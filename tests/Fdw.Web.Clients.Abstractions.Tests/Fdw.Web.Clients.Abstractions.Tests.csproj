@@ -2,6 +2,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fdw.Web.Clients.Abstractions\Fdw.Web.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Schema.Clients\Fdw.Schema.Clients.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data.Clients\Fdw.Services.Data.Clients.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Web.Calculations.Clients\Fdw.Web.Calculations.Clients.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Web.Analytics.Clients\Fdw.Web.Analytics.Clients.csproj" />

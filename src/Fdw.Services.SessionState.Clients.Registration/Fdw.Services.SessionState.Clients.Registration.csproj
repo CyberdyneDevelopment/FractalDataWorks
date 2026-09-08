@@ -19,6 +19,7 @@
        without silently attaching it as the SessionState option in its consumer's collection. -->
   <ItemGroup>
     <ProjectReference Include="..\Fdw.Services.SessionState.Clients\Fdw.Services.SessionState.Clients.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Clients\Fdw.Web.Clients.csproj" />
     <ProjectReference Include="..\Fdw.Services.SessionState\Fdw.Services.SessionState.csproj" />
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />

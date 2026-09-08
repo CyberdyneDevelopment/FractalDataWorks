@@ -1,8 +1,13 @@
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Results;
 using Fdw.Schema.Clients;
-using Fdw.Web.Http.Authentication;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
@@ -13,10 +18,9 @@ namespace Fdw.Web.Clients.Abstractions.Tests;
 /// Where a named API client gets its base address.
 /// </summary>
 /// <remarks>
-/// An API client is a service type option, so its endpoint is its own configuration and the platform
-/// loads it through <see cref="IApiEndpointSource"/> when the client is resolved. A host declares
-/// nothing in a file, which is why these assert against a registered source rather than against
-/// configuration keys.
+/// An endpoint IS a connection: a client named SchemaClient is served by the conn.Connection row of
+/// that name, and its implementation's BaseUrl is the answer. So these assert against a registered
+/// connection provider rather than against configuration keys.
 ///
 /// The endpoint is read INSIDE the factory's configure delegate, so it is resolved on each
 /// CreateClient(name) rather than at registration — that is what lets a host register the ~35 client
@@ -26,16 +30,42 @@ public sealed class ApiClientBaseUrlResolutionTests
 {
     private const string ClientName = "SchemaClient";
 
-    private sealed class StubEndpointSource(string? clientName, string? endpoint) : IApiEndpointSource
+    /// <summary>Answers for one connection name and nothing else.</summary>
+    private sealed class StubConnections(string? connectionName, string? baseUrl) : IConnectionConfigurationProvider
     {
-        public string? Resolve(string name)
-            => string.Equals(name, clientName, StringComparison.Ordinal) ? endpoint : null;
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+            string name, CancellationToken cancellationToken = default)
+            => Task.FromResult(
+                string.Equals(name, connectionName, StringComparison.Ordinal) && baseUrl is not null
+                    ? GenericResult<IConnectionImplementationConfiguration>.Success(
+                        new HttpConnectionConfiguration { BaseUrl = baseUrl })
+                    : GenericResult<IConnectionImplementationConfiguration>.Success(default!));
+
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+            Guid id, CancellationToken cancellationToken = default)
+            => Get(string.Empty, cancellationToken);
+
+        public Task<IGenericResult> Save<T>(
+            string serviceOptionType, string name, T implementationConfiguration,
+            CancellationToken cancellationToken = default)
+            where T : IConnectionImplementationConfiguration
+            => Task.FromResult(GenericResult.Success());
+
+        public Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(GenericResult.Success());
+
+        public Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default)
+            => Task.FromResult(GenericResult.Success());
+
+        public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
+            where T : IImplementationConfigurationProvider<IConnectionImplementationConfiguration>
+            => GenericResult.Success();
     }
 
-    private static Uri? ConfiguredBaseAddress(IApiEndpointSource? source)
+    private static Uri? ConfiguredBaseAddress(IConnectionConfigurationProvider? connections)
     {
         var builder = Host.CreateApplicationBuilder();
-        if (source is not null) builder.Services.AddSingleton(source);
+        if (connections is not null) builder.Services.AddSingleton(connections);
         new SchemaClientType().Configure(builder);
 
         using var provider = builder.Services.BuildServiceProvider();
@@ -49,37 +79,37 @@ public sealed class ApiClientBaseUrlResolutionTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureUsesTheEndpointTheSourceDeclaresForThisClient()
+    public void ConfigureUsesTheEndpointTheConnectionOfThatNameDeclares()
     {
-        ConfiguredBaseAddress(new StubEndpointSource(ClientName, "http://declared/"))
+        ConfiguredBaseAddress(new StubConnections(ClientName, "http://declared/"))
             .ShouldBe(new Uri("http://declared/"));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureIgnoresAnEndpointDeclaredForAnotherClient()
+    public void ConfigureIgnoresAConnectionDeclaredUnderAnotherName()
     {
-        ConfiguredBaseAddress(new StubEndpointSource("SomeOtherClient", "http://other/"))
+        ConfiguredBaseAddress(new StubConnections("SomeOtherClient", "http://other/"))
             .ShouldBeNull();
     }
 
     // Registration is unconditional and resolution is what makes a client required, so a client
-    // nobody declared an endpoint for registers cleanly and is left with no BaseAddress -- the
+    // nobody declared a connection for registers cleanly and is left with no BaseAddress -- the
     // absence is reported by name rather than filled in with an invented URL.
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureWithNoEndpointDeclaredLeavesBaseAddressUnset()
+    public void ConfigureWithNoConnectionForThisClientLeavesBaseAddressUnset()
     {
-        ConfiguredBaseAddress(new StubEndpointSource(ClientName, null)).ShouldBeNull();
+        ConfiguredBaseAddress(new StubConnections(ClientName, null)).ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void ConfigureWithNoEndpointSourceAtAllLeavesBaseAddressUnset()
+    public void ConfigureWithNoConnectionProviderAtAllLeavesBaseAddressUnset()
     {
-        ConfiguredBaseAddress(source: null).ShouldBeNull();
+        ConfiguredBaseAddress(connections: null).ShouldBeNull();
     }
 }

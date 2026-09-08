@@ -967,6 +967,45 @@ public static partial class ServiceTypeLog
         string reason);
 
     /// <summary>
+    /// Logs that one domain's phase failed, while the sweep continues to the next.
+    /// </summary>
+    /// <remarks>
+    /// Fail loud is about being heard, not about stopping. A sweep that returned at the first failure
+    /// reported one broken domain per boot and hid the rest, so a host with four independent faults
+    /// took four deploys to reveal them -- each one knowable at the first boot and withheld. Every
+    /// domain now runs and every failure is named here; the phase still returns a failure overall, so
+    /// nothing is being tolerated, only reported completely.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61020,
+        Level = LogLevel.Critical,
+        Message = "Platform {phase} FAILED at domain '{categoryName}' (entry {position} of {total}): {reason}. "
+            + "The sweep continues so every failing domain is reported in this run, and {phase} will "
+            + "return a failure once it completes.")]
+    public static partial IGenericMessage PlatformPhaseDomainFailed(
+        ILogger logger,
+        string phase,
+        string categoryName,
+        int position,
+        int total,
+        string reason);
+
+    /// <summary>
+    /// Logs the tally at the end of a phase in which at least one domain failed.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61021,
+        Level = LogLevel.Critical,
+        Message = "Platform {phase} completed with {failed} of {total} domain(s) failing: {categoryNames}. "
+            + "Each failure is logged above with its own reason.")]
+    public static partial IGenericMessage PlatformPhaseCompletedWithFailures(
+        ILogger logger,
+        string phase,
+        int failed,
+        int total,
+        string categoryNames);
+
+    /// <summary>
     /// Logs that an option phase threw. The exception is converted to a failure result after this is
     /// logged, so one throwing option cannot unwind a collect that is handling failures as values.
     /// </summary>

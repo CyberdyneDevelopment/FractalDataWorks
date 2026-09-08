@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Fdw.Results;
+using Fdw.Web.Clients.Abstractions.Registration;
 
 namespace Fdw.Services.SessionState.Clients.Registration;
 

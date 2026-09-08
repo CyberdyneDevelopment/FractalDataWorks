@@ -21,7 +21,6 @@
     <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
-    <ProjectReference Include="..\Fdw.Web.Http.Authentication\Fdw.Web.Http.Authentication.csproj" />
     <ProjectReference Include="..\Fdw.Services.Connections.Http.Abstractions\Fdw.Services.Connections.Http.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
     <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />

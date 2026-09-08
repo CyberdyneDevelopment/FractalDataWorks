@@ -109,6 +109,10 @@ public static class PlatformServices
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
+        var _log = loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance;
+        var _failed = new List<string>();
+        IGenericResult<IHostApplicationBuilder>? _first = null;
+
         foreach (var entry in _frozenOrder)
         {
             if (entry.ConfigureState == PhaseState.Deferred) continue;
@@ -116,17 +120,27 @@ public static class PlatformServices
             var result = entry.Configure(builder, loggerFactory);
             if (result.IsFailure)
             {
-                ServiceTypeLog.PlatformPhaseStopped(
-                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
-                    "Configure",
-                    entry.CategoryName,
-                    _frozenOrder.IndexOf(entry) + 1,
-                    _frozenOrder.Length,
-                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
-                return result;
+                // Every domain runs and every failure is named. Returning at the first one reported
+                // a single broken domain per boot and hid the rest, so a host with four independent
+                // faults needed four deploys to reveal them. The phase still fails -- it just says
+                // everything it knows first.
+                _failed.Add(entry.CategoryName);
+                _first ??= result;
+                ServiceTypeLog.PlatformPhaseDomainFailed(
+                _log, "Configure", entry.CategoryName,
+                _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
+                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                continue;
             }
 
             builder = result.Value ?? builder;
+        }
+
+        if (_failed.Count > 0)
+        {
+            ServiceTypeLog.PlatformPhaseCompletedWithFailures(
+                _log, "Configure", _failed.Count, _frozenOrder.Length, string.Join(", ", _failed));
+            return _first!;
         }
 
         return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -144,23 +158,37 @@ public static class PlatformServices
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
+        var _log = loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance;
+        var _failed = new List<string>();
+        IGenericResult<IHostApplicationBuilder>? _first = null;
+
         foreach (var entry in _frozenOrder)
         {
-
             if (entry.RegisterState == PhaseState.Deferred) continue;
 
             var result = entry.Register(builder, loggerFactory);
             if (result.IsFailure)
             {
-                ServiceTypeLog.PlatformPhaseStopped(
-                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
-                    "Register",
-                    entry.CategoryName,
-                    _frozenOrder.IndexOf(entry) + 1,
-                    _frozenOrder.Length,
-                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
-                return result;
+                // Every domain runs and every failure is named. Returning at the first one reported
+                // a single broken domain per boot and hid the rest, so a host with four independent
+                // faults needed four deploys to reveal them. The phase still fails -- it just says
+                // everything it knows first.
+                _failed.Add(entry.CategoryName);
+                _first ??= result;
+                ServiceTypeLog.PlatformPhaseDomainFailed(
+                _log, "Register", entry.CategoryName,
+                _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
+                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                continue;
             }
+
+        }
+
+        if (_failed.Count > 0)
+        {
+            ServiceTypeLog.PlatformPhaseCompletedWithFailures(
+                _log, "Register", _failed.Count, _frozenOrder.Length, string.Join(", ", _failed));
+            return _first!;
         }
 
         return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -178,23 +206,37 @@ public static class PlatformServices
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
+        var _log = loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance;
+        var _failed = new List<string>();
+        IGenericResult<IHost>? _first = null;
+
         foreach (var entry in _frozenOrder)
         {
-
             if (entry.InitializeState == PhaseState.Deferred) continue;
 
             var result = entry.Initialize(host, loggerFactory);
             if (result.IsFailure)
             {
-                ServiceTypeLog.PlatformPhaseStopped(
-                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
-                    "Initialize",
-                    entry.CategoryName,
-                    _frozenOrder.IndexOf(entry) + 1,
-                    _frozenOrder.Length,
-                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
-                return result;
+                // Every domain runs and every failure is named. Returning at the first one reported
+                // a single broken domain per boot and hid the rest, so a host with four independent
+                // faults needed four deploys to reveal them. The phase still fails -- it just says
+                // everything it knows first.
+                _failed.Add(entry.CategoryName);
+                _first ??= result;
+                ServiceTypeLog.PlatformPhaseDomainFailed(
+                _log, "Initialize", entry.CategoryName,
+                _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
+                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                continue;
             }
+
+        }
+
+        if (_failed.Count > 0)
+        {
+            ServiceTypeLog.PlatformPhaseCompletedWithFailures(
+                _log, "Initialize", _failed.Count, _frozenOrder.Length, string.Join(", ", _failed));
+            return _first!;
         }
 
         return GenericResult<IHost>.Success(host);
