@@ -175,6 +175,15 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
                 return commitResult;
             }
 
+
+            // The write used DeleteInTransaction/SaveInTransaction, which defer to this
+            // transaction and so CANNOT invalidate before commit -- the provider says as much on
+            // InvalidateCache. Without this call the row is correct in storage and the running
+            // host keeps serving the cached list until it restarts, which for a revoke means the
+            // permission stays live after an administrator was told it was gone. Worse than the
+            // read filter it sits behind (FDW-732), because the database looks right to anyone
+            // who checks. See FDW-736.
+            _userRoleProvider.InvalidateCache();
             return Fdw.Results.GenericResult.Success();
         }
         finally
