@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -72,7 +72,8 @@ public abstract class GetQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest
             MinValue = config.MinValue,
             MaxValue = config.MaxValue,
             Pattern = config.Pattern,
-            Expression = config.Expression
+            Expression = config.Expression,
+            CreatedAt = config.CreateDate
         };
     }
 }

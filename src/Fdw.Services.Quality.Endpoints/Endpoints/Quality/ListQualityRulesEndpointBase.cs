@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -83,7 +83,8 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
             MinValue = config.MinValue,
             MaxValue = config.MaxValue,
             Pattern = config.Pattern,
-            Expression = config.Expression
+            Expression = config.Expression,
+            CreatedAt = config.CreateDate
         };
     }
 }
