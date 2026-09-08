@@ -110,6 +110,9 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// initialize it manually, in whatever order matters, before a later
     /// <see cref="PlatformServices.Initialize"/> collect skips anything already done.
     /// </summary>
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
+    /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
     /// <param name="force">
     /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
     /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
@@ -140,6 +143,9 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <see cref="Initialize"/> — a host that configures a domain early, to put it ahead of the others,
     /// is not configured a second time by the later <see cref="PlatformServices.Configure"/> pass.
     /// </summary>
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
+    /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
     /// <param name="force">
     /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
     /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
@@ -170,6 +176,9 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// registers a domain explicitly and is then collected by <see cref="PlatformServices.Register"/>
     /// (or vice versa) does not double-register the domain's services.
     /// </summary>
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
+    /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
     /// <param name="force">
     /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
     /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
