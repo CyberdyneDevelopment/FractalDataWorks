@@ -86,10 +86,10 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
 
             // Published under the closed generic as well as the domain interface: a consumer asking
-            // for IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>
+            // for IPlatformServiceProvider<IGenericService, IPipelineConfiguration, IPipelineImplementationConfiguration>
             // and one asking for IPipelineServiceProvider must get the SAME instance, or the second
             // gets a provider whose factory registrations the first one made.
-            builder.Services.AddScoped<IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>>(
+            builder.Services.AddScoped<IPlatformServiceProvider<IGenericService, IPipelineConfiguration, IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IPipelineServiceProvider>());
 
             builder.Services.AddScoped<IPipelineServiceProvider>(sp =>

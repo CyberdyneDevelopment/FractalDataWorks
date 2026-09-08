@@ -12,8 +12,9 @@ namespace Fdw.Services.Telemetry;
 public sealed class TelemetryServiceProvider
     : PlatformServiceProviderBase<
         ITelemetryService,
+        ITelemetryConfiguration,
         ITelemetryImplementationConfiguration,
-        ITelemetryFactory<ITelemetryService, ITelemetryImplementationConfiguration>,
+        ITelemetryFactory<ITelemetryService, ITelemetryConfiguration>,
         ITelemetryConfigurationProvider>,
       ITelemetryServiceProvider
 {

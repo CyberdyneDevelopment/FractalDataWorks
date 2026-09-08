@@ -54,7 +54,7 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
     /// <inheritdoc />
     public IGenericResult<IExternalIdentityProvisioner> Create(
         IExternalIdentityProvisionerImplementationConfiguration configuration,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
+        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
     {
         if (configuration is null)
             return GenericResult<IExternalIdentityProvisioner>.Failure(

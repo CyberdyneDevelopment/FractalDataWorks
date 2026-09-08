@@ -17,6 +17,11 @@ namespace Fdw.Services.Configuration;
 /// member is, and hands the request to that implementation's provider.
 /// </summary>
 /// <typeparam name="TDomainConfiguration">The domain record.</typeparam>
+/// <typeparam name="TDomainContract">
+/// The domain's configuration contract — the interface consumers name, which
+/// <typeparamref name="TDomainConfiguration"/> implements. It exists because the abstractions package
+/// cannot see the concrete record and the concrete record is what this provider reads.
+/// </typeparam>
 /// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <typeparam name="TCommand">The domain record's configuration command.</typeparam>
 /// <remarks>
@@ -25,27 +30,20 @@ namespace Fdw.Services.Configuration;
 /// reads and writes in the same connection as the domain it belongs to — which the foreign key already
 /// required, being declared on the domain row's <c>RowId</c>.
 /// </remarks>
-public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>
+public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TDomainContract, TImplementationConfiguration, TCommand>
     : ImplementationConfigurationProviderBase<TDomainConfiguration, TCommand>,
-      IDomainConfigurationProvider<TImplementationConfiguration>
-    where TDomainConfiguration : class, IGenericConfiguration
+      IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>
+    where TDomainConfiguration : class, TDomainContract
+    where TDomainContract : class, IDomainConfiguration
     where TImplementationConfiguration : IImplementationConfiguration
     where TCommand : ConfigurationCommandBase<TDomainConfiguration>
 {
     private readonly ILogger _log;
 
-    /// <summary>The implementation providers this domain dispatches to, keyed by ServiceOptionType.</summary>
-    /// <remarks>
-    /// Kept alongside the erased registry the compose step uses, because dispatch has to call
-    /// <see cref="IImplementationConfigurationProvider{T}.Get(Guid, CancellationToken)"/> and get
-    /// <typeparamref name="TImplementationConfiguration"/> back. The erased entry cannot return it.
-    /// </remarks>
-    private readonly ConcurrentDictionary<string, IImplementationConfigurationProvider<TImplementationConfiguration>> _implementations
-        = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the
-    /// <see cref="ServiceConfigurationProviderBase{TDomainConfiguration, TImplementationConfiguration, TCommand}"/> class.
+    /// <see cref="ServiceConfigurationProviderBase{TDomainConfiguration, TDomainContract, TImplementationConfiguration, TCommand}"/> class.
     /// </summary>
     /// <param name="logger">The logger for this provider.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
@@ -71,24 +69,33 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         }
 
         base.Register(name, erased);
-        _implementations[name] = implementationConfigurationProvider;
         return GenericResult.Success();
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<TImplementationConfiguration>> IDomainConfigurationProvider<TImplementationConfiguration>.Get(
+    async Task<IGenericResult<TDomainContract>> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Get(
         string name, CancellationToken cancellationToken)
-        => await Dispatch(await Get(name, cancellationToken).ConfigureAwait(false), name, cancellationToken)
-            .ConfigureAwait(false);
+    {
+        // ToNewResult throws on a SUCCESSFUL result, so the success path widens explicitly.
+        var record = await Get(name, cancellationToken).ConfigureAwait(false);
+        return record.IsSuccess && record.Value is { } value
+            ? GenericResult<TDomainContract>.Success(value)
+            : record.ToNewResult<TDomainContract>();
+    }
 
     /// <inheritdoc />
-    async Task<IGenericResult<TImplementationConfiguration>> IDomainConfigurationProvider<TImplementationConfiguration>.Get(
+    async Task<IGenericResult<TDomainContract>> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Get(
         Guid id, CancellationToken cancellationToken)
-        => await Dispatch(await Get(id, cancellationToken).ConfigureAwait(false), id.ToString(), cancellationToken)
-            .ConfigureAwait(false);
+    {
+        // ToNewResult throws on a SUCCESSFUL result, so the success path widens explicitly.
+        var record = await Get(id, cancellationToken).ConfigureAwait(false);
+        return record.IsSuccess && record.Value is { } value
+            ? GenericResult<TDomainContract>.Success(value)
+            : record.ToNewResult<TDomainContract>();
+    }
 
     /// <inheritdoc />
-    async Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Save<T>(
+    async Task<IGenericResult> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Save<T>(
         string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
     {
         if (!ImplementationProviders.TryGetValue(serviceOptionType, out _))
@@ -97,7 +104,17 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
                 DefaultConfigurationProviderLog.NoImplementationProvider(_log, name, serviceOptionType));
         }
 
-        return await Save(Compose(serviceOptionType, name, implementationConfiguration), cancellationToken)
+        // The interface cannot name this domain's implementation contract, so the caller's value is
+        // widened to IImplementationConfiguration there and narrowed back here. A mismatch is a
+        // caller handing one domain's implementation to another's provider — fail rather than throw.
+        if (implementationConfiguration is not TImplementationConfiguration typed)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.ProviderNotErasable(
+                    _log, name, implementationConfiguration?.GetType().FullName ?? "(null)"));
+        }
+
+        return await Save(Compose(serviceOptionType, name, typed), cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -112,45 +129,11 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         where T : TImplementationConfiguration;
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Delete(
+    Task<IGenericResult> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Delete(
         Guid id, CancellationToken cancellationToken) => Delete(id, cancellationToken);
 
     /// <inheritdoc />
-    Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Delete(
+    Task<IGenericResult> IDomainConfigurationProvider<TDomainContract, TImplementationConfiguration>.Delete(
         string name, CancellationToken cancellationToken) => Delete(name, cancellationToken);
 
-    /// <summary>Hands a domain record to the provider for the implementation it names.</summary>
-    /// <remarks>
-    /// The domain record says which implementation a member is; this looks that name up in the
-    /// registry and asks that provider for the member's own configuration. A name with no registered
-    /// provider is a failed result — there is no hook for a domain to answer it differently.
-    /// </remarks>
-    private async Task<IGenericResult<TImplementationConfiguration>> Dispatch(
-        IGenericResult<TDomainConfiguration> domainRecord,
-        string identifier,
-        CancellationToken cancellationToken)
-    {
-        if (!domainRecord.IsSuccess)
-            return domainRecord.ToNewResult<TImplementationConfiguration>();
-
-        // Success with no value is its own state, not a failed read. Folding it into the branch
-        // above called ToNewResult on a SUCCESSFUL result, which THROWS -- and this runs inside
-        // AddHttpClient's configure delegate during endpoint construction, so the throw escaped
-        // through MapFastEndpoints and took down endpoint mapping for the whole host rather than
-        // failing one lookup. The caller wants "no row of that name" as an answer it can act on.
-        if (domainRecord.Value is null)
-            return GenericResult<TImplementationConfiguration>.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(
-                    _log, typeof(TDomainConfiguration).Name, identifier));
-
-        var serviceOptionType = domainRecord.Value.ServiceOptionType;
-        if (string.IsNullOrWhiteSpace(serviceOptionType))
-            return GenericResult<TImplementationConfiguration>.Failure(
-                DefaultConfigurationProviderLog.RecordHasNoServiceOptionType(_log, identifier));
-
-        return _implementations.TryGetValue(serviceOptionType, out var implementation)
-            ? await implementation.Get(domainRecord.Value.Id, cancellationToken).ConfigureAwait(false)
-            : GenericResult<TImplementationConfiguration>.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_log, identifier, serviceOptionType));
-    }
 }

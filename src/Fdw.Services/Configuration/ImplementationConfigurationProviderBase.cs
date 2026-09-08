@@ -85,7 +85,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// provider (Connection, SecretManager, ...) registers one entry per typed body via
     /// <c>Register</c>; a leaf/child provider (e.g. the MsSqlConnectionConfiguration body
     /// provider) never registers any, so its registry stays empty — that emptiness is how
-    /// <c>ComposeTypedBody</c> distinguishes a header provider from a leaf.
+    /// A registered implementation provider distinguishes a domain provider from a leaf.
     /// </summary>
     protected ConcurrentDictionary<string, IServiceConfigurationProvider> ImplementationProviders { get; }
         = new(StringComparer.OrdinalIgnoreCase);
@@ -173,8 +173,8 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     }
 
     /// <summary>
-    /// Composes a header row into its full aggregate: the polymorphic typed body (<see cref="ComposeTypedBody"/>)
-    /// followed by the child cascade (<see cref="ComposeChildren"/>).
+    /// Composes a domain row into its full aggregate: its implementation, then the child cascade
+    /// (<see cref="ComposeChildren"/>).
     /// </summary>
     /// <param name="header">The already-loaded header row to compose.</param>
     /// <param name="ct">The cancellation token.</param>
@@ -187,16 +187,59 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// </summary>
     /// <param name="header">The already-loaded header row to compose.</param>
     /// <param name="asOf">
-    /// The instant to compose as of — the typed body and children belonging to the version in force
-    /// then — or null for the current ones.
+    /// The instant to compose as of — the implementation and children belonging to the version in
+    /// force then — or null for the current ones.
     /// </param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The composed aggregate, or the first failing step's result.</returns>
     protected async Task<IGenericResult<TConfig>> ComposeAggregate(TConfig header, DateTimeOffset? asOf, CancellationToken ct)
     {
-        var typedResult = await ComposeTypedBody(header, asOf, ct).ConfigureAwait(false);
-        if (!typedResult.IsSuccess || typedResult.Value is null) return typedResult;
-        return await ComposeChildren(typedResult.Value, asOf, ct).ConfigureAwait(false);
+        // The domain row names which implementation it is. That name selects the implementation's own
+        // configuration provider, which reads its row by joining back to this one on the foreign key.
+        // The discriminator is read once, here, off the row that carries it -- the implementation
+        // table has no such column, because the discriminator is what chose that table.
+        if (!ImplementationProviders.IsEmpty)
+        {
+            if (string.IsNullOrEmpty(header.ServiceOptionType))
+            {
+                DefaultConfigurationProviderLog.NoServiceOptionTypeForTypedBody(
+                    _logger, typeof(TConfig).Name, header.Name);
+            }
+            else if (!ImplementationProviders.TryGetValue(header.ServiceOptionType, out var implementationProvider))
+            {
+                return GenericResult<TConfig>.Failure(
+                    DefaultConfigurationProviderLog.NoImplementationProvider(
+                        _logger, header.Name, header.ServiceOptionType));
+            }
+            else
+            {
+                DefaultConfigurationProviderLog.LoadingTypedBody(
+                    _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
+
+                var implementationResult = await implementationProvider.Get(header.Id, ct).ConfigureAwait(false);
+                if (!implementationResult.IsSuccess)
+                {
+                    return GenericResult<TConfig>.Failure(
+                        DefaultConfigurationProviderLog.TypedBodyLoadFailed(
+                            _logger, new InvalidOperationException(implementationResult.CurrentMessage),
+                            typeof(TConfig).Name, header.Name, header.ServiceOptionType));
+                }
+
+                var implementationMapper = PocoMapperCollection.ByName(typeof(TConfig).Name);
+                if (implementationMapper == PocoMapperCollection.NotFound)
+                {
+                    DefaultConfigurationProviderLog.NoMapperForTypedBody(_logger, typeof(TConfig).Name, header.Name);
+                }
+                else
+                {
+                    implementationMapper.SetTypedBody(header, implementationResult.Value);
+                    DefaultConfigurationProviderLog.TypedBodyLoaded(
+                        _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
+                }
+            }
+        }
+
+        return await ComposeChildren(header, asOf, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -306,44 +349,6 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         return GenericResult<TConfig>.Success(result.Value?.FirstOrDefault()!);
     }
 
-    private async Task<IGenericResult<TConfig>> ComposeTypedBody(TConfig header, DateTimeOffset? asOf, CancellationToken ct)
-    {
-        if (ImplementationProviders.IsEmpty)
-            return GenericResult<TConfig>.Success(header);
-
-        if (string.IsNullOrEmpty(header.ServiceOptionType))
-        {
-            DefaultConfigurationProviderLog.NoServiceOptionTypeForTypedBody(_logger, typeof(TConfig).Name, header.Name);
-            return GenericResult<TConfig>.Success(header);
-        }
-
-        if (!ImplementationProviders.TryGetValue(header.ServiceOptionType, out var typedProvider))
-        {
-            return GenericResult<TConfig>.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(
-                    _logger, header.Name, header.ServiceOptionType));
-        }
-
-        DefaultConfigurationProviderLog.LoadingTypedBody(_logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
-
-        var typedResult = await typedProvider.Get(header.Id, ct).ConfigureAwait(false);
-        if (!typedResult.IsSuccess)
-            return GenericResult<TConfig>.Failure(
-                DefaultConfigurationProviderLog.TypedBodyLoadFailed(
-                    _logger, new InvalidOperationException(typedResult.CurrentMessage),
-                    typeof(TConfig).Name, header.Name, header.ServiceOptionType));
-
-        var mapper = PocoMapperCollection.ByName(typeof(TConfig).Name);
-        if (mapper == PocoMapperCollection.NotFound)
-        {
-            DefaultConfigurationProviderLog.NoMapperForTypedBody(_logger, typeof(TConfig).Name, header.Name);
-            return GenericResult<TConfig>.Success(header);
-        }
-
-        mapper.SetTypedBody(header, typedResult.Value);
-        DefaultConfigurationProviderLog.TypedBodyLoaded(_logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
-        return GenericResult<TConfig>.Success(header);
-    }
     // lookup. Each descriptor carries the physical {Owner}RowId FK column; children are queried via the
     // gateway keyed on the owner's RowId and recursed, so any N-level aggregate composes from data rows
     // alone (DataStore→Paths→Containers→Fields, Connection→typed body→auth/limits, DataSet→Fields,

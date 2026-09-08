@@ -47,13 +47,13 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
 {
     private const int CanonicalNotFoundId = 30000;
     private readonly ChainedExternalIdentityProvisionerConfiguration _typed;
-    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> _provisionerProvider;
+    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration> _provisionerProvider;
     private readonly ILogger<ChainedExternalIdentityProvisioner> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ChainedExternalIdentityProvisioner"/> class.</summary>
     public ChainedExternalIdentityProvisioner(
         ChainedExternalIdentityProvisionerConfiguration typed,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider,
+        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider,
         ILogger<ChainedExternalIdentityProvisioner>? logger)
     {
         _typed = typed ?? throw new ArgumentNullException(nameof(typed));

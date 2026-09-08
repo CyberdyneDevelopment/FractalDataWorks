@@ -15,6 +15,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// concrete provider implements them.
 /// </remarks>
 public interface IExternalIdentityProvisionerServiceProvider
-    : IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>
+    : IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>
 {
 }

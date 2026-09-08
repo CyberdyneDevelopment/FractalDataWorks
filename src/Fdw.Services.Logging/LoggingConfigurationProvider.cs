@@ -19,6 +19,7 @@ namespace Fdw.Services.Logging;
 public class LoggingConfigurationProvider
     : ServiceConfigurationProviderBase<
           LoggingConfiguration,
+          ILoggingConfiguration,
           ILoggingImplementationConfiguration,
           LoggingConfigurationCommand>,
       ILoggingConfigurationProvider

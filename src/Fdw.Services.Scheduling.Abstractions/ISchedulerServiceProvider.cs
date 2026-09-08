@@ -13,6 +13,6 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// implements them.
 /// </remarks>
 public interface ISchedulerServiceProvider
-    : IPlatformServiceProvider<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>
+    : IPlatformServiceProvider<IFrameworkSchedulingService, ISchedulerConfiguration, ISchedulerImplementationConfiguration>
 {
 }

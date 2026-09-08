@@ -20,6 +20,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 public sealed class HealthMonitorConfigurationProvider
     : ServiceConfigurationProviderBase<
           HealthMonitorConfiguration,
+          IHealthMonitorConfiguration,
           IHealthMonitorImplementationConfiguration,
           HealthMonitorConfigurationCommand>,
       IHealthMonitorConfigurationProvider

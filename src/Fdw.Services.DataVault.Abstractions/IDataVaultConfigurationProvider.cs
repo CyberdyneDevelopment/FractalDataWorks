@@ -6,6 +6,6 @@ namespace Fdw.Services.DataVault.Abstractions;
 /// Resolves configured data vaults and routes each to the implementation provider that owns it.
 /// </summary>
 public interface IDataVaultConfigurationProvider
-    : IDomainConfigurationProvider<IDataVaultImplementationConfiguration>
+    : IDomainConfigurationProvider<IDataVaultConfiguration, IDataVaultImplementationConfiguration>
 {
 }

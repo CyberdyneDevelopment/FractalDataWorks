@@ -6,6 +6,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// Resolves configured pipelines and routes each to the implementation provider that owns it.
 /// </summary>
 public interface IPipelineConfigurationProvider
-    : IDomainConfigurationProvider<IPipelineImplementationConfiguration>
+    : IDomainConfigurationProvider<IPipelineConfiguration, IPipelineImplementationConfiguration>
 {
 }

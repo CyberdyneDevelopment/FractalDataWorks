@@ -20,6 +20,7 @@ namespace Fdw.Services.Scheduling;
 public class SchedulerConfigurationProvider
     : ServiceConfigurationProviderBase<
           SchedulerConfiguration,
+          ISchedulerConfiguration,
           ISchedulerImplementationConfiguration,
           SchedulerConfigurationCommand>,
       ISchedulerConfigurationProvider

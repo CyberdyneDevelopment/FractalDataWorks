@@ -7,6 +7,6 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// depend on THIS interface and resolve the host's configured monitor by name — never on a direct
 /// <see cref="IHealthMonitorService"/> registration.
 /// </summary>
-public interface IHealthMonitorProvider : IPlatformServiceProvider<IHealthMonitorService, IHealthMonitorImplementationConfiguration>
+public interface IHealthMonitorProvider : IPlatformServiceProvider<IHealthMonitorService, IHealthMonitorConfiguration, IHealthMonitorImplementationConfiguration>
 {
 }

@@ -54,7 +54,7 @@ public sealed class ClaimMappedProvisionerType
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>();
+            var provider = services.GetRequiredService<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>>();
 
             var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
             var logger = loggerFactory.CreateLogger<ClaimMappedProvisionerType>();

@@ -33,22 +33,29 @@ public sealed class ApiClientBaseUrlResolutionTests
     /// <summary>Answers for one connection name and nothing else.</summary>
     private sealed class StubConnections(string? connectionName, string? baseUrl) : IConnectionConfigurationProvider
     {
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+        // The stub answers with a domain record carrying the implementation, which is what the
+        // provider now returns -- the caller reads BaseUrl off .Configuration.
+        public Task<IGenericResult<IConnectionConfiguration>> Get(
             string name, CancellationToken cancellationToken = default)
             => Task.FromResult(
                 string.Equals(name, connectionName, StringComparison.Ordinal) && baseUrl is not null
-                    ? GenericResult<IConnectionImplementationConfiguration>.Success(
-                        new HttpConnectionConfiguration { BaseUrl = baseUrl })
-                    : GenericResult<IConnectionImplementationConfiguration>.Success(default!));
+                    ? GenericResult<IConnectionConfiguration>.Success(
+                        new ConnectionConfiguration
+                        {
+                            Name = name,
+                            ServiceOptionType = "Http",
+                            Configuration = new HttpConnectionConfiguration { BaseUrl = baseUrl },
+                        })
+                    : GenericResult<IConnectionConfiguration>.Success(default!));
 
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+        public Task<IGenericResult<IConnectionConfiguration>> Get(
             Guid id, CancellationToken cancellationToken = default)
             => Get(string.Empty, cancellationToken);
 
         public Task<IGenericResult> Save<T>(
             string serviceOptionType, string name, T implementationConfiguration,
             CancellationToken cancellationToken = default)
-            where T : IConnectionImplementationConfiguration
+            where T : IImplementationConfiguration
             => Task.FromResult(GenericResult.Success());
 
         public Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default)

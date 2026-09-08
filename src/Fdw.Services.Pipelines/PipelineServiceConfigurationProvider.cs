@@ -22,6 +22,7 @@ namespace Fdw.Services.Pipelines;
 public class PipelineServiceConfigurationProvider
     : ServiceConfigurationProviderBase<
           PipelineConfiguration,
+          IPipelineConfiguration,
           IPipelineImplementationConfiguration,
           PipelineConfigurationCommand>,
       IPipelineConfigurationProvider

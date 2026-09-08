@@ -11,6 +11,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// its configuration lives in the file-backed server tier declared in <c>configurationSchema.json</c>.
 /// </remarks>
 public interface IHostConfigurationProvider
-    : IDomainConfigurationProvider<IHostImplementationConfiguration>
+    : IDomainConfigurationProvider<IHostConfiguration, IHostImplementationConfiguration>
 {
 }

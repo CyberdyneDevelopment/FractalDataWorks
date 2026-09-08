@@ -20,6 +20,7 @@ namespace Fdw.Services.Pipelines;
 public sealed class PipelineServiceProvider
     : PlatformServiceProviderBase<
           IGenericService,
+          IPipelineConfiguration,
           IPipelineImplementationConfiguration,
           IServiceFactory<IGenericService>,
           IPipelineConfigurationProvider>,

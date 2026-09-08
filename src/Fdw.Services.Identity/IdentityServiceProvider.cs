@@ -12,8 +12,9 @@ namespace Fdw.Services.Identity;
 public sealed class IdentityServiceProvider
     : PlatformServiceProviderBase<
           IIdentityService,
+          IIdentityServiceConfiguration,
           IIdentityServiceImplementationConfiguration,
-          IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>,
+          IIdentityServiceFactory<IIdentityService, IIdentityServiceConfiguration>,
           IIdentityServiceConfigurationProvider>,
       IIdentityServiceProvider
 {

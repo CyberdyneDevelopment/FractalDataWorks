@@ -30,7 +30,7 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Test configuration class for service provider tests.
     /// </summary>
-    public class TestServiceConfiguration : IGenericConfiguration<TestServiceConfiguration>, IImplementationConfiguration
+    public class TestServiceConfiguration : IGenericConfiguration<TestServiceConfiguration>, IImplementationConfiguration, IDomainConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
@@ -38,6 +38,9 @@ public class ServiceProviderLifetimeTests
         public string ServiceType => "TestService";
         public string? ServiceOptionType { get; set; }
         public string Value { get; set; } = string.Empty;
+
+        // Its own implementation: this double has no domain/implementation split.
+        IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => this;
     }
 
     /// <summary>
@@ -222,8 +225,6 @@ public class ServiceProviderLifetimeTests
         Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
-            string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 
     /// <summary>
@@ -320,8 +321,6 @@ public class ServiceProviderLifetimeTests
         Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
-            string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 
     #endregion

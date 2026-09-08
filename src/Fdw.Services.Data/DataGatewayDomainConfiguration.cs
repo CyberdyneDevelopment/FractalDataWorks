@@ -38,4 +38,10 @@ public partial class DataGatewayDomainConfiguration : IDataGatewayConfiguration
 
     /// <summary>Gets or sets the implementation for the implementation this record names.</summary>
     public IDataGatewayImplementationConfiguration? Configuration { get; set; }
+
+    /// <inheritdoc />
+    public string? Description { get; set; }
+
+    /// <inheritdoc />
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
 }

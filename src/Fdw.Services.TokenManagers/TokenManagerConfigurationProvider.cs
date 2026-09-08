@@ -18,6 +18,7 @@ namespace Fdw.Services.TokenManagers;
 public class TokenManagerConfigurationProvider
     : ServiceConfigurationProviderBase<
           TokenManagerConfiguration,
+          ITokenManagerConfiguration,
           ITokenManagerImplementationConfiguration,
           TokenManagerConfigurationCommand>,
       ITokenManagerConfigurationProvider

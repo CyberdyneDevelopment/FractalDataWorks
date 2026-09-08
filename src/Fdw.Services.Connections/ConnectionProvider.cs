@@ -30,6 +30,7 @@ namespace Fdw.Services.Connections;
 public sealed class ConnectionProvider
     : PlatformServiceProviderBase<
           IGenericConnection,
+          IConnectionConfiguration,
           IConnectionImplementationConfiguration,
           IServiceFactory<IGenericConnection>,
           IConnectionConfigurationProvider>,

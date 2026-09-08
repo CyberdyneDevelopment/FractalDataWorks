@@ -12,8 +12,9 @@ namespace Fdw.Services.Logging;
 public sealed class LoggingServiceProvider
     : PlatformServiceProviderBase<
         ILoggingService,
+        ILoggingConfiguration,
         ILoggingImplementationConfiguration,
-        ILoggingFactory<ILoggingService, ILoggingImplementationConfiguration>,
+        ILoggingFactory<ILoggingService, ILoggingConfiguration>,
         ILoggingConfigurationProvider>,
       ILoggingServiceProvider
 {

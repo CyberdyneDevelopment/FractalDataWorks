@@ -11,6 +11,6 @@ namespace Fdw.Services.Logging.Abstractions;
 /// its configuration lives in the file-backed server tier declared in <c>configurationSchema.json</c>.
 /// </remarks>
 public interface ILoggingConfigurationProvider
-    : IDomainConfigurationProvider<ILoggingImplementationConfiguration>
+    : IDomainConfigurationProvider<ILoggingConfiguration, ILoggingImplementationConfiguration>
 {
 }

@@ -8,7 +8,7 @@ namespace Fdw.Services.Credentials.Abstractions;
 /// <summary>
 /// Provider for configured credential service instances.
 /// </summary>
-public interface ICredentialServiceProvider : IPlatformServiceProvider<ICredentialService, ICredentialServiceImplementationConfiguration>
+public interface ICredentialServiceProvider : IPlatformServiceProvider<ICredentialService, ICredentialServiceConfiguration, ICredentialServiceImplementationConfiguration>
 {
     /// <summary>
     /// Gets a credential service matching the supplied typed request (Id and/or Name).

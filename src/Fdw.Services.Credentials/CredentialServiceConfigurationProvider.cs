@@ -23,6 +23,7 @@ namespace Fdw.Services.Credentials;
 public class CredentialServiceConfigurationProvider
     : ServiceConfigurationProviderBase<
           CredentialServiceConfiguration,
+          ICredentialServiceConfiguration,
           ICredentialServiceImplementationConfiguration,
           CredentialServiceConfigurationCommand>,
       ICredentialServiceConfigurationProvider

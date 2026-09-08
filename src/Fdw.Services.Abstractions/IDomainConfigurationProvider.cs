@@ -9,7 +9,8 @@ namespace Fdw.Services.Abstractions;
 /// <summary>
 /// Resolves a domain's configured members and routes each to the implementation provider that owns it.
 /// </summary>
-/// <typeparam name="TConfiguration">The domain's implementation configuration contract.</typeparam>
+/// <typeparam name="TConfiguration">The domain's own configuration record.</typeparam>
+/// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <remarks>
 /// It queries its <c>IConfigurationGateway</c> for the domain's configurations, finds the member
 /// by name or id, reads the <c>ServiceOptionType</c> that member names, and passes the member's
@@ -28,19 +29,20 @@ namespace Fdw.Services.Abstractions;
 /// row's <c>RowId</c> and cannot span connections.
 /// </para>
 /// </remarks>
-public interface IDomainConfigurationProvider<TConfiguration>
-    where TConfiguration : IImplementationConfiguration
+public interface IDomainConfigurationProvider<TConfiguration, TImplementationConfiguration>
+    where TConfiguration : IDomainConfiguration
+    where TImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets a configured member's implementation configuration by name.</summary>
+    /// <summary>Gets a configured member's domain record, with its implementation attached.</summary>
     /// <param name="name">The member's name.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The implementation configuration, or a structured failure.</returns>
+    /// <returns>The domain record, or a structured failure.</returns>
     Task<IGenericResult<TConfiguration>> Get(string name, CancellationToken cancellationToken = default);
 
-    /// <summary>Gets a configured member's implementation configuration by durable id.</summary>
+    /// <summary>Gets a configured member's domain record by durable id, with its implementation attached.</summary>
     /// <param name="id">The member's durable id.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The implementation configuration, or a structured failure.</returns>
+    /// <returns>The domain record, or a structured failure.</returns>
     Task<IGenericResult<TConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Writes a configured member — its domain row and its implementation row.</summary>
@@ -55,7 +57,7 @@ public interface IDomainConfigurationProvider<TConfiguration>
         string name,
         T implementationConfiguration,
         CancellationToken cancellationToken = default)
-        where T : TConfiguration;
+        where T : TImplementationConfiguration;
 
     /// <summary>Deletes a configured member by durable id.</summary>
     /// <param name="id">The member's durable id.</param>
@@ -69,11 +71,12 @@ public interface IDomainConfigurationProvider<TConfiguration>
     /// <returns>Success, or a structured failure.</returns>
     Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default);
 
+
     /// <summary>Registers the implementation configuration provider for one ServiceOptionType.</summary>
     /// <typeparam name="T">The implementation provider being registered.</typeparam>
     /// <param name="name">The ServiceOptionType this provider owns.</param>
     /// <param name="implementationConfigurationProvider">The provider.</param>
     /// <returns>Success, or a structured failure.</returns>
     IGenericResult Register<T>(string name, T implementationConfigurationProvider)
-        where T : IImplementationConfigurationProvider<TConfiguration>;
+        where T : IImplementationConfigurationProvider<TImplementationConfiguration>;
 }

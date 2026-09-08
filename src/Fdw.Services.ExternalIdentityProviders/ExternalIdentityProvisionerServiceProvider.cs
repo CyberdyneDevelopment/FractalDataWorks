@@ -22,8 +22,9 @@ namespace Fdw.Services.ExternalIdentityProviders;
 public class ExternalIdentityProvisionerServiceProvider
     : PlatformServiceProviderBase<
         IExternalIdentityProvisioner,
+        IExternalIdentityProvisionerConfiguration,
         IExternalIdentityProvisionerImplementationConfiguration,
-        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
+        IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
         IExternalIdentityProvisionerConfigurationProvider>,
       IExternalIdentityProvisionerServiceProvider
 {
@@ -36,13 +37,15 @@ public class ExternalIdentityProvisionerServiceProvider
         IServiceProvider services,
         ILogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
+            IExternalIdentityProvisionerConfiguration,
             IExternalIdentityProvisionerImplementationConfiguration,
-            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
+            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
             IExternalIdentityProvisionerConfigurationProvider>> logger)
         : base(services, logger ?? NullLogger<PlatformServiceProviderBase<
             IExternalIdentityProvisioner,
+            IExternalIdentityProvisionerConfiguration,
             IExternalIdentityProvisionerImplementationConfiguration,
-            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
+            IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerConfiguration>,
             IExternalIdentityProvisionerConfigurationProvider>>.Instance)
     {
     }

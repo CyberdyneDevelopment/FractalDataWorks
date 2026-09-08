@@ -33,6 +33,7 @@ namespace Fdw.Services.SecretManagers;
 public class SecretManagerConfigurationProvider
     : ServiceConfigurationProviderBase<
           SecretManagerConfiguration,
+          ISecretManagerConfiguration,
           ISecretManagerImplementationConfiguration,
           SecretManagerConfigurationCommand>,
       ISecretManagerConfigurationProvider

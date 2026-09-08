@@ -54,4 +54,12 @@ public sealed partial class MessagingConfiguration : IMessagingConfiguration
 
     /// <inheritdoc/>
     public IMessagingImplementationConfiguration? Configuration { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The non-generic view of <see cref="Configuration"/>, for the platform service provider —
+    /// it must read the implementation without naming this domain's implementation contract.
+    /// </remarks>
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+
 }

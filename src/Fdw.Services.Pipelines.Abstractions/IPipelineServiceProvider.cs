@@ -14,6 +14,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// domain can look wired while having no way to accept a configuration provider.
 /// </remarks>
 public interface IPipelineServiceProvider
-    : IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>
+    : IPlatformServiceProvider<IGenericService, IPipelineConfiguration, IPipelineImplementationConfiguration>
 {
 }

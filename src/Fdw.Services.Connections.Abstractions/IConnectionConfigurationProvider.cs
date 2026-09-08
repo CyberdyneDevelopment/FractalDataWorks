@@ -6,6 +6,6 @@ namespace Fdw.Services.Connections.Abstractions;
 /// Resolves configured connections and routes each to the implementation provider that owns it.
 /// </summary>
 public interface IConnectionConfigurationProvider
-    : IDomainConfigurationProvider<IConnectionImplementationConfiguration>
+    : IDomainConfigurationProvider<IConnectionConfiguration, IConnectionImplementationConfiguration>
 {
 }

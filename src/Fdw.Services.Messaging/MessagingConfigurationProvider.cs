@@ -23,6 +23,7 @@ namespace Fdw.Services.Messaging;
 public sealed class MessagingConfigurationProvider
     : ServiceConfigurationProviderBase<
           MessagingConfiguration,
+          IMessagingConfiguration,
           IMessagingImplementationConfiguration,
           MessagingConfigurationCommand>,
       IMessagingConfigurationProvider
