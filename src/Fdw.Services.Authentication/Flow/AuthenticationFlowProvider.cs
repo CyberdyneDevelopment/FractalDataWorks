@@ -94,6 +94,28 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
             FlowProviderLog.FlowKnownInvalid(_logger, flowName, cached.InvalidReason ?? "unknown reason"));
     }
 
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<AuthenticationFlow>>> Get(
+        CancellationToken cancellationToken = default)
+    {
+        // Load on an empty cache rather than unconditionally: a caller asking what is on offer
+        // before anything has asked for a flow by name would otherwise get an empty list back and
+        // read it as "this host federates with nobody", which is the same false answer a Login
+        // screen has already shipped once.
+        if (_cache.IsEmpty)
+        {
+            var loaded = await LoadAndValidate(cancellationToken).ConfigureAwait(false);
+            if (loaded.IsFailure)
+                return loaded.ToNewResult<IReadOnlyList<AuthenticationFlow>>();
+        }
+
+        return GenericResult<IReadOnlyList<AuthenticationFlow>>.Success(
+            [.. _cache.Values
+                .Where(v => v.Flow is not null)
+                .Select(v => v.Flow!)
+                .OrderBy(f => f.Name, StringComparer.Ordinal)]);
+    }
+
     // Only the flows that are actually usable — naming a broken one back to the caller as a
     // "configured" alternative would just move the same failure to whatever they tried next.
     private IEnumerable<string> ValidNames()

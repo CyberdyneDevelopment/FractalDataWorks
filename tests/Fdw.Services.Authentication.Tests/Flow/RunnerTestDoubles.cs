@@ -98,6 +98,9 @@ internal sealed class StaticFlowProvider : IAuthenticationFlowProvider
             ? GenericResult<AuthenticationFlow>.Success(_flow)
             : GenericResult<AuthenticationFlow>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound")));
 
+    public Task<IGenericResult<IReadOnlyList<AuthenticationFlow>>> Get(CancellationToken cancellationToken = default)
+        => Task.FromResult(GenericResult<IReadOnlyList<AuthenticationFlow>>.Success([_flow]));
+
     public Task<IGenericResult> LoadAndValidate(CancellationToken cancellationToken = default)
         => Task.FromResult<IGenericResult>(GenericResult.Success());
 }

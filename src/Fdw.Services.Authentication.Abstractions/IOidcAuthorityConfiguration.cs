@@ -14,6 +14,14 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// </remarks>
 public interface IOidcAuthorityConfiguration
 {
+    /// <summary>Gets the name this deployment declared the authority under.</summary>
+    /// <remarks>
+    /// What a person reads when choosing where to sign in - the issuer is a URL and the client id
+    /// is an opaque registration, so this is the only value here anybody recognises. It names the
+    /// provider, never the flow: what a caller selects is the flow, and the two are separate rows.
+    /// </remarks>
+    string Name { get; }
+
     /// <summary>Gets the provider's issuer, as it appears in the token's <c>iss</c> claim.</summary>
     string Issuer { get; }
 

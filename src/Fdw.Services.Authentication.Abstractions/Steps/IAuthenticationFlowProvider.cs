@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -23,6 +24,17 @@ public interface IAuthenticationFlowProvider
     /// </remarks>
     Task<IGenericResult<AuthenticationFlow>> Get(
         string flowName, CancellationToken cancellationToken = default);
+
+    /// <summary>Returns every flow that loaded and validated.</summary>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// The flows a caller could actually select, which is why a flow that failed validation is
+    /// absent rather than present-and-flagged: offering one back would move the same failure to
+    /// whatever the caller tried next. Asking for that flow by name still says why it is broken -
+    /// this answers what is on offer, not what exists.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyList<AuthenticationFlow>>> Get(
+        CancellationToken cancellationToken = default);
 
     /// <summary>Loads every configured flow and validates each one.</summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

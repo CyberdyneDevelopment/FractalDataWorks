@@ -11,6 +11,9 @@ namespace Fdw.Services.Authentication.Steps;
 [ExcludeFromCodeCoverage]
 public sealed record OidcRedirectStepConfiguration : IOidcAuthorityConfiguration
 {
+    /// <summary>Gets the name this deployment declared the authority under.</summary>
+    public required string Name { get; init; }
+
     /// <summary>Gets the provider's issuer, as it appears in the token's <c>iss</c> claim.</summary>
     public required string Issuer { get; init; }
 
