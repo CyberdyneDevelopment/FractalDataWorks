@@ -8,6 +8,8 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Universes.Abstractions;
 using Fdw.Services.Universes.Commands;
 using Fdw.Services.Universes.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -46,6 +48,14 @@ public class UniverseConfigurationProvider
 
         services.TryAddSingleton<IUniverseConfigurationProvider>(
             sp => sp.GetRequiredService<UniverseConfigurationProvider>());
+
+        // Scoped, unlike the providers above: it reads the calling user off the ambient
+        // authentication context, so it answers per request rather than once per process.
+        services.TryAddScoped<IUniverseAccessPolicy>(sp =>
+            new UniverseAccessPolicy(
+                sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                sp.GetRequiredService<RoleConfigurationProvider>(),
+                sp.GetService<ILogger<UniverseAccessPolicy>>()));
     }
 
     /// <summary>
@@ -112,6 +122,20 @@ public class UniverseConfigurationProvider
                 UniversesResultCodes.ByName("UniverseLifecycleValueInvalid"), _logger,
                 ResultDetails.Create("name", universeId.ToString(), "field", "MemberRole",
                                      "value", member.MemberRole ?? string.Empty));
+        }
+
+        // State was the one column of the three with a CHECK constraint in the database and no
+        // check here, so a typo was refused as a constraint violation rather than by name -- and
+        // an unknown state now decides authorization (UniverseAccessPolicy reads GrantsMembership
+        // off the option), which makes accepting one a way to store a membership nobody can
+        // interpret.
+        if (string.IsNullOrWhiteSpace(member.State)
+            || ReferenceEquals(UniverseMemberStates.ByName(member.State), UniverseMemberStates.NotFound))
+        {
+            return GenericResult<UniverseMemberConfiguration>.Failure(
+                UniversesResultCodes.ByName("UniverseLifecycleValueInvalid"), _logger,
+                ResultDetails.Create("name", universeId.ToString(), "field", "State",
+                                     "value", member.State ?? string.Empty));
         }
 
         member.UniverseId = universeId;

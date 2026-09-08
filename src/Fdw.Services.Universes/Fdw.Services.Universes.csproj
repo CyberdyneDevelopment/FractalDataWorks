@@ -25,6 +25,8 @@
     <ProjectReference Include="..\Fdw.Services\Fdw.Services.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authorization\Fdw.Services.Authorization.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

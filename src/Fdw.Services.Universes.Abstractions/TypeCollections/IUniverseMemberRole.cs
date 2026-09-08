@@ -5,4 +5,6 @@ namespace Fdw.Services.Universes.Abstractions;
 /// <summary>A role a person can hold in a universe.</summary>
 public interface IUniverseMemberRole : ITypeOption<int, UniverseMemberRoleBase>
 {
+    /// <summary>Gets whether this role may change the universe it is held in.</summary>
+    bool MayWrite { get; }
 }

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.Collections.Attributes;
 
 namespace Fdw.Services.Universes.Abstractions;
@@ -18,4 +19,11 @@ public sealed class RoleUniverseSubjectTypeOption : UniverseSubjectTypeBase
     public RoleUniverseSubjectTypeOption() : base("Role")
     {
     }
+
+    /// <inheritdoc />
+    public override bool Holds(
+        System.Guid subjectId,
+        System.Guid callerUserId,
+        System.Collections.Generic.IReadOnlyCollection<System.Guid> callerRoleIds)
+        => callerRoleIds.Contains(subjectId);
 }
