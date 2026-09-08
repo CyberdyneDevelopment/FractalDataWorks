@@ -273,6 +273,9 @@
     <Project Path="src/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
     <Project Path="src/Fdw.Services.DataVault.Abstractions/Fdw.Services.DataVault.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.DataVault/Fdw.Services.DataVault.csproj" />
+    <Project Path="src/Fdw.Services.Dataverses.Abstractions/Fdw.Services.Dataverses.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Dataverses.Endpoints/Fdw.Services.Dataverses.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Dataverses/Fdw.Services.Dataverses.csproj" />
     <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.JobTriggerSources/Fdw.Services.Etl.JobTriggerSources.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects.Registration/Fdw.Services.Etl.Projects.Registration.csproj" />
@@ -337,9 +340,6 @@
     <Project Path="src/Fdw.Services.Terminal.UI.Pages/Fdw.Services.Terminal.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
-    <Project Path="src/Fdw.Services.Universes.Abstractions/Fdw.Services.Universes.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Universes.Endpoints/Fdw.Services.Universes.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Universes/Fdw.Services.Universes.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Users.Endpoints/Fdw.Services.Users.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Users/Fdw.Services.Users.csproj" />

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Fdw.Services.Dataverses.Abstractions</RootNamespace>
+    <AssemblyName>Fdw.Services.Dataverses.Abstractions</AssemblyName>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+  </PropertyGroup>
+
+  <!--
+    Why this package is dependency-light: every domain that owns a resource kind attaches its own
+    [TypeOption] to DataverseResourceKinds, so those packages reference this one. Anything heavier
+    here would push a transitive dependency onto Fdw.Data.DataSets and its siblings.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
