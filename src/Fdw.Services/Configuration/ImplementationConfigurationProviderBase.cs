@@ -473,13 +473,27 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         foreach (var item in rowsResult.Value)
             typedList.Add(item);
 
-        descriptor.SetCollection(ownerRow, typedList);
-
+        // Compose the grandchildren BEFORE handing the list to the owner. The owner row is very
+        // often a shared instance -- the gateway caches query results in an IMemoryCache, which
+        // returns the same object to every caller -- so anything reachable from it is reachable
+        // by another request mid-composition. Publishing first and filling after made a freshly
+        // read row visible in its empty state: for the AuthDb store that meant a path with no
+        // containers, so the RevokedAccessToken lookup failed, the revocation check failed, and
+        // LocalKeyAuthenticationHandler refused a valid token. Five concurrent authenticated
+        // requests reliably lost four of them (API-164); serial ones always passed, because
+        // nobody else was looking during the window.
+        //
+        // Depth-first then one assignment closes it: the collection goes from complete to
+        // complete, never through empty. It does not make the cached aggregate safe to MUTATE
+        // concurrently -- two composers still race to assign -- but both now assign a whole
+        // answer, and either is correct.
         foreach (var item in typedList)
         {
             if (item is not null)
                 await LoadChildrenInto(item, childMapper, childContainerName, asOf, ct).ConfigureAwait(false);
         }
+
+        descriptor.SetCollection(ownerRow, typedList);
     }
 
     private IDataCommand BuildChildJoinQuery(
