@@ -9,6 +9,7 @@ using Fdw.Services.Data.Limits;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -77,9 +78,19 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             // as `built`.
             domainProvider.Register(Name, built.GetRequiredService<MainDataGatewayConfigurationProvider>());
 
+            // The elevation is opened and closed around this read. Note this one is in the REGISTER
+            // phase, before Build() -- a host that brackets only its post-Build Initialize calls never
+            // covered this read at all. The accessor resolved from `built` is a different instance
+            // than the running host's, which does not matter: AuthenticationContextAccessor's backing
+            // AsyncLocal is static, so every instance reads and writes the one ambient slot.
+            IGenericResult<IDataGatewayImplementationConfiguration> result;
+            using (new SystemAuthenticationContextScope(
+                built.GetRequiredService<IAuthenticationContextAccessor>()))
+            {
 #pragma warning disable VSTHRD002
-            var result = domainProvider.Get("DataGateway").GetAwaiter().GetResult();
+                result = domainProvider.Get("DataGateway").GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+            }
 
             if (result.IsFailure || result.Value is null)
             {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Fdw.Collections;
@@ -6,6 +7,7 @@ using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.ServiceTypes;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -126,13 +128,24 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 return GenericResult<IHost>.Success(host);
 
             var services = host.Services;
-            // VSTHRD002: Initialization is a synchronous phase by contract, and this runs once at
-            // startup on the host's own thread before any request exists to deadlock against.
+
+            // The elevation is opened and closed around this read, by the domain that needs it. The
+            // read has no ClaimsPrincipal and no TenantId, so under the RLS predicates it resolves to
+            // the deny-everywhere principal and returns nothing -- the host then cannot see its own
+            // declared authentication services. Scoping it here rather than in the host keeps the
+            // window to the one statement that needs it, and means no host has to know to do it.
+            IGenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>> declared;
+            using (new SystemAuthenticationContextScope(
+                services.GetRequiredService<IAuthenticationContextAccessor>()))
+            {
+                // VSTHRD002: Initialization is a synchronous phase by contract, and this runs once at
+                // startup on the host's own thread before any request exists to deadlock against.
 #pragma warning disable VSTHRD002
-            var declared = services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                .GetHeaders(CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                declared = services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                    .GetHeaders(CancellationToken.None)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+            }
 
             if (!declared.IsSuccess || declared.Value is null)
                 return declared.ToNewResult<IHost>();

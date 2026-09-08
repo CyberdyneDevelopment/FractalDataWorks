@@ -17,6 +17,7 @@ using Fdw.Services.Data.Results;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -149,9 +150,17 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigurationGatewayDataStoreProvider>>();
 
+        // The elevation is opened and closed around this read, by the domain that needs it: a
+        // boot-time load has no ClaimsPrincipal and no TenantId, so under the RLS predicates it
+        // resolves to the deny-everywhere principal and reads nothing. Scoping it here rather than
+        // in the host keeps the window to the load itself, and no host has to know to do it.
+        using (new SystemAuthenticationContextScope(
+            scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>()))
+        {
 #pragma warning disable VSTHRD002
-        LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
+            LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+        }
     
         return GenericResult<IHost>.Success(host);
     }

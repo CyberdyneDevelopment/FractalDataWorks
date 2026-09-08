@@ -9,6 +9,7 @@ using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -63,9 +64,18 @@ public sealed class DataSetCategoryProvider
     public static void Initialize(IServiceProvider services, ILoggerFactory? loggerFactory = null)
     {
         var provider = services.GetRequiredService<DataSetCategoryProvider>();
+
+        // The elevation is opened and closed around this read, by the domain that needs it: a
+        // boot-time load has no ClaimsPrincipal and no TenantId, so under the RLS predicates it
+        // resolves to the deny-everywhere principal and reads nothing. Scoping it here rather than
+        // in the host keeps the window to the load itself, and no host has to know to do it.
+        using (new SystemAuthenticationContextScope(
+            services.GetRequiredService<IAuthenticationContextAccessor>()))
+        {
 #pragma warning disable VSTHRD002 // three-phase Initialize is sync-by-contract; the gatewayProvider query is a one-shot startup load
-        provider.LoadAndRegister(CancellationToken.None).GetAwaiter().GetResult();
+            provider.LoadAndRegister(CancellationToken.None).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+        }
     }
 
     // ============================================================
