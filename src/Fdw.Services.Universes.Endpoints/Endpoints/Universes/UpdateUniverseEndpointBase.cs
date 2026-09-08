@@ -16,11 +16,16 @@ namespace Fdw.Services.Universes.Endpoints;
 public abstract class UpdateUniverseEndpointBase : CrudUpdateEndpointBase<UpdateUniverseRequest, UniverseDetailResponse>
 {
     private readonly IUniverseConfigurationProvider _provider;
+    private readonly IUniverseAccessPolicy _access;
 
     /// <inheritdoc />
-    protected UpdateUniverseEndpointBase(ILogger<UpdateUniverseEndpointBase> logger, IUniverseConfigurationProvider provider) : base(logger)
+    protected UpdateUniverseEndpointBase(
+        ILogger<UpdateUniverseEndpointBase> logger,
+        IUniverseConfigurationProvider provider,
+        IUniverseAccessPolicy access) : base(logger)
     {
         _provider = provider;
+        _access = access;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -77,6 +82,13 @@ public abstract class UpdateUniverseEndpointBase : CrudUpdateEndpointBase<Update
         }
 
         var config = current.Value;
+
+        // After the load, because the decision is about THIS universe: who owns it and who is in
+        // it are on the row. universes:write got the caller this far and says nothing about which
+        // universe they may change.
+        var permitted = await _access.MayWrite(config, ct).ConfigureAwait(false);
+        if (permitted.IsFailure) return permitted.ToNewResult<UniverseDetailResponse>();
+
         config.DisplayName = request.DisplayName ?? config.DisplayName;
         config.Description = request.Description ?? config.Description;
         config.Purpose = request.Purpose ?? config.Purpose;

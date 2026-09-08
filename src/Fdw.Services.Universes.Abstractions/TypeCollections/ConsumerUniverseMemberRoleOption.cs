@@ -9,7 +9,7 @@ namespace Fdw.Services.Universes.Abstractions;
 public sealed class ConsumerUniverseMemberRoleOption : UniverseMemberRoleBase
 {
     /// <summary>Initializes a new instance of the <see cref="ConsumerUniverseMemberRoleOption"/> class.</summary>
-    public ConsumerUniverseMemberRoleOption() : base("Consumer")
+    public ConsumerUniverseMemberRoleOption() : base("Consumer", mayWrite: false)
     {
     }
 }

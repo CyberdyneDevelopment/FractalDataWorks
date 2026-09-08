@@ -12,4 +12,11 @@ public sealed class UserUniverseSubjectTypeOption : UniverseSubjectTypeBase
     public UserUniverseSubjectTypeOption() : base("User")
     {
     }
+
+    /// <inheritdoc />
+    public override bool Holds(
+        System.Guid subjectId,
+        System.Guid callerUserId,
+        System.Collections.Generic.IReadOnlyCollection<System.Guid> callerRoleIds)
+        => subjectId == callerUserId;
 }

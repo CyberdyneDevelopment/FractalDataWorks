@@ -11,7 +11,18 @@ public abstract class UniverseMemberRoleBase : TypeOptionBase<UniverseMemberRole
 {
     /// <summary>Initializes a new instance of the <see cref="UniverseMemberRoleBase"/> class.</summary>
     /// <param name="name">The role name, which is the value persisted.</param>
-    protected UniverseMemberRoleBase(string name) : base(name)
+    /// <param name="mayWrite">Whether this role may change the universe.</param>
+    protected UniverseMemberRoleBase(string name, bool mayWrite) : base(name)
     {
+        MayWrite = mayWrite;
     }
+
+    /// <summary>Gets whether this role may change the universe it is held in.</summary>
+    /// <remarks>
+    /// On the option, not decided by a caller comparing names, so a role added later arrives with
+    /// its own answer instead of falling through somebody's else-branch. This is the only question
+    /// the vocabulary answers so far: Owner's ability to change WHO ELSE is in the project is a
+    /// separate decision, and declaring a property nothing reads is the failure this fixes.
+    /// </remarks>
+    public bool MayWrite { get; }
 }

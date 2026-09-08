@@ -9,7 +9,7 @@ namespace Fdw.Services.Universes.Abstractions;
 public sealed class OwnerUniverseMemberRoleOption : UniverseMemberRoleBase
 {
     /// <summary>Initializes a new instance of the <see cref="OwnerUniverseMemberRoleOption"/> class.</summary>
-    public OwnerUniverseMemberRoleOption() : base("Owner")
+    public OwnerUniverseMemberRoleOption() : base("Owner", mayWrite: true)
     {
     }
 }

@@ -77,6 +77,23 @@ public partial class RoleConfiguration : IGenericConfiguration
     public int SortOrder { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this is the current active version of the row.
+    /// </summary>
+    public bool IsCurrent { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets whether the row has been soft-deleted.
+    /// </summary>
+    /// <remarks>
+    /// <c>authz.Role</c> has carried both of these since the table shipped and
+    /// <c>configurationSchema.json</c> declares both, but this type had neither -- so a role
+    /// deleted through the versioned write path (current row stamped IsCurrent=0, a copy inserted
+    /// with IsDeleted=1) went on appearing in every listing and went on naming itself for every
+    /// user still assigned to it. No read could filter what the type could not carry.
+    /// </remarks>
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
     /// Gets or sets when the role was created (audit field — populated from DB).
     /// </summary>
     public DateTimeOffset CreateDate { get; set; }
