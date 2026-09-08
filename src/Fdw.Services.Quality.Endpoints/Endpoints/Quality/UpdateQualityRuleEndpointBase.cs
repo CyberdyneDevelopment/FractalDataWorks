@@ -53,7 +53,7 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         }
 
         var config = existing.Value;
-        if (!string.IsNullOrWhiteSpace(req.Name)) config.Name = req.Name;
+        // No Name: the column does not exist, so assigning it changed nothing on the way out.
         if (req.Description is not null) config.Description = req.Description;
         if (req.Expression is not null) config.Expression = req.Expression;
         config.IsEnabled = req.IsEnabled;

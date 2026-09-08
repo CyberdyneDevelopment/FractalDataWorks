@@ -66,7 +66,7 @@ public abstract class CreateQualityRuleEndpointBase : Endpoint<CreateQualityRule
         var config = QualityConfigurationProvider.MapQualityRuleFromRequest(
             req.DataSetName, req.FieldName, req.RuleType, req.Severity,
             req.IsEnabled, req.Description, req.MinValue, req.MaxValue,
-            req.Pattern, req.Expression, req.Name);
+            req.Pattern, req.Expression);
 
         var result = await _provider.SaveQualityRule(config, ct).ConfigureAwait(false);
 

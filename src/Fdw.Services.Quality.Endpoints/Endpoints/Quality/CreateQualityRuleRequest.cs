@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Fdw.Services.Quality.Endpoints;
@@ -6,8 +6,7 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Request containing the properties needed to create a new quality rule.</summary>
 public class CreateQualityRuleRequest
 {
-    /// <summary>Gets or sets the rule name. When omitted, the server synthesizes "{dataSet}:{ruleType}".</summary>
-    public string? Name { get; set; }
+    // No Name -- see QualityRuleDto. Accepting one would store nothing and say so to nobody.
 
     /// <summary>Gets or sets the name of the DataSet this rule applies to.</summary>
     public string DataSetName { get; set; } = string.Empty;

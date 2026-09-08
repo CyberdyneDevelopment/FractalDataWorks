@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -8,8 +8,12 @@ public class QualityRuleDto
     /// <summary>Gets or sets the unique identifier of the quality rule.</summary>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the name of the quality rule.</summary>
-    public string Name { get; set; } = string.Empty;
+    // No Name. quality.QualityRule has no Name column, so a name was accepted, discarded and
+    // read back empty. It is not a missing feature: a rule's identity is its type applied to
+    // its field -- "NotNull on team_name" -- which is derived and cannot drift from what the
+    // rule does. A typed-in name can and eventually does: change a rule from InRange to
+    // MatchesPattern and the old name still describes the old test. Description already holds
+    // the part that cannot be derived, which is why the rule exists. See FDW-734.
 
     /// <summary>Gets or sets the name of the DataSet this rule applies to.</summary>
     public string DataSetName { get; set; } = string.Empty;

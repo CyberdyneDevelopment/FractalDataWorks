@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Fdw.Services.Quality.Endpoints;
 
@@ -8,8 +8,7 @@ public class UpdateQualityRuleRequest
     /// <summary>Gets or sets the unique identifier of the quality rule (bound from the route).</summary>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the rule name.</summary>
-    public string? Name { get; set; }
+    // No Name -- see QualityRuleDto.
 
     /// <summary>Gets or sets the rule description.</summary>
     public string? Description { get; set; }
