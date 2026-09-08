@@ -50,9 +50,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var testService = new TestService(NullLogger<TestService>.Instance, config);
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
 
         var mockFactory = new Mock<IServiceFactory<IGenericService>>();
         mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
@@ -78,9 +78,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(mockService.Object));
 
@@ -100,9 +100,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         IPlatformServiceProvider explicitProvider = _provider;
 
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(default(IDomainConfiguration)!));
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(default(IDomainConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
 
         var result = await explicitProvider.Get<TestService>("NonExistent", TestContext.Current.CancellationToken);
@@ -122,9 +122,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var testService = new TestService(NullLogger<TestService>.Instance, config);
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
 
         var mockFactory = new Mock<IServiceFactory<IGenericService>>();
         mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
@@ -151,9 +151,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(mockService.Object));
 
@@ -173,7 +173,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         IPlatformServiceProvider explicitProvider = _provider;
 
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(default(IDomainConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
 
         var result = await explicitProvider.Get<TestService>(Guid.NewGuid(), TestContext.Current.CancellationToken);
@@ -192,9 +192,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(id.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Success(mockService.Object));
 
@@ -213,9 +213,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
     {
         var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed due to X")));
 
@@ -236,9 +236,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
         var id = Guid.NewGuid();
         var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed due to X")));
 
@@ -256,9 +256,9 @@ public class DefaultServiceProviderExplicitInterfaceTests
     public async Task GetTypedByNamePassesThroughFailureFromGet()
     {
         _mockConfigProvider.Setup(cp => cp.Get("Missing", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(default(IDomainConfiguration)!));
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(default(IDomainConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
 
         var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("Missing", TestContext.Current.CancellationToken);
@@ -272,7 +272,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     public async Task GetTypedByIdPassesThroughFailureFromGet()
     {
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
+            .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(default(IDomainConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
 
         var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(Guid.NewGuid(), TestContext.Current.CancellationToken);

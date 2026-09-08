@@ -12,6 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Options;
 
+using Fdw.Configuration;
+using Fdw.Services.Connections;
+
 namespace Fdw.Web.Clients.Abstractions.Tests;
 
 /// <summary>
@@ -33,15 +36,22 @@ public sealed class ApiClientBaseUrlResolutionTests
     /// <summary>Answers for one connection name and nothing else.</summary>
     private sealed class StubConnections(string? connectionName, string? baseUrl) : IConnectionConfigurationProvider
     {
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+        // Answers with the domain record carrying the implementation, which is what the provider
+        // returns now -- the caller reads BaseUrl off the implementation.
+        public Task<IGenericResult<IDomainConfiguration>> Get(
             string name, CancellationToken cancellationToken = default)
             => Task.FromResult(
                 string.Equals(name, connectionName, StringComparison.Ordinal) && baseUrl is not null
-                    ? GenericResult<IConnectionImplementationConfiguration>.Success(
-                        new HttpConnectionConfiguration { BaseUrl = baseUrl })
-                    : GenericResult<IConnectionImplementationConfiguration>.Success(default!));
+                    ? GenericResult<IDomainConfiguration>.Success(
+                        new ConnectionConfiguration
+                        {
+                            Name = name,
+                            ServiceOptionType = "Http",
+                            Configuration = new HttpConnectionConfiguration { BaseUrl = baseUrl },
+                        })
+                    : GenericResult<IDomainConfiguration>.Success(default!));
 
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+        public Task<IGenericResult<IDomainConfiguration>> Get(
             Guid id, CancellationToken cancellationToken = default)
             => Get(string.Empty, cancellationToken);
 

@@ -163,22 +163,24 @@ public class ConnectionProviderTests
 
 
         // ── IDomainConfigurationProvider ────────────────────────────────────
-        async Task<IGenericResult<IConnectionImplementationConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
+        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
             string name, CancellationToken ct)
         {
+            // The domain record goes back whole; the provider under test reads the discriminator off it.
             var result = await Get(name, ct).ConfigureAwait(false);
-            return result.IsSuccess && result.Value?.Configuration is { } implementation
-                ? GenericResult<IConnectionImplementationConfiguration>.Success(implementation)
-                : GenericResult<IConnectionImplementationConfiguration>.Failure();
+            return result.IsSuccess && result.Value is { } record
+                ? GenericResult<IDomainConfiguration>.Success(record)
+                : GenericResult<IDomainConfiguration>.Failure();
         }
 
-        async Task<IGenericResult<IConnectionImplementationConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
+        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Get(
             Guid id, CancellationToken ct)
         {
+            // The domain record goes back whole; the provider under test reads the discriminator off it.
             var result = await Get(id, ct).ConfigureAwait(false);
-            return result.IsSuccess && result.Value?.Configuration is { } implementation
-                ? GenericResult<IConnectionImplementationConfiguration>.Success(implementation)
-                : GenericResult<IConnectionImplementationConfiguration>.Failure();
+            return result.IsSuccess && result.Value is { } record
+                ? GenericResult<IDomainConfiguration>.Success(record)
+                : GenericResult<IDomainConfiguration>.Failure();
         }
 
         Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Save<T>(

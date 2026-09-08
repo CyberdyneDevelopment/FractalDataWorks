@@ -20,7 +20,7 @@ namespace Fdw.Configuration;
 /// connection domain's own concern and belong on its implementation contract, not on every domain.
 /// </para>
 /// </remarks>
-public interface IPlatformServiceConfiguration<TImplementationConfiguration> : IGenericConfiguration
+public interface IPlatformServiceConfiguration<TImplementationConfiguration> : IDomainConfiguration
     where TImplementationConfiguration : IGenericConfiguration
 {
     /// <summary>Gets or sets a description of this configured member.</summary>

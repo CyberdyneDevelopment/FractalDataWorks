@@ -103,4 +103,13 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     /// </summary>
     [NotMapped]
     public IDataVaultImplementationConfiguration? Configuration { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
+    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
+    /// a default interface implementation, so each domain record states it.
+    /// </remarks>
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+
 }

@@ -41,7 +41,7 @@ public class TestService : IGenericService
 /// <summary>
 /// Test configuration for unit testing.
 /// </summary>
-public sealed class TestConfiguration : IImplementationConfiguration
+public sealed class TestConfiguration : IImplementationConfiguration, IDomainConfiguration
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "test-config";
@@ -49,6 +49,10 @@ public sealed class TestConfiguration : IImplementationConfiguration
     public string ServiceType => "Test";
     public string? ServiceOptionType { get; set; } = "Default";
     public string? Description { get; init; }
+
+    // No domain/implementation split in this double: it is its own implementation, so the factory
+    // receives exactly the object it received before.
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => this;
 }
 
 /// <summary>

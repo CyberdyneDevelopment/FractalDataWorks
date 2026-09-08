@@ -75,4 +75,13 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
     /// <remarks>Held, never inherited — see <see cref="IAuthenticationServiceImplementationConfiguration"/>.</remarks>
     [NotMapped]
     public IAuthenticationServiceImplementationConfiguration? Configuration { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
+    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
+    /// a default interface implementation, so each domain record states it.
+    /// </remarks>
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+
 }

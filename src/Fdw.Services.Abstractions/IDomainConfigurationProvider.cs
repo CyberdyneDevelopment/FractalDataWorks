@@ -31,17 +31,17 @@ namespace Fdw.Services.Abstractions;
 public interface IDomainConfigurationProvider<TConfiguration>
     where TConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets a configured member's implementation configuration by name.</summary>
+    /// <summary>Gets a configured member's domain record, with its implementation composed onto it.</summary>
     /// <param name="name">The member's name.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The implementation configuration, or a structured failure.</returns>
-    Task<IGenericResult<TConfiguration>> Get(string name, CancellationToken cancellationToken = default);
+    /// <returns>The domain record, or a structured failure.</returns>
+    Task<IGenericResult<IDomainConfiguration>> Get(string name, CancellationToken cancellationToken = default);
 
-    /// <summary>Gets a configured member's implementation configuration by durable id.</summary>
+    /// <summary>Gets a configured member's domain record by durable id, with its implementation composed onto it.</summary>
     /// <param name="id">The member's durable id.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The implementation configuration, or a structured failure.</returns>
-    Task<IGenericResult<TConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
+    /// <returns>The domain record, or a structured failure.</returns>
+    Task<IGenericResult<IDomainConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Writes a configured member — its domain row and its implementation row.</summary>
     /// <typeparam name="T">The implementation configuration being written.</typeparam>

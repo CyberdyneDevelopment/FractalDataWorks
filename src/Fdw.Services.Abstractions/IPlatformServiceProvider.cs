@@ -65,7 +65,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// No name/id lookup is performed — the configuration's
     /// <see cref="IGenericConfiguration.ServiceOptionType"/> selects the factory directly.
     /// </summary>
-    Task<IGenericResult<TService>> Get(TConfiguration configuration, CancellationToken cancellationToken = default);
+    Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a factory for a service option type.

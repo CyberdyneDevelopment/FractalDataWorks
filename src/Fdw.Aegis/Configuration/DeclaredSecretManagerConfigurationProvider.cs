@@ -126,23 +126,27 @@ public sealed class DeclaredSecretManagerConfigurationProvider
     // ── IDomainConfigurationProvider ────────────────────────────────────────
 
     /// <inheritdoc />
-    async Task<IGenericResult<ISecretManagerImplementationConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
+    async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
         string name, CancellationToken cancellationToken)
     {
+        // The record goes back whole. Unwrapping .Configuration here left the caller holding an
+        // object with no ServiceOptionType to select a factory by.
         var result = await Get(name, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess && result.Value?.Configuration is { } implementation
-            ? GenericResult<ISecretManagerImplementationConfiguration>.Success(implementation)
-            : result.ToNewResult<ISecretManagerImplementationConfiguration>();
+        return result.IsSuccess && result.Value is { } record
+            ? GenericResult<IDomainConfiguration>.Success(record)
+            : result.ToNewResult<IDomainConfiguration>();
     }
 
     /// <inheritdoc />
-    async Task<IGenericResult<ISecretManagerImplementationConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
+    async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Get(
         Guid id, CancellationToken cancellationToken)
     {
+        // The record goes back whole. Unwrapping .Configuration here left the caller holding an
+        // object with no ServiceOptionType to select a factory by.
         var result = await Get(id, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess && result.Value?.Configuration is { } implementation
-            ? GenericResult<ISecretManagerImplementationConfiguration>.Success(implementation)
-            : result.ToNewResult<ISecretManagerImplementationConfiguration>();
+        return result.IsSuccess && result.Value is { } record
+            ? GenericResult<IDomainConfiguration>.Success(record)
+            : result.ToNewResult<IDomainConfiguration>();
     }
 
     /// <inheritdoc />

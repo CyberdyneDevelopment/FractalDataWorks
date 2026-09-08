@@ -126,7 +126,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <param name="factory">The factory registered for the configuration's ServiceOptionType.</param>
     /// <param name="configuration">The resolved (composed) configuration.</param>
     /// <returns>The created service, or a structured failure.</returns>
-    private static IGenericResult<TService> Create(IServiceFactory<TService> factory, TConfiguration configuration)
+    private static IGenericResult<TService> Create(IServiceFactory<TService> factory, IGenericConfiguration configuration)
         => factory.Create(configuration);
 
     // ── Resolution ──────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
     private async Task<IGenericResult<TService>> Resolve(
         string identifier,
-        Func<CancellationToken, Task<IGenericResult<TConfiguration>>> get,
+        Func<CancellationToken, Task<IGenericResult<IDomainConfiguration>>> get,
         CancellationToken cancellationToken)
     {
         ServiceLogger.GettingServiceByName(_logger, identifier);
@@ -167,8 +167,12 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     }
 
     private async Task<IGenericResult<TService>> CreateFrom(
-        TConfiguration configuration, string identifier, CancellationToken cancellationToken)
+        IDomainConfiguration configuration, string identifier, CancellationToken cancellationToken)
     {
+        // Read once, off the row that owns the field. The implementation table has no
+        // ServiceOptionType column -- the discriminator is what selected that table -- so reading it
+        // back off the implementation asked an object a question it cannot answer, and every
+        // implementation-shaped container answered the same way: empty.
         var serviceOptionType = configuration.ServiceOptionType;
         if (string.IsNullOrEmpty(serviceOptionType))
         {
@@ -191,9 +195,17 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
         ServiceLogger.FactoryLookupSucceeded(_logger, serviceOptionType);
 
+        // The factory builds from the implementation. The domain row has done its one job by naming
+        // which factory to use.
+        if (configuration.ImplementationConfiguration is not { } implementation)
+            return GenericResult<TService>.Failure(
+                ServicesResultCodes.ByName("ConfigurationNotFound"),
+                ResultDetails.Create("Identifier", identifier,
+                                     "ServiceOptionType", serviceOptionType));
+
         var created = factory is IAsyncServiceFactory<TService> asyncFactory
-            ? await asyncFactory.Create(configuration, cancellationToken).ConfigureAwait(false)
-            : Create(factory, configuration);
+            ? await asyncFactory.Create(implementation, cancellationToken).ConfigureAwait(false)
+            : Create(factory, implementation);
 
         return created ?? GenericResult<TService>.Failure(
             ServicesResultCodes.ByName("InvalidFactoryType"),
@@ -250,7 +262,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                                      "ActualType", configuration?.GetType().Name ?? "(null)")));
 
     /// <inheritdoc />
-    public virtual Task<IGenericResult<TService>> Get(TConfiguration configuration, CancellationToken cancellationToken = default)
+    public virtual Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default)
         => configuration is null
             ? Task.FromResult(GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("ConfigurationRequired"),
