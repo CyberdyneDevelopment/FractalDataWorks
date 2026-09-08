@@ -970,7 +970,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                 // Why this is logged rather than skipped quietly: a type-test `continue` treats
                 // "did not match" as "nothing to do", so the row is dropped and NOTHING reports
                 // it — not the build, not the save result, not an audit trail. That silence is
-                // why the Universe children were discarded unnoticed. A rewrite at least leaves
+                // why the Dataverse children were discarded unnoticed. A rewrite at least leaves
                 // evidence; a silent skip leaves none, so it has to announce itself.
                 if (item is not IGenericConfiguration childCfg)
                 {
@@ -1123,7 +1123,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
                 // Why this is logged rather than skipped quietly: a type-test `continue` treats
                 // "did not match" as "nothing to do", so the row is dropped and NOTHING reports
                 // it — not the build, not the save result, not an audit trail. That silence is
-                // why the Universe children were discarded unnoticed. A rewrite at least leaves
+                // why the Dataverse children were discarded unnoticed. A rewrite at least leaves
                 // evidence; a silent skip leaves none, so it has to announce itself.
                 if (item is not IGenericConfiguration childCfg)
                 {

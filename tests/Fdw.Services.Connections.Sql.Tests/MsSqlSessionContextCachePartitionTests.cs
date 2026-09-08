@@ -65,7 +65,7 @@ public sealed class MsSqlSessionContextCachePartitionTests
     public void DistinguishesCrossTenantFromStrictTenantScope()
     {
         // Mode 2 vs Mode 3: the same user in cross-tenant scope sees every tenant they hold a grant
-        // in, rather than only the active one. Two different visibility universes, one principal.
+        // in, rather than only the active one. Two different visibility dataverses, one principal.
         PartitionFor(Principal(UserA, tenantId: null, isCrossTenant: true))
             .ShouldNotBe(PartitionFor(Principal(UserA, TenantA)));
     }

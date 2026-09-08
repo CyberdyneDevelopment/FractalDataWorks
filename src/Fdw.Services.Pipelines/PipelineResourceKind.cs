@@ -1,19 +1,19 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
-using Fdw.Services.Universes.Abstractions;
+using Fdw.Services.Dataverses.Abstractions;
 
 namespace Fdw.Services.Pipelines;
 
 /// <summary>
-/// A pipeline attached to a universe.
+/// A pipeline attached to a dataverse.
 /// </summary>
 /// <remarks>
-/// Declared here rather than in the universes package because this package owns the pipeline.
-/// A host that has not referenced pipelines cannot attach one to a universe.
+/// Declared here rather than in the dataverses package because this package owns the pipeline.
+/// A host that has not referenced pipelines cannot attach one to a dataverse.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(UniverseResourceKinds), "Pipeline")]
-public sealed class PipelineResourceKind : UniverseResourceKindBase
+[TypeOption(typeof(DataverseResourceKinds), "Pipeline")]
+public sealed class PipelineResourceKind : DataverseResourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="PipelineResourceKind"/> class.</summary>
     /// <remarks>
