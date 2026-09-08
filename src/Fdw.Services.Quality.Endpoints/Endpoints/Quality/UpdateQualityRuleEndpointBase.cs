@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Quality;
@@ -85,7 +85,8 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
             MinValue = config.MinValue,
             MaxValue = config.MaxValue,
             Pattern = config.Pattern,
-            Expression = config.Expression
+            Expression = config.Expression,
+            CreatedAt = config.CreateDate
         };
     }
 }

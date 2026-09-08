@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -39,6 +39,15 @@ public sealed partial class QualityRuleConfiguration : IGenericConfiguration
     /// Gets or sets the name of the DataSet this rule applies to.
     /// </summary>
     public string DataSetName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets when the rule was created.</summary>
+    /// <remarks>
+    /// quality.QualityRule.CreateDate is NOT NULL and the shipped container declares it; this
+    /// type simply did not carry it, so every read returned the default and the create endpoint
+    /// invented DateTimeOffset.UtcNow for its response instead. The stored value was there and
+    /// unreachable, which is why the same row answered two different dates. See FDW-734.
+    /// </remarks>
+    public DateTimeOffset CreateDate { get; set; }
 
     /// <summary>
     /// Gets or sets the field name this rule applies to (null for aggregate rules).
