@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Universes.Results;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,7 @@ public abstract class CreateUniverseNoteEndpointBase : CrudCreateEndpointBase<Cr
     private readonly NoteConfigurationProvider _notes;
     private readonly UserConfigurationProvider _users;
     private readonly IAuthenticationContextAccessor _authContext;
+    private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <inheritdoc />
     protected CreateUniverseNoteEndpointBase(
@@ -40,16 +42,40 @@ public abstract class CreateUniverseNoteEndpointBase : CrudCreateEndpointBase<Cr
         IUniverseConfigurationProvider universes,
         NoteConfigurationProvider notes,
         UserConfigurationProvider users,
-        IAuthenticationContextAccessor authContext) : base(logger)
+        IAuthenticationContextAccessor authContext,
+        IDataSetConfigurationProvider dataSets) : base(logger)
     {
         _universes = universes;
         _notes = notes;
         _users = users;
         _authContext = authContext;
+        _dataSets = dataSets;
     }
 
     /// <summary>Gets the resource name used for policy generation.</summary>
     protected override string ResourceName => "universes";
+
+    /// <summary>Resolves a human label for a subject, for the kinds that cost one lookup.</summary>
+    /// <remarks>Same rule as the list endpoint: present means resolved, absent never claims deletion.</remarks>
+    /// <param name="subjectKind">The subject's kind.</param>
+    /// <param name="subjectId">The subject's identity.</param>
+    /// <param name="ct">Cancellation token.</param>
+    protected async Task<string?> ResolveSubjectLabel(string subjectKind, Guid subjectId, CancellationToken ct)
+    {
+        if (string.Equals(subjectKind, "DataSet", StringComparison.Ordinal))
+        {
+            var dataSet = await _dataSets.Get(subjectId, ct).ConfigureAwait(false);
+            return dataSet.IsSuccess && dataSet.Value is { Name.Length: > 0 } found ? found.Name : null;
+        }
+
+        if (string.Equals(subjectKind, "Universe", StringComparison.Ordinal))
+        {
+            var universe = await _universes.Get(subjectId, ct).ConfigureAwait(false);
+            return universe.IsSuccess && universe.Value is { Name.Length: > 0 } found ? found.Name : null;
+        }
+
+        return null;
+    }
 
     /// <inheritdoc />
     protected override string Route => "/universes/{Name}/notes";
@@ -143,6 +169,12 @@ public abstract class CreateUniverseNoteEndpointBase : CrudCreateEndpointBase<Cr
             AuthorName = author.IsSuccess && author.Value is { Username.Length: > 0 } found ? found.Username : null,
             SubjectKind = config.SubjectType,
             SubjectKey = config.SubjectId,
+            // Resolved here too so the row the client appends matches the one a refresh
+            // shows. Sending it on the list and not the create would make the new note the
+            // only one without a label, which reads as an unresolvable subject rather than
+            // as an asymmetry in the API.
+            SubjectLabel = await ResolveSubjectLabel(config.SubjectType, config.SubjectId, ct)
+                .ConfigureAwait(false),
             PromotedToRequestId = config.PromotedToRequestId,
         });
     }

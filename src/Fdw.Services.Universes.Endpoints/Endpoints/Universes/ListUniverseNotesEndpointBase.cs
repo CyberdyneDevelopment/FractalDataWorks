@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Universes.Results;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -23,17 +24,20 @@ public abstract class ListUniverseNotesEndpointBase : CrudGetEndpointBase<Univer
     private readonly IUniverseConfigurationProvider _universes;
     private readonly NoteConfigurationProvider _notes;
     private readonly UserConfigurationProvider _users;
+    private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <inheritdoc />
     protected ListUniverseNotesEndpointBase(
         ILogger<ListUniverseNotesEndpointBase> logger,
         IUniverseConfigurationProvider universes,
         NoteConfigurationProvider notes,
-        UserConfigurationProvider users) : base(logger)
+        UserConfigurationProvider users,
+        IDataSetConfigurationProvider dataSets) : base(logger)
     {
         _universes = universes;
         _notes = notes;
         _users = users;
+        _dataSets = dataSets;
     }
 
     /// <summary>Gets the resource name used for policy generation.</summary>
@@ -104,6 +108,14 @@ public abstract class ListUniverseNotesEndpointBase : CrudGetEndpointBase<Univer
                 : null;
         }
 
+        var labels = new Dictionary<Guid, string?>();
+        foreach (var note in notes)
+        {
+            if (labels.ContainsKey(note.SubjectId)) continue;
+            labels[note.SubjectId] = await ResolveSubjectLabel(note.SubjectType, note.SubjectId, ct)
+                .ConfigureAwait(false);
+        }
+
         return notes.Select(n => new UniverseNoteResponse
         {
             Id = n.Id,
@@ -113,7 +125,35 @@ public abstract class ListUniverseNotesEndpointBase : CrudGetEndpointBase<Univer
             AuthorName = names.TryGetValue(n.AuthorUserId, out var name) ? name : null,
             SubjectKind = n.SubjectType,
             SubjectKey = n.SubjectId,
+            SubjectLabel = labels.TryGetValue(n.SubjectId, out var label) ? label : null,
             PromotedToRequestId = n.PromotedToRequestId,
         }).ToList();
+    }
+
+    /// <summary>Resolves a human label for a subject, for the kinds that cost one lookup.</summary>
+    /// <remarks>
+    /// Returns null for every other kind, and the DTO documents that absent means UNRESOLVED and
+    /// never "deleted". Field, Snapshot, Pipeline, OrchestrationNode and SavedView would each mean
+    /// reaching into another domain from this endpoint; they are left unresolved rather than
+    /// half-resolved, so a label that IS present always means something was found.
+    /// </remarks>
+    /// <param name="subjectKind">The subject's kind.</param>
+    /// <param name="subjectId">The subject's identity.</param>
+    /// <param name="ct">Cancellation token.</param>
+    protected async Task<string?> ResolveSubjectLabel(string subjectKind, Guid subjectId, CancellationToken ct)
+    {
+        if (string.Equals(subjectKind, "DataSet", StringComparison.Ordinal))
+        {
+            var dataSet = await _dataSets.Get(subjectId, ct).ConfigureAwait(false);
+            return dataSet.IsSuccess && dataSet.Value is { Name.Length: > 0 } found ? found.Name : null;
+        }
+
+        if (string.Equals(subjectKind, "Universe", StringComparison.Ordinal))
+        {
+            var universe = await _universes.Get(subjectId, ct).ConfigureAwait(false);
+            return universe.IsSuccess && universe.Value is { Name.Length: > 0 } found ? found.Name : null;
+        }
+
+        return null;
     }
 }

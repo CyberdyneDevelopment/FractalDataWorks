@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Fdw.Services.Universes.Endpoints;
 
@@ -41,6 +41,18 @@ public class UniverseNoteResponse
     /// column cannot carry a name for any kind.
     /// </remarks>
     public Guid SubjectKey { get; set; }
+
+    /// <summary>Gets or sets a human label for the subject, when this kind can be resolved cheaply.</summary>
+    /// <remarks>
+    /// PRESENT MEANS RESOLVED. Absent never claims the subject was deleted — only that nothing
+    /// looked it up. Resolved for DataSet and Universe, which are one lookup each; omitted for the
+    /// kinds that would mean reaching into a further five domains from this endpoint.
+    ///
+    /// Deliberately not null-for-unresolvable: null would have to mean either "gone" or "not
+    /// looked at", and a client cannot tell those apart. A real deletion signal, if one is ever
+    /// wanted, is its own field rather than an overload of this one.
+    /// </remarks>
+    public string? SubjectLabel { get; set; }
 
     /// <summary>Gets or sets the request this note was promoted into, or null when it never was.</summary>
     /// <remarks>Null rather than a bool-and-id pair: the id's absence IS "never promoted".</remarks>
