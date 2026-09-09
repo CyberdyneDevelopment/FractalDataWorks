@@ -16,9 +16,6 @@ public sealed class TestConfiguration : IGenericConfiguration
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "TestConfig";
-    public string SectionName => "TestSection";
-    public string ServiceType => "Test";
-    public string? ServiceOptionType => "Default";
     public string? ConnectionString { get; init; }
 }
 

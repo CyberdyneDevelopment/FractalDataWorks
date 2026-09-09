@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -23,6 +24,9 @@ public sealed partial class SystemNotificationConfiguration : INotificationImple
     public Guid Id { get; set; }
 
     /// <inheritdoc/>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the owning notification's durable id.</summary>

@@ -44,6 +44,14 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     /// </summary>
     public Guid Id { get; set; }
 
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the FK to <c>conn.Connection.Id</c> (the parent header row).
     /// Set by the endpoint before calling Save on this provider.

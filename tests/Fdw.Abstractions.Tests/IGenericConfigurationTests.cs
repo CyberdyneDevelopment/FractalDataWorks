@@ -1,113 +1,100 @@
 using Fdw.Configuration;
 using Moq;
 using System;
+using System.Linq;
 
 namespace Fdw.Abstractions.Tests;
 
 /// <summary>
-/// Tests for IGenericConfiguration interface contracts.
+/// Tests the configuration contract: what each of the three tiers is required to carry.
 /// </summary>
+/// <remarks>
+/// The tiers are the point. <see cref="IGenericConfiguration"/> is identity and nothing else, so a
+/// plain child row is never asked for a name it has no reason to have. A domain record adds the name
+/// it is resolved by, the domain it is, and the implementation it names. An implementation record
+/// adds its own name, so it can be looked up without first resolving the domain row pointing at it,
+/// and deliberately carries no discriminator -- that value is the domain's to state.
+/// </remarks>
 public class IGenericConfigurationTests
 {
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationInterfaceExists()
+    public void GenericConfigurationCarriesIdentityOnly()
     {
-        // Assert
         var type = typeof(IGenericConfiguration);
-        type.ShouldNotBeNull();
+
         type.IsInterface.ShouldBeTrue();
+        type.GetProperties().Select(p => p.Name).ShouldBe(new[] { "Id" });
+
+        var id = type.GetProperty("Id");
+        id.ShouldNotBeNull();
+        id!.PropertyType.ShouldBe(typeof(Guid));
+        id.CanRead.ShouldBeTrue();
+        id.CanWrite.ShouldBeTrue();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationHasIdProperty()
+    public void GenericConfigurationDoesNotDeclareTheMembersItsTiersOwn()
     {
-        // Assert
         var type = typeof(IGenericConfiguration);
-        var property = type.GetProperty("Id");
-        property.ShouldNotBeNull();
-        property!.PropertyType.ShouldBe(typeof(Guid));
-        property.CanRead.ShouldBeTrue();
-        property.CanWrite.ShouldBeTrue();
+
+        // Why each is absent: Name belongs to the two tiers that are resolvable by name; SectionName
+        // named an appsettings section nothing has read since the gateway became the one source; and
+        // ServiceType/ServiceOptionType were a discriminator every record had to invent whether or
+        // not it discriminated anything -- which is what let malformed rows claim one.
+        type.GetProperty("Name").ShouldBeNull();
+        type.GetProperty("SectionName").ShouldBeNull();
+        type.GetProperty("ServiceType").ShouldBeNull();
+        type.GetProperty("ServiceOptionType").ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationHasNameProperty()
+    public void DomainConfigurationNamesItselfItsDomainAndItsImplementation()
     {
-        // Assert
-        var type = typeof(IGenericConfiguration);
-        var property = type.GetProperty("Name");
-        property.ShouldNotBeNull();
-        property!.PropertyType.ShouldBe(typeof(string));
-        property.CanRead.ShouldBeTrue();
-        property.CanWrite.ShouldBeTrue();
+        var type = typeof(IDomainConfiguration);
+
+        typeof(IGenericConfiguration).IsAssignableFrom(type).ShouldBeTrue();
+
+        var name = type.GetProperty("Name");
+        name.ShouldNotBeNull();
+        name!.PropertyType.ShouldBe(typeof(string));
+        name.CanWrite.ShouldBeTrue();
+
+        var domain = type.GetProperty("Domain");
+        domain.ShouldNotBeNull();
+        domain!.PropertyType.ShouldBe(typeof(string));
+        domain.CanWrite.ShouldBeFalse("the domain a record belongs to is stated, never assigned");
+
+        var implementation = type.GetProperty("Implementation");
+        implementation.ShouldNotBeNull();
+        implementation!.PropertyType.ShouldBe(typeof(string));
+        implementation.CanWrite.ShouldBeTrue("the discriminator is read from the row, not compiled in");
+
+        type.GetProperty("ImplementationConfiguration").ShouldNotBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationHasSectionNameProperty()
+    public void ImplementationConfigurationCarriesItsOwnNameAndNoDiscriminator()
     {
-        // Assert
-        var type = typeof(IGenericConfiguration);
-        var property = type.GetProperty("SectionName");
-        property.ShouldNotBeNull();
-        property!.PropertyType.ShouldBe(typeof(string));
-        property.CanRead.ShouldBeTrue();
-    }
+        var type = typeof(IImplementationConfiguration);
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationHasServiceTypeProperty()
-    {
-        // Assert
-        var type = typeof(IGenericConfiguration);
-        var property = type.GetProperty("ServiceType");
-        property.ShouldNotBeNull();
-        property!.PropertyType.ShouldBe(typeof(string));
-        property.CanRead.ShouldBeTrue();
-    }
+        typeof(IGenericConfiguration).IsAssignableFrom(type).ShouldBeTrue();
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationHasServiceOptionTypeProperty()
-    {
-        // Assert
-        var type = typeof(IGenericConfiguration);
-        var property = type.GetProperty("ServiceOptionType");
-        property.ShouldNotBeNull();
-        property!.PropertyType.ShouldBe(typeof(string));
-        property.CanRead.ShouldBeTrue();
-    }
+        var name = type.GetProperty("Name");
+        name.ShouldNotBeNull();
+        name!.CanWrite.ShouldBeTrue();
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationGenericInterfaceExists()
-    {
-        // Assert
-        var type = typeof(IGenericConfiguration<>);
-        type.ShouldNotBeNull();
-        type.IsInterface.ShouldBeTrue();
-        type.IsGenericTypeDefinition.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void IGenericConfigurationGenericInheritsFromBase()
-    {
-        // Assert
-        var type = typeof(IGenericConfiguration<>);
-        var baseInterface = type.GetInterface("IGenericConfiguration");
-        baseInterface.ShouldNotBeNull();
+        // The value that selected this implementation is the domain's to state, not this record's to
+        // restate. Restating it is what produced rows claiming a discriminator they had no right to.
+        type.GetProperty("Domain").ShouldBeNull();
+        type.GetProperty("Implementation").ShouldBeNull();
     }
 
     [Fact]
@@ -115,170 +102,21 @@ public class IGenericConfigurationTests
     [Trait("Category", "CoreFramework")]
     public void MockConfigurationCanSetId()
     {
-        // Arrange
         var expectedId = Guid.NewGuid();
         var mockConfig = new Mock<IGenericConfiguration>();
         mockConfig.Setup(c => c.Id).Returns(expectedId);
 
-        // Act
-        var id = mockConfig.Object.Id;
-
-        // Assert
-        id.ShouldBe(expectedId);
+        mockConfig.Object.Id.ShouldBe(expectedId);
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void MockConfigurationCanSetName()
+    public void MockDomainConfigurationCanSetName()
     {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
+        var mockConfig = new Mock<IDomainConfiguration>();
         mockConfig.Setup(c => c.Name).Returns("TestConfig");
 
-        // Act
-        var name = mockConfig.Object.Name;
-
-        // Assert
-        name.ShouldBe("TestConfig");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationCanSetSectionName()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.SectionName).Returns("Connections:MsSql");
-
-        // Act
-        var sectionName = mockConfig.Object.SectionName;
-
-        // Assert
-        sectionName.ShouldBe("Connections:MsSql");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationCanSetServiceType()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceType).Returns("Connection");
-
-        // Act
-        var serviceType = mockConfig.Object.ServiceType;
-
-        // Assert
-        serviceType.ShouldBe("Connection");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationCanSetServiceOptionType()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceOptionType).Returns("MsSql");
-
-        // Act
-        var serviceOptionType = mockConfig.Object.ServiceOptionType;
-
-        // Assert
-        serviceOptionType.ShouldBe("MsSql");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationServiceOptionTypeCanBeNull()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceOptionType).Returns((string?)null);
-
-        // Act
-        var serviceOptionType = mockConfig.Object.ServiceOptionType;
-
-        // Assert
-        serviceOptionType.ShouldBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationSupportsConnectionServiceType()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceType).Returns("Connection");
-        mockConfig.Setup(c => c.ServiceOptionType).Returns("MsSql");
-
-        // Act & Assert
-        mockConfig.Object.ServiceType.ShouldBe("Connection");
-        mockConfig.Object.ServiceOptionType.ShouldBe("MsSql");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationSupportsAuthenticationServiceType()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceType).Returns("Authentication");
-        mockConfig.Setup(c => c.ServiceOptionType).Returns("Jwt");
-
-        // Act & Assert
-        mockConfig.Object.ServiceType.ShouldBe("Authentication");
-        mockConfig.Object.ServiceOptionType.ShouldBe("Jwt");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationSupportsNotificationServiceType()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceType).Returns("Notification");
-        mockConfig.Setup(c => c.ServiceOptionType).Returns("Email");
-
-        // Act & Assert
-        mockConfig.Object.ServiceType.ShouldBe("Notification");
-        mockConfig.Object.ServiceOptionType.ShouldBe("Email");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void MockConfigurationSupportsSecretManagerServiceType()
-    {
-        // Arrange
-        var mockConfig = new Mock<IGenericConfiguration>();
-        mockConfig.Setup(c => c.ServiceType).Returns("SecretManager");
-        mockConfig.Setup(c => c.ServiceOptionType).Returns("AzureKeyVault");
-
-        // Act & Assert
-        mockConfig.Object.ServiceType.ShouldBe("SecretManager");
-        mockConfig.Object.ServiceOptionType.ShouldBe("AzureKeyVault");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void GenericConfigurationConstrainsTypeParameter()
-    {
-        // Arrange
-        var type = typeof(IGenericConfiguration<>);
-        var typeParam = type.GetGenericArguments()[0];
-        var constraints = typeParam.GetGenericParameterConstraints();
-
-        // Assert
-        constraints.ShouldNotBeEmpty();
-        constraints.Length.ShouldBe(1);
+        mockConfig.Object.Name.ShouldBe("TestConfig");
     }
 }

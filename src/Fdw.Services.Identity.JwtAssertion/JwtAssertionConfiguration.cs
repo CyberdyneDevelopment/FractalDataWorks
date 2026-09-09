@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -49,7 +50,10 @@ public partial class JwtAssertionConfiguration : IIdentityServiceImplementationC
     /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the name this identity is resolved by.</summary>
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the issuer URL.</summary>

@@ -97,15 +97,15 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
 
     /// <inheritdoc />
     async Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Save<T>(
-        string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
+        string implementation, string name, T implementationConfiguration, CancellationToken cancellationToken)
     {
-        if (!_implementations.ContainsKey(serviceOptionType))
+        if (!_implementations.ContainsKey(implementation))
         {
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_log, name, serviceOptionType));
+                DefaultConfigurationProviderLog.NoImplementationProvider(_log, name, implementation));
         }
 
-        return await Save(Compose(serviceOptionType, name, implementationConfiguration), cancellationToken)
+        return await Save(Compose(implementation, name, implementationConfiguration), cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -144,6 +144,11 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
                         _log, new InvalidOperationException(implementation.CurrentMessage),
                         typeof(TDomainConfiguration).Name, header.Name, header.Implementation));
             }
+
+            // The implementation's name is the domain's. It is not a column on the implementation
+            // row -- there is one name for a configured member, held where it is authored, and the
+            // join that just produced this record is what carries it across.
+            implementation.Value.Name = header.Name;
 
             var mapper = PocoMapperCollection.ByName(typeof(TDomainConfiguration).Name);
             if (mapper == PocoMapperCollection.NotFound)
