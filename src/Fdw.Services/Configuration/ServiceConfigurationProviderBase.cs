@@ -164,12 +164,12 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
 
     /// <summary>Builds the domain record that carries a member's name, kind and implementation.</summary>
     /// <typeparam name="T">The implementation configuration being written.</typeparam>
-    /// <param name="serviceOptionType">Which implementation this member is.</param>
+    /// <param name="implementation">Which implementation this member is.</param>
     /// <param name="name">The member's name.</param>
     /// <param name="implementationConfiguration">The implementation's own configuration.</param>
     /// <returns>The domain record to save.</returns>
     protected abstract TDomainConfiguration Compose<T>(
-        string serviceOptionType, string name, T implementationConfiguration)
+        string implementation, string name, T implementationConfiguration)
         where T : TImplementationConfiguration;
 
     /// <inheritdoc />

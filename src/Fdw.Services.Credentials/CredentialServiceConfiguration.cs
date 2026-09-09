@@ -60,13 +60,11 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the service option type (e.g., "Sql").
-    /// </summary>
-    [ValuesFrom(typeof(CredentialServiceTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "CredentialService";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(CredentialServiceTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>

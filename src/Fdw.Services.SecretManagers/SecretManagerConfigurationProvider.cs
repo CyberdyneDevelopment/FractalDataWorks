@@ -67,13 +67,13 @@ public class SecretManagerConfigurationProvider
 
     /// <inheritdoc />
     protected override SecretManagerConfiguration Compose<T>(
-        string serviceOptionType,
+        string implementation,
         string name,
         T implementationConfiguration)
         => new()
         {
             Name = name,
-            ServiceOptionType = serviceOptionType,
+            Implementation = implementation,
             Configuration = implementationConfiguration,
         };
 }

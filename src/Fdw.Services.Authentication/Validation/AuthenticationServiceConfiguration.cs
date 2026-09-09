@@ -43,11 +43,11 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    [ValuesFrom(typeof(AuthenticationServiceTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "AuthenticationService";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(AuthenticationServiceTypes))]
     public string? Implementation { get; set; }
 
     /// <inheritdoc />

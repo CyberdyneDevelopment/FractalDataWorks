@@ -37,14 +37,11 @@ public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentit
     /// <summary>Gets or sets the display name of this external identity provisioner configuration.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the TypeOption discriminator. <see cref="ExternalIdentityProvisionerTypes"/> uses
-    /// this value to select the active implementation (e.g. <c>"Chained"</c>).
-    /// </summary>
-    [ValuesFrom(typeof(ExternalIdentityProvisionerTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "ExternalIdentityProvisioner";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(ExternalIdentityProvisionerTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>Gets or sets an optional human-readable description for this configuration.</summary>

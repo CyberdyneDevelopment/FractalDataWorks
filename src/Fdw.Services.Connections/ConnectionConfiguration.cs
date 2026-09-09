@@ -62,13 +62,11 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the service option type (e.g., "MsSql", "Rest", "Http").
-    /// </summary>
-    [ValuesFrom(typeof(ConnectionTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "Connection";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(ConnectionTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>

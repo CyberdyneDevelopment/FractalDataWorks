@@ -13,7 +13,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// the parent header (which <see cref="ConnectionConfigurationProvider"/> populates with the
 /// polymorphic typed body in <see cref="ConnectionConfiguration.Configuration"/>) and hands that body
 /// to <see cref="MapToDetail"/>. The concrete endpoint maps the typed body to the DTO by dispatching
-/// on <see cref="ConnectionConfiguration.ServiceOptionType"/> — so one GET-by-name endpoint renders
+/// on <see cref="ConnectionConfiguration.Implementation"/> — so one GET-by-name endpoint renders
 /// every connection type (MsSql, Http, PostgreSql, FileSystem, RoslynWorkspace) rather than being
 /// locked to a single typed provider.
 /// </summary>
@@ -53,7 +53,7 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
 
     /// <summary>
     /// Maps the parent connection and its polymorphic typed body to a detail DTO. Implementations
-    /// dispatch the type-specific projection on <see cref="ConnectionConfiguration.ServiceOptionType"/>.
+    /// dispatch the type-specific projection on <see cref="ConnectionConfiguration.Implementation"/>.
     /// The body may be null if the typed row does not exist yet (header-only render).
     /// </summary>
     protected abstract ConnectionDetailDto MapToDetail(ConnectionConfiguration connection, IConnectionImplementationConfiguration? body);

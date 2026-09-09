@@ -67,13 +67,13 @@ public sealed class MessagingConfigurationProvider
 
     /// <inheritdoc />
     protected override MessagingConfiguration Compose<T>(
-        string serviceOptionType,
+        string implementation,
         string name,
         T implementationConfiguration)
         => new()
         {
             Name = name,
-            ServiceOptionType = serviceOptionType,
+            Implementation = implementation,
             Configuration = implementationConfiguration,
         };
 }

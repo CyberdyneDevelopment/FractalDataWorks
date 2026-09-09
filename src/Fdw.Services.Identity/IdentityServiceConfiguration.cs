@@ -52,14 +52,11 @@ public partial class IdentityServiceConfiguration : IIdentityServiceConfiguratio
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the TypeOption discriminator. <see cref="IdentityServiceTypes"/> uses this value
-    /// to select the mechanism (e.g. <c>"ClientCredentials"</c>, <c>"JwtAssertion"</c>).
-    /// </summary>
-    [ValuesFrom(typeof(IdentityServiceTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "Identity";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(IdentityServiceTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>Gets or sets an optional human-readable description for this configuration.</summary>

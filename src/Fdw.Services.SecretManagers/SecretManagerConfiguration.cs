@@ -62,13 +62,11 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the service option type (e.g., "EnvironmentVariable", "AzureKeyVault").
-    /// </summary>
-    [ValuesFrom(typeof(SecretManagerTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "SecretManager";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(SecretManagerTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>

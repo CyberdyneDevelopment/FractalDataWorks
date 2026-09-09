@@ -40,14 +40,11 @@ public partial class TokenManagerConfiguration : ITokenManagerConfiguration
     /// <summary>Gets or sets the display name of this token manager configuration.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the TypeOption discriminator. <see cref="TokenManagerTypes"/> uses this value to
-    /// select the active implementation (e.g. <c>"OpenIddict"</c>).
-    /// </summary>
-    [ValuesFrom(typeof(TokenManagerTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "TokenManager";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(TokenManagerTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>Gets or sets the secret manager name used to resolve provider secrets (e.g. the signing key).</summary>

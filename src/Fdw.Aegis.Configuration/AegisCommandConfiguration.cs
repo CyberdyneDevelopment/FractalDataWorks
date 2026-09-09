@@ -24,7 +24,7 @@ namespace Fdw.Aegis.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AegisCommand")]
-public partial class AegisCommandConfiguration : IGenericConfiguration
+public partial class AegisCommandConfiguration : IDomainConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AegisCommandConfiguration"/> class.
@@ -49,10 +49,14 @@ public partial class AegisCommandConfiguration : IGenericConfiguration
     /// </summary>
     public string ConnectionName { get; set; } = string.Empty;
 
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "AegisCommand";
+
     /// <summary>
-    /// Gets or sets the approval-policy kind discriminator (e.g., "PreApproved", "AdHoc").
+    /// Gets or sets the approval-policy implementation this record names (e.g., "PreApproved", "AdHoc").
     /// </summary>
     [ValuesFrom(typeof(ApprovalPolicyTypes))]
+    public string? Implementation { get; set; }
 
     /// <summary>
     /// Gets or sets the typed approval-policy body for this command header row. Populated on the
@@ -60,10 +64,13 @@ public partial class AegisCommandConfiguration : IGenericConfiguration
     /// body is saved separately to its own table.
     /// </summary>
     /// <remarks>
-    /// Why: [NotMapped] — this property is not a column on the AegisCommand header row. The read
-    /// path populates this by dispatching on ServiceOptionType to the appropriate typed provider,
-    /// mirroring <c>ConnectionConfiguration.Configuration</c>.
+    /// Why: [NotMapped] — this property is not a column on the AegisCommand domain row. The read
+    /// path populates it by dispatching on <see cref="Implementation"/> to that implementation's own
+    /// provider, mirroring <c>ConnectionConfiguration.Configuration</c>.
     /// </remarks>
     [NotMapped]
     public IApprovalPolicyConfiguration? Configuration { get; set; }
+
+    /// <inheritdoc />
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
 }

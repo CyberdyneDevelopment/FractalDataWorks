@@ -45,13 +45,13 @@ public class ConnectionConfigurationProvider
 
     /// <inheritdoc />
     protected override ConnectionConfiguration Compose<T>(
-        string serviceOptionType,
+        string implementation,
         string name,
         T implementationConfiguration)
         => new()
         {
             Name = name,
-            ServiceOptionType = serviceOptionType,
+            Implementation = implementation,
             Configuration = implementationConfiguration,
         };
 }

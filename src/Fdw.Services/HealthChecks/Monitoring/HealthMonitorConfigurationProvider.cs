@@ -45,13 +45,13 @@ public sealed class HealthMonitorConfigurationProvider
 
     /// <inheritdoc />
     protected override HealthMonitorConfiguration Compose<T>(
-        string serviceOptionType,
+        string implementation,
         string name,
         T implementationConfiguration)
         => new()
         {
             Name = name,
-            ServiceOptionType = serviceOptionType,
+            Implementation = implementation,
             Configuration = implementationConfiguration,
         };
 }

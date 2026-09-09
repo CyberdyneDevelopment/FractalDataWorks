@@ -60,13 +60,11 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the service option type (e.g., "Default").
-    /// </summary>
-    [ValuesFrom(typeof(DataVaultTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "DataVault";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(DataVaultTypes))]
     public string? Implementation { get; set; }
 
     /// <summary>

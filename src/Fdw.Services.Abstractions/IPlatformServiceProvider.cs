@@ -43,7 +43,7 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
 
     /// <summary>
     /// Gets a service instance built from the supplied configuration. No name/id lookup is
-    /// performed — the configuration's <see cref="IGenericConfiguration.ServiceOptionType"/>
+    /// performed — the configuration's <see cref="IDomainConfiguration.Implementation"/>
     /// selects the factory directly. A null configuration or missing ServiceOptionType is a
     /// structured failure, never a fallback.
     /// </summary>
@@ -63,7 +63,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// <summary>
     /// Gets a service instance built from the supplied strongly-typed configuration.
     /// No name/id lookup is performed — the configuration's
-    /// <see cref="IGenericConfiguration.ServiceOptionType"/> selects the factory directly.
+    /// <see cref="IDomainConfiguration.Implementation"/> selects the factory directly.
     /// </summary>
     Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default);
 
@@ -75,7 +75,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// Registers a parent configuration provider for direct name-to-type resolution.
     /// The parent provider holds ALL configurations across all service option types,
     /// enabling O(1) lookup by name to determine which factory to use via
-    /// <see cref="IGenericConfiguration.ServiceOptionType"/>.
+    /// <see cref="IDomainConfiguration.Implementation"/>.
     /// </summary>
     /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
     IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider);

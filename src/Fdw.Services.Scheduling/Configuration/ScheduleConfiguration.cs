@@ -28,15 +28,14 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     /// Initializes a new instance of the <see cref="ScheduleConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceType">The service type (domain) - always "Schedule".</param>
-    /// <param name="serviceOptionType">The service option type (e.g., "Interval", "Cron").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    public ScheduleConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    /// <param name="serviceOptionType">The schedule kind (e.g., "Interval", "Cron").</param>
+    public ScheduleConfiguration(string? serviceOptionType)
     {
-        ServiceType = serviceType;
         ServiceOptionType = serviceOptionType;
-        SectionName = sectionName;
     }
+
+    /// <summary>Gets or sets the schedule kind this record is.</summary>
+    public string? ServiceOptionType { get; set; }
 
     /// <inheritdoc />
     public Guid Id { get; set; } = Guid.CreateVersion7();

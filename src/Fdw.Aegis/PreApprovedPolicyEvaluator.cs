@@ -12,7 +12,7 @@ namespace Fdw.Aegis;
 /// <summary>
 /// Phase 1's <see cref="IApprovalPolicyEvaluator"/>: fail-closed, deterministic, no human/agent in
 /// the loop. Approves ONLY when the requested command's declared policy
-/// <see cref="AegisCommandConfiguration.ServiceOptionType"/> is <c>"PreApproved"</c> — every other
+/// <see cref="AegisCommandConfiguration.Implementation"/> is <c>"PreApproved"</c> — every other
 /// case (undeclared command, <c>"AdHoc"</c>, or any future policy kind) is denied. Phases 2-4 add
 /// human/agent evaluators against this same interface.
 /// </summary>
@@ -46,10 +46,10 @@ public sealed class PreApprovedPolicyEvaluator : IApprovalPolicyEvaluator
         }
 
         if (command is not null)
-            AegisLog.PolicyEvaluated(_logger, command.ServiceOptionType, request.CommandName);
+            AegisLog.PolicyEvaluated(_logger, command.Implementation, request.CommandName);
 
         if (command is not null
-            && string.Equals(command.ServiceOptionType, ApprovalPolicyTypes.PreApproved.Name, StringComparison.Ordinal))
+            && string.Equals(command.Implementation, ApprovalPolicyTypes.PreApproved.Name, StringComparison.Ordinal))
         {
             return GenericResult<Verdict>.Success(new Verdict
             {
@@ -63,7 +63,7 @@ public sealed class PreApprovedPolicyEvaluator : IApprovalPolicyEvaluator
 
         var reason = command is null
             ? $"command '{request.CommandName}' is not declared for connection '{request.ConnectionName}'"
-            : $"policy '{command.ServiceOptionType}' is not PreApproved";
+            : $"policy '{command.Implementation}' is not PreApproved";
 
         AegisLog.ActionDenied(_logger, request.CommandName, reason);
 

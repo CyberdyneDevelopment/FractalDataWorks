@@ -227,7 +227,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
         if (result.Value is not SystemRoleMappingConfiguration system)
         {
             throw new InvalidOperationException(
-                $"The SystemRoleMapping row names implementation '{result.Value.ServiceOptionType}', "
+                $"The RoleMapping row named implementation '{result.Value.Name}', "
                 + "which is not the System role mapping. Authorization cannot start without knowing "
                 + "which role names carry system authority.");
         }

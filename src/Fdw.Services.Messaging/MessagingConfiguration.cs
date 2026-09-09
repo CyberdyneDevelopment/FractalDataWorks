@@ -33,11 +33,11 @@ public sealed partial class MessagingConfiguration : IMessagingConfiguration
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    [ValuesFrom(typeof(MessagingServiceTypes))]
     /// <summary>Gets the domain this record belongs to.</summary>
     public string Domain => "Messaging";
 
+    /// <summary>Gets or sets the implementation this record names.</summary>
+    [ValuesFrom(typeof(MessagingServiceTypes))]
     public string? Implementation { get; set; }
 
     /// <inheritdoc/>
