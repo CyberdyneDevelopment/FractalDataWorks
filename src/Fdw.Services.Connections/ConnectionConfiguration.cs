@@ -20,7 +20,7 @@ namespace Fdw.Services.Connections;
 /// </list>
 /// </para>
 /// <para>
-/// All type identity properties (ServiceType, Implementation, SectionName) are set via the constructor chain.
+/// The implementation this record names is read from the row, never compiled into a type.
 /// Derived classes call the protected constructor to set their specific values.
 /// </para>
 /// </remarks>
@@ -33,7 +33,7 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// Initializes a new instance of the <see cref="ConnectionConfiguration"/> class.
     /// Default constructor for IOptions binding and header lookups.
     /// </summary>
-    public ConnectionConfiguration() : this("Connection", null, "Connections")
+    public ConnectionConfiguration() : this(null)
     {
     }
 
@@ -41,14 +41,10 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// Initializes a new instance of the <see cref="ConnectionConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceType">The service type (domain) - always "Connection".</param>
-    /// <param name="serviceOptionType">The service option type (e.g., "MsSql", "Rest", "Http").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    protected ConnectionConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    /// <param name="serviceOptionType">The implementation this record names (e.g., "MsSql", "Rest", "Http").</param>
+    protected ConnectionConfiguration(string? serviceOptionType)
     {
-        ServiceType = serviceType;
         Implementation = serviceOptionType;
-        SectionName = sectionName;
     }
 
 

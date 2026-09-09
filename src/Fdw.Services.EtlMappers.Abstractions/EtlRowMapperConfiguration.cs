@@ -25,6 +25,12 @@ public class EtlRowMapperConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets the mapper kind this record is. EtlMapper has no domain record to state it, so the
+    /// option states its own.
+    /// </summary>
+    public virtual string MapperType => string.Empty;
+
+    /// <summary>
     /// Gets or sets a value indicating whether connection pooling is enabled for this mapper.
     /// Defaults to <c>true</c>.
     /// </summary>

@@ -14,8 +14,6 @@ public class OrchestrationStepConfiguration : IGenericConfiguration
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public virtual string SectionName { get; set; } = "OrchestrationSteps";
 
     /// <inheritdoc/>
     public virtual string ServiceType { get; set; } = "OrchestrationStep";

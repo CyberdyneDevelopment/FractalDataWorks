@@ -68,11 +68,6 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         builder.Services.Configure<List<DataContainerFieldConfiguration>>(
             builder.Configuration.GetSection("DataStores:DataContainerField"));
 
-        foreach (var type in DataStoreTypes.All())
-        {
-            type.Configure(builder.Services, builder.Configuration, loggerFactory);
-        }
-
         var logger = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;
         DataStoreTypesLog.ConfiguredOptionsBindings(logger);
 

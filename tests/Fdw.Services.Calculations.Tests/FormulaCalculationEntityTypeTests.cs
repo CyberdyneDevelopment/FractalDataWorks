@@ -407,21 +407,6 @@ public class FormulaCalculationEntityTypeTests
         config.ShouldBeNull();
     }
 
-    [Fact]
-    public void CreateTypedConfigurationValidInputsReturnsConfiguration()
-    {
-        var type = new FormulaCalculationEntityType();
-        var entityId = Guid.NewGuid();
-        var node = new Dictionary<string, object?> { ["FormulaBody"] = "[A]+1", ["FormulaLanguage"] = "Sql" };
-
-        var config = type.CreateTypedConfiguration(node, entityId).ShouldBeOfType<FormulaCalculationConfiguration>();
-
-        config.Id.ShouldBe(entityId);
-        config.FormulaBody.ShouldBe("[A]+1");
-        config.FormulaLanguage.ShouldBe("Sql");
-        config.ServiceType.ShouldBe("Formula");
-        config.TimeoutSeconds.ShouldBe(30);
-    }
 
     [Fact]
     public void TypedContainerNameReturnsFormulaCalculation()

@@ -38,8 +38,8 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
 
         var items = (allResult.Value ?? (IReadOnlyList<ConnectionConfiguration>)[])
             .Where(config => !string.IsNullOrWhiteSpace(config.Name)
-                && !string.IsNullOrWhiteSpace(config.ServiceOptionType)
-                && !string.Equals(config.ServiceOptionType, "Connection", StringComparison.OrdinalIgnoreCase))
+                && !string.IsNullOrWhiteSpace(config.Implementation)
+                && !string.Equals(config.Implementation, "Connection", StringComparison.OrdinalIgnoreCase))
             .GroupBy(config => config.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .Select(MapToSummary)
@@ -55,7 +55,7 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
         {
             Id = config.Id,
             Name = config.Name,
-            ConnectionType = config.ConnectionType ?? config.ServiceOptionType ?? "Unknown",
+            ConnectionType = config.ConnectionType ?? config.Implementation ?? "Unknown",
         };
     }
 }

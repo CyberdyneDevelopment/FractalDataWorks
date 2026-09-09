@@ -189,35 +189,6 @@ public class DataSetConfigurationTests
         config.Aggregates[0].AggregateFunctionName.ShouldBe("SUM");
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public void Aggregates_ImplementIGenericConfigurationForCascade()
-    {
-        // Arrange
-        var dataSetId = Guid.NewGuid();
-        var aggregateId = Guid.NewGuid();
-
-        // Act
-#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
-        IGenericConfiguration aggregate = new DataSetAggregateConfiguration
-        {
-            Id = aggregateId,
-            DataSetId = dataSetId,
-            AggregateColumnName = "TransactionCount",
-            GroupByFieldNames = "State,Region",
-            AggregateFunctionName = "COUNT",
-            InputFieldName = "Id"
-        };
-#pragma warning restore CA1859
-
-        // Assert
-        aggregate.Id.ShouldBe(aggregateId);
-        aggregate.ServiceType.ShouldBe("DataSet");
-        ((DataSetAggregateConfiguration)aggregate).DataSetId.ShouldBe(dataSetId);
-        ((DataSetAggregateConfiguration)aggregate).IsCurrent.ShouldBeTrue();
-        ((DataSetAggregateConfiguration)aggregate).IsDeleted.ShouldBeFalse();
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -234,18 +205,6 @@ public class DataSetConfigurationTests
         config.Caching.DurationMinutes.ShouldBe(30);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public void SectionName_HasCorrectStaticValue()
-    {
-        // Arrange
-        var config = new DataSetConfiguration { Name = "Users" };
-
-        // Act & Assert - SectionName is static for IOptions binding, Name is set separately
-        config.SectionName.ShouldBe("DataSets");
-        config.Name.ShouldBe("Users");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

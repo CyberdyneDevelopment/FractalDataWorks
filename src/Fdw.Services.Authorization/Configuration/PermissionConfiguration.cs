@@ -31,8 +31,6 @@ namespace Fdw.Services.Authorization.Configuration;
 [ManagedConfiguration( ServiceCategory = "Permission")]
 public partial class PermissionConfiguration : ConfigurationBase<PermissionConfiguration>
 {
-    /// <inheritdoc />
-    public override string SectionName => "Authorization";
 
     /// <inheritdoc />
     public override string ServiceType => "Permission";

@@ -401,11 +401,13 @@ public sealed class ConnectionBaseTests : IDisposable
         public string Sql { get; set; } = string.Empty;
     }
 
-    public class TestConnectionConfiguration : ConnectionConfiguration
+    public class TestConnectionConfiguration : IConnectionImplementationConfiguration
     {
-        public TestConnectionConfiguration() : base("Connection", "Test", "TestConnections")
-        {
-        }
+        public Guid Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public Guid ConnectionId { get; set; }
     }
 
     public class TestConnection : ConnectionBase<TestNativeCommand, TestConnectionConfiguration, TestConnection>

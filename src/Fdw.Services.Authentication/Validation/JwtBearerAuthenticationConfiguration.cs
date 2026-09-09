@@ -37,9 +37,6 @@ public partial class JwtBearerAuthenticationConfiguration : IJwtBearerAuthentica
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationConfiguration"/> class.</summary>
     public JwtBearerAuthenticationConfiguration()
     {
-        ServiceType = "AuthenticationService";
-        ServiceOptionType = "JwtBearer";
-        SectionName = "AuthenticationServices";
     }
 
     /// <inheritdoc />

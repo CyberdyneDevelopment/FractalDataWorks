@@ -43,6 +43,10 @@ public class TestService : IGenericService
 /// </summary>
 public sealed class TestConfiguration : IImplementationConfiguration, IDomainConfiguration
 {
+        public string Domain => "TestService";
+
+        public string? Implementation { get; set; }
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "test-config";
     public string SectionName => "TestSection";

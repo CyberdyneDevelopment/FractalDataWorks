@@ -40,7 +40,7 @@ public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<Get
             return allResult.ToNewResult<List<ConnectionByTypeDto>?>();
         var allConnections = allResult.Value!;
         var connections = allConnections
-            .Where(c => string.Equals(c.ServiceOptionType, request.TypeName, StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.Equals(c.Implementation, request.TypeName, StringComparison.OrdinalIgnoreCase))
             .Select(MapToDto)
             .ToList();
 
@@ -53,7 +53,7 @@ public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<Get
         return new ConnectionByTypeDto
         {
             Name = connection.Name,
-            ConnectionType = connection.ServiceOptionType ?? "Unknown"
+            ConnectionType = connection.Implementation ?? "Unknown"
         };
     }
 }

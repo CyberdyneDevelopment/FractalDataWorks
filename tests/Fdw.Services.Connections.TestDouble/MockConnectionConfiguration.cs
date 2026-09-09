@@ -33,15 +33,6 @@ public partial class MockConnectionConfiguration : IConnectionImplementationConf
     /// <summary>Gets or sets the single value the schema-load assertions read back.</summary>
     public string Root { get; set; } = string.Empty;
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-
-    string IGenericConfiguration.ServiceType => "Connection";
-
-    string? IGenericConfiguration.ServiceOptionType => "MockConnection";
+    /// <summary>Gets or sets the name the domain provider stamps on this record when it joins.</summary>
+    public string Name { get; set; } = string.Empty;
 }

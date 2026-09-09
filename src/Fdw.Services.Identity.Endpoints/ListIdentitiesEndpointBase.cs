@@ -57,7 +57,7 @@ public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<Identity
         {
             Id = configuration.Id,
             Name = configuration.Name,
-            Mechanism = configuration.ServiceOptionType,
+            Mechanism = configuration.Implementation,
             Description = configuration.Description,
         };
 }

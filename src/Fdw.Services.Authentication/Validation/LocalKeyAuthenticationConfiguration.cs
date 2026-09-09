@@ -24,9 +24,6 @@ public partial class LocalKeyAuthenticationConfiguration : ILocalKeyAuthenticati
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationConfiguration"/> class.</summary>
     public LocalKeyAuthenticationConfiguration()
     {
-        ServiceType = "AuthenticationService";
-        ServiceOptionType = "LocalKey";
-        SectionName = "AuthenticationServices";
     }
 
     /// <inheritdoc />

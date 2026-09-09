@@ -66,8 +66,6 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
         {
             Id = entityId,
             Name = string.Empty,
-            SectionName = string.Empty,
-            ServiceType = "Formula",
             FormulaLanguage = language,
             FormulaBody = formulaBody,
             TimeoutSeconds = 30

@@ -72,7 +72,7 @@ public sealed class AegisToolService
         {
             name = c.Name,
             connectionName = c.ConnectionName,
-            policy = c.ServiceOptionType,
+            policy = c.Implementation,
         }).ToArray();
 
         AegisLog.ConnectionsListed(_logger, payload.Length);
@@ -100,7 +100,7 @@ public sealed class AegisToolService
         {
             name = command.Name,
             connectionName = command.ConnectionName,
-            policy = command.ServiceOptionType,
+            policy = command.Implementation,
             secretRequired = true,
             parameters = allowList.Select(p => new
             {

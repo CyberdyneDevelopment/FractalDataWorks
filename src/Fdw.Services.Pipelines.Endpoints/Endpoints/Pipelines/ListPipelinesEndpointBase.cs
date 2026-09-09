@@ -40,7 +40,7 @@ public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineS
         var items = new List<PipelineSummaryResponse>();
         foreach (var config in (result.Value ?? []).Where(p => !string.IsNullOrWhiteSpace(p.Name)))
         {
-            if (string.IsNullOrEmpty(config.ServiceOptionType))
+            if (string.IsNullOrEmpty(config.Implementation))
                 return GenericResult<List<PipelineSummaryResponse>>.Failure(
                     Logging.PipelineEndpointLog.PipelineMissingKind(Logger, config.Name));
 
@@ -57,7 +57,7 @@ public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineS
         {
             Id = config.Id,
             Name = config.Name,
-            PipelineType = config.ServiceOptionType!
+            PipelineType = config.Implementation!
         };
     }
 }

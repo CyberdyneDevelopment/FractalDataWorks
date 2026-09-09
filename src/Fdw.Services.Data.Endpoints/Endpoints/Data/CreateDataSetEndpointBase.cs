@@ -96,7 +96,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
                     Ordinal = i
                 })
                 .ToList(),
-            ServiceOptionType = request.ServiceOptionType,
+            Implementation = request.ServiceOptionType,
             FederationStrategy = request.FederationStrategy,
             TransformExpression = request.TransformExpression,
             SourceDataSetName = request.SourceDataSetName,

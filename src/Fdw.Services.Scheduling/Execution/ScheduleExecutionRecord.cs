@@ -35,10 +35,6 @@ public sealed partial class ScheduleExecutionRecord
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name (not used for execution records).
-    /// </summary>
-    public string SectionName => $"ScheduleExecutions:{Id}";
 
     /// <summary>
     /// Gets or sets the name of the schedule that fired.

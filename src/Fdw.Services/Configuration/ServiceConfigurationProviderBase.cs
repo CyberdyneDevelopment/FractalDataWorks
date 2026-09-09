@@ -8,6 +8,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration.Logging;
 using Fdw.Data;
+using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -147,8 +148,12 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
 
             // The implementation's name is the domain's. It is not a column on the implementation
             // row -- there is one name for a configured member, held where it is authored, and the
-            // join that just produced this record is what carries it across.
-            implementation.Value.Name = header.Name;
+            // join that just produced this record is what carries it across. The registry is typed
+            // to the erased provider, so the record arrives as IGenericConfiguration.
+            if (implementation.Value is IImplementationConfiguration named)
+            {
+                named.Name = header.Name;
+            }
 
             var mapper = PocoMapperCollection.ByName(typeof(TDomainConfiguration).Name);
             if (mapper == PocoMapperCollection.NotFound)

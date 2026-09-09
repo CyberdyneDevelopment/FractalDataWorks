@@ -77,7 +77,7 @@ public sealed class IdentityHostBootTests
         // A configuration naming a registered mechanism must not fail with "no factory registered".
         // It fails for want of a typed body instead, which is the next gate and a different message.
         var built = await provider.Get(
-            new IdentityServiceConfiguration { Name = "probe", ServiceOptionType = mechanism },
+            new IdentityServiceConfiguration { Name = "probe", Implementation = mechanism },
             TestContext.Current.CancellationToken);
 
         built.IsFailure.ShouldBeTrue();

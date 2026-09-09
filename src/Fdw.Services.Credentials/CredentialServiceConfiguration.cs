@@ -31,7 +31,7 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     /// Initializes a new instance of the <see cref="CredentialServiceConfiguration"/> class.
     /// Default constructor for IOptions binding and header lookups.
     /// </summary>
-    public CredentialServiceConfiguration() : this("CredentialService", null, "CredentialServices")
+    public CredentialServiceConfiguration() : this(null)
     {
     }
 
@@ -39,14 +39,10 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     /// Initializes a new instance of the <see cref="CredentialServiceConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceType">The service type (domain) — always "CredentialService".</param>
     /// <param name="serviceOptionType">The service option type (e.g., "Sql").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    protected CredentialServiceConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    protected CredentialServiceConfiguration(string? serviceOptionType)
     {
-        ServiceType = serviceType;
         Implementation = serviceOptionType;
-        SectionName = sectionName;
     }
 
 

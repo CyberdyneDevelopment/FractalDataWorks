@@ -105,7 +105,7 @@ public class ConnectionProviderTests
         private static ConnectionConfiguration AttachStubConfig(ConnectionConfiguration cfg)
         {
             if (cfg.Configuration is null)
-                cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, ServiceOptionType = cfg.ServiceOptionType };
+                cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, ServiceOptionType = cfg.Implementation };
             return cfg;
         }
 
@@ -249,7 +249,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = null
+            Implementation = null
         };
         _configurations.Add(config);
 
@@ -271,7 +271,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         });
         var mockFactory = FactoryReturning(new Mock<IGenericConnection>().Object);
 
@@ -331,7 +331,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -360,7 +360,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -389,7 +389,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -419,7 +419,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -448,7 +448,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -478,7 +478,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -509,7 +509,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -540,7 +540,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -572,7 +572,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
 
         _configurations.Add(config);
@@ -604,7 +604,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = null
+            Implementation = null
         };
         _configurations.Add(config);
 
@@ -627,7 +627,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
         _configurations.Add(config);
 
@@ -654,7 +654,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
         _configurations.Add(config);
 
@@ -685,7 +685,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
         _configurations.Add(config);
 
@@ -711,7 +711,7 @@ public class ConnectionProviderTests
         {
             Id = connectionId,
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
         _configurations.Add(config);
 
@@ -736,7 +736,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "PgConn",
-            ServiceOptionType = "PostgreSql"
+            Implementation = "PostgreSql"
         });
 
         var msSqlConnection = new Mock<IGenericConnection>();
@@ -765,7 +765,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = string.Empty,
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         });
 
         // Assert
@@ -799,19 +799,19 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "NoOptionType",
-            ServiceOptionType = null,
+            Implementation = null,
         });
         _configurations.Add(new ConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "NoFactory",
-            ServiceOptionType = "NoSuchConnectionKind",
+            Implementation = "NoSuchConnectionKind",
         });
         _configurations.Add(new ConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "NotAConnectionFactory",
-            ServiceOptionType = "MsSql",
+            Implementation = "MsSql",
         });
         _provider.Register("MsSql", new Mock<IServiceFactory<IGenericConnection>>().Object);
 
@@ -840,7 +840,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         };
         _configurations.Add(config);
         var mockFactory = FactoryReturning(new Mock<IGenericConnection>().Object);
@@ -850,7 +850,7 @@ public class ConnectionProviderTests
         // takes the IMPLEMENTATION configuration, which is what the domain provider hands back.
         var byName = await _provider.Get("TestConnection");
         var byConfiguration = await _provider.Get(
-            new StubConnectionConfiguration { Id = config.Id, Name = config.Name, ServiceOptionType = config.ServiceOptionType });
+            new StubConnectionConfiguration { Id = config.Id, Name = config.Name, ServiceOptionType = config.Implementation });
 
         // Assert - the provider no longer caches connections, so each Get calls the factory. This
         // replaces an assertion that the two paths SHARED one cached connection.
@@ -873,7 +873,7 @@ public class ConnectionProviderTests
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            ServiceOptionType = "MsSql"
+            Implementation = "MsSql"
         });
         var stale = new Mock<IGenericConnection>();
         stale.SetupGet(x => x.IsStale).Returns(true);

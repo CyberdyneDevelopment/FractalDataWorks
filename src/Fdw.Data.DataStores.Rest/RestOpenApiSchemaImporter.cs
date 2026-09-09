@@ -82,9 +82,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
             var dataStore = new DataStoreConfiguration
             {
                 Name = storeName,
-                ServiceType = "DataStore",
-                ServiceOptionType = "Rest",
-                SectionName = "DataStores"
+                TypeId = "Rest",
             };
 
             var totalEndpoints = ImportEndpoints(openApiDocument, baseUrl, dataStore, options);

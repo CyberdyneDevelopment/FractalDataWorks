@@ -12,8 +12,6 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// </remarks>
 public sealed class HealthMonitorSelectionOptions
 {
-    /// <summary>The appsettings section this selector binds from.</summary>
-    public const string SectionName = "HealthMonitor";
 
     /// <summary>Gets or sets the name of the ConfigurationDb health monitor row this host uses.</summary>
     public string Name { get; set; } = string.Empty;

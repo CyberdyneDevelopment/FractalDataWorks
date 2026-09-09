@@ -115,10 +115,10 @@ public sealed class AggregateWriteCascadeTests
     public async Task SaveFailsLoudAndWritesNothingWhenTypedBodyMissingForRegisteredDiscriminator()
     {
         var gateway = new RecordingGateway();
-        var provider = MakeProvider(gateway);
+        var provider = new RecursiveCascadeSaveTests.TestRootDomainProvider(GatewayProviderFor(gateway));
         provider.Register(
             "Default",
-            new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+            new ImplementationConfigurationProvider<RecursiveCascadeSaveTests.ITestBodyConfiguration, TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",

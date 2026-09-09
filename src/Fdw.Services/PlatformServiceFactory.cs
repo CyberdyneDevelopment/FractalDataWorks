@@ -20,7 +20,7 @@ namespace Fdw.Services;
 /// <typeparam name="TService">The type of service this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type required by the service.</typeparam>
 public abstract class PlatformServiceFactory<TService, TConfiguration> : IServiceFactory<TService, TConfiguration> where TService : class
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : class, IImplementationConfiguration
 {
     private readonly ILogger<PlatformServiceFactory<TService, TConfiguration>> _logger;
     private readonly ILogger<TService> _serviceLogger;

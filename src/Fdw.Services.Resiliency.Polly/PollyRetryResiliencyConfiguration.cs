@@ -9,8 +9,6 @@ namespace Fdw.Services.Resiliency.Polly;
 /// </summary>
 public sealed class PollyRetryResiliencyConfiguration : ResiliencyConfiguration
 {
-    /// <inheritdoc/>
-    public override string SectionName => "Resiliency:PollyRetry";
 
     /// <inheritdoc/>
     public override string StrategyType => "PollyRetry";

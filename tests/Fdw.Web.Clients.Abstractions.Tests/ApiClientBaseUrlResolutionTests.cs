@@ -46,7 +46,7 @@ public sealed class ApiClientBaseUrlResolutionTests
                         new ConnectionConfiguration
                         {
                             Name = name,
-                            ServiceOptionType = "Http",
+                            Implementation = "Http",
                             Configuration = new HttpConnectionConfiguration { BaseUrl = baseUrl },
                         })
                     : GenericResult<IDomainConfiguration>.Success(default!));

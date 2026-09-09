@@ -45,8 +45,6 @@ public sealed class AggregationConfiguration : ConfigurationBase<AggregationConf
     /// </summary>
     public string? FilterExpression { get; init; }
 
-    /// <inheritdoc/>
-    public override string SectionName => "Aggregation";
 
     /// <summary>
     /// Gets the service type (domain) for this configuration.

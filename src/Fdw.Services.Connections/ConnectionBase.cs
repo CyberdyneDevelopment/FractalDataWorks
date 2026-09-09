@@ -36,7 +36,7 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     : ServiceBase<IDataCommand, TConfiguration, TService>, IDataConnection
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : class, IImplementationConfiguration
     where TService : class
 {
     private IConnectionState _state;

@@ -401,24 +401,24 @@ public sealed class DataGatewayService : IDataGateway
                     _logger, target.DataStore, "the DataStore's connection configuration could not be resolved"));
         }
 
-        if (string.IsNullOrWhiteSpace(connectionResult.Value.ServiceOptionType))
+        if (string.IsNullOrWhiteSpace(connectionResult.Value.Implementation))
         {
             return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger, target.DataStore, "the connection declares no ServiceOptionType"));
         }
 
-        if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType), ConnectionTypes.NotFound))
+        if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.Implementation), ConnectionTypes.NotFound))
         {
             return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger,
                     target.DataStore,
-                    $"connection type '{connectionResult.Value.ServiceOptionType}' is not registered"));
+                    $"connection type '{connectionResult.Value.Implementation}' is not registered"));
         }
 
         return GenericResult<IConnectionType>.Success(
-            ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType));
+            ConnectionTypes.ByName(connectionResult.Value.Implementation));
     }
 
     /// <inheritdoc/>
@@ -478,14 +478,14 @@ public sealed class DataGatewayService : IDataGateway
             return GenericResult<T>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "IDataStoreProvider is not available; cannot execute a DataSet"));
 
-        if (string.IsNullOrWhiteSpace(config.ServiceOptionType))
+        if (string.IsNullOrWhiteSpace(config.Implementation))
             return GenericResult<T>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "DataSet configuration has no ServiceOptionType (strategy kind)"));
 
-        var strategy = DataSetTypes.ByName(config.ServiceOptionType);
+        var strategy = DataSetTypes.ByName(config.Implementation);
         if (ReferenceEquals(strategy, DataSetTypes.NotFound))
             return GenericResult<T>.Failure(
-                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, $"DataSet strategy type '{config.ServiceOptionType}' is not a registered DataSetTypes member"));
+                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, $"DataSet strategy type '{config.Implementation}' is not a registered DataSetTypes member"));
 
         DataGatewayLogger.RoutingToDataSet(_logger, target.DataSet);
         var context = new DataSetExecutionContext(

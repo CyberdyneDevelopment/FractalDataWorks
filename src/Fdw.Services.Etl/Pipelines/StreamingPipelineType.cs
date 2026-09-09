@@ -91,7 +91,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 Name,
                 nameof(IStreamingPipelineFactory));
 
-            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
+            var configProvider = services.GetRequiredService<ImplementationConfigurationProvider<IEtlPipelineTypedConfiguration, StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
 
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
             etlKindProvider.Register(Name, configProvider);
@@ -121,7 +121,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 sp.GetService<IDataGatewayProvider>(),
                 sp.GetService<IConnectionProvider>()));
 
-            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
+            builder.Services.AddSingleton(sp => new ImplementationConfigurationProvider<IEtlPipelineTypedConfiguration, StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
                 sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 DataStore,

@@ -20,7 +20,7 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     /// Initializes a new instance of the <see cref="ScheduleConfiguration"/> class.
     /// Default constructor for IOptions binding and header lookups.
     /// </summary>
-    public ScheduleConfiguration() : this("Schedule", null, "Schedules")
+    public ScheduleConfiguration() : this(null)
     {
     }
 
@@ -35,6 +35,7 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     }
 
     /// <summary>Gets or sets the schedule kind this record is.</summary>
+    [ValuesFrom(typeof(TriggerTypes))]
     public string? ServiceOptionType { get; set; }
 
     /// <inheritdoc />
@@ -42,11 +43,6 @@ public partial class ScheduleConfiguration : IScheduleDefinition
 
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the service option type (implementation variant) this configuration is for.
-    /// </summary>
-    [ValuesFrom(typeof(TriggerTypes))]
 
     /// <inheritdoc />
     public virtual string ScheduleType => ServiceOptionType ?? "Unknown";

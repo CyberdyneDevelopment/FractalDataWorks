@@ -82,7 +82,7 @@ internal sealed class ClaimMappedProvisionerFactory
             return Create(typed);
 
         return GenericResult<IExternalIdentityProvisioner>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
                 $"expected IExternalIdentityProvisionerImplementationConfiguration but received '{configuration?.GetType().FullName ?? "null"}'."));
     }
 
@@ -97,7 +97,7 @@ internal sealed class ClaimMappedProvisionerFactory
             return GenericResult<T>.Success(typed);
 
         return GenericResult<T>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
                 $"created service does not implement requested type '{typeof(T).FullName}'."));
     }
 

@@ -224,7 +224,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
         // The domain provider returns the implementation its row named. Anything other than the
         // System mapping here means the row names an implementation this host does not run, which is
         // a configuration fault rather than something to coerce.
-        if (result.Value is not SystemRoleMappingConfiguration system)
+        if (result.Value.ImplementationConfiguration is not SystemRoleMappingConfiguration system)
         {
             throw new InvalidOperationException(
                 $"The RoleMapping row named implementation '{result.Value.Name}', "

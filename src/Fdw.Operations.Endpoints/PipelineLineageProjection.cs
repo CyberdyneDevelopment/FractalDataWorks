@@ -37,7 +37,7 @@ internal static class PipelineLineageProjection
         {
             Id = aggregate.Id,
             Name = aggregate.Name,
-            ServiceOptionType = aggregate.ServiceOptionType ?? string.Empty
+            ServiceOptionType = aggregate.Implementation ?? string.Empty
         };
 
         if (aggregate.Configuration is not EtlPipelineConfiguration kindBody ||
@@ -47,7 +47,7 @@ internal static class PipelineLineageProjection
             return record;
         }
 
-        ApiEndpointLog.PipelineAggregateComposed(logger, aggregate.Name, kindBody.ServiceOptionType ?? string.Empty);
+        ApiEndpointLog.PipelineAggregateComposed(logger, aggregate.Name, kindBody.Implementation ?? string.Empty);
 
         record.SourceDataSet = engine.SourceDataSet;
         record.DestinationDataSet = engine.DestinationDataSet;

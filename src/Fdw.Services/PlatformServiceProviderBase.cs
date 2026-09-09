@@ -173,7 +173,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         // ServiceOptionType column -- the discriminator is what selected that table -- so reading it
         // back off the implementation asked an object a question it cannot answer, and every
         // implementation-shaped container answered the same way: empty.
-        var serviceOptionType = configuration.ServiceOptionType;
+        var serviceOptionType = configuration.Implementation;
         if (string.IsNullOrEmpty(serviceOptionType))
         {
             ServiceLogger.ServiceOptionTypeMissing(_logger, identifier);

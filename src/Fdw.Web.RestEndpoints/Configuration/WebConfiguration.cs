@@ -15,8 +15,6 @@ public sealed class WebConfiguration : ConfigurationBase<WebConfiguration>
     /// <inheritdoc/>
     public override string ServiceType => "Web";
 
-    /// <inheritdoc/>
-    public override string SectionName => "FdwWeb";
 
     /// <summary>
     /// Gets or sets the host address to bind the web server to.

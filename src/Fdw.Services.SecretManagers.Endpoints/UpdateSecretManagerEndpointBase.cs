@@ -84,7 +84,7 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
                 Name = existing.Name,
                 SecretManagerType = existing.SecretManagerType,
                 Description = existing.Description,
-                ServiceOptionType = existing.ServiceOptionType
+                ServiceOptionType = existing.Implementation
             };
 
             await Send.OkAsync(detail, ct).ConfigureAwait(false);

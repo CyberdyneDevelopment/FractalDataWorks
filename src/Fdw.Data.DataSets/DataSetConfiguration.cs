@@ -58,9 +58,10 @@ public partial class DataSetConfiguration : IGenericConfiguration
     public string? Abbreviation { get; set; }
 
     /// <summary>
-    /// Gets or sets the service option type (not used for DataSets).
+    /// Gets or sets the implementation this dataset names (Standard, Compound, Federated).
     /// </summary>
     [ValuesFrom(typeof(DataSetTypes))]
+    public string? Implementation { get; set; }
 
     // ── Type-specific properties (flattened from former child tables) ────────────
 

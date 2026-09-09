@@ -27,8 +27,6 @@ public partial class TokenManagerConfiguration : ITokenManagerConfiguration
     /// </summary>
     public TokenManagerConfiguration()
     {
-        ServiceType = "TokenManager";
-        SectionName = "TokenManagers";
     }
 
     /// <summary>

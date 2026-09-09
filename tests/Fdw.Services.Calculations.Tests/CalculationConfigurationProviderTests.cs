@@ -1,4 +1,5 @@
 ﻿using System;
+using Fdw.Services.Calculations.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -46,7 +47,7 @@ public class CalculationConfigurationProviderTests
             "calc");
 
         // Register the Formula typed provider exactly as DefaultCalculationServiceType.RegisterFactory does.
-        var formulaProvider = new ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(
+        var formulaProvider = new ImplementationConfigurationProvider<ICalculationTypedConfiguration, FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(
             NullLogger<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>.Instance,
             GatewayProviderFor(gateway),
             "PlatformConfiguration",
@@ -85,7 +86,7 @@ public class CalculationConfigurationProviderTests
 
         public AggregateGateway()
         {
-            _entities = [new CalculationEntityConfiguration { Id = EntityId, Name = "Calc1", CalculationEntityType = "Formula" }];
+            _entities = [new CalculationEntityConfiguration { Id = EntityId, Name = "Calc1", Implementation = "Formula" }];
             _inputs =
             [
                 new CalculationEntityInputRecord { Id = Guid.NewGuid(), InputAlias = "A", InputKind = "DataSet", Ordinal = 0 },

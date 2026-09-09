@@ -174,7 +174,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         // An implementation composes its own subtree and nothing else. Which implementation a
         // domain row names, and attaching it, is the domain provider's job --
         // ServiceConfigurationProviderBase overrides this to do that first.
-        return await ComposeChildren(header, asOf, ct).ConfigureAwait(false);
+        return ComposeChildren(header, asOf, ct);
     }
 
     /// <summary>

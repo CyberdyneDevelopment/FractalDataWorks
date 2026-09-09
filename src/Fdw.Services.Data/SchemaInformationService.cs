@@ -155,7 +155,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         CancellationToken cancellationToken)
     {
         var connectionName = config.Name;
-        var connectionType = config.ServiceOptionType;
+        var connectionType = config.Implementation;
 
         if (string.IsNullOrEmpty(connectionType))
         {

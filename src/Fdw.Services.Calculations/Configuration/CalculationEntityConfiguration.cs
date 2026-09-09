@@ -15,14 +15,14 @@ namespace Fdw.Services.Calculations.Configuration;
 /// <remarks>
 /// Why: the keystone <c>ImplementationConfigurationProviderBase</c> composes the full aggregate on read
 /// (ComposeChildren for the nav collections, ComposeTypedBody for <see cref="Configuration"/> dispatched
-/// on <see cref="ServiceOptionType"/>) and cascade-saves it on write — there is no per-domain hand-assembly.
+/// on <see cref="Implementation"/>) and cascade-saves it on write — there is no per-domain hand-assembly.
 /// Named without the "Managed" suffix so the cascade FK derives correctly: Strip("Configuration") =>
 /// "CalculationEntity" => child FK column "CalculationEntityId" (matches the DDL).
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Calculation", ServiceType = "Entity", Temporal = true)]
-public partial class CalculationEntityConfiguration : IGenericConfiguration
+public partial class CalculationEntityConfiguration : IDomainConfiguration
 {
 
 
@@ -35,8 +35,11 @@ public partial class CalculationEntityConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the optional description.</summary>
     public string? Description { get; set; }
 
-    /// <summary>Gets or sets the calculation entity type name (e.g. "Formula", "Windowed").</summary>
-    public string CalculationEntityType { get; set; } = string.Empty;
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Calculation";
+
+    /// <summary>Gets or sets the implementation this record names (e.g. "Formula", "Windowed").</summary>
+    public string? Implementation { get; set; }
 
     /// <summary>
     /// Gets or sets the name of the <c>CalculationSourceTypes</c> option that wrote this row
@@ -58,11 +61,14 @@ public partial class CalculationEntityConfiguration : IGenericConfiguration
 
     /// <summary>
     /// Gets or sets the polymorphic typed body (FormulaCalculationConfiguration / WindowedCalculationConfiguration).
-    /// Composed on read by the base ComposeTypedBody (dispatch on <see cref="ServiceOptionType"/>); cascade-saved
+    /// Composed on read by the base ComposeTypedBody (dispatch on <see cref="Implementation"/>); cascade-saved
     /// by base.Save on insert. Not a column on calc.CalculationEntity.
     /// </summary>
     [NotMapped]
     public ICalculationTypedConfiguration? Configuration { get; set; }
+
+    /// <inheritdoc />
+    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
 
     /// <summary>
     /// Gets or sets the input declarations. Composed from calc.CalculationEntityInput on read; cascade-saved on insert.

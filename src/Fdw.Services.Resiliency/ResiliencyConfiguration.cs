@@ -21,8 +21,6 @@ public class ResiliencyConfiguration : IResiliencyConfiguration
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public virtual string SectionName => "Resiliency";
 
     /// <summary>
     /// Gets the strategy type identifier used to select the corresponding <see cref="ResiliencyTypeBase"/> instance.

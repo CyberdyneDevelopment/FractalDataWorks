@@ -21,13 +21,10 @@ public class ServiceBaseTests
     }
 
     [ExcludeFromCodeCoverage]
-    private class TestConfiguration : IGenericConfiguration
+    private class TestConfiguration : IImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "TestConfig";
-        public string SectionName => "Test";
-        public string ServiceType => "Test";
-        public string? ServiceOptionType => "Test";
     }
 
     [ExcludeFromCodeCoverage]

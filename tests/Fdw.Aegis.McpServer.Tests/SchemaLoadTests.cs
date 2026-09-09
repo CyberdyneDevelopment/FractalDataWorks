@@ -53,7 +53,7 @@ public sealed class SchemaLoadTests
             schema.Commands.Count.ShouldBe(1);
             var command = schema.Commands[0];
             command.Name.ShouldBe("echo_credential");
-            command.ServiceOptionType.ShouldBe("PreApproved");
+            command.Implementation.ShouldBe("PreApproved");
 
             // The discriminator dispatched to the correct typed body — the whole point of the converter.
             var preApproved = command.Configuration.ShouldBeOfType<PreApprovedCommandConfiguration>();

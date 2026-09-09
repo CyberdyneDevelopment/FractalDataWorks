@@ -68,7 +68,7 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
             Name = config.Name,
             SecretManagerType = config.SecretManagerType,
             Description = config.Description,
-            ServiceOptionType = config.ServiceOptionType
+            ServiceOptionType = config.Implementation
         };
 
         await Send.OkAsync(detail, ct).ConfigureAwait(false);

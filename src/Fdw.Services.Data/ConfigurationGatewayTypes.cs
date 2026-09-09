@@ -126,14 +126,14 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionNotDeclared(log, connectionName));
 
-        if (string.IsNullOrWhiteSpace(declared.ServiceOptionType))
+        if (string.IsNullOrWhiteSpace(declared.Implementation))
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionDeclaresNoKind(log, connectionName));
 
-        if (ConnectionTypes.ByName(declared.ServiceOptionType) is not IServiceType connectionType)
+        if (ConnectionTypes.ByName(declared.Implementation) is not IServiceType connectionType)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(
-                    log, connectionName, declared.ServiceOptionType));
+                    log, connectionName, declared.Implementation));
 
         if (services.GetService(connectionType.FactoryType) is not IConnectionFactory factory)
             return GenericResult<IConfigurationGateway>.Failure(
@@ -195,14 +195,14 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
 
         var declared = schema.SecretManagers[0];
 
-        if (string.IsNullOrWhiteSpace(declared.ServiceOptionType))
+        if (string.IsNullOrWhiteSpace(declared.Implementation))
             return GenericResult<ISecretManager?>.Failure(
                 ConfigurationGatewayProviderLog.SecretManagerDeclaresNoKind(log, declared.Name));
 
-        if (SecretManagerTypes.ByName(declared.ServiceOptionType) is not IServiceType secretManagerType)
+        if (SecretManagerTypes.ByName(declared.Implementation) is not IServiceType secretManagerType)
             return GenericResult<ISecretManager?>.Failure(
                 ConfigurationGatewayProviderLog.SecretManagerKindNotRegistered(
-                    log, declared.Name, declared.ServiceOptionType));
+                    log, declared.Name, declared.Implementation));
 
         if (services.GetService(secretManagerType.FactoryType) is not IServiceFactory<ISecretManager> secretManagerFactory)
             return GenericResult<ISecretManager?>.Failure(

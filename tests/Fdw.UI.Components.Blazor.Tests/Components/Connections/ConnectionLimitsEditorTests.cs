@@ -28,13 +28,13 @@ public sealed class ConnectionLimitsEditorTests : IDisposable
     /// <summary>A limit config with the base ctor wired but all enforcement values null.</summary>
     private sealed class PlainLimitConfig : ConnectionLimitConfiguration
     {
-        public PlainLimitConfig() : base("Connection", "MsSql", "Connections:Limits") { }
+        public PlainLimitConfig() { }
     }
 
     /// <summary>A limit config that exposes enforcement values to exercise the value-row branches.</summary>
     private sealed class FullLimitConfig : ConnectionLimitConfiguration
     {
-        public FullLimitConfig() : base("Connection", "MsSql", "Connections:Limits") { }
+        public FullLimitConfig() { }
 
         public override int? EnforceMaxPerSecond => 10;
         public override int? EnforceBurstSize => 20;

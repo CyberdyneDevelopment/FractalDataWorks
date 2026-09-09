@@ -23,20 +23,6 @@ public class WebConfigurationTests
         config.Swagger.ShouldNotBeNull();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void SectionName_ReturnsCorrectValue()
-    {
-        // Arrange
-        var config = new WebConfiguration();
-
-        // Act
-        var sectionName = config.SectionName;
-
-        // Assert
-        sectionName.ShouldBe("FdwWeb");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

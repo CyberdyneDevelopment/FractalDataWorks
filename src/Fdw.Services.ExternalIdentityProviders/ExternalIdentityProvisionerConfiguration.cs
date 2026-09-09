@@ -8,14 +8,12 @@ using Fdw.Services.ExternalIdentityProviders.Abstractions;
 namespace Fdw.Services.ExternalIdentityProviders;
 
 /// <summary>
-/// Header configuration for external identity provisioner services representing the
-/// <c>sec.ExternalIdentityProvisioner</c> parent table — identity-only: <see cref="SectionName"/> and
-/// <see cref="ServiceType"/> are fixed, get-only computed values (mirroring
-/// <c>Fdw.Operations.Configuration.EscalationPolicyConfiguration</c>'s root-config shape), NOT persisted
-/// columns — sec.ExternalIdentityProvisioner carries no SectionName/ServiceType column. A
-/// tenant/visibility/audit block follows (see <see cref="TenantId"/> through
-/// <see cref="ModifyOnBehalfOf"/>). NO secret column exists here — this domain is a
-/// provisioning-mechanism selector, not a credential.
+/// The external-identity provisioning domain, backed by <c>sec.ExternalIdentityProvisioner</c>: it
+/// names which provisioning mechanism is configured and holds that implementation's own
+/// configuration. <see cref="Domain"/> is stated by the type; <see cref="Implementation"/> is read
+/// from the row. A tenant/visibility/audit block follows (see <see cref="TenantId"/> through
+/// <see cref="ModifyOnBehalfOf"/>). NO secret column exists here — this domain selects a
+/// provisioning mechanism, it is not a credential.
 /// </summary>
 /// <remarks>
 /// After loading a header row, <c>ExternalIdentityProvisionerConfigurationProvider</c> dispatches to

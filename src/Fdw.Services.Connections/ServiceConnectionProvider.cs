@@ -122,13 +122,14 @@ public sealed class ServiceConnectionProvider : IServiceConnectionProvider, IDis
     /// </summary>
     public Task<IGenericResult<IGenericConnection>> Get(IGenericConfiguration configuration, CancellationToken cancellationToken = default)
     {
-        if (configuration is null || string.IsNullOrWhiteSpace(configuration.Name))
+        // A connection is resolved by name, and the name is the domain record's.
+        if (configuration is not IDomainConfiguration domain || string.IsNullOrWhiteSpace(domain.Name))
         {
             return Task.FromResult(GenericResult<IGenericConnection>.Failure(
                 ServiceConnectionProviderLog.ConnectionNotFound(_logger, "(null configuration)")));
         }
 
-        return Get(configuration.Name, cancellationToken);
+        return Get(domain.Name, cancellationToken);
     }
 
 

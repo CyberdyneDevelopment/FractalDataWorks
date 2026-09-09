@@ -89,9 +89,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                 var dataStore = new DataStoreConfiguration
                 {
                     Name = databaseName,
-                    ServiceType = "DataStore",
-                    ServiceOptionType = "MsSql",
-                    SectionName = "DataStores"
+                    TypeId = "MsSql",
                 };
 
                 var totalObjects = 0;

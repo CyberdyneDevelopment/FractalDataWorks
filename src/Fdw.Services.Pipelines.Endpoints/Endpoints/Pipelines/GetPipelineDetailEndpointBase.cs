@@ -72,7 +72,7 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
             return;
         }
 
-        if (string.IsNullOrEmpty(pipeline.ServiceOptionType))
+        if (string.IsNullOrEmpty(pipeline.Implementation))
         {
             OnPipelineFetchFailed(req.Name, $"Pipeline '{req.Name}' has no kind (ServiceOptionType).");
             HttpContext.Response.StatusCode = 500;

@@ -12,10 +12,4 @@ internal sealed class FakeGenericConfiguration : IGenericConfiguration
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public string Name { get; set; } = "FakeConfig";
-
-    public string SectionName => "Fake";
-
-    public string ServiceType => "Fake";
-
-    public string? ServiceOptionType => null;
 }

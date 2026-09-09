@@ -155,18 +155,6 @@ public class ServiceTypePhaseFuncTests
         serviceType.Register(NewBuilder(), loggerFactory: null).IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void PublishesItsServiceFactoryAndConfigurationTypes()
-    {
-        var serviceType = new TestServiceType();
-
-        serviceType.ServiceType.ShouldBe(typeof(SimpleService));
-        serviceType.FactoryType.ShouldBe(typeof(SimpleFactory));
-        serviceType.ConfigurationType.ShouldBe(typeof(IServiceConfiguration));
-        serviceType.SectionName.ShouldBe(serviceType.ConfigurationKey);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

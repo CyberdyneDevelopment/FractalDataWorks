@@ -47,11 +47,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             header.Register(
                 "Formula",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProvider<ICalculationTypedConfiguration, FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
 
             header.Register(
                 "Windowed",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProvider<ICalculationTypedConfiguration, WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -72,13 +72,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                     sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         CalculationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
-                sp => sp.GetRequiredService<CalculationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
 
-            RegisterTypedBodyProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
-            RegisterTypedBodyProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>(builder.Services);
+            RegisterImplementationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
+            RegisterImplementationProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>(builder.Services);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
@@ -86,13 +84,14 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
     /// <inheritdoc />
 
-    private static void RegisterTypedBodyProvider<TConfig, TCommand>(IServiceCollection services)
-        where TConfig : class, IGenericConfiguration
+    // Closed over the domain's implementation contract, because that is what the domain provider's
+    // registry accepts.
+    private static void RegisterImplementationProvider<TConfig, TCommand>(IServiceCollection services)
+        where TConfig : class, ICalculationTypedConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        services.AddOptions<List<TConfig>>();
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, TCommand>>(sp =>
-            new ImplementationConfigurationProviderBase<TConfig, TCommand>(
+        services.TryAddSingleton<ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>>(sp =>
+            new ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>(
                 sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "PlatformConfiguration",

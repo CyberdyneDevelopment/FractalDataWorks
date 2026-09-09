@@ -22,10 +22,6 @@ public sealed class WebhookConfiguration
     /// </summary>
     public string Name { get; set; } = "Webhook";
 
-    /// <summary>
-    /// Gets the configuration section name — always "Webhook" for this configuration.
-    /// </summary>
-    public string SectionName => "Webhook";
 
     /// <summary>
     /// Gets the service type (domain) - always "Notification" for this configuration.

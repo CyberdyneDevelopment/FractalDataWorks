@@ -89,7 +89,7 @@ internal static class DataSetQueryHelper
         Description = config.Description,
         Category = config.Category,
         Version = config.Version,
-        ServiceOptionType = config.ServiceOptionType,
+        ServiceOptionType = config.Implementation,
         FederationStrategy = config.FederationStrategy,
         TransformExpression = config.TransformExpression,
         SourceDataSetName = config.SourceDataSetName,

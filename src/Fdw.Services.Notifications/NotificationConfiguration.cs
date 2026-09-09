@@ -33,7 +33,7 @@ public partial class NotificationConfiguration : INotificationConfiguration
     /// Initializes a new instance of the <see cref="NotificationConfiguration"/> class.
     /// Default constructor for IOptions binding and header lookups.
     /// </summary>
-    public NotificationConfiguration() : this("Notification", null, "Notifications")
+    public NotificationConfiguration() : this(null)
     {
     }
 
@@ -41,14 +41,10 @@ public partial class NotificationConfiguration : INotificationConfiguration
     /// Initializes a new instance of the <see cref="NotificationConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceType">The service type (domain) - always "Notification".</param>
     /// <param name="serviceOptionType">The service option type (e.g., "Email", "Teams", "Webhook").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    protected NotificationConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    protected NotificationConfiguration(string? serviceOptionType)
     {
-        ServiceType = serviceType;
         Implementation = serviceOptionType;
-        SectionName = sectionName;
     }
 
     /// <summary>

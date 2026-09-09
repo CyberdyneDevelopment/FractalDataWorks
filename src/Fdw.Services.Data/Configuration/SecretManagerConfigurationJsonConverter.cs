@@ -60,15 +60,15 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
         var secretManager = JsonSerializer.Deserialize<SecretManagerConfiguration>(parentJson, innerOptions);
         if (secretManager is null) return null;
 
-        if (!string.IsNullOrEmpty(secretManager.ServiceOptionType)
+        if (!string.IsNullOrEmpty(secretManager.Implementation)
             && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
             && settingsElement.ValueKind == JsonValueKind.Object)
         {
-            var secretManagerType = SecretManagerTypes.ByName(secretManager.ServiceOptionType);
+            var secretManagerType = SecretManagerTypes.ByName(secretManager.Implementation);
             if (ReferenceEquals(secretManagerType, SecretManagerTypes.NotFound))
             {
                 throw new JsonException(
-                    $"SecretManager '{secretManager.Name}' declares ServiceOptionType '{secretManager.ServiceOptionType}', "
+                    $"SecretManager '{secretManager.Name}' names implementation '{secretManager.Implementation}', "
                     + "which is not registered in SecretManagerTypes. Reference the package that provides that "
                     + "[ServiceTypeOption] so its module initializer registers it before configuration is loaded.");
             }
@@ -77,7 +77,7 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
             if (settingsType is null || !typeof(ISecretManagerImplementationConfiguration).IsAssignableFrom(settingsType))
             {
                 throw new JsonException(
-                    $"SecretManager '{secretManager.Name}' resolved ServiceOptionType '{secretManager.ServiceOptionType}' "
+                    $"SecretManager '{secretManager.Name}' resolved implementation '{secretManager.Implementation}' "
                     + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
                     + $"{nameof(ISecretManagerImplementationConfiguration)}.");
             }

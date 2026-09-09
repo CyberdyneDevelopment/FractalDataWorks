@@ -40,7 +40,7 @@ public class CalculationEntityServiceTests
         Id = id,
         Name = name,
         Description = "desc",
-        CalculationEntityType = type,
+        Implementation = type,
         OutputDataSetName = "OutDs",
         ResultFieldName = "Result",
         ResultDataTypeName = "Decimal",

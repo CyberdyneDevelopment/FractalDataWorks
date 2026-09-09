@@ -184,6 +184,12 @@ public class EtlRowMapperProviderTests
 
     private sealed class TestEtlRowMapperConfig : EtlRowMapperConfiguration
     {
-        public TestEtlRowMapperConfig() : base("EtlMapper", null, "EtlMappers") { }
+        public override string MapperType => ServiceOptionType ?? string.Empty;
+
+        public string? ServiceOptionType { get; set; }
+
+        public TestEtlRowMapperConfig()
+    {
+    }
     }
 }

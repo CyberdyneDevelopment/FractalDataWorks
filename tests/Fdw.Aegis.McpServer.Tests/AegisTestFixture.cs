@@ -98,21 +98,21 @@ public sealed class AegisTestFixture : IAsyncLifetime
         var syntheticConnection = new ConnectionConfiguration
         {
             Name = "synthetic-echo",
-            ServiceOptionType = "Http",
+            Implementation = "Http",
             Configuration = new HttpConnectionConfiguration { BaseUrl = stubAddress },
         };
 
         var hostileConnection = new ConnectionConfiguration
         {
             Name = "hostile-echo",
-            ServiceOptionType = "Http",
+            Implementation = "Http",
             Configuration = new HttpConnectionConfiguration { BaseUrl = hostileAddress },
         };
 
         var secretManager = new SecretManagerConfiguration
         {
             Name = "EnvSecrets",
-            ServiceOptionType = SyntheticSecretManagerType.OptionName,
+            Implementation = SyntheticSecretManagerType.OptionName,
             Configuration = new SyntheticSecretManagerConfiguration { Prefix = "FDW_SECRET_" },
         };
 
@@ -120,7 +120,7 @@ public sealed class AegisTestFixture : IAsyncLifetime
         {
             Name = "echo_credential",
             ConnectionName = "synthetic-echo",
-            ServiceOptionType = "PreApproved",
+            Implementation = "PreApproved",
             Configuration = new PreApprovedCommandConfiguration
             {
                 SecretManagerName = "EnvSecrets",
@@ -136,7 +136,7 @@ public sealed class AegisTestFixture : IAsyncLifetime
         {
             Name = "echo_adhoc",
             ConnectionName = "synthetic-echo",
-            ServiceOptionType = "AdHoc",
+            Implementation = "AdHoc",
             Configuration = new AdHocCommandConfiguration
             {
                 SecretManagerName = "EnvSecrets",
@@ -148,7 +148,7 @@ public sealed class AegisTestFixture : IAsyncLifetime
         {
             Name = "echo_hostile",
             ConnectionName = "hostile-echo",
-            ServiceOptionType = "PreApproved",
+            Implementation = "PreApproved",
             Configuration = new PreApprovedCommandConfiguration
             {
                 SecretManagerName = "EnvSecrets",
@@ -164,7 +164,7 @@ public sealed class AegisTestFixture : IAsyncLifetime
         {
             Name = "echo_badchar",
             ConnectionName = "synthetic-echo",
-            ServiceOptionType = "PreApproved",
+            Implementation = "PreApproved",
             Configuration = new PreApprovedCommandConfiguration
             {
                 SecretManagerName = "EnvSecrets",

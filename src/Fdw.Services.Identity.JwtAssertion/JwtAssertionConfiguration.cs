@@ -42,9 +42,6 @@ public partial class JwtAssertionConfiguration : IIdentityServiceImplementationC
     /// </summary>
     public JwtAssertionConfiguration()
     {
-        ServiceType = "Identity";
-        SectionName = "Identities";
-        ServiceOptionType = "JwtAssertion";
     }
 
     /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>

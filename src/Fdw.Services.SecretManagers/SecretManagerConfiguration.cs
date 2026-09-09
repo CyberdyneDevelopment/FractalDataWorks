@@ -20,7 +20,7 @@ namespace Fdw.Services.SecretManagers;
 /// </list>
 /// </para>
 /// <para>
-/// All type identity properties (ServiceType, Implementation, SectionName) are set via the constructor chain.
+/// The implementation this record names is read from the row, never compiled into a type.
 /// Derived classes call the protected constructor to set their specific values.
 /// </para>
 /// </remarks>
@@ -33,7 +33,7 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     /// Initializes a new instance of the <see cref="SecretManagerConfiguration"/> class.
     /// Default constructor for IOptions binding and header lookups.
     /// </summary>
-    public SecretManagerConfiguration() : this("SecretManager", null, "SecretManagers")
+    public SecretManagerConfiguration() : this(null)
     {
     }
 
@@ -41,14 +41,10 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     /// Initializes a new instance of the <see cref="SecretManagerConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceType">The service type (domain) - always "SecretManager".</param>
     /// <param name="serviceOptionType">The service option type (e.g., "EnvironmentVariable", "AzureKeyVault").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    protected SecretManagerConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    protected SecretManagerConfiguration(string? serviceOptionType)
     {
-        ServiceType = serviceType;
         Implementation = serviceOptionType;
-        SectionName = sectionName;
     }
 
 

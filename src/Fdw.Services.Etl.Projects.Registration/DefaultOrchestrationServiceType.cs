@@ -53,7 +53,7 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
         Configuration(builder =>
         {
             builder.Services.Configure<ServerPolicyDefaultsOptions>(
-                builder.Configuration.GetSection(ServerPolicyDefaultsOptions.SectionName));
+                builder.Configuration.GetSection("ProjectServerDefaults"));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

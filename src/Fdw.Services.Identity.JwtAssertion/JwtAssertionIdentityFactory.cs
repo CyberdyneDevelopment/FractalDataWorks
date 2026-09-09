@@ -46,7 +46,7 @@ internal sealed class JwtAssertionIdentityFactory
 
         if (configuration is not JwtAssertionConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration.Name, "JwtAssertion"));
+                IdentityLog.TypedBodyMissing(_logger, configuration.GetType().Name, "JwtAssertion"));
 
         return GenericResult<IIdentityService>.Success(
             new JwtAssertionIdentityService(
@@ -60,7 +60,7 @@ internal sealed class JwtAssertionIdentityFactory
         => configuration is IIdentityServiceImplementationConfiguration implementation
             ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "JwtAssertion"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? "(null)", "JwtAssertion"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

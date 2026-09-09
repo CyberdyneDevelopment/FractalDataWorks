@@ -79,6 +79,6 @@ internal static class PipelineLineageLoader
     {
         Id = header.Id,
         Name = header.Name,
-        ServiceOptionType = header.ServiceOptionType ?? string.Empty
+        ServiceOptionType = header.Implementation ?? string.Empty
     };
 }

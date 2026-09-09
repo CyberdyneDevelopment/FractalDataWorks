@@ -18,7 +18,6 @@ public class WebhookConfigurationTests
         // Assert
         config.Id.ShouldNotBe(Guid.Empty);
         config.Name.ShouldBe("Webhook");
-        config.SectionName.ShouldBe("Webhook");
         config.ServiceType.ShouldBe("Notification");
         config.ServiceOptionType.ShouldBe("Webhook");
         config.NotificationType.ShouldBe("Webhook");

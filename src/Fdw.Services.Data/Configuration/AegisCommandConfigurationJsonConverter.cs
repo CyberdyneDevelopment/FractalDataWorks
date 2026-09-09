@@ -63,16 +63,16 @@ public sealed class AegisCommandConfigurationJsonConverter : JsonConverter<Aegis
         var command = JsonSerializer.Deserialize<AegisCommandConfiguration>(parentJson, innerOptions);
         if (command is null) return null;
 
-        // Resolve typed settings type via ServiceOptionType, deserialize the nested Configuration.
-        if (!string.IsNullOrEmpty(command.ServiceOptionType)
+        // Resolve the implementation configuration type via Implementation, deserialize the nested Configuration.
+        if (!string.IsNullOrEmpty(command.Implementation)
             && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
             && settingsElement.ValueKind == JsonValueKind.Object)
         {
-            var policyType = ApprovalPolicyTypes.ByName(command.ServiceOptionType);
+            var policyType = ApprovalPolicyTypes.ByName(command.Implementation);
             if (ReferenceEquals(policyType, ApprovalPolicyTypes.NotFound))
             {
                 throw new JsonException(
-                    $"Command '{command.Name}' declares ServiceOptionType '{command.ServiceOptionType}', "
+                    $"Command '{command.Name}' names implementation '{command.Implementation}', "
                     + "which is not registered in ApprovalPolicyTypes. Reference the package that provides that "
                     + "[TypeOption] so its module initializer registers it before configuration is loaded.");
             }
@@ -81,7 +81,7 @@ public sealed class AegisCommandConfigurationJsonConverter : JsonConverter<Aegis
             if (settingsType is null || !typeof(IApprovalPolicyConfiguration).IsAssignableFrom(settingsType))
             {
                 throw new JsonException(
-                    $"Command '{command.Name}' resolved ServiceOptionType '{command.ServiceOptionType}' to "
+                    $"Command '{command.Name}' resolved implementation '{command.Implementation}' to "
                     + $"configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
                     + $"{nameof(IApprovalPolicyConfiguration)}.");
             }

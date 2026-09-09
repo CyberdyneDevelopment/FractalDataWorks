@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Calculations.Commands;
 using Fdw.Services.Calculations.Configuration;
 using Fdw.Services.Configuration;
@@ -18,13 +19,16 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Calculations;
 
 /// <summary>
-/// Header configuration provider for the calculation domain. The full aggregate — Inputs, Steps→{Fields,
-/// Operands}, and the polymorphic Formula/Windowed typed body — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; there is no
-/// per-domain hand-assembly. Typed providers are registered with this header via the inherited
-/// <c>Register</c> in <see cref="DefaultCalculationServiceType"/> (dispatch on ServiceOptionType).
+/// The calculation domain's configuration provider. It reads the domain row, resolves the
+/// implementation its <c>Implementation</c> value names, and attaches it; the subtree — Inputs,
+/// Steps→{Fields, Operands} — is composed and cascade-saved by the base. Implementation providers are
+/// registered with it via <c>Register</c> in <see cref="DefaultCalculationServiceType"/>.
 /// </summary>
-public class CalculationConfigurationProvider : ImplementationConfigurationProviderBase<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>
+public class CalculationConfigurationProvider
+    : ServiceConfigurationProviderBase<
+          CalculationEntityConfiguration,
+          ICalculationTypedConfiguration,
+          CalculationEntityConfigurationCommand>
 {
     /// <summary>
     /// Registers the CalculationConfigurationProvider with DI, targeting this domain's own default
@@ -66,4 +70,16 @@ public class CalculationConfigurationProvider : ImplementationConfigurationProvi
 
         return base.Save(record, ct);
     }
+
+    /// <inheritdoc />
+    protected override CalculationEntityConfiguration Compose<T>(
+        string implementation,
+        string name,
+        T implementationConfiguration)
+        => new()
+        {
+            Name = name,
+            Implementation = implementation,
+            Configuration = implementationConfiguration,
+        };
 }

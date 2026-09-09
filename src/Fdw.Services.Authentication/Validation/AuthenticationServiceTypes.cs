@@ -162,7 +162,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
 
-                if (entry.ServiceOptionType is not { Length: > 0 } kind)
+                if (entry.Implementation is not { Length: > 0 } kind)
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.SectionUnreadable(log, serviceName));
 

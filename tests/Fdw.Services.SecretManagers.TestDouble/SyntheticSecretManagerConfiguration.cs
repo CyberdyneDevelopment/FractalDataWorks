@@ -29,9 +29,6 @@ public sealed class SyntheticSecretManagerConfiguration : ISecretManagerImplemen
     /// <summary>Gets or sets the environment-variable prefix secret keys are looked up under.</summary>
     public string Prefix { get; set; } = string.Empty;
 
-    string IGenericConfiguration.SectionName => "SecretManagers";
 
-    string IGenericConfiguration.ServiceType => "SecretManager";
 
-    string? IGenericConfiguration.ServiceOptionType => SyntheticSecretManagerType.OptionName;
 }

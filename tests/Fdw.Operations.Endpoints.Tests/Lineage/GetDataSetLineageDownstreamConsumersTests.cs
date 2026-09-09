@@ -49,10 +49,10 @@ public class GetDataSetLineageDownstreamConsumersTests
     {
         Id = Guid.NewGuid(),
         Name = name,
-        ServiceOptionType = "Etl",
+        Implementation = "Etl",
         Configuration = new EtlPipelineConfiguration
         {
-            ServiceOptionType = "BatchCopy",
+            Implementation = "BatchCopy",
             Configuration = new BatchCopyPipelineConfiguration
             {
                 IsEnabled = true,

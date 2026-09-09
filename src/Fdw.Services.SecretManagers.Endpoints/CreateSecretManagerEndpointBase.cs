@@ -126,7 +126,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
             {
                 Id = domainConfigurationId,
                 Name = req.Name,
-                ServiceOptionType = req.SecretManagerType,
+                Implementation = req.SecretManagerType,
                 Description = req.Description,
                 Environment = req.Environment,
                 Configuration = bodyResult.Body
@@ -149,7 +149,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 Name = config.Name,
                 SecretManagerType = config.SecretManagerType,
                 Description = config.Description,
-                ServiceOptionType = config.ServiceOptionType
+                ServiceOptionType = config.Implementation
             };
 
             await Send.ResponseAsync(detail, 201, ct).ConfigureAwait(false);

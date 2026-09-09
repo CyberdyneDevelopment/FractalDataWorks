@@ -117,7 +117,7 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
         {
             Id = connectionId,
             Name = request.Name,
-            ServiceOptionType = request.ServiceType,
+            Implementation = request.ServiceType,
             HealthCheckEnabled = request.HealthCheckEnabled,
             HealthCheckOnStartup = request.HealthCheckOnStartup,
             HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds,

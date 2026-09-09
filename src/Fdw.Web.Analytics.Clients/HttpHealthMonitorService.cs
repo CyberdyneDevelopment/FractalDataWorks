@@ -18,6 +18,9 @@ namespace Fdw.Web.Analytics.Clients;
 /// </summary>
 public sealed class HttpHealthMonitorService : IHealthMonitorService
 {
+    /// <summary>Gets the service category this instance belongs to.</summary>
+    public string ServiceType => "HealthMonitor";
+
     private readonly HttpClient _httpClient;
     private readonly ILogger<HttpHealthMonitorService> _logger;
 

@@ -44,9 +44,7 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     /// <param name="sectionName">The configuration section name for binding.</param>
     protected DataVaultConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
-        ServiceType = serviceType;
         Implementation = serviceOptionType;
-        SectionName = sectionName;
     }
 
 

@@ -82,18 +82,18 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
         var existing = loadResult.Value;
 
-        var mergedServiceOptionType = request.ServiceOptionType ?? existing.ServiceOptionType;
-        if (string.IsNullOrWhiteSpace(mergedServiceOptionType)
-            || ReferenceEquals(DataSetTypes.ByName(mergedServiceOptionType), DataSetTypes.NotFound))
+        var mergedImplementation = request.ServiceOptionType ?? existing.Implementation;
+        if (string.IsNullOrWhiteSpace(mergedImplementation)
+            || ReferenceEquals(DataSetTypes.ByName(mergedImplementation), DataSetTypes.NotFound))
         {
             return GenericResult<DataSetDetailResponse>.Failure(
                 DataSetsResultCodes.ServiceOptionTypeInvalid, Logger,
-                ResultDetails.Create("name", request.Name, "serviceOptionType", mergedServiceOptionType ?? string.Empty));
+                ResultDetails.Create("name", request.Name, "serviceOptionType", mergedImplementation ?? string.Empty));
         }
 
         var mergedFederationStrategy = request.FederationStrategy ?? existing.FederationStrategy;
         var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
-            mergedServiceOptionType, mergedFederationStrategy, request.Name, Logger);
+            mergedImplementation, mergedFederationStrategy, request.Name, Logger);
         if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
 
         var aggregatesValidation = ValidateRequestedAggregates(request);
@@ -104,7 +104,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         existing.Category = request.Category ?? existing.Category;
         existing.Version = request.Version;
         existing.RecordTypeName = request.RecordTypeName;
-        existing.ServiceOptionType = mergedServiceOptionType;
+        existing.Implementation = mergedImplementation;
         existing.FederationStrategy = mergedFederationStrategy;
         existing.TransformExpression = request.TransformExpression ?? existing.TransformExpression;
         existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;

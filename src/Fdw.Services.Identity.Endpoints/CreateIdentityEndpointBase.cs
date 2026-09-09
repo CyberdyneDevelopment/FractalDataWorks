@@ -75,9 +75,7 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
         {
             Id = identityId,
             Name = request.Name,
-            ServiceType = "Identity",
-            SectionName = "Identities",
-            ServiceOptionType = request.ServiceOptionType,
+            Implementation = request.ServiceOptionType,
             Description = request.Description,
             Configuration = typedBody,
         };

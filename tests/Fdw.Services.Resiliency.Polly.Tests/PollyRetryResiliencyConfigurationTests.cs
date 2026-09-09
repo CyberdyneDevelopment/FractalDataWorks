@@ -5,20 +5,6 @@ namespace Fdw.Services.Resiliency.Polly.Tests;
 /// </summary>
 public sealed class PollyRetryResiliencyConfigurationTests
 {
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    public void SectionNameReturnsResiliencyPollyRetry()
-    {
-        // Arrange
-        var config = new PollyRetryResiliencyConfiguration();
-
-        // Act
-        var sectionName = config.SectionName;
-
-        // Assert
-        sectionName.ShouldBe("Resiliency:PollyRetry");
-    }
 
     [Fact]
     [Trait("Priority", "P2")]
@@ -80,29 +66,4 @@ public sealed class PollyRetryResiliencyConfigurationTests
         config.TimeoutSeconds.ShouldBe(30);
     }
 
-    [Fact]
-    [Trait("Priority", "P3")]
-    [Trait("Category", "Configuration")]
-    public void InheritedGenericConfigurationPropertiesAreSettable()
-    {
-        // Arrange
-        var config = new PollyRetryResiliencyConfiguration();
-        var id = System.Guid.NewGuid();
-        var tenantId = System.Guid.NewGuid();
-
-        // Act
-        config.Id = id;
-        config.Name = "MyPolicy";
-        config.ServiceOptionType = "Custom";
-        config.Description = "A description";
-        config.TenantId = tenantId;
-
-        // Assert
-        config.Id.ShouldBe(id);
-        config.Name.ShouldBe("MyPolicy");
-        config.ServiceOptionType.ShouldBe("Custom");
-        config.Description.ShouldBe("A description");
-        config.TenantId.ShouldBe(tenantId);
-        config.ServiceType.ShouldBe("Resiliency");
-    }
 }

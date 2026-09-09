@@ -105,7 +105,7 @@ internal sealed class JwtIssuanceResolver : IDisposable
                     _logger,
                     rows.Count == 0
                         ? "no rows"
-                        : string.Join(", ", rows.Select(r => r.ServiceOptionType ?? "(none)"))));
+                        : string.Join(", ", rows.Select(r => r.Implementation ?? "(none)"))));
 
             if (header.SecretManagerName is not { Length: > 0 } secretManager
                 || header.SecretKeyName is not { Length: > 0 } secretKey)
@@ -154,7 +154,7 @@ internal sealed class JwtIssuanceResolver : IDisposable
     // and which option a row declares is what decides whether this code can serve it.
     private static TokenManagerConfiguration? Select(IReadOnlyList<TokenManagerConfiguration> rows) =>
         rows.FirstOrDefault(row =>
-            string.Equals(row.ServiceOptionType, "Jwt", StringComparison.OrdinalIgnoreCase));
+            string.Equals(row.Implementation, "Jwt", StringComparison.OrdinalIgnoreCase));
 
     private IGenericResult<TimeSpan> Lifetime(string? configured, string name)
     {

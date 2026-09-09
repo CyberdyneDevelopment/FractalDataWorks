@@ -32,9 +32,7 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
     /// <param name="sectionName">The section these rows are read from.</param>
     protected AuthenticationServiceConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
-        ServiceType = serviceType;
         Implementation = serviceOptionType;
-        SectionName = sectionName;
     }
 
     /// <inheritdoc />

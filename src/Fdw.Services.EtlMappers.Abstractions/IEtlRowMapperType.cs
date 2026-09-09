@@ -12,10 +12,6 @@ namespace Fdw.Services.EtlMappers.Abstractions;
 /// </summary>
 public interface IEtlRowMapperType : ITypeOption<Guid, IEtlRowMapperType>
 {
-    /// <summary>
-    /// Gets the configuration section name for appsettings.json.
-    /// </summary>
-    string SectionName { get; }
 
     /// <summary>
     /// Gets the display name for this mapper type.
@@ -41,14 +37,6 @@ public interface IEtlRowMapperType : ITypeOption<Guid, IEtlRowMapperType>
     /// Gets the estimated allocations per row for this mapper type.
     /// </summary>
     int EstimatedAllocationsPerRow { get; }
-
-    /// <summary>
-    /// Configures IOptions binding for this mapper type.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">The configuration root.</param>
-    /// <param name="loggerFactory">Optional logger factory.</param>
-    void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory = null);
 
     /// <summary>
     /// Registers required services (factories) with the DI container.

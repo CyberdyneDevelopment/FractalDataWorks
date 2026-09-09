@@ -61,7 +61,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
 
         ApplyPaths(config, request.Paths);
 
-        config.ServiceOptionType = connection.ServiceOptionType;
+        config.TypeId = connection.Implementation;
 
         var saveResult = await _dataStoreProvider.Save(config, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)

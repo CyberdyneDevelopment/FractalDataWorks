@@ -97,17 +97,14 @@ public sealed class RecursiveCascadeSaveTests
         // Arrange — header row carries ServiceOptionType "Default" (TestRoot's discriminator).
         var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
         var gateway = new HeaderReturningGateway(header);
-        var provider = new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
-            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
-            GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "pipe");
+        var provider = new TestRootDomainProvider(GatewayProviderFor(gateway));
 
-        // Register a typed provider for a DIFFERENT kind: the registry is NON-EMPTY (so this is a header
-        // provider, not a leaf) yet cannot resolve "Default" — the missing-provider condition.
+        // Register an implementation provider under a DIFFERENT name. The row names "Default", which
+        // nothing is registered for -- the missing-provider condition, which is now a named failure
+        // rather than something inferred from an empty registry.
         provider.Register(
             "SomeOtherKind",
-            new ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>(
+            new ImplementationConfigurationProvider<ITestBodyConfiguration, TestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",
@@ -118,6 +115,20 @@ public sealed class RecursiveCascadeSaveTests
 
         // Assert — fail loud, no silent fallback to the bare header. NO FALLBACKS WITHOUT EXPLICIT APPROVAL.
         result.IsSuccess.ShouldBeFalse();
+    }
+
+    /// <summary>A domain provider for the test hierarchy: it owns the registry and dispatches.</summary>
+    public sealed class TestRootDomainProvider
+        : ServiceConfigurationProviderBase<TestRootConfiguration, ITestBodyConfiguration, TestRootCommand>
+    {
+        public TestRootDomainProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
+                   gatewayProvider, "PlatformConfiguration", "pipe")
+        {
+        }
+
+        protected override TestRootConfiguration Compose<T>(string implementation, string name, T implementationConfiguration)
+            => new() { Name = name, Implementation = implementation, Configuration = implementationConfiguration };
     }
 
     private static ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
@@ -141,16 +152,19 @@ public sealed class RecursiveCascadeSaveTests
     /// A property typed as the bare IGenericConfiguration is treated as a scalar, so a derived interface
     /// is required for GetTypedBody to return the body.
     /// </summary>
-    public interface ITestBodyConfiguration : IGenericConfiguration
+    public interface ITestBodyConfiguration : IImplementationConfiguration
     {
     }
 
     /// <summary>Root record carrying a typed body in its <c>Configuration</c> property.</summary>
     [GenerateMapper]
-    public sealed class TestRootConfiguration : IGenericConfiguration
+    public sealed class TestRootConfiguration : IDomainConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
+        public string Domain => "TestRoot";
+        public string? Implementation { get; set; } = "Default";
+        IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
         public string SectionName => "TestRoot";
         public string ServiceType => "TestRoot";
         public string? ServiceOptionType => "Default";

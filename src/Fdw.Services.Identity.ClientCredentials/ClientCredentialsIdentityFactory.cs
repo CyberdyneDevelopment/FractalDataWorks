@@ -58,7 +58,7 @@ internal sealed class ClientCredentialsIdentityFactory
 
         if (configuration is not ClientCredentialsConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration.Name, "ClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration.GetType().Name, "ClientCredentials"));
 
         return GenericResult<IIdentityService>.Success(
             new ClientCredentialsIdentityService(
@@ -73,7 +73,7 @@ internal sealed class ClientCredentialsIdentityFactory
         => configuration is IIdentityServiceImplementationConfiguration implementation
             ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "ClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? "(null)", "ClientCredentials"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

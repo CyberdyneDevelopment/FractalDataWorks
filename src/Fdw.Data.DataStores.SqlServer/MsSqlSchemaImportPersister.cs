@@ -76,10 +76,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
             Id = Guid.NewGuid(),
             Name = discovered.Name,
             ConnectionId = connectionId,
-            ServiceType = "DataStore",
-            ServiceOptionType = "MsSql",
-            SectionName = "DataStores",
-            Description = discovered.Description
+            TypeId = "MsSql",
         };
 
         var saveDataStoreResult = await _dataStoreProvider.Save(dataStoreConfig, cancellationToken).ConfigureAwait(false);

@@ -10,8 +10,6 @@ namespace Fdw.Services.Resiliency.RetryNotify;
 /// </summary>
 public sealed class RetryNotifyResiliencyConfiguration : ResiliencyConfiguration
 {
-    /// <inheritdoc/>
-    public override string SectionName => "Resiliency:RetryNotify";
 
     /// <inheritdoc/>
     public override string StrategyType => "RetryNotify";

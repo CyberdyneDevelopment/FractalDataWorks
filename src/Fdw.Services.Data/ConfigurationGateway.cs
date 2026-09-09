@@ -469,24 +469,24 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             if (!string.Equals(_schema.Connections[i].Name, ConnectionName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (string.IsNullOrWhiteSpace(_schema.Connections[i].ServiceOptionType))
+            if (string.IsNullOrWhiteSpace(_schema.Connections[i].Implementation))
             {
                 return GenericResult<IConnectionType>.Failure(
                     DataGatewayCacheLog.CachePartitionUnavailable(
-                        _logger, ConnectionName, "the connection declares no ServiceOptionType"));
+                        _logger, ConnectionName, "the connection names no implementation"));
             }
 
-            if (ReferenceEquals(ConnectionTypes.ByName(_schema.Connections[i].ServiceOptionType), ConnectionTypes.NotFound))
+            if (ReferenceEquals(ConnectionTypes.ByName(_schema.Connections[i].Implementation), ConnectionTypes.NotFound))
             {
                 return GenericResult<IConnectionType>.Failure(
                     DataGatewayCacheLog.CachePartitionUnavailable(
                         _logger,
                         ConnectionName,
-                        $"connection type '{_schema.Connections[i].ServiceOptionType}' is not registered"));
+                        $"connection type '{_schema.Connections[i].Implementation}' is not registered"));
             }
 
             return GenericResult<IConnectionType>.Success(
-                ConnectionTypes.ByName(_schema.Connections[i].ServiceOptionType));
+                ConnectionTypes.ByName(_schema.Connections[i].Implementation));
         }
 
         return GenericResult<IConnectionType>.Failure(

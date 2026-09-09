@@ -72,7 +72,7 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
                 ConnectionEndpointLog.ConnectionTypeNotFound(_logger, request.Name);
                 return GenericResult<ConnectionTypeCapabilitiesResponse?>.Success(null);
             }
-            typeName = connResult.Value.ServiceOptionType ?? string.Empty;
+            typeName = connResult.Value.Implementation ?? string.Empty;
         }
 
         var connectionType = Fdw.Services.Connections.ConnectionTypes.ByName(typeName);

@@ -74,7 +74,7 @@ public abstract class GetDataverseReadinessEndpointBase : CrudGetEndpointBase<Da
                 continue;
             }
 
-            anyFederated |= string.Equals(dataSet.Value.ServiceOptionType, "Federated", StringComparison.Ordinal);
+            anyFederated |= string.Equals(dataSet.Value.Implementation, "Federated", StringComparison.Ordinal);
 
             // A calculated field has no source BY DESIGN -- it is not missing a binding, it does not
             // have one. Counting it here would leave every data set containing a calculation

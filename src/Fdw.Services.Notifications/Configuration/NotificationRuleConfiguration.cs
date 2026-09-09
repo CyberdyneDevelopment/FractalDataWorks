@@ -30,8 +30,6 @@ namespace Fdw.Services.Notifications.Configuration;
 [ManagedConfiguration( ServiceCategory = "Notification")]
 public partial class NotificationRuleConfiguration : ConfigurationBase<NotificationRuleConfiguration>
 {
-    /// <inheritdoc />
-    public override string SectionName => "Notification";
 
     /// <inheritdoc />
     public override string ServiceType => "NotificationRule";

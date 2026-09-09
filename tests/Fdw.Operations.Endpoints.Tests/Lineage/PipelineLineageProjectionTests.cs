@@ -41,10 +41,10 @@ public class PipelineLineageProjectionTests
         {
             Id = System.Guid.NewGuid(),
             Name = "UsgsDailyLoad",
-            ServiceOptionType = "Etl",
+            Implementation = "Etl",
             Configuration = new EtlPipelineConfiguration
             {
-                ServiceOptionType = "BatchCopy",
+                Implementation = "BatchCopy",
                 Configuration = new BatchCopyPipelineConfiguration
                 {
                     IsEnabled = true,
@@ -77,10 +77,10 @@ public class PipelineLineageProjectionTests
         {
             Id = System.Guid.NewGuid(),
             Name = "StreamingIngest",
-            ServiceOptionType = "Etl",
+            Implementation = "Etl",
             Configuration = new EtlPipelineConfiguration
             {
-                ServiceOptionType = "Streaming",
+                Implementation = "Streaming",
                 Configuration = new StreamingPipelineConfiguration
                 {
                     IsEnabled = true,
@@ -108,10 +108,10 @@ public class PipelineLineageProjectionTests
         {
             Id = System.Guid.NewGuid(),
             Name = "OrphanPipeline",
-            ServiceOptionType = "Etl",
+            Implementation = "Etl",
             Configuration = new EtlPipelineConfiguration
             {
-                ServiceOptionType = "BatchCopy",
+                Implementation = "BatchCopy",
                 Configuration = null
             }
         };
@@ -135,7 +135,7 @@ public class PipelineLineageProjectionTests
         {
             Id = System.Guid.NewGuid(),
             Name = "NonEtlPipeline",
-            ServiceOptionType = "SomeOtherKind",
+            Implementation = "SomeOtherKind",
             Configuration = null
         };
 

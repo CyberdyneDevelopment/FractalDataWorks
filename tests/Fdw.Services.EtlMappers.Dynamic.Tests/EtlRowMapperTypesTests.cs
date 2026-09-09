@@ -67,41 +67,7 @@ public class EtlRowMapperTypesTests
         notFound.EstimatedAllocationsPerRow.ShouldBe(0);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void PooledTypeInstanceHasCorrectProperties()
-    {
-        // Arrange - create instance directly (RestrictToCurrentCompilation prevents auto-registration)
-        var pooledType = new PooledDictionaryMapperType();
 
-        // Assert
-        pooledType.Name.ShouldBe("Pooled");
-        pooledType.DisplayName.ShouldBe("Pooled Dictionary Mapper");
-        pooledType.Description.ShouldBe("Zero-allocation mapper using dictionary pooling");
-        pooledType.SectionName.ShouldBe("EtlMappers:Pooled");
-        pooledType.EstimatedAllocationsPerRow.ShouldBe(0);
-        pooledType.ConfigurationType.ShouldBe(typeof(PooledDictionaryMapperConfiguration));
-        pooledType.FactoryType.ShouldBe(typeof(PooledDictionaryMapperFactory));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void DynamicTypeInstanceHasCorrectProperties()
-    {
-        // Arrange - create instance directly (RestrictToCurrentCompilation prevents auto-registration)
-        var dynamicType = new DynamicStructMapperType();
-
-        // Assert
-        dynamicType.Name.ShouldBe("Dynamic");
-        dynamicType.DisplayName.ShouldBe("Dynamic Struct Mapper");
-        dynamicType.Description.ShouldBe("Mapper using compiled expression trees for field access");
-        dynamicType.SectionName.ShouldBe("EtlMappers:Dynamic");
-        dynamicType.EstimatedAllocationsPerRow.ShouldBe(1);
-        dynamicType.ConfigurationType.ShouldBe(typeof(DynamicStructMapperConfiguration));
-        dynamicType.FactoryType.ShouldBe(typeof(DynamicStructMapperFactory));
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

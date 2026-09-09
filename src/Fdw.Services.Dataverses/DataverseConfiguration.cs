@@ -15,7 +15,7 @@ namespace Fdw.Services.Dataverses;
 /// it, and the data sets it owns need not be backed by a source yet.
 /// </para>
 /// <para>
-/// Why <see cref="ServiceOptionType"/> is null: a Dataverse is not dispatched to a factory. It is
+/// Why a Dataverse names no implementation: it is not dispatched to a factory. It is
 /// a configuration record, not a service with pluggable implementations, so it carries no option
 /// discriminator — the same as <c>OrchestrationNodeConfiguration</c> and its Stage/Step siblings.
 /// </para>

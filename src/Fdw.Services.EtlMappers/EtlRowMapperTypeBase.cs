@@ -21,10 +21,6 @@ public abstract class EtlRowMapperTypeBase<TMapper, TFactory, TConfiguration>
     where TConfiguration : EtlRowMapperConfiguration
     where TFactory : IEtlRowMapperFactory<TMapper, TConfiguration>
 {
-    /// <summary>
-    /// Gets the configuration section name for appsettings.json.
-    /// </summary>
-    public string SectionName { get; }
 
     /// <summary>
     /// Gets the display name for this mapper type.
@@ -51,30 +47,16 @@ public abstract class EtlRowMapperTypeBase<TMapper, TFactory, TConfiguration>
     /// Initializes a new instance of the mapper type base class.
     /// </summary>
     /// <param name="name">The name of this mapper type.</param>
-    /// <param name="sectionName">The configuration section name.</param>
     /// <param name="displayName">The display name for this mapper type.</param>
     /// <param name="description">The description of what this mapper type provides.</param>
     protected EtlRowMapperTypeBase(
         string name,
-        string sectionName,
         string displayName,
         string description)
         : base(Guid.NewGuid(), name)
     {
-        SectionName = sectionName;
         DisplayName = displayName;
         Description = description;
-    }
-
-    /// <inheritdoc />
-    public virtual void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory = null)
-    {
-        // Default: bind configuration section to IOptions<List<TConfiguration>>
-        var section = configuration.GetSection(SectionName);
-        if (section.Exists())
-        {
-            services.Configure<System.Collections.Generic.List<TConfiguration>>(section);
-        }
     }
 
     /// <inheritdoc />

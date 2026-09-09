@@ -36,8 +36,6 @@ public partial class IdentityServiceConfiguration : IIdentityServiceConfiguratio
     /// </summary>
     public IdentityServiceConfiguration()
     {
-        ServiceType = "Identity";
-        SectionName = "Identities";
     }
 
     /// <summary>

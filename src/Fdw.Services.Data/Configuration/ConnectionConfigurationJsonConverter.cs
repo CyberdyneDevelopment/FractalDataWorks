@@ -64,16 +64,16 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
         var connection = JsonSerializer.Deserialize<ConnectionConfiguration>(parentJson, innerOptions);
         if (connection is null) return null;
 
-        // Resolve typed settings type via ServiceOptionType, deserialize the nested Configuration.
-        if (!string.IsNullOrEmpty(connection.ServiceOptionType)
+        // Resolve the implementation configuration type via Implementation, deserialize the nested Configuration.
+        if (!string.IsNullOrEmpty(connection.Implementation)
             && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
             && settingsElement.ValueKind == JsonValueKind.Object)
         {
-            var connectionType = ConnectionTypes.ByName(connection.ServiceOptionType);
+            var connectionType = ConnectionTypes.ByName(connection.Implementation);
             if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
             {
                 throw new JsonException(
-                    $"Connection '{connection.Name}' declares ServiceOptionType '{connection.ServiceOptionType}', "
+                    $"Connection '{connection.Name}' names implementation '{connection.Implementation}', "
                     + "which is not registered in ConnectionTypes. Reference the package that provides that "
                     + "[ServiceTypeOption] so its module initializer registers it before configuration is loaded.");
             }
@@ -82,7 +82,7 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
             if (settingsType is null || !typeof(IConnectionImplementationConfiguration).IsAssignableFrom(settingsType))
             {
                 throw new JsonException(
-                    $"Connection '{connection.Name}' resolved ServiceOptionType '{connection.ServiceOptionType}' "
+                    $"Connection '{connection.Name}' resolved implementation '{connection.Implementation}' "
                     + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
                     + $"{nameof(IConnectionImplementationConfiguration)}.");
             }

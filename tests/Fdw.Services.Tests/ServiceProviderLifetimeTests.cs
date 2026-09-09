@@ -32,6 +32,10 @@ public class ServiceProviderLifetimeTests
     /// </summary>
     public class TestServiceConfiguration : IGenericConfiguration<TestServiceConfiguration>, IImplementationConfiguration, IDomainConfiguration
     {
+        public string Domain => "TestService";
+
+        public string? Implementation { get; set; }
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
         public string SectionName => "TestServices";

@@ -45,13 +45,13 @@ public class ServiceTypeCollectionBaseSimpleTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void ServiceTypeBaseSectionNameMatchesConstructorArg()
+    public void ServiceTypeBaseConfigurationKeyMatchesConstructorArg()
     {
         // Arrange & Act
         var sut = new TestServiceType();
 
         // Assert
-        sut.SectionName.ShouldBe("Services:TestType");
+        sut.ConfigurationKey.ShouldBe("Services:TestType");
     }
 
     [Fact]

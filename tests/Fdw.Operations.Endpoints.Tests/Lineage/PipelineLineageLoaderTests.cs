@@ -53,16 +53,16 @@ public class PipelineLineageLoaderTests
     }
 
     private static PipelineConfiguration Header(string name) =>
-        new() { Id = Guid.NewGuid(), Name = name, ServiceOptionType = "Etl" };
+        new() { Id = Guid.NewGuid(), Name = name, Implementation = "Etl" };
 
     private static PipelineConfiguration Composed(PipelineConfiguration header, string sourceDataSet, string destinationDataSet) => new()
     {
         Id = header.Id,
         Name = header.Name,
-        ServiceOptionType = header.ServiceOptionType,
+        Implementation = header.Implementation,
         Configuration = new EtlPipelineConfiguration
         {
-            ServiceOptionType = "BatchCopy",
+            Implementation = "BatchCopy",
             Configuration = new BatchCopyPipelineConfiguration
             {
                 IsEnabled = true,

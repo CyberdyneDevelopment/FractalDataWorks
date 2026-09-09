@@ -22,8 +22,8 @@ namespace Fdw.Services.SecretManagers;
 
 /// <summary>
 /// Domain-specific configuration provider for secret managers.
-/// The polymorphic typed-body read (dispatch on
-/// <see cref="Fdw.Configuration.IGenericConfiguration.ServiceOptionType"/>, e.g.
+/// The implementation read (dispatch on
+/// <see cref="Fdw.Configuration.IDomainConfiguration.Implementation"/>, e.g.
 /// "EnvironmentVariable"/"AzureKeyVault", to load the typed body row and attach it to
 /// <see cref="SecretManagerConfiguration.Configuration"/>) is composed uniformly by
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. This subclass additionally captures the

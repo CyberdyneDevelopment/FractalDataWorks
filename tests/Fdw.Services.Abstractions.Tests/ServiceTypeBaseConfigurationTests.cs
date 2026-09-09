@@ -28,9 +28,7 @@ public class ServiceTypeBaseConfigurationTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "Test";
-        public string SectionName => "Test";
         public string ServiceType => "Test";
-        public string? ServiceOptionType => "Test";
     }
 
     [ExcludeFromCodeCoverage]
@@ -76,7 +74,7 @@ public class ServiceTypeBaseConfigurationTests
                 // Inline, because binding from appsettings is three lines in the body that wants
                 // it rather than a helper on every service type that does not.
                 builder.Services.AddOptions<SimpleConfig>()
-                    .BindConfiguration(SectionName)
+                    .BindConfiguration(ConfigurationKey)
                     .ValidateDataAnnotations()
                     .ValidateOnStart();
 

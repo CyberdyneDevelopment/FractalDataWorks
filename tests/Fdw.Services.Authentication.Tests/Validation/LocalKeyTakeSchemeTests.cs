@@ -67,7 +67,7 @@ public sealed class LocalKeyTakeSchemeTests
         => new()
         {
             Name = name ?? string.Empty,
-            ServiceOptionType = "LocalKey",
+            Implementation = "LocalKey",
             Enabled = true,
             Authority = authority,
         };

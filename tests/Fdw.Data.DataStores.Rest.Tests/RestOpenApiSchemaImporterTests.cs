@@ -186,8 +186,7 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         result.IsSuccess.ShouldBeTrue();
         var dataStore = result.Value!;
         dataStore.Name.ShouldBe("Test Pet Store");
-        dataStore.ServiceType.ShouldBe("DataStore");
-        dataStore.ServiceOptionType.ShouldBe("Rest");
+        dataStore.TypeId.ShouldBe("Rest");
         dataStore.Paths.Count.ShouldBe(2);
         dataStore.Paths.Select(p => p.Name).ShouldBe(["listPets", "createPet"], ignoreOrder: true);
         dataStore.Paths.ShouldAllBe(p => p.PathValue == "http://api.example.com/pets");

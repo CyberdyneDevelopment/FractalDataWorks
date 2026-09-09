@@ -46,7 +46,7 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
     /// <inheritdoc />
     public IGenericResult<IExternalIdentityProvisioner> Create(IExternalIdentityProvisionerImplementationConfiguration configuration)
         => GenericResult<IExternalIdentityProvisioner>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
                 "a Chained provisioner requires the provisioner provider for sibling lookup; it must be created "
                 + "via Create(configuration, provisionerProvider) — the provider supplies itself. "
                 + "Reaching this overload means the provisioner domain is not using DefaultExternalIdentityProvisionerProvider."));
@@ -82,7 +82,7 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
             return Create(typed);
 
         return GenericResult<IExternalIdentityProvisioner>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
                 $"expected IExternalIdentityProvisionerImplementationConfiguration but received '{configuration?.GetType().FullName ?? "null"}'."));
     }
 
@@ -97,7 +97,7 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
             return GenericResult<T>.Success(typed);
 
         return GenericResult<T>.Failure(
-            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.Name ?? "(null)",
+            ExternalIdentityProvisionerLog.FactoryCreateFailed(_logger, configuration?.GetType().Name ?? "(null)",
                 $"created service does not implement requested type '{typeof(T).FullName}'."));
     }
 
