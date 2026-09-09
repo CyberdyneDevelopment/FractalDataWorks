@@ -88,6 +88,28 @@ public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="TypeOptionBase{TKey, T}"/> class with full
+    /// metadata and a derived configuration key.
+    /// </summary>
+    /// <param name="id">The unique identifier for this type option value.</param>
+    /// <param name="name">The name of this type option value.</param>
+    /// <param name="displayName">The display name for user-facing representations.</param>
+    /// <param name="description">The detailed description of this type option.</param>
+    /// <param name="category">The category of this type option value.</param>
+    /// <exception cref="ArgumentNullException">Thrown when name is null.</exception>
+    protected TypeOptionBase(TKey id, string name, string displayName, string description, string? category)
+    {
+        if (name == null) throw new ArgumentNullException(nameof(name));
+
+        Id = id;
+        Name = name;
+        _category = category ?? string.Empty;
+        ConfigurationKey = $"TypeOptions:{name}";
+        DisplayName = displayName ?? name;
+        Description = description ?? $"Type option: {name}";
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="TypeOptionBase{TKey, T}"/> class with full metadata.
     /// </summary>
     /// <param name="id">The unique identifier for this type option value.</param>

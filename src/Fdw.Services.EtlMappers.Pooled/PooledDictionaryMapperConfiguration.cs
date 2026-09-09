@@ -10,9 +10,6 @@ namespace Fdw.Services.EtlMappers.Pooled;
 /// </summary>
 public sealed class PooledDictionaryMapperConfiguration : EtlRowMapperConfiguration
 {
-    /// <inheritdoc />
-    public override string MapperType => "Pooled";
-
     /// <summary>
     /// Gets or sets the maximum dictionary size to pool.
     /// Dictionaries larger than this are not returned to the pool.

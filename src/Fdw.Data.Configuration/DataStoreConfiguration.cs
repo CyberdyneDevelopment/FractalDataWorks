@@ -39,22 +39,8 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     /// Initializes a new instance of the <see cref="DataStoreConfiguration"/> class.
     /// Default constructor for IOptions binding and header lookups.
     /// </summary>
-    public DataStoreConfiguration() : this("DataStore", null, "DataStores")
+    public DataStoreConfiguration()
     {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="DataStoreConfiguration"/> class.
-    /// Protected constructor for derived classes to set their type identity.
-    /// </summary>
-    /// <param name="serviceType">The service type (domain) - always "DataStore".</param>
-    /// <param name="serviceOptionType">The service option type (e.g., "MsSql", "Rest", "OData").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    protected DataStoreConfiguration(string serviceType, string? serviceOptionType, string sectionName)
-    {
-        ServiceType = serviceType;
-        TypeId = serviceOptionType;
-        SectionName = sectionName;
     }
 
 

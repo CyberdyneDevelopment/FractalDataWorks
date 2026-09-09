@@ -35,22 +35,6 @@ namespace Fdw.Data.DataSets.Abstractions;
 public partial class DataSetConfiguration : IGenericConfiguration
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataSetConfiguration"/> class.
-    /// </summary>
-    /// <remarks>
-    /// Why: only the structural discriminator (<c>ServiceType</c>) and section name are set here —
-    /// fixed constants for every dataset. <c>ServiceOptionType</c> is the AUTHORED strategy kind
-    /// (Simple/Compound/Federated) and is NOT defaulted: a missing value must fail loud at dispatch,
-    /// not be silently substituted (NO FALLBACKS).
-    /// </remarks>
-    public DataSetConfiguration()
-    {
-        ServiceType = "DataSet";
-        SectionName = "DataSets";
-    }
-
-
-    /// <summary>
     /// Gets or sets the unique identifier for this dataset.
     /// </summary>
     public Guid Id { get; set; }

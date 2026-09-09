@@ -44,31 +44,11 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     /// </summary>
     protected DataStoreTypeBase(
         string name,
-        string sectionName,
         string displayName,
         string description,
         string? category = null)
-        : base(GenerateId(name), name, sectionName, displayName, description, category ?? "DataStore")
+        : base(GenerateId(name), name, displayName, description, category ?? "DataStore")
     {
-        SectionName = sectionName;
-    }
-
-    /// <summary>
-    /// Configures IOptions binding for this data store type.
-    /// Binds List&lt;TConfiguration&gt; from the configuration section.
-    /// </summary>
-    public virtual void Configure(IServiceCollection services, IConfiguration configuration)
-    {
-        var section = configuration.GetSection(SectionName);
-        services.Configure<List<TConfiguration>>(section);
-    }
-
-    /// <summary>
-    /// Configures IOptions binding with logging support.
-    /// </summary>
-    public virtual void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory)
-    {
-        Configure(services, configuration);
     }
 
     /// <summary>

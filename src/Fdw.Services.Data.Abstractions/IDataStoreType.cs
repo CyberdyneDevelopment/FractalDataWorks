@@ -25,18 +25,6 @@ public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
     Type ConfigurationType { get; }
 
     /// <summary>
-    /// Configures IOptions binding for this data store type.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">The configuration root.</param>
-    void Configure(IServiceCollection services, IConfiguration configuration);
-
-    /// <summary>
-    /// Configures IOptions binding with logging support.
-    /// </summary>
-    void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory);
-
-    /// <summary>
     /// Supplies the per-transport <see cref="IDataStoreBuilder"/> that assembles this transport's
     /// <see cref="IDataStore"/> tree (store → paths → containers → fields → keys).
     /// </summary>

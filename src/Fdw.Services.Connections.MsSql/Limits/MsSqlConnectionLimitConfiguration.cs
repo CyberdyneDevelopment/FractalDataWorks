@@ -30,7 +30,6 @@ public sealed partial class MsSqlConnectionLimitConfiguration : ConnectionLimitC
     /// Default constructor for IOptions binding.
     /// </summary>
     public MsSqlConnectionLimitConfiguration()
-        : base("Connection", "MsSql", "Connections")
     {
     }
 

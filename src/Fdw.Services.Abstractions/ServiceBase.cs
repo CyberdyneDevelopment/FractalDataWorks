@@ -25,7 +25,7 @@ namespace Fdw.Services;
 /// </remarks>
 public abstract class ServiceBase<TCommand, TConfiguration, TService> : IGenericService, IDisposable
     where TCommand : IGenericCommand
-    where TConfiguration : IGenericConfiguration
+    where TConfiguration : IImplementationConfiguration
     where TService : class
 {
     private readonly ILogger<TService> _logger;
@@ -37,6 +37,11 @@ public abstract class ServiceBase<TCommand, TConfiguration, TService> : IGeneric
     public string Id { get; }
 
     /// <summary>
+    /// Gets the service category this instance belongs to.
+    /// </summary>
+    public string ServiceType { get; }
+
+    /// <summary>
     /// Gets a value indicating whether the service is currently available for use.
     /// </summary>
     public virtual bool IsAvailable { get; protected set; } = true;
@@ -44,7 +49,7 @@ public abstract class ServiceBase<TCommand, TConfiguration, TService> : IGeneric
     /// <summary>
     /// Gets the service name for display purposes.
     /// </summary>
-    public string Name => Configuration?.Name ?? typeof(TService).Name;
+    public string Name => Configuration.Name;
 
     /// <summary>
     /// Gets the configuration instance for this service.

@@ -14,22 +14,8 @@ public class EtlRowMapperConfiguration : IGenericConfiguration
     /// Initializes a new instance of the <see cref="EtlRowMapperConfiguration"/> class.
     /// Default constructor for IOptions binding.
     /// </summary>
-    protected EtlRowMapperConfiguration() : this("EtlMapper", null, "EtlMappers")
+    protected EtlRowMapperConfiguration()
     {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="EtlRowMapperConfiguration"/> class.
-    /// Protected constructor for derived classes to set their type identity.
-    /// </summary>
-    /// <param name="serviceType">The service type (domain) - always "EtlMapper".</param>
-    /// <param name="serviceOptionType">The service option type (e.g., "Pooled", "Dynamic").</param>
-    /// <param name="sectionName">The configuration section name for binding.</param>
-    protected EtlRowMapperConfiguration(string serviceType, string? serviceOptionType, string sectionName)
-    {
-        ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
-        SectionName = sectionName;
     }
 
     /// <inheritdoc />
@@ -37,11 +23,6 @@ public class EtlRowMapperConfiguration : IGenericConfiguration
 
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets the mapper type name. Alias for <see cref="ServiceOptionType"/>.
-    /// </summary>
-    public virtual string MapperType => ServiceOptionType ?? string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether connection pooling is enabled for this mapper.

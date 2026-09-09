@@ -22,17 +22,8 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
     /// <summary>
     /// Initializes a new instance of <see cref="ConnectionLimitConfiguration"/>.
     /// </summary>
-    /// <param name="serviceType">Domain name (e.g., "Connection").</param>
-    /// <param name="serviceOptionType">Connection option type (e.g., "MsSql", "Http").</param>
-    /// <param name="sectionName">IOptions section path.</param>
-    protected ConnectionLimitConfiguration(
-        string serviceType,
-        string serviceOptionType,
-        string sectionName)
+    protected ConnectionLimitConfiguration()
     {
-        ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
-        SectionName = sectionName;
     }
 
     /// <inheritdoc />

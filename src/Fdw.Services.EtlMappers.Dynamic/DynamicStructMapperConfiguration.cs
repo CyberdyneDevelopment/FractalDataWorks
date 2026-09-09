@@ -10,9 +10,6 @@ namespace Fdw.Services.EtlMappers.Dynamic;
 /// </summary>
 public sealed class DynamicStructMapperConfiguration : EtlRowMapperConfiguration
 {
-    /// <inheritdoc />
-    public override string MapperType => "Dynamic";
-
     /// <summary>
     /// Gets or sets whether to use compiled expressions for field access.
     /// When true, uses compiled delegates for faster access.
