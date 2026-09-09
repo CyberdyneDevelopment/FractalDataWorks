@@ -104,7 +104,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             sp.GetRequiredService<DataStoreConfigurationProvider>(),
             sp.GetRequiredService<IDataStoreBuilderSelector>()));
 
-        services.AddScoped<ConfigurationGatewayDataStoreProvider>(sp =>
+        services.AddSingleton<ConfigurationGatewayDataStoreProvider>(sp =>
         {
             var providerLogger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<ConfigurationGatewayDataStoreProvider>();
             var coreProvider = sp.GetRequiredService<ConfiguredDataStoreProvider>();
@@ -112,7 +112,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
             return new ConfigurationGatewayDataStoreProvider(providerLogger, coreProvider, configProvider, gatewayProvider);
         });
-        services.AddScoped<IDataStoreProvider>(sp => sp.GetRequiredService<ConfigurationGatewayDataStoreProvider>());
+        services.AddSingleton<IDataStoreProvider>(sp => sp.GetRequiredService<ConfigurationGatewayDataStoreProvider>());
 
 
 

@@ -120,7 +120,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();
 
-            builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
+            builder.Services.TryAddSingleton<IDataConnectionProvider>(sp =>
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
             builder.Services.TryAddSingleton<IServiceConnectionProvider, ServiceConnectionProvider>();
@@ -152,7 +152,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             }
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ConnectionTypes), providerService);
 
-            builder.Services.AddScoped<IConnectionProvider>(sp =>
+            builder.Services.AddSingleton<IConnectionProvider>(sp =>
             {
                 var provider = new ConnectionProvider(
                     sp,
