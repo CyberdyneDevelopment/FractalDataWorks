@@ -14,14 +14,6 @@ namespace Fdw.Services.Quality.Configuration;
 [ManagedConfiguration( ServiceCategory = "Catalog")]
 public sealed partial class DataSetAnnotationTagConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc/>
-    public string SectionName => "Catalogs";
-
-    /// <inheritdoc/>
-    public string ServiceType => "Catalog";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the unique identifier.

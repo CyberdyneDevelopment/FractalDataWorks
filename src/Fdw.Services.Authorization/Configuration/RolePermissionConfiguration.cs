@@ -33,15 +33,6 @@ public partial class RolePermissionConfiguration : IGenericConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "RolePermissions";
-
-    /// <inheritdoc />
-    public string ServiceType => "Authorization";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the role ID this permission is assigned to.
     /// </summary>

@@ -29,15 +29,6 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the name of this source configuration.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the section name for configuration binding.</summary>
-    public string SectionName => $"DataSetSources:{Id}";
-
-    /// <summary>Gets or sets the service type domain ("DataSet").</summary>
-    public string ServiceType { get; set; } = "DataSet";
-
-    /// <summary>Gets or sets the service option type discriminator ("DataSetSource").</summary>
-    public string? ServiceOptionType { get; set; } = "DataSetSource";
-
     /// <summary>Gets or sets whether this is the current active version of the record.</summary>
     public bool IsCurrent { get; set; } = true;
 

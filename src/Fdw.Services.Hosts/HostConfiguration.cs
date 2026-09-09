@@ -22,23 +22,20 @@ public partial class HostConfiguration : IHostConfiguration
     /// <summary>Gets or sets the name this configuration is resolved by.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section this domain reads.</summary>
-    public string SectionName => "Host";
-
-    /// <summary>Gets the service category this configuration belongs to.</summary>
-    public string ServiceType => "Host";
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Host";
 
     /// <summary>Gets or sets the option name selecting which hosting implementation is configured.</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets the human-readable description.</summary>
     public string? Description { get; set; }
 
-    /// <summary>Gets or sets the configuration of the implementation named by <see cref="ServiceOptionType"/>.</summary>
+    /// <summary>Gets or sets the configuration of the implementation named by <see cref="Implementation"/>.</summary>
     public IHostImplementationConfiguration? Configuration { get; set; }
 
     // Why these five live on the domain header rather than a typed body of their own: a typed body
-    // is chosen by ServiceOptionType and a host runs several options at once (Cors AND SecurityHeaders
+    // is chosen by Implementation and a host runs several options at once (Cors AND SecurityHeaders
     // AND EmptyBody...), so "the implementation" for a Host row is never singular the way it is for a
     // Connection. The support contact is not an implementation choice at all -- it describes the host
     // itself, the same way Description already does.

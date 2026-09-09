@@ -31,15 +31,6 @@ public partial class SavedViewConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the unique view name.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name.</summary>
-    public string SectionName => "SavedViews";
-
-    /// <summary>Gets the structural discriminator.</summary>
-    public string ServiceType => "SavedView";
-
-    /// <summary>Gets the service option type. Always null — a saved view selects no factory.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the optional display name.</summary>
     public string? DisplayName { get; set; }
 

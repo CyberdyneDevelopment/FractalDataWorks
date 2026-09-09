@@ -23,12 +23,6 @@ public sealed partial class HealthMonitorSelectionConfiguration : IGenericConfig
     /// <summary>Gets or sets the name of this configuration row.</summary>
     public string Name { get; set; } = string.Empty;
 
-    string IGenericConfiguration.SectionName => "HealthMonitor";
-
-    string IGenericConfiguration.ServiceType => "HealthMonitor";
-
-    string? IGenericConfiguration.ServiceOptionType => "HealthMonitorSelection";
-
     /// <summary>Gets or sets the name of the monitor row this host reports to.</summary>
     public string MonitorName { get; set; } = string.Empty;
 }

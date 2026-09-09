@@ -22,15 +22,6 @@ public partial class MainDataGatewayConfiguration : IDataGatewayImplementationCo
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName => "DataGateway";
-
-    /// <inheritdoc/>
-    public string ServiceType => "DataGateway";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the domain record this implementation belongs to.</summary>
     public Guid DataGatewayId { get; set; }
 

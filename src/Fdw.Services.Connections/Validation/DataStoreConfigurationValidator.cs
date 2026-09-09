@@ -19,10 +19,6 @@ public sealed class DataStoreConfigurationValidator : FdwConfigurationValidator<
         RuleFor(x => x.ConnectionId)
             .IsNotEmpty();
 
-        RuleFor(x => x.ServiceType)
-            .NotEmpty()
-            .WithMessage("ServiceType is required");
-
         When(x => x.Description is not null, () =>
         {
             RuleFor(x => x.Description!)

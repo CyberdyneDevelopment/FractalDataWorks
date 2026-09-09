@@ -41,15 +41,6 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName { get; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; }
-
     /// <summary>
     /// Gets or sets the connection configuration identifier this limit applies to.
     /// </summary>

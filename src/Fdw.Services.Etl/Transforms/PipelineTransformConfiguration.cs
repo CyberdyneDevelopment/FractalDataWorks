@@ -38,15 +38,6 @@ public sealed partial class PipelineTransformConfiguration : IGenericConfigurati
     /// </remarks>
     public Guid EtlPipelineId { get; set; }
 
-    /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets or sets the operation type (Map, Filter, Calculate, Lookup, Aggregate).
     /// Maps to the pipe.PipelineOperation.OperationType column (FDW-389 rename); resolved at runtime

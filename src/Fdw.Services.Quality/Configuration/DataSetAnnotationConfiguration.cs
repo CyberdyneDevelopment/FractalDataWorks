@@ -16,14 +16,6 @@ namespace Fdw.Services.Quality.Configuration;
     ServiceType = "Annotation")]
 public sealed partial class DataSetAnnotationConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Catalogs";
-
-    /// <inheritdoc />
-    public string ServiceType => "Catalog";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the display name for this annotation.

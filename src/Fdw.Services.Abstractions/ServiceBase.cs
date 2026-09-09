@@ -37,11 +37,6 @@ public abstract class ServiceBase<TCommand, TConfiguration, TService> : IGeneric
     public string Id { get; }
 
     /// <summary>
-    /// Gets the display name of the service.
-    /// </summary>
-    public string ServiceType { get; }
-
-    /// <summary>
     /// Gets a value indicating whether the service is currently available for use.
     /// </summary>
     public virtual bool IsAvailable { get; protected set; } = true;

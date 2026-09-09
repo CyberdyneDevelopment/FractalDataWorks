@@ -36,15 +36,6 @@ public partial class LocalKeyAuthenticationConfiguration : ILocalKeyAuthenticati
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string SectionName { get; set; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; set; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; set; }
-
-    /// <inheritdoc />
     public Guid AuthenticationServiceId { get; set; }
 
     /// <summary>Gets or sets the audience a token must name.</summary>

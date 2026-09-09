@@ -47,7 +47,7 @@ public partial class NotificationConfiguration : INotificationConfiguration
     protected NotificationConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
         ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
         SectionName = sectionName;
     }
 
@@ -61,25 +61,18 @@ public partial class NotificationConfiguration : INotificationConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "Notification" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Notification";
 
     /// <summary>
     /// Gets or sets the service option type (e.g., "Email", "Sms", "Push").
     /// </summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>
-    /// Gets the notification type name. Alias for <see cref="ServiceOptionType"/>.
+    /// Gets the notification type name. Alias for <see cref="Implementation"/>.
     /// </summary>
-    public string? NotificationType => ServiceOptionType;
+    public string? NotificationType => Implementation;
 
     /// <summary>
     /// Gets or sets the optional description of this notification channel.

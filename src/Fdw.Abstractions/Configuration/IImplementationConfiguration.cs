@@ -1,11 +1,12 @@
 namespace Fdw.Configuration;
 
 /// <summary>
-/// One implementation's own configuration, owned by a domain row.
+/// The contract every implementation configuration satisfies.
 /// </summary>
 /// <remarks>
-/// Every <c>I&lt;Domain&gt;ImplementationConfiguration</c> implements this, which is what lets the
-/// domain and implementation provider contracts constrain their configuration without naming a domain.
+/// Identity and its own payload. No name and no discriminator: an implementation is identified by
+/// its reference to the domain record, the name comes from that record, and the discriminator that
+/// selected this implementation is the domain's to state, not the implementation's to restate.
 /// </remarks>
 public interface IImplementationConfiguration : IGenericConfiguration
 {

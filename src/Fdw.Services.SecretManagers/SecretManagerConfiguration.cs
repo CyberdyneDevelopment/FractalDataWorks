@@ -20,7 +20,7 @@ namespace Fdw.Services.SecretManagers;
 /// </list>
 /// </para>
 /// <para>
-/// All type identity properties (ServiceType, ServiceOptionType, SectionName) are set via the constructor chain.
+/// All type identity properties (ServiceType, Implementation, SectionName) are set via the constructor chain.
 /// Derived classes call the protected constructor to set their specific values.
 /// </para>
 /// </remarks>
@@ -47,7 +47,7 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     protected SecretManagerConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
         ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
         SectionName = sectionName;
     }
 
@@ -63,25 +63,18 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "SecretManager" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the service option type (e.g., "EnvironmentVariable", "AzureKeyVault").
     /// </summary>
     [ValuesFrom(typeof(SecretManagerTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "SecretManager";
+
+    public string? Implementation { get; set; }
 
     /// <summary>
-    /// Gets the secret manager type name. Alias for <see cref="ServiceOptionType"/>.
+    /// Gets the secret manager type name. Alias for <see cref="Implementation"/>.
     /// </summary>
-    public string? SecretManagerType => ServiceOptionType;
+    public string? SecretManagerType => Implementation;
 
     /// <summary>
     /// Gets or sets the optional description of this secret manager.

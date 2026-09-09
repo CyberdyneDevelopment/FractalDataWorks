@@ -27,19 +27,16 @@ public partial class RoleMappingConfiguration : IRoleMappingConfiguration
     /// <summary>Gets or sets the name this configuration is resolved by.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section this domain reads.</summary>
-    public string SectionName => "RoleMapping";
-
-    /// <summary>Gets the service category this configuration belongs to.</summary>
-    public string ServiceType => "RoleMapping";
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "RoleMapping";
 
     /// <summary>Gets or sets the option name selecting which role-mapping implementation is configured.</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets the human-readable description.</summary>
     public string? Description { get; set; }
 
-    /// <summary>Gets or sets the configuration of the implementation named by <see cref="ServiceOptionType"/>.</summary>
+    /// <summary>Gets or sets the configuration of the implementation named by <see cref="Implementation"/>.</summary>
     public IRoleMappingImplementationConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />

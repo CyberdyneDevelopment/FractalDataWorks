@@ -25,15 +25,6 @@ public sealed partial class SystemNotificationConfiguration : INotificationImple
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName => "Notifications:System";
-
-    /// <inheritdoc/>
-    public string ServiceType => "Notification";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the owning notification's durable id.</summary>
     public Guid NotificationId { get; set; }
 

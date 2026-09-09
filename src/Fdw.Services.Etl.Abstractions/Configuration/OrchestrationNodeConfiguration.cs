@@ -48,15 +48,6 @@ public sealed partial class OrchestrationNodeConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the name of this node (unique within sibling scope).</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name for IOptions binding.</summary>
-    public string SectionName => "OrchestrationNodes";
-
-    /// <summary>Gets the service type discriminator.</summary>
-    public string ServiceType => "Node";
-
-    /// <summary>Gets the service option type discriminator. Not applicable for generic nodes.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the optional description of this node.</summary>
     public string? Description { get; set; }
 

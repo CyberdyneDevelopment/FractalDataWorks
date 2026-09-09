@@ -51,16 +51,6 @@ public partial class PostgreSqlConnectionConfiguration : IConnectionImplementati
     public Guid ConnectionId { get; set; }
 
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by ConnectionId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-    string IGenericConfiguration.ServiceType => "Connection";
-    string? IGenericConfiguration.ServiceOptionType => "PostgreSql";
-
     #region PostgreSQL Specific Properties
 
     /// <summary>

@@ -29,15 +29,6 @@ public sealed partial class DataContainerKeyConfiguration : IGenericConfiguratio
     /// <summary>Configuration name (key name) for IGenericConfiguration contract.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Section name for binding.</summary>
-    public string SectionName { get; set; } = "DataContainerKeys";
-
-    /// <summary>Service type for the key record.</summary>
-    public string ServiceType { get; set; } = "DataContainerKey";
-
-    /// <summary>Optional service option type discriminator.</summary>
-    public string? ServiceOptionType { get; set; }
-
 
     /// <summary>Logical Id of the owning DataContainer.</summary>
     public Guid DataContainerId { get; set; }

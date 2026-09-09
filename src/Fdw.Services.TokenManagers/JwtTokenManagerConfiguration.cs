@@ -30,18 +30,6 @@ public sealed partial class JwtTokenManagerConfiguration : ITokenManagerImplemen
     /// <summary>Gets or sets this typed-body row's identifier (<c>auth.JwtTokenManager.Id</c>).</summary>
     public Guid Id { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { }
-    }
-
-    string IGenericConfiguration.SectionName => "TokenManagers";
-
-    string IGenericConfiguration.ServiceType => "TokenManager";
-
-    string? IGenericConfiguration.ServiceOptionType => "Jwt";
-
     /// <summary>Gets or sets the logical FK to <c>auth.TokenManager.Id</c>.</summary>
     public Guid TokenManagerId { get; set; }
 

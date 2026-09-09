@@ -18,7 +18,7 @@ namespace Fdw.Services.Credentials;
 /// <list type="bullet">
 /// <item><description>As a header for <c>IOptionsMonitor&lt;List&lt;CredentialServiceConfiguration&gt;&gt;</c> lookups</description></item>
 /// <item><description>The typed body row is loaded separately by <see cref="CredentialServiceConfigurationProvider"/>
-/// and attached to <see cref="Configuration"/> via discriminator dispatch on <see cref="ServiceOptionType"/>.</description></item>
+/// and attached to <see cref="Configuration"/> via discriminator dispatch on <see cref="Implementation"/>.</description></item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -45,7 +45,7 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     protected CredentialServiceConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
         ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
         SectionName = sectionName;
     }
 
@@ -61,25 +61,18 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) — always "CredentialService" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the service option type (e.g., "Sql").
     /// </summary>
     [ValuesFrom(typeof(CredentialServiceTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "CredentialService";
+
+    public string? Implementation { get; set; }
 
     /// <summary>
-    /// Gets the credential service type name. Alias for <see cref="ServiceOptionType"/>.
+    /// Gets the credential service type name. Alias for <see cref="Implementation"/>.
     /// </summary>
-    public string? CredentialServiceType => ServiceOptionType;
+    public string? CredentialServiceType => Implementation;
 
     /// <summary>
     /// Gets or sets the optional description of this credential service.

@@ -20,9 +20,6 @@ public class OrchestrationStepConfiguration : IGenericConfiguration
     /// <inheritdoc/>
     public virtual string ServiceType { get; set; } = "OrchestrationStep";
 
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the maximum number of retry attempts for this step.</summary>
     public int MaxRetries { get; set; }
 

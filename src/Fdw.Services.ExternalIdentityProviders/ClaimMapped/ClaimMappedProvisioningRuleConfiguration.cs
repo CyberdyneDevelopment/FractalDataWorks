@@ -24,14 +24,6 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner")]
 public sealed partial class ClaimMappedProvisioningRuleConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "ExternalIdentityProvisioners";
-
-    /// <inheritdoc />
-    public string ServiceType => "ExternalIdentityProvisioner";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>Gets or sets the display name for this rule.</summary>
     public string Name { get; set; } = string.Empty;

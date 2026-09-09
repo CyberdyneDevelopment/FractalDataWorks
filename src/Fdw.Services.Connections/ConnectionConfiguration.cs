@@ -20,7 +20,7 @@ namespace Fdw.Services.Connections;
 /// </list>
 /// </para>
 /// <para>
-/// All type identity properties (ServiceType, ServiceOptionType, SectionName) are set via the constructor chain.
+/// All type identity properties (ServiceType, Implementation, SectionName) are set via the constructor chain.
 /// Derived classes call the protected constructor to set their specific values.
 /// </para>
 /// </remarks>
@@ -47,7 +47,7 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     protected ConnectionConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
         ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
         SectionName = sectionName;
     }
 
@@ -63,25 +63,18 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "Connection" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the service option type (e.g., "MsSql", "Rest", "Http").
     /// </summary>
     [ValuesFrom(typeof(ConnectionTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Connection";
+
+    public string? Implementation { get; set; }
 
     /// <summary>
-    /// Gets the connection type name. Alias for <see cref="ServiceOptionType"/>.
+    /// Gets the connection type name. Alias for <see cref="Implementation"/>.
     /// </summary>
-    public string? ConnectionType => ServiceOptionType;
+    public string? ConnectionType => Implementation;
 
     /// <summary>
     /// Gets or sets the optional description of this connection.
@@ -129,7 +122,7 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// <remarks>
     /// Why: [NotMapped] — this property is not a column on conn.Connection. The write path
     /// saves the typed body independently via its own provider. The read path populates this
-    /// by dispatching on ServiceOptionType to the appropriate typed provider.
+    /// by dispatching on Implementation to the appropriate typed provider.
     /// </remarks>
     [NotMapped]
     public IConnectionImplementationConfiguration? Configuration { get; set; }

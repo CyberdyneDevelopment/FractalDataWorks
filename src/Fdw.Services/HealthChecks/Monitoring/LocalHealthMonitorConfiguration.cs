@@ -16,15 +16,6 @@ public sealed partial class LocalHealthMonitorConfiguration : IHealthMonitorImpl
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName => "HealthMonitors";
-
-    /// <inheritdoc/>
-    public string ServiceType => "HealthMonitor";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the owning health monitor's durable id.</summary>
     public Guid HealthMonitorId { get; set; }
 

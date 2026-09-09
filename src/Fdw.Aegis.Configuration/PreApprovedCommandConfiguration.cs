@@ -36,16 +36,6 @@ public partial class PreApprovedCommandConfiguration : IApprovalPolicyConfigurat
     /// </summary>
     public Guid AegisCommandId { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by AegisCommandId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Commands";
-    string IGenericConfiguration.ServiceType => "AegisCommand";
-    string? IGenericConfiguration.ServiceOptionType => "PreApproved";
-
     // ========================================
     // Approval-policy properties
     // ========================================

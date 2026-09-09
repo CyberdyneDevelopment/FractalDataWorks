@@ -79,9 +79,6 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <summary>Gets the configuration type this service reads.</summary>
     public Type ConfigurationType => typeof(TConfiguration);
 
-    /// <summary>Gets the configuration section name for appsettings.json.</summary>
-    public string SectionName => ConfigurationKey;
-
     /// <summary>The connection this type's configuration is read from.</summary>
     /// <remarks>
     /// Defaults to the type's <c>defaultDataStoreName</c>, which every base sets to

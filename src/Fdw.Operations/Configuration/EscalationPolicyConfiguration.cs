@@ -45,14 +45,6 @@ namespace Fdw.Operations.Configuration;
 [ManagedConfiguration( ServiceCategory = "Operations")]
 public sealed partial class EscalationPolicyConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Operationss";
-
-    /// <inheritdoc />
-    public string ServiceType => "Operations";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
 
     /// <summary>

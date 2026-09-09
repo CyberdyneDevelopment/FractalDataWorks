@@ -57,21 +57,6 @@ public partial class FileTypeHandlerOverrideConfiguration : IGenericConfiguratio
     public string Name { get; set; } = string.Empty;
 
 
-    /// <summary>
-    /// Gets the section name for IOptions binding.
-    /// </summary>
-    public string SectionName => "FileTypeHandlerOverrides";
-
-    /// <summary>
-    /// Gets the service type — always "DataStore" for child config of DataPath.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type — always "FileTypeHandlerOverride".
-    /// </summary>
-    public string? ServiceOptionType => "FileTypeHandlerOverride";
-
 
     /// <summary>
     /// Gets or sets the file extension this override targets (e.g., ".csv", ".json", ".parquet").

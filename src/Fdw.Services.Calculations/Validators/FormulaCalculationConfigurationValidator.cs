@@ -19,18 +19,6 @@ public sealed class FormulaCalculationConfigurationValidator : FdwConfigurationV
             .NotEmpty()
             .WithMessage("Name is required");
 
-        RuleFor(x => x.SectionName)
-            .NotEmpty()
-            .WithMessage("SectionName is required");
-
-        RuleFor(x => x.ServiceType)
-            .NotEmpty()
-            .WithMessage("ServiceType is required");
-
-        RuleFor(x => x.ServiceOptionType)
-            .NotEmpty()
-            .WithMessage("ServiceOptionType is required");
-
         RuleFor(x => x.FormulaBody)
             .NotEmpty()
             .WithMessage("FormulaBody is required");

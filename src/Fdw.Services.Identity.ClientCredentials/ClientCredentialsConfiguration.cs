@@ -56,15 +56,6 @@ public partial class ClientCredentialsConfiguration : IIdentityServiceImplementa
     /// <summary>Gets or sets the name this identity is resolved by.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the IConfiguration section name used for bootstrap binding.</summary>
-    public string SectionName { get; set; }
-
-    /// <summary>Gets or sets the service-type domain — always <c>"Identity"</c>.</summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>Gets or sets the TypeOption discriminator — always <c>"ClientCredentials"</c>.</summary>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the issuer URL of the authorization server (e.g. <c>https://api.example.dev/</c>).</summary>
     public string? Issuer { get; set; }
 

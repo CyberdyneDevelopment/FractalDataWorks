@@ -27,11 +27,6 @@ namespace Fdw.Services.ExternalIdentityProviders;
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner")]
 public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "ExternalIdentityProvisioners";
-
-    /// <inheritdoc />
-    public string ServiceType => "ExternalIdentityProvisioner";
 
     /// <summary>
     /// Gets or sets the durable logical identity across versions.
@@ -47,7 +42,10 @@ public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentit
     /// this value to select the active implementation (e.g. <c>"Chained"</c>).
     /// </summary>
     [ValuesFrom(typeof(ExternalIdentityProvisionerTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "ExternalIdentityProvisioner";
+
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets an optional human-readable description for this configuration.</summary>
     public string? Description { get; set; }

@@ -12,7 +12,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <see cref="ServiceOptionType"/> selects the registered option ("Local" or "HttpClient") — the
+/// <see cref="Implementation"/> selects the registered option ("Local" or "HttpClient") — the
 /// domain provider dispatches to that option's factory. Which ROW a host uses is that host's
 /// <c>HealthMonitor:Name</c> selector knob (see <c>HealthMonitorSelectionOptions</c>) — rows are
 /// shared in ConfigurationDb; the selection is per host.
@@ -35,14 +35,11 @@ public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfigura
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName => "HealthMonitors";
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "HealthMonitor";
 
     /// <inheritdoc/>
-    public string ServiceType => "HealthMonitor";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <inheritdoc/>
     public string? Description { get; set; }

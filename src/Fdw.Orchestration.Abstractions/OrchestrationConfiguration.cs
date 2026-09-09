@@ -22,9 +22,6 @@ public class OrchestrationConfiguration : IGenericConfiguration
     /// <inheritdoc/>
     public virtual string ServiceType { get; set; } = "Orchestration";
 
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the maximum execution time for the entire orchestration.</summary>
     public TimeSpan? ExecutionTimeout { get; set; }
 

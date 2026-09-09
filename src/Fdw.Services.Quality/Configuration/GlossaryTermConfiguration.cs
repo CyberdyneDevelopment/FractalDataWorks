@@ -16,14 +16,6 @@ namespace Fdw.Services.Quality.Configuration;
     ServiceType = "GlossaryTerm")]
 public sealed partial class GlossaryTermConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Catalogs";
-
-    /// <inheritdoc />
-    public string ServiceType => "Catalog";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the unique identifier for this term.

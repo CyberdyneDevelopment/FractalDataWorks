@@ -18,10 +18,6 @@ namespace Fdw.Services.Data.Abstractions;
 /// </summary>
 public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
 {
-    /// <summary>
-    /// Gets the configuration section name for appsettings.json.
-    /// </summary>
-    string SectionName { get; }
 
     /// <summary>
     /// Gets the configuration type for this data store type.

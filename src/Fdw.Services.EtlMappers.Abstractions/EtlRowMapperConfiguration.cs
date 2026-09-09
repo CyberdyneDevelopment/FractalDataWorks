@@ -38,15 +38,6 @@ public class EtlRowMapperConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName { get; set; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; set; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets the mapper type name. Alias for <see cref="ServiceOptionType"/>.
     /// </summary>

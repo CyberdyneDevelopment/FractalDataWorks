@@ -58,21 +58,6 @@ public partial class DataPathPolicyConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
 
-    /// <summary>
-    /// Gets the section name for IOptions binding.
-    /// </summary>
-    public string SectionName => "DataPathPolicies";
-
-    /// <summary>
-    /// Gets the service type — always "DataStore" for child config of DataPath.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type — always "DataPathPolicy".
-    /// </summary>
-    public string? ServiceOptionType => "DataPathPolicy";
-
 
     /// <summary>
     /// Gets or sets the name of the <c>IPathAuthorizationPolicy</c> to apply.

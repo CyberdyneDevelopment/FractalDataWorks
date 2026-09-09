@@ -20,15 +20,6 @@ public partial class AuthenticationFlowStepConfiguration : IGenericConfiguration
     /// <remarks>The step's registered name, which is also what addresses this row.</remarks>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "AuthenticationFlowSteps";
-
-    /// <inheritdoc />
-    public string ServiceType => "AuthenticationFlowStep";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the flow this step belongs to.</summary>
     public Guid AuthenticationFlowId { get; set; }
 

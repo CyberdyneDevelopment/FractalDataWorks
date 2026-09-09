@@ -29,15 +29,6 @@ public sealed partial class DataverseResourceConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the row name.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name.</summary>
-    public string SectionName => "DataverseResources";
-
-    /// <summary>Gets the structural discriminator.</summary>
-    public string ServiceType => "DataverseResource";
-
-    /// <summary>Gets the service option type. Always null — this row selects no factory.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the owning dataverse.</summary>
     public Guid DataverseId { get; set; }
 

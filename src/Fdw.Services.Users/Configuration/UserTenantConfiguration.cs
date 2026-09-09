@@ -20,15 +20,6 @@ public partial class UserTenantConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "UserTenants";
-
-    /// <inheritdoc />
-    public string ServiceType => "UserTenant";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     // ── Domain columns ──
 
     /// <summary>Gets or sets the user identifier.</summary>

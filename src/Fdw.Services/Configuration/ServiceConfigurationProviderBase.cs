@@ -7,6 +7,7 @@ using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration.Logging;
+using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -51,6 +52,13 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         : base(logger, gatewayProvider, dataStoreName, pathName)
         => _log = (ILogger?)logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 
+    // The registry of implementation providers, keyed by the discriminator a domain row carries.
+    // It lives on the DOMAIN provider because only a domain has implementations to choose between --
+    // an implementation provider has no such question to answer, which is why it no longer has this
+    // dictionary and cannot be asked whether it is empty.
+    private readonly ConcurrentDictionary<string, IServiceConfigurationProvider> _implementations
+        = new(StringComparer.OrdinalIgnoreCase);
+
     /// <inheritdoc />
     public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
         where T : IImplementationConfigurationProvider<TImplementationConfiguration>
@@ -62,7 +70,8 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
                     _log, name, implementationConfigurationProvider?.GetType().FullName ?? "(null)"));
         }
 
-        base.Register(name, erased);
+        _implementations[name] = erased;
+        DefaultConfigurationProviderLog.TypedProviderRegistered(_log, typeof(TDomainConfiguration).Name, name);
         return GenericResult.Success();
     }
 
@@ -90,7 +99,7 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
     async Task<IGenericResult> IDomainConfigurationProvider<TImplementationConfiguration>.Save<T>(
         string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
     {
-        if (!ImplementationProviders.TryGetValue(serviceOptionType, out _))
+        if (!_implementations.ContainsKey(serviceOptionType))
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_log, name, serviceOptionType));
@@ -98,6 +107,59 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
 
         return await Save(Compose(serviceOptionType, name, implementationConfiguration), cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The domain half of composition: the row names its implementation, that name selects the
+    /// implementation's own provider, and the result is attached. The base then composes the
+    /// subtree. A row naming an implementation nobody registered is a fault and says so by name --
+    /// there is no longer a case where "nothing to compose" and "nobody registered" look alike,
+    /// because an implementation provider does not reach this code at all.
+    /// </remarks>
+    protected override async Task<IGenericResult<TDomainConfiguration>> ComposeAggregate(
+        TDomainConfiguration header, DateTimeOffset? asOf, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(header.Implementation))
+        {
+            DefaultConfigurationProviderLog.NoServiceOptionTypeForTypedBody(
+                _log, typeof(TDomainConfiguration).Name, header.Name);
+        }
+        else if (!_implementations.TryGetValue(header.Implementation, out var implementationProvider))
+        {
+            return GenericResult<TDomainConfiguration>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(
+                    _log, header.Name, header.Implementation));
+        }
+        else
+        {
+            DefaultConfigurationProviderLog.LoadingTypedBody(
+                _log, typeof(TDomainConfiguration).Name, header.Name, header.Implementation);
+
+            var implementation = await implementationProvider.Get(header.Id, ct).ConfigureAwait(false);
+            if (!implementation.IsSuccess)
+            {
+                return GenericResult<TDomainConfiguration>.Failure(
+                    DefaultConfigurationProviderLog.TypedBodyLoadFailed(
+                        _log, new InvalidOperationException(implementation.CurrentMessage),
+                        typeof(TDomainConfiguration).Name, header.Name, header.Implementation));
+            }
+
+            var mapper = PocoMapperCollection.ByName(typeof(TDomainConfiguration).Name);
+            if (mapper == PocoMapperCollection.NotFound)
+            {
+                DefaultConfigurationProviderLog.NoMapperForTypedBody(
+                    _log, typeof(TDomainConfiguration).Name, header.Name);
+            }
+            else
+            {
+                mapper.SetTypedBody(header, implementation.Value);
+                DefaultConfigurationProviderLog.TypedBodyLoaded(
+                    _log, typeof(TDomainConfiguration).Name, header.Name, header.Implementation);
+            }
+        }
+
+        return await base.ComposeAggregate(header, asOf, ct).ConfigureAwait(false);
     }
 
     /// <summary>Builds the domain record that carries a member's name, kind and implementation.</summary>

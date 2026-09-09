@@ -20,14 +20,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner")]
 public sealed partial class ChainedProvisionerStepConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "ExternalIdentityProvisioners";
-
-    /// <inheritdoc />
-    public string ServiceType => "ExternalIdentityProvisioner";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the display name for this step.

@@ -23,24 +23,10 @@ public sealed partial class SystemRoleMappingConfiguration : IRoleMappingImpleme
     /// <summary>Gets or sets the identifier assigned by the store.</summary>
     public Guid Id { get; set; }
 
-    // Why the name is not persisted here: an implementation is identified by its reference to the
-    // domain row, and the name comes from RoleMappingConfiguration.Name. The setter exists so the
-    // domain can copy it across for logging once the two are composed.
-    /// <summary>Gets or sets the name, copied from the domain record after composition.</summary>
-    string IGenericConfiguration.Name { get; set; } = string.Empty;
-
-    /// <summary>Gets the configuration section this implementation belongs to.</summary>
-    string IGenericConfiguration.SectionName => "RoleMapping";
-
-    /// <summary>Gets the service category this implementation belongs to.</summary>
-    string IGenericConfiguration.ServiceType => "RoleMapping";
-
     // Why settable rather than a constant: the discriminator is data. The domain row names the
     // implementation and the row carries the value; a hardcoded literal here would state the same
     // fact a second time, by hand, and is what let configurations declare a discriminator they had
     // no claim to.
-    /// <summary>Gets or sets the option name this implementation was selected by.</summary>
-    public string? ServiceOptionType { get; set; }
 
     /// <summary>Gets or sets the foreign key to the owning <see cref="RoleMappingConfiguration"/> row.</summary>
     public Guid RoleMappingId { get; set; }

@@ -25,14 +25,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisionerBinding")]
 public sealed partial class ExternalIdentityProvisionerBindingConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "ExternalIdentityProvisionerBindings";
-
-    /// <inheritdoc />
-    public string ServiceType => "ExternalIdentityProvisionerBinding";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the durable logical identity across versions.

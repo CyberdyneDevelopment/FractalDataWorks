@@ -36,18 +36,6 @@ public partial class EtlPipelineConfiguration : IPipelineImplementationConfigura
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the engine discriminator (e.g. "BatchCopy", "Streaming") that drives dispatch to the
-    /// engine typed body in <see cref="Configuration"/>.
-    /// </summary>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets or sets the pipeline transform configurations (ETL-specific child collection of
     /// <c>pipe.PipelineOperation</c>, FK <c>EtlPipelineId</c> → pipe.EtlPipeline).

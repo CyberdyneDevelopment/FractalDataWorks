@@ -13,14 +13,6 @@ namespace Fdw.Data.DataSets.Abstractions;
 [GenerateMapper]
 public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
-    public string SectionName => "DataSetFields";
-
-    /// <summary>Gets the service type domain.</summary>
-    public string ServiceType => "DataSet";
-
-    /// <summary>Gets the service option type discriminator (none for fields).</summary>
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the stable logical identifier for this field record.

@@ -32,15 +32,6 @@ public sealed partial class WindowedCalculationConfiguration : ICalculationTyped
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets or sets the name of the DataSet column that the window function operates on.
     /// </summary>

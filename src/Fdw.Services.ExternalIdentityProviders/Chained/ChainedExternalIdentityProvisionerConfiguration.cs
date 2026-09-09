@@ -38,16 +38,6 @@ public sealed partial class ChainedExternalIdentityProvisionerConfiguration : IE
     /// </summary>
     public Guid Id { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — identified by ExternalIdentityProvisionerId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "ExternalIdentityProvisioners";
-    string IGenericConfiguration.ServiceType => "ExternalIdentityProvisioner";
-    string? IGenericConfiguration.ServiceOptionType => "Chained";
-
     // ========================================
     // FK to header
     // ========================================

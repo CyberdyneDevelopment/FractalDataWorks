@@ -37,9 +37,6 @@ public sealed class HttpHealthMonitorService : IHealthMonitorService
     public string Name => nameof(HttpHealthMonitorService);
 
     /// <inheritdoc/>
-    public string ServiceType => "HealthMonitor";
-
-    /// <inheritdoc/>
     public bool IsAvailable => true;
 
     /// <inheritdoc/>

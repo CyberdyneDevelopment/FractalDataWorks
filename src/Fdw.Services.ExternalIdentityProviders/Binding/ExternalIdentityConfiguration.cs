@@ -34,15 +34,6 @@ public partial class ExternalIdentityConfiguration : IGenericConfiguration
     /// <remarks>The provider name, which is what this row is addressed by.</remarks>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "ExternalIdentities";
-
-    /// <inheritdoc />
-    public string ServiceType => "ExternalIdentity";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the configured name of the authority that asserted the subject.</summary>
     public string Provider { get; set; } = string.Empty;
 

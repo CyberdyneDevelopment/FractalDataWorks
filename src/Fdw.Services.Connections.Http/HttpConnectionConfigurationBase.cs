@@ -47,16 +47,6 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     public Guid ConnectionId { get; set; }
 
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by ConnectionId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-    string IGenericConfiguration.ServiceType => "Connection";
-    string? IGenericConfiguration.ServiceOptionType => "Http";
-
     /// <summary>Gets the connection type name for this HTTP variant.</summary>
     public abstract string ConnectionType { get; }
 

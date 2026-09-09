@@ -24,15 +24,6 @@ public sealed partial class StageConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the name of this stage.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name for IOptions binding.</summary>
-    public string SectionName => "Projects";
-
-    /// <summary>Gets the service type discriminator.</summary>
-    public string ServiceType => "Stage";
-
-    /// <summary>Gets the service option type discriminator. Not applicable for stages.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the FK to the parent Project logical identifier.
     /// Follows the {ParentTableName}ConfigurationId naming convention.

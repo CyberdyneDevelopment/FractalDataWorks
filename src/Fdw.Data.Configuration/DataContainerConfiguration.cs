@@ -46,21 +46,6 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "DataContainers";
-
-    /// <summary>
-    /// Gets the service type - always "DataStore" for DataContainer.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for base DataContainer.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the DataPath ID this container is defined at.
     /// </summary>
     public Guid DataPathId { get; set; }

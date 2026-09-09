@@ -16,14 +16,6 @@ namespace Fdw.Services.Quality.Configuration;
     ServiceType = "Rule")]
 public sealed partial class QualityRuleConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Qualitys";
-
-    /// <inheritdoc />
-    public string ServiceType => "Quality";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the display name for this quality rule.

@@ -15,14 +15,6 @@ namespace Fdw.UI.Themes.Configuration;
 [ManagedConfiguration( ServiceCategory = "Theme")]
 public partial class ThemeManagedConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Themes";
-
-    /// <inheritdoc />
-    public string ServiceType => "Theme";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the unique identifier for this theme.

@@ -31,15 +31,6 @@ public sealed partial class FormulaCalculationConfiguration : ICalculationTypedC
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets or sets the language of the formula expression.
     /// Supported values: <c>"CSharp"</c>, <c>"Sql"</c>.

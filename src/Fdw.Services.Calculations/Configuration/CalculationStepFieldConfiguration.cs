@@ -18,14 +18,6 @@ namespace Fdw.Services.Calculations.Configuration;
 [ManagedConfiguration( ServiceCategory = "CalculationStepField")]
 public partial class CalculationStepFieldConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
-    public string SectionName => "CalculationStepFields";
-
-    /// <summary>Gets the service type domain.</summary>
-    public string ServiceType => "Calculation";
-
-    /// <summary>Gets the service option type discriminator (none for step fields).</summary>
-    public string? ServiceOptionType => null;
 
 
     /// <summary>Gets or sets the unique identifier.</summary>

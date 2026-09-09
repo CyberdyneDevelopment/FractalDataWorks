@@ -39,17 +39,6 @@ public abstract partial class SecretManagerConfigurationBase : IGenericConfigura
     public abstract string SectionName { get; }
 
     /// <summary>
-    /// Gets the service type (domain) - always "SecretManager" for this configuration.
-    /// </summary>
-    public string ServiceType => "SecretManager";
-
-    /// <summary>
-    /// Gets the service option type (implementation variant) this configuration is for.
-    /// Alias for <see cref="SecretManagerType"/>.
-    /// </summary>
-    public string? ServiceOptionType => SecretManagerType;
-
-    /// <summary>
     /// Gets the secret manager type name this configuration is for.
     /// This discriminator is used by the SecretManagerProvider to determine which factory to use.
     /// </summary>

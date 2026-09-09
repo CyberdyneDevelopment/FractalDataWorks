@@ -39,22 +39,6 @@ public sealed partial class RoleSettingConfiguration : IGenericConfiguration
     /// </summary>
     public string SettingName { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    string IGenericConfiguration.Name
-    {
-        get => SettingName;
-        set => SettingName = value;
-    }
-
-    /// <inheritdoc />
-    string IGenericConfiguration.SectionName => "Settings:RoleSetting";
-
-    /// <inheritdoc />
-    string IGenericConfiguration.ServiceType => "RoleSetting";
-
-    /// <inheritdoc />
-    string? IGenericConfiguration.ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the overridden setting value for this role.
     /// </summary>

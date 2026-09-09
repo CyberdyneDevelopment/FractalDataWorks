@@ -20,15 +20,6 @@ public sealed partial class UserPreferencesConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "UserPreferences";
-
-    /// <inheritdoc />
-    public string ServiceType => "UserPreference";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
 
     /// <summary>Gets or sets the user this preference record belongs to.</summary>
     public Guid UserId { get; set; }

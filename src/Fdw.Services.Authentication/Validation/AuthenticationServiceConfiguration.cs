@@ -33,7 +33,7 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
     protected AuthenticationServiceConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
         ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
         SectionName = sectionName;
     }
 
@@ -44,14 +44,11 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string SectionName { get; set; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; set; }
-
-    /// <inheritdoc />
     [ValuesFrom(typeof(AuthenticationServiceTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "AuthenticationService";
+
+    public string? Implementation { get; set; }
 
     /// <inheritdoc />
     public string? Description { get; set; }

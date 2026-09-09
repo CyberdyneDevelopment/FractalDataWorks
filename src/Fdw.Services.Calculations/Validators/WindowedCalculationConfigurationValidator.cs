@@ -17,18 +17,6 @@ public sealed class WindowedCalculationConfigurationValidator : FdwConfiguration
             .NotEmpty()
             .WithMessage("Name is required");
 
-        RuleFor(x => x.SectionName)
-            .NotEmpty()
-            .WithMessage("SectionName is required");
-
-        RuleFor(x => x.ServiceType)
-            .NotEmpty()
-            .WithMessage("ServiceType is required");
-
-        RuleFor(x => x.ServiceOptionType)
-            .NotEmpty()
-            .WithMessage("ServiceOptionType is required");
-
         RuleFor(x => x.TargetField)
             .NotEmpty()
             .WithMessage("TargetField is required");

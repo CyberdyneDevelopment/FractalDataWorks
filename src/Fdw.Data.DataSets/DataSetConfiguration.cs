@@ -74,20 +74,9 @@ public partial class DataSetConfiguration : IGenericConfiguration
     public string? Abbreviation { get; set; }
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "DataSet" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the service option type (not used for DataSets).
     /// </summary>
     [ValuesFrom(typeof(DataSetTypes))]
-    public string? ServiceOptionType { get; set; }
 
     // ── Type-specific properties (flattened from former child tables) ────────────
 

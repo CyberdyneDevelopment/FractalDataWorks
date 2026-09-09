@@ -42,15 +42,6 @@ public sealed partial class DataSetAggregateConfiguration : IGenericConfiguratio
     /// <summary>Gets or sets the name (computed; not a persisted column).</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
-    public string SectionName => "DataSetAggregates";
-
-    /// <summary>Gets the service type domain.</summary>
-    public string ServiceType => "DataSet";
-
-    /// <summary>Gets the service option type discriminator (none for aggregate definitions).</summary>
-    public string? ServiceOptionType => null;
-
     // ============================================================================
     // Parent foreign key
     // ============================================================================

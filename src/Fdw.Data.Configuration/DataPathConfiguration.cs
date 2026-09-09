@@ -47,21 +47,6 @@ public partial class DataPathConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "DataPaths";
-
-    /// <summary>
-    /// Gets the service type - always "DataStore" for DataPath.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for base DataPath.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the DataStore ID this path belongs to.
     /// </summary>
     public Guid DataStoreId { get; set; }

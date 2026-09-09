@@ -35,15 +35,6 @@ public partial class RoleConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "Roles";
-
-    /// <inheritdoc />
-    public string ServiceType => "Authorization";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the display name for this role.
     /// </summary>

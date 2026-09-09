@@ -18,7 +18,7 @@ namespace Fdw.Services.DataVault;
 /// <list type="bullet">
 /// <item><description>As a header for <c>IOptionsMonitor&lt;List&lt;DataVaultConfiguration&gt;&gt;</c> lookups</description></item>
 /// <item><description>The typed body row is loaded separately by <see cref="DataVaultConfigurationProvider"/>
-/// and attached to <see cref="Configuration"/> via discriminator dispatch on <see cref="ServiceOptionType"/>.</description></item>
+/// and attached to <see cref="Configuration"/> via discriminator dispatch on <see cref="Implementation"/>.</description></item>
 /// </list>
 /// </para>
 /// </remarks>
@@ -45,7 +45,7 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     protected DataVaultConfiguration(string serviceType, string? serviceOptionType, string sectionName)
     {
         ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
         SectionName = sectionName;
     }
 
@@ -61,25 +61,18 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) — always "DataVault" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the service option type (e.g., "Default").
     /// </summary>
     [ValuesFrom(typeof(DataVaultTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "DataVault";
+
+    public string? Implementation { get; set; }
 
     /// <summary>
-    /// Gets the vault type name. Alias for <see cref="ServiceOptionType"/>.
+    /// Gets the vault type name. Alias for <see cref="Implementation"/>.
     /// </summary>
-    public string? VaultType => ServiceOptionType;
+    public string? VaultType => Implementation;
 
     /// <summary>
     /// Gets or sets the optional description of this vault.

@@ -27,15 +27,6 @@ public partial class UserConfiguration : IUserConfiguration, IUser
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "Users";
-
-    /// <inheritdoc />
-    public string ServiceType => "User";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     // ── Identity columns ──
 
     /// <summary>Gets or sets the username (alias for <see cref="Name"/>).</summary>

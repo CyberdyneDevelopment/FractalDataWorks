@@ -16,14 +16,6 @@ namespace Fdw.Services.Quality.Configuration;
     ServiceType = "Request")]
 public sealed partial class PromotionRequestConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Promotions";
-
-    /// <inheritdoc />
-    public string ServiceType => "Promotion";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the display name for this promotion request.

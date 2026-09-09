@@ -36,15 +36,6 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets or sets the transforms to apply at runtime. NOT a column on pipe.BatchCopyPipeline — the
     /// transforms are persisted on the ETL-kind body (<c>pipe.PipelineOperation</c> → pipe.EtlPipeline)

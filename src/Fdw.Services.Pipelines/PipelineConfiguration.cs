@@ -8,7 +8,7 @@ namespace Fdw.Services.Pipelines;
 
 /// <summary>
 /// General header configuration for pipeline services representing the pipe.Pipeline parent table.
-/// The pipeline KIND lives in <see cref="ServiceOptionType"/> (e.g. "Etl") and the kind-specific
+/// The pipeline KIND lives in <see cref="Implementation"/> (e.g. "Etl") and the kind-specific
 /// fields live on the <see cref="Configuration"/> typed body (e.g. <c>EtlPipelineConfiguration</c>).
 /// </summary>
 [ExcludeFromCodeCoverage]
@@ -26,15 +26,8 @@ public partial class PipelineConfiguration : IPipelineConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "Pipelines";
-
-    /// <summary>
-    /// Gets the service type (domain) - always "Pipeline" for this configuration.
-    /// </summary>
-    public string ServiceType => "Pipeline";
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Pipeline";
 
     /// <summary>
     /// Gets or sets the service option type — the pipeline KIND discriminator (e.g., "Etl").
@@ -42,12 +35,12 @@ public partial class PipelineConfiguration : IPipelineConfiguration
     /// typed providers. No <c>[ValuesFrom]</c> static value-list: kinds are sourced from the registered
     /// typed providers, mirroring the engine discriminator on <c>EtlPipelineConfiguration</c>.
     /// </summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>
-    /// Gets the pipeline kind name. Alias for <see cref="ServiceOptionType"/> for domain convenience.
+    /// Gets the pipeline kind name. Alias for <see cref="Implementation"/> for domain convenience.
     /// </summary>
-    public string? PipelineType => ServiceOptionType;
+    public string? PipelineType => Implementation;
 
     /// <summary>Gets or sets the optional description of this pipeline.</summary>
     public string? Description { get; set; }
@@ -75,7 +68,7 @@ public partial class PipelineConfiguration : IPipelineConfiguration
     public Guid? OrgId { get; set; }
 
     /// <summary>
-    /// Gets or sets the kind typed-body configuration that corresponds to <see cref="ServiceOptionType"/>
+    /// Gets or sets the kind typed-body configuration that corresponds to <see cref="Implementation"/>
     /// (e.g. <c>EtlPipelineConfiguration</c> for kind "Etl"). The keystone cascade persists this typed-body
     /// row alongside the parent on write and composes it on read.
     /// </summary>

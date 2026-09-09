@@ -24,12 +24,6 @@ public class ResiliencyConfiguration : IResiliencyConfiguration
     /// <inheritdoc/>
     public virtual string SectionName => "Resiliency";
 
-    /// <inheritdoc/>
-    public string ServiceType => "Resiliency";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>
     /// Gets the strategy type identifier used to select the corresponding <see cref="ResiliencyTypeBase"/> instance.
     /// </summary>

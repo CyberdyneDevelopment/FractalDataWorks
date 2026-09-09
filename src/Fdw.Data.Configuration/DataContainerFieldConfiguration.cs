@@ -43,21 +43,6 @@ public partial class DataContainerFieldConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "DataContainerFields";
-
-    /// <summary>
-    /// Gets the service type - always "DataStore" for field configuration.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for base field configuration.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the DataContainer ID this field belongs to.
     /// </summary>
     public Guid DataContainerId { get; set; }

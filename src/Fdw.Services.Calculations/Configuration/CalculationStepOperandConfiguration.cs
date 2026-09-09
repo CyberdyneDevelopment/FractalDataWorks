@@ -26,15 +26,6 @@ public partial class CalculationStepOperandConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the name of this operand (matches the operation parameter name).</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name.</summary>
-    public string SectionName => "Calculations";
-
-    /// <summary>Gets the service type discriminator.</summary>
-    public string ServiceType => "StepOperand";
-
-    /// <summary>Gets the service option type discriminator. Not applicable for operands.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the operand source type.
     /// Valid values: <c>"Input"</c> (from a calculation input), <c>"StepReference"</c>

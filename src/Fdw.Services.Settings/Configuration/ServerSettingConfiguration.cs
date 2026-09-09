@@ -30,22 +30,6 @@ public sealed partial class ServerSettingConfiguration : IGenericConfiguration
     /// </summary>
     public string SettingName { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    string IGenericConfiguration.Name
-    {
-        get => SettingName;
-        set => SettingName = value;
-    }
-
-    /// <inheritdoc />
-    string IGenericConfiguration.SectionName => "Settings:ServerSetting";
-
-    /// <inheritdoc />
-    string IGenericConfiguration.ServiceType => "ServerSetting";
-
-    /// <inheritdoc />
-    string? IGenericConfiguration.ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the setting value as a string representation.
     /// </summary>

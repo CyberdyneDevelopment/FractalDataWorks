@@ -1,22 +1,28 @@
 namespace Fdw.Configuration;
 
 /// <summary>
-/// The non-generic face of a domain configuration: which implementation a configured member is, and
-/// that implementation's configuration.
+/// A domain configuration: the record that names which implementation is configured and holds it.
 /// </summary>
 /// <remarks>
-/// <see cref="IPlatformServiceConfiguration{TImplementationConfiguration}"/> is the typed form and
-/// every domain configuration implements it. This base exists for the one caller that reads both
-/// fields without knowing the domain — the platform service provider, which needs
-/// <c>ServiceOptionType</c> to choose a factory and the implementation to hand it.
-/// <para>
-/// Both come from the domain row. The implementation table has no <c>ServiceOptionType</c> column,
-/// because the discriminator is what selected that table; reading it back off the implementation
-/// gets an empty answer from every domain.
-/// </para>
+/// A domain record carries four things and nothing else: its identity, its name, the domain it is,
+/// and the implementation it names. <see cref="Implementation"/> is the discriminator — read from
+/// the row, never a constant compiled into a type — and it selects the implementation's own
+/// configuration provider.
 /// </remarks>
 public interface IDomainConfiguration : IGenericConfiguration
 {
+    /// <summary>Gets or sets the name this record is resolved by.</summary>
+    string Name { get; set; }
+
+    /// <summary>Gets the domain this record belongs to — "Connection", "Logging", "Cors".</summary>
+    string Domain { get; }
+
+    /// <summary>
+    /// Gets or sets the implementation this record names — "MsSql", "Serilog", "Host".
+    /// Read from the domain row.
+    /// </summary>
+    string? Implementation { get; set; }
+
     /// <summary>Gets the implementation's own configuration, or null when it has not been composed.</summary>
     IGenericConfiguration? ImplementationConfiguration { get; }
 }

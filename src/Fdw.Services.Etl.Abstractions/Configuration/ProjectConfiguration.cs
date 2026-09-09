@@ -25,15 +25,6 @@ public sealed partial class ProjectConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the unique name of this project.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name for IOptions binding.</summary>
-    public string SectionName => "Projects";
-
-    /// <summary>Gets the service type discriminator.</summary>
-    public string ServiceType => "Project";
-
-    /// <summary>Gets the service option type discriminator. Not applicable for projects.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the optional description of this project.</summary>
     public string? Description { get; set; }
 

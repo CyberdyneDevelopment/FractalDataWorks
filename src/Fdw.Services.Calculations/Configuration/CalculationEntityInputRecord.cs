@@ -19,14 +19,6 @@ namespace Fdw.Services.Calculations.Configuration;
 [GenerateMapper]
 public partial class CalculationEntityInputRecord : IGenericConfiguration
 {
-    /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
-    public string SectionName => "CalculationEntityInputs";
-
-    /// <summary>Gets the service type domain.</summary>
-    public string ServiceType => "Calculation";
-
-    /// <summary>Gets the service option type discriminator (none for inputs).</summary>
-    public string? ServiceOptionType => null;
 
 
     /// <summary>Gets or sets the logical identity of this input.</summary>

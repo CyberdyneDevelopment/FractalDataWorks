@@ -16,10 +16,6 @@ public sealed class ConnectionConfigurationValidator : FdwConfigurationValidator
         RuleFor(x => x.Name)
             .IsValidName(200);
 
-        RuleFor(x => x.ServiceType)
-            .NotEmpty()
-            .WithMessage("ServiceType is required");
-
         When(x => x.Description is not null, () =>
         {
             RuleFor(x => x.Description!)

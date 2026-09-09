@@ -64,20 +64,9 @@ public partial class AegisCommandConfiguration : IGenericConfiguration
     public string ConnectionName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "AegisCommand" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the approval-policy kind discriminator (e.g., "PreApproved", "AdHoc").
     /// </summary>
     [ValuesFrom(typeof(ApprovalPolicyTypes))]
-    public string? ServiceOptionType { get; set; }
 
     /// <summary>
     /// Gets or sets the typed approval-policy body for this command header row. Populated on the

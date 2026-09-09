@@ -36,16 +36,6 @@ public partial class AdHocCommandConfiguration : IApprovalPolicyConfiguration
     /// </summary>
     public Guid AegisCommandId { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by AegisCommandId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Commands";
-    string IGenericConfiguration.ServiceType => "AegisCommand";
-    string? IGenericConfiguration.ServiceOptionType => "AdHoc";
-
     // ========================================
     // Approval-policy properties
     // ========================================

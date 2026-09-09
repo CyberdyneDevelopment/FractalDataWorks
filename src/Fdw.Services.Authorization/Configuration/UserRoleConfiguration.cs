@@ -34,15 +34,6 @@ public partial class UserRoleConfiguration : IGenericConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "UserRoles";
-
-    /// <inheritdoc />
-    public string ServiceType => "Authorization";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the user identifier (external identity provider ID or internal user ID).
     /// </summary>

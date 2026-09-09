@@ -30,14 +30,6 @@ namespace Fdw.Operations.Configuration;
 [ManagedConfiguration( ServiceCategory = "Operations")]
 public sealed partial class EscalationLevelRecipientConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Operationss";
-
-    /// <inheritdoc />
-    public string ServiceType => "Operations";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
 
     /// <summary>

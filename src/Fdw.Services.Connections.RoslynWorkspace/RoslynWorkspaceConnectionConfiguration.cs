@@ -35,16 +35,6 @@ public partial class RoslynWorkspaceConnectionConfiguration : IConnectionImpleme
     public Guid ConnectionId { get; set; }
 
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by ConnectionId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-    string IGenericConfiguration.ServiceType => "Connection";
-    string? IGenericConfiguration.ServiceOptionType => "RoslynWorkspace";
-
     // ========================================
     // RoslynWorkspace-specific properties
     // ========================================

@@ -23,15 +23,6 @@ public sealed partial class OrchestrationNodePipelineMembershipConfiguration : I
     /// <summary>Gets or sets the name of this membership record.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name for IOptions binding.</summary>
-    public string SectionName => "OrchestrationNodes";
-
-    /// <summary>Gets the service type discriminator.</summary>
-    public string ServiceType => "NodePipeline";
-
-    /// <summary>Gets the service option type discriminator. Not applicable here.</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the FK to the parent OrchestrationNode logical identifier.
     /// Follows the {ParentTableName}ConfigurationId naming convention.

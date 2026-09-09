@@ -21,14 +21,11 @@ public partial class SchedulerConfiguration : ISchedulerConfiguration
     /// <summary>Gets or sets the name of this scheduler for lookup and display.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the section name for configuration binding.</summary>
-    public string SectionName => "Scheduler";
-
-    /// <summary>Gets the service type (domain).</summary>
-    public string ServiceType => "Scheduler";
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Scheduler";
 
     /// <summary>Gets or sets the implementation this scheduler is (e.g. "Default", "Quartz").</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <inheritdoc/>
     public string? Description { get; set; }

@@ -45,16 +45,6 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// </summary>
     public bool IsDeleted { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by CredentialServiceId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "CredentialServices";
-    string IGenericConfiguration.ServiceType => "CredentialService";
-    string? IGenericConfiguration.ServiceOptionType => "Sql";
-
     // ========================================
     // ICredentialServiceImplementationConfiguration
     // ========================================

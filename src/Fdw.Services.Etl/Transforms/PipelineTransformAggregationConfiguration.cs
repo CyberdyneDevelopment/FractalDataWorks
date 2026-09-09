@@ -39,15 +39,6 @@ public sealed partial class PipelineTransformAggregationConfiguration : IGeneric
     /// </remarks>
     public Guid PipelineTransformId { get; set; }
 
-    /// <inheritdoc/>
-    public string SectionName => string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType => "Pipeline";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the source field to aggregate.
     /// </summary>

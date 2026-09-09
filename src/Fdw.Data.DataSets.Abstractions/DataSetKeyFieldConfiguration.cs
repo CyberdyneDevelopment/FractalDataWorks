@@ -22,15 +22,6 @@ public partial class DataSetKeyFieldConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the name (mirrors <see cref="KeyName"/>; not a persisted column).</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
-    public string SectionName => "DataSetKeyFields";
-
-    /// <summary>Gets the service type domain.</summary>
-    public string ServiceType => "DataSet";
-
-    /// <summary>Gets the service option type discriminator (none for key fields).</summary>
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the DataSet logical identifier (FK to data.DataSet.Id).</summary>
     /// <remarks>
     /// Why: Denormalized for efficient single-table query from DataSetConfigurationProvider

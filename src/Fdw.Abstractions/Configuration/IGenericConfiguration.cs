@@ -3,42 +3,22 @@ namespace Fdw.Configuration;
 using System;
 
 /// <summary>
-/// Base interface for all configuration objects in the Fdw framework.
-/// Provides common properties for all configuration types.
+/// Base interface for every configuration record.
 /// </summary>
+/// <remarks>
+/// Identity, and nothing else. A name belongs to a domain record; an implementation is identified by
+/// its reference to the domain it configures, which is why <c>Name</c>, <c>Domain</c> and
+/// <c>Implementation</c> all live on <see cref="IDomainConfiguration"/>.
+/// <para>
+/// <c>SectionName</c> and <c>ServiceType</c> used to live here and are gone. SectionName named an
+/// appsettings section, and configuration has not come from appsettings since the gateway became the
+/// one source; nothing read it but validators asserting the value they forced every class to invent.
+/// </para>
+/// </remarks>
 public interface IGenericConfiguration
 {
-    /// <summary>
-    /// Gets the unique identifier for this configuration instance.
-    /// </summary>
+    /// <summary>Gets or sets the unique identifier for this configuration record.</summary>
     Guid Id { get; set; }
-
-    /// <summary>
-    /// Gets the name of this configuration for lookup and display.
-    /// Defaults to <see cref="string.Empty"/>; FluentValidation enforces non-empty at validation time.
-    /// </summary>
-    string Name { get; set; }
-
-    /// <summary>
-    /// Gets the section name for this configuration in appsettings.
-    /// Defaults to <see cref="string.Empty"/>; FluentValidation enforces non-empty at validation time.
-    /// </summary>
-    string SectionName { get; }
-
-    /// <summary>
-    /// Gets the service type (domain) this configuration is for.
-    /// Examples: "Connection", "Authentication", "Notification", "SecretManager", etc.
-    /// Defaults to <see cref="string.Empty"/>; FluentValidation enforces non-empty at validation time.
-    /// </summary>
-    string ServiceType { get; }
-
-    /// <summary>
-    /// Gets the service option type (specific implementation) this configuration is for.
-    /// Examples: "MsSql", "Jwt", "Email", "AzureKeyVault", etc.
-    /// Used by providers to determine which factory to use.
-    /// </summary>
-    string? ServiceOptionType { get; }
-
 }
 
 /// <summary>

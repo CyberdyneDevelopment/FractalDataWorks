@@ -34,22 +34,6 @@ public sealed partial class TenantSettingConfiguration : IGenericConfiguration
     /// </summary>
     public string SettingName { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    string IGenericConfiguration.Name
-    {
-        get => SettingName;
-        set => SettingName = value;
-    }
-
-    /// <inheritdoc />
-    string IGenericConfiguration.SectionName => "Settings:TenantSetting";
-
-    /// <inheritdoc />
-    string IGenericConfiguration.ServiceType => "TenantSetting";
-
-    /// <inheritdoc />
-    string? IGenericConfiguration.ServiceOptionType => null;
-
     /// <summary>
     /// Gets or sets the overridden setting value for this tenant.
     /// </summary>

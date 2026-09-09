@@ -52,18 +52,15 @@ public partial class IdentityServiceConfiguration : IIdentityServiceConfiguratio
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the IConfiguration section name used for bootstrap binding.</summary>
-    public string SectionName { get; set; }
-
-    /// <summary>Gets or sets the service-type domain — always <c>"Identity"</c> for this hierarchy.</summary>
-    public string ServiceType { get; set; }
-
     /// <summary>
     /// Gets or sets the TypeOption discriminator. <see cref="IdentityServiceTypes"/> uses this value
     /// to select the mechanism (e.g. <c>"ClientCredentials"</c>, <c>"JwtAssertion"</c>).
     /// </summary>
     [ValuesFrom(typeof(IdentityServiceTypes))]
-    public string? ServiceOptionType { get; set; }
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "Identity";
+
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets an optional human-readable description for this configuration.</summary>
     public string? Description { get; set; }

@@ -24,14 +24,6 @@ namespace Fdw.Services.Calculations.Configuration;
 [ManagedConfiguration( ServiceCategory = "Calculation", ServiceType = "Entity", Temporal = true)]
 public partial class CalculationEntityConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Calculations";
-
-    /// <inheritdoc />
-    public string ServiceType => "Calculation";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => CalculationEntityType;
 
 
     /// <summary>Gets or sets the unique identifier for this calculation entity.</summary>

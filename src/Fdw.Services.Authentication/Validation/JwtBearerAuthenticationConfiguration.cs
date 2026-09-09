@@ -49,15 +49,6 @@ public partial class JwtBearerAuthenticationConfiguration : IJwtBearerAuthentica
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string SectionName { get; set; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; set; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; set; }
-
-    /// <inheritdoc />
     public Guid AuthenticationServiceId { get; set; }
 
     /// <inheritdoc />

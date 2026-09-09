@@ -26,12 +26,6 @@ public sealed partial class UsersServiceConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the name of this configuration row.</summary>
     public string Name { get; set; } = string.Empty;
 
-    string IGenericConfiguration.SectionName => "User";
-
-    string IGenericConfiguration.ServiceType => "User";
-
-    string? IGenericConfiguration.ServiceOptionType => "UsersService";
-
     /// <summary>Gets or sets the credential service credential operations resolve through.</summary>
     public string? CredentialServiceName { get; set; }
 

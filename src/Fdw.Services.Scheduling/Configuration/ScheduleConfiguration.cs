@@ -45,20 +45,9 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "Schedule" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the service option type (implementation variant) this configuration is for.
     /// </summary>
     [ValuesFrom(typeof(TriggerTypes))]
-    public string? ServiceOptionType { get; set; }
 
     /// <inheritdoc />
     public virtual string ScheduleType => ServiceOptionType ?? "Unknown";

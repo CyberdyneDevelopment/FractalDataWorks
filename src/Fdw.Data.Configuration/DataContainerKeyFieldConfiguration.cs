@@ -64,13 +64,5 @@ public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration
     /// </summary>
     [NotMapped]
     public string Name { get; set; } = string.Empty;
-    /// <summary>Section name for binding.</summary>
-    public string SectionName { get; set; } = "DataContainerKeyFields";
-
-    /// <summary>Service type.</summary>
-    public string ServiceType { get; set; } = "DataContainerKeyField";
-
-    /// <summary>Optional service option type.</summary>
-    public string? ServiceOptionType { get; set; }
 
 }

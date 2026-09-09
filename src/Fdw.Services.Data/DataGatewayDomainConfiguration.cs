@@ -27,14 +27,11 @@ public partial class DataGatewayDomainConfiguration : IDataGatewayConfiguration
     /// <summary>Gets or sets the name of this configuration row.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the configuration section this record belongs to.</summary>
-    public string SectionName => "DataGateway";
-
-    /// <summary>Gets the service type this record configures.</summary>
-    public string ServiceType => "DataGateway";
+    /// <summary>Gets the domain this record belongs to.</summary>
+    public string Domain => "DataGateway";
 
     /// <summary>Gets or sets which implementation this record names.</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets the implementation for the implementation this record names.</summary>
     public IDataGatewayImplementationConfiguration? Configuration { get; set; }

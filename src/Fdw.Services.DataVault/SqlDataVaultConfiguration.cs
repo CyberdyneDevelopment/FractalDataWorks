@@ -44,16 +44,6 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// </summary>
     public bool IsDeleted { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by DataVaultId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "DataVaults";
-    string IGenericConfiguration.ServiceType => "DataVault";
-    string? IGenericConfiguration.ServiceOptionType => "Default";
-
     // ========================================
     // IDataVaultImplementationConfiguration
     // ========================================

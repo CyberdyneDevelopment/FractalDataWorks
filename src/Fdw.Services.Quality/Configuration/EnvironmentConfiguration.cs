@@ -16,14 +16,6 @@ namespace Fdw.Services.Quality.Configuration;
     ServiceType = "Environment")]
 public sealed partial class EnvironmentConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Promotions";
-
-    /// <inheritdoc />
-    public string ServiceType => "Promotion";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the unique identifier for this environment.

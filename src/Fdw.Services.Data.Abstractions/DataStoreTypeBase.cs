@@ -35,11 +35,6 @@ public abstract class DataStoreTypeBase<TConfiguration> :
 #pragma warning restore CA5351, SCS0006, CA1850
 
     /// <summary>
-    /// Gets the configuration section name.
-    /// </summary>
-    public string SectionName { get; }
-
-    /// <summary>
     /// Gets the configuration type.
     /// </summary>
     public Type ConfigurationType => typeof(TConfiguration);

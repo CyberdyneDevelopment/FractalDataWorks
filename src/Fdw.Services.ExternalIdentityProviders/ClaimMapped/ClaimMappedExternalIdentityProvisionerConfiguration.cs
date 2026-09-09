@@ -27,16 +27,6 @@ public sealed partial class ClaimMappedExternalIdentityProvisionerConfiguration 
     /// </summary>
     public Guid Id { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — identified by ExternalIdentityProvisionerId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "ExternalIdentityProvisioners";
-    string IGenericConfiguration.ServiceType => "ExternalIdentityProvisioner";
-    string? IGenericConfiguration.ServiceOptionType => "ClaimMapped";
-
     /// <summary>
     /// Gets or sets the durable logical FK to <c>sec.ExternalIdentityProvisioner.Id</c> (the parent header).
     /// </summary>

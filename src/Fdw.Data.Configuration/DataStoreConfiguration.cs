@@ -69,16 +69,6 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the section name for configuration binding.
-    /// </summary>
-    public string SectionName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the service type (domain) - always "DataStore" for this configuration.
-    /// </summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>
     /// Gets or sets the DataStore type discriminator (e.g., "MsSql", "Rest", "OData").
     /// Maps to the <c>TypeId</c> column on <c>data.DataStore</c>.
     /// </summary>
