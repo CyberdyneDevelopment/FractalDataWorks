@@ -5,7 +5,7 @@ using Fdw.Services.Configuration;
 namespace Fdw.Services.Authorization.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the system role mapping.</summary>
-[TypeOption(typeof(ConfigurationCommands), "SystemRoleMapping")]
+[TypeOption(typeof(ConfigurationCommands), "System")]
 public sealed class SystemRoleMappingConfigurationCommand : ConfigurationCommandBase<SystemRoleMappingConfiguration>
 {
     /// <inheritdoc/>

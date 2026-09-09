@@ -165,6 +165,20 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, pathNameAuthz));
 
+            // Why the domain provider and not the implementation one: the domain row names which
+            // mapping this host runs, and routing to it is the domain provider's job. Reading the
+            // implementation directly would name one in code and make the record decorative.
+            builder.Services.TryAddSingleton<IRoleMappingConfigurationProvider>(sp =>
+            {
+                var domain = new RoleMappingConfigurationProvider(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<RoleMappingConfigurationProvider>()
+                        ?? NullLogger<RoleMappingConfigurationProvider>.Instance,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStore, pathNameAuthz);
+                domain.Register("System", sp.GetRequiredService<SystemRoleMappingConfigurationProvider>());
+                return domain;
+            });
+
             // Why the row is read here rather than injected: DefaultSystemRoleConfiguration throws
             // when no administrator role is named, and it does that at construction so the process
             // fails at startup instead of at the first authorization check.
@@ -196,7 +210,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
     // decide whether the process may start at all.
     private static SystemRoleMappingConfiguration ReadSystemRoleMapping(IServiceProvider services)
     {
-        var provider = services.GetRequiredService<SystemRoleMappingConfigurationProvider>();
+        var provider = services.GetRequiredService<IRoleMappingConfigurationProvider>();
 #pragma warning disable VSTHRD002
         var result = provider.Get("SystemRoleMapping").GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
@@ -207,6 +221,17 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 "Authorization cannot start without knowing which role names carry system authority.");
         }
 
-        return result.Value;
+        // The domain provider returns the implementation its row named. Anything other than the
+        // System mapping here means the row names an implementation this host does not run, which is
+        // a configuration fault rather than something to coerce.
+        if (result.Value is not SystemRoleMappingConfiguration system)
+        {
+            throw new InvalidOperationException(
+                $"The SystemRoleMapping row names implementation '{result.Value.ServiceOptionType}', "
+                + "which is not the System role mapping. Authorization cannot start without knowing "
+                + "which role names carry system authority.");
+        }
+
+        return system;
     }
 }
