@@ -66,12 +66,17 @@ public sealed class LocalHealthMonitorFactory : ILocalHealthMonitorFactory
     /// <inheritdoc/>
     public IGenericResult<IHealthMonitorService> Create(IGenericConfiguration configuration)
     {
-        if (configuration is not HealthMonitorConfiguration typed)
+        // The implementation, not the domain record: the provider reads the discriminator off the
+        // domain row to pick this factory and then hands over what the row named. Casting to
+        // HealthMonitorConfiguration here also bound Create(typed) back to this same overload
+        // rather than to the strongly-typed sibling below -- unreachable while the discriminator
+        // never resolved, an infinite recursion the moment it did.
+        if (configuration is not LocalHealthMonitorConfiguration typed)
         {
             return GenericResult<IHealthMonitorService>.Failure(
                 HealthMonitorLog.FactoryConfigurationCastFailed(
                     _logger, nameof(LocalHealthMonitorFactory),
-                    nameof(HealthMonitorConfiguration), configuration?.GetType().Name ?? "null"));
+                    nameof(LocalHealthMonitorConfiguration), configuration?.GetType().Name ?? "null"));
         }
 
         return Create(typed);

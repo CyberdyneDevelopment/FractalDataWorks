@@ -46,15 +46,21 @@ public sealed class HttpHealthMonitorFactory : IHttpHealthMonitorFactory
     /// <inheritdoc/>
     public IGenericResult<IHealthMonitorService> Create(IGenericConfiguration configuration)
     {
-        if (configuration is not HealthMonitorConfiguration typed)
+        // The implementation, for the same reason as the Local factory: the provider hands over what
+        // the domain row named. This service takes nothing from it, but the cast still has to match
+        // what arrives or it refuses every configuration.
+        if (configuration is not IHealthMonitorImplementationConfiguration)
         {
             return GenericResult<IHealthMonitorService>.Failure(
                 HealthMonitorLog.FactoryConfigurationCastFailed(
                     _logger, nameof(HttpHealthMonitorFactory),
-                    nameof(HealthMonitorConfiguration), configuration?.GetType().Name ?? "null"));
+                    nameof(IHealthMonitorImplementationConfiguration), configuration?.GetType().Name ?? "null"));
         }
 
-        return Create(typed);
+        return GenericResult<IHealthMonitorService>.Success(
+            new HttpHealthMonitorService(
+                _httpClientFactory,
+                _loggerFactory?.CreateLogger<HttpHealthMonitorService>()));
     }
 
     /// <inheritdoc/>
