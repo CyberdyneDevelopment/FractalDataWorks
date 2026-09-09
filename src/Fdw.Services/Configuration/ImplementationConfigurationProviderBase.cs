@@ -80,13 +80,18 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
 
     /// <summary>
-    /// Per-discriminator registry of typed-body providers, keyed by the framework-level
-    /// <see cref="IGenericConfiguration.ServiceOptionType"/> (e.g. "MsSql", "Http"). A polymorphic HEADER
-    /// provider (Connection, SecretManager, ...) registers one entry per typed body via
-    /// <c>Register</c>; a leaf/child provider (e.g. the MsSqlConnectionConfiguration body
-    /// provider) never registers any, so its registry stays empty — that emptiness is how
-    /// A registered implementation provider distinguishes a domain provider from a leaf.
+    /// Per-discriminator registry of implementation providers, keyed by the framework-level
+    /// <see cref="IGenericConfiguration.ServiceOptionType"/> (e.g. "MsSql", "Http"). A domain provider
+    /// (Connection, SecretManager, ...) registers one entry per implementation via <c>Register</c>;
+    /// an implementation provider registers none, so its registry stays empty.
     /// </summary>
+    /// <remarks>
+    /// Emptiness is NOT a discriminator. It once was — <c>ComposeAggregate</c> skipped composition
+    /// entirely when this was empty, which answered "I am an implementation, there is nothing to
+    /// compose" and "I am a domain and nobody registered my implementations" with the same silent
+    /// success. The row's own <c>ServiceOptionType</c> is what separates those: absent means nothing
+    /// to compose, present-but-unregistered is a fault and now says so by name (FDW-727).
+    /// </remarks>
     protected ConcurrentDictionary<string, IServiceConfigurationProvider> ImplementationProviders { get; }
         = new(StringComparer.OrdinalIgnoreCase);
 
@@ -197,44 +202,41 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         // The domain row names which implementation it is; that name selects the implementation's own
         // configuration provider, which reads its row by joining back to this one on the foreign key.
         // The discriminator is read once, here, off the row that carries it.
-        if (!ImplementationProviders.IsEmpty)
+        if (string.IsNullOrEmpty(header.ServiceOptionType))
         {
-            if (string.IsNullOrEmpty(header.ServiceOptionType))
-            {
-                DefaultConfigurationProviderLog.NoServiceOptionTypeForTypedBody(
-                    _logger, typeof(TConfig).Name, header.Name);
-            }
-            else if (!ImplementationProviders.TryGetValue(header.ServiceOptionType, out var implementationProvider))
+            DefaultConfigurationProviderLog.NoServiceOptionTypeForTypedBody(
+                _logger, typeof(TConfig).Name, header.Name);
+        }
+        else if (!ImplementationProviders.TryGetValue(header.ServiceOptionType, out var implementationProvider))
+        {
+            return GenericResult<TConfig>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(
+                    _logger, header.Name, header.ServiceOptionType));
+        }
+        else
+        {
+            DefaultConfigurationProviderLog.LoadingTypedBody(
+                _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
+
+            var implementation = await implementationProvider.Get(header.Id, ct).ConfigureAwait(false);
+            if (!implementation.IsSuccess)
             {
                 return GenericResult<TConfig>.Failure(
-                    DefaultConfigurationProviderLog.NoImplementationProvider(
-                        _logger, header.Name, header.ServiceOptionType));
+                    DefaultConfigurationProviderLog.TypedBodyLoadFailed(
+                        _logger, new InvalidOperationException(implementation.CurrentMessage),
+                        typeof(TConfig).Name, header.Name, header.ServiceOptionType));
+            }
+
+            var implementationMapper = PocoMapperCollection.ByName(typeof(TConfig).Name);
+            if (implementationMapper == PocoMapperCollection.NotFound)
+            {
+                DefaultConfigurationProviderLog.NoMapperForTypedBody(_logger, typeof(TConfig).Name, header.Name);
             }
             else
             {
-                DefaultConfigurationProviderLog.LoadingTypedBody(
+                implementationMapper.SetTypedBody(header, implementation.Value);
+                DefaultConfigurationProviderLog.TypedBodyLoaded(
                     _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
-
-                var implementation = await implementationProvider.Get(header.Id, ct).ConfigureAwait(false);
-                if (!implementation.IsSuccess)
-                {
-                    return GenericResult<TConfig>.Failure(
-                        DefaultConfigurationProviderLog.TypedBodyLoadFailed(
-                            _logger, new InvalidOperationException(implementation.CurrentMessage),
-                            typeof(TConfig).Name, header.Name, header.ServiceOptionType));
-                }
-
-                var implementationMapper = PocoMapperCollection.ByName(typeof(TConfig).Name);
-                if (implementationMapper == PocoMapperCollection.NotFound)
-                {
-                    DefaultConfigurationProviderLog.NoMapperForTypedBody(_logger, typeof(TConfig).Name, header.Name);
-                }
-                else
-                {
-                    implementationMapper.SetTypedBody(header, implementation.Value);
-                    DefaultConfigurationProviderLog.TypedBodyLoaded(
-                        _logger, typeof(TConfig).Name, header.Name, header.ServiceOptionType);
-                }
             }
         }
 
