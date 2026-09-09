@@ -139,8 +139,11 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 
         // The audience and roles are on the implementation row, which the provider dispatches to by
         // the kind the domain row names.
-        var implementation = await _configuration.Get(header.Id, cancellationToken).ConfigureAwait(false);
-        if (!implementation.IsSuccess || implementation.Value is not IJwtBearerAuthenticationConfiguration body)
+        // Get returns the DOMAIN record; the audience is on the implementation it carries. Testing the
+        // record itself for the implementation contract can never match, and the failure is silent in
+        // the worst way: the scheme builds with no key and no issuer and refuses every valid token.
+        var record = await _configuration.Get(header.Id, cancellationToken).ConfigureAwait(false);
+        if (!record.IsSuccess || record.Value?.ImplementationConfiguration is not IJwtBearerAuthenticationConfiguration body)
         {
             return GenericResult<TokenValidationParameters>.Failure(
                 AuthenticationValidationLog.JwtBearerEntryUnreadable(_log, ServiceName));
