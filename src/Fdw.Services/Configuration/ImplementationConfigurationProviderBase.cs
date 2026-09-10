@@ -165,60 +165,56 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         return await Implementation(domain.Value, null, ct).ConfigureAwait(false);
     }
 
-    /// <inheritdoc/>
+    /// <summary>Writes a configured member: its domain row if there is not one, then its implementation.</summary>
+    /// <typeparam name="T">The implementation configuration being written.</typeparam>
+    /// <param name="implementationConfiguration">The configuration to write.</param>
+    /// <param name="domain">The domain this member belongs to.</param>
+    /// <param name="implementationName">Which implementation this is; it selects the provider that writes it.</param>
+    /// <param name="name">The member's name, which the domain row carries.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>Success, or a structured failure.</returns>
+    /// <remarks>
+    /// One write, not a create and an update. The name is what a member is known by, so a domain row
+    /// already carrying it is the row this implementation hangs from; only when there is none is one
+    /// minted. The two rows are never written apart -- a domain row naming an implementation that was
+    /// not written is the record that fails to compose on the next read.
+    /// </remarks>
     public async Task<IGenericResult> Save<T>(
-        T implementationConfiguration, Guid domainId, CancellationToken ct = default)
+        T implementationConfiguration, string domain, string implementationName, string name,
+        CancellationToken ct = default)
         where T : TImplementationConfiguration
     {
-        var domain = await GetHeaderById(domainId, null, ct).ConfigureAwait(false);
-        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
-        if (domain.Value is not IDomainConfiguration { Implementation: { Length: > 0 } implementationName } existing)
-        {
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoImplementationForTypedBody(
-                    _logger, typeof(TImplementationConfiguration).Name, domainId.ToString()));
-        }
-
-        return await Write(implementationConfiguration, implementationName, existing.Name, domainId, ct)
-            .ConfigureAwait(false);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IGenericResult> Save<T>(
-        T implementationConfiguration, string implementationName, string name, CancellationToken ct = default)
-        where T : TImplementationConfiguration
-    {
-        // The two rows are written together. A domain row is never created on its own: it names an
-        // implementation, so a domain row without one is the bodiless record that fails to compose on
-        // the next read and takes the host down when that read is at startup.
-        var record = Activator.CreateInstance<TDomainConfiguration>();
-        if (record is not IDomainConfiguration created)
-        {
-            return GenericResult.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
-        }
-
         if (!_implementations.ContainsKey(implementationName))
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
         }
 
-        // Everything the domain row needs is in hand: a new Id, the domain the type states, the
-        // implementation named by the caller, and the name.
-        created.Id = Guid.CreateVersion7();
-        created.Name = name;
-        created.Implementation = implementationName;
-        created.ImplementationConfiguration = implementationConfiguration;
+        var existing = await GetByName(name, null, ct).ConfigureAwait(false);
+        if (!existing.IsSuccess) return existing.ToNewResult<TDomainConfiguration>();
 
-        var gateway = Gateway();
-        if (gateway.IsFailure) return gateway.ToNewResult<TDomainConfiguration>();
+        var domainId = existing.Value?.Id ?? Guid.Empty;
+        if (domainId == Guid.Empty)
+        {
+            var record = new DomainConfiguration
+            {
+                Id = Guid.CreateVersion7(),
+                Name = name,
+                Domain = domain,
+                Implementation = implementationName,
+            };
 
-        var written = await gateway.Value!.Execute<TDomainConfiguration>(
-            Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
-        if (!written.IsSuccess) return written.ToNewResult<TDomainConfiguration>();
+            var gateway = Gateway();
+            if (gateway.IsFailure) return gateway.ToNewResult<TDomainConfiguration>();
 
-        return await Write(implementationConfiguration, implementationName, name, created.Id, ct)
+            var written = await gateway.Value!.Execute<DomainConfiguration>(
+                Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
+            if (!written.IsSuccess) return written.ToNewResult<TDomainConfiguration>();
+
+            domainId = record.Id;
+        }
+
+        return await Write(implementationConfiguration, implementationName, name, domainId, ct)
             .ConfigureAwait(false);
     }
 

@@ -53,35 +53,21 @@ public interface IDomainConfigurationProvider<TImplementationConfiguration>
     /// </remarks>
     Task<IGenericResult<IReadOnlyList<IDomainConfiguration>>> Get(CancellationToken ct = default);
 
-    /// <summary>Updates an existing member's implementation configuration.</summary>
+    /// <summary>Writes a configured member: its domain row if there is not one, then its implementation.</summary>
     /// <typeparam name="T">The implementation configuration being written.</typeparam>
     /// <param name="implementationConfiguration">The configuration to write.</param>
-    /// <param name="domainId">The domain record this implementation hangs from.</param>
-    /// <param name="ct">A token to cancel the operation.</param>
+    /// <param name="domain">The domain this member belongs to.</param>
+    /// <param name="implementationName">Which implementation this is; it selects the provider that writes it.</param>
+    /// <param name="name">The member's name, which the domain row carries.</param>
+    /// <param name="ct">The cancellation token.</param>
     /// <returns>Success, or a structured failure.</returns>
     /// <remarks>
-    /// The domain row already exists, so it states the name and the implementation -- there is
-    /// nothing for the caller to restate and nothing to create.
+    /// One write rather than a create and an update: the name identifies the member, so an existing
+    /// domain row carrying it is the row to hang from and only its absence mints a new one.
     /// </remarks>
     Task<IGenericResult> Save<T>(
         T implementationConfiguration,
-        Guid domainId,
-        CancellationToken ct = default)
-        where T : TImplementationConfiguration;
-
-    /// <summary>Writes a new configured member: its domain record, then its implementation.</summary>
-    /// <typeparam name="T">The implementation configuration being written.</typeparam>
-    /// <param name="implementationConfiguration">The configuration to write.</param>
-    /// <param name="implementationName">Which implementation this is -- it selects the provider that writes it.</param>
-    /// <param name="name">The member's name, which the new domain row carries.</param>
-    /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>Success, or a structured failure.</returns>
-    /// <remarks>
-    /// There is no domain record yet, so this creates one and writes the implementation against the
-    /// id it was assigned.
-    /// </remarks>
-    Task<IGenericResult> Save<T>(
-        T implementationConfiguration,
+        string domain,
         string implementationName,
         string name,
         CancellationToken ct = default)
