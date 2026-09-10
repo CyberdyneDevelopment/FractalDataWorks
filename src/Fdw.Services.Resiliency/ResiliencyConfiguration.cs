@@ -19,6 +19,7 @@ public class ResiliencyConfiguration : IResiliencyConfiguration
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
+
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();
 
@@ -26,14 +27,9 @@ public class ResiliencyConfiguration : IResiliencyConfiguration
     public string Name { get; set; } = string.Empty;
 
 
-    /// <summary>
-    /// Gets the strategy type identifier used to select the corresponding <see cref="ResiliencyTypeBase"/> instance.
-    /// </summary>
-    /// <remarks>
-    /// Why: Implementation is the discriminator that maps this config to the
-    /// <see cref="ResiliencyTypeBase"/> instance via <see cref="ResiliencyTypes.ByName"/>.
-    /// </remarks>
-    public virtual string Implementation => string.Empty;
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the optional description.

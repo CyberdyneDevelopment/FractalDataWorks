@@ -236,28 +236,28 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 ResultDetails.Create("Identifier", identifier));
         }
 
-        if (!_factories.TryGetValue(configuration.Value.Domain, out var resolve) || _services is null)
+        if (!_factories.TryGetValue(configuration.Value.Implementation, out var resolve) || _services is null)
         {
-            ServiceLogger.NoFactoryRegistered(_logger, configuration.Value.Domain);
+            ServiceLogger.NoFactoryRegistered(_logger, configuration.Value.Implementation);
             ServiceLogger.FactoryLookupMiss(
-                _logger, GetType().Name, configuration.Value.Domain, identifier,
+                _logger, GetType().Name, configuration.Value.Implementation, identifier,
                 _factories.Count == 0 ? "<empty>" : string.Join(", ", _factories.Keys));
             return GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("NoFactoryRegistered"),
-                ResultDetails.Create("Implementation", configuration.Value.Domain, "Identifier", identifier));
+                ResultDetails.Create("Implementation", configuration.Value.Implementation, "Identifier", identifier));
         }
 
         // Invoked here, not cached: a factory registered transient hands back a new instance, a
         // singleton the same one -- whichever the application asked for.
         var factory = resolve(_services);
-        ServiceLogger.FactoryLookupSucceeded(_logger, configuration.Value.Domain);
+        ServiceLogger.FactoryLookupSucceeded(_logger, configuration.Value.Implementation);
 
         return (factory is IAsyncServiceFactory<TService> asyncFactory
             ? await asyncFactory.Create(configuration.Value, cancellationToken).ConfigureAwait(false)
             : Create(factory, configuration.Value))
             ?? GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("InvalidFactoryType"),
-                ResultDetails.Create("Implementation", configuration.Value.Domain,
+                ResultDetails.Create("Implementation", configuration.Value.Implementation,
                                      "FactoryType", factory.GetType().Name));
     }
 

@@ -41,6 +41,10 @@ public sealed partial class JwtTokenManagerConfiguration : ITokenManagerImplemen
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>Gets or sets this typed-body row's identifier (<c>auth.JwtTokenManager.Id</c>).</summary>
     public Guid Id { get; set; }
 

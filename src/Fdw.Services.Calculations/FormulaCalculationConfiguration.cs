@@ -53,6 +53,10 @@ public sealed partial class FormulaCalculationConfiguration : ICalculationTypedC
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
 
     /// <inheritdoc/>
     public Guid Id { get; set; }

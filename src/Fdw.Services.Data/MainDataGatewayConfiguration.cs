@@ -19,6 +19,10 @@ public partial class MainDataGatewayConfiguration : IDataGatewayImplementationCo
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // Why no generated default: the store assigns identity. A value minted here reaches Get(id) as a
     // real-looking id matching no row, and the miss reads as a data problem rather than an unsaved record.
     /// <inheritdoc/>

@@ -29,6 +29,10 @@ public sealed partial class DataSetImplementationConfiguration : IDataSetImpleme
     /// <summary>Gets or sets the domain.</summary>
     public string Domain { get; set; } = string.Empty;
 
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the data set id.</summary>
     public Guid DataSetId { get; set; }
 

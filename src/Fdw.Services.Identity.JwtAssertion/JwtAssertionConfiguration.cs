@@ -41,6 +41,10 @@ public partial class JwtAssertionConfiguration : IIdentityServiceImplementationC
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="JwtAssertionConfiguration"/> class.
     /// </summary>

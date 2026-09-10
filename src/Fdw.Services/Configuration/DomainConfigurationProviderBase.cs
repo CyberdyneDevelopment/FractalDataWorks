@@ -104,7 +104,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (rows.Value?.FirstOrDefault() is not { } row)
             return GenericResult<TImplementationConfiguration>.Success(default!);
 
-        if (!_implementations.TryGetValue(row.Implementation ?? string.Empty, out var provider))
+        if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
             return GenericResult<TImplementationConfiguration>.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
 
@@ -113,6 +113,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         {
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
+            loaded.Value.Implementation = implementation;
         }
 
         return loaded;
@@ -130,7 +131,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (rows.Value?.FirstOrDefault() is not { } row)
             return GenericResult<TImplementationConfiguration>.Success(default!);
 
-        if (!_implementations.TryGetValue(row.Implementation ?? string.Empty, out var provider))
+        if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
             return GenericResult<TImplementationConfiguration>.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
 
@@ -139,6 +140,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         {
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
+            loaded.Value.Implementation = implementation;
         }
 
         return loaded;
@@ -156,7 +158,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (rows.Value?.FirstOrDefault() is not { } row)
             return GenericResult<TImplementationConfiguration>.Success(default!);
 
-        if (!_implementations.TryGetValue(row.Implementation ?? string.Empty, out var provider))
+        if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
             return GenericResult<TImplementationConfiguration>.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
 
@@ -166,6 +168,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         {
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
+            loaded.Value.Implementation = implementation;
         }
 
         return loaded;
@@ -184,7 +187,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var found = new List<TImplementationConfiguration>();
         foreach (var row in rows.Value ?? [])
         {
-            if (!_implementations.TryGetValue(row.Implementation ?? string.Empty, out var provider))
+            if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
                 return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Failure(
                     DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
 
@@ -194,6 +197,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
+            loaded.Value.Implementation = implementation;
             found.Add(loaded.Value);
         }
 
@@ -258,6 +262,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
 
         implementationConfiguration.Name = name;
         implementationConfiguration.Domain = domain;
+        implementationConfiguration.Implementation = implementationName;
         implementationConfiguration.Id = domainId;
         return await provider.Save(implementationConfiguration, ct).ConfigureAwait(false);
     }
@@ -273,7 +278,7 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         if (!rows.IsSuccess) return rows.ToNewResult<TImplementationConfiguration>();
         if (rows.Value?.FirstOrDefault() is not { } row) return GenericResult.Success();
 
-        if (!_implementations.TryGetValue(row.Implementation ?? string.Empty, out var provider))
+        if (row.Implementation is not { } implementation || !_implementations.TryGetValue(implementation, out var provider))
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, row.Implementation ?? "(none)"));
 

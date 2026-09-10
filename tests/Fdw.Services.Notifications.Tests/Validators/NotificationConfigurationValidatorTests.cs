@@ -18,6 +18,7 @@ public sealed class NotificationConfigurationValidatorTests
         public string Name { get; set; } = string.Empty;
 
         public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = string.Empty;
     }
 
     private readonly NotificationConfigurationValidator _sut = new();

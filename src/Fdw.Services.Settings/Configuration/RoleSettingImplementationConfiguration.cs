@@ -28,6 +28,10 @@ public sealed partial class RoleSettingImplementationConfiguration
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;
 
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>The domain record's durable id.</summary>
     public Guid RoleSettingId { get; set; }
 

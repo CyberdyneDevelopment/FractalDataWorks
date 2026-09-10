@@ -10,8 +10,6 @@ namespace Fdw.Services.Resiliency.Polly;
 public sealed class PollyRetryResiliencyConfiguration : ResiliencyConfiguration
 {
 
-    /// <inheritdoc/>
-    public override string Implementation => "PollyRetry";
 
     /// <summary>
     /// Gets or sets the maximum number of retry attempts (not counting the initial attempt).
