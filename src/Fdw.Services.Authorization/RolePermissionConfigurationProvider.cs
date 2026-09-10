@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Authorization;
 
-/// <summary>Supplies the RolePermission domain configuration.</summary>
+/// <summary>Supplies the RolePermission configuration.</summary>
 public sealed class RolePermissionConfigurationProvider
     : DomainConfigurationProviderBase<IRolePermissionImplementationConfiguration>,
       IRolePermissionConfigurationProvider

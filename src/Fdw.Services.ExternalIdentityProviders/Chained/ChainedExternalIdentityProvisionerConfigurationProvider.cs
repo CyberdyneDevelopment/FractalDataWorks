@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
-/// <summary>Supplies the ChainedExternalIdentityProvisioner implementation configuration.</summary>
+/// <summary>Supplies the ChainedExternalIdentityProvisioner configuration.</summary>
 public sealed class ChainedExternalIdentityProvisionerConfigurationProvider
     : ImplementationProviderBase<ChainedExternalIdentityProvisionerConfiguration>
 {

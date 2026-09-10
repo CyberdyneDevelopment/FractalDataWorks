@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the EmptyBody domain configuration.</summary>
+/// <summary>Supplies the EmptyBody configuration.</summary>
 public sealed class EmptyBodyConfigurationProvider
     : DomainConfigurationProviderBase<IEmptyBodyImplementationConfiguration>,
       IEmptyBodyConfigurationProvider

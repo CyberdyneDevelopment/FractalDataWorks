@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings;
 
-/// <summary>Supplies the configured TenantSetting members.</summary>
+/// <summary>Supplies the TenantSetting configuration.</summary>
 public sealed class TenantSettingConfigurationProvider
     : DomainConfigurationProviderBase<ITenantSettingImplementationConfiguration>,
       ITenantSettingConfigurationProvider

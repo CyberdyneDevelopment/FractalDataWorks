@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality;
 
-/// <summary>Supplies the configured QualityRule members.</summary>
+/// <summary>Supplies the QualityRule configuration.</summary>
 public sealed class QualityRuleConfigurationProvider
     : DomainConfigurationProviderBase<IQualityRuleImplementationConfiguration>,
       IQualityRuleConfigurationProvider

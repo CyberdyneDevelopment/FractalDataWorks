@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the Cors domain configuration.</summary>
+/// <summary>Supplies the Cors configuration.</summary>
 public sealed class CorsConfigurationProvider
     : DomainConfigurationProviderBase<ICorsImplementationConfiguration>,
       ICorsConfigurationProvider

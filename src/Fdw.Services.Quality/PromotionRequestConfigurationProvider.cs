@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality;
 
-/// <summary>Supplies the configured PromotionRequest members.</summary>
+/// <summary>Supplies the PromotionRequest configuration.</summary>
 public sealed class PromotionRequestConfigurationProvider
     : DomainConfigurationProviderBase<IPromotionRequestImplementationConfiguration>,
       IPromotionRequestConfigurationProvider

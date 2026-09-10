@@ -14,7 +14,5 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// </remarks>
 public interface IOidcAuthorityConfigurationProvider
 {
-    /// <summary>Reads the declared authority.</summary>
-    /// <param name="cancellationToken">A token to cancel the read.</param>
-    Task<IGenericResult<IOidcAuthorityConfiguration>> Get(CancellationToken cancellationToken = default);
+
 }

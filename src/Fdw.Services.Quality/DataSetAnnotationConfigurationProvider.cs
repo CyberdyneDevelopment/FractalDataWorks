@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality;
 
-/// <summary>Supplies the configured DataSetAnnotation members.</summary>
+/// <summary>Supplies the DataSetAnnotation configuration.</summary>
 public sealed class DataSetAnnotationConfigurationProvider
     : DomainConfigurationProviderBase<IDataSetAnnotationImplementationConfiguration>,
       IDataSetAnnotationConfigurationProvider

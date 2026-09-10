@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data;
 
-/// <summary>Supplies the DataGateway domain configuration.</summary>
+/// <summary>Supplies the DataGateway configuration.</summary>
 public sealed class DataGatewayDomainConfigurationProvider
     : DomainConfigurationProviderBase<IDataGatewayDomainImplementationConfiguration>,
       IDataGatewayConfigurationProvider

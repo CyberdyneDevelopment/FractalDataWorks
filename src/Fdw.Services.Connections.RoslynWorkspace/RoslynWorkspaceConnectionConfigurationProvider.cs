@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.RoslynWorkspace;
 
-/// <summary>Supplies the Roslyn workspace connection's own configuration.</summary>
+/// <summary>Supplies the RoslynWorkspaceConnection configuration.</summary>
 public sealed class RoslynWorkspaceConnectionConfigurationProvider
     : ImplementationProviderBase<RoslynWorkspaceConnectionConfiguration>,
       IRoslynWorkspaceConnectionConfigurationProvider

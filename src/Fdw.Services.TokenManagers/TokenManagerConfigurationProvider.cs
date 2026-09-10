@@ -4,13 +4,11 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.TokenManagers.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.TokenManagers;
 
-/// <summary>Supplies the TokenManager domain configuration.</summary>
+/// <summary>Supplies the TokenManager configuration.</summary>
 public sealed class TokenManagerConfigurationProvider
     : DomainConfigurationProviderBase<ITokenManagerImplementationConfiguration>,
       ITokenManagerConfigurationProvider

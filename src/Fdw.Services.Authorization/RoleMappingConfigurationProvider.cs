@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Authorization;
 
-/// <summary>Supplies the RoleMapping domain configuration.</summary>
+/// <summary>Supplies the RoleMapping configuration.</summary>
 public sealed class RoleMappingConfigurationProvider
     : DomainConfigurationProviderBase<IRoleMappingImplementationConfiguration>,
       IRoleMappingConfigurationProvider

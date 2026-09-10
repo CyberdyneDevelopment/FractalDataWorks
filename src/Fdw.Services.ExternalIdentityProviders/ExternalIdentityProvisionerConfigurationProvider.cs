@@ -4,13 +4,11 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
-/// <summary>Supplies the ExternalIdentityProvisioner domain configuration.</summary>
+/// <summary>Supplies the ExternalIdentityProvisioner configuration.</summary>
 public sealed class ExternalIdentityProvisionerConfigurationProvider
     : DomainConfigurationProviderBase<IExternalIdentityProvisionerImplementationConfiguration>,
       IExternalIdentityProvisionerConfigurationProvider

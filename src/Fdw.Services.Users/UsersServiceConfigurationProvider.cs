@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Users;
 
-/// <summary>Supplies the UsersService domain configuration.</summary>
+/// <summary>Supplies the UsersService configuration.</summary>
 public sealed class UsersServiceConfigurationProvider
     : DomainConfigurationProviderBase<IUsersServiceImplementationConfiguration>
 {

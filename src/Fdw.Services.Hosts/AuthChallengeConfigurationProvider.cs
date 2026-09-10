@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the AuthChallenge domain configuration.</summary>
+/// <summary>Supplies the AuthChallenge configuration.</summary>
 public sealed class AuthChallengeConfigurationProvider
     : DomainConfigurationProviderBase<IAuthChallengeImplementationConfiguration>,
       IAuthChallengeConfigurationProvider

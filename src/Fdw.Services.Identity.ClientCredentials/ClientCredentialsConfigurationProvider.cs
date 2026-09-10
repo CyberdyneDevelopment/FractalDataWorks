@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity.ClientCredentials;
 
-/// <summary>Supplies the ClientCredentialsIdentity implementation configuration.</summary>
+/// <summary>Supplies the ClientCredentialsIdentity configuration.</summary>
 public sealed class ClientCredentialsConfigurationProvider
     : ImplementationProviderBase<ClientCredentialsConfiguration>
 {

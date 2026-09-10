@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
-/// <summary>Supplies the LocalHealthMonitor implementation configuration.</summary>
+/// <summary>Supplies the LocalHealthMonitor configuration.</summary>
 public sealed class LocalHealthMonitorConfigurationProvider
     : ImplementationProviderBase<LocalHealthMonitorConfiguration>
 {

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the SecurityHeaders domain configuration.</summary>
+/// <summary>Supplies the SecurityHeaders configuration.</summary>
 public sealed class SecurityHeadersConfigurationProvider
     : DomainConfigurationProviderBase<ISecurityHeadersImplementationConfiguration>,
       ISecurityHeadersConfigurationProvider

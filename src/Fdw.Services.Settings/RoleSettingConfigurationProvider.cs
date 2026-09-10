@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings;
 
-/// <summary>Supplies the configured RoleSetting members.</summary>
+/// <summary>Supplies the RoleSetting configuration.</summary>
 public sealed class RoleSettingConfigurationProvider
     : DomainConfigurationProviderBase<IRoleSettingImplementationConfiguration>,
       IRoleSettingConfigurationProvider

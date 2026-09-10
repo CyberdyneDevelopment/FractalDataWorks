@@ -7,15 +7,11 @@ using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Commands;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Results;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Fdw.Services.Etl;
 
-/// <summary>Supplies the EtlPipeline domain configuration.</summary>
+/// <summary>Supplies the EtlPipeline configuration.</summary>
 public sealed class EtlPipelineConfigurationProvider
     : DomainConfigurationProviderBase<IEtlPipelineImplementationConfiguration>,
       IImplementationConfigurationProvider<IPipelineImplementationConfiguration>

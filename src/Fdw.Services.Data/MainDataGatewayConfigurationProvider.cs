@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data;
 
-/// <summary>Supplies the MainDataGateway implementation configuration.</summary>
+/// <summary>Supplies the MainDataGateway configuration.</summary>
 public sealed class MainDataGatewayConfigurationProvider
     : ImplementationProviderBase<MainDataGatewayConfiguration>
 {

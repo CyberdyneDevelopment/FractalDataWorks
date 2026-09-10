@@ -8,13 +8,11 @@ using Fdw.Services.Notifications.Commands;
 using Fdw.Services.Notifications.Configuration;
 using Fdw.Services.Notifications.Services;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Notifications;
 
-/// <summary>Supplies the Notification domain configuration.</summary>
+/// <summary>Supplies the Notification configuration.</summary>
 public sealed class NotificationConfigurationProvider
     : DomainConfigurationProviderBase<INotificationImplementationConfiguration>,
       INotificationConfigurationProvider

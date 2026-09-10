@@ -1,9 +1,3 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -13,72 +7,21 @@ using Fdw.Services.Connections.Commands;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Commands;
 using Fdw.Services.Data.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Data;
 
-/// <summary>
-/// Domain-specific configuration provider for DataStore configurations.
-/// The polymorphic typed-body read (dispatch on <see cref="DataStoreImplementationConfiguration.Implementation"/> to
-/// load the typed body row, e.g. <c>data.MsSqlDataStore</c>, and attach it to
-/// <see cref="DataStoreImplementationConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>; typed providers are registered via the
-/// inherited <c>Register</c>.
-/// </summary>
-/// <remarks>
-/// The hierarchy assembly that previously lived here (<c>AssembleHierarchy</c>) was removed
-/// in Phase 6.M — it caused the ConfigurationGateway/DataStoreLoader cycle by making
-/// gatewayProvider round-trips for every DataStore lookup. The IDataStore tree is now assembled
-/// in memory by the per-transport <c>DataStoreBuilderBase</c> from the nested store configuration
-/// (the same builder mechanism ConfigurationGateway and ConfigurationGatewayDataStoreProvider.Load feed).
-/// </remarks>
-public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration>
+/// <summary>Supplies the DataStore configuration.</summary>
+public sealed class DataStoreConfigurationProvider
+    : ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration>
 {
-
-    private readonly ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> _containerProvider;
-
-    private readonly ILogger<DataStoreConfigurationProvider> _logger;
-
     /// <summary>Initializes a new instance of the <see cref="DataStoreConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public DataStoreConfigurationProvider(
-        ILogger<DataStoreConfigurationProvider>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> containerProvider,
-        string dataStoreName,
-        string pathName = "data")
-        : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName,
-               "DataStore")
+        ILogger<DataStoreConfigurationProvider> logger,
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "data", "DataStore")
     {
-        _logger = logger ?? NullLogger<DataStoreConfigurationProvider>.Instance;
-        _containerProvider = containerProvider ?? throw new ArgumentNullException(nameof(containerProvider));
     }
-
-    /// <inheritdoc />
-    public override async Task<IGenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>> Get(CancellationToken ct = default)
-    {
-        DataStoreConfigurationProviderLog.ComposingDataStoreList(_logger);
-        var headers = await base.Get(ct).ConfigureAwait(false);
-        if (!headers.IsSuccess || headers.Value is null) return headers;
-
-        var composed = new List<DataStoreImplementationConfiguration>(headers.Value.Count);
-        foreach (var header in headers.Value)
-        {
-            var aggregate = await ComposeAggregate(header, ct).ConfigureAwait(false);
-            if (!aggregate.IsSuccess || aggregate.Value is null)
-                return GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Failure(
-                    DataStoreConfigurationProviderLog.DataStoreListComposeFailed(_logger, header.Name));
-            composed.Add(aggregate.Value);
-        }
-
-        DataStoreConfigurationProviderLog.DataStoreListComposed(_logger, composed.Count);
-        return GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success(composed);
-    }
-
-
 }

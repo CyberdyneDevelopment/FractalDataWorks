@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality;
 
-/// <summary>Supplies the configured GlossaryTerm members.</summary>
+/// <summary>Supplies the GlossaryTerm configuration.</summary>
 public sealed class GlossaryTermConfigurationProvider
     : DomainConfigurationProviderBase<IGlossaryTermImplementationConfiguration>,
       IGlossaryTermConfigurationProvider

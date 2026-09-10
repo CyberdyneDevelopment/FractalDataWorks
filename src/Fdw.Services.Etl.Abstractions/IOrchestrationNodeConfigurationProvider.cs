@@ -16,45 +16,5 @@ namespace Fdw.Services.Etl.Projects.Abstractions;
 /// </summary>
 public interface IOrchestrationNodeConfigurationProvider
 {
-    /// <summary>Gets a node by name within a given parent scope.</summary>
-    /// <param name="name">The node name.</param>
-    /// <param name="parentId">The parent logical Id, or null for root nodes.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<OrchestrationNodeConfiguration>> Get(string name, Guid? parentId, CancellationToken cancellationToken = default);
 
-    /// <summary>Gets a node by its logical identifier.</summary>
-    /// <param name="id">The node logical identifier.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<OrchestrationNodeConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets a node by its logical identifier and recursively loads children to the specified depth.
-    /// </summary>
-    /// <param name="id">The node logical identifier.</param>
-    /// <param name="depth">Maximum recursion depth (number of child levels to inflate). 0 = no children. Use <see cref="int.MaxValue"/> for unlimited.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<OrchestrationNodeConfiguration>> Get(Guid id, int depth, CancellationToken cancellationToken = default);
-
-    /// <summary>Gets all root nodes (nodes with no parent, CanBeRoot = true types).</summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetRoots(CancellationToken cancellationToken = default);
-
-    /// <summary>Gets all direct children of the given parent node.</summary>
-    /// <param name="parentId">The durable Id of the parent node (RowId is DB-managed and invisible).</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetChildren(Guid parentId, CancellationToken cancellationToken = default);
-
-    /// <summary>Gets all current, non-deleted nodes (merged ctrl + cfg).</summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> Get(CancellationToken cancellationToken = default);
-
-    /// <summary>Persists a node configuration (INSERT for new, UPDATE for existing by Id).</summary>
-    /// <param name="config">The node configuration to persist.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult<OrchestrationNodeConfiguration>> Save(OrchestrationNodeConfiguration config, CancellationToken cancellationToken = default);
-
-    /// <summary>Soft-deletes a node configuration by its logical identifier.</summary>
-    /// <param name="id">The node logical identifier to delete.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default);
 }

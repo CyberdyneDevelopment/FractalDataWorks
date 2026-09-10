@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Credentials.Sql;
 
-/// <summary>Supplies the CredentialsSql domain configuration.</summary>
+/// <summary>Supplies the CredentialsSql configuration.</summary>
 public sealed class CredentialsSqlConfigurationProvider
     : DomainConfigurationProviderBase<ICredentialsSqlImplementationConfiguration>
 {

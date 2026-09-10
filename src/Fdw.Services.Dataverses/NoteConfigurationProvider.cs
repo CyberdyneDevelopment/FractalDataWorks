@@ -1,42 +1,21 @@
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Dataverses.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Dataverses;
 
-/// <summary>Reads and writes the notes raised against a dataverse.</summary>
-public class NoteConfigurationProvider
+/// <summary>Supplies the Note configuration.</summary>
+public sealed class NoteConfigurationProvider
     : ImplementationConfigurationProviderBase<INoteImplementationConfiguration>
 {
-
-    /// <summary>Registers this provider and the base it is resolved through.</summary>
-    /// <param name="services">The service collection to register into.</param>
-    public static void RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<NoteConfigurationProvider>(sp =>
-            new NoteConfigurationProvider(
-                sp.GetService<ILogger<NoteConfigurationProvider>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                DataStoreTypes.ConfigurationConnection,
-                "dataverse"));
-
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<INoteImplementationConfiguration>>(
-            sp => sp.GetRequiredService<NoteConfigurationProvider>());
-    }
-
     /// <summary>Initializes a new instance of the <see cref="NoteConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public NoteConfigurationProvider(
-        ILogger<NoteConfigurationProvider>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "dataverse")
-        : base(logger ?? NullLogger<NoteConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName, "Note")
+        ILogger<NoteConfigurationProvider> logger,
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "dataverse", "Note")
     {
     }
 }

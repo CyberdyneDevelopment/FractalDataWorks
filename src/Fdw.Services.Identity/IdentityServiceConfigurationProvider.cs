@@ -4,13 +4,11 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity;
 
-/// <summary>Supplies the Identity domain configuration.</summary>
+/// <summary>Supplies the Identity configuration.</summary>
 public sealed class IdentityServiceConfigurationProvider
     : DomainConfigurationProviderBase<IIdentityServiceImplementationConfiguration>,
       IIdentityServiceConfigurationProvider

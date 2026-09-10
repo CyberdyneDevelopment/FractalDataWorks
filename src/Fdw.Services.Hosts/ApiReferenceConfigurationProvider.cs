@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the ApiReference domain configuration.</summary>
+/// <summary>Supplies the ApiReference configuration.</summary>
 public sealed class ApiReferenceConfigurationProvider
     : DomainConfigurationProviderBase<IApiReferenceImplementationConfiguration>,
       IApiReferenceConfigurationProvider

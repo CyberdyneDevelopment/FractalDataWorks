@@ -3,13 +3,11 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Credentials.Abstractions;
 using Fdw.Services.Data.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Credentials;
 
-/// <summary>Supplies the CredentialService domain configuration.</summary>
+/// <summary>Supplies the CredentialService configuration.</summary>
 public sealed class CredentialServiceConfigurationProvider
     : DomainConfigurationProviderBase<ICredentialServiceImplementationConfiguration>,
       ICredentialServiceConfigurationProvider

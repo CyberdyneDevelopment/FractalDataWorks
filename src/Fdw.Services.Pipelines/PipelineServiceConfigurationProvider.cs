@@ -4,13 +4,11 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines;
 
-/// <summary>Supplies the Pipeline domain configuration.</summary>
+/// <summary>Supplies the Pipeline configuration.</summary>
 public sealed class PipelineServiceConfigurationProvider
     : DomainConfigurationProviderBase<IPipelineImplementationConfiguration>,
       IPipelineConfigurationProvider

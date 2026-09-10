@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the ForwardedHeaders domain configuration.</summary>
+/// <summary>Supplies the ForwardedHeaders configuration.</summary>
 public sealed class ForwardedHeadersConfigurationProvider
     : DomainConfigurationProviderBase<IForwardedHeadersImplementationConfiguration>,
       IForwardedHeadersConfigurationProvider

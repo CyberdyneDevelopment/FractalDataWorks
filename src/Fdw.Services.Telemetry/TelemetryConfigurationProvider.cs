@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Telemetry;
 
-/// <summary>Supplies the Telemetry domain configuration.</summary>
+/// <summary>Supplies the Telemetry configuration.</summary>
 public sealed class TelemetryConfigurationProvider
     : DomainConfigurationProviderBase<ITelemetryImplementationConfiguration>,
       ITelemetryConfigurationProvider

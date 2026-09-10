@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Authorization;
 
-/// <summary>Supplies the Permission domain configuration.</summary>
+/// <summary>Supplies the Permission configuration.</summary>
 public sealed class PermissionConfigurationProvider
     : DomainConfigurationProviderBase<IPermissionImplementationConfiguration>,
       IPermissionConfigurationProvider

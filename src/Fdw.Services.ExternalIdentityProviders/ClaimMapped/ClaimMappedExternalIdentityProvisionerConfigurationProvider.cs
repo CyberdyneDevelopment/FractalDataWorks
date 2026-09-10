@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
-/// <summary>Supplies the ClaimMappedExternalIdentityProvisioner implementation configuration.</summary>
+/// <summary>Supplies the ClaimMappedExternalIdentityProvisioner configuration.</summary>
 public sealed class ClaimMappedExternalIdentityProvisionerConfigurationProvider
     : ImplementationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration>
 {

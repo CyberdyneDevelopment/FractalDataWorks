@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the ResponseBuffering domain configuration.</summary>
+/// <summary>Supplies the ResponseBuffering configuration.</summary>
 public sealed class ResponseBufferingConfigurationProvider
     : DomainConfigurationProviderBase<IResponseBufferingImplementationConfiguration>,
       IResponseBufferingConfigurationProvider

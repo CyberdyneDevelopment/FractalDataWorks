@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
@@ -9,42 +5,20 @@ using Fdw.UI.Themes.Commands;
 using Fdw.UI.Themes.Configuration;
 using Fdw.UI.Themes.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.UI.Themes;
 
-/// <summary>
-/// Configuration provider for themes. Thin wrapper over
-/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with theme-specific logging.
-/// </summary>
-public class ThemeConfigurationProvider : ImplementationConfigurationProviderBase<IThemeManagedImplementationConfiguration>
+/// <summary>Supplies the Theme configuration.</summary>
+public sealed class ThemeConfigurationProvider
+    : ImplementationConfigurationProviderBase<IThemeManagedImplementationConfiguration>
 {
-
-    private readonly ILogger _logger;
-
     /// <summary>Initializes a new instance of the <see cref="ThemeConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public ThemeConfigurationProvider(
-        ILogger<ThemeConfigurationProvider>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "settings")
-        : base(logger ?? NullLogger<ThemeConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName, "Theme")
+        ILogger<ThemeConfigurationProvider> logger,
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "settings", "Theme")
     {
-        _logger = logger ?? NullLogger<ThemeConfigurationProvider>.Instance;
-    }
-
-    /// <inheritdoc />
-    public override async Task<IGenericResult<IReadOnlyList<ThemeManagedConfiguration>>> Get(
-        CancellationToken ct = default)
-    {
-        var result = await base.Get(ct).ConfigureAwait(false);
-        if (result.IsSuccess)
-        {
-            ThemeConfigurationProviderLog.AllThemesLoaded(_logger, result.Value?.Count ?? 0);
-        }
-        return result;
     }
 }

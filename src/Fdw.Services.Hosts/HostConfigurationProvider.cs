@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>Supplies the Host domain configuration.</summary>
+/// <summary>Supplies the Host configuration.</summary>
 public sealed class HostConfigurationProvider
     : DomainConfigurationProviderBase<IHostImplementationConfiguration>,
       IHostConfigurationProvider

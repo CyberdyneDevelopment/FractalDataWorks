@@ -1,52 +1,26 @@
 using Fdw.Configuration;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Commands;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Messaging.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Messaging;
 
-/// <summary>
-/// Reads the configured messaging services from <c>msg.Messaging</c>.
-/// </summary>
-/// <remarks>
-/// Behaviourally the base; it exists so the domain's own
-/// <see cref="IMessagingConfigurationProvider"/> has a concrete type behind it, which is what lets
-/// <c>MessageService</c> and <c>AccessRequestService</c> name the domain they read rather than a
-/// closed generic that two domains could satisfy.
-/// </remarks>
+/// <summary>Supplies the Messaging configuration.</summary>
 public sealed class MessagingConfigurationProvider
     : ImplementationConfigurationProviderBase<IMessagingImplementationConfiguration>,
       IMessagingConfigurationProvider
 {
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="MessagingConfigurationProvider"/> class.
-    /// </summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the configuration connection.</param>
-    /// <param name="dataStoreName">The connection the domain's configuration rows live in.</param>
-    /// <param name="pathName">The path those rows live under.</param>
+    /// <summary>Initializes a new instance of the <see cref="MessagingConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public MessagingConfigurationProvider(
-        ILogger<MessagingConfigurationProvider>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "msg")
-        : base(logger ?? NullLogger<MessagingConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName,
-               "Messaging")
-        => _log = logger ?? NullLogger<MessagingConfigurationProvider>.Instance;
-
-    // The bases hold their loggers privately, so GetHeader keeps its own reference rather than
-    // reaching for one it cannot see.
-    private readonly ILogger _log;
-
+        ILogger<MessagingConfigurationProvider> logger,
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "msg", "Messaging")
+    {
+    }
 }

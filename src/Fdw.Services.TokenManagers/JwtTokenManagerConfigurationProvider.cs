@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.TokenManagers;
 
-/// <summary>Supplies the JwtTokenManager implementation configuration.</summary>
+/// <summary>Supplies the JwtTokenManager configuration.</summary>
 public sealed class JwtTokenManagerConfigurationProvider
     : ImplementationProviderBase<JwtTokenManagerConfiguration>
 {

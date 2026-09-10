@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Logging;
 
-/// <summary>Supplies the Logging domain configuration.</summary>
+/// <summary>Supplies the Logging configuration.</summary>
 public sealed class LoggingConfigurationProvider
     : DomainConfigurationProviderBase<ILoggingImplementationConfiguration>,
       ILoggingConfigurationProvider

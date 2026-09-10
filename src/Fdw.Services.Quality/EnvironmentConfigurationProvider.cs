@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality;
 
-/// <summary>Supplies the configured Environment members.</summary>
+/// <summary>Supplies the Environment configuration.</summary>
 public sealed class EnvironmentConfigurationProvider
     : DomainConfigurationProviderBase<IEnvironmentImplementationConfiguration>,
       IEnvironmentConfigurationProvider

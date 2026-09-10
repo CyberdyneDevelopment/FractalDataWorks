@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Settings;
 
-/// <summary>Supplies the configured ServerSetting members.</summary>
+/// <summary>Supplies the ServerSetting configuration.</summary>
 public sealed class ServerSettingConfigurationProvider
     : DomainConfigurationProviderBase<IServerSettingImplementationConfiguration>,
       IServerSettingConfigurationProvider

@@ -22,26 +22,5 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </remarks>
 public interface IDataSetConfigurationProvider
 {
-    /// <summary>
-    /// Gets a DataSet configuration by name.
-    /// </summary>
-    /// <param name="name">The unique name of the DataSet.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result containing the <see cref="DomainConfiguration"/> if found, or failure.</returns>
-    Task<IGenericResult<DomainConfiguration>> Get(string name, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Gets a DataSet configuration by its unique identifier.
-    /// </summary>
-    /// <param name="id">The unique identifier of the DataSet.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result containing the <see cref="DomainConfiguration"/> if found, or failure.</returns>
-    Task<IGenericResult<DomainConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Gets all DataSet configurations, merging all three sources.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result containing all registered <see cref="DomainConfiguration"/> records.</returns>
-    Task<IGenericResult<IReadOnlyList<DomainConfiguration>>> Get(CancellationToken cancellationToken = default);
 }

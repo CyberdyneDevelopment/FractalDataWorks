@@ -14,15 +14,5 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// </remarks>
 public interface IForeignAuthorityConfigurationProvider
 {
-    /// <summary>Reads the authority this deployment declared.</summary>
-    /// <param name="cancellationToken">A token to cancel the read.</param>
-    /// <returns>The authority, or a failure naming what was missing.</returns>
-    /// <remarks>
-    /// No name, because a step does not know one: the resolver maps a flow's step name to a type
-    /// and the type never learns what it was called. An implementation reading more than one
-    /// declared authority therefore has nothing to choose between them with, and should refuse
-    /// rather than pick by order.
-    /// </remarks>
-    Task<IGenericResult<IForeignAuthorityConfiguration>> Get(
-        CancellationToken cancellationToken = default);
+
 }

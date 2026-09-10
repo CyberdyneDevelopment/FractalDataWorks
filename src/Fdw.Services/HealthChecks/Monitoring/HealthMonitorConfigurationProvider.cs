@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
-/// <summary>Supplies the HealthMonitor domain configuration.</summary>
+/// <summary>Supplies the HealthMonitor configuration.</summary>
 public sealed class HealthMonitorConfigurationProvider
     : DomainConfigurationProviderBase<IHealthMonitorImplementationConfiguration>,
       IHealthMonitorConfigurationProvider

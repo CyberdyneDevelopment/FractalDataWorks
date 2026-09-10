@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity.JwtAssertion;
 
-/// <summary>Supplies the JwtAssertionIdentity implementation configuration.</summary>
+/// <summary>Supplies the JwtAssertionIdentity configuration.</summary>
 public sealed class JwtAssertionConfigurationProvider
     : ImplementationProviderBase<JwtAssertionConfiguration>
 {

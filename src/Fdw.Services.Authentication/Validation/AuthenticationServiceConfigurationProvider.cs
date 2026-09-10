@@ -1,7 +1,4 @@
 using Fdw.Configuration;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
@@ -9,43 +6,21 @@ using Fdw.Services.Authentication.Commands;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Authentication.Validation;
 
-/// <summary>
-/// Reads the authentication services a host trusts, and dispatches each to the provider for its kind.
-/// </summary>
-/// <remarks>
-/// The domain half of the pair. It holds the gateway onto the store the rows live on and a registry
-/// of implementation providers keyed by <c>Implementation</c>; an option registers itself into
-/// that registry during Initialize, when both providers can be resolved.
-/// <para>
-/// A caller asks by name or by id. This reads the domain row, takes the kind it names, and hands the
-/// row's id to the provider for that kind. What comes back is the implementation configuration.
-/// </para>
-/// </remarks>
-public class AuthenticationServiceConfigurationProvider
+/// <summary>Supplies the AuthenticationService configuration.</summary>
+public sealed class AuthenticationServiceConfigurationProvider
     : ImplementationConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
       IAuthenticationServiceConfigurationProvider
 {
-
     /// <summary>Initializes a new instance of the <see cref="AuthenticationServiceConfigurationProvider"/> class.</summary>
-    /// <param name="logger">The logger for provider operations.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the store these rows live on.</param>
-    /// <param name="dataStoreName">The store the host declared these rows on.</param>
-    /// <param name="pathName">The path the rows live under.</param>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public AuthenticationServiceConfigurationProvider(
         ILogger<AuthenticationServiceConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "auth")
-        : base(logger ?? NullLogger<AuthenticationServiceConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName, "AuthenticationService")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "auth", "AuthenticationService")
     {
     }
-
-
 }
