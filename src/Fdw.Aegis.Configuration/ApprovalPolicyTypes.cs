@@ -17,4 +17,8 @@ namespace Fdw.Aegis.Configuration;
 [TypeCollection(typeof(ApprovalPolicyTypeBase), typeof(IApprovalPolicyType), typeof(ApprovalPolicyTypes))]
 public abstract partial class ApprovalPolicyTypes : TypeCollectionBase<ApprovalPolicyTypeBase, IApprovalPolicyType>
 {
+    /// <summary>
+    /// The connection the AegisCommand domain's configuration rows are read from.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "AegisConfiguration";
 }

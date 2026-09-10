@@ -13,9 +13,9 @@ namespace Fdw.Aegis.Configuration;
 /// must satisfy. Standalone typed-body POCO — mirrors <c>MsSqlConnectionConfiguration</c>.
 /// </summary>
 /// <remarks>
-/// Persisted (Phase 2) to its own table as a child of the <c>AegisCommand</c> header via
-/// <see cref="AegisCommandId"/>. For Phase 0/1 this is bound directly from <c>aegisSchema.json</c>
-/// via <c>IOptions</c> — no ConfigurationDb round trip.
+/// The PreApproved implementation of the AegisCommand domain: its row hangs from the domain row by
+/// <see cref="AegisCommandId"/>, and its <see cref="ParameterAllowList"/> rows hang from it and load
+/// and save with it.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
@@ -43,9 +43,14 @@ public partial class PreApprovedCommandConfiguration : IApprovalPolicyConfigurat
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent <c>AegisCommandConfiguration.Id</c>.
+    /// Gets or sets the domain record's durable id.
     /// </summary>
     public Guid AegisCommandId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the declared connection this command runs against.
+    /// </summary>
+    public string ConnectionName { get; set; } = string.Empty;
 
     // ========================================
     // Approval-policy properties
@@ -65,7 +70,7 @@ public partial class PreApprovedCommandConfiguration : IApprovalPolicyConfigurat
     /// <summary>
     /// Gets or sets the deterministic parameter allow-list: every parameter this command accepts,
     /// the values it permits, and whether it is required. A submitted parameter absent from this
-    /// list, or with a value not in <see cref="ParameterAllowEntry.PermittedValues"/>, is rejected.
+    /// list, or with a value not in <see cref="ParameterAllowEntryConfiguration.PermittedValues"/>, is rejected.
     /// </summary>
-    public IList<ParameterAllowEntry> ParameterAllowList { get; set; } = new List<ParameterAllowEntry>();
+    public IList<ParameterAllowEntryConfiguration> ParameterAllowList { get; set; } = new List<ParameterAllowEntryConfiguration>();
 }

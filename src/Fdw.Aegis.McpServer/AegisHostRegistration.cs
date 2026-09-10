@@ -18,7 +18,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Aegis.McpServer;
 
@@ -107,9 +106,9 @@ public static class AegisHostRegistration
         ?? NullLogger.Instance;
 
     /// <summary>
-    /// Phase 1b (before Build): registers <see cref="SecretManagerTypes"/>' required services, the
-    /// declared schema as <see cref="IOptions{TOptions}"/>, one named <see cref="System.Net.Http.HttpClient"/>
-    /// per declared HTTP connection, and the Aegis injector pipeline itself.
+    /// Phase 1b (before Build): registers <see cref="SecretManagerTypes"/>' required services, one
+    /// named <see cref="System.Net.Http.HttpClient"/> per declared HTTP connection, the AegisCommand
+    /// domain with its PreApproved and AdHoc providers, and the Aegis injector pipeline itself.
     /// </summary>
     public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ConfigurationSchema schema, ILoggerFactory? loggerFactory = null)
     {
@@ -128,14 +127,34 @@ public static class AegisHostRegistration
 
         foreach (var connection in schema.Connections)
         {
-            if (connection.Configuration is HttpConnectionConfigurationBase http)
+            if (connection is HttpConnectionConfigurationBase http)
             {
                 var baseUrl = http.BaseUrl;
                 builder.Services.AddHttpClient(connection.Name, client => client.BaseAddress = new Uri(baseUrl));
             }
         }
 
-        builder.Services.AddSingleton(Options.Create(new AegisCommandsOptions { Commands = [.. schema.Commands] }));
+        // The declared commands are a domain: AegisCommand rows, each naming the implementation --
+        // PreApproved or AdHoc -- whose row carries the command. All three read the connection
+        // ApprovalPolicyTypes names.
+        builder.Services.TryAddSingleton(sp => new PreApprovedCommandConfigurationProvider(
+            sp.GetRequiredService<ILogger<PreApprovedCommandConfigurationProvider>>(),
+            sp.GetRequiredService<IConfigurationGatewayProvider>(),
+            ApprovalPolicyTypes.ConfigurationConnection));
+        builder.Services.TryAddSingleton(sp => new AdHocCommandConfigurationProvider(
+            sp.GetRequiredService<ILogger<AdHocCommandConfigurationProvider>>(),
+            sp.GetRequiredService<IConfigurationGatewayProvider>(),
+            ApprovalPolicyTypes.ConfigurationConnection));
+        builder.Services.TryAddSingleton<IAegisCommandConfigurationProvider>(sp =>
+        {
+            var domain = new AegisCommandConfigurationProvider(
+                sp.GetRequiredService<ILogger<AegisCommandConfigurationProvider>>(),
+                sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                ApprovalPolicyTypes.ConfigurationConnection);
+            domain.Register(ApprovalPolicyTypes.PreApproved.Name, sp.GetRequiredService<PreApprovedCommandConfigurationProvider>());
+            domain.Register(ApprovalPolicyTypes.AdHoc.Name, sp.GetRequiredService<AdHocCommandConfigurationProvider>());
+            return domain;
+        });
 
 
         builder.Services.AddScoped<IApprovalPolicyEvaluator, PreApprovedPolicyEvaluator>();

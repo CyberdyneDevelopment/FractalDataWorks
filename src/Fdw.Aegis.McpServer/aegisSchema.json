@@ -17,33 +17,6 @@
           "Prefix": "FDW_SECRET_"
         }
       }
-    ],
-    "Commands": [
-      {
-        "Name": "echo_credential",
-        "ConnectionName": "synthetic-echo",
-        "Implementation": "PreApproved",
-        "Configuration": {
-          "SecretManagerName": "EnvSecrets",
-          "SecretKeyName": "AEGIS_SYNTHETIC_TOKEN",
-          "ParameterAllowList": [
-            {
-              "ParameterName": "mode",
-              "PermittedValues": ["echo"],
-              "Required": true
-            }
-          ]
-        }
-      },
-      {
-        "Name": "echo_adhoc",
-        "ConnectionName": "synthetic-echo",
-        "Implementation": "AdHoc",
-        "Configuration": {
-          "SecretManagerName": "EnvSecrets",
-          "SecretKeyName": "AEGIS_SYNTHETIC_TOKEN"
-        }
-      }
     ]
   }
 }
