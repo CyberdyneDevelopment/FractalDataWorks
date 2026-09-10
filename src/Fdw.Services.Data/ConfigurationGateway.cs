@@ -495,16 +495,8 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
         }
 
-        // A connection factory builds from the implementation configuration — the declared record
-        // names the connection and says which kind it is, the body carries what the kind needs.
-        if (configDbEntry.Configuration is null)
-        {
-            return GenericResult<IDataConnection>.Failure(
-                ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
-        }
-
         var factoryResult = await _connectionFactory
-            .Create(configDbEntry.Configuration, cancellationToken)
+            .Create(configDbEntry, cancellationToken)
             .ConfigureAwait(false);
         if (!factoryResult.IsSuccess || factoryResult.Value is null)
         {

@@ -18,7 +18,7 @@ public sealed class SchemaInformation
     /// <summary>
     /// Gets the DataStore configuration that this schema belongs to.
     /// </summary>
-    public DataStoreImplementationConfiguration DataStore { get; }
+    public IDataStoreImplementationConfiguration DataStore { get; }
 
     /// <summary>
     /// Gets the DataPaths (schemas) within the DataStore, each containing their containers and fields.
@@ -39,7 +39,7 @@ public sealed class SchemaInformation
     /// Initializes a new instance of <see cref="SchemaInformation"/>.
     /// </summary>
     /// <param name="dataStore">The DataStore configuration including nested paths and containers.</param>
-    public SchemaInformation(DataStoreImplementationConfiguration dataStore)
+    public SchemaInformation(IDataStoreImplementationConfiguration dataStore)
     {
         DataStore = dataStore;
         Paths = dataStore.Paths;

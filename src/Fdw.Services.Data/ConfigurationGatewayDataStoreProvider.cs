@@ -175,7 +175,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             return;
         }
 
-        var dataStores = new List<Fdw.Services.Connections.DataStoreImplementationConfiguration>();
+        var dataStores = new List<Fdw.Services.Connections.IDataStoreImplementationConfiguration>();
         foreach (var shallow in configResult.Value!)
         {
             if (string.IsNullOrWhiteSpace(shallow.Name)) continue;

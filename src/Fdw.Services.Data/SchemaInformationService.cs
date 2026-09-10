@@ -146,7 +146,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         CancellationToken cancellationToken)
     {
         var allConfigsResult = await _dataStoreProvider.Get(cancellationToken).ConfigureAwait(false);
-        var allConfigs = allConfigsResult.IsSuccess ? allConfigsResult.Value! : (IReadOnlyList<DataStoreImplementationConfiguration>)[];
+        var allConfigs = allConfigsResult.IsSuccess ? allConfigsResult.Value! : (IReadOnlyList<IDataStoreImplementationConfiguration>)[];
         var dataStore = allConfigs.FirstOrDefault(ds => ds.ConnectionId == config.Id);
         return dataStore != null ? new SchemaInformation(dataStore) : null;
     }
@@ -266,7 +266,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         return GenericResult.Success();
     }
 
-    private async Task<IGenericResult<DataStoreImplementationConfiguration>> ResolveOrCreateDataStore(
+    private async Task<IGenericResult<IDataStoreImplementationConfiguration>> ResolveOrCreateDataStore(
         string dataStoreName,
         string connectionType,
         Guid connectionId,
@@ -274,13 +274,13 @@ public sealed class SchemaInformationService : ISchemaInformationService
         CancellationToken ct)
     {
         var allDataStoresResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        var allDataStores = allDataStoresResult.IsSuccess ? allDataStoresResult.Value! : (IReadOnlyList<DataStoreImplementationConfiguration>)[];
+        var allDataStores = allDataStoresResult.IsSuccess ? allDataStoresResult.Value! : (IReadOnlyList<IDataStoreImplementationConfiguration>)[];
         var existingDataStore = allDataStores.FirstOrDefault(ds => ds.ConnectionId == connectionId);
 
         if (existingDataStore != null)
         {
             SchemaDiscoveryLog.ExistingDataStoreFound(_logger, dataStoreName, existingDataStore.Id);
-            return GenericResult<DataStoreImplementationConfiguration>.Success(existingDataStore);
+            return GenericResult<IDataStoreImplementationConfiguration>.Success(existingDataStore);
         }
 
         var dataStoreConfig = new DataStoreImplementationConfiguration
@@ -300,7 +300,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
             return savedResult.ToNewResult<DataStoreImplementationConfiguration>();
         }
 
-        return GenericResult<DataStoreImplementationConfiguration>.Success(savedResult.Value);
+        return GenericResult<IDataStoreImplementationConfiguration>.Success(savedResult.Value);
     }
 
     private async Task<IGenericResult> PersistPathGroups(

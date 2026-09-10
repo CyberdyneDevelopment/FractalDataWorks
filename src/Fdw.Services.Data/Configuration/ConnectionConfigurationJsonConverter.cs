@@ -65,52 +65,60 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<IConnec
         var root = doc.RootElement;
         var innerOptions = GetInnerOptions(options);
 
-        // Build the parent-only JSON (everything EXCEPT the typed Configuration child).
-        using var stream = new System.IO.MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
+        // The entry names the connection and says which implementation it is; its nested
+        // Configuration object is that implementation, and is what this returns. Name and
+        // Implementation are stamped onto it from the entry, as the domain provider stamps them
+        // from a domain row.
+        if (ReadString(root, "Name") is not { Length: > 0 } name)
+            throw new JsonException("A connection entry declares no Name.");
+
+        if (ReadString(root, "Implementation") is not { Length: > 0 } implementation)
+            throw new JsonException($"Connection '{name}' names no implementation.");
+
+        var connectionType = ConnectionTypes.ByName(implementation);
+        if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
         {
-            writer.WriteStartObject();
-            foreach (var prop in root.EnumerateObject())
-            {
-                if (!string.Equals(prop.Name, SettingsPropertyName, StringComparison.Ordinal))
-                    prop.WriteTo(writer);
-            }
-            writer.WriteEndObject();
-        }
-        var parentJson = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-
-        var connection = JsonSerializer.Deserialize<IConnectionImplementationConfiguration>(parentJson, innerOptions);
-        if (connection is null) return null;
-
-        // Resolve the implementation configuration type via Implementation, deserialize the nested Configuration.
-        if (!string.IsNullOrEmpty(connection.Implementation)
-            && root.TryGetProperty(SettingsPropertyName, out var settingsElement)
-            && settingsElement.ValueKind == JsonValueKind.Object)
-        {
-            var connectionType = ConnectionTypes.ByName(connection.Implementation);
-            if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
-            {
-                throw new JsonException(
-                    $"Connection '{connection.Name}' names implementation '{connection.Implementation}', "
-                    + "which is not registered in ConnectionTypes. Reference the package that provides that "
-                    + "[Implementation] so its module initializer registers it before configuration is loaded.");
-            }
-
-            var settingsType = connectionType.ConfigurationType;
-            if (settingsType is null || !typeof(IConnectionImplementationConfiguration).IsAssignableFrom(settingsType))
-            {
-                throw new JsonException(
-                    $"Connection '{connection.Name}' resolved implementation '{connection.Implementation}' "
-                    + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
-                    + $"{nameof(IConnectionImplementationConfiguration)}.");
-            }
-
-            connection.Configuration = (IConnectionImplementationConfiguration?)JsonSerializer.Deserialize(
-                settingsElement.GetRawText(), settingsType, innerOptions);
+            throw new JsonException(
+                $"Connection '{name}' names implementation '{implementation}', "
+                + "which is not registered in ConnectionTypes. Reference the package that provides that "
+                + "[Implementation] so its module initializer registers it before configuration is loaded.");
         }
 
+        var settingsType = connectionType.ConfigurationType;
+        if (settingsType is null || !typeof(IConnectionImplementationConfiguration).IsAssignableFrom(settingsType))
+        {
+            throw new JsonException(
+                $"Connection '{name}' resolved implementation '{implementation}' "
+                + $"to configuration type '{settingsType?.FullName ?? "(null)"}', which does not implement "
+                + $"{nameof(IConnectionImplementationConfiguration)}.");
+        }
+
+        if (FindProperty(root, SettingsPropertyName) is not { ValueKind: JsonValueKind.Object } settingsElement)
+            throw new JsonException($"Connection '{name}' has no {SettingsPropertyName} object.");
+
+        if (JsonSerializer.Deserialize(settingsElement.GetRawText(), settingsType, innerOptions)
+            is not IConnectionImplementationConfiguration connection)
+            return null;
+
+        connection.Name = name;
+        connection.Implementation = implementation;
         return connection;
     }
+
+    // Case-insensitive, matching the schema loader's own PropertyNameCaseInsensitive.
+    private static JsonElement? FindProperty(JsonElement root, string propertyName)
+    {
+        foreach (var property in root.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+                return property.Value;
+        }
+
+        return null;
+    }
+
+    private static string? ReadString(JsonElement root, string propertyName)
+        => FindProperty(root, propertyName) is { ValueKind: JsonValueKind.String } value ? value.GetString() : null;
 
     /// <inheritdoc />
     public override void Write(Utf8JsonWriter writer, IConnectionImplementationConfiguration value, JsonSerializerOptions options)
