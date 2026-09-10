@@ -29,6 +29,18 @@ public interface IImplementationConfigurationProvider<TConfiguration>
     /// <returns>The implementation configuration, or a structured failure.</returns>
     Task<IGenericResult<TConfiguration>> Get(Guid domainId, CancellationToken cancellationToken = default);
 
+    /// <summary>Reads this implementation's row as it stood at an instant.</summary>
+    /// <param name="domainId">The domain record's durable id.</param>
+    /// <param name="asOf">The instant to read as of.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The implementation in force at that instant, or a structured failure.</returns>
+    /// <remarks>
+    /// Required, not optional: composing today's implementation onto a domain row read as of a past
+    /// instant would answer an as-of question with a mixture of two versions, and say nothing about
+    /// having done so.
+    /// </remarks>
+    Task<IGenericResult<TConfiguration>> Get(Guid domainId, DateTimeOffset asOf, CancellationToken cancellationToken = default);
+
     /// <summary>Gets every implementation configuration this provider owns.</summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The implementation configurations, or a structured failure.</returns>

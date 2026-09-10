@@ -161,7 +161,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var domain = await GetByName(name, null, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
-        return await Dispatch(domain.Value, ct).ConfigureAwait(false);
+        return await Dispatch(domain.Value, null, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -228,6 +228,10 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         Guid domainId, CancellationToken ct)
         => await Get(domainId, ct).ConfigureAwait(false);
 
+    async Task<IGenericResult<TImplementationConfiguration>> IImplementationConfigurationProvider<TImplementationConfiguration>.Get(
+        Guid domainId, DateTimeOffset asOf, CancellationToken ct)
+        => await Get(domainId, asOf, ct).ConfigureAwait(false);
+
     async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> IImplementationConfigurationProvider<TImplementationConfiguration>.Get(
         CancellationToken ct)
     {
@@ -275,11 +279,13 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// silently handing back the current row — a restatement that quietly used today's definition
     /// is precisely the failure this path exists to prevent.
     /// </remarks>
-    public virtual async Task<IGenericResult<TDomainConfiguration>> GetAsOf(string name, DateTimeOffset asOf, CancellationToken ct = default)
+    public virtual async Task<IGenericResult<TImplementationConfiguration>> Get(
+        string name, DateTimeOffset asOf, CancellationToken ct = default)
     {
-        var headerResult = await GetByName(name, asOf, ct).ConfigureAwait(false);
-        if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
-        return await ComposeAggregate(headerResult.Value, asOf, ct).ConfigureAwait(false);
+        var domain = await GetByName(name, asOf, ct).ConfigureAwait(false);
+        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+
+        return await Dispatch(domain.Value, asOf, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -364,12 +370,15 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <param name="asOf">The instant to read the configuration as of.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The aggregate in force at that instant, or a failure.</returns>
-    public virtual async Task<IGenericResult<TDomainConfiguration>> GetAsOf(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+    public virtual async Task<IGenericResult<TImplementationConfiguration>> Get(
+        Guid id, DateTimeOffset asOf, CancellationToken ct = default)
     {
-        if (id == Guid.Empty) return GenericResult<TDomainConfiguration>.Success(default!);
-        var headerResult = await GetHeaderById(id, asOf, ct).ConfigureAwait(false);
-        if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
-        return await ComposeAggregate(headerResult.Value, asOf, ct).ConfigureAwait(false);
+        if (id == Guid.Empty) return GenericResult<TImplementationConfiguration>.Success(default!);
+
+        var domain = await GetHeaderById(id, asOf, ct).ConfigureAwait(false);
+        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+
+        return await Dispatch(domain.Value, asOf, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -378,13 +387,14 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var domain = await GetHeaderById(id, null, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
-        return await Dispatch(domain.Value, ct).ConfigureAwait(false);
+        return await Dispatch(domain.Value, null, ct).ConfigureAwait(false);
     }
 
     // The domain row names an implementation; that name selects the provider, and the domain's own
     // Id is what the provider joins on. What it returns is the answer -- there is nothing to attach
     // it to and take back off again.
-    private async Task<IGenericResult<TImplementationConfiguration>> Dispatch(TDomainConfiguration? row, CancellationToken ct)
+    private async Task<IGenericResult<TImplementationConfiguration>> Dispatch(
+        TDomainConfiguration? row, DateTimeOffset? asOf, CancellationToken ct)
     {
         if (row is not IDomainConfiguration domain)
         {
@@ -406,7 +416,9 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, domain.Name, implementation));
         }
 
-        var loaded = await provider.Get(domain.Id, ct).ConfigureAwait(false);
+        var loaded = asOf is { } instant
+            ? await provider.Get(domain.Id, instant, ct).ConfigureAwait(false)
+            : await provider.Get(domain.Id, ct).ConfigureAwait(false);
         if (!loaded.IsSuccess) return loaded;
 
         // The name and the domain are the domain row's, read across here so a caller holding the
