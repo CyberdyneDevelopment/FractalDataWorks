@@ -22,7 +22,7 @@ public interface IDataSetBuilder
 {
     /// <summary>Supplies the configuration to build from.</summary>
     /// <param name="dataSetConfig">The dataset's configuration.</param>
-    IGenericResult Configure(DataSetImplementationConfiguration dataSetConfig);
+    IGenericResult Configure(IDataSetImplementationConfiguration dataSetConfig);
 
     /// <summary>Builds the dataset the supplied configuration describes.</summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

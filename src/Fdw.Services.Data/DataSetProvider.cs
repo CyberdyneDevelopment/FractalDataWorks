@@ -207,7 +207,7 @@ public sealed class DataSetProvider
     {
         DataSetProviderLog.TraceGetAllDataSetsEntry(_logger);
 
-        var dataSets = new List<DataSetImplementationConfiguration>();
+        var dataSets = new List<IDataSetImplementationConfiguration>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (_configurationProvider != null)

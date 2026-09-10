@@ -11,6 +11,7 @@ using DataSetFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataSetFieldCon
 using DataSetCompositionTypes = Fdw.Data.Abstractions.DataSetCompositionTypes;
 using DataSetImplementationConfiguration = Fdw.Data.DataSets.Abstractions.DataSetImplementationConfiguration;
 using DataSetSourceConfiguration = Fdw.Data.DataSets.Abstractions.DataSetSourceConfiguration;
+using IDataSetImplementationConfiguration = Fdw.Data.DataSets.Abstractions.IDataSetImplementationConfiguration;
 using IDataSetBuilder = Fdw.Data.DataSets.Abstractions.IDataSetBuilder;
 using JoinConfiguration = Fdw.Data.DataSets.Abstractions.JoinConfiguration;
 
@@ -34,10 +35,10 @@ public sealed class DataSetBuilder : IDataSetBuilder
     }
 
     /// <inheritdoc />
-    private DataSetImplementationConfiguration? _config;
+    private IDataSetImplementationConfiguration? _config;
 
     /// <inheritdoc />
-    public IGenericResult Configure(DataSetImplementationConfiguration dataSetConfig)
+    public IGenericResult Configure(IDataSetImplementationConfiguration dataSetConfig)
     {
         ArgumentNullException.ThrowIfNull(dataSetConfig);
         _config = dataSetConfig;
@@ -130,7 +131,7 @@ public sealed class DataSetBuilder : IDataSetBuilder
     /// <summary>
     /// Determines the composition strategy from the configuration.
     /// </summary>
-    private static IDataSetCompositionType ResolveComposition(DataSetImplementationConfiguration config)
+    private static IDataSetCompositionType ResolveComposition(IDataSetImplementationConfiguration config)
     {
         var sourceCount = config.Sources?.Count ?? 0;
         if (sourceCount <= 1 || config.Joins.Count == 0)

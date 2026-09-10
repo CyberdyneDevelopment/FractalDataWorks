@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using Fdw.Configuration;
 
@@ -12,6 +13,18 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </remarks>
 public interface IDataSetImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the data set's Description.</summary>
+    string Description { get; set; }
+
+    /// <summary>Gets or sets the data set's Fields.</summary>
+    IList<DataSetFieldConfiguration> Fields { get; set; }
+
+    /// <summary>Gets or sets the data set's Joins.</summary>
+    IList<JoinConfiguration> Joins { get; set; }
+
+    /// <summary>Gets or sets the data set's Sources.</summary>
+    IList<DataSetSourceConfiguration> Sources { get; set; }
+
     /// <summary>Gets or sets the domain record\'s durable id.</summary>
     Guid DataSetId { get; set; }
 
