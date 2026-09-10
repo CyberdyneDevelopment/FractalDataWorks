@@ -12,6 +12,7 @@ using Fdw.Services.Etl.Logging;
 using Fdw.Services.Pipelines;
 using Fdw.Services.Pipelines.Abstractions.DataDestination;
 using Fdw.Services.Pipelines.Abstractions.DataSource;
+using Fdw.Services.Etl;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -83,42 +84,17 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 EtlLog.PipelineCreationFailed(_logger, "unknown", "Configuration is null"));
         }
 
-        var engine = UnwrapEngineBody(configuration);
-        if (engine is BatchCopyPipelineConfiguration batchConfig)
+        // A domain read is already dispatched to the implementation, so what arrives IS the engine
+        // row -- there is no header to unwrap and no second body hanging off it.
+        if (configuration is BatchCopyPipelineConfiguration batchConfig)
         {
+            ResolveKinds(batchConfig);
             return Create(batchConfig);
         }
 
         return GenericResult<IEtlPipeline>.Failure(
             EtlLog.PipelineCreationFailed(_logger, "unknown",
                 $"Invalid configuration type. Expected BatchCopyPipelineConfiguration, got {configuration.GetType().Name}"));
-    }
-
-    private IGenericConfiguration UnwrapEngineBody(IGenericConfiguration configuration)
-    {
-        var kind = configuration switch
-        {
-            PipelineConfiguration { Configuration: EtlPipelineConfiguration k } => k,
-            EtlPipelineConfiguration k => k,
-            _ => null
-        };
-
-        if (kind?.Configuration is not { } engine)
-            return configuration;
-
-        if (engine is BatchCopyPipelineConfiguration batch)
-        {
-            if ((batch.Transforms is null || batch.Transforms.Count == 0)
-                && kind.Transforms is { Count: > 0 })
-            {
-                batch.Transforms = kind.Transforms;
-                EtlLog.TransformsTransferredKindToEngine(_logger, batch.Name, kind.Transforms.Count);
-            }
-
-            ResolveKinds(batch);
-        }
-
-        return engine;
     }
 
     private void ResolveKinds(BatchCopyPipelineConfiguration batch)

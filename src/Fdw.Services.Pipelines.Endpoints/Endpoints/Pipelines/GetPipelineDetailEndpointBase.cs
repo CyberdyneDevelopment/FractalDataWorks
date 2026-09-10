@@ -10,6 +10,7 @@ using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -87,13 +88,13 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     }
 
     /// <summary>
-    /// Extracts the transform DTOs from the composed pipeline aggregate's ETL-kind typed body.
-    /// Returns an empty list when the pipeline is not an ETL kind or has no transforms.
+    /// Extracts the transform DTOs the pipeline's implementation carries.
+    /// Returns an empty list for an implementation that has no transforms.
     /// </summary>
-    protected virtual IList<PipelineTransformDto> ExtractTransforms(PipelineConfiguration pipeline)
+    protected virtual IList<PipelineTransformDto> ExtractTransforms(IPipelineImplementationConfiguration pipeline)
     {
         var transforms = new List<PipelineTransformDto>();
-        if (pipeline.Configuration is EtlPipelineConfiguration etlBody && etlBody.Transforms is { } operations)
+        if (pipeline is IEtlPipelineImplementationConfiguration { Transforms: { } operations })
         {
             foreach (var op in operations)
                 transforms.Add(MapTransformToDto(op));
@@ -104,21 +105,23 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     /// <summary>
     /// Maps the domain pipeline configuration to a detail DTO.
     /// </summary>
-    protected virtual PipelineDetailResponse MapToDetailDto(PipelineConfiguration pipeline, IList<PipelineTransformDto> transforms)
+    protected virtual PipelineDetailResponse MapToDetailDto(IPipelineImplementationConfiguration pipeline, IList<PipelineTransformDto> transforms)
     {
-        var engine = (pipeline.Configuration as EtlPipelineConfiguration)?.Configuration;
+        // A domain read hands back the implementation, so the linkage is on the record itself --
+        // there is no header to reach through. Description and the schedule flag are still columns on
+        // the pipe.Pipeline domain row, which this read does not carry, so they are the app's to fill.
+        var etl = pipeline as IEtlPipelineImplementationConfiguration;
 
         return new PipelineDetailResponse
         {
             Id = pipeline.Id,
             Name = pipeline.Name,
-            PipelineType = pipeline.PipelineType!,
-            SourceConnectionName = engine?.SourceConnectionName ?? string.Empty,
-            DestinationConnectionName = engine?.DestinationConnectionName ?? string.Empty,
-            SourceDataSet = engine?.SourceDataSet,
-            DestinationDataSet = engine?.DestinationDataSet,
-            Description = pipeline.Description,
-            IsEnabled = !pipeline.IsScheduled || pipeline.ScheduleId.HasValue,
+            PipelineType = pipeline.Implementation,
+            SourceConnectionName = etl?.SourceConnectionName ?? string.Empty,
+            DestinationConnectionName = etl?.DestinationConnectionName ?? string.Empty,
+            SourceDataSet = etl?.SourceDataSet,
+            DestinationDataSet = etl?.DestinationDataSet,
+            IsEnabled = etl?.IsEnabled ?? false,
             CreatedAt = default,
             UpdatedAt = default,
             Transforms = transforms

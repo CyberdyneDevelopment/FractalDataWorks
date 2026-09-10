@@ -1,3 +1,4 @@
+using Fdw.Services.Configuration;
 using Fdw.Services.Pipelines;
 using Fdw.Services.Pipelines.Commands;
 using Shouldly;
@@ -21,7 +22,7 @@ public sealed class PipelineConfigurationCommandTests
 
         command.TableName.ShouldBe("Pipeline");
         command.ContainerName.ShouldBe("Pipeline");
-        command.ConfigType.ShouldBe(typeof(PipelineConfiguration));
+        command.ConfigType.ShouldBe(typeof(DomainConfiguration));
     }
 
     [Fact]

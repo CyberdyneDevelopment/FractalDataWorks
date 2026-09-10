@@ -34,14 +34,14 @@ namespace Fdw.Services.Etl;
 /// </summary>
 /// <remarks>
 /// This ServiceTypeCollection manages ETL pipeline ENGINE types (BatchCopy, Streaming).
-/// Engine types are services with behavior - they register factories and the two-level configuration
-/// typed-body chain (Pipeline → Etl → engine). Each engine type registers its own engine configuration
-/// body (e.g., BatchCopyPipelineConfiguration : IEtlPipelineImplementationConfiguration) plus the ETL-kind header
-/// provider (EtlPipelineConfiguration, the "Etl" kind of PipelineConfiguration).
+/// Engine types are services with behavior: each registers its factory and the provider for its own
+/// implementation row (BatchCopyPipelineConfiguration over pipe.BatchCopyPipeline,
+/// StreamingPipelineConfiguration over pipe.StreamingPipeline), then registers that provider into the
+/// EtlPipeline domain under its own name.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>),
+    typeof(EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, IEtlPipelineImplementationConfiguration>, IEtlPipelineImplementationConfiguration>),
     typeof(IEtlPipelineType),
     typeof(EtlPipelineTypes),
     ServiceInterface = typeof(IEtlPipeline),
@@ -49,8 +49,8 @@ namespace Fdw.Services.Etl;
     ProviderInterface = typeof(IEtlPipelineProvider),
     ServiceCategory = "Pipeline")]
 public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
-    EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>,
-    IEtlPipelineType<IEtlPipeline, EtlPipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>>>
+    EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, IEtlPipelineImplementationConfiguration>, IEtlPipelineImplementationConfiguration>,
+    IEtlPipelineType<IEtlPipeline, IEtlPipelineImplementationConfiguration, IEtlPipelineFactory<IEtlPipeline, IEtlPipelineImplementationConfiguration>>>
 {
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.

@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Transforms;
 
 /// <summary>
 /// Database-backed configuration for a pipeline transform step.
-/// Child of EtlPipelineConfiguration (pipe.Pipeline table).
+/// Child of an ETL pipeline implementation (pipe.BatchCopyPipeline / pipe.StreamingPipeline).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

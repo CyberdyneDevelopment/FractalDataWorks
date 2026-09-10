@@ -816,19 +816,6 @@ public static partial class EtlLog
     // Pipeline Factory Events (8199)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Logs when the pipeline factory carries the kind-level Transforms onto the engine body across the
-    /// kind→engine unwrap seam (the engine's [NotMapped] Transforms cannot load via its own FK, so the
-    /// factory transfers the composed transforms from the ETL-kind body).
-    /// </summary>
-    [MessageLogging(
-        EventId = 11039,
-        Level = LogLevel.Debug,
-        Message = "Transferred {transformCount} transform(s) from the ETL-kind body to engine pipeline '{pipelineName}'")]
-    public static partial IGenericMessage TransformsTransferredKindToEngine(
-        ILogger logger,
-        string pipelineName,
-        int transformCount);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // State Walk / Lifecycle Warning Events (91010-91013)

@@ -7,15 +7,16 @@ using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for updating an existing pipeline configuration.
 /// </summary>
-/// <typeparam name="TConfig">The concrete pipeline configuration type.</typeparam>
+/// <typeparam name="TConfig">The pipeline implementation this endpoint serves.</typeparam>
 public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpointBase<UpdatePipelineRequest, PipelineDetailResponse>
-    where TConfig : PipelineConfiguration
+    where TConfig : IPipelineImplementationConfiguration
 {
     private readonly PipelineServiceConfigurationProvider _provider;
 

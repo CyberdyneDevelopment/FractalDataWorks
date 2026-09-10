@@ -14,6 +14,7 @@ using Moq;
 using Shouldly;
 using Xunit;
 using Fdw.Services.Data;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Operations.Endpoints.Tests.Lineage;
 
@@ -45,21 +46,15 @@ public class GetDataSetLineageDownstreamConsumersTests
             "pipe");
     }
 
-    private static PipelineConfiguration ComposedPipeline(string name, string sourceDataSet, string destinationDataSet) => new()
+    private static BatchCopyPipelineConfiguration ComposedPipeline(string name, string sourceDataSet, string destinationDataSet) => new()
     {
         Id = Guid.NewGuid(),
         Name = name,
-        Implementation = "Etl",
-        Configuration = new EtlPipelineConfiguration
-        {
-            Implementation = "BatchCopy",
-            Configuration = new BatchCopyPipelineConfiguration
-            {
-                IsEnabled = true,
-                SourceDataSet = sourceDataSet,
-                DestinationDataSet = destinationDataSet
-            }
-        }
+        Domain = "Pipeline",
+        Implementation = "BatchCopy",
+        IsEnabled = true,
+        SourceDataSet = sourceDataSet,
+        DestinationDataSet = destinationDataSet,
     };
 
     // These tests only exercise BuildDownstreamConsumers, which reads through the pipeline provider;
@@ -79,9 +74,9 @@ public class GetDataSetLineageDownstreamConsumersTests
         var pipeline = ComposedPipeline("Consumer1", "UsgsDailySink", string.Empty);
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Success([pipeline]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([pipeline]));
         providerMock.Setup(p => p.Get(pipeline.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineConfiguration>.Success(pipeline));
+            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(pipeline));
 
         var consumers = await CreateEndpoint(providerMock)
             .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
@@ -95,9 +90,9 @@ public class GetDataSetLineageDownstreamConsumersTests
         var pipeline = ComposedPipeline("Producer1", string.Empty, "UsgsDailySink");
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Success([pipeline]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([pipeline]));
         providerMock.Setup(p => p.Get(pipeline.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineConfiguration>.Success(pipeline));
+            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(pipeline));
 
         var consumers = await CreateEndpoint(providerMock)
             .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
@@ -111,9 +106,9 @@ public class GetDataSetLineageDownstreamConsumersTests
         var pipeline = ComposedPipeline("Unrelated", "SomeOtherDataSet", "AnotherDataSet");
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Success([pipeline]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([pipeline]));
         providerMock.Setup(p => p.Get(pipeline.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineConfiguration>.Success(pipeline));
+            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(pipeline));
 
         var consumers = await CreateEndpoint(providerMock)
             .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);

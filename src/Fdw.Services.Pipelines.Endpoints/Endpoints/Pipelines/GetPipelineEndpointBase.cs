@@ -4,15 +4,16 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for getting a pipeline by name.
 /// </summary>
-/// <typeparam name="TConfig">The concrete pipeline configuration type.</typeparam>
+/// <typeparam name="TConfig">The pipeline implementation this endpoint serves.</typeparam>
 public abstract class GetPipelineEndpointBase<TConfig> : CrudGetEndpointBase<PipelineNameRequest, PipelineDetailResponse>
-    where TConfig : PipelineConfiguration
+    where TConfig : IPipelineImplementationConfiguration
 {
     private readonly PipelineServiceConfigurationProvider _provider;
 

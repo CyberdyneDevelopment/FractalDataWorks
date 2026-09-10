@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -51,7 +52,7 @@ public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineS
     }
 
     /// <summary>Maps a pipeline configuration to a summary DTO. Caller guarantees Implementation is set.</summary>
-    protected virtual PipelineSummaryResponse MapToSummary(PipelineConfiguration config)
+    protected virtual PipelineSummaryResponse MapToSummary(IPipelineImplementationConfiguration config)
     {
         return new PipelineSummaryResponse
         {

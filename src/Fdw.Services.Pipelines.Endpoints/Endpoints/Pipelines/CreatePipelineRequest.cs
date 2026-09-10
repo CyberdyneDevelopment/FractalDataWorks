@@ -70,7 +70,7 @@ public class CreatePipelineRequest
     /// Gets or sets the optional transform (operation) steps for this pipeline. Each entry persists as a
     /// pipe.PipelineOperation row; its <see cref="CreatePipelineTransformRequest.FieldMappings"/> persist
     /// as child pipe.PipelineTransformFieldMapping rows. Maps onto the typed body's
-    /// <c>EtlPipelineConfiguration.Transforms</c> collection consumed by the Map transform at runtime.
+    /// <c>IEtlPipelineImplementationConfiguration.Transforms</c> collection consumed by the Map transform at runtime.
     /// </summary>
     public IList<CreatePipelineTransformRequest> Transforms { get; set; } = [];
 }

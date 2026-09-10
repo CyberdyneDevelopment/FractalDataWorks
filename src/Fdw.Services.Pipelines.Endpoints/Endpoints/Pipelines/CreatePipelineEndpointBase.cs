@@ -7,15 +7,16 @@ using Fdw.Services.Etl.Transforms;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for creating a new pipeline configuration.
 /// </summary>
-/// <typeparam name="TConfig">The concrete pipeline configuration type.</typeparam>
+/// <typeparam name="TConfig">The pipeline implementation this endpoint serves.</typeparam>
 public abstract class CreatePipelineEndpointBase<TConfig> : CrudCreateEndpointBase<CreatePipelineRequest, PipelineDetailResponse>
-    where TConfig : PipelineConfiguration
+    where TConfig : IPipelineImplementationConfiguration
 {
     private readonly PipelineServiceConfigurationProvider _provider;
 

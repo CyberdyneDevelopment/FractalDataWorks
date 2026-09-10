@@ -10,6 +10,7 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Pipelines;
+using Fdw.Services.Etl;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -76,8 +77,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
                 EtlLog.PipelineCreationFailed(_logger, "unknown", "Configuration is null"));
         }
 
-        var engine = UnwrapEngineBody(configuration);
-        if (engine is StreamingPipelineConfiguration streamingConfig)
+        if (configuration is StreamingPipelineConfiguration streamingConfig)
         {
             return Create(streamingConfig);
         }
@@ -85,29 +85,6 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
         return GenericResult<IEtlPipeline>.Failure(
             EtlLog.PipelineCreationFailed(_logger, "unknown",
                 $"Invalid configuration type. Expected StreamingPipelineConfiguration, got {configuration.GetType().Name}"));
-    }
-
-    private IGenericConfiguration UnwrapEngineBody(IGenericConfiguration configuration)
-    {
-        var kind = configuration switch
-        {
-            PipelineConfiguration { Configuration: EtlPipelineConfiguration k } => k,
-            EtlPipelineConfiguration k => k,
-            _ => null
-        };
-
-        if (kind?.Configuration is not { } engine)
-            return configuration;
-
-        if (engine is StreamingPipelineConfiguration streaming
-            && (streaming.Transforms is null || streaming.Transforms.Count == 0)
-            && kind.Transforms is { Count: > 0 })
-        {
-            streaming.Transforms = kind.Transforms;
-            EtlLog.TransformsTransferredKindToEngine(_logger, streaming.Name, kind.Transforms.Count);
-        }
-
-        return engine;
     }
 
     /// <inheritdoc />

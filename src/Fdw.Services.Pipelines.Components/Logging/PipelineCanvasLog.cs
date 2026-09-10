@@ -143,7 +143,7 @@ public static partial class PipelineCanvasLog
     [MessageLogging(EventId = 4558, Level = LogLevel.Warning, Message = "Pipeline canvas has no sink DataSet node")]
     public static partial IGenericMessage NoSinkDataSetNode(ILogger logger);
 
-    /// <summary>Logs that the EtlPipelineConfiguration typed body is missing from the pipeline configuration.</summary>
+    /// <summary>Logs that the ETL implementation is missing from the pipeline configuration.</summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="pipelineName">The name of the pipeline.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
