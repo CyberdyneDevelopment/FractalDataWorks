@@ -15,7 +15,8 @@ namespace Fdw.Services.Data;
 
 /// <summary>Supplies the DataSet configuration.</summary>
 public sealed class DataSetConfigurationProvider
-    : DomainConfigurationProviderBase<IDataSetImplementationConfiguration>
+    : DomainConfigurationProviderBase<IDataSetImplementationConfiguration>,
+      IDataSetConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="DataSetConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

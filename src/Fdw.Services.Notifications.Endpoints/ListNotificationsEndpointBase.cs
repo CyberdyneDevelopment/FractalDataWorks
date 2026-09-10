@@ -43,7 +43,7 @@ public abstract class ListNotificationsEndpointBase : CrudListEndpointBase<Notif
             return allResult.ToNewResult<List<NotificationSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<NotificationConfiguration>)[])
+        var items = allResult.Value
             .Select(n => new NotificationSummaryDto
             {
                 Id = n.Id,

@@ -20,7 +20,7 @@ using Fdw.Results;
 namespace Fdw.Services.Settings;
 
 /// <summary>
-/// Default settings service type. Registers the gateway-backed SettingsConfigurationProvider
+/// Default settings service type. Registers the gateway-backed ServerSetting, TenantSetting and RoleSetting providers
 /// (server/tenant/role settings) and the layered IEffectiveSettingsProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]

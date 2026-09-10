@@ -1,3 +1,5 @@
+using Fdw.Services.Identity.ClientCredentials;
+using Fdw.Configuration;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -76,9 +78,16 @@ public sealed class IdentityHostBootTests
 
         // A configuration naming a registered mechanism must not fail with "no factory registered".
         // It fails for want of a typed body instead, which is the next gate and a different message.
-        var built = await provider.Get(
-            new IdentityServiceConfiguration { Name = "probe", Implementation = mechanism },
-            TestContext.Current.CancellationToken);
+        // The probe is the mechanism's own implementation record, because the factory is chosen by
+        // the configuration's type now, not by a name on a header row.
+        IGenericConfiguration probe = mechanism switch
+        {
+            "ClientCredentials" => new ClientCredentialsConfiguration { Name = "probe" },
+            "JwtAssertion" => new JwtAssertionConfiguration { Name = "probe" },
+            _ => throw new ArgumentOutOfRangeException(nameof(mechanism), mechanism, "unknown mechanism"),
+        };
+
+        var built = await provider.Get(probe, TestContext.Current.CancellationToken);
 
         built.IsFailure.ShouldBeTrue();
         built.CurrentMessage!.ShouldNotContain("NoFactoryRegistered");

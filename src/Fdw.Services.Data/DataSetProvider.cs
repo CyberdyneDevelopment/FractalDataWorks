@@ -29,7 +29,7 @@ namespace Fdw.Services.Data;
 /// Also provides static Configure/Register/Initialize methods for three-phase DI registration.
 /// </summary>
 [PlatformServiceProvider(ServiceCategory = "DataSet")]
-public sealed class DataSetProvider : IDataSetConfigurationProvider
+public sealed class DataSetProvider
 {
     // ============================================================
     // Static DI Orchestration (three-phase)
@@ -80,12 +80,15 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
 
         var services = builder.Services;
 
-        services.TryAddSingleton<IDataSetConfigurationProvider>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
-            var configProvider = sp.GetService<IImplementationConfigurationProvider<IDataSetImplementationConfiguration>>();
-            return new DataSetProvider(logger, configProvider);
-        });
+        // The configuration interface resolves to the domain provider; this one is the DataSet
+        // domain's platform service provider, and reads through it.
+        services.TryAddSingleton<IDataSetConfigurationProvider>(
+            sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+
+        services.TryAddSingleton<DataSetProvider>(sp =>
+            new DataSetProvider(
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>(),
+                sp.GetRequiredService<IDataSetConfigurationProvider>()));
 
         services.TryAddSingleton<IDataSetBuilder>(sp =>
             new DataSetBuilder(sp.GetService<ILogger<DataSetBuilder>>()));
@@ -136,7 +139,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     // ============================================================
 
     private readonly ILogger<DataSetProvider> _logger;
-    private readonly IImplementationConfigurationProvider<IDataSetImplementationConfiguration>? _configurationProvider;
+    private readonly IDataSetConfigurationProvider? _configurationProvider;
 
     /// <summary>
     /// Initializes a new instance of <see cref="DataSetProvider"/>.
@@ -145,20 +148,20 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="configurationProvider">Optional DataSet configuration provider for DB-backed lookups.</param>
     public DataSetProvider(
         ILogger<DataSetProvider>? logger,
-        IImplementationConfigurationProvider<IDataSetImplementationConfiguration>? configurationProvider = null)
+        IDataSetConfigurationProvider? configurationProvider = null)
     {
         _logger = logger ?? NullLogger<DataSetProvider>.Instance;
         _configurationProvider = configurationProvider;
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<DataSetImplementationConfiguration>> Get(string name, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataSetImplementationConfiguration>> Get(string name, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetEntry(_logger, name);
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return GenericResult<DataSetImplementationConfiguration>.Failure(
+            return GenericResult<IDataSetImplementationConfiguration>.Failure(
                 DataServiceResultCodes.ByName("DataSetNameRequired"), _logger);
         }
 
@@ -173,13 +176,13 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.DataSetNotFound(_logger, name);
-        return GenericResult<DataSetImplementationConfiguration>.Failure(
+        return GenericResult<IDataSetImplementationConfiguration>.Failure(
             DataServiceResultCodes.ByName("DataSetNotFound"),
             ResultDetails.Create().With("DataSetName", name));
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<DataSetImplementationConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataSetImplementationConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetByIdEntry(_logger, id);
 
@@ -194,13 +197,13 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.DataSetByIdNotFound(_logger, id);
-        return GenericResult<DataSetImplementationConfiguration>.Failure(
+        return GenericResult<IDataSetImplementationConfiguration>.Failure(
             DataServiceResultCodes.ByName("DataSetNotFound"),
             ResultDetails.Create().With("DataSetId", id));
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<DataSetImplementationConfiguration>>> Get(CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Get(CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetAllDataSetsEntry(_logger);
 
@@ -225,7 +228,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.AllDataSetsRetrieved(_logger, dataSets.Count);
-        return GenericResult<IReadOnlyList<DataSetImplementationConfiguration>>.Success(dataSets.AsReadOnly());
+        return GenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>.Success(dataSets.AsReadOnly());
     }
 
     // ============================================================

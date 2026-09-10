@@ -19,9 +19,8 @@ namespace Fdw.Services.Quality.Tests;
 
 /// <summary>
 /// Tests for <see cref="PromotionService"/> - environment promotion request lifecycle logic.
-/// Only <see cref="IConfigurationGateway"/> is faked; <see cref="QualityConfigurationProvider"/>
-/// and the underlying <c>ImplementationConfigurationProviderBase</c> run for real, matching how production
-/// wires them. An empty <see cref="IConfigurationGateway.DataStores"/> tree means every header
+/// Only <see cref="IConfigurationGateway"/> is faked; <see cref="EnvironmentConfigurationProvider"/>
+/// runs for real, matching how production wires it. An empty <see cref="IConfigurationGateway.DataStores"/> tree means every header
 /// lookup resolves as a root (no-parent) table and no child cascade is attempted - exactly what
 /// PromotionService needs (it only reads Environment headers).
 /// </summary>
@@ -33,13 +32,12 @@ public sealed class PromotionServiceTests
         gatewayMock.SetupGet(g => g.DataStores).Returns(new List<IDataStore>());
 
         var lazyGateway = GatewayProviderFor(gatewayMock.Object);
-        var qualityProvider = new QualityConfigurationProvider(
-            NullLogger<QualityConfigurationProvider>.Instance,
-            lazyGateway,
-            "PlatformConfiguration");
+        var environments = new EnvironmentConfigurationProvider(
+            NullLogger<EnvironmentConfigurationProvider>.Instance,
+            lazyGateway);
 
         var loggerFactory = LoggerFactory.Create(_ => { });
-        return (new PromotionService(loggerFactory, qualityProvider), gatewayMock);
+        return (new PromotionService(loggerFactory, environments), gatewayMock);
     }
 
     private static EnvironmentImplementationConfiguration MakeEnvironment(string name, int order = 0)

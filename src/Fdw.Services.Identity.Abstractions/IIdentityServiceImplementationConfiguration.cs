@@ -9,7 +9,7 @@ namespace Fdw.Services.Identity.Abstractions;
 /// </summary>
 /// <remarks>
 /// Each typed body implements this interface directly rather than inheriting a concrete header
-/// class. The header (<c>IdentityServiceConfiguration</c>) carries a
+/// class. The header (the domain row) carries a
 /// <c>[NotMapped] IIdentityServiceImplementationConfiguration? Configuration</c> populated on the read path,
 /// mirroring every other polymorphic header/typed-body domain (Connection, SecretManager,
 /// TokenManager).

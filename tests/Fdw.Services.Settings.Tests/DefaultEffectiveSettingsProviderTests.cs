@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -19,113 +20,53 @@ namespace Fdw.Services.Settings.Tests;
 
 public sealed class DefaultEffectiveSettingsProviderTests
 {
-    private readonly Mock<SettingsConfigurationProvider> _provider;
+    private readonly Mock<IServerSettingConfigurationProvider> _server = new(MockBehavior.Loose);
+    private readonly Mock<ITenantSettingConfigurationProvider> _tenant = new(MockBehavior.Loose);
+    private readonly Mock<IRoleSettingConfigurationProvider> _role = new(MockBehavior.Loose);
 
-    private readonly List<ServerSettingConfiguration> _serverSettings = [];
+    private readonly List<ServerSettingImplementationConfiguration> _serverSettings = [];
     private readonly List<TenantSettingImplementationConfiguration> _tenantSettings = [];
     private readonly List<RoleSettingImplementationConfiguration> _roleSettings = [];
 
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
 
-    private static ImplementationConfigurationProviderBase<IServerSettingImplementationConfiguration> MakeServerProvider()
-    {
-        var lazyGateway = new ConfigurationGatewayProvider();
-        return new ImplementationConfigurationProviderBase<IServerSettingImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<IServerSettingImplementationConfiguration>>.Instance,
-            lazyGateway,
-            "TestStore",
-            "settings");
-    }
-
-    private static ImplementationConfigurationProviderBase<ITenantSettingImplementationConfiguration> MakeTenantProvider()
-    {
-        var lazyGateway = new ConfigurationGatewayProvider();
-        return new ImplementationConfigurationProviderBase<ITenantSettingImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITenantSettingImplementationConfiguration>>.Instance,
-            lazyGateway,
-            "TestStore",
-            "settings");
-    }
-
-    private static ImplementationConfigurationProviderBase<IRoleSettingImplementationConfiguration> MakeRoleProvider()
-    {
-        var lazyGateway = new ConfigurationGatewayProvider();
-        return new ImplementationConfigurationProviderBase<IRoleSettingImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<IRoleSettingImplementationConfiguration>>.Instance,
-            lazyGateway,
-            "TestStore",
-            "settings");
-    }
-
+    // Each domain provider is mocked on its own: the resolver reads a server setting by name and
+    // the tenant and role overrides as lists, which is the whole surface it uses.
     public DefaultEffectiveSettingsProviderTests()
     {
-        _provider = new Mock<SettingsConfigurationProvider>(
-            MakeServerProvider(),
-            MakeTenantProvider(),
-            MakeRoleProvider(),
-            NullLogger<SettingsConfigurationProvider>.Instance) { CallBase = false };
-
-        _provider.Setup(p => p.GetServerSettings(It.IsAny<CancellationToken>()))
-            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<ServerSettingConfiguration>>>(
-                GenericResult<IReadOnlyList<ServerSettingConfiguration>>.Success(_serverSettings)));
-        _provider.Setup(p => p.GetServerSetting(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _server
+            .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns((string name, CancellationToken _) =>
             {
-                ServerSettingConfiguration? result = null;
-                foreach (var s in _serverSettings)
+                IServerSettingImplementationConfiguration? found = null;
+                foreach (var setting in _serverSettings)
                 {
-                    if (string.Equals(s.SettingName, name, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(setting.Name, name, StringComparison.OrdinalIgnoreCase))
                     {
-                        result = s;
+                        found = setting;
                         break;
                     }
                 }
 
-                return Task.FromResult<IGenericResult<ServerSettingConfiguration>>(
-                    GenericResult<ServerSettingConfiguration>.Success(result!));
+                return Task.FromResult<IGenericResult<IServerSettingImplementationConfiguration>>(
+                    GenericResult<IServerSettingImplementationConfiguration>.Success(found!));
             });
-        _provider.Setup(p => p.GetTenantSettings(It.IsAny<CancellationToken>()))
-            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<TenantSettingImplementationConfiguration>>>(
-                GenericResult<IReadOnlyList<TenantSettingImplementationConfiguration>>.Success(_tenantSettings)));
-        _provider.Setup(p => p.GetTenantSetting(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string name, CancellationToken _) =>
-            {
-                TenantSettingImplementationConfiguration? result = null;
-                foreach (var s in _tenantSettings)
-                {
-                    if (string.Equals(s.SettingName, name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        result = s;
-                        break;
-                    }
-                }
 
-                return Task.FromResult<IGenericResult<TenantSettingImplementationConfiguration>>(
-                    GenericResult<TenantSettingImplementationConfiguration>.Success(result!));
-            });
-        _provider.Setup(p => p.GetRoleSettings(It.IsAny<CancellationToken>()))
-            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<RoleSettingImplementationConfiguration>>>(
-                GenericResult<IReadOnlyList<RoleSettingImplementationConfiguration>>.Success(_roleSettings)));
-        _provider.Setup(p => p.GetRoleSetting(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string name, CancellationToken _) =>
-            {
-                RoleSettingImplementationConfiguration? result = null;
-                foreach (var s in _roleSettings)
-                {
-                    if (string.Equals(s.SettingName, name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        result = s;
-                        break;
-                    }
-                }
+        _tenant
+            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<ITenantSettingImplementationConfiguration>>>(
+                GenericResult<IReadOnlyList<ITenantSettingImplementationConfiguration>>.Success(
+                    [.. _tenantSettings.Cast<ITenantSettingImplementationConfiguration>()])));
 
-                return Task.FromResult<IGenericResult<RoleSettingImplementationConfiguration>>(
-                    GenericResult<RoleSettingImplementationConfiguration>.Success(result!));
-            });
+        _role
+            .Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<IRoleSettingImplementationConfiguration>>>(
+                GenericResult<IReadOnlyList<IRoleSettingImplementationConfiguration>>.Success(
+                    [.. _roleSettings.Cast<IRoleSettingImplementationConfiguration>()])));
     }
 
     private DefaultEffectiveSettingsProvider CreateProvider() =>
-        new(_provider.Object, NullLogger<DefaultEffectiveSettingsProvider>.Instance);
+        new(_server.Object, _tenant.Object, _role.Object, NullLogger<DefaultEffectiveSettingsProvider>.Instance);
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -133,7 +74,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueReturnsServerValueWhenNoTenantOrRole()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
         var provider = CreateProvider();
 
         // Act
@@ -149,7 +90,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueReturnsTenantOverrideWhenWithinCeiling()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "MaxRows", SettingValue = "2000", IsActive = true });
         var provider = CreateProvider();
 
@@ -166,7 +107,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueClampsTenantOverrideToMaxValue()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "MaxRows", SettingValue = "9999", IsActive = true });
         var provider = CreateProvider();
 
@@ -183,7 +124,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueClampsTenantOverrideToMinValue()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "Timeout", SettingValue = "30", DataType = "Int32", MinValue = "10", IsActive = true });
+        _serverSettings.Add(new() { Name = "Timeout", SettingValue = "30", DataType = "Int32", MinValue = "10", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "Timeout", SettingValue = "3", IsActive = true });
         var provider = CreateProvider();
 
@@ -200,7 +141,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueReturnsRoleOverrideWithinTenantValue()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "MaxRows", SettingValue = "3000", IsActive = true });
         _roleSettings.Add(new() { TenantId = TenantA, RoleName = "Analyst", SettingName = "MaxRows", SettingValue = "2500", IsActive = true });
         var provider = CreateProvider();
@@ -218,7 +159,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueClampsRoleOverrideToMaxValue()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "1000", DataType = "Int32", MaxValue = "5000", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "MaxRows", SettingValue = "3000", IsActive = true });
         _roleSettings.Add(new() { TenantId = TenantA, RoleName = "Admin", SettingName = "MaxRows", SettingValue = "8000", IsActive = true });
         var provider = CreateProvider();
@@ -266,7 +207,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueConvertsDecimalType()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "Rate", SettingValue = "99.95", DataType = "Decimal", IsActive = true });
+        _serverSettings.Add(new() { Name = "Rate", SettingValue = "99.95", DataType = "Decimal", IsActive = true });
         var provider = CreateProvider();
 
         // Act
@@ -282,7 +223,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueConvertsBooleanType()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "EnableFeature", SettingValue = "true", DataType = "Boolean", IsActive = true });
+        _serverSettings.Add(new() { Name = "EnableFeature", SettingValue = "true", DataType = "Boolean", IsActive = true });
         var provider = CreateProvider();
 
         // Act
@@ -298,7 +239,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueReturnsStringDirectly()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "Greeting", SettingValue = "Hello World", DataType = "String", IsActive = true });
+        _serverSettings.Add(new() { Name = "Greeting", SettingValue = "Hello World", DataType = "String", IsActive = true });
         var provider = CreateProvider();
 
         // Act
@@ -314,7 +255,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueReturnsDefaultForUnparseableValue()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "BadInt", SettingValue = "not-a-number", DataType = "Int32", IsActive = true });
+        _serverSettings.Add(new() { Name = "BadInt", SettingValue = "not-a-number", DataType = "Int32", IsActive = true });
         var provider = CreateProvider();
 
         // Act
@@ -330,7 +271,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueSkipsInactiveServerSetting()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = false });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = false });
         var provider = CreateProvider();
 
         // Act
@@ -346,7 +287,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueSkipsInactiveTenantSetting()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "MaxRows", SettingValue = "9999", IsActive = false });
         var provider = CreateProvider();
 
@@ -363,7 +304,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueIsCaseInsensitiveOnSettingName()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
         var provider = CreateProvider();
 
         // Act
@@ -379,7 +320,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueDoesNotClampNonNumericDataType()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "Label", SettingValue = "Default", DataType = "String", MaxValue = "100", IsActive = true });
+        _serverSettings.Add(new() { Name = "Label", SettingValue = "Default", DataType = "String", MaxValue = "100", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "Label", SettingValue = "TenantLabel", IsActive = true });
         var provider = CreateProvider();
 
@@ -396,7 +337,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueSkipsInactiveRoleSetting()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
+        _serverSettings.Add(new() { Name = "MaxRows", SettingValue = "500", DataType = "Int32", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "MaxRows", SettingValue = "2000", IsActive = true });
         _roleSettings.Add(new() { TenantId = TenantA, RoleName = "Analyst", SettingName = "MaxRows", SettingValue = "9999", IsActive = false });
         var provider = CreateProvider();
@@ -414,7 +355,7 @@ public sealed class DefaultEffectiveSettingsProviderTests
     public void GetEffectiveValueClampsDecimalType()
     {
         // Arrange
-        _serverSettings.Add(new() { SettingName = "Rate", SettingValue = "50.0", DataType = "Decimal", MinValue = "10.0", MaxValue = "100.0", IsActive = true });
+        _serverSettings.Add(new() { Name = "Rate", SettingValue = "50.0", DataType = "Decimal", MinValue = "10.0", MaxValue = "100.0", IsActive = true });
         _tenantSettings.Add(new() { TenantId = TenantA, SettingName = "Rate", SettingValue = "200.5", IsActive = true });
         var provider = CreateProvider();
 

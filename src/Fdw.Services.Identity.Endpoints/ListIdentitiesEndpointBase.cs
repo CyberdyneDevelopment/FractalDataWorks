@@ -53,7 +53,7 @@ public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<Identity
     /// <summary>Maps a configuration header to its summary view.</summary>
     /// <param name="configuration">The identity configuration.</param>
     /// <returns>The summary.</returns>
-    protected virtual IdentitySummaryResponse MapToSummary(IdentityServiceConfiguration configuration)
+    protected virtual IdentitySummaryResponse MapToSummary(IIdentityServiceImplementationConfiguration configuration)
         => new()
         {
             Id = configuration.Id,
