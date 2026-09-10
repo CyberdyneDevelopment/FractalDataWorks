@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -269,7 +270,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         string dataStoreName,
         string connectionType,
         Guid connectionId,
-        ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> writer,
+        ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> writer,
         CancellationToken ct)
     {
         var allDataStoresResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
@@ -474,7 +475,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     private async Task UpdateLastDiscoveredAt(
         DataStoreConfiguration dataStoreConfig,
         string dataStoreName,
-        ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> writer,
+        ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> writer,
         CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
@@ -506,13 +507,13 @@ public sealed class SchemaInformationService : ISchemaInformationService
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private sealed class ConfigurationWriters
     {
-        public ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> DataStore { get; }
+        public ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> DataStore { get; }
         public ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> Path { get; }
         public ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> Container { get; }
         public ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> Field { get; }
 
         public ConfigurationWriters(
-            ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> dataStore,
+            ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> dataStore,
             ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> path,
             ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> container,
             ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> field)

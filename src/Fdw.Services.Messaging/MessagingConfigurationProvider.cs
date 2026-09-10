@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -21,7 +22,7 @@ namespace Fdw.Services.Messaging;
 /// closed generic that two domains could satisfy.
 /// </remarks>
 public sealed class MessagingConfigurationProvider
-    : ImplementationConfigurationProviderBase<MessagingConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>,
       IMessagingConfigurationProvider
 {
 

@@ -21,7 +21,7 @@ namespace Fdw.Services.Credentials;
 /// inherited <c>Register</c>.
 /// </summary>
 public class CredentialServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<CredentialServiceConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>,
       ICredentialServiceConfigurationProvider
 {
 

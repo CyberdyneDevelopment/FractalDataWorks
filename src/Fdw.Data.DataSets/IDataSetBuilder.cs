@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using System.Threading;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 namespace Fdw.Data.DataSets.Abstractions;
 
 /// <summary>
-/// Builds a live <see cref="IDataSet"/> runtime from a <see cref="DataSetConfiguration"/>.
+/// Builds a live <see cref="IDataSet"/> runtime from a <see cref="DomainConfiguration"/>.
 /// </summary>
 /// <remarks>
 /// The mirror of <c>IDataStoreBuilder</c>: configuration goes in, the thing it describes comes out.
@@ -21,7 +22,7 @@ public interface IDataSetBuilder
 {
     /// <summary>Supplies the configuration to build from.</summary>
     /// <param name="dataSetConfig">The dataset's configuration.</param>
-    IGenericResult Configure(DataSetConfiguration dataSetConfig);
+    IGenericResult Configure(DomainConfiguration dataSetConfig);
 
     /// <summary>Builds the dataset the supplied configuration describes.</summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -79,7 +80,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IIdentityServiceImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -57,7 +58,7 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<MessagingConfigurationProvider>(
                 sp => (MessagingConfigurationProvider)sp.GetRequiredService<IMessagingConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<MessagingConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>>(
                 sp => sp.GetRequiredService<MessagingConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IMessagingImplementationConfiguration>>(
                 sp => sp.GetRequiredService<MessagingConfigurationProvider>());

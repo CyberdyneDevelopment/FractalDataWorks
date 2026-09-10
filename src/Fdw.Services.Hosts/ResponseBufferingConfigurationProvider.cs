@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Hosts.Abstractions;
@@ -11,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies ResponseBuffering configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class ResponseBufferingConfigurationProvider
-    : ImplementationConfigurationProviderBase<ResponseBufferingConfiguration, IResponseBufferingImplementationConfiguration, ResponseBufferingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IResponseBufferingImplementationConfiguration, ResponseBufferingConfigurationCommand>,
       IResponseBufferingConfigurationProvider
 {
 

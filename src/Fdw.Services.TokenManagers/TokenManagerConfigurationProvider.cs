@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -16,7 +17,7 @@ namespace Fdw.Services.TokenManagers;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class TokenManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<TokenManagerConfiguration, ITokenManagerImplementationConfiguration, TokenManagerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ITokenManagerImplementationConfiguration, TokenManagerConfigurationCommand>,
       ITokenManagerConfigurationProvider
 {
 

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace Fdw.Services.Data;
 /// <see cref="IServiceConfigurationProvider{TConfig}"/> and transport dispatch through
 /// <see cref="IDataStoreBuilderSelector"/> — both supplied by the caller, which CAN reference the
 /// excluded packages. Each store is built once by its selected <c>IDataStoreBuilder</c> from the
-/// cascaded <c>DataStoreConfiguration</c> (Paths → Containers → Fields); path and container lookups
+/// cascaded <c>DomainConfiguration</c> (Paths → Containers → Fields); path and container lookups
 /// dot-walk the built tree, mirroring <c>DataStoreProvider</c>'s instance members minus the gateway
 /// shortcut branches.
 /// </remarks>
@@ -136,7 +137,7 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         return pathResult.Value.Container(containerName);
     }
 
-    private async Task<IGenericResult<IDataStore>> BuildStore(DataStoreConfiguration storeCfg, CancellationToken cancellationToken)
+    private async Task<IGenericResult<IDataStore>> BuildStore(DomainConfiguration storeCfg, CancellationToken cancellationToken)
     {
         var selectResult = _builderSelector.Select(storeCfg, _logger);
         if (!selectResult.IsSuccess || selectResult.Value is null)

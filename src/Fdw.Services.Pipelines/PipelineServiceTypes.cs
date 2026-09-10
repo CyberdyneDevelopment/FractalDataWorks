@@ -80,7 +80,7 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
                 sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PipelineConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());

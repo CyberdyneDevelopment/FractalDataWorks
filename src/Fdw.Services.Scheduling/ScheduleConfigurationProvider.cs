@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -25,7 +26,7 @@ namespace Fdw.Services.Scheduling;
 /// is the one source of truth for which schedules should be live, so a write here is the moment
 /// that changes.
 /// </remarks>
-public class ScheduleConfigurationProvider : ImplementationConfigurationProviderBase<ScheduleConfiguration, IScheduleImplementationConfiguration, ScheduleConfigurationCommand>
+public class ScheduleConfigurationProvider : ImplementationConfigurationProviderBase<DomainConfiguration, IScheduleImplementationConfiguration, ScheduleConfigurationCommand>
 {
 
     /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationProvider"/> class.</summary>

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -45,7 +46,7 @@ public sealed class PipelineServiceConfigurationProviderTests
         using var provider = builder.Services.BuildServiceProvider();
         var byInterface = provider.GetRequiredService<IPipelineConfigurationProvider>();
         var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
-        var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<PipelineConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>>();
+        var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<DomainConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>>();
         var asServiceConfiguration = provider.GetRequiredService<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>();
 
         concrete.ShouldBeSameAs(byInterface);

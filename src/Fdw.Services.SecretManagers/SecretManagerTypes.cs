@@ -102,7 +102,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
                 sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SecretManagerConfiguration, ISecretManagerImplementationConfiguration, SecretManagerConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, ISecretManagerImplementationConfiguration, SecretManagerConfigurationCommand>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());

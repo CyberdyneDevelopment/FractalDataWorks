@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +27,7 @@ namespace Fdw.Services.Data;
 /// Overrides Get/GetAll to assemble the DataSet → DataSetSource/Field/KeyField hierarchy
 /// after base resolution, and composes FieldMappings onto each source.
 /// </summary>
-public class DataSetConfigurationProvider : ImplementationConfigurationProviderBase<DataSetConfiguration, IDataSetImplementationConfiguration, DataSetConfigurationCommand>
+public class DataSetConfigurationProvider : ImplementationConfigurationProviderBase<DomainConfiguration, IDataSetImplementationConfiguration, DataSetConfigurationCommand>
 {
 
 

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -20,7 +21,7 @@ namespace Fdw.Services.Pipelines;
 /// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
 /// </summary>
 public class PipelineServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<PipelineConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>,
       IPipelineConfigurationProvider
 {
 

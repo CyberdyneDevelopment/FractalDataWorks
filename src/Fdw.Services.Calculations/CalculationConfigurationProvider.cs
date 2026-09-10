@@ -25,7 +25,7 @@ namespace Fdw.Services.Calculations;
 /// registered with it via <c>Register</c> in <see cref="DefaultCalculationServiceType"/>.
 /// </summary>
 public class CalculationConfigurationProvider
-    : ImplementationConfigurationProviderBase<CalculationEntityConfiguration, ICalculationEntityImplementationConfiguration, CalculationEntityConfigurationCommand>
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ICalculationEntityImplementationConfiguration, CalculationEntityConfigurationCommand>
 {
 
     /// <summary>

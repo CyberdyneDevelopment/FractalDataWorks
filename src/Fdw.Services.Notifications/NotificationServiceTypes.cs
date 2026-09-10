@@ -89,7 +89,7 @@ public partial class NotificationServiceTypes
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
                 sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<NotificationConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());

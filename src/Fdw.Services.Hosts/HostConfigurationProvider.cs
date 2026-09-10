@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Hosts.Abstractions;
@@ -17,7 +18,7 @@ namespace Fdw.Services.Hosts;
 /// datastore differs.
 /// </remarks>
 public class HostConfigurationProvider
-    : ImplementationConfigurationProviderBase<HostConfiguration, IHostImplementationConfiguration, HostConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IHostImplementationConfiguration, HostConfigurationCommand>,
       IHostConfigurationProvider
 {
 

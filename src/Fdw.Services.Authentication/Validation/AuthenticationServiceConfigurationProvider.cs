@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public class AuthenticationServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<AuthenticationServiceConfiguration, IAuthenticationServiceImplementationConfiguration, AuthenticationServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthenticationServiceImplementationConfiguration, AuthenticationServiceConfigurationCommand>,
       IAuthenticationServiceConfigurationProvider
 {
 

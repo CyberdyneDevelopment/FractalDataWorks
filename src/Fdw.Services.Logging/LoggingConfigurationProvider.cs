@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Logging.Abstractions;
@@ -17,7 +18,7 @@ namespace Fdw.Services.Logging;
 /// datastore differs.
 /// </remarks>
 public class LoggingConfigurationProvider
-    : ImplementationConfigurationProviderBase<LoggingConfiguration, ILoggingImplementationConfiguration, LoggingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ILoggingImplementationConfiguration, LoggingConfigurationCommand>,
       ILoggingConfigurationProvider
 {
 

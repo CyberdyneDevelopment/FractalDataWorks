@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 ﻿using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services.Abstractions;
@@ -25,7 +26,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// The health monitor is a full service domain: options ("Local" in this assembly, "HttpClient" in
 /// <c>Fdw.Web.Analytics.Clients</c>) register factories with the domain provider, and consumers depend
 /// on the provider (<see cref="IPlatformServiceProvider{TService,TConfiguration}"/> of
-/// <see cref="IHealthMonitorService"/>/<see cref="HealthMonitorConfiguration"/>) — never on a direct
+/// <see cref="IHealthMonitorService"/>/<see cref="DomainConfiguration"/>) — never on a direct
 /// <see cref="IHealthMonitorService"/> registration. Which implementation a host runs is that host's
 /// <c>HealthMonitors</c> appsettings row (<c>Implementation</c>), resolved at first use — not a
 /// registration-order race.
@@ -37,7 +38,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>, HealthMonitorConfiguration>),
+    typeof(HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, DomainConfiguration>, DomainConfiguration>),
     typeof(IHealthMonitorType),
     typeof(HealthMonitorTypes),
     ServiceInterface = typeof(IHealthMonitorService),
@@ -45,7 +46,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     ProviderInterface = typeof(IHealthMonitorProvider),
     ServiceCategory = "HealthMonitor")]
 public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
-    HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>, HealthMonitorConfiguration>,
+    HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, DomainConfiguration>, DomainConfiguration>,
     IHealthMonitorType>
 {
 

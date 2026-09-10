@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -74,7 +75,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand>>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
@@ -148,7 +149,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<DataSetConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, IDataSetImplementationConfiguration, DataSetConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IDataSetImplementationConfiguration, DataSetConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Hosts.Abstractions;
@@ -11,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies ForwardedHeaders configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class ForwardedHeadersConfigurationProvider
-    : ImplementationConfigurationProviderBase<ForwardedHeadersConfiguration, IForwardedHeadersImplementationConfiguration, ForwardedHeadersConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IForwardedHeadersImplementationConfiguration, ForwardedHeadersConfigurationCommand>,
       IForwardedHeadersConfigurationProvider
 {
 

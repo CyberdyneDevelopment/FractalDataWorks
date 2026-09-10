@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -18,7 +19,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// section.
 /// </summary>
 public class ExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ExternalIdentityProvisionerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ExternalIdentityProvisionerConfigurationCommand>,
       IExternalIdentityProvisionerConfigurationProvider
 {
 

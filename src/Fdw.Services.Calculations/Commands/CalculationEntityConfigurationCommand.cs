@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Calculations.Configuration;
 using Fdw.Services.Configuration;
@@ -6,7 +7,7 @@ namespace Fdw.Services.Calculations.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the CalculationEntity configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "CalculationEntity")]
-public sealed class CalculationEntityConfigurationCommand : ConfigurationCommandBase<CalculationEntityConfiguration>
+public sealed class CalculationEntityConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
     /// <inheritdoc/>
     public CalculationEntityConfigurationCommand() : base("CalculationEntity") { }

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services;
@@ -80,7 +81,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(
                 sp => (CredentialServiceConfigurationProvider)sp.GetRequiredService<ICredentialServiceConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ICredentialServiceImplementationConfiguration>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());

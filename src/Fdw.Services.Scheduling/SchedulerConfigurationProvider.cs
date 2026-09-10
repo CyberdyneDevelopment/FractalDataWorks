@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using Fdw.Services.Abstractions;
@@ -18,7 +19,7 @@ namespace Fdw.Services.Scheduling;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class SchedulerConfigurationProvider
-    : ImplementationConfigurationProviderBase<SchedulerConfiguration, ISchedulerImplementationConfiguration, SchedulerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ISchedulerImplementationConfiguration, SchedulerConfigurationCommand>,
       ISchedulerConfigurationProvider
 {
 

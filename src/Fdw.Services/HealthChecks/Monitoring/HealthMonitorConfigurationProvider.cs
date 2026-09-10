@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Abstractions.Health.Monitoring;
@@ -18,7 +19,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// mechanism is identical either way; only the connection differs.
 /// </remarks>
 public sealed class HealthMonitorConfigurationProvider
-    : ImplementationConfigurationProviderBase<HealthMonitorConfiguration, IHealthMonitorImplementationConfiguration, HealthMonitorConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IHealthMonitorImplementationConfiguration, HealthMonitorConfigurationCommand>,
       IHealthMonitorConfigurationProvider
 {
 

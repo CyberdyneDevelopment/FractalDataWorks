@@ -31,7 +31,7 @@ namespace Fdw.Services.SecretManagers;
 /// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
 public class SecretManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<SecretManagerConfiguration, ISecretManagerImplementationConfiguration, SecretManagerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ISecretManagerImplementationConfiguration, SecretManagerConfigurationCommand>,
       ISecretManagerConfigurationProvider
 {
 

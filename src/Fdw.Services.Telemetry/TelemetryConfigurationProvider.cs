@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Telemetry.Abstractions;
@@ -17,7 +18,7 @@ namespace Fdw.Services.Telemetry;
 /// datastore differs.
 /// </remarks>
 public class TelemetryConfigurationProvider
-    : ImplementationConfigurationProviderBase<TelemetryConfiguration, ITelemetryImplementationConfiguration, TelemetryConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ITelemetryImplementationConfiguration, TelemetryConfigurationCommand>,
       ITelemetryConfigurationProvider
 {
 

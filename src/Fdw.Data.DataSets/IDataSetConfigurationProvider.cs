@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -8,7 +9,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 
 /// <summary>
 /// Provides centralized registry and resolution for logical DataSet <em>configurations</em>.
-/// Returns <see cref="DataSetConfiguration"/> records — not runtime services.
+/// Returns <see cref="DomainConfiguration"/> records — not runtime services.
 /// Use <c>IDataSetProvider</c> (in <c>Fdw.Services.Data.Abstractions</c>) when you need the live <see cref="Fdw.Data.Abstractions.IDataSet"/> runtime.
 /// </summary>
 /// <remarks>
@@ -26,21 +27,21 @@ public interface IDataSetConfigurationProvider
     /// </summary>
     /// <param name="name">The unique name of the DataSet.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result containing the <see cref="DataSetConfiguration"/> if found, or failure.</returns>
-    Task<IGenericResult<DataSetConfiguration>> Get(string name, CancellationToken cancellationToken = default);
+    /// <returns>A result containing the <see cref="DomainConfiguration"/> if found, or failure.</returns>
+    Task<IGenericResult<DomainConfiguration>> Get(string name, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a DataSet configuration by its unique identifier.
     /// </summary>
     /// <param name="id">The unique identifier of the DataSet.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result containing the <see cref="DataSetConfiguration"/> if found, or failure.</returns>
-    Task<IGenericResult<DataSetConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
+    /// <returns>A result containing the <see cref="DomainConfiguration"/> if found, or failure.</returns>
+    Task<IGenericResult<DomainConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all DataSet configurations, merging all three sources.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A result containing all registered <see cref="DataSetConfiguration"/> records.</returns>
-    Task<IGenericResult<IReadOnlyList<DataSetConfiguration>>> Get(CancellationToken cancellationToken = default);
+    /// <returns>A result containing all registered <see cref="DomainConfiguration"/> records.</returns>
+    Task<IGenericResult<IReadOnlyList<DomainConfiguration>>> Get(CancellationToken cancellationToken = default);
 }

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
@@ -28,5 +29,5 @@ public interface IDataStoreBuilderSelector
     /// Success with the resolved builder, or Failure (with MessageLogging) when no builder is registered
     /// for the configuration's transport.
     /// </returns>
-    IGenericResult<IDataStoreBuilder> Select(DataStoreConfiguration configuration, ILogger? logger = null);
+    IGenericResult<IDataStoreBuilder> Select(DomainConfiguration configuration, ILogger? logger = null);
 }

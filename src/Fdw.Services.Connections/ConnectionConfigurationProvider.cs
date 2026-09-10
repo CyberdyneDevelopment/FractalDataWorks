@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
@@ -18,7 +19,7 @@ namespace Fdw.Services.Connections;
 /// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
 /// </remarks>
 public class ConnectionConfigurationProvider
-    : ImplementationConfigurationProviderBase<ConnectionConfiguration, IConnectionImplementationConfiguration, ConnectionConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IConnectionImplementationConfiguration, ConnectionConfigurationCommand>,
       IConnectionConfigurationProvider
 {
 

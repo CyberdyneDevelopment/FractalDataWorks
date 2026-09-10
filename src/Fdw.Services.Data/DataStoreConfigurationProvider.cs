@@ -36,7 +36,7 @@ namespace Fdw.Services.Data;
 /// in memory by the per-transport <c>DataStoreBuilderBase</c> from the nested store configuration
 /// (the same builder mechanism ConfigurationGateway and ConfigurationGatewayDataStoreProvider.Load feed).
 /// </remarks>
-public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>
+public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>
 {
 
     private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> _containerProvider;

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -16,7 +17,7 @@ namespace Fdw.Services.Identity;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class IdentityServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>,
       IIdentityServiceConfigurationProvider
 {
 

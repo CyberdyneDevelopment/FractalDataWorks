@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Commands;
 using Fdw.Services.Authorization.Configuration;
@@ -12,7 +13,7 @@ namespace Fdw.Services.Authorization;
 /// Supplies role-mapping configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class RoleMappingConfigurationProvider
-    : ImplementationConfigurationProviderBase<RoleMappingConfiguration, IRoleMappingImplementationConfiguration, RoleMappingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IRoleMappingImplementationConfiguration, RoleMappingConfigurationCommand>,
       IRoleMappingConfigurationProvider
 {
 

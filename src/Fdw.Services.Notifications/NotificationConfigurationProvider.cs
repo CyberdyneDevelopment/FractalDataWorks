@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
 using Fdw.Data.Abstractions;
@@ -23,7 +24,7 @@ namespace Fdw.Services.Notifications;
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
 public class NotificationConfigurationProvider
-    : ImplementationConfigurationProviderBase<NotificationConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>,
       INotificationConfigurationProvider
 {
 
