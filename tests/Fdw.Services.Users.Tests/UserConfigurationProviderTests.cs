@@ -68,7 +68,7 @@ public class UserConfigurationProviderTests
         return new UserConfigurationProvider(
             NullLogger<UserConfigurationProvider>.Instance,
             GatewayProviderFor(gw.Object),
-            "PlatformConfiguration", "usr");
+            "PlatformConfiguration");
     }
 
     private static UserImplementationConfiguration User(

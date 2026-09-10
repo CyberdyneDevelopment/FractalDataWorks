@@ -38,7 +38,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<JwtBearerAuthenticationConfigurationProvider>();
+            builder.Services.TryAddSingleton<JwtBearerAuthenticationConfigurationProvider>(sp => new JwtBearerAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IJwtBearerAuthenticationConfigurationProvider>(sp =>
                 sp.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
 

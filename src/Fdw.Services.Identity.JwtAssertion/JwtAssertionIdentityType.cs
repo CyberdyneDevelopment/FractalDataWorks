@@ -53,7 +53,7 @@ public sealed class JwtAssertionIdentityType
 
             // The typed body provider, so the header provider can compose the aggregate.
 
-            builder.Services.TryAddSingleton<JwtAssertionConfigurationProvider>();
+            builder.Services.TryAddSingleton<JwtAssertionConfigurationProvider>(sp => new JwtAssertionConfigurationProvider(sp.GetRequiredService<ILogger<JwtAssertionConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), IdentityServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IJwtAssertionConfigurationProvider>(sp => sp.GetRequiredService<JwtAssertionConfigurationProvider>());
 
 

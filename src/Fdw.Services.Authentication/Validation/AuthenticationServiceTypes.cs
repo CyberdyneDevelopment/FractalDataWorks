@@ -84,7 +84,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             // through the gateway onto the store the host declared it on — not application settings,
             // because two hosts sharing a tenant legitimately trust different issuers, the same
             // reason the flows themselves live there.
-            builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>();
+            builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>(sp => new AuthenticationServiceConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationServiceConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IAuthenticationServiceConfigurationProvider>(sp =>
                 sp.GetRequiredService<AuthenticationServiceConfigurationProvider>());
 

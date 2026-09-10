@@ -15,4 +15,9 @@ namespace Fdw.Services.Settings;
     RestrictToCurrentCompilation = true)]
 public partial class SettingsServiceTypes : ServiceTypeCollectionBase<SettingsServiceTypeBase, ISettingsServiceType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
 }

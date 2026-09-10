@@ -91,7 +91,7 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<HealthMonitorConfigurationProvider>(sp =>
                 new HealthMonitorConfigurationProvider(
                     sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), HealthMonitorTypes.ConfigurationConnection));
 
             builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());

@@ -12,10 +12,12 @@ public sealed class ExternalIdentityImplementationConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityImplementationConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
     public ExternalIdentityImplementationConfigurationProvider(
         ILogger<ExternalIdentityImplementationConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider)
-        : base(logger, gatewayProvider, "PlatformConfiguration", "auth", "ExternalIdentityImplementation")
+        IConfigurationGatewayProvider gatewayProvider,
+        string dataStoreName)
+        : base(logger, gatewayProvider, dataStoreName, "auth", "ExternalIdentityImplementation")
     {
     }
 }

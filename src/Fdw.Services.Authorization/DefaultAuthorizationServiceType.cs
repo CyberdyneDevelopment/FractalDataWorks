@@ -78,13 +78,13 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.AddAuthorization();
 
 
-            builder.Services.TryAddSingleton<RoleImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<RoleImplementationConfigurationProvider>(sp => new RoleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RoleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IRoleImplementationConfigurationProvider>(sp => sp.GetRequiredService<RoleImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<RoleConfigurationProvider>(sp =>
             {
                 var domain = new RoleConfigurationProvider(
                     sp.GetRequiredService<ILogger<RoleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection);
                 domain.Register("Role", sp.GetRequiredService<IRoleImplementationConfigurationProvider>());
                 return domain;
             });
@@ -92,39 +92,39 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
 
 
-            builder.Services.TryAddSingleton<UserRoleImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<UserRoleImplementationConfigurationProvider>(sp => new UserRoleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserRoleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IUserRoleImplementationConfigurationProvider>(sp => sp.GetRequiredService<UserRoleImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
             {
                 var domain = new UserRoleConfigurationProvider(
                     sp.GetRequiredService<ILogger<UserRoleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection);
                 domain.Register("UserRole", sp.GetRequiredService<IUserRoleImplementationConfigurationProvider>());
                 return domain;
             });
             builder.Services.TryAddSingleton<IUserRoleConfigurationProvider>(sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
 
 
-            builder.Services.TryAddSingleton<PermissionImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<PermissionImplementationConfigurationProvider>(sp => new PermissionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<PermissionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IPermissionImplementationConfigurationProvider>(sp => sp.GetRequiredService<PermissionImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<PermissionConfigurationProvider>(sp =>
             {
                 var domain = new PermissionConfigurationProvider(
                     sp.GetRequiredService<ILogger<PermissionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection);
                 domain.Register("Permission", sp.GetRequiredService<IPermissionImplementationConfigurationProvider>());
                 return domain;
             });
             builder.Services.TryAddSingleton<IPermissionConfigurationProvider>(sp => sp.GetRequiredService<PermissionConfigurationProvider>());
 
 
-            builder.Services.TryAddSingleton<RolePermissionImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<RolePermissionImplementationConfigurationProvider>(sp => new RolePermissionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RolePermissionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IRolePermissionImplementationConfigurationProvider>(sp => sp.GetRequiredService<RolePermissionImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>(sp =>
             {
                 var domain = new RolePermissionConfigurationProvider(
                     sp.GetRequiredService<ILogger<RolePermissionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection);
                 domain.Register("RolePermission", sp.GetRequiredService<IRolePermissionImplementationConfigurationProvider>());
                 return domain;
             });
@@ -144,7 +144,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
                     sp.GetService<ILogger<DefaultOrgAccessProvider>>()));
 
-            builder.Services.TryAddSingleton<SystemRoleMappingConfigurationProvider>();
+            builder.Services.TryAddSingleton<SystemRoleMappingConfigurationProvider>(sp => new SystemRoleMappingConfigurationProvider(sp.GetRequiredService<ILogger<SystemRoleMappingConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ISystemRoleMappingConfigurationProvider>(sp => sp.GetRequiredService<SystemRoleMappingConfigurationProvider>());
 
             // Why the domain provider and not the implementation one: the domain row names which
@@ -154,7 +154,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             {
                 var domain = new RoleMappingConfigurationProvider(
                     sp.GetRequiredService<ILogger<RoleMappingConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection);
                 domain.Register("System", sp.GetRequiredService<ISystemRoleMappingConfigurationProvider>());
                 return domain;
             });

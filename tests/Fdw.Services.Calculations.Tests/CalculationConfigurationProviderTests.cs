@@ -43,8 +43,7 @@ public class CalculationConfigurationProviderTests
         var provider = new CalculationConfigurationProvider(
             NullLogger<CalculationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "calc");
+            "PlatformConfiguration");
 
         // Register the Formula typed provider exactly as DefaultCalculationServiceType.RegisterFactory does.
         var formulaProvider = new ImplementationConfigurationProviderBase<ICalculationTypedConfiguration>(

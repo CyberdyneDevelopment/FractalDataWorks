@@ -44,7 +44,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>();
+            builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>(sp => new LocalKeyAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<LocalKeyAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
                 sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
 

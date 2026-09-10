@@ -37,7 +37,7 @@ public sealed class ClaimMappedProvisionerType
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<ClaimMappedExternalIdentityProvisionerConfigurationProvider>();
+            builder.Services.TryAddSingleton<ClaimMappedExternalIdentityProvisionerConfigurationProvider>(sp => new ClaimMappedExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IClaimMappedExternalIdentityProvisionerConfigurationProvider>(sp => sp.GetRequiredService<ClaimMappedExternalIdentityProvisionerConfigurationProvider>());
 
             ExternalIdentityProvisionerServiceProvider.Register<IClaimMappedProvisionerFactory, ClaimMappedProvisionerFactory>(

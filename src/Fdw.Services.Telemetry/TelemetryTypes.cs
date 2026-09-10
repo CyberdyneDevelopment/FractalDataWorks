@@ -59,7 +59,7 @@ public partial class TelemetryTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ITelemetryConfigurationProvider>(sp =>
                 new TelemetryConfigurationProvider(
                     sp.GetService<ILogger<TelemetryConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), TelemetryTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<TelemetryConfigurationProvider>(
                 sp => (TelemetryConfigurationProvider)sp.GetRequiredService<ITelemetryConfigurationProvider>());
 

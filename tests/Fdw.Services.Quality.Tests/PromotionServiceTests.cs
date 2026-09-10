@@ -34,7 +34,7 @@ public sealed class PromotionServiceTests
         var lazyGateway = GatewayProviderFor(gatewayMock.Object);
         var environments = new EnvironmentConfigurationProvider(
             NullLogger<EnvironmentConfigurationProvider>.Instance,
-            lazyGateway);
+            lazyGateway, "PlatformConfiguration");
 
         var loggerFactory = LoggerFactory.Create(_ => { });
         return (new PromotionService(loggerFactory, environments), gatewayMock);

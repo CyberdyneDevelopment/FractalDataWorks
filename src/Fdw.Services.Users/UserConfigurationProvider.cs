@@ -20,10 +20,12 @@ public sealed class UserConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="UserConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
     public UserConfigurationProvider(
         ILogger<UserConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider)
-        : base(logger, gatewayProvider, "PlatformConfiguration", "usr", "Users")
+        IConfigurationGatewayProvider gatewayProvider,
+        string dataStoreName)
+        : base(logger, gatewayProvider, dataStoreName, "usr", "Users")
     {
     }
 }

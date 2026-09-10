@@ -85,35 +85,35 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // GetRequiredService and registered nowhere, so the flow provider could not be built -
             // it surfaced as "No service for type ImplementationConfigurationProviderBase`2[...]"
             // only once everything ahead of it in startup had been fixed.
-            builder.Services.TryAddSingleton<AuthenticationFlowImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<AuthenticationFlowImplementationConfigurationProvider>(sp => new AuthenticationFlowImplementationConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationFlowImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IAuthenticationFlowImplementationConfigurationProvider>(
                 sp => sp.GetRequiredService<AuthenticationFlowImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<AuthenticationFlowConfigurationProvider>(sp =>
             {
                 var domain = new AuthenticationFlowConfigurationProvider(
                     sp.GetRequiredService<ILogger<AuthenticationFlowConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection);
                 domain.Register("AuthenticationFlow", sp.GetRequiredService<IAuthenticationFlowImplementationConfigurationProvider>());
                 return domain;
             });
             builder.Services.TryAddSingleton<IAuthenticationFlowConfigurationProvider>(
                 sp => sp.GetRequiredService<AuthenticationFlowConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<AuthenticationFlowStepConfigurationProvider>();
+            builder.Services.TryAddSingleton<AuthenticationFlowStepConfigurationProvider>(sp => new AuthenticationFlowStepConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationFlowStepConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IAuthenticationFlowStepConfigurationProvider>(
                 sp => sp.GetRequiredService<AuthenticationFlowStepConfigurationProvider>());
 
             // What the foreign-token exchange needs. A caller arriving on another authority's token
             // is bound to a local user through ExternalIdentity rows, so the binding reads its own
             // container the way every other implementation provider does.
-            builder.Services.TryAddSingleton<ExternalIdentityImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<ExternalIdentityImplementationConfigurationProvider>(sp => new ExternalIdentityImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IExternalIdentityImplementationConfigurationProvider>(
                 sp => sp.GetRequiredService<ExternalIdentityImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<ExternalIdentityConfigurationProvider>(sp =>
             {
                 var domain = new ExternalIdentityConfigurationProvider(
                     sp.GetRequiredService<ILogger<ExternalIdentityConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection);
                 domain.Register("ExternalIdentity", sp.GetRequiredService<IExternalIdentityImplementationConfigurationProvider>());
                 return domain;
             });

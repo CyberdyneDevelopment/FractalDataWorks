@@ -48,8 +48,7 @@ public sealed class EscalationAggregateCompositionTests
         var provider = new EscalationConfigurationProvider(
             NullLogger<EscalationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "workflow");
+            "PlatformConfiguration");
 
         var result = await provider.Get(PolicyId, TestContext.Current.CancellationToken);
 

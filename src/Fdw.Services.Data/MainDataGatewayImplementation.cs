@@ -54,7 +54,7 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
 
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<MainDataGatewayConfigurationProvider>();
+            builder.Services.TryAddSingleton<MainDataGatewayConfigurationProvider>(sp => new MainDataGatewayConfigurationProvider(sp.GetRequiredService<ILogger<MainDataGatewayConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), DataGatewayServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IMainDataGatewayConfigurationProvider>(sp => sp.GetRequiredService<MainDataGatewayConfigurationProvider>());
 
 

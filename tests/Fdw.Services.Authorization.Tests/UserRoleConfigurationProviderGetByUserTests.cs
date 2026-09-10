@@ -48,7 +48,7 @@ public class UserRoleConfigurationProviderGetByUserTests
         return new UserRoleConfigurationProvider(
             NullLogger<UserRoleConfigurationProvider>.Instance,
             GatewayProviderFor(gateway.Object),
-            "PlatformConfiguration", "authz");
+            "PlatformConfiguration");
     }
 
     private static UserRoleImplementationConfiguration Assignment(string userId)

@@ -37,6 +37,11 @@ public partial class HostTypes : ServiceTypeCollectionBase<
     HostTypeBase<IHostService, IHostImplementationConfiguration, IHostFactory<IHostService, IHostImplementationConfiguration>>,
     IHostType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
     /// <summary>Orders this collection's options by where their middleware belongs.</summary>
     /// <remarks>
     /// The default body cycles options in registration order, which for a request pipeline is
@@ -66,7 +71,7 @@ public partial class HostTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<HostConfigurationProvider>(sp =>
                 new HostConfigurationProvider(
                     sp.GetService<ILogger<HostConfigurationProvider>>() ?? NullLogger<HostConfigurationProvider>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), HostTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IHostConfigurationProvider>(
                 sp => sp.GetRequiredService<HostConfigurationProvider>());
 

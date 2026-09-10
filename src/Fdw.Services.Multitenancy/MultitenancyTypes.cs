@@ -50,6 +50,11 @@ namespace Fdw.Services.Multitenancy;
     ServiceCategory = "Multitenancy")]
 public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyTypeBase<IMultitenancyFactory>, IMultitenancyType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+
 #pragma warning disable CA2255 // The 'ModuleInitializer' attribute should not be used in libraries
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void RegisterOverrides()
@@ -57,7 +62,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
         Configuration(SelectAndConfigureSingleOption);
         Registration(static (builder, _) =>
         {
-            builder.Services.TryAddSingleton<MultitenancyConfigurationProvider>();
+            builder.Services.TryAddSingleton<MultitenancyConfigurationProvider>(sp => new MultitenancyConfigurationProvider(sp.GetRequiredService<ILogger<MultitenancyConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MultitenancyTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IMultitenancyConfigurationProvider>(
                 sp => sp.GetRequiredService<MultitenancyConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);

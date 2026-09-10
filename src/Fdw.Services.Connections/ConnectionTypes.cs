@@ -125,7 +125,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection));
 
             builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(
                 sp => sp.GetRequiredService<ConnectionConfigurationProvider>());

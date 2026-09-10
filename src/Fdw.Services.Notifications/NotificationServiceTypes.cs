@@ -82,19 +82,19 @@ public partial class NotificationServiceTypes
 
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            builder.Services.TryAddSingleton<NotificationConfigurationProvider>();
+            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<INotificationConfigurationProvider>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<NotificationRuleImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<NotificationRuleImplementationConfigurationProvider>(sp => new NotificationRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<INotificationRuleImplementationConfigurationProvider>(sp => sp.GetRequiredService<NotificationRuleImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<NotificationRuleConfigurationProvider>(sp =>
             {
                 var domain = new NotificationRuleConfigurationProvider(
                     sp.GetRequiredService<ILogger<NotificationRuleConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection);
                 domain.Register("NotificationRule", sp.GetRequiredService<INotificationRuleImplementationConfigurationProvider>());
                 return domain;
             });

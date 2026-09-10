@@ -17,10 +17,12 @@ public sealed class MessagingConfigurationProvider
     /// <summary>Initializes a new instance of the <see cref="MessagingConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
     public MessagingConfigurationProvider(
         ILogger<MessagingConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider)
-        : base(logger, gatewayProvider, "PlatformConfiguration", "msg", "Messaging")
+        IConfigurationGatewayProvider gatewayProvider,
+        string dataStoreName)
+        : base(logger, gatewayProvider, dataStoreName, "msg", "Messaging")
     {
     }
 }

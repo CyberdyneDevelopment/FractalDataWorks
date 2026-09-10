@@ -45,7 +45,7 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<DataGatewayDomainConfigurationProvider>(sp =>
                 new DataGatewayDomainConfigurationProvider(
                     sp.GetRequiredService<ILogger<DataGatewayDomainConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), DataGatewayServiceTypes.ConfigurationConnection));
 
             builder.Services.TryAddSingleton<IDataGatewayConfigurationProvider>(
                 sp => sp.GetRequiredService<DataGatewayDomainConfigurationProvider>());

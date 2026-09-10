@@ -62,13 +62,13 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
 
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<OrchestrationNodeImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<OrchestrationNodeImplementationConfigurationProvider>(sp => new OrchestrationNodeImplementationConfigurationProvider(sp.GetRequiredService<ILogger<OrchestrationNodeImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IOrchestrationNodeImplementationConfigurationProvider>(sp => sp.GetRequiredService<OrchestrationNodeImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<OrchestrationNodeConfigurationProvider>(sp =>
             {
                 var domain = new OrchestrationNodeConfigurationProvider(
                     sp.GetRequiredService<ILogger<OrchestrationNodeConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection);
                 domain.Register("OrchestrationNode", sp.GetRequiredService<IOrchestrationNodeImplementationConfigurationProvider>());
                 return domain;
             });

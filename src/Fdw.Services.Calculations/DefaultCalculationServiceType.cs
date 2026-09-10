@@ -61,14 +61,14 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             builder.Services.AddDistributedMemoryCache();
 
-            builder.Services.TryAddSingleton<CalculationConfigurationProvider>();
+            builder.Services.TryAddSingleton<CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection));
 
             builder.Services.TryAddSingleton<ICalculationConfigurationProvider>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
-            builder.Services.TryAddSingleton<FormulaCalculationConfigurationProvider>();
+            builder.Services.TryAddSingleton<FormulaCalculationConfigurationProvider>(sp => new FormulaCalculationConfigurationProvider(sp.GetRequiredService<ILogger<FormulaCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IFormulaCalculationConfigurationProvider>(
                 sp => sp.GetRequiredService<FormulaCalculationConfigurationProvider>());
-            builder.Services.TryAddSingleton<WindowedCalculationConfigurationProvider>();
+            builder.Services.TryAddSingleton<WindowedCalculationConfigurationProvider>(sp => new WindowedCalculationConfigurationProvider(sp.GetRequiredService<ILogger<WindowedCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IWindowedCalculationConfigurationProvider>(
                 sp => sp.GetRequiredService<WindowedCalculationConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);

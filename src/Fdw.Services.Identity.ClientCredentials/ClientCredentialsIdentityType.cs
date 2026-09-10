@@ -55,7 +55,7 @@ public sealed class ClientCredentialsIdentityType
             // The typed body provider, so the header provider can compose the aggregate. Registration
             // only makes it resolvable; Initialization is where it is handed over, because the header
             // provider has to exist first.
-            builder.Services.TryAddSingleton<ClientCredentialsConfigurationProvider>();
+            builder.Services.TryAddSingleton<ClientCredentialsConfigurationProvider>(sp => new ClientCredentialsConfigurationProvider(sp.GetRequiredService<ILogger<ClientCredentialsConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), IdentityServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IClientCredentialsConfigurationProvider>(sp => sp.GetRequiredService<ClientCredentialsConfigurationProvider>());
 
             IdentityHttpClient.Register(builder.Services);

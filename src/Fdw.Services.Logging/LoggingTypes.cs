@@ -59,7 +59,7 @@ public partial class LoggingTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ILoggingConfigurationProvider>(sp =>
                 new LoggingConfigurationProvider(
                     sp.GetService<ILogger<LoggingConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), LoggingTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<LoggingConfigurationProvider>(
                 sp => (LoggingConfigurationProvider)sp.GetRequiredService<ILoggingConfigurationProvider>());
 
