@@ -20,6 +20,7 @@ using Fdw.Services.Connections.MsSql;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Commands;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Data.DataStores.SqlServer;
 
@@ -645,7 +646,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         }
 
         // DataStoreConfigurationProvider returns DataStoreConfiguration (general model), not MsSqlDataStoreConfiguration.
-        // Schema hash tracking requires IServiceConfigurationProvider<MsSqlDataStoreConfiguration>.
+        // Schema hash tracking requires IDomainConfigurationProvider<IDataStoreImplementationConfiguration>.
         // TODO(FDW-235): Restore schema hash tracking after the FDW-220/221 cache migration.
         _ = dataStoreResult.Value;
         _ = newSchemaHash;

@@ -79,7 +79,7 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataVaultConfiguration, IDataVaultImplementationConfiguration, DataVaultConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataVaultConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataVaultImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
 
             var declaredOptions = Options;
@@ -114,7 +114,7 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(DataVaultTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<DataVaultConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<IDataVaultImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

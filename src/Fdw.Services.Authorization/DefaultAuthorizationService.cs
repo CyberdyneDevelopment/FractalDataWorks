@@ -30,9 +30,9 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
     /// Initializes a new instance of the <see cref="DefaultAuthorizationService"/> class.
     /// </summary>
     public DefaultAuthorizationService(
-        IServiceConfigurationProvider<RoleConfiguration> roleProvider,
-        IServiceConfigurationProvider<PermissionConfiguration> permissionProvider,
-        IServiceConfigurationProvider<RolePermissionConfiguration> rolePermissionProvider,
+        IDomainConfigurationProvider<IRoleImplementationConfiguration> roleProvider,
+        IDomainConfigurationProvider<IPermissionImplementationConfiguration> permissionProvider,
+        IDomainConfigurationProvider<IRolePermissionImplementationConfiguration> rolePermissionProvider,
         ILogger<DefaultAuthorizationService>? logger,
         Lazy<ITenantContext>? tenantContext = null,
         Lazy<IOrgContext>? orgContext = null,

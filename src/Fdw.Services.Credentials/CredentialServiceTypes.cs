@@ -82,7 +82,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<CredentialServiceConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ICredentialServiceImplementationConfiguration>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
 
             var registered = collectOptions(builder, loggerFactory);
@@ -121,7 +121,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(CredentialServiceTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<CredentialServiceConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<ICredentialServiceImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

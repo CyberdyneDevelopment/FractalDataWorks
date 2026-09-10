@@ -87,7 +87,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IExternalIdentityProvisionerBindingImplementationConfiguration>>(sp =>
                 sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp =>
@@ -99,7 +99,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                 sp => (ExternalIdentityProvisionerConfigurationProvider)sp.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
             builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
@@ -128,7 +128,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                             stLogger,
                             nameof(ExternalIdentityProvisionerTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

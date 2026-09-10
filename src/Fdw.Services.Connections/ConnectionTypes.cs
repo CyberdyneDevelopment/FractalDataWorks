@@ -178,7 +178,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(ConnectionTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<ConnectionConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<IConnectionImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

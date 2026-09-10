@@ -23,9 +23,9 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 {
-    private readonly IRoleConfigurationProvider _roleProvider;
-    private readonly IPermissionConfigurationProvider _permissionProvider;
-    private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
+    private readonly RoleConfigurationProvider _roleProvider;
+    private readonly PermissionConfigurationProvider _permissionProvider;
+    private readonly RolePermissionConfigurationProvider _rolePermissionProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
     private readonly IOrgAccessProvider _orgAccessProvider;
     private readonly ILogger<EffectivePermissionResolver> _logger;
@@ -34,9 +34,9 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
     /// Initializes a new instance of <see cref="EffectivePermissionResolver"/>.
     /// </summary>
     public EffectivePermissionResolver(
-        IRoleConfigurationProvider roleProvider,
-        IPermissionConfigurationProvider permissionProvider,
-        IRolePermissionConfigurationProvider rolePermissionProvider,
+        RoleConfigurationProvider roleProvider,
+        PermissionConfigurationProvider permissionProvider,
+        RolePermissionConfigurationProvider rolePermissionProvider,
         UserRoleConfigurationProvider userRoleProvider,
         ILogger<EffectivePermissionResolver>? logger,
         IOrgAccessProvider? orgAccessProvider = null)

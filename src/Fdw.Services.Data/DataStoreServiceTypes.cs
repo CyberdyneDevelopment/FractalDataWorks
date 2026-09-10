@@ -76,7 +76,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     DataStoreTypes.ConfigurationConnection, "data"));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataStoreConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
 
             // Why: Child types (DataPath/DataContainer/DataContainerField) need their own providers so
@@ -150,7 +150,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     DataStoreTypes.ConfigurationConnection, "data"));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, IDataSetImplementationConfiguration, DataSetConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
 
             // Lineage reads containers that span domains and, in the transform schema, have no

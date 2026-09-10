@@ -36,7 +36,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
 
     private readonly Mock<IDataGateway> _mockGateway;
     private readonly Mock<INotificationServiceProvider> _mockNotificationProvider;
-    private readonly Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>> _mockRuleProvider;
+    private readonly Mock<IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>> _mockRuleProvider;
     private readonly Mock<INotificationService> _mockNotificationSvc;
 
     private static readonly NullLoggerFactory LoggerFactory = NullLoggerFactory.Instance;
@@ -45,7 +45,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
     {
         _mockGateway = new Mock<IDataGateway>();
         _mockNotificationProvider = new Mock<INotificationServiceProvider>();
-        _mockRuleProvider = new Mock<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
+        _mockRuleProvider = new Mock<IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>>();
         _mockNotificationSvc = new Mock<INotificationService>();
     }
 

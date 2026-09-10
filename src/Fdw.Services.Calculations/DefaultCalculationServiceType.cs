@@ -72,7 +72,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                     sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         CalculationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ICalculationEntityImplementationConfiguration>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
 
             RegisterImplementationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
@@ -92,7 +92,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
     {
         services.TryAddSingleton<ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>>(sp =>
             new ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>(
-                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>>(),
+                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "PlatformConfiguration",
                 "calc"));

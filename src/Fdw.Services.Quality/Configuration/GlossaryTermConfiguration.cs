@@ -14,8 +14,12 @@ namespace Fdw.Services.Quality.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Catalog",
     ServiceType = "GlossaryTerm")]
-public sealed partial class GlossaryTermConfiguration : IGenericConfiguration
+public sealed partial class GlossaryTermConfiguration : IGlossaryTermImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>
     /// Gets or sets the unique identifier for this term.

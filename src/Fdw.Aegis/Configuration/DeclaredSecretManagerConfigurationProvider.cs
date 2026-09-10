@@ -30,7 +30,7 @@ namespace Fdw.Aegis.Configuration;
 /// </para>
 /// </remarks>
 public sealed class DeclaredSecretManagerConfigurationProvider
-    : IServiceConfigurationProvider<SecretManagerConfiguration>,
+    : IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>,
       IServiceConfigurationProvider,
       ISecretManagerConfigurationProvider
 {

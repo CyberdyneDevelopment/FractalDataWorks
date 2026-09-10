@@ -82,7 +82,7 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                 sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PipelineConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
 
             // Published under the closed generic as well as the domain interface: a consumer asking

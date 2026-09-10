@@ -101,7 +101,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                 sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SchedulerConfiguration, ISchedulerImplementationConfiguration, SchedulerConfigurationCommand>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
 
             builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
@@ -111,7 +111,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                         SchedulerTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ScheduleConfiguration, IScheduleImplementationConfiguration, ScheduleConfigurationCommand>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IScheduleImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
@@ -140,7 +140,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(SchedulerTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<SchedulerConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<ISchedulerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

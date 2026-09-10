@@ -110,14 +110,14 @@ public sealed class RolePermissionResolverTests
     [Fact]
     public async Task Resolve_fails_when_the_role_catalogue_cannot_be_read()
     {
-        var roles = MockCatalog<IRoleConfigurationProvider, RoleConfiguration>(Roles);
+        var roles = MockCatalog<RoleConfigurationProvider, RoleConfiguration>(Roles);
         roles.Setup(p => p.Get(It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<RoleConfiguration>>.Failure(new GenericMessage("the catalogue is unreachable")));
 
         var resolver = new RolePermissionResolver(
             roles.Object,
-            MockCatalog<IPermissionConfigurationProvider, PermissionConfiguration>(Permissions).Object,
-            MockCatalog<IRolePermissionConfigurationProvider, RolePermissionConfiguration>(RolePermissions).Object,
+            MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(Permissions).Object,
+            MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(RolePermissions).Object,
             NullLogger<RolePermissionResolver>.Instance);
 
         var result = await resolver.Resolve(["ServicePipelineRunner"], TestContext.Current.CancellationToken);
@@ -130,20 +130,20 @@ public sealed class RolePermissionResolverTests
     private static RolePermissionResolver Build(
         IReadOnlyList<RolePermissionConfiguration>? rolePermissions = null)
         => new RolePermissionResolver(
-            MockCatalog<IRoleConfigurationProvider, RoleConfiguration>(Roles).Object,
-            MockCatalog<IPermissionConfigurationProvider, PermissionConfiguration>(Permissions).Object,
-            MockCatalog<IRolePermissionConfigurationProvider, RolePermissionConfiguration>(
+            MockCatalog<RoleConfigurationProvider, RoleConfiguration>(Roles).Object,
+            MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(Permissions).Object,
+            MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(
                 rolePermissions ?? RolePermissions).Object,
             NullLogger<RolePermissionResolver>.Instance);
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>> MockProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>> MockProvider<TConfig, TCommand>(
         IEnumerable<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
@@ -151,7 +151,7 @@ public sealed class RolePermissionResolverTests
         return mock;
     }
     private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
-        where TProvider : class, IServiceConfigurationProvider<TConfig>
+        where TProvider : class, IDomainConfigurationProvider<IImplementationConfiguration>
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
     {
         var mock = new Mock<TProvider>();

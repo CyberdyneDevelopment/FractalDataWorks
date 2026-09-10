@@ -94,7 +94,7 @@ public partial class LoggingTypes : ServiceTypeCollectionBase<
                         stLogger,
                         nameof(LoggingTypes),
                         provider.GetType().Name,
-                        typeof(IServiceConfigurationProvider<LoggingConfiguration>).ToString());
+                        typeof(IDomainConfigurationProvider<ILoggingImplementationConfiguration>).ToString());
                 }
 
                 return provider;

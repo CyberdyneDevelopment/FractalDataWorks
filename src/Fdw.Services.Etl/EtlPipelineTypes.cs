@@ -155,7 +155,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                         EtlPipelineTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EtlPipelineConfiguration, IEtlPipelineImplementationConfiguration, EtlPipelineConfigurationCommand>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IEtlPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
 
             var declaredOptions = Options;
@@ -190,7 +190,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(EtlPipelineTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<PipelineConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<IPipelineImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

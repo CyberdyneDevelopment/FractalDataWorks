@@ -55,7 +55,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                         OperationsServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, IEscalationPolicyImplementationConfiguration, EscalationPolicyConfigurationCommand>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IEscalationPolicyImplementationConfiguration>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
 
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
@@ -63,7 +63,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var lf = sp.GetRequiredService<ILoggerFactory>();
                 var gatewayProvider = sp.GetRequiredService<IDataGatewayProvider>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
-                var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
+                var ruleProvider = sp.GetService<IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>>();
                 return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
 

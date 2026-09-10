@@ -17,10 +17,10 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </summary>
 public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSchedulesRequest, ScheduleSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<ScheduleConfiguration> _provider;
+    private readonly IDomainConfigurationProvider<IScheduleImplementationConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListSchedulesEndpointBase(ILogger<ListSchedulesEndpointBase> logger, IServiceConfigurationProvider<ScheduleConfiguration> provider) : base(logger)
+    protected ListSchedulesEndpointBase(ILogger<ListSchedulesEndpointBase> logger, IDomainConfigurationProvider<IScheduleImplementationConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }
