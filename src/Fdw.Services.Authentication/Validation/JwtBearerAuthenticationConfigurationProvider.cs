@@ -97,16 +97,4 @@ public sealed class JwtBearerAuthenticationConfigurationProvider
         Guid domainId, CancellationToken cancellationToken)
         => Delete(domainId, cancellationToken);
 
-    private IGenericResult<IJwtBearerAuthenticationConfiguration> Narrow(
-        IGenericResult<IAuthenticationServiceImplementationConfiguration> result)
-    {
-        if (!result.IsSuccess || result.Value is null)
-            return result.ToNewResult<IJwtBearerAuthenticationConfiguration>();
-
-        return result.Value is IJwtBearerAuthenticationConfiguration typed
-            ? GenericResult<IJwtBearerAuthenticationConfiguration>.Success(typed)
-            : GenericResult<IJwtBearerAuthenticationConfiguration>.Failure(
-                AuthenticationValidationLog.ImplementationKindMismatch(
-                    _log, nameof(JwtBearerAuthenticationConfiguration), result.Value.GetType().Name));
-    }
 }

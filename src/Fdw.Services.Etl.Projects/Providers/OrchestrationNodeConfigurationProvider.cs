@@ -111,62 +111,6 @@ public class OrchestrationNodeConfigurationProvider
         return GenericResult<OrchestrationNodeConfiguration>.Success(root);
     }
 
-    /// <inheritdoc/>
-    public async Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetRoots(
-        CancellationToken cancellationToken = default)
-    {
-        var allResult = await Get(cancellationToken).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
-            return allResult;
 
-        var roots = (allResult.Value ?? [])
-            .Where(n => n.ParentId is null)
-            .OrderBy(n => n.Ordinal)
-            .ToList();
 
-        OrchestrationNodeConfigurationLog.NodesLoaded(_logger, roots.Count);
-        return GenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>.Success(roots);
-    }
-
-    /// <inheritdoc/>
-    public async Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> GetChildren(
-        Guid parentId,
-        CancellationToken cancellationToken = default)
-    {
-        var allResult = await Get(cancellationToken).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
-            return allResult;
-
-        var children = (allResult.Value ?? [])
-            .Where(n => n.ParentId == parentId)
-            .OrderBy(n => n.Ordinal)
-            .ToList();
-
-        return GenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>.Success(children);
-    }
-
-    /// <summary>
-    /// Recursively populates the Children collection of each node from the flat list, bounded by depth.
-    /// </summary>
-    private static void BuildSubtree(
-        OrchestrationNodeConfiguration node,
-        IReadOnlyList<OrchestrationNodeConfiguration> allNodes,
-        int depth,
-        int currentDepth)
-    {
-        if (currentDepth >= depth)
-            return;
-
-        var children = allNodes
-            .Where(n => n.ParentId == node.Id)
-            .OrderBy(n => n.Ordinal)
-            .ToList();
-
-        node.Children = children;
-
-        foreach (var child in children)
-        {
-            BuildSubtree(child, allNodes, depth, currentDepth + 1);
-        }
-    }
 }

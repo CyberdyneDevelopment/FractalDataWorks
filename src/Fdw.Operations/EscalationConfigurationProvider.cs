@@ -36,94 +36,9 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
     }
 
 
-    /// <summary>Gets all escalation level configurations.</summary>
-    public async Task<IReadOnlyList<EscalationLevelConfiguration>> GetAllLevels(CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommandBuilder<EscalationLevelConfiguration>(
-                DataStoreName, PathName, "EscalationLevel")
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .OrderBy("Level")
-            .WithCaching()
-            .Build();
 
-        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
-            command, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
-    }
 
-    /// <summary>Gets all escalation level recipient configurations.</summary>
-    public async Task<IReadOnlyList<EscalationLevelRecipientConfiguration>> GetAllRecipients(CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommandBuilder<EscalationLevelRecipientConfiguration>(
-                DataStoreName, PathName, "EscalationLevelRecipient")
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .WithCaching()
-            .Build();
 
-        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
-            command, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.ToList() ?? [] : [];
-    }
 
-    /// <summary>Gets an escalation level by ID.</summary>
-    public async Task<EscalationLevelConfiguration?> GetLevel(Guid id, CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommandBuilder<EscalationLevelConfiguration>(
-                DataStoreName, PathName, "EscalationLevel")
-            .Where("Id", id)
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .Build();
 
-        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
-            command, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
-    }
-
-    /// <summary>Gets an escalation level by name.</summary>
-    public async Task<EscalationLevelConfiguration?> GetLevel(string name, CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommandBuilder<EscalationLevelConfiguration>(
-                DataStoreName, PathName, "EscalationLevel")
-            .Where("Name", name)
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .Build();
-
-        var result = await Execute<IEnumerable<EscalationLevelConfiguration>>(
-            command, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
-    }
-
-    /// <summary>Gets an escalation level recipient by ID.</summary>
-    public async Task<EscalationLevelRecipientConfiguration?> GetRecipient(Guid id, CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommandBuilder<EscalationLevelRecipientConfiguration>(
-                DataStoreName, PathName, "EscalationLevelRecipient")
-            .Where("Id", id)
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .Build();
-
-        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
-            command, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
-    }
-
-    /// <summary>Gets an escalation level recipient by name.</summary>
-    public async Task<EscalationLevelRecipientConfiguration?> GetRecipient(string name, CancellationToken cancellationToken = default)
-    {
-        var command = new QueryCommandBuilder<EscalationLevelRecipientConfiguration>(
-                DataStoreName, PathName, "EscalationLevelRecipient")
-            .Where("Name", name)
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .Build();
-
-        var result = await Execute<IEnumerable<EscalationLevelRecipientConfiguration>>(
-            command, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess ? result.Value?.FirstOrDefault() : null;
-    }
 }

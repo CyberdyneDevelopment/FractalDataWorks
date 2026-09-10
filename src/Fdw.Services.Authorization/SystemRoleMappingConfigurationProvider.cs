@@ -19,20 +19,4 @@ public class SystemRoleMappingConfigurationProvider
     : ImplementationConfigurationProviderBase<IRoleMappingImplementationConfiguration>
 {
 
-    /// <summary>Initializes a new instance of the <see cref="SystemRoleMappingConfigurationProvider"/> class.</summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the store these rows live on.</param>
-    /// <param name="dataStoreName">The store the domain's rows live in.</param>
-    /// <param name="pathName">The path the rows live under.</param>
-    public SystemRoleMappingConfigurationProvider(
-        ILogger<ImplementationConfigurationProviderBase<IRoleMappingImplementationConfiguration>>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName)
-        : base(logger ?? NullLogger<ImplementationConfigurationProviderBase<IRoleMappingImplementationConfiguration>>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName, "SystemRoleMapping")
-    {
-    }
 }

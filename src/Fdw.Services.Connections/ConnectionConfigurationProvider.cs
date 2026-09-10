@@ -10,23 +10,6 @@ public sealed class ConnectionConfigurationProvider
     : DomainConfigurationProviderBase<IConnectionImplementationConfiguration>,
       IConnectionConfigurationProvider
 {
-    /// <inheritdoc/>
-    public string? Description { get; set; }
-
-    /// <inheritdoc/>
-    public string? Environment { get; set; }
-
-    /// <inheritdoc/>
-    public bool HealthCheckEnabled { get; set; }
-
-    /// <inheritdoc/>
-    public bool HealthCheckOnStartup { get; set; }
-
-    /// <inheritdoc/>
-    public int? HealthCheckIntervalSeconds { get; set; }
-
-    /// <inheritdoc/>
-    public bool DiscoveryEnabled { get; set; } = true;
 
     /// <summary>Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

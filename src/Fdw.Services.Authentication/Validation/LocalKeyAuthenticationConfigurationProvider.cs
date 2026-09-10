@@ -97,16 +97,4 @@ public sealed class LocalKeyAuthenticationConfigurationProvider
         Guid domainId, CancellationToken cancellationToken)
         => Delete(domainId, cancellationToken);
 
-    private IGenericResult<ILocalKeyAuthenticationConfiguration> Narrow(
-        IGenericResult<IAuthenticationServiceImplementationConfiguration> result)
-    {
-        if (!result.IsSuccess || result.Value is null)
-            return result.ToNewResult<ILocalKeyAuthenticationConfiguration>();
-
-        return result.Value is ILocalKeyAuthenticationConfiguration typed
-            ? GenericResult<ILocalKeyAuthenticationConfiguration>.Success(typed)
-            : GenericResult<ILocalKeyAuthenticationConfiguration>.Failure(
-                AuthenticationValidationLog.ImplementationKindMismatch(
-                    _log, nameof(LocalKeyAuthenticationConfiguration), result.Value.GetType().Name));
-    }
 }

@@ -49,19 +49,4 @@ public sealed class MessagingConfigurationProvider
     // reaching for one it cannot see.
     private readonly ILogger _log;
 
-    /// <inheritdoc />
-    public async Task<IGenericResult<IMessagingConfiguration>> GetHeader(
-        string name, CancellationToken cancellationToken = default)
-    {
-        var header = await GetByName(name, null, cancellationToken).ConfigureAwait(false);
-        if (!header.IsSuccess)
-            return header.ToNewResult<IMessagingConfiguration>();
-
-        // Same split as the callers': a successful read that found no row is not a failed read, and
-        // converting it as one throws instead of reporting which row is missing.
-        return header.Value is not null
-            ? GenericResult<IMessagingConfiguration>.Success(header.Value)
-            : GenericResult<IMessagingConfiguration>.Failure(
-                MessagingLog.LocationNotConfigured(_log, $"no Messaging row named '{name}' exists"));
-    }
 }

@@ -59,46 +59,6 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         _containerProvider = containerProvider ?? throw new ArgumentNullException(nameof(containerProvider));
     }
 
-    /// <summary>
-    /// Adds a new container to the specified path within the named DataStore.
-    /// Enforces store-exists, path-exists, and no-duplicate-container-name invariants before persisting.
-    /// </summary>
-    public async Task<IGenericResult<DataContainerConfiguration>> AddContainer(
-        string storeName,
-        string pathName,
-        DataContainerConfiguration container,
-        CancellationToken ct = default)
-    {
-        var storeResult = await Get(storeName, ct).ConfigureAwait(false);
-        if (!storeResult.IsSuccess || storeResult.Value is null)
-        {
-            return GenericResult<DataContainerConfiguration>.Failure(
-                DataStoreConfigurationProviderLog.StoreNotFoundForAddContainer(_logger, storeName));
-        }
-
-        var store = storeResult.Value;
-        var path = store.Paths.FirstOrDefault(p => string.Equals(p.Name, pathName, StringComparison.Ordinal));
-        if (path is null)
-        {
-            return GenericResult<DataContainerConfiguration>.Failure(
-                DataStoreConfigurationProviderLog.PathNotFoundForAddContainer(_logger, pathName, storeName));
-        }
-
-        if (path.Containers.Any(c => string.Equals(c.Name, container.Name, StringComparison.Ordinal)))
-        {
-            return GenericResult<DataContainerConfiguration>.Failure(
-                DataStoreConfigurationProviderLog.ContainerAlreadyExists(_logger, container.Name, pathName, storeName));
-        }
-
-        container.DataPathId = path.Id;
-
-        var saveResult = await _containerProvider.Save(container, ct).ConfigureAwait(false);
-        if (saveResult.IsFailure)
-            return saveResult.ToNewResult<DataContainerConfiguration>();
-
-        DataStoreConfigurationProviderLog.ContainerAdded(_logger, container.Name, pathName, storeName);
-        return GenericResult<DataContainerConfiguration>.Success(container);
-    }
     /// <inheritdoc />
     public override async Task<IGenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>> Get(CancellationToken ct = default)
     {

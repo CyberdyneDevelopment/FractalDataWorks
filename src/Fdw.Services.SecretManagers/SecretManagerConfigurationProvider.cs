@@ -55,12 +55,4 @@ public class SecretManagerConfigurationProvider
     {
         _logger = logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
     }
-    /// <summary>
-    /// Loads the parent header row without dispatching to a typed provider. Use for management
-    /// flows (Delete, exists-check) that don't need the typed body and shouldn't fail if no
-    /// typed provider is registered for the header's Implementation (e.g. stale or
-    /// plugin-removed types).
-    /// </summary>
-    public Task<IGenericResult<SecretManagerConfiguration>> GetHeader(string name, CancellationToken ct = default)
-        => GetByName(name, null, ct);
 }

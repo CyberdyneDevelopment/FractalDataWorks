@@ -44,30 +44,4 @@ public class UserPreferenceConfigurationProvider
         _logger = logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance;
     }
 
-    /// <summary>
-    /// Gets the preferences for the specified user (returns null when none exist yet).
-    /// </summary>
-    public virtual async Task<IGenericResult<UserPreferencesConfiguration?>> GetPreferences(
-        Guid userId, CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.LoadPreferencesTrace(_logger, userId);
-
-        var command = new QueryCommandBuilder<UserPreferencesConfiguration>(
-                DataStoreName, PathName, "UserPreferences")
-            .Where(nameof(UserPreferencesConfiguration.UserId), userId)
-            .Where(nameof(UserPreferencesConfiguration.IsCurrent), true)
-            .Where(nameof(UserPreferencesConfiguration.IsDeleted), false)
-            .Build();
-
-        var result = await Execute<IEnumerable<UserPreferencesConfiguration>>(command, cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            UserConfigurationProviderLog.LoadPreferencesFailed(_logger, userId);
-            return result.Messages.Any()
-                ? result.ToNewResult<UserPreferencesConfiguration?>()
-                : GenericResult<UserPreferencesConfiguration?>.Failure(UserConfigurationProviderLog.LoadPreferencesFailed(_logger, userId));
-        }
-
-        return GenericResult<UserPreferencesConfiguration?>.Success(result.Value?.FirstOrDefault());
-    }
 }

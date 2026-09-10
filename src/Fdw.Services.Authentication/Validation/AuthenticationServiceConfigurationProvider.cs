@@ -47,25 +47,5 @@ public class AuthenticationServiceConfigurationProvider
     {
     }
 
-    /// <summary>Reads the domain row for a named authentication service, without dispatching.</summary>
-    /// <param name="name">The declared service name.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <remarks>
-    /// The scheme selector needs the issuer and the kind, both of which are on the domain row; it
-    /// does not need what the kind uses to check a signature.
-    /// </remarks>
-    public Task<IGenericResult<AuthenticationServiceConfiguration>> GetHeader(
-        string name,
-        CancellationToken cancellationToken = default)
-        => GetDomainByName(name, cancellationToken);
 
-    /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>> GetHeaders(
-        CancellationToken cancellationToken = default)
-    {
-        var rows = await Get(cancellationToken).ConfigureAwait(false);
-        return rows.IsSuccess && rows.Value is not null
-            ? GenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>.Success(rows.Value)
-            : rows.ToNewResult<IReadOnlyList<IAuthenticationServiceConfiguration>>();
-    }
 }
