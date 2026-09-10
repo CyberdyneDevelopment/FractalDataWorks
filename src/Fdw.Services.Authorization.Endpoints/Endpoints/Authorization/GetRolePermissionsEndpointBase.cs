@@ -16,7 +16,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -26,10 +26,10 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
-    protected GetRolePermissionsEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider, ITenantContext? tenantContext = null)
+    protected GetRolePermissionsEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider, ITenantContext? tenantContext = null)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
         _tenantContext = tenantContext;
     }
 
@@ -37,7 +37,7 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -64,16 +64,16 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
         AuthorizationEndpointLog.GettingRolePermissions(EndpointLogger, req.Name);
 
         var role = Guid.TryParse(req.Name, out var roleId)
-            ? await _roleProvider.GetRole(roleId, ct).ConfigureAwait(false)
-            : await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
+            ? await _authorizationProvider.GetRole(roleId, ct).ConfigureAwait(false)
+            : await _authorizationProvider.GetRole(req.Name, ct).ConfigureAwait(false);
         if (role is null)
         {
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
             return;
         }
 
-        var rolePermissions = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
-        var permissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
+        var rolePermissions = await _authorizationProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
+        var permissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
 
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";

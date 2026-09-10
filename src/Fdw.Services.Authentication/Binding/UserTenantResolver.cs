@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
-using Fdw.Services.Configuration;
+using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Fdw.Services.Users.Commands;
 using Microsoft.Extensions.Logging;
@@ -18,14 +18,14 @@ namespace Fdw.Services.Authentication.Binding;
 /// </summary>
 public sealed class UserTenantResolver : ITenantResolver
 {
-    private readonly ImplementationConfigurationProviderBase<IUserImplementationConfiguration> _users;
+    private readonly IUserConfigurationProvider _users;
     private readonly ILogger<UserTenantResolver> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserTenantResolver"/> class.</summary>
     /// <param name="users">Reads user records.</param>
     /// <param name="logger">The logger.</param>
     public UserTenantResolver(
-        ImplementationConfigurationProviderBase<IUserImplementationConfiguration> users,
+        IUserConfigurationProvider users,
         ILogger<UserTenantResolver>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));

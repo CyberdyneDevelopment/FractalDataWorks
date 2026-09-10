@@ -14,7 +14,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
 {
     /// <summary>Initializes a new instance of the <see cref="DeleteRoleEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -22,7 +22,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="DeleteRoleEndpointBase"/> class.</summary>
-    protected DeleteRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
+    protected DeleteRoleEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider)
     {
         EndpointLogger = logger;
         _roleProvider = roleProvider;
@@ -32,7 +32,7 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IRoleConfigurationProvider RoleProvider => _roleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:delete".
@@ -56,9 +56,17 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
     public override async Task HandleAsync(GetRoleRequest req, CancellationToken ct)
     {
         
-        var existing = await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
+        var existing = await _roleProvider.Get(req.Name, ct).ConfigureAwait(false);
 
-        if (existing is null)
+        // A read that FAILED and a role that is genuinely absent are opposite facts; reporting the
+        // first as 404 tells an administrator the role is gone when the store could not answer.
+        if (!existing.IsSuccess)
+        {
+            ThrowError(existing.CurrentMessage ?? "Failed to read role", 500);
+            return;
+        }
+
+        if (existing.Value is null)
         {
             HttpContext.Response.StatusCode = 404;
             HttpContext.Response.ContentType = "application/json";
@@ -66,9 +74,9 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
             return;
         }
 
-        OnDeletingRole(req.Name, existing.Id);
+        OnDeletingRole(req.Name, existing.Value.Id);
 
-        var result = await _roleProvider.Delete(existing.Id, ct).ConfigureAwait(false);
+        var result = await _roleProvider.Delete(existing.Value.Id, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             ThrowError(result.CurrentMessage ?? "Failed to delete role", 500);
