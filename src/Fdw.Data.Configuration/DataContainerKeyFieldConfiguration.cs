@@ -13,12 +13,8 @@ namespace Fdw.Services.Connections;
 /// </summary>
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataContainerKeyField")]
-public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration, IDataContainerKeyFieldImplementationConfiguration
+public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
 
     /// <inheritdoc />
     public Guid Id { get; set; }

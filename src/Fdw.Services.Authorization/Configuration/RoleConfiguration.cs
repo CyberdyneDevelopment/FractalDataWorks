@@ -27,12 +27,8 @@ namespace Fdw.Services.Authorization.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Role")]
-public partial class RoleConfiguration : IGenericConfiguration, IRoleImplementationConfiguration
+public partial class RoleConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
     /// <inheritdoc />
     public Guid Id { get; set; } = Guid.CreateVersion7();
 

@@ -14,12 +14,8 @@ namespace Fdw.Services.Quality.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Catalog",
     ServiceType = "Annotation")]
-public sealed partial class DataSetAnnotationConfiguration : IGenericConfiguration, IDataSetAnnotationImplementationConfiguration
+public sealed partial class DataSetAnnotationConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
 
     /// <summary>
     /// Gets or sets the display name for this annotation.

@@ -23,12 +23,8 @@ namespace Fdw.Services.Dataverses;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "SavedView")]
-public partial class SavedViewConfiguration : IGenericConfiguration, ISavedViewImplementationConfiguration
+public partial class SavedViewConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
     /// <summary>Gets or sets the durable logical identity.</summary>
     public Guid Id { get; set; }
 

@@ -20,6 +20,9 @@ public class LoggingConfigurationProvider
     : ImplementationConfigurationProviderBase<LoggingConfiguration, ILoggingImplementationConfiguration, LoggingConfigurationCommand>,
       ILoggingConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Initializes a new instance of the <see cref="LoggingConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>

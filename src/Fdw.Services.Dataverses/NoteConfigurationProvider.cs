@@ -12,6 +12,9 @@ namespace Fdw.Services.Dataverses;
 public class NoteConfigurationProvider
     : ImplementationConfigurationProviderBase<NoteConfiguration, INoteImplementationConfiguration, NoteConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Registers this provider and the base it is resolved through.</summary>
     /// <param name="services">The service collection to register into.</param>

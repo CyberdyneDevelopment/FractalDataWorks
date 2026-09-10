@@ -21,12 +21,8 @@ namespace Fdw.Services.Authorization.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "RolePermission")]
-public partial class RolePermissionConfiguration : IGenericConfiguration, IRolePermissionImplementationConfiguration
+public partial class RolePermissionConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the unique identifier for this role-permission assignment.
     /// </summary>

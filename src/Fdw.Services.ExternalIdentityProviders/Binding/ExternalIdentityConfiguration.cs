@@ -25,12 +25,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentity")]
-public partial class ExternalIdentityConfiguration : IGenericConfiguration, IExternalIdentityImplementationConfiguration
+public partial class ExternalIdentityConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
     /// <inheritdoc />
     public Guid Id { get; set; }
 

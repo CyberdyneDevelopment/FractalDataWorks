@@ -17,15 +17,8 @@ namespace Fdw.Services.Settings.Configuration;
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Settings",
     ServiceType = "TenantSetting")]
-public sealed partial class TenantSettingConfiguration : IGenericConfiguration, ITenantSettingImplementationConfiguration
+public sealed partial class TenantSettingConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the name, set by the domain provider from the domain row.</summary>
-    public string Name { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets the unique identifier for this tenant setting.
     /// </summary>

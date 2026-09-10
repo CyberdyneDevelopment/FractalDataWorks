@@ -21,12 +21,8 @@ namespace Fdw.Services.Connections;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataContainerKey")]
-public sealed partial class DataContainerKeyConfiguration : IGenericConfiguration, IDataContainerKeyImplementationConfiguration
+public sealed partial class DataContainerKeyConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
 
     /// <summary>Durable logical identity of this key.</summary>
     public Guid Id { get; set; }

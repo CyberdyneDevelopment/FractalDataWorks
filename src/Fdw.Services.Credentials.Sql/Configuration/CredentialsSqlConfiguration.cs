@@ -15,7 +15,7 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "CredentialStore", ServiceType = "Sql")]
-public sealed partial class CredentialsSqlConfiguration : ICredentialStoreImplementationConfiguration, ICredentialsSqlImplementationConfiguration
+public sealed partial class CredentialsSqlConfiguration : ICredentialStoreImplementationConfiguration
 {
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>

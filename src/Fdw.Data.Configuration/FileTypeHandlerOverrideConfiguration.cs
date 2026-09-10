@@ -25,12 +25,8 @@ namespace Fdw.Services.Connections;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataStore", ServiceType = "FileTypeHandlerOverride")]
-public partial class FileTypeHandlerOverrideConfiguration : IGenericConfiguration, IFileTypeHandlerOverrideImplementationConfiguration
+public partial class FileTypeHandlerOverrideConfiguration : IGenericConfiguration
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="FileTypeHandlerOverrideConfiguration"/> class.
     /// </summary>

@@ -28,15 +28,8 @@ namespace Fdw.Services.Notifications.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Notification")]
-public partial class NotificationRuleConfiguration : ConfigurationBase<NotificationRuleConfiguration>, INotificationRuleImplementationConfiguration
+public partial class NotificationRuleConfiguration : ConfigurationBase<NotificationRuleConfiguration>
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the name, set by the domain provider from the domain row.</summary>
-    public string Name { get; set; } = string.Empty;
-
 
     /// <inheritdoc />
     public override string ServiceType => "NotificationRule";
