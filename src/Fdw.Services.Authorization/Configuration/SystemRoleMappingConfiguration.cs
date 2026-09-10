@@ -41,7 +41,7 @@ public sealed partial class SystemRoleMappingConfiguration : IRoleMappingImpleme
     // fact a second time, by hand, and is what let configurations declare a discriminator they had
     // no claim to.
 
-    /// <summary>Gets or sets the foreign key to the owning <see cref="RoleMappingConfiguration"/> row.</summary>
+    /// <summary>Gets or sets the foreign key to the owning <see cref="IRoleMappingImplementationConfiguration"/> row.</summary>
     public Guid RoleMappingId { get; set; }
 
     /// <summary>Gets or sets the role name that grants administrator authority.</summary>

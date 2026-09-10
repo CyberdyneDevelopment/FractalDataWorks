@@ -20,6 +20,8 @@ namespace Fdw.Operations.Escalation;
 /// </summary>
 public sealed class EscalationService : IEscalationService
 {
+    private const string EscalationPolicyDomain = "EscalationPolicy";
+
     private readonly EscalationConfigurationProvider _provider;
     private readonly ILogger _logger;
 
@@ -92,7 +94,7 @@ public sealed class EscalationService : IEscalationService
         => GetPolicyMatching(c => c.ScheduleId == scheduleId, cancellationToken);
 
     private async Task<IGenericResult<IEscalationPolicy?>> GetPolicyMatching(
-        Func<EscalationPolicyImplementationConfiguration, bool> predicate,
+        Func<IEscalationPolicyImplementationConfiguration, bool> predicate,
         CancellationToken cancellationToken)
     {
         var headers = await _provider.Get(cancellationToken).ConfigureAwait(false);
@@ -122,13 +124,23 @@ public sealed class EscalationService : IEscalationService
 
         OperationsLog.EscalationCreatingPolicy(_logger, policy.Name);
 
-        var result = await _provider.Save(BuildConfig(policy, id: null), cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess || result.Value is null)
-            return GenericResult<IEscalationPolicy>.Failure(
-                OperationsLog.EscalationPersistFailed(_logger, result.CurrentMessage ?? "Failed to create policy"));
+        var saved = await _provider
+            .Save(BuildConfig(policy, id: null), EscalationPolicyDomain, EscalationPolicyDomain, policy.Name, cancellationToken)
+            .ConfigureAwait(false);
+        if (!saved.IsSuccess)
+            return saved.ToNewResult<IEscalationPolicy>();
 
-        OperationsLog.EscalationPolicyCreated(_logger, result.Value.Id, policy.Name);
-        return GenericResult<IEscalationPolicy>.Success(new EscalationPolicyRecord(result.Value));
+        // Save writes the domain row and the implementation together and hands back neither: the
+        // domain row's id is minted inside it. Read it back by the name it was written under.
+        var written = await _provider.Get(policy.Name, cancellationToken).ConfigureAwait(false);
+        if (!written.IsSuccess)
+            return written.ToNewResult<IEscalationPolicy>();
+        if (written.Value is null)
+            return GenericResult<IEscalationPolicy>.Failure(
+                OperationsLog.EscalationPersistFailed(_logger, "the policy is not readable by the name it was written under"));
+
+        OperationsLog.EscalationPolicyCreated(_logger, written.Value.Id, policy.Name);
+        return GenericResult<IEscalationPolicy>.Success(new EscalationPolicyRecord(written.Value));
     }
 
     /// <inheritdoc />
@@ -139,13 +151,21 @@ public sealed class EscalationService : IEscalationService
     {
         OperationsLog.EscalationUpdatingPolicy(_logger, policyId);
 
-        var saveResult = await _provider.Save(BuildConfig(policy, id: policyId), cancellationToken).ConfigureAwait(false);
-        if (!saveResult.IsSuccess || saveResult.Value is null)
+        var saveResult = await _provider
+            .Save(BuildConfig(policy, id: policyId), EscalationPolicyDomain, EscalationPolicyDomain, policy.Name, cancellationToken)
+            .ConfigureAwait(false);
+        if (!saveResult.IsSuccess)
+            return saveResult.ToNewResult<IEscalationPolicy>();
+
+        var updated = await _provider.Get(policy.Name, cancellationToken).ConfigureAwait(false);
+        if (!updated.IsSuccess)
+            return updated.ToNewResult<IEscalationPolicy>();
+        if (updated.Value is null)
             return GenericResult<IEscalationPolicy>.Failure(
-                OperationsLog.EscalationPersistFailed(_logger, saveResult.CurrentMessage ?? "Failed to insert updated policy version"));
+                OperationsLog.EscalationPersistFailed(_logger, "the policy is not readable by the name it was written under"));
 
         OperationsLog.EscalationPolicyUpdated(_logger, policyId);
-        return GenericResult<IEscalationPolicy>.Success(new EscalationPolicyRecord(saveResult.Value));
+        return GenericResult<IEscalationPolicy>.Success(new EscalationPolicyRecord(updated.Value));
     }
 
     /// <inheritdoc />

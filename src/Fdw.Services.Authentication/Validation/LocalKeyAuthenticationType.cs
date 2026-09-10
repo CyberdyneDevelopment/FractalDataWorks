@@ -44,12 +44,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>(sp =>
-                new LocalKeyAuthenticationConfigurationProvider(
-                    sp.GetRequiredService<ILogger<LocalKeyAuthenticationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    AuthenticationServiceTypes.ConfigurationConnection,
-                    AuthenticationServiceTypes.ServerConfigurationPath));
+            builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>();
             builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
                 sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
 
@@ -114,7 +109,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
 
     /// <inheritdoc />
     public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
-        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationServiceImplementationConfiguration configuration,
         IAuthenticationSchemeProvider schemes,
         IServiceProvider services,
         ILoggerFactory? loggerFactory)

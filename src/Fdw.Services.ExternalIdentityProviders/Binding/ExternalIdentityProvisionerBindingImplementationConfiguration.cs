@@ -16,7 +16,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// <remarks>
 /// <see cref="TenantId"/> null means the global/system binding. Matching is EXACT (TenantId, ProviderName)
 /// equality, including null==null for the global row — there is NO tenant-to-global fall-through (see
-/// <see cref="ExternalIdentityProvisionerBindingConfigurationProvider.ResolveProvisionerName"/>). An
+/// <c>ExternalIdentityProvisionerBindingConfigurationProvider</c>). An
 /// absent binding is Success(null), meaning provisioning stays default-OFF for that provider; more than
 /// one current match for the same pair is a fail-loud ambiguity, never a silent "first match wins".
 /// </remarks>
@@ -55,7 +55,7 @@ public sealed partial class ExternalIdentityProvisionerBindingImplementationConf
     /// <summary>
     /// Gets or sets the external issuer this binding selects a provisioner for. Matched as a free
     /// string against the proven subject's own issuer (<c>Subject.Issuer</c>) at resolve time — see
-    /// <see cref="ExternalIdentityProvisionerBindingConfigurationProvider.ResolveProvisionerName"/>,
+    /// <c>ExternalIdentityProvisionerBindingConfigurationProvider</c>,
     /// which the caller (<c>ResolvePrincipalStepType</c>) invokes with <c>subject.Issuer</c> directly.
     /// There is no foreign key to any provider-configuration table; this is not tied to
     /// <c>auth.OidcAuthority</c>/<c>auth.ForeignAuthority</c> existing, being named consistently with

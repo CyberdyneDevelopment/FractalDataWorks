@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Fdw.Services.Quality.Logging;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ namespace Fdw.Services.Quality.Services;
 public sealed class PromotionService : IPromotionService
 {
     private readonly ILogger _logger;
-    private readonly QualityConfigurationProvider _qualityProvider;
+    private readonly IEnvironmentConfigurationProvider _environments;
     private readonly List<PromotionRequestImplementationConfiguration> _inMemoryRequests = new();
 
     /// <summary>
@@ -24,19 +25,25 @@ public sealed class PromotionService : IPromotionService
     /// </summary>
     public PromotionService(
         ILoggerFactory loggerFactory,
-        QualityConfigurationProvider qualityProvider)
+        IEnvironmentConfigurationProvider environments)
     {
         _logger = loggerFactory.CreateLogger<PromotionService>();
-        _qualityProvider = qualityProvider;
+        _environments = environments;
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IReadOnlyList<EnvironmentImplementationConfiguration>>> GetEnvironments(CancellationToken ct = default)
+    public async Task<IGenericResult<IReadOnlyList<IEnvironmentImplementationConfiguration>>> GetEnvironments(CancellationToken ct = default)
     {
-        var result = await _qualityProvider.GetAllEnvironments(ct).ConfigureAwait(false);
-        if (!result.IsSuccess) return result;
-        var environments = (result.Value ?? []).OrderBy(e => e.PromotionOrder).ToList();
-        return GenericResult<IReadOnlyList<EnvironmentImplementationConfiguration>>.Success(environments);
+        var result = await _environments.Get(ct).ConfigureAwait(false);
+        if (!result.IsSuccess)
+            return result.ToNewResult<IReadOnlyList<IEnvironmentImplementationConfiguration>>();
+
+        if (result.Value is not { } environments)
+            return GenericResult<IReadOnlyList<IEnvironmentImplementationConfiguration>>.Failure(
+                PromotionLog.EnvironmentsUnreadable(_logger));
+
+        return GenericResult<IReadOnlyList<IEnvironmentImplementationConfiguration>>.Success(
+            environments.OrderBy(e => e.PromotionOrder).ToList());
     }
 
     /// <inheritdoc/>
@@ -50,14 +57,14 @@ public sealed class PromotionService : IPromotionService
                     PromotionLog.SameEnvironmentError(_logger, request.SourceEnvironment));
             }
 
-            var sourceLookup = await _qualityProvider.GetEnvironment(request.SourceEnvironment, ct).ConfigureAwait(false);
+            var sourceLookup = await _environments.Get(request.SourceEnvironment, ct).ConfigureAwait(false);
             if (!sourceLookup.IsSuccess || sourceLookup.Value is null)
             {
                 return GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                     PromotionLog.EnvironmentNotFound(_logger, request.SourceEnvironment));
             }
 
-            var targetLookup = await _qualityProvider.GetEnvironment(request.TargetEnvironment, ct).ConfigureAwait(false);
+            var targetLookup = await _environments.Get(request.TargetEnvironment, ct).ConfigureAwait(false);
             if (!targetLookup.IsSuccess || targetLookup.Value is null)
             {
                 return GenericResult<PromotionRequestImplementationConfiguration>.Failure(
@@ -199,14 +206,14 @@ public sealed class PromotionService : IPromotionService
         {
             PromotionLog.ComparingEnvironments(_logger, sourceEnvironment, targetEnvironment);
 
-            var sourceLookup = await _qualityProvider.GetEnvironment(sourceEnvironment, ct).ConfigureAwait(false);
+            var sourceLookup = await _environments.Get(sourceEnvironment, ct).ConfigureAwait(false);
             if (!sourceLookup.IsSuccess || sourceLookup.Value is null)
             {
                 return GenericResult<ConfigDiff>.Failure(
                     PromotionLog.EnvironmentNotFound(_logger, sourceEnvironment));
             }
 
-            var targetLookup = await _qualityProvider.GetEnvironment(targetEnvironment, ct).ConfigureAwait(false);
+            var targetLookup = await _environments.Get(targetEnvironment, ct).ConfigureAwait(false);
             if (!targetLookup.IsSuccess || targetLookup.Value is null)
             {
                 return GenericResult<ConfigDiff>.Failure(

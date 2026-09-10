@@ -121,17 +121,21 @@ public sealed class ResolvePrincipalStepType
     private async Task<IGenericResult<StepOutcome>> TryProvision(
         Subject subject, AuthenticationContext context, CancellationToken cancellationToken)
     {
-        var provisionerName = await _provisionerBindings!
-            .ResolveProvisionerName(tenantId: null, subject.Issuer, cancellationToken)
+        // The global binding for this issuer: TenantId null is the system row, and matching is exact.
+        var bindings = await _provisionerBindings!
+            .Find<Fdw.Services.ExternalIdentityProviders.Binding.ExternalIdentityProvisionerBindingImplementationConfiguration>(
+                candidate => candidate.TenantId is null
+                    && string.Equals(candidate.ProviderName, subject.Issuer, StringComparison.Ordinal),
+                cancellationToken)
             .ConfigureAwait(false);
 
-        if (provisionerName.IsFailure)
-            return provisionerName.ToNewResult<StepOutcome>();
+        if (bindings.IsFailure)
+            return bindings.ToNewResult<StepOutcome>();
 
         // A subject with no binding AND no configured provisioner is a caller this platform has
         // never seen. Refusing is the whole point of the step: the alternative is inventing a
         // principal for them.
-        if (provisionerName.Value is not { Length: > 0 } name)
+        if (bindings.Value is not [var binding] || binding.ProvisionerName is not { Length: > 0 } name)
             return GenericResult<StepOutcome>.Failure(StepLog.NoBinding(_logger, subject.Issuer));
 
         var provisioner = await _provisioners!.Get(name, cancellationToken).ConfigureAwait(false);

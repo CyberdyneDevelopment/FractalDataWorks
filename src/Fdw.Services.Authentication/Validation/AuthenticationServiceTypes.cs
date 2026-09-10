@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -83,12 +84,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             // through the gateway onto the store the host declared it on — not application settings,
             // because two hosts sharing a tenant legitimately trust different issuers, the same
             // reason the flows themselves live there.
-            builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>(sp =>
-                new AuthenticationServiceConfigurationProvider(
-                    sp.GetRequiredService<ILogger<AuthenticationServiceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection,
-                    ServerConfigurationPath));
+            builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>();
             builder.Services.TryAddSingleton<IAuthenticationServiceConfigurationProvider>(sp =>
                 sp.GetRequiredService<AuthenticationServiceConfigurationProvider>());
 
@@ -134,7 +130,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             // the deny-everywhere principal and returns nothing -- the host then cannot see its own
             // declared authentication services. Scoping it here rather than in the host keeps the
             // window to the one statement that needs it, and means no host has to know to do it.
-            IGenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>> declared;
+            IGenericResult<IReadOnlyList<IAuthenticationServiceImplementationConfiguration>> declared;
             using (new SystemAuthenticationContextScope(
                 services.GetRequiredService<IAuthenticationContextAccessor>()))
             {
@@ -142,7 +138,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 // startup on the host's own thread before any request exists to deadlock against.
 #pragma warning disable VSTHRD002
                 declared = services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                    .GetHeaders(CancellationToken.None)
+                    .Get(CancellationToken.None)
                     .ConfigureAwait(false).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
             }
@@ -162,10 +158,6 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
 
-                if (entry.Implementation is not { Length: > 0 } kind)
-                    return GenericResult<IHost>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, serviceName));
-
                 // Through IssuerName, which the options bridge also reads its ValidIssuer through:
                 // the selector matches the binding ordinally and the scheme checks ValidIssuer
                 // ordinally, so both have to derive from the same rule or a declared "https://host"
@@ -177,9 +169,14 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
 
                 entry.Authority = issuer.Value;
 
-                if (ByName(kind) is not AuthenticationServiceTypeBase option)
+                // Which option serves this row is the row's own implementation type: the domain
+                // handed back the implementation it named, and the collection is what maps a
+                // configuration type back to the option that declared it.
+                if (All().Values.FirstOrDefault(t => t.ConfigurationType == entry.GetType()) is not AuthenticationServiceTypeBase option)
                     return GenericResult<IHost>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, kind));
+                        AuthenticationValidationLog.SectionUnreadable(log, serviceName));
+
+                var kind = option.Name;
 
                 var binding = option.TakeScheme(entry, schemes, services, hostLoggerFactory);
                 if (!binding.IsSuccess || binding.Value is null)

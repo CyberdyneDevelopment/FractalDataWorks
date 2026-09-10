@@ -38,8 +38,8 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     /// </summary>
     private sealed record CachedFlow(AuthenticationFlow? Flow, string? InvalidReason);
 
-    private readonly ImplementationConfigurationProviderBase<IAuthenticationFlowImplementationConfiguration> _flows;
-    private readonly ImplementationConfigurationProviderBase<IAuthenticationFlowStepImplementationConfiguration> _steps;
+    private readonly IAuthenticationFlowConfigurationProvider _flows;
+    private readonly IAuthenticationFlowStepConfigurationProvider _steps;
     private readonly ConcurrentDictionary<string, CachedFlow> _cache = new(StringComparer.Ordinal);
     private readonly ILogger<AuthenticationFlowProvider> _logger;
 
@@ -48,8 +48,8 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     /// <param name="steps">Reads their step rows.</param>
     /// <param name="logger">The logger.</param>
     public AuthenticationFlowProvider(
-        ImplementationConfigurationProviderBase<IAuthenticationFlowImplementationConfiguration> flows,
-        ImplementationConfigurationProviderBase<IAuthenticationFlowStepImplementationConfiguration> steps,
+        IAuthenticationFlowConfigurationProvider flows,
+        IAuthenticationFlowStepConfigurationProvider steps,
         ILogger<AuthenticationFlowProvider>? logger = null)
     {
         _flows = flows ?? throw new ArgumentNullException(nameof(flows));
@@ -135,7 +135,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
         foreach (var row in rows.Value ?? [])
         {
             var ordered = (stepRows.Value ?? [])
-                .Where(s => s.AuthenticationFlowId == row.Id)
+                .Where(s => s.AuthenticationFlowId == row.AuthenticationFlowId)
                 .OrderBy(s => s.StepOrder)
                 .ToList();
 
@@ -146,13 +146,22 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
                 continue;
             }
 
+            // The column is text (an ISO 8601 duration); the flow model holds the parsed span, so a
+            // row that cannot be read as one is a known-invalid flow rather than a thrown format
+            // exception at startup.
+            if (!TryLifetime(row.ExecutionLifetime, out var lifetime, out var lifetimeReason))
+            {
+                _cache[row.Name] = new CachedFlow(null, lifetimeReason);
+                continue;
+            }
+
             var flow = new AuthenticationFlow
             {
                 Name = row.Name,
                 Steps = [.. ordered.Select(s => s.StepName)],
                 Audience = row.Audience,
                 MinimumAcr = row.MinimumAcr,
-                ExecutionLifetime = row.ExecutionLifetime,
+                ExecutionLifetime = lifetime,
             };
 
             var valid = Validate(flow);
@@ -204,5 +213,27 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
         }
 
         return GenericResult.Success();
+    }
+
+    private static bool TryLifetime(string? configured, out TimeSpan lifetime, out string reason)
+    {
+        lifetime = default;
+        if (configured is not { Length: > 0 } value)
+        {
+            reason = "execution lifetime is unset";
+            return false;
+        }
+
+        try
+        {
+            lifetime = System.Xml.XmlConvert.ToTimeSpan(value);
+            reason = string.Empty;
+            return true;
+        }
+        catch (FormatException ex)
+        {
+            reason = $"execution lifetime '{value}' is not a duration: {ex.Message}";
+            return false;
+        }
     }
 }

@@ -168,4 +168,11 @@ public static partial class ExternalIdentityProvisionerLog
         Level = LogLevel.Warning,
         Message = "ClaimMapped rule '{ruleName}': username already exists with no identity link — resuming provisioning for existing user {userId} instead of creating a new one.")]
     public static partial IGenericMessage ResumingOrphanedUser(ILogger logger, string ruleName, Guid userId);
+
+    /// <summary>Logs a provisioned account that cannot be read back by the name it was written under.</summary>
+    [MessageLogging(
+        EventId = 91007,
+        Level = LogLevel.Error,
+        Message = "ClaimMapped rule '{ruleName}': the account '{username}' was written but is not readable by that name.")]
+    public static partial IGenericMessage ProvisionedUserUnreadable(ILogger logger, string ruleName, string username);
 }

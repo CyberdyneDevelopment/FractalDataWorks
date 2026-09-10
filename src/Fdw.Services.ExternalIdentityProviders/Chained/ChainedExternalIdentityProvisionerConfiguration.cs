@@ -10,7 +10,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
 /// Typed-body configuration for the Chained external-identity-provisioner TypeOption.
-/// Standalone POCO — does NOT inherit from <see cref="ExternalIdentityProvisionerConfiguration"/>.
+/// Standalone POCO — does NOT inherit from <c>IExternalIdentityProvisionerImplementationConfiguration</c>.
 /// Persisted to <c>sec.ChainedExternalIdentityProvisioner</c> as a child of
 /// <c>sec.ExternalIdentityProvisioner</c> via <see cref="ExternalIdentityProvisionerId"/>. Carries no
 /// scalar columns of its own — its policy lives entirely in the ordered <see cref="Steps"/> child

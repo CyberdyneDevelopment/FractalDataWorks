@@ -6,6 +6,6 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// Reads the JwtBearer rows of <c>auth.AuthenticationService</c>.
 /// </summary>
 public interface IJwtBearerAuthenticationConfigurationProvider
-    : IImplementationConfigurationProvider<IJwtBearerAuthenticationConfiguration>
+    : IImplementationConfigurationProvider<IAuthenticationServiceImplementationConfiguration>
 {
 }

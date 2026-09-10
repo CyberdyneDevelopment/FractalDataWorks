@@ -119,7 +119,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
     /// <param name="cancellationToken">A token to cancel the reads.</param>
     private async Task<IGenericResult<TokenValidationParameters>> ResolveParameters(CancellationToken cancellationToken)
     {
-        var headers = await _configuration.GetHeaders(cancellationToken).ConfigureAwait(false);
+        var headers = await _configuration.Get(cancellationToken).ConfigureAwait(false);
         if (!headers.IsSuccess || headers.Value is null)
             return headers.ToNewResult<TokenValidationParameters>();
 
@@ -143,7 +143,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         // record itself for the implementation contract can never match, and the failure is silent in
         // the worst way: the scheme builds with no key and no issuer and refuses every valid token.
         var record = await _configuration.Get(header.Id, cancellationToken).ConfigureAwait(false);
-        if (!record.IsSuccess || record.Value?.ImplementationConfiguration is not IJwtBearerAuthenticationConfiguration body)
+        if (!record.IsSuccess || record.Value is not IJwtBearerAuthenticationConfiguration body)
         {
             return GenericResult<TokenValidationParameters>.Failure(
                 AuthenticationValidationLog.JwtBearerEntryUnreadable(_log, ServiceName));

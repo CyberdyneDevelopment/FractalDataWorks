@@ -17,7 +17,7 @@ public interface IPromotionService
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the list of environment configurations.</returns>
-    Task<IGenericResult<IReadOnlyList<EnvironmentImplementationConfiguration>>> GetEnvironments(CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<IEnvironmentImplementationConfiguration>>> GetEnvironments(CancellationToken ct = default);
 
     /// <summary>
     /// Creates a new promotion request.

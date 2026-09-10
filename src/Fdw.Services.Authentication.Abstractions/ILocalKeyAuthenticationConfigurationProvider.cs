@@ -11,6 +11,6 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// specifically asks for this rather than for the domain provider.
 /// </remarks>
 public interface ILocalKeyAuthenticationConfigurationProvider
-    : IImplementationConfigurationProvider<ILocalKeyAuthenticationConfiguration>
+    : IImplementationConfigurationProvider<IAuthenticationServiceImplementationConfiguration>
 {
 }

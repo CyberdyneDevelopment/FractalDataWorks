@@ -1,3 +1,5 @@
+using Fdw.Services.Notifications.Abstractions;
+using System;
 using Fdw.Services.Notifications.Validators;
 
 namespace Fdw.Services.Notifications.Tests.Validators;
@@ -7,6 +9,17 @@ namespace Fdw.Services.Notifications.Tests.Validators;
 /// </summary>
 public sealed class NotificationConfigurationValidatorTests
 {
+    // Why a double: the validator validates the domain's contract, and every notification
+    // implementation is supplied by reference-servicetypes, so there is no concrete one here.
+    private sealed class TestNotificationConfiguration : INotificationImplementationConfiguration
+    {
+        public Guid Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public string Domain { get; set; } = string.Empty;
+    }
+
     private readonly NotificationConfigurationValidator _sut = new();
 
     [Fact]
@@ -15,14 +28,14 @@ public sealed class NotificationConfigurationValidatorTests
     public void ValidateFailsWhenNameIsEmpty()
     {
         // Arrange
-        var config = new NotificationConfiguration { Name = string.Empty };
+        var config = new TestNotificationConfiguration { Name = string.Empty };
 
         // Act
         var result = _sut.Validate(config);
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationConfiguration.Name));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(INotificationImplementationConfiguration.Name));
     }
 
     [Fact]
@@ -31,7 +44,7 @@ public sealed class NotificationConfigurationValidatorTests
     public void ValidateSucceedsWhenNameIsProvided()
     {
         // Arrange
-        var config = new NotificationConfiguration { Name = "OpsAlerts" };
+        var config = new TestNotificationConfiguration { Name = "OpsAlerts" };
 
         // Act
         var result = _sut.Validate(config);
@@ -46,10 +59,10 @@ public sealed class NotificationConfigurationValidatorTests
     public void ValidateOptionsReturnsFailWhenNameIsEmpty()
     {
         // Arrange
-        var config = new NotificationConfiguration { Name = string.Empty };
+        var config = new TestNotificationConfiguration { Name = string.Empty };
 
         // Act
-        var result = ((Microsoft.Extensions.Options.IValidateOptions<NotificationConfiguration>)_sut).Validate(null, config);
+        var result = ((Microsoft.Extensions.Options.IValidateOptions<INotificationImplementationConfiguration>)_sut).Validate(null, config);
 
         // Assert
         result.Failed.ShouldBeTrue();
@@ -61,10 +74,10 @@ public sealed class NotificationConfigurationValidatorTests
     public void ValidateOptionsReturnsSuccessWhenNameIsProvided()
     {
         // Arrange
-        var config = new NotificationConfiguration { Name = "OpsAlerts" };
+        var config = new TestNotificationConfiguration { Name = "OpsAlerts" };
 
         // Act
-        var result = ((Microsoft.Extensions.Options.IValidateOptions<NotificationConfiguration>)_sut).Validate(null, config);
+        var result = ((Microsoft.Extensions.Options.IValidateOptions<INotificationImplementationConfiguration>)_sut).Validate(null, config);
 
         // Assert
         result.Succeeded.ShouldBeTrue();

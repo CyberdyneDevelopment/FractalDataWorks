@@ -14,6 +14,15 @@ namespace Fdw.Services.Messaging.Abstractions;
 /// </remarks>
 public interface IMessagingImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the data store the messages themselves live in.</summary>
+    string? DataStoreName { get; set; }
+
+    /// <summary>Gets or sets the path within that store.</summary>
+    string? PathName { get; set; }
+
+    /// <summary>Gets or sets the human-readable description.</summary>
+    string? Description { get; set; }
+
     /// <summary>Gets or sets the id of the messaging service this configuration belongs to.</summary>
     /// <remarks>
     /// The owner's logical id, which is what the configuration system resolves by. The database also

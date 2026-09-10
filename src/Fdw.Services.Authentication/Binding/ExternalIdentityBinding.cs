@@ -23,7 +23,7 @@ namespace Fdw.Services.Authentication.Binding;
 /// </remarks>
 public sealed class ExternalIdentityBinding : IPrincipalBinding
 {
-    private readonly ImplementationConfigurationProviderBase<IExternalIdentityImplementationConfiguration> _identities;
+    private readonly IExternalIdentityConfigurationProvider _identities;
     private readonly ITenantResolver _tenants;
     private readonly ILogger<ExternalIdentityBinding> _logger;
 
@@ -32,7 +32,7 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
     /// <param name="tenants">Supplies the tenant a user belongs to.</param>
     /// <param name="logger">The logger.</param>
     public ExternalIdentityBinding(
-        ImplementationConfigurationProviderBase<IExternalIdentityImplementationConfiguration> identities,
+        IExternalIdentityConfigurationProvider identities,
         ITenantResolver tenants,
         ILogger<ExternalIdentityBinding>? logger = null)
     {

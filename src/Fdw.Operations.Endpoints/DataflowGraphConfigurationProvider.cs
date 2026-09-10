@@ -23,18 +23,6 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public class DataflowGraphConfigurationProvider
 {
-    /// <summary>
-    /// Registers <see cref="DataflowGraphConfigurationProvider"/> as a singleton in the DI container.
-    /// Call from Program.cs after the IConfigurationGateway is registered.
-    /// </summary>
-    public static IServiceCollection RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<DataflowGraphConfigurationProvider>(sp =>
-            new DataflowGraphConfigurationProvider(
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                sp.GetService<ILogger<DataflowGraphConfigurationProvider>>()));
-        return services;
-    }
 
 
     private static string DataStoreName => EtlPipelineTypes.ConfigurationConnection;

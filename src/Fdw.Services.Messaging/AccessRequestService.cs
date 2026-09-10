@@ -58,26 +58,26 @@ public sealed class AccessRequestService : IAccessRequestService
     private async Task<IGenericResult<(string DataStoreName, string PathName)>> ResolveLocation(
         CancellationToken cancellationToken)
     {
-        var header = await _messaging.GetHeader(MessagingServiceName, cancellationToken).ConfigureAwait(false);
-        if (!header.IsSuccess)
-            return header.ToNewResult<(string, string)>();
+        var messaging = await _messaging.Get(MessagingServiceName, cancellationToken).ConfigureAwait(false);
+        if (!messaging.IsSuccess)
+            return messaging.ToNewResult<(string, string)>();
 
         // Success with no value is its own state, not a failure to convert. Folding it into the
         // branch above called ToNewResult on a SUCCESSFUL result, which throws "Cannot convert a
         // successful result without providing a value" -- so a missing Messaging row surfaced as a
         // complaint about result plumbing and said nothing about the row.
-        if (header.Value is null)
+        if (messaging.Value is null)
             return GenericResult<(string, string)>.Failure(
                 MessagingLog.LocationNotConfigured(
                     _logger, $"no Messaging row named '{MessagingServiceName}' exists"));
 
-        if (string.IsNullOrWhiteSpace(header.Value.DataStoreName) || string.IsNullOrWhiteSpace(header.Value.PathName))
+        if (string.IsNullOrWhiteSpace(messaging.Value.DataStoreName) || string.IsNullOrWhiteSpace(messaging.Value.PathName))
         {
             return GenericResult<(string, string)>.Failure(
                 MessagingLog.LocationNotConfigured(_logger, "DataStoreName or PathName is unset on the Messaging row"));
         }
 
-        return GenericResult<(string, string)>.Success((header.Value.DataStoreName, header.Value.PathName));
+        return GenericResult<(string, string)>.Success((messaging.Value.DataStoreName, messaging.Value.PathName));
     }
 
     /// <inheritdoc />

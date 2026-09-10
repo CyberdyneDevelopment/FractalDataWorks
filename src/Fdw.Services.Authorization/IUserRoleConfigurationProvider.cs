@@ -1,3 +1,4 @@
+using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Authorization;

@@ -11,7 +11,7 @@ namespace Fdw.Services.Authentication.Validation;
 
 /// <summary>Supplies the JwtBearerAuthenticationService configuration.</summary>
 public sealed class JwtBearerAuthenticationConfigurationProvider
-    : ImplementationConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
+    : ImplementationProviderBase<JwtBearerAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration>,
       IJwtBearerAuthenticationConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationConfigurationProvider"/> class.</summary>

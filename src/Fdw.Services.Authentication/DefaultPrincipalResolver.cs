@@ -1,3 +1,5 @@
+using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Users.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -128,12 +130,14 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
 
         if (tenantId.HasValue)
         {
-            var tenantsResult = await _userTenantProvider.GetUserTenants(userId, cancellationToken).ConfigureAwait(false);
+            var tenantsResult = await _userTenantProvider
+                .Find<UserTenantImplementationConfiguration>(m => m.UserId == userId, cancellationToken)
+                .ConfigureAwait(false);
             if (!tenantsResult.IsSuccess)
                 return GenericResult<ClaimsPrincipal>.Failure(
                     PrincipalResolverLog.TenantResolutionFailed(_logger, userIdStr, tenantsResult.CurrentMessage!));
 
-            var membershipHolds = tenantsResult.Value!.Contains(tenantId.Value);
+            var membershipHolds = tenantsResult.Value!.Any(m => m.TenantId == tenantId.Value);
             PrincipalResolverLog.ResolveMembershipTrace(
                 _logger, userIdStr, tenantId.Value.ToString(), tenantsResult.Value!.Count, membershipHolds ? "pass" : "deny");
 
@@ -145,16 +149,18 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         }
         else
         {
-            var defaultResult = await _userTenantProvider.GetDefaultTenant(userId, cancellationToken).ConfigureAwait(false);
+            var defaultResult = await _userTenantProvider
+                .Find<UserTenantImplementationConfiguration>(m => m.UserId == userId && m.IsDefault, cancellationToken)
+                .ConfigureAwait(false);
             if (!defaultResult.IsSuccess)
                 return GenericResult<ClaimsPrincipal>.Failure(
                     PrincipalResolverLog.TenantResolutionFailed(_logger, userIdStr, defaultResult.CurrentMessage!));
 
-            if (defaultResult.Value is null)
+            if (defaultResult.Value is not [var defaultMembership])
                 return GenericResult<ClaimsPrincipal>.Failure(
                     PrincipalResolverLog.NoTenantsForUser(_logger, userIdStr));
 
-            resolvedTenantId = defaultResult.Value.Value;
+            resolvedTenantId = defaultMembership.TenantId;
             PrincipalResolverLog.ResolveDefaultTenantTrace(_logger, userIdStr, resolvedTenantId.ToString());
         }
 
@@ -227,11 +233,18 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
 
     private async Task<IReadOnlyList<string>> LoadRoleNames(Guid userId, CancellationToken ct)
     {
-        var assignmentsResult = await _userRoleProvider.GetByUser(userId.ToString(), ct).ConfigureAwait(false);
+        var assignmentsResult = await _userRoleProvider
+            .Find<UserRoleImplementationConfiguration>(
+                assignment => string.Equals(assignment.UserId, userId.ToString(), StringComparison.Ordinal), ct)
+            .ConfigureAwait(false);
         if (!assignmentsResult.IsSuccess || assignmentsResult.Value is null)
             return Array.Empty<string>();
 
-        var allRoles = await _roleProvider.GetAllRoles(ct).ConfigureAwait(false);
+        var rolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
+        if (!rolesResult.IsSuccess || rolesResult.Value is null)
+            return Array.Empty<string>();
+
+        var allRoles = rolesResult.Value;
 
         var roleNames = new List<string>(assignmentsResult.Value.Count);
         foreach (var assignment in assignmentsResult.Value)
@@ -258,21 +271,23 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
         IReadOnlyList<string> additionalRoles,
         CancellationToken cancellationToken)
     {
-        var defaultResult = await _userTenantProvider.GetDefaultTenant(userId, cancellationToken).ConfigureAwait(false);
+        var defaultResult = await _userTenantProvider
+            .Find<UserTenantImplementationConfiguration>(m => m.UserId == userId && m.IsDefault, cancellationToken)
+            .ConfigureAwait(false);
         if (!defaultResult.IsSuccess)
             return GenericResult<ClaimsPrincipal>.Failure(
                 PrincipalResolverLog.TenantResolutionFailed(_logger, userIdStr, defaultResult.CurrentMessage!));
 
-        if (defaultResult.Value is null)
+        if (defaultResult.Value is not [var crossTenantDefault])
             return GenericResult<ClaimsPrincipal>.Failure(
                 PrincipalResolverLog.NoTenantsForUser(_logger, userIdStr));
 
-        PrincipalResolverLog.ResolveDefaultTenantTrace(_logger, userIdStr, defaultResult.Value.Value.ToString());
+        PrincipalResolverLog.ResolveDefaultTenantTrace(_logger, userIdStr, crossTenantDefault.TenantId.ToString());
 
-        var isGlobalTenant = await IsGlobalTenant(defaultResult.Value.Value, cancellationToken).ConfigureAwait(false);
+        var isGlobalTenant = await IsGlobalTenant(crossTenantDefault.TenantId, cancellationToken).ConfigureAwait(false);
 
         var permResult = await _permissionResolver.Resolve(
-            userIdStr, defaultResult.Value.Value, orgId: null, isGlobalTenant, cancellationToken).ConfigureAwait(false);
+            userIdStr, crossTenantDefault.TenantId, orgId: null, isGlobalTenant, cancellationToken).ConfigureAwait(false);
 
         if (!permResult.IsSuccess)
             return GenericResult<ClaimsPrincipal>.Failure(

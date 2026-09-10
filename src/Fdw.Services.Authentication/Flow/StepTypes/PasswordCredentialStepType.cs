@@ -109,7 +109,7 @@ public sealed class PasswordCredentialStepType
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             return GenericResult<StepOutcome>.Failure(PasswordCredentialLog.NothingPresented(_logger));
 
-        var found = await _users.GetUser(username, cancellationToken).ConfigureAwait(false);
+        var found = await _users.Get(username, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure)
             return found.ToNewResult<StepOutcome>();
 

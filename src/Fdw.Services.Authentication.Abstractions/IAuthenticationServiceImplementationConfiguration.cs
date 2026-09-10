@@ -25,4 +25,13 @@ public interface IAuthenticationServiceImplementationConfiguration : IImplementa
     /// container's keys and never reaches this model.
     /// </remarks>
     Guid AuthenticationServiceId { get; set; }
+
+    /// <summary>Gets or sets whether this authentication service is in force.</summary>
+    bool Enabled { get; set; }
+
+    /// <summary>Gets or sets the issuer this service validates against.</summary>
+    string? Authority { get; set; }
+
+    /// <summary>Gets or sets the human-readable description.</summary>
+    string? Description { get; set; }
 }

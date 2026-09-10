@@ -5,7 +5,7 @@ using Fdw.Services.Configuration;
 namespace Fdw.Services.Messaging.Commands;
 
 /// <summary>
-/// The configuration command for <see cref="MessagingConfiguration"/> rows.
+/// The configuration command for <c>MessagingImplementationConfiguration</c> rows.
 /// </summary>
 /// <remarks>
 /// The string handed to the base IS the container the provider queries —

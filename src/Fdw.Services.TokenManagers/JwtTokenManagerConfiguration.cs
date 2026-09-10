@@ -28,6 +28,15 @@ namespace Fdw.Services.TokenManagers;
 [ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "Jwt")]
 public sealed partial class JwtTokenManagerConfiguration : ITokenManagerImplementationConfiguration
 {
+    /// <summary>Gets or sets the secret manager that resolves the signing key.</summary>
+    public string? SecretManagerName { get; set; }
+
+    /// <summary>Gets or sets the key the signing material is stored under.</summary>
+    public string? SecretKeyName { get; set; }
+
+    /// <summary>Gets or sets the human-readable description.</summary>
+    public string? Description { get; set; }
+
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;

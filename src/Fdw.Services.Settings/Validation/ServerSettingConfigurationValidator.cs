@@ -5,7 +5,7 @@ using Fdw.Validation;
 namespace Fdw.Services.Settings.Validation;
 
 /// <summary>
-/// Validator for <see cref="ServerSettingConfiguration"/>.
+/// Validator for <see cref="ServerSettingImplementationConfiguration"/>.
 /// </summary>
 public sealed class ServerSettingConfigurationValidator : FdwConfigurationValidator<ServerSettingImplementationConfiguration>
 {

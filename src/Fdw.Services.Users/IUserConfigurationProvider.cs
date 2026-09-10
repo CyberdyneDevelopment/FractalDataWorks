@@ -1,3 +1,4 @@
+using Fdw.Services.Users.Configuration;
 using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Users;

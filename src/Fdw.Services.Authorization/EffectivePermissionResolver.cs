@@ -63,7 +63,8 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
         var (allRoles, allPermissions, allRolePermissions) = catalogResult.Value;
 
-        var userRoleAssignmentsResult = await _userRoleProvider.GetByUser(userId, cancellationToken).ConfigureAwait(false);
+        var userRoleAssignmentsResult = await _userRoleProvider.Find<UserRoleImplementationConfiguration>(
+                assignment => string.Equals(assignment.UserId, userId, StringComparison.Ordinal), cancellationToken).ConfigureAwait(false);
         if (!userRoleAssignmentsResult.IsSuccess || userRoleAssignmentsResult.Value is null)
             return GenericResult<IReadOnlyCollection<string>>.Failure(
                 AuthorizationLog.UserRoleAssignmentLoadFailed(_logger, userId));
@@ -103,7 +104,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         return GenericResult<IReadOnlyCollection<string>>.Success(permissions);
     }
 
-    private async Task<(IReadOnlyList<RoleImplementationConfiguration>, IReadOnlyList<PermissionImplementationConfiguration>, IReadOnlyList<RolePermissionImplementationConfiguration>)?> LoadCatalog(
+    private async Task<(IReadOnlyList<IRoleImplementationConfiguration>, IReadOnlyList<IPermissionImplementationConfiguration>, IReadOnlyList<IRolePermissionImplementationConfiguration>)?> LoadCatalog(
         CancellationToken cancellationToken)
     {
         var allRolesResult = await _roleProvider.Get(cancellationToken).ConfigureAwait(false);
@@ -132,9 +133,9 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
     private (int GlobalCount, int TenantCount) ApplyRoleTiers(
         string userId,
-        IReadOnlyList<RoleImplementationConfiguration> allRoles,
-        IReadOnlyList<PermissionImplementationConfiguration> allPermissions,
-        IReadOnlyList<RolePermissionImplementationConfiguration> allRolePermissions,
+        IReadOnlyList<IRoleImplementationConfiguration> allRoles,
+        IReadOnlyList<IPermissionImplementationConfiguration> allPermissions,
+        IReadOnlyList<IRolePermissionImplementationConfiguration> allRolePermissions,
         Dictionary<string, Guid> roleNameToId,
         Guid? currentTenantId,
         bool isGlobalTenant,
@@ -233,13 +234,13 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
             ? 1
             : 0;
 
-    private static bool RoleContributesToTenant(RoleImplementationConfiguration? roleDef, Guid? currentTenantId, bool isGlobalTenant)
+    private static bool RoleContributesToTenant(IRoleImplementationConfiguration? roleDef, Guid? currentTenantId, bool isGlobalTenant)
         => isGlobalTenant
            || (roleDef is not null && roleDef.IsTenantScoped
                && currentTenantId.HasValue
                && roleDef.TenantId == currentTenantId.Value);
 
-    private static PermissionImplementationConfiguration? FindPermission(IReadOnlyList<PermissionImplementationConfiguration> permissions, Guid permissionId)
+    private static IPermissionImplementationConfiguration? FindPermission(IReadOnlyList<IPermissionImplementationConfiguration> permissions, Guid permissionId)
     {
         for (var i = 0; i < permissions.Count; i++)
         {

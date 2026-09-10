@@ -13,9 +13,9 @@ namespace Fdw.Operations.Escalation;
 [ExcludeFromCodeCoverage]
 internal sealed class EscalationPolicyRecord : IEscalationPolicy
 {
-    private readonly EscalationPolicyImplementationConfiguration _config;
+    private readonly IEscalationPolicyImplementationConfiguration _config;
 
-    internal EscalationPolicyRecord(EscalationPolicyImplementationConfiguration config)
+    internal EscalationPolicyRecord(IEscalationPolicyImplementationConfiguration config)
     {
         _config = config;
     }

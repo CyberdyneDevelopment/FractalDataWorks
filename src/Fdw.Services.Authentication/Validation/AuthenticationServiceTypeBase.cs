@@ -87,7 +87,7 @@ public abstract class AuthenticationServiceTypeBase
     /// rather than the builder, which is closed by this point.
     /// </remarks>
     public abstract IGenericResult<AuthenticationSchemeBinding> TakeScheme(
-        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationServiceImplementationConfiguration configuration,
         IAuthenticationSchemeProvider schemes,
         IServiceProvider services,
         ILoggerFactory? loggerFactory);

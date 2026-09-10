@@ -891,7 +891,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         return NotificationPriorities.NotFound;
     }
 
-    private static bool RuleMatchesExecution(NotificationRuleImplementationConfiguration rule, ExecutionItemRecord record)
+    private static bool RuleMatchesExecution(INotificationRuleImplementationConfiguration rule, ExecutionItemRecord record)
     {
         // Catch-all rule: no scope constraints.
         if (rule.PipelineId is null && rule.WorkflowId is null && rule.ScheduleId is null)
@@ -926,7 +926,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     }
 
     private static string BuildNotificationMessage(
-        NotificationRuleImplementationConfiguration rule,
+        INotificationRuleImplementationConfiguration rule,
         ExecutionItemRecord record,
         IExecutionStateType targetState)
     {

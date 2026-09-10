@@ -11,7 +11,7 @@ namespace Fdw.Services.Authentication.Validation;
 
 /// <summary>Supplies the LocalKeyAuthenticationService configuration.</summary>
 public sealed class LocalKeyAuthenticationConfigurationProvider
-    : ImplementationConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
+    : ImplementationProviderBase<LocalKeyAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration>,
       ILocalKeyAuthenticationConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationConfigurationProvider"/> class.</summary>

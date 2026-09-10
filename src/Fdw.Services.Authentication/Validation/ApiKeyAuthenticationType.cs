@@ -112,7 +112,7 @@ public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
 
     /// <inheritdoc />
     public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
-        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationServiceImplementationConfiguration configuration,
         IAuthenticationSchemeProvider schemes,
         IServiceProvider services,
         ILoggerFactory? loggerFactory)

@@ -38,6 +38,10 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// </remarks>
 public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
 {
+    private const string ExternalIdentityDomain = "ExternalIdentity";
+    private const string UserRoleDomain = "UserRole";
+    private const string UsersDomain = "Users";
+
     private readonly ClaimMappedExternalIdentityProvisionerConfiguration _configuration;
     private readonly UserConfigurationProvider _users;
     private readonly UserRoleConfigurationProvider _userRoles;
@@ -120,19 +124,24 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
         var roleNames = rule.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var roleName in roleNames)
         {
-            var role = await _roles.GetRole(roleName, cancellationToken).ConfigureAwait(false);
-            if (role is null)
+            var role = await _roles.Get(roleName, cancellationToken).ConfigureAwait(false);
+            if (!role.IsSuccess)
+                return role.ToNewResult<Guid>();
+            if (role.Value is null)
                 return GenericResult<Guid>.Failure(
                     ExternalIdentityProvisionerLog.RuleReferencesUnknownRole(_logger, rule.Name, roleName));
 
-            var grant = await _userRoles.Save(new Fdw.Services.Authorization.Configuration.UserRoleImplementationConfiguration
-            {
-                Name = $"{userId.Value}:{role.Id}",
-                UserId = userId.Value.ToString(),
-                RoleId = role.Id,
-                AssignedBy = Name,
-                AssignedAt = DateTimeOffset.UtcNow,
-            }, cancellationToken).ConfigureAwait(false);
+            var grantName = $"{userId.Value}:{role.Value.Id}";
+            var grant = await _userRoles.Save(
+                new Fdw.Services.Authorization.Configuration.UserRoleImplementationConfiguration
+                {
+                    Name = grantName,
+                    UserId = userId.Value.ToString(),
+                    RoleId = role.Value.Id,
+                    AssignedBy = Name,
+                    AssignedAt = DateTimeOffset.UtcNow,
+                },
+                UserRoleDomain, UserRoleDomain, grantName, cancellationToken).ConfigureAwait(false);
 
             if (grant.IsFailure)
                 return grant.ToNewResult<Guid>();
@@ -147,7 +156,7 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
             ExternalSubject = externalSubject,
             UserId = userId.Value,
             IsActive = true,
-        }, cancellationToken).ConfigureAwait(false);
+        }, ExternalIdentityDomain, ExternalIdentityDomain, provider, cancellationToken).ConfigureAwait(false);
 
         if (linked.IsFailure)
             return linked.ToNewResult<Guid>();
@@ -174,23 +183,42 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
     private async Task<IGenericResult<Guid>> CreateOrResumeUser(
         string username, string? email, ClaimMappedProvisioningRuleConfiguration rule, CancellationToken cancellationToken)
     {
-        var created = await _users.CreateUser(username, email, rule.TenantId, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (created.IsSuccess)
-            return created;
-
-        if (created.Code?.Name != "UserAlreadyExists")
-            return created;
-
-        var existing = await _users.GetUser(username, cancellationToken).ConfigureAwait(false);
-        if (existing.IsFailure)
+        // Read first: Save is an upsert by name, so an account that already exists is resumed here
+        // rather than written over -- which is what the old "create, then handle UserAlreadyExists"
+        // sequence was for.
+        var existing = await _users.Get(username, cancellationToken).ConfigureAwait(false);
+        if (!existing.IsSuccess)
             return existing.ToNewResult<Guid>();
 
-        if (existing.Value is not { } user)
-            return created;
+        if (existing.Value is { } user)
+        {
+            ExternalIdentityProvisionerLog.ResumingOrphanedUser(_logger, rule.Name, user.Id);
+            return GenericResult<Guid>.Success(user.Id);
+        }
 
-        ExternalIdentityProvisionerLog.ResumingOrphanedUser(_logger, rule.Name, user.Id);
-        return GenericResult<Guid>.Success(user.Id);
+        var written = await _users.Save(
+            new Fdw.Services.Users.Configuration.UserImplementationConfiguration
+            {
+                Name = username,
+                Username = username,
+                Email = email,
+                TenantId = rule.TenantId,
+                IsActive = true,
+                CreatedAt = DateTimeOffset.UtcNow,
+            },
+            UsersDomain, UsersDomain, username, cancellationToken).ConfigureAwait(false);
+        if (!written.IsSuccess)
+            return written.ToNewResult<Guid>();
+
+        // Save mints the domain row's id inside itself and hands back neither row, so the account
+        // is read back by the name it was written under to learn what it was given.
+        var provisioned = await _users.Get(username, cancellationToken).ConfigureAwait(false);
+        if (!provisioned.IsSuccess)
+            return provisioned.ToNewResult<Guid>();
+        if (provisioned.Value is null)
+            return GenericResult<Guid>.Failure(
+                ExternalIdentityProvisionerLog.ProvisionedUserUnreadable(_logger, rule.Name, username));
+
+        return GenericResult<Guid>.Success(provisioned.Value.Id);
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Aegis.Configuration;
 using Fdw.Services.Connections;
+using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Data.Configuration;
 
