@@ -3,35 +3,34 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Abstractions;
 using Fdw.Collections.Attributes;
+using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
-using Fdw.Results;
 using Fdw.Messages;
+using Fdw.Results;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Services.Data;
 
-using Fdw.Abstractions;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Verifies the N-level recursive configuration cascade-save: a root record whose typed body
-/// (<c>Configuration</c> property) carries a child collection, where each child carries its own
-/// child collection, persists ALL levels with the correct logical foreign keys set.
+/// Verifies the N-level recursive child cascade a save performs: an implementation record whose
+/// child collection's items carry their own child collections persists every level, with the
+/// logical foreign key each level hangs from.
 /// </summary>
 /// <remarks>
-/// Why: the cascade was single-level (root collections only) and never recursed into the typed
-/// body's collections or their grandchildren — so pipeline operations and their field mappings were
-/// silently dropped on save. This test pins the generalized recursive behavior (root -> typed-body
-/// operations -> field mappings) and the FK derivation at each level.
+/// Why: the cascade is what makes an aggregate one thing to write. Without it a pipeline's
+/// operations and their field mappings are dropped silently on save, which is how they were lost
+/// before. The foreign key at each level is its IMMEDIATE owner's -- Strip(owner type) + "Id" --
+/// never the root's, matching the DDL (pipe.PipelineOperation.EtlPipelineId,
+/// conn.MsSqlConnectionLimit.MsSqlConnectionId).
 /// </remarks>
 [Collection(nameof(ServicesTestCollection))]
 public sealed class RecursiveCascadeSaveTests
@@ -39,146 +38,66 @@ public sealed class RecursiveCascadeSaveTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
-    public async Task SavePersistsTypedBodyOperationsAndFieldMappingsWithForeignKeys()
+    public async Task SavePersistsOperationsAndTheirFieldMappingsWithForeignKeys()
     {
-        // Arrange — a root with a typed body holding one operation that holds one field mapping.
-        var rootId = Guid.NewGuid();
         var mapping = new TestMapConfiguration { Id = Guid.NewGuid(), Name = "Map" };
-        var operation = new TestOpConfiguration
-        {
-            Id = Guid.NewGuid(),
-            Name = "Op",
-            Mappings = { mapping }
-        };
-        var body = new TestBodyConfiguration
-        {
-            Id = Guid.NewGuid(),
-            Name = "Body",
-            Operations = { operation }
-        };
-        var root = new TestRootConfiguration
-        {
-            Id = rootId,
-            Name = "Root",
-            Configuration = body
-        };
+        var operation = new TestOpConfiguration { Id = Guid.NewGuid(), Name = "Op", Mappings = { mapping } };
+        var root = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root", Operations = { operation } };
 
         var gateway = new RecordingGateway();
-        var provider = MakeProvider(gateway);
 
-        // Act
-        var result = await provider.Save(root, TestContext.Current.CancellationToken);
+        var result = await ImplementationProvider(gateway).Save(root, TestContext.Current.CancellationToken);
 
-        // Assert — save succeeded and every level was persisted via its own ConfigurationSaveCommand.
         result.IsSuccess.ShouldBeTrue();
-
-        gateway.SavedConfigs.OfType<TestBodyConfiguration>().ShouldHaveSingleItem();
+        gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
         gateway.SavedConfigs.OfType<TestOpConfiguration>().ShouldHaveSingleItem();
         gateway.SavedConfigs.OfType<TestMapConfiguration>().ShouldHaveSingleItem();
 
-        // The typed body is FK'd to the ROOT record's logical Id (Strip(TestRootConfiguration)+"Id").
-        body.TestRootId.ShouldBe(rootId);
-
-        // Level-1 child (operation, on the typed body) is FK'd to its IMMEDIATE owner — the typed body —
-        // NOT the root (Strip(TestBodyConfiguration)+"Id" = TestBodyId). This is the corrected cascade:
-        // typed-body collections key to the body that owns them, matching the real DDL (e.g.
-        // pipe.PipelineOperation.EtlPipelineId, conn.MsSqlConnectionLimit.MsSqlConnectionId).
-        operation.TestBodyId.ShouldBe(body.Id);
-
-        // Level-2 child (field mapping) is FK'd to its parent operation's logical Id.
+        operation.TestRootId.ShouldBe(root.Id);
         mapping.TestOpId.ShouldBe(operation.Id);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
-    public async Task GetFailsLoudWhenKindHasNoRegisteredTypedProvider()
+    public async Task GetFailsLoudWhenTheRowNamesAnImplementationNothingIsRegisteredFor()
     {
-        // Arrange — header row carries Implementation "Default" (TestRoot's discriminator).
-        var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
-        var gateway = new HeaderReturningGateway(header);
-        var provider = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        var gateway = new HeaderReturningGateway(new DomainConfiguration
+        {
+            Id = Guid.NewGuid(),
+            Name = "Root",
+            Domain = "TestRoot",
+            Implementation = "Default",
+        });
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
 
-        // Register an implementation provider under a DIFFERENT name. The row names "Default", which
-        // nothing is registered for -- the missing-provider condition, which is now a named failure
-        // rather than something inferred from an empty registry.
-        provider.Register(
-            "SomeOtherKind",
-            new ImplementationConfigurationProviderBase<ITestBodyConfiguration>(
-                NullLogger<ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>>.Instance,
-                GatewayProviderFor(gateway),
-                "PlatformConfiguration",
-                "pipe"));
+        // Registered under a DIFFERENT name: the row names "Default", which nothing answers for.
+        domain.Register("SomeOtherKind", ImplementationProvider(gateway));
 
-        // Act — Get by name reads the header then composes the typed body; "Default" has no provider.
-        var result = await provider.Get("Root", TestContext.Current.CancellationToken);
+        var result = await domain.Get("Root", TestContext.Current.CancellationToken);
 
-        // Assert — fail loud, no silent fallback to the bare header. NO FALLBACKS WITHOUT EXPLICIT APPROVAL.
+        // Fail loud rather than hand back a domain row with no implementation behind it.
         result.IsSuccess.ShouldBeFalse();
     }
 
-    /// <summary>A domain provider for the test hierarchy: it owns the registry and dispatches.</summary>
-    public sealed class TestRootDomainProvider
-        : ServiceConfigurationProviderBase<TestRootConfiguration, ITestBodyConfiguration, TestRootCommand>
-    {
-        public TestRootDomainProvider(IConfigurationGatewayProvider gatewayProvider)
-            : base(NullLogger<ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
-                   gatewayProvider, "PlatformConfiguration", "pipe")
-        {
-        }
-
-        protected override TestRootConfiguration Compose<T>(string implementation, string name, T implementationConfiguration)
-            => new() { Name = name, Implementation = implementation, Configuration = implementationConfiguration };
-    }
-
-    private static ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration> MakeProvider(RecordingGateway gateway)
-    {
-
-        return new ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
-            GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "pipe");
-    }
+    private static TestRootImplementationProvider ImplementationProvider(IConfigurationGateway gateway)
+        => new(GatewayProviderFor(gateway));
 
     // ========================================================================
     // Test infrastructure: a 3-level configuration hierarchy
     // ========================================================================
 
-    /// <summary>
-    /// Marker interface for the test's typed body. Why: the generated mapper detects a typed-body
-    /// "Configuration" property only when its type is a config interface that *derives from*
-    /// IGenericConfiguration (the production pattern — IConnectionImplementationConfiguration, ISecretManagerImplementationConfiguration).
-    /// A property typed as the bare IGenericConfiguration is treated as a scalar, so a derived interface
-    /// is required for GetTypedBody to return the body.
-    /// </summary>
-    public interface ITestBodyConfiguration : IImplementationConfiguration
-    {
-    }
-
-    /// <summary>Root record carrying a typed body in its <c>Configuration</c> property.</summary>
+    /// <summary>The implementation record, owning a child collection.</summary>
     [GenerateMapper]
-    public sealed class TestRootConfiguration : IDomainConfiguration
+    public sealed class TestRootConfiguration : ITestRootImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
+
         public string Name { get; set; } = string.Empty;
+
         public string Domain { get; set; } = string.Empty;
-        public string? Implementation { get; set; } = "Default";
-        IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
 
-        /// <summary>The typed body whose own child collections must also cascade.</summary>
-        public ITestBodyConfiguration? Configuration { get; set; }
-    }
-
-    /// <summary>Typed body holding a child collection (operations).</summary>
-    [GenerateMapper]
-    public sealed class TestBodyConfiguration : ITestBodyConfiguration
-    {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = string.Empty;
-
-        /// <summary>FK to the root, set by the cascade (Strip(TestRootConfiguration)+"Id").</summary>
-        public Guid TestRootId { get; set; }
+        public string Implementation { get; set; } = "Default";
 
         public IList<TestOpConfiguration> Operations { get; set; } = [];
     }
@@ -188,10 +107,11 @@ public sealed class RecursiveCascadeSaveTests
     public sealed class TestOpConfiguration : IGenericConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
+
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>FK to the typed body (immediate owner), set by the cascade (Strip(TestBodyConfiguration)+"Id").</summary>
-        public Guid TestBodyId { get; set; }
+        /// <summary>FK to the record that owns it, set by the cascade (Strip(TestRootConfiguration)+"Id").</summary>
+        public Guid TestRootId { get; set; }
 
         public IList<TestMapConfiguration> Mappings { get; set; } = [];
     }
@@ -201,22 +121,41 @@ public sealed class RecursiveCascadeSaveTests
     public sealed class TestMapConfiguration : IGenericConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
+
         public string Name { get; set; } = string.Empty;
 
         /// <summary>FK to the parent operation, set by the cascade (Strip(TestOpConfiguration)+"Id").</summary>
         public Guid TestOpId { get; set; }
     }
 
-    [TypeOption(typeof(ConfigurationCommands), "TestRoot")]
-    public sealed class TestRootCommand : ConfigurationCommandBase<TestRootConfiguration>
+    /// <summary>The provider under test: an implementation provider owns the cascade.</summary>
+    public sealed class TestRootImplementationProvider
+        : ImplementationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration>
     {
-        public TestRootCommand() : base("TestRoot") { }
+        public TestRootImplementationProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRoot")
+        {
+        }
     }
 
-    [TypeOption(typeof(ConfigurationCommands), "TestBody")]
-    public sealed class TestBodyCommand : ConfigurationCommandBase<TestBodyConfiguration>
+    /// <summary>The domain provider: it owns the registry and dispatches by the row's implementation.</summary>
+    public sealed class TestRootDomainProvider
+        : DomainConfigurationProviderBase<ITestRootImplementationConfiguration>
     {
-        public TestBodyCommand() : base("TestBody") { }
+        public TestRootDomainProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<DomainConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "pipe",
+                "TestRootDomain")
+        {
+        }
     }
 
     [TypeOption(typeof(ConfigurationCommands), "TestOp")]
@@ -232,9 +171,8 @@ public sealed class RecursiveCascadeSaveTests
     }
 
     /// <summary>
-    /// Gateway test double that records every configuration record saved through it so the test can
-    /// assert which levels of the hierarchy were persisted. The root's existence-check read
-    /// (<c>Execute&lt;IEnumerable&lt;T&gt;&gt;</c>) returns empty so Save treats the record as new.
+    /// Gateway test double that records every configuration record saved through it, so the test can
+    /// assert which levels of the hierarchy were persisted.
     /// </summary>
     private sealed class RecordingGateway : IConfigurationGateway
     {
@@ -258,7 +196,7 @@ public sealed class RecursiveCascadeSaveTests
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            // The Get(id) existence-check inside Save reads IEnumerable<T> — return empty (record is new).
+            // A read asks for a sequence — the record is new, so nothing comes back.
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));
 
@@ -271,7 +209,7 @@ public sealed class RecursiveCascadeSaveTests
 
         public Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            // The save cascade routes child saves through the non-generic Execute — record them too.
+            // The cascade routes child saves through the non-generic Execute — record them too.
             if (command is IConfigurationSaveCommand save && save.InputData is not null)
                 SavedConfigs.Add(save.InputData);
             return Task.FromResult<IGenericResult>(GenericResult.Success());
@@ -305,9 +243,8 @@ public sealed class RecursiveCascadeSaveTests
     }
 
     /// <summary>
-    /// Gateway test double that returns a single supplied <see cref="TestRootConfiguration"/> on the
-    /// by-name read (so Get(name) composes the implementation configuration), and empty for every other
-    /// read. Exercises the fail-loud missing-provider path without a mock schema tree.
+    /// Gateway test double that answers the domain read with one supplied row and every other read
+    /// with nothing, so the missing-implementation path is exercised without a schema tree.
     /// </summary>
     private sealed class HeaderReturningGateway : IConfigurationGateway
     {
@@ -319,9 +256,9 @@ public sealed class RecursiveCascadeSaveTests
 
         public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
 
-        private readonly TestRootConfiguration _header;
+        private readonly DomainConfiguration _row;
 
-        public HeaderReturningGateway(TestRootConfiguration header) => _header = header;
+        public HeaderReturningGateway(DomainConfiguration row) => _row = row;
 
         public IReadOnlyList<IDataStore> DataStores { get; } = [];
 
@@ -333,9 +270,8 @@ public sealed class RecursiveCascadeSaveTests
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            // The Get(name) header read requests IEnumerable<TestRootConfiguration> — return the one header.
-            if (typeof(T) == typeof(IEnumerable<TestRootConfiguration>))
-                return Task.FromResult(GenericResult<T>.Success((T)(object)new List<TestRootConfiguration> { _header }));
+            if (typeof(T) == typeof(IEnumerable<DomainConfiguration>))
+                return Task.FromResult(GenericResult<T>.Success((T)(object)new List<DomainConfiguration> { _row }));
 
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));
@@ -387,5 +323,4 @@ public sealed class RecursiveCascadeSaveTests
 
         public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
     }
-
 }

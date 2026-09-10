@@ -63,7 +63,7 @@ public sealed class LocalKeyTakeSchemeTests
             .ShouldBe(LocalKeyAuthenticationType.SchemePrefix + "FdwAuthority");
     }
 
-    private static AuthenticationServiceConfiguration Entry(string? name, string? authority)
+    private static LocalKeyAuthenticationConfiguration Entry(string? name, string? authority)
         => new()
         {
             Name = name ?? string.Empty,

@@ -23,9 +23,9 @@ using Fdw.Abstractions;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Smoke test for <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}.Get(Guid, CancellationToken)"/>
-/// verifying that when the container has a Foreign key (no Primary key), the emitted command
-/// uses the FK column rather than [Id].
+/// Smoke test for <see cref="ImplementationProviderBase{TConfiguration,TContract}.Get(Guid, CancellationToken)"/>
+/// verifying that the read joins to the domain container and filters on the domain's durable Id
+/// rather than the implementation row's own [Id].
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
 public class DefaultConfigurationProviderGetByIdTests
@@ -49,14 +49,9 @@ public class DefaultConfigurationProviderGetByIdTests
             fkColumn: "SecretManagerId");
 
 
-        var provider = new ImplementationConfigurationProviderBase<ITestChildConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestChildConfigImplementationConfiguration>>.Instance,
-            GatewayProviderFor(fakeGateway),
-            "PlatformConfiguration",
-            "sec");
-
         var domainConfigurationId = Guid.NewGuid();
-        await provider.Get(domainConfigurationId, TestContext.Current.CancellationToken);
+        await new TestChildConfigProvider(GatewayProviderFor(fakeGateway))
+            .Get(domainConfigurationId, TestContext.Current.CancellationToken);
 
         // Assert: the FK join filters by the PARENT's durable Logical key ("SecretManager.Id"); the
         // caller passes the parent's Id as the value. The join column itself (SecretManagerRowId →
@@ -222,16 +217,30 @@ public class DefaultConfigurationProviderGetByIdTests
     // ========================================================================
 
     /// <summary>
-    /// Minimal test configuration type for child config scenario.
+    /// Minimal implementation configuration, reached through the SecretManager domain row.
     /// </summary>
-    public sealed class TestChildConfig : IGenericConfiguration
+    public sealed class TestChildConfig : ITestChildConfigImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestChildSection";
-        public string ServiceType => "TestChild";
-        public string? Implementation => "Default";
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = "Default";
         public Guid SecretManagerId { get; set; }
+    }
+
+    /// <summary>The provider under test — an implementation provider over the child container.</summary>
+    private sealed class TestChildConfigProvider
+        : ImplementationProviderBase<TestChildConfig, ITestChildConfigImplementationConfiguration>
+    {
+        public TestChildConfigProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestChildConfig, ITestChildConfigImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "sec",
+                "AzureKeyVaultSecretManager")
+        {
+        }
     }
 
     /// <summary>

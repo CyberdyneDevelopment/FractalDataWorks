@@ -76,24 +76,36 @@ public class ConnectionProviderTests
     }
 
     /// <summary>
-    /// Minimal IConnectionImplementationConfiguration stub — ConnectionProvider.CreateFromHeader
-    /// requires a non-null Configuration on the parent header before it dispatches to the
-    /// registered factory, so the test config provider attaches one of these to every match.
+    /// Minimal connection implementation configuration: what a domain read hands back, and what the
+    /// factory is given.
     /// </summary>
     private sealed class StubConnectionConfiguration : IConnectionImplementationConfiguration
     {
         public Guid Id { get; set; }
+
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "Connections";
-        public string ServiceType => "Connection";
-        public string? Implementation { get; set; }
+
+        public string Domain { get; set; } = string.Empty;
+
+        public string Implementation { get; set; } = string.Empty;
+
         public Guid ConnectionId { get; set; }
+
+        public string? Description { get; set; }
+
+        public string? Environment { get; set; }
+
+        public bool HealthCheckEnabled { get; set; }
+
+        public bool HealthCheckOnStartup { get; set; }
+
+        public int? HealthCheckIntervalSeconds { get; set; }
+
+        public bool DiscoveryEnabled { get; set; } = true;
     }
 
-    /// <summary>
-    /// Simple test configuration provider for testing.
-    /// </summary>
-    private class TestConnectionConfigurationProvider : IImplementationConfigurationProvider<IConnectionImplementationConfiguration>, IServiceConfigurationProvider, IConnectionConfigurationProvider
+    /// <summary>The connection catalogue this provider reads, held in memory.</summary>
+    private sealed class TestConnectionConfigurationProvider : IConnectionConfigurationProvider
     {
         private readonly List<IConnectionImplementationConfiguration> _configs;
 
@@ -102,100 +114,39 @@ public class ConnectionProviderTests
             _configs = configs ?? [];
         }
 
-        private static IConnectionImplementationConfiguration AttachStubConfig(IConnectionImplementationConfiguration cfg)
-        {
-            if (cfg.Configuration is null)
-                cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, Implementation = cfg.Implementation };
-            return cfg;
-        }
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(string name, CancellationToken ct = default)
+            => Task.FromResult(GenericResult<IConnectionImplementationConfiguration>.Success(
+                _configs.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase))!));
 
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(string name, CancellationToken cancellationToken = default)
-        {
-            var match = _configs.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
-            if (match is not null) AttachStubConfig(match);
-            return Task.FromResult(GenericResult<IConnectionImplementationConfiguration>.Success(match!));
-        }
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(Guid id, CancellationToken ct = default)
+            => Task.FromResult(GenericResult<IConnectionImplementationConfiguration>.Success(
+                _configs.FirstOrDefault(c => c.Id == id)!));
 
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
-        {
-            var match = _configs.FirstOrDefault(c => c.Id == id);
-            if (match is not null) AttachStubConfig(match);
-            return Task.FromResult(GenericResult<IConnectionImplementationConfiguration>.Success(match!));
-        }
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+            => Get(id, ct);
 
-        public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(CancellationToken cancellationToken = default)
-        {
-            IReadOnlyList<IConnectionImplementationConfiguration> list = _configs;
-            return Task.FromResult(GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success(list));
-        }
+        public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(CancellationToken ct = default)
+            => Task.FromResult(GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success(_configs));
 
-        public Task<IGenericResult<IConnectionImplementationConfiguration>> Save(IConnectionImplementationConfiguration record, CancellationToken cancellationToken = default)
+        public Task<IGenericResult<IReadOnlyList<T>>> Find<T>(Func<T, bool> predicate, CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
+            => Task.FromResult(GenericResult<IReadOnlyList<T>>.Success(
+                (IReadOnlyList<T>)_configs.OfType<T>().Where(predicate).ToList()));
+
+        public Task<IGenericResult> Save<T>(
+            T implementationConfiguration, string domain, string implementationName, string name, CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
             => throw new NotSupportedException("Test provider does not support Save.");
 
-        public Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default)
+        public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 
-        public Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default)
+        public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 
-    
-        // Type-erased surface — delegates to the typed members.
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
-        {
-            var result = await Get(id, ct).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
-                : result.ToNewResult<IGenericConfiguration>();
-        }
-
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
-        {
-            var result = await Get(name, ct).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
-                : result.ToNewResult<IGenericConfiguration>();
-        }
-
-        async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
-            => record is IConnectionImplementationConfiguration typed
-                ? await Save(typed, ct).ConfigureAwait(false)
-                : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
-
-
-        // ── IImplementationConfigurationProvider ────────────────────────────────────
-        async Task<IGenericResult<IDomainConfiguration>> IImplementationConfigurationProvider<IConnectionImplementationConfiguration>.Get(
-            string name, CancellationToken ct)
-        {
-            // The domain record goes back whole; the provider under test reads the discriminator off it.
-            var result = await Get(name, ct).ConfigureAwait(false);
-            return result.IsSuccess && result.Value is { } record
-                ? GenericResult<IDomainConfiguration>.Success(record)
-                : GenericResult<IDomainConfiguration>.Failure();
-        }
-
-        async Task<IGenericResult<IDomainConfiguration>> IImplementationConfigurationProvider<IConnectionImplementationConfiguration>.Get(
-            Guid id, CancellationToken ct)
-        {
-            // The domain record goes back whole; the provider under test reads the discriminator off it.
-            var result = await Get(id, ct).ConfigureAwait(false);
-            return result.IsSuccess && result.Value is { } record
-                ? GenericResult<IDomainConfiguration>.Success(record)
-                : GenericResult<IDomainConfiguration>.Failure();
-        }
-
-        Task<IGenericResult> IImplementationConfigurationProvider<IConnectionImplementationConfiguration>.Save<T>(
-            string implementation, string name, T implementationConfiguration, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        Task<IGenericResult> IImplementationConfigurationProvider<IConnectionImplementationConfiguration>.Delete(Guid id, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        Task<IGenericResult> IImplementationConfigurationProvider<IConnectionImplementationConfiguration>.Delete(string name, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        IGenericResult IImplementationConfigurationProvider<IConnectionImplementationConfiguration>.Register<T>(
-            string name, T implementationConfigurationProvider) => GenericResult.Success();
-}
+        public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
+            => GenericResult.Success();
+    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -245,11 +196,11 @@ public class ConnectionProviderTests
     public async Task GetByNameWithNoImplementationReturnsFailure()
     {
         // Arrange - add config with null Implementation
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
-            Implementation = null
+            Implementation = string.Empty
         };
         _configurations.Add(config);
 
@@ -267,7 +218,7 @@ public class ConnectionProviderTests
     public async Task RegisterWithValidParametersSucceeds()
     {
         // Arrange
-        _configurations.Add(new IConnectionImplementationConfiguration
+        _configurations.Add(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -327,7 +278,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -356,7 +307,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -385,7 +336,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -415,7 +366,7 @@ public class ConnectionProviderTests
     public async Task GetGenericWithIncompatibleTypeReturnsFailure()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -444,7 +395,7 @@ public class ConnectionProviderTests
     public async Task IConnectionProviderExplicitImplementationDelegatesToBaseGet()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -474,7 +425,7 @@ public class ConnectionProviderTests
     public async Task IDataConnectionProviderExplicitImplementationDelegatesToBaseGet()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -505,7 +456,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -536,7 +487,7 @@ public class ConnectionProviderTests
     public async Task IDataConnectionProviderGetGenericByNameReturnsTypedConnection()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -568,7 +519,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -600,11 +551,11 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
-            Implementation = null
+            Implementation = string.Empty
         };
         _configurations.Add(config);
 
@@ -623,7 +574,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -650,7 +601,7 @@ public class ConnectionProviderTests
     public async Task RegisterFactoryOverwritesPrevious()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -681,7 +632,7 @@ public class ConnectionProviderTests
     public async Task GetByNameWhenFactoryReturnsFailureReturnsFailure()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -707,7 +658,7 @@ public class ConnectionProviderTests
     {
         // Arrange
         var connectionId = Guid.NewGuid();
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = connectionId,
             Name = "TestConnection",
@@ -732,7 +683,7 @@ public class ConnectionProviderTests
     public async Task GetByNameSelectsFactoryByHeaderImplementation()
     {
         // Arrange
-        _configurations.Add(new IConnectionImplementationConfiguration
+        _configurations.Add(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "PgConn",
@@ -761,7 +712,7 @@ public class ConnectionProviderTests
         _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)FactoryReturning(new Mock<IGenericConnection>().Object).Object);
 
         // Act
-        var result = await _provider.Get(new IConnectionImplementationConfiguration
+        var result = await _provider.Get(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = string.Empty,
@@ -795,19 +746,19 @@ public class ConnectionProviderTests
     public async Task EachMissingCreationPrerequisiteReportsItsOwnMessage()
     {
         // Arrange
-        _configurations.Add(new IConnectionImplementationConfiguration
+        _configurations.Add(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "NoOptionType",
-            Implementation = null,
+            Implementation = string.Empty,
         });
-        _configurations.Add(new IConnectionImplementationConfiguration
+        _configurations.Add(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "NoFactory",
             Implementation = "NoSuchConnectionKind",
         });
-        _configurations.Add(new IConnectionImplementationConfiguration
+        _configurations.Add(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "NotAConnectionFactory",
@@ -836,7 +787,7 @@ public class ConnectionProviderTests
     public async Task EveryGetBuildsItsOwnConnection()
     {
         // Arrange
-        var config = new IConnectionImplementationConfiguration
+        var config = new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",
@@ -869,7 +820,7 @@ public class ConnectionProviderTests
     {
         // Arrange - a connection that is stale the moment it is built. The old implementation
         // re-entered Get() on every stale result and recursed until the stack blew.
-        _configurations.Add(new IConnectionImplementationConfiguration
+        _configurations.Add(new StubConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
             Name = "TestConnection",

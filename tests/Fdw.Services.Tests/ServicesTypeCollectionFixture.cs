@@ -23,8 +23,6 @@ public sealed class ServicesTypeCollectionFixture
         _ = ServicesResultCodes.All();
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderTests.TestConfigurationCommand());
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderGetByIdTests.TestChildCommand());
-        ConfigurationCommands.RegisterMember(new RecursiveCascadeSaveTests.TestRootCommand());
-        ConfigurationCommands.RegisterMember(new RecursiveCascadeSaveTests.TestBodyCommand());
         ConfigurationCommands.RegisterMember(new RecursiveCascadeSaveTests.TestOpCommand());
         ConfigurationCommands.RegisterMember(new RecursiveCascadeSaveTests.TestMapCommand());
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderTests.TestKvpCommand());
@@ -32,7 +30,6 @@ public sealed class ServicesTypeCollectionFixture
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderTests.TestContainerFieldCommand());
 
         PocoMapperCollection.RegisterMember(new TestRootConfigurationPocoMapper());
-        PocoMapperCollection.RegisterMember(new TestBodyConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new TestOpConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new TestMapConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new TestKvpConfigurationPocoMapper());
