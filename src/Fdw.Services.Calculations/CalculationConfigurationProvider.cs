@@ -55,7 +55,7 @@ public class CalculationConfigurationProvider
     /// SecretManagerConfigurationProvider.Save stamping SecretManagerId. NO FALLBACKS — only stamps when a
     /// typed body is present and its mapper exists.
     /// </remarks>
-    protected override Task<IGenericResult<CalculationEntityConfiguration>> WriteDomain(
+    protected override Task<IGenericResult<CalculationEntityConfiguration>> WriteRow(
         CalculationEntityConfiguration record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -66,6 +66,6 @@ public class CalculationConfigurationProvider
         if (record.Configuration is not null)
             record.Configuration.CalculationEntityId = record.Id;
 
-        return base.WriteDomain(record, ct);
+        return base.WriteRow(record, ct);
     }
 }

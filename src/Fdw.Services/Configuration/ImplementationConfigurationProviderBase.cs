@@ -113,7 +113,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
                     _logger, typeof(TDomainConfiguration).Name, record?.GetType().Name ?? "null"));
         }
 
-        return await WriteDomain(typed, ct).ConfigureAwait(false);
+        return await WriteRow(typed, ct).ConfigureAwait(false);
     }
 
     private static readonly Lazy<TCommand> _commands = new(static () =>
@@ -187,7 +187,9 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         T implementationConfiguration, string implementationName, string name, CancellationToken ct = default)
         where T : TImplementationConfiguration
     {
-        // No domain row yet: create the one this implementation will hang from, then write it.
+        // The two rows are written together. A domain row is never created on its own: it names an
+        // implementation, so a domain row without one is the bodiless record that fails to compose on
+        // the next read and takes the host down when that read is at startup.
         var record = Activator.CreateInstance<TDomainConfiguration>();
         if (record is not IDomainConfiguration created)
         {
@@ -195,11 +197,25 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
         }
 
+        if (!_implementations.ContainsKey(implementationName))
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
+        }
+
+        // Everything the domain row needs is in hand: a new Id, the domain the type states, the
+        // implementation named by the caller, and the name.
+        created.Id = Guid.CreateVersion7();
         created.Name = name;
         created.Implementation = implementationName;
+        created.ImplementationConfiguration = implementationConfiguration;
 
-        var domain = await WriteDomain(record, ct).ConfigureAwait(false);
-        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+        var gateway = Gateway();
+        if (gateway.IsFailure) return gateway.ToNewResult<TDomainConfiguration>();
+
+        var written = await gateway.Value!.Execute<TDomainConfiguration>(
+            Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
+        if (!written.IsSuccess) return written.ToNewResult<TDomainConfiguration>();
 
         return await Write(implementationConfiguration, implementationName, name, created.Id, ct)
             .ConfigureAwait(false);
@@ -259,7 +275,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
                                      "ActualType", record?.GetType().Name ?? "(null)"));
         }
 
-        var saved = await WriteDomain(typed, ct).ConfigureAwait(false);
+        var saved = await WriteRow(typed, ct).ConfigureAwait(false);
         return saved.IsSuccess
             ? GenericResult<TImplementationConfiguration>.Success(record)
             : saved.ToNewResult<TImplementationConfiguration>();
@@ -924,10 +940,10 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <see cref="DeleteChild{TChild}"/> and expose a named domain method over it.
     /// </para>
     /// </remarks>
-    // Writes the domain row. Not public: a caller does not hand this provider a domain record --
-    // the record is Id, Name, Domain and Implementation and carries no payload, so there is nothing
-    // for a caller to have built. The two Save overloads own writing and reach this.
-    protected virtual async Task<IGenericResult<TDomainConfiguration>> WriteDomain(TDomainConfiguration record, CancellationToken ct = default)
+    // Writes the one row this provider owns, whichever half of the pair that is. Not public, and
+    // not a way to create a domain row on its own: a domain row names an implementation, so the two
+    // are always written together by the create overload above.
+    protected virtual async Task<IGenericResult<TDomainConfiguration>> WriteRow(TDomainConfiguration record, CancellationToken ct = default)
     {
         // A domain row that names a registered implementation and carries none is the bodiless record
         // that cannot be composed on read -- and, when read at startup, takes the host down at boot.
@@ -965,7 +981,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <param name="child">The child row to write.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <remarks>
-    /// The counterpart to <see cref="WriteDomain"/>'s unconditional cascade: this writes the row it is
+    /// The counterpart to <see cref="WriteRow"/>'s unconditional cascade: this writes the row it is
     /// given and nothing else, so changing one member's role leaves every other row's audit columns
     /// alone. Protected rather than public so a domain provider publishes a named operation —
     /// SetMemberRole, AttachResource — and an endpoint never handles a child-level primitive.

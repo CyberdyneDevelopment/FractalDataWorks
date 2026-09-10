@@ -1,3 +1,4 @@
+using Fdw.Services;
 using System;
 using System.Collections.Generic;
 using Fdw.Abstractions;
@@ -21,7 +22,8 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// contract itself takes an <see cref="IServiceProvider"/>; the factory passes it through, it never
 /// service-locates its own dependencies.
 /// </remarks>
-public sealed class LocalHealthMonitorFactory : ILocalHealthMonitorFactory
+public sealed class LocalHealthMonitorFactory
+    : ServiceFactoryBase<IHealthMonitorService, LocalHealthMonitorConfiguration>, ILocalHealthMonitorFactory
 {
     private readonly IEnumerable<IHealthCheckable> _healthCheckables;
     private readonly IServiceProvider _services;
@@ -47,7 +49,7 @@ public sealed class LocalHealthMonitorFactory : ILocalHealthMonitorFactory
     }
 
     /// <inheritdoc/>
-    public IGenericResult<IHealthMonitorService> Create(LocalHealthMonitorConfiguration configuration)
+    public override IGenericResult<IHealthMonitorService> Create(LocalHealthMonitorConfiguration configuration)
     {
         if (configuration is null)
             throw new ArgumentNullException(nameof(configuration));
@@ -63,37 +65,7 @@ public sealed class LocalHealthMonitorFactory : ILocalHealthMonitorFactory
         return GenericResult<IHealthMonitorService>.Success(instance);
     }
 
-    /// <inheritdoc/>
-    public IGenericResult<IHealthMonitorService> Create(IGenericConfiguration configuration)
-    {
-        // The implementation, not the domain record: the provider reads the discriminator off the
-        // domain row to pick this factory and then hands over what the row named. Casting to
-        // HealthMonitorConfiguration here also bound Create(typed) back to this same overload
-        // rather than to the strongly-typed sibling below -- unreachable while the discriminator
-        // never resolved, an infinite recursion the moment it did.
-        if (configuration is not LocalHealthMonitorConfiguration typed)
-        {
-            return GenericResult<IHealthMonitorService>.Failure(
-                HealthMonitorLog.FactoryConfigurationCastFailed(
-                    _logger, nameof(LocalHealthMonitorFactory),
-                    nameof(LocalHealthMonitorConfiguration), configuration?.GetType().Name ?? "null"));
-        }
 
-        return Create(typed);
-    }
-
-    /// <inheritdoc/>
-    public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService
-    {
-        var result = Create(configuration);
-        if (!result.IsSuccess)
-            return result.ToNewResult<T>();
-        return result.Value is T typed
-            ? GenericResult<T>.Success(typed)
-            : GenericResult<T>.Failure(
-                HealthMonitorLog.FactoryConfigurationCastFailed(
-                    _logger, nameof(LocalHealthMonitorFactory), typeof(T).Name, result.Value!.GetType().Name));
-    }
 
     /// <inheritdoc/>
     IGenericResult<IGenericService> IServiceFactory.Create(IGenericConfiguration configuration)
