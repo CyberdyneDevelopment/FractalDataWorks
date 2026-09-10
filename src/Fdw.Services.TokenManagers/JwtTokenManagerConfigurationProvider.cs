@@ -15,10 +15,7 @@ namespace Fdw.Services.TokenManagers;
 /// <c>auth.TokenManager.Id</c>, not this row's own id.
 /// </remarks>
 public class JwtTokenManagerConfigurationProvider
-    : ImplementationConfigurationProvider<
-        ITokenManagerImplementationConfiguration,
-        JwtTokenManagerConfiguration,
-        JwtTokenManagerConfigurationCommand>
+    : ImplementationConfigurationProviderBase<JwtTokenManagerConfiguration, ITokenManagerImplementationConfiguration, JwtTokenManagerConfigurationCommand>
 {
 
     /// <summary>Initializes a new instance of the <see cref="JwtTokenManagerConfigurationProvider"/> class.</summary>

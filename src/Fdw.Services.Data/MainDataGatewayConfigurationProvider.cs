@@ -9,10 +9,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>Reads how the data gateway behaves.</summary>
 public class MainDataGatewayConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IDataGatewayImplementationConfiguration,
-          MainDataGatewayConfiguration,
-          MainDataGatewayConfigurationCommand>
+    : ImplementationConfigurationProviderBase<MainDataGatewayConfiguration, IDataGatewayImplementationConfiguration, MainDataGatewayConfigurationCommand>
 {
 
     /// <summary>Initializes a new instance of the <see cref="MainDataGatewayConfigurationProvider"/> class.</summary>

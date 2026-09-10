@@ -23,10 +23,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <c>IConfigurationGateway</c>, no <c>IConfiguration</c> binding section.
 /// </remarks>
 public class ChainedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IExternalIdentityProvisionerImplementationConfiguration,
-          ChainedExternalIdentityProvisionerConfiguration,
-          ChainedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ChainedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ChainedExternalIdentityProvisionerConfigurationCommand>
 {
 
     /// <summary>

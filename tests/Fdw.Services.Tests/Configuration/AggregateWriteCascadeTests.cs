@@ -118,7 +118,7 @@ public sealed class AggregateWriteCascadeTests
         var provider = new RecursiveCascadeSaveTests.TestRootDomainProvider(GatewayProviderFor(gateway));
         provider.Register(
             "Default",
-            new ImplementationConfigurationProvider<RecursiveCascadeSaveTests.ITestBodyConfiguration, TestBodyConfiguration, TestBodyCommand>(
+            new ImplementationConfigurationProviderBase<TestBodyConfiguration, RecursiveCascadeSaveTests.ITestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration, TestBodyConfigurationCommand>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",

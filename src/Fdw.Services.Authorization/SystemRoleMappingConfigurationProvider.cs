@@ -16,10 +16,7 @@ namespace Fdw.Services.Authorization;
 /// anything narrower cannot be registered.
 /// </remarks>
 public class SystemRoleMappingConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IRoleMappingImplementationConfiguration,
-          SystemRoleMappingConfiguration,
-          SystemRoleMappingConfigurationCommand>
+    : ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>
 {
 
     /// <summary>Initializes a new instance of the <see cref="SystemRoleMappingConfigurationProvider"/> class.</summary>

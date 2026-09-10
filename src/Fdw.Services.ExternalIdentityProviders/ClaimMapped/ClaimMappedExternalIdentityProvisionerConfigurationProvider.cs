@@ -15,10 +15,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// <c>ComposeChildren</c> cascade.
 /// </remarks>
 public class ClaimMappedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IExternalIdentityProvisionerImplementationConfiguration,
-          ClaimMappedExternalIdentityProvisionerConfiguration,
-          ClaimMappedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ClaimMappedExternalIdentityProvisionerConfigurationCommand>
 {
 
     /// <summary>

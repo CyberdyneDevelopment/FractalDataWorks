@@ -47,9 +47,9 @@ public class ScheduleConfigurationProvider : ImplementationConfigurationProvider
     public event EventHandler? Changed;
 
     /// <inheritdoc />
-    public override async Task<IGenericResult<ScheduleConfiguration>> Save(ScheduleConfiguration record, CancellationToken ct = default)
+    protected override async Task<IGenericResult<ScheduleConfiguration>> WriteDomain(ScheduleConfiguration record, CancellationToken ct = default)
     {
-        var result = await base.Save(record, ct).ConfigureAwait(false);
+        var result = await base.WriteDomain(record, ct).ConfigureAwait(false);
         if (result.IsSuccess)
         {
             Changed?.Invoke(this, EventArgs.Empty);

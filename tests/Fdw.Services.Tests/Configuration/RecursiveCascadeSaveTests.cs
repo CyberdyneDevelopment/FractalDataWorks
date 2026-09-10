@@ -104,7 +104,7 @@ public sealed class RecursiveCascadeSaveTests
         // rather than something inferred from an empty registry.
         provider.Register(
             "SomeOtherKind",
-            new ImplementationConfigurationProvider<ITestBodyConfiguration, TestBodyConfiguration, TestBodyCommand>(
+            new ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyConfiguration, TestBodyCommand>(
                 NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration, TestBodyConfigurationCommand>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",

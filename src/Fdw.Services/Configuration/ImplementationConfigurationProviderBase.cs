@@ -12,6 +12,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Results;
 using Fdw.Services.Configuration.Logging;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -27,7 +28,9 @@ namespace Fdw.Services.Configuration;
 /// <typeparam name="TImplementationConfiguration">The domain's implementation contract -- the marker only this domain's implementations carry, and what a read hands back.</typeparam>
 /// <typeparam name="TCommand">The configuration command for this provider's rows.</typeparam>
 public abstract class ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>
-    : IServiceConfigurationProvider, IDomainConfigurationProvider<TImplementationConfiguration>
+    : IServiceConfigurationProvider,
+      IDomainConfigurationProvider<TImplementationConfiguration>,
+      IImplementationConfigurationProvider<TImplementationConfiguration>
     where TDomainConfiguration : class, IGenericConfiguration
     where TImplementationConfiguration : IImplementationConfiguration
     where TCommand : ConfigurationCommandBase<TDomainConfiguration>
@@ -110,7 +113,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
                     _logger, typeof(TDomainConfiguration).Name, record?.GetType().Name ?? "null"));
         }
 
-        return await Save(typed, ct).ConfigureAwait(false);
+        return await WriteDomain(typed, ct).ConfigureAwait(false);
     }
 
     private static readonly Lazy<TCommand> _commands = new(static () =>
@@ -195,7 +198,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         created.Name = name;
         created.Implementation = implementationName;
 
-        var domain = await Save(record, ct).ConfigureAwait(false);
+        var domain = await WriteDomain(record, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
         return await Write(implementationConfiguration, implementationName, name, created.Id, ct)
@@ -217,6 +220,45 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         implementationConfiguration.Name = name;
         implementationConfiguration.Id = domainId;
         return await provider.Save(implementationConfiguration, ct).ConfigureAwait(false);
+    }
+
+    // The implementation surface. A provider registered against a domain is asked for its row by
+    // that domain's Id; the join to the domain's RowId happens inside the query.
+    async Task<IGenericResult<TImplementationConfiguration>> IImplementationConfigurationProvider<TImplementationConfiguration>.Get(
+        Guid domainId, CancellationToken ct)
+        => await Get(domainId, ct).ConfigureAwait(false);
+
+    async Task<IGenericResult<IReadOnlyList<TImplementationConfiguration>>> IImplementationConfigurationProvider<TImplementationConfiguration>.Get(
+        CancellationToken ct)
+    {
+        var rows = await Get(ct).ConfigureAwait(false);
+        if (!rows.IsSuccess) return rows.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
+
+        var widened = new List<TImplementationConfiguration>();
+        foreach (var row in rows.Value ?? [])
+        {
+            if (row is IDomainConfiguration { ImplementationConfiguration: TImplementationConfiguration found })
+                widened.Add(found);
+        }
+
+        return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success(widened);
+    }
+
+    async Task<IGenericResult<TImplementationConfiguration>> IImplementationConfigurationProvider<TImplementationConfiguration>.Save(
+        TImplementationConfiguration record, CancellationToken ct)
+    {
+        if (record is not TDomainConfiguration typed)
+        {
+            return GenericResult<TImplementationConfiguration>.Failure(
+                ServicesResultCodes.ByName("InvalidConfigurationType"),
+                ResultDetails.Create("ExpectedType", typeof(TDomainConfiguration).Name,
+                                     "ActualType", record?.GetType().Name ?? "(null)"));
+        }
+
+        var saved = await WriteDomain(typed, ct).ConfigureAwait(false);
+        return saved.IsSuccess
+            ? GenericResult<TImplementationConfiguration>.Success(record)
+            : saved.ToNewResult<TImplementationConfiguration>();
     }
 
     /// <summary>
@@ -870,7 +912,10 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <see cref="DeleteChild{TChild}"/> and expose a named domain method over it.
     /// </para>
     /// </remarks>
-    public virtual async Task<IGenericResult<TDomainConfiguration>> Save(TDomainConfiguration record, CancellationToken ct = default)
+    // Writes the domain row. Not public: a caller does not hand this provider a domain record --
+    // the record is Id, Name, Domain and Implementation and carries no payload, so there is nothing
+    // for a caller to have built. The two Save overloads own writing and reach this.
+    protected virtual async Task<IGenericResult<TDomainConfiguration>> WriteDomain(TDomainConfiguration record, CancellationToken ct = default)
     {
         // A domain row that names a registered implementation and carries none is the bodiless record
         // that cannot be composed on read -- and, when read at startup, takes the host down at boot.
@@ -908,7 +953,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <param name="child">The child row to write.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <remarks>
-    /// The counterpart to <see cref="Save"/>'s unconditional cascade: this writes the row it is
+    /// The counterpart to <see cref="WriteDomain"/>'s unconditional cascade: this writes the row it is
     /// given and nothing else, so changing one member's role leaves every other row's audit columns
     /// alone. Protected rather than public so a domain provider publishes a named operation —
     /// SetMemberRole, AttachResource — and an endpoint never handles a child-level primitive.

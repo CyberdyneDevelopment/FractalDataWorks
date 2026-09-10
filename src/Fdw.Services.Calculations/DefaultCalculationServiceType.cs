@@ -47,11 +47,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             header.Register(
                 "Formula",
-                services.GetRequiredService<ImplementationConfigurationProvider<ICalculationTypedConfiguration, FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, ICalculationTypedConfiguration, FormulaCalculationConfigurationCommand>>());
 
             header.Register(
                 "Windowed",
-                services.GetRequiredService<ImplementationConfigurationProvider<ICalculationTypedConfiguration, WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, ICalculationTypedConfiguration, WindowedCalculationConfigurationCommand>>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -90,8 +90,8 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         where TConfig : class, ICalculationTypedConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        services.TryAddSingleton<ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>>(sp =>
-            new ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration, TCommand>>(sp =>
+            new ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration, TCommand>(
                 sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "PlatformConfiguration",

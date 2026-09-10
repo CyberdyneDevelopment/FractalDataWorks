@@ -32,10 +32,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public sealed class JwtBearerAuthenticationConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IAuthenticationServiceImplementationConfiguration,
-          JwtBearerAuthenticationConfiguration,
-          JwtBearerAuthenticationConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<JwtBearerAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration, JwtBearerAuthenticationConfigurationCommand>,
       IJwtBearerAuthenticationConfigurationProvider
 {
 
