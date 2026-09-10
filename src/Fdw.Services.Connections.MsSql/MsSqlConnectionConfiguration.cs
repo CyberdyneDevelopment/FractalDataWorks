@@ -12,20 +12,19 @@ namespace Fdw.Services.Connections.MsSql;
 
 /// <summary>
 /// Configuration for Microsoft SQL Server connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>.
-/// Persisted to <c>conn.MsSqlConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
+/// The MsSql implementation of the Connection domain (<see cref="IConnectionImplementationConfiguration"/>).
+/// Persisted to <c>conn.MsSqlConnection</c> hanging from its <c>conn.Connection</c> domain row via <see cref="ConnectionId"/>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Configuration patterns: <b>Pattern A</b> (typed columns: Server, Database, Port, etc.) +
-/// <b>Pattern B</b> (typed-body specialization: conn.MsSqlConnection.ConnectionId FK to conn.Connection.Id) +
+/// <b>Pattern B</b> (the implementation row: conn.MsSqlConnection.ConnectionId FK to conn.Connection.Id) +
 /// <b>Pattern C</b> (PropertyCollection: <c>AdditionalProperties</c> dict bound via DataContainerKey seed row
 /// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.MsSqlAuthentication).
 /// </para>
 /// <para>
-/// The endpoint creates a <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>
-/// first (writing conn.Connection), then creates this record with <see cref="ConnectionId"/> pointing to
-/// the parent's <see cref="Fdw.Configuration.IGenericConfiguration.Id"/>.
+/// Saving through the Connection domain writes the <c>conn.Connection</c> domain row first, then this
+/// row with <see cref="ConnectionId"/> set to the domain row's <see cref="Fdw.Configuration.IGenericConfiguration.Id"/>.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -60,13 +59,12 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     public string Implementation { get; set; } = string.Empty;
 
     // ========================================
-    // IGenericConfiguration — typed body identity
+    // IGenericConfiguration — identity
     // ========================================
 
     /// <summary>
-    /// Gets or sets the unique identifier for this typed body row (conn.MsSqlConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>
-    /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
+    /// Gets or sets the identifier (conn.MsSqlConnection.Id). The Connection domain stamps its domain row's Id here
+    /// when it saves the pair.
     /// </summary>
     public Guid Id { get; set; }
 
@@ -79,7 +77,7 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the parent header row).
+    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the domain row).
     /// Set by the endpoint before calling Save on this provider.
     /// </summary>
     public Guid ConnectionId { get; set; }

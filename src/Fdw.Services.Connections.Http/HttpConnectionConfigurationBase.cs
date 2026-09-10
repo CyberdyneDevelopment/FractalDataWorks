@@ -12,13 +12,13 @@ namespace Fdw.Services.Connections.Http;
 
 /// <summary>
 /// Base configuration class for HTTP-based connections (REST, SOAP, GraphQL, etc.).
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>.
+/// The HTTP implementation of the Connection domain (<see cref="IConnectionImplementationConfiguration"/>).
 /// Provides HTTP-specific configuration options shared across all HTTP connection types.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Configuration patterns: <b>Pattern A</b> (typed columns: BaseUrl, Protocol, TimeoutSeconds, etc.) +
-/// <b>Pattern B</b> (typed-body specialization: conn.HttpConnection.ConnectionId FK to conn.Connection.Id) +
+/// <b>Pattern B</b> (the implementation row: conn.HttpConnection.ConnectionId FK to conn.Connection.Id) +
 /// <b>Pattern C</b> (PropertyCollection: <c>AdditionalProperties</c> dict bound via DataContainerKey seed row
 /// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.HttpConnectionAuthentication).
 /// </para>
@@ -56,13 +56,12 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     public string Implementation { get; set; } = string.Empty;
 
     // ========================================
-    // IGenericConfiguration — typed body identity
+    // IGenericConfiguration — identity
     // ========================================
 
     /// <summary>
-    /// Gets or sets the unique identifier for this typed body row (conn.HttpConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>
-    /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
+    /// Gets or sets the identifier (conn.HttpConnection.Id). The Connection domain stamps its domain row's Id here
+    /// when it saves the pair.
     /// </summary>
     public Guid Id { get; set; }
 
@@ -75,7 +74,7 @@ public abstract class HttpConnectionConfigurationBase : IConnectionImplementatio
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the parent header row).
+    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the domain row).
     /// Set by the endpoint before calling Save on this provider.
     /// </summary>
     public Guid ConnectionId { get; set; }

@@ -25,6 +25,9 @@ public interface IDataSetImplementationConfiguration : IImplementationConfigurat
     /// <summary>Gets or sets the data set's Sources.</summary>
     IList<DataSetSourceConfiguration> Sources { get; set; }
 
+    /// <summary>Gets or sets the data set's key fields.</summary>
+    IList<DataSetKeyFieldConfiguration> KeyFields { get; set; }
+
     /// <summary>Gets or sets the data set's Aggregates.</summary>
     IList<DataSetAggregateConfiguration> Aggregates { get; set; }
 

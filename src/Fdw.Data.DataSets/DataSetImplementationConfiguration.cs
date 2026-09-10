@@ -94,7 +94,7 @@ public sealed partial class DataSetImplementationConfiguration : IDataSetImpleme
     public IList<DataSetAggregateConfiguration> Aggregates { get; set; } = new List<DataSetAggregateConfiguration>();
 
     /// <summary>Gets or sets the key fields.</summary>
-    public List<DataSetKeyFieldConfiguration> KeyFields { get; set; } = [];
+    public IList<DataSetKeyFieldConfiguration> KeyFields { get; set; } = new List<DataSetKeyFieldConfiguration>();
 
     /// <summary>Gets the durable ids of this dataset's sources.</summary>
     public IReadOnlyList<Guid> SourceIds => Sources?.Select(s => s.Id).ToList() ?? [];
