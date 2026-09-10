@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies ResponseBuffering configuration. Registered and resolved as this type -- never as the base.
 /// </summary>
 public interface IResponseBufferingConfigurationProvider
-    : IDomainConfigurationProvider<IResponseBufferingImplementationConfiguration>
+    : IImplementationConfigurationProvider<IResponseBufferingImplementationConfiguration>
 {
 }

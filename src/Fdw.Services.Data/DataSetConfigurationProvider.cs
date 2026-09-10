@@ -27,7 +27,7 @@ namespace Fdw.Services.Data;
 /// Overrides Get/GetAll to assemble the DataSet → DataSetSource/Field/KeyField hierarchy
 /// after base resolution, and composes FieldMappings onto each source.
 /// </summary>
-public class DataSetConfigurationProvider : ImplementationConfigurationProviderBase<DomainConfiguration, IDataSetImplementationConfiguration>
+public class DataSetConfigurationProvider : ImplementationConfigurationProviderBase<IDataSetImplementationConfiguration>
 {
 
 

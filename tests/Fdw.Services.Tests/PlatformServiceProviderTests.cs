@@ -21,14 +21,14 @@ namespace Fdw.Services.Tests;
 public class DefaultServiceProviderTests
 {
     private readonly TestServiceProvider _provider;
-    private readonly Mock<IDomainConfigurationProvider<TestConfiguration>> _mockConfigProvider;
+    private readonly Mock<IImplementationConfigurationProvider<TestConfiguration>> _mockConfigProvider;
     private readonly Mock<IServiceFactory<IGenericService>> _mockFactory;
 
     public DefaultServiceProviderTests()
     {
-        var logger = NullLogger<PlatformServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
+        var logger = NullLogger<PlatformServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IImplementationConfigurationProvider<TestConfiguration>>>.Instance;
         _provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), logger);
-        _mockConfigProvider = new Mock<IDomainConfigurationProvider<TestConfiguration>>();
+        _mockConfigProvider = new Mock<IImplementationConfigurationProvider<TestConfiguration>>();
         _mockFactory = new Mock<IServiceFactory<IGenericService>>();
 
         _provider.Register(_mockConfigProvider.Object);

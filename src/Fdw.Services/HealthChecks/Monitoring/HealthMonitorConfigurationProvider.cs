@@ -19,7 +19,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// mechanism is identical either way; only the connection differs.
 /// </remarks>
 public sealed class HealthMonitorConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IHealthMonitorImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IHealthMonitorImplementationConfiguration>,
       IHealthMonitorConfigurationProvider
 {
 

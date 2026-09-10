@@ -32,7 +32,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public sealed class LocalKeyAuthenticationConfigurationProvider
-    : ImplementationConfigurationProviderBase<LocalKeyAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
       ILocalKeyAuthenticationConfigurationProvider
 {
 

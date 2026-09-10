@@ -42,7 +42,7 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
     private readonly UserConfigurationProvider _users;
     private readonly UserRoleConfigurationProvider _userRoles;
     private readonly RoleConfigurationProvider _roles;
-    private readonly ImplementationConfigurationProviderBase<ExternalIdentityConfiguration, IExternalIdentityImplementationConfiguration> _identities;
+    private readonly ImplementationConfigurationProviderBase<IExternalIdentityImplementationConfiguration> _identities;
     private readonly ILogger<ClaimMappedProvisioner> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ClaimMappedProvisioner"/> class.</summary>
@@ -51,7 +51,7 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
         UserConfigurationProvider users,
         UserRoleConfigurationProvider userRoles,
         RoleConfigurationProvider roles,
-        ImplementationConfigurationProviderBase<ExternalIdentityConfiguration, IExternalIdentityImplementationConfiguration> identities,
+        ImplementationConfigurationProviderBase<IExternalIdentityImplementationConfiguration> identities,
         ILogger<ClaimMappedProvisioner>? logger = null)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));

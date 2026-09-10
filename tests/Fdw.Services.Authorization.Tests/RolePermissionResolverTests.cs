@@ -136,14 +136,14 @@ public sealed class RolePermissionResolverTests
                 rolePermissions ?? RolePermissions).Object,
             NullLogger<RolePermissionResolver>.Instance);
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>> MockProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>> MockProvider<TConfig, TCommand>(
         IEnumerable<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<IImplementationConfiguration>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
@@ -151,7 +151,7 @@ public sealed class RolePermissionResolverTests
         return mock;
     }
     private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
-        where TProvider : class, IDomainConfigurationProvider<IImplementationConfiguration>
+        where TProvider : class, IImplementationConfigurationProvider<IImplementationConfiguration>
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
     {
         var mock = new Mock<TProvider>();

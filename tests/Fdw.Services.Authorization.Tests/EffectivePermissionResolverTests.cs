@@ -441,7 +441,7 @@ public sealed class EffectivePermissionResolverTests
     // Mocks the named provider interface the resolver actually asks for, rather than the concrete
     // base it happens to be built on.
     private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
-        where TProvider : class, IDomainConfigurationProvider<IImplementationConfiguration>
+        where TProvider : class, IImplementationConfigurationProvider<IImplementationConfiguration>
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
     {
         var mock = new Mock<TProvider>();
@@ -450,14 +450,14 @@ public sealed class EffectivePermissionResolverTests
         return mock;
     }
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>> MockCatalogProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>> MockCatalogProvider<TConfig, TCommand>(
         IEnumerable<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<IImplementationConfiguration>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))

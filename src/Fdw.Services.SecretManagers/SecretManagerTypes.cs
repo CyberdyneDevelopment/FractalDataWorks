@@ -102,9 +102,9 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
                 sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, ISecretManagerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
@@ -145,7 +145,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(SecretManagerTypes),
                             provider.GetType().Name,
-                            typeof(IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<ISecretManagerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

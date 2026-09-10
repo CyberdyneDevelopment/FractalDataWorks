@@ -17,7 +17,7 @@ namespace Fdw.Services.TokenManagers;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class TokenManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ITokenManagerImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<ITokenManagerImplementationConfiguration>,
       ITokenManagerConfigurationProvider
 {
 

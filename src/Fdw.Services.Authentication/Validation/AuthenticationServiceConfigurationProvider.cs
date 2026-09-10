@@ -26,7 +26,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public class AuthenticationServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthenticationServiceImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
       IAuthenticationServiceConfigurationProvider
 {
 

@@ -24,7 +24,7 @@ namespace Fdw.Services.Notifications;
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
 public class NotificationConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<INotificationImplementationConfiguration>,
       INotificationConfigurationProvider
 {
 

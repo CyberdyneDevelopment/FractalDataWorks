@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies EmptyBody configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class EmptyBodyConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IEmptyBodyImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IEmptyBodyImplementationConfiguration>,
       IEmptyBodyConfigurationProvider
 {
 

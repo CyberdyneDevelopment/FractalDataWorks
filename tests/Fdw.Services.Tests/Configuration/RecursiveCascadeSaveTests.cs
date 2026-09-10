@@ -104,8 +104,8 @@ public sealed class RecursiveCascadeSaveTests
         // rather than something inferred from an empty registry.
         provider.Register(
             "SomeOtherKind",
-            new ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyConfiguration>(
-                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration>>.Instance,
+            new ImplementationConfigurationProviderBase<ITestBodyConfiguration>(
+                NullLogger<ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",
                 "pipe"));
@@ -122,7 +122,7 @@ public sealed class RecursiveCascadeSaveTests
         : ServiceConfigurationProviderBase<TestRootConfiguration, ITestBodyConfiguration, TestRootCommand>
     {
         public TestRootDomainProvider(IConfigurationGatewayProvider gatewayProvider)
-            : base(NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration>>.Instance,
+            : base(NullLogger<ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
                    gatewayProvider, "PlatformConfiguration", "pipe")
         {
         }
@@ -131,11 +131,11 @@ public sealed class RecursiveCascadeSaveTests
             => new() { Name = name, Implementation = implementation, Configuration = implementationConfiguration };
     }
 
-    private static ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration> MakeProvider(RecordingGateway gateway)
+    private static ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration> MakeProvider(RecordingGateway gateway)
     {
 
-        return new ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration>>.Instance,
+        return new ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
             GatewayProviderFor(gateway),
             "PlatformConfiguration",
             "pipe");

@@ -43,9 +43,9 @@ namespace Fdw.Services.Tests.Configuration;
 [Collection(nameof(ServicesTestCollection))]
 public sealed class AggregateWriteCascadeTests
 {
-    private static ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration> MakeProvider(RecordingGateway gateway)
+    private static ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration> MakeProvider(RecordingGateway gateway)
         => new(
-            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
             GatewayProviderFor(gateway),
             "PlatformConfiguration",
             "pipe");
@@ -118,8 +118,8 @@ public sealed class AggregateWriteCascadeTests
         var provider = new RecursiveCascadeSaveTests.TestRootDomainProvider(GatewayProviderFor(gateway));
         provider.Register(
             "Default",
-            new ImplementationConfigurationProviderBase<TestBodyConfiguration, RecursiveCascadeSaveTests.ITestBodyConfiguration>(
-                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration>>.Instance,
+            new ImplementationConfigurationProviderBase<RecursiveCascadeSaveTests.ITestBodyConfiguration>(
+                NullLogger<ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",
                 "pipe"));
@@ -251,8 +251,8 @@ public sealed class AggregateWriteCascadeTests
         // id used to look it up — simulating a parent-join read (caller passes the PARENT's id) that
         // resolves to a row with its own distinct durable Id.
         var gateway = new RecordingGateway { BodyHeader = body };
-        var bodyProvider = new ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration>>.Instance,
+        var bodyProvider = new ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>>.Instance,
             GatewayProviderFor(gateway),
             "PlatformConfiguration",
             "pipe");

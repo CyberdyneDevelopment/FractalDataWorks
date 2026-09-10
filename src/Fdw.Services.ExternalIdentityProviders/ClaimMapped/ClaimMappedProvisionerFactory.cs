@@ -28,7 +28,7 @@ internal sealed class ClaimMappedProvisionerFactory
     private readonly UserConfigurationProvider _users;
     private readonly UserRoleConfigurationProvider _userRoles;
     private readonly RoleConfigurationProvider _roles;
-    private readonly ImplementationConfigurationProviderBase<ExternalIdentityConfiguration, IExternalIdentityImplementationConfiguration> _identities;
+    private readonly ImplementationConfigurationProviderBase<IExternalIdentityImplementationConfiguration> _identities;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ClaimMappedProvisionerFactory> _logger;
 
@@ -37,7 +37,7 @@ internal sealed class ClaimMappedProvisionerFactory
         UserConfigurationProvider users,
         UserRoleConfigurationProvider userRoles,
         RoleConfigurationProvider roles,
-        ImplementationConfigurationProviderBase<ExternalIdentityConfiguration, IExternalIdentityImplementationConfiguration> identities,
+        ImplementationConfigurationProviderBase<IExternalIdentityImplementationConfiguration> identities,
         ILoggerFactory? loggerFactory)
     {
         _users = users;

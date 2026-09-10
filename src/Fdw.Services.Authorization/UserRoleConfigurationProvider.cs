@@ -23,7 +23,7 @@ namespace Fdw.Services.Authorization;
 /// Domain configuration provider for user-role assignments.
 /// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with a by-user convenience method.
 /// </summary>
-public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, IUserRoleImplementationConfiguration>
+public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<IUserRoleImplementationConfiguration>
 {
 
     private readonly ILogger _logger;

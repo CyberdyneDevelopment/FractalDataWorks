@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies CORS configuration. Registered and resolved as this type — never as the base.
 /// </summary>
 public interface ICorsConfigurationProvider
-    : IDomainConfigurationProvider<ICorsImplementationConfiguration>
+    : IImplementationConfigurationProvider<ICorsImplementationConfiguration>
 {
 }

@@ -18,7 +18,7 @@ namespace Fdw.Services.Logging;
 /// datastore differs.
 /// </remarks>
 public class LoggingConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ILoggingImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<ILoggingImplementationConfiguration>,
       ILoggingConfigurationProvider
 {
 

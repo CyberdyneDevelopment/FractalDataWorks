@@ -31,7 +31,7 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     }
 
     /// <summary>Gets the provider that reads and writes identity configuration.</summary>
-    protected abstract IDomainConfigurationProvider<IIdentityServiceImplementationConfiguration> Identities { get; }
+    protected abstract IImplementationConfigurationProvider<IIdentityServiceImplementationConfiguration> Identities { get; }
 
     /// <inheritdoc />
     protected override string ResourceName => "identities";

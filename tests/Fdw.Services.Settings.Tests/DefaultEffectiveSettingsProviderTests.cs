@@ -27,31 +27,31 @@ public sealed class DefaultEffectiveSettingsProviderTests
 
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
 
-    private static ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration> MakeServerProvider()
+    private static ImplementationConfigurationProviderBase<IServerSettingImplementationConfiguration> MakeServerProvider()
     {
         var lazyGateway = new ConfigurationGatewayProvider();
-        return new ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration>>.Instance,
+        return new ImplementationConfigurationProviderBase<IServerSettingImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<IServerSettingImplementationConfiguration>>.Instance,
             lazyGateway,
             "TestStore",
             "settings");
     }
 
-    private static ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration> MakeTenantProvider()
+    private static ImplementationConfigurationProviderBase<ITenantSettingImplementationConfiguration> MakeTenantProvider()
     {
         var lazyGateway = new ConfigurationGatewayProvider();
-        return new ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration>>.Instance,
+        return new ImplementationConfigurationProviderBase<ITenantSettingImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITenantSettingImplementationConfiguration>>.Instance,
             lazyGateway,
             "TestStore",
             "settings");
     }
 
-    private static ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration> MakeRoleProvider()
+    private static ImplementationConfigurationProviderBase<IRoleSettingImplementationConfiguration> MakeRoleProvider()
     {
         var lazyGateway = new ConfigurationGatewayProvider();
-        return new ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration>>.Instance,
+        return new ImplementationConfigurationProviderBase<IRoleSettingImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<IRoleSettingImplementationConfiguration>>.Instance,
             lazyGateway,
             "TestStore",
             "settings");

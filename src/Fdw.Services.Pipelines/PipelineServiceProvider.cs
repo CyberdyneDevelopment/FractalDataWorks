@@ -13,7 +13,7 @@ namespace Fdw.Services.Pipelines;
 /// <remarks>
 /// Exists so the domain's own <see cref="IPipelineServiceProvider"/> has a concrete type behind it;
 /// the behaviour is entirely the base's. Closed over <see cref="IPipelineConfigurationProvider"/>
-/// rather than the raw <c>IDomainConfigurationProvider&lt;&gt;</c>, because the base's factory
+/// rather than the raw <c>IImplementationConfigurationProvider&lt;&gt;</c>, because the base's factory
 /// registries are static per closed generic — a second closing of the same domain gets its own empty
 /// registry and silently builds nothing.
 /// </remarks>

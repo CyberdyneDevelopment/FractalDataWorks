@@ -11,7 +11,7 @@ namespace Fdw.Services.Authorization;
 /// Reads the permissions this platform defines.
 /// </summary>
 public class PermissionConfigurationProvider
-    : ImplementationConfigurationProviderBase<PermissionConfiguration, IPermissionImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IPermissionImplementationConfiguration>,
       IPermissionConfigurationProvider
 {
 

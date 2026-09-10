@@ -18,7 +18,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// did not load", several layers from the missing registration.
 /// </remarks>
 public class ClientCredentialsConfigurationProvider
-    : ImplementationConfigurationProviderBase<ClientCredentialsConfiguration, IIdentityServiceImplementationConfiguration>
+    : ImplementationConfigurationProviderBase<IIdentityServiceImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the class.</summary>

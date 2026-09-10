@@ -18,7 +18,7 @@ namespace Fdw.Services.Telemetry;
 /// datastore differs.
 /// </remarks>
 public class TelemetryConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ITelemetryImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<ITelemetryImplementationConfiguration>,
       ITelemetryConfigurationProvider
 {
 

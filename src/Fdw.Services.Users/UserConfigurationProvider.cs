@@ -29,7 +29,7 @@ namespace Fdw.Services.Users;
 /// usage — usr.Users is ConfigurationDb data, and the schema-built ConfigurationDb store has no ConnectionId,
 /// so routing through IDataGateway produces "DataStore 'ConfigurationDb' has no ConnectionId".
 /// </remarks>
-public class UserConfigurationProvider : ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration>
+public class UserConfigurationProvider : ImplementationConfigurationProviderBase<IUserImplementationConfiguration>
 {
 
     private readonly ILogger _logger;

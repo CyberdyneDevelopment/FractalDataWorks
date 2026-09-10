@@ -18,7 +18,7 @@ namespace Fdw.Services.Hosts;
 /// datastore differs.
 /// </remarks>
 public class HostConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IHostImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IHostImplementationConfiguration>,
       IHostConfigurationProvider
 {
 

@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies SecurityHeaders configuration. Registered and resolved as this type -- never as the base.
 /// </summary>
 public interface ISecurityHeadersConfigurationProvider
-    : IDomainConfigurationProvider<ISecurityHeadersImplementationConfiguration>
+    : IImplementationConfigurationProvider<ISecurityHeadersImplementationConfiguration>
 {
 }

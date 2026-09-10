@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies SecurityHeaders configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class SecurityHeadersConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ISecurityHeadersImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<ISecurityHeadersImplementationConfiguration>,
       ISecurityHeadersConfigurationProvider
 {
 

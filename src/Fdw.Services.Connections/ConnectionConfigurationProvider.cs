@@ -19,7 +19,7 @@ namespace Fdw.Services.Connections;
 /// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
 /// </remarks>
 public class ConnectionConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IConnectionImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IConnectionImplementationConfiguration>,
       IConnectionConfigurationProvider
 {
 

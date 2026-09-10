@@ -24,7 +24,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// pair.
 /// </summary>
 public class ExternalIdentityProvisionerBindingConfigurationProvider
-    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration>
+    : ImplementationConfigurationProviderBase<IExternalIdentityProvisionerBindingImplementationConfiguration>
 {
 
     private readonly ILogger _logger;

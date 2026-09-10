@@ -27,7 +27,7 @@ namespace Fdw.Services.Dataverses;
 /// does not have.
 /// </remarks>
 public class DataverseConfigurationProvider
-    : ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IDataverseImplementationConfiguration>,
       IDataverseConfigurationProvider
 {
 
@@ -44,7 +44,7 @@ public class DataverseConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataverseImplementationConfiguration>>(
             sp => sp.GetRequiredService<DataverseConfigurationProvider>());
 
         services.TryAddSingleton<IDataverseConfigurationProvider>(

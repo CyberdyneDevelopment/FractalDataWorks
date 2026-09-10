@@ -22,7 +22,7 @@ namespace Fdw.Data.DataNodes.Tests;
 public sealed class ConfiguredDataStoreProviderTests
 {
     private readonly Mock<ILogger<ConfiguredDataStoreProvider>> _logger = new();
-    private readonly Mock<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>> _configurationProvider = new();
+    private readonly Mock<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>> _configurationProvider = new();
     private readonly Mock<IDataStoreBuilderSelector> _builderSelector = new();
 
     private ConfiguredDataStoreProvider CreateSut()

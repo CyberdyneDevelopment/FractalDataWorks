@@ -17,7 +17,7 @@ namespace Fdw.Services.Identity;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class IdentityServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IIdentityServiceImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IIdentityServiceImplementationConfiguration>,
       IIdentityServiceConfigurationProvider
 {
 

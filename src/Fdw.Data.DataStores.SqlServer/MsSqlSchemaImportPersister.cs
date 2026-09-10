@@ -31,18 +31,18 @@ namespace Fdw.Data.DataStores.SqlServer;
 public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
 {
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration> _dataPathProvider;
-    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration> _containerProvider;
-    private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration> _fieldProvider;
+    private readonly ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> _dataPathProvider;
+    private readonly ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> _containerProvider;
+    private readonly ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> _fieldProvider;
     private readonly ConnectionConfigurationProvider _connectionProvider;
     private readonly ILogger<MsSqlSchemaImportPersister> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="MsSqlSchemaImportPersister"/> class.</summary>
     public MsSqlSchemaImportPersister(
         DataStoreConfigurationProvider dataStoreProvider,
-        ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration> dataPathProvider,
-        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration> containerProvider,
-        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration> fieldProvider,
+        ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> dataPathProvider,
+        ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> containerProvider,
+        ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> fieldProvider,
         ConnectionConfigurationProvider connectionProvider,
         ILogger<MsSqlSchemaImportPersister> logger)
     {
@@ -646,7 +646,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
         }
 
         // DataStoreConfigurationProvider returns DataStoreConfiguration (general model), not MsSqlDataStoreConfiguration.
-        // Schema hash tracking requires IDomainConfigurationProvider<IDataStoreImplementationConfiguration>.
+        // Schema hash tracking requires IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>.
         // TODO(FDW-235): Restore schema hash tracking after the FDW-220/221 cache migration.
         _ = dataStoreResult.Value;
         _ = newSchemaHash;

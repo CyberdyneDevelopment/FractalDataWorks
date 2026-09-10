@@ -128,7 +128,7 @@ public class ServiceProviderLifetimeTests
         ITestService,
         TestServiceConfiguration,
         IServiceFactory<ITestService>,
-        IDomainConfigurationProvider<TestServiceConfiguration>>
+        IImplementationConfigurationProvider<TestServiceConfiguration>>
     {
         public TestServiceProvider(IServiceProvider services, ILogger<TestServiceProvider> logger)
             : base(services, logger)
@@ -138,14 +138,14 @@ public class ServiceProviderLifetimeTests
         public new void Register(string implementation, IServiceFactory<ITestService> factory)
             => base.Register(implementation, factory);
 
-        public new IGenericResult Register(IDomainConfigurationProvider<TestServiceConfiguration> domainConfigurationProvider)
+        public new IGenericResult Register(IImplementationConfigurationProvider<TestServiceConfiguration> domainConfigurationProvider)
             => base.Register(domainConfigurationProvider);
     }
 
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    public class TestServiceConfigurationProvider : IDomainConfigurationProvider<IImplementationConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
+    public class TestServiceConfigurationProvider : IImplementationConfigurationProvider<IImplementationConfiguration>, IServiceConfigurationProvider, IImplementationConfigurationProvider<TestServiceConfiguration>
     {
         private readonly List<TestServiceConfiguration> _configs;
 
@@ -209,8 +209,8 @@ public class ServiceProviderLifetimeTests
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
 
-        // ── IDomainConfigurationProvider ────────────────────────────────────
-        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+        // ── IImplementationConfigurationProvider ────────────────────────────────────
+        async Task<IGenericResult<IDomainConfiguration>> IImplementationConfigurationProvider<TestServiceConfiguration>.Get(
             string name, CancellationToken ct)
         {
             var r = await Get(name, ct).ConfigureAwait(false);
@@ -219,7 +219,7 @@ public class ServiceProviderLifetimeTests
                 : r.ToNewResult<IDomainConfiguration>();
         }
 
-        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+        async Task<IGenericResult<IDomainConfiguration>> IImplementationConfigurationProvider<TestServiceConfiguration>.Get(
             Guid id, CancellationToken ct)
         {
             var r = await Get(id, ct).ConfigureAwait(false);
@@ -228,28 +228,28 @@ public class ServiceProviderLifetimeTests
                 : r.ToNewResult<IDomainConfiguration>();
         }
 
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
+        Task<IGenericResult> IImplementationConfigurationProvider<TestServiceConfiguration>.Save<T>(
             string implementation, string name, T implementationConfiguration, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
+        Task<IGenericResult> IImplementationConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
+        Task<IGenericResult> IImplementationConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
+        IGenericResult IImplementationConfigurationProvider<TestServiceConfiguration>.Register<T>(
             string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 
     /// <summary>
     /// Aggregates multiple config providers into one for parent provider registration.
     /// </summary>
-    public class AggregateConfigProvider : IDomainConfigurationProvider<IImplementationConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
+    public class AggregateConfigProvider : IImplementationConfigurationProvider<IImplementationConfiguration>, IServiceConfigurationProvider, IImplementationConfigurationProvider<TestServiceConfiguration>
     {
-        private readonly IDomainConfigurationProvider<IImplementationConfiguration>[] _providers;
+        private readonly IImplementationConfigurationProvider<IImplementationConfiguration>[] _providers;
 
-        public AggregateConfigProvider(params IDomainConfigurationProvider<IImplementationConfiguration>[] providers)
+        public AggregateConfigProvider(params IImplementationConfigurationProvider<IImplementationConfiguration>[] providers)
         {
             _providers = providers;
         }
@@ -319,8 +319,8 @@ public class ServiceProviderLifetimeTests
                 : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
 
 
-        // ── IDomainConfigurationProvider ────────────────────────────────────
-        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+        // ── IImplementationConfigurationProvider ────────────────────────────────────
+        async Task<IGenericResult<IDomainConfiguration>> IImplementationConfigurationProvider<TestServiceConfiguration>.Get(
             string name, CancellationToken ct)
         {
             var r = await Get(name, ct).ConfigureAwait(false);
@@ -329,7 +329,7 @@ public class ServiceProviderLifetimeTests
                 : r.ToNewResult<IDomainConfiguration>();
         }
 
-        async Task<IGenericResult<IDomainConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
+        async Task<IGenericResult<IDomainConfiguration>> IImplementationConfigurationProvider<TestServiceConfiguration>.Get(
             Guid id, CancellationToken ct)
         {
             var r = await Get(id, ct).ConfigureAwait(false);
@@ -338,17 +338,17 @@ public class ServiceProviderLifetimeTests
                 : r.ToNewResult<IDomainConfiguration>();
         }
 
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
+        Task<IGenericResult> IImplementationConfigurationProvider<TestServiceConfiguration>.Save<T>(
             string implementation, string name, T implementationConfiguration, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
+        Task<IGenericResult> IImplementationConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
+        Task<IGenericResult> IImplementationConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
-        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
+        IGenericResult IImplementationConfigurationProvider<TestServiceConfiguration>.Register<T>(
             string name, T implementationConfigurationProvider) => GenericResult.Success();
 }
 

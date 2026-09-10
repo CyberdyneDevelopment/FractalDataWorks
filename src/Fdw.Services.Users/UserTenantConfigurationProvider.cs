@@ -27,7 +27,7 @@ namespace Fdw.Services.Users;
 /// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
 /// usage — tenant.UserTenants is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
 /// </remarks>
-public class UserTenantConfigurationProvider : ImplementationConfigurationProviderBase<UserTenantConfiguration, IUserTenantImplementationConfiguration>
+public class UserTenantConfigurationProvider : ImplementationConfigurationProviderBase<IUserTenantImplementationConfiguration>
 {
 
     private readonly ILogger _logger;

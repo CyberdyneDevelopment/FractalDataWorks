@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies WebMcp configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class WebMcpConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IWebMcpImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IWebMcpImplementationConfiguration>,
       IWebMcpConfigurationProvider
 {
 

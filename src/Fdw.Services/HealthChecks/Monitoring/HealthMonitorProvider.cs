@@ -10,7 +10,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <summary>
 /// Default implementation of <see cref="IHealthMonitorProvider"/>. Resolves the configured
 /// <see cref="IHealthMonitorService"/> by row name: loads the <c>settings.HealthMonitor</c> row via
-/// the registered <c>IDomainConfigurationProvider</c>, then dispatches to the
+/// the registered <c>IImplementationConfigurationProvider</c>, then dispatches to the
 /// factory registered for the row's <c>Implementation</c> ("Local", "HttpClient", …).
 /// </summary>
 public sealed class HealthMonitorProvider

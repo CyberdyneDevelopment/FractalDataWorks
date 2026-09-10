@@ -6,6 +6,6 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// Resolves configured token managers and routes each to the implementation provider that owns it.
 /// </summary>
 public interface ITokenManagerConfigurationProvider
-    : IDomainConfigurationProvider<ITokenManagerImplementationConfiguration>
+    : IImplementationConfigurationProvider<ITokenManagerImplementationConfiguration>
 {
 }

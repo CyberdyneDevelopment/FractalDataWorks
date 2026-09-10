@@ -10,7 +10,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>Reads the data gateway domain's records and routes to the implementation that owns each.</summary>
 public class DataGatewayDomainConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IDataGatewayDomainImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IDataGatewayDomainImplementationConfiguration>,
       IDataGatewayConfigurationProvider
 {
 

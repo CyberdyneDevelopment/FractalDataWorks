@@ -84,10 +84,10 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         ExternalIdentityProvisionerTypes.ConfigurationConnection));
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IExternalIdentityProvisionerBindingImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IExternalIdentityProvisionerBindingImplementationConfiguration>>(sp =>
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IExternalIdentityProvisionerBindingImplementationConfiguration>>(sp =>
                 sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp =>
@@ -97,9 +97,9 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(
                 sp => (ExternalIdentityProvisionerConfigurationProvider)sp.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IExternalIdentityProvisionerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
             builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
@@ -128,7 +128,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                             stLogger,
                             nameof(ExternalIdentityProvisionerTypes),
                             provider.GetType().Name,
-                            typeof(IDomainConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

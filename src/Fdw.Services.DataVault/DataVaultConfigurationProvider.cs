@@ -21,7 +21,7 @@ namespace Fdw.Services.DataVault;
 /// inherited <c>Register</c>.
 /// </summary>
 public class DataVaultConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IDataVaultImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IDataVaultImplementationConfiguration>,
       IDataVaultConfigurationProvider
 {
 

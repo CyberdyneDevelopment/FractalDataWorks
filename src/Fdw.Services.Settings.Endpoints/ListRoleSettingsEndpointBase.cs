@@ -16,10 +16,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSettingSummaryDto>
 {
-    private readonly IDomainConfigurationProvider<IRoleSettingImplementationConfiguration> _provider;
+    private readonly IImplementationConfigurationProvider<IRoleSettingImplementationConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IDomainConfigurationProvider<IRoleSettingImplementationConfiguration> provider) : base(logger)
+    protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IImplementationConfigurationProvider<IRoleSettingImplementationConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }

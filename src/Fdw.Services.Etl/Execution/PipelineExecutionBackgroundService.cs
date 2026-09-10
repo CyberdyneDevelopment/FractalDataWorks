@@ -138,7 +138,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         PipelineExecutionRequest request,
         CancellationToken ct)
     {
-        var configProvider = services.GetRequiredService<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>();
+        var configProvider = services.GetRequiredService<IImplementationConfigurationProvider<IPipelineImplementationConfiguration>>();
         var configResult = await configProvider.Get(request.PipelineName, ct).ConfigureAwait(false);
         return configResult.IsSuccess && configResult.Value is not null ? configResult.Value.OrgId : null;
     }

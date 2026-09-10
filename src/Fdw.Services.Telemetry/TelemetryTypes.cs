@@ -94,7 +94,7 @@ public partial class TelemetryTypes : ServiceTypeCollectionBase<
                         stLogger,
                         nameof(TelemetryTypes),
                         provider.GetType().Name,
-                        typeof(IDomainConfigurationProvider<ITelemetryImplementationConfiguration>).ToString());
+                        typeof(IImplementationConfigurationProvider<ITelemetryImplementationConfiguration>).ToString());
                 }
 
                 return provider;

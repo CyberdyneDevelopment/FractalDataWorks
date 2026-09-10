@@ -89,14 +89,14 @@ public partial class NotificationServiceTypes
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
                 sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration>>()!,
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<INotificationRuleImplementationConfiguration>>(sp =>
+                new ImplementationConfigurationProviderBase<INotificationRuleImplementationConfiguration>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<INotificationRuleImplementationConfiguration>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     "PlatformConfiguration", "notify"));
 
@@ -132,7 +132,7 @@ public partial class NotificationServiceTypes
                             stLogger,
                             nameof(NotificationServiceTypes),
                             provider.GetType().Name,
-                            typeof(IDomainConfigurationProvider<INotificationImplementationConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<INotificationImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

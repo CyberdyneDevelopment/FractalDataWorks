@@ -72,7 +72,7 @@ public sealed class RoslynWorkspaceConnectionType
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore,
                     PathName));
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IConnectionImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IConnectionImplementationConfiguration>>(
                 sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

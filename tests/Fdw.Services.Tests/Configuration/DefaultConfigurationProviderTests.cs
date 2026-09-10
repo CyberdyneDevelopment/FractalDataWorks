@@ -25,7 +25,7 @@ namespace Fdw.Services.Tests.Configuration;
 [Collection(nameof(ServicesTestCollection))]
 public class DefaultConfigurationProviderTests
 {
-    private static ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration> MakeProvider(
+    private static ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration> MakeProvider(
         TestDualConfig[] systemConfigs,
         TestDualConfig[] userConfigs)
     {
@@ -37,8 +37,8 @@ public class DefaultConfigurationProviderTests
 
         var gatewayProvider = GatewayProviderFor(mockGateway.Object);
 
-        return new ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>>.Instance,
+        return new ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>>.Instance,
             gatewayProvider,
             "TestStore",
             "cfg");
@@ -197,8 +197,8 @@ public class DefaultConfigurationProviderTests
                 new TestContainerFieldConfiguration { Id = Guid.NewGuid(), Name = "Beta", TypeId = "Int32" },
             }));
 
-        var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>>.Instance,
             GatewayProviderFor(mockGateway.Object),
             "PlatformConfiguration",
             "data");
@@ -232,8 +232,8 @@ public class DefaultConfigurationProviderTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<object>>.Success(System.Array.Empty<object>()));
 
-        var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>>.Instance,
             GatewayProviderFor(mockGateway.Object),
             "PlatformConfiguration",
             "data");
@@ -344,8 +344,8 @@ public class DefaultConfigurationProviderTests
         var mockGateway = new Mock<IConfigurationGateway>();
         mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        var provider = new ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>>.Instance,
             GatewayProviderFor(mockGateway.Object),
             "TestStore",
             "cfg");
@@ -364,8 +364,8 @@ public class DefaultConfigurationProviderTests
         var mockGateway = new Mock<IConfigurationGateway>();
         mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        new ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>>.Instance,
+        new ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>>.Instance,
             GatewayProviderFor(mockGateway.Object),
             "TestStore",
             "cfg").InvalidateCache();
@@ -436,8 +436,8 @@ public class DefaultConfigurationProviderTests
                 return Task.FromResult<IGenericResult>(GenericResult.Success());
             });
 
-        var provider = new ImplementationConfigurationProviderBase<TestKvpConfiguration, ITestKvpImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestKvpConfiguration, ITestKvpImplementationConfiguration>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<ITestKvpImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestKvpImplementationConfiguration>>.Instance,
             GatewayProviderFor(mockGateway.Object),
             "PlatformConfiguration",
             "conn");
@@ -498,8 +498,8 @@ public class DefaultConfigurationProviderTests
                 return Task.FromResult<IGenericResult>(GenericResult.Success());
             });
 
-        var provider = new ImplementationConfigurationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>(
+            NullLogger<ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>>.Instance,
             GatewayProviderFor(mockGateway.Object),
             "PlatformConfiguration",
             "data");

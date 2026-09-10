@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies ApiReference configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class ApiReferenceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IApiReferenceImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IApiReferenceImplementationConfiguration>,
       IApiReferenceConfigurationProvider
 {
 

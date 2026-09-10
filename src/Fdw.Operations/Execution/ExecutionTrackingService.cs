@@ -42,7 +42,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private readonly ILogger _logger;
     private readonly string? _dataStoreName;
     private readonly INotificationServiceProvider? _notificationProvider;
-    private readonly IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>? _notificationRuleProvider;
+    private readonly IImplementationConfigurationProvider<INotificationRuleImplementationConfiguration>? _notificationRuleProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionTrackingService"/> class.
@@ -62,7 +62,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         ILoggerFactory loggerFactory,
         string? dataStoreName,
         INotificationServiceProvider? notificationProvider = null,
-        IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>? notificationRuleProvider = null)
+        IImplementationConfigurationProvider<INotificationRuleImplementationConfiguration>? notificationRuleProvider = null)
     {
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = loggerFactory?.CreateLogger<ExecutionTrackingService>()

@@ -83,7 +83,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         services.TryAddSingleton<IDataSetConfigurationProvider>(sp =>
         {
             var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
-            var configProvider = sp.GetService<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>();
+            var configProvider = sp.GetService<IImplementationConfigurationProvider<IDataSetImplementationConfiguration>>();
             return new DataSetProvider(logger, configProvider);
         });
 
@@ -136,7 +136,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     // ============================================================
 
     private readonly ILogger<DataSetProvider> _logger;
-    private readonly IDomainConfigurationProvider<IDataSetImplementationConfiguration>? _configurationProvider;
+    private readonly IImplementationConfigurationProvider<IDataSetImplementationConfiguration>? _configurationProvider;
 
     /// <summary>
     /// Initializes a new instance of <see cref="DataSetProvider"/>.
@@ -145,7 +145,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="configurationProvider">Optional DataSet configuration provider for DB-backed lookups.</param>
     public DataSetProvider(
         ILogger<DataSetProvider>? logger,
-        IDomainConfigurationProvider<IDataSetImplementationConfiguration>? configurationProvider = null)
+        IImplementationConfigurationProvider<IDataSetImplementationConfiguration>? configurationProvider = null)
     {
         _logger = logger ?? NullLogger<DataSetProvider>.Instance;
         _configurationProvider = configurationProvider;

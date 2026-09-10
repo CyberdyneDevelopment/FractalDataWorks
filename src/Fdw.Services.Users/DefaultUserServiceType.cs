@@ -52,9 +52,9 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "usr"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IUserImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IUserImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IUserImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
 
             builder.Services.TryAddSingleton<UserTenantConfigurationProvider>(sp =>
@@ -62,9 +62,9 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "tenant"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserTenantConfiguration, IUserTenantImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IUserTenantImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IUserTenantImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IUserTenantImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
 
             builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>

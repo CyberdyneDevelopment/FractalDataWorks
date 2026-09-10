@@ -17,7 +17,7 @@ namespace Fdw.Services.Dataverses;
 /// resource, not by owning it here.
 /// </remarks>
 public class SavedViewConfigurationProvider
-    : ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration>
+    : ImplementationConfigurationProviderBase<ISavedViewImplementationConfiguration>
 {
 
     /// <summary>
@@ -33,7 +33,7 @@ public class SavedViewConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<ISavedViewImplementationConfiguration>>(
             sp => sp.GetRequiredService<SavedViewConfigurationProvider>());
     }
 

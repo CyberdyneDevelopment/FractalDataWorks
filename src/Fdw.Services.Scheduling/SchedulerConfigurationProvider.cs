@@ -19,7 +19,7 @@ namespace Fdw.Services.Scheduling;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class SchedulerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ISchedulerImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<ISchedulerImplementationConfiguration>,
       ISchedulerConfigurationProvider
 {
 

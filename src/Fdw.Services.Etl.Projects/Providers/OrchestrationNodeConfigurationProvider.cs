@@ -32,7 +32,7 @@ namespace Fdw.Services.Etl.Projects.Providers;
 /// Delete) are inherited from the base unchanged — no per-domain override.
 /// </remarks>
 public class OrchestrationNodeConfigurationProvider
-    : ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, IOrchestrationNodeImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IOrchestrationNodeImplementationConfiguration>,
       IOrchestrationNodeConfigurationProvider
 {
 
@@ -49,7 +49,7 @@ public class OrchestrationNodeConfigurationProvider
                 sp.GetService<ILogger<OrchestrationNodeConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     EtlPipelineTypes.ConfigurationConnection));
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, IOrchestrationNodeImplementationConfiguration>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<IOrchestrationNodeImplementationConfiguration>>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
         services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());

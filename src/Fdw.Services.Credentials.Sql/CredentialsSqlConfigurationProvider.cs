@@ -9,7 +9,7 @@ namespace Fdw.Services.Credentials.Sql;
 
 /// <summary>Reads which credential service this host resolves SQL credentials through.</summary>
 public class CredentialsSqlConfigurationProvider
-    : ImplementationConfigurationProviderBase<CredentialsSqlConfiguration, ICredentialsSqlImplementationConfiguration>
+    : ImplementationConfigurationProviderBase<ICredentialsSqlImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="CredentialsSqlConfigurationProvider"/> class.</summary>

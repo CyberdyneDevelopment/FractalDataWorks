@@ -16,7 +16,7 @@ namespace Fdw.Services.Users;
 /// configuration file that every consumer has to be handed through IOptions.
 /// </remarks>
 public class UsersServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<UsersServiceConfiguration, IUsersServiceImplementationConfiguration>
+    : ImplementationConfigurationProviderBase<IUsersServiceImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="UsersServiceConfigurationProvider"/> class.</summary>

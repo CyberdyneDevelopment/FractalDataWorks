@@ -22,7 +22,7 @@ namespace Fdw.Services.Messaging;
 /// closed generic that two domains could satisfy.
 /// </remarks>
 public sealed class MessagingConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IMessagingImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IMessagingImplementationConfiguration>,
       IMessagingConfigurationProvider
 {
 

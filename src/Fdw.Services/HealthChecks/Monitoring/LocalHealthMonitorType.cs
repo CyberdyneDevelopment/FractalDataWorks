@@ -63,7 +63,7 @@ public sealed class LocalHealthMonitorType
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;
-            services.GetRequiredService<IHealthMonitorConfigurationProvider>()
+            services.GetRequiredService<HealthMonitorConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<LocalHealthMonitorConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });

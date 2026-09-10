@@ -47,11 +47,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             header.Register(
                 "Formula",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, ICalculationTypedConfiguration>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<ICalculationTypedConfiguration>>());
 
             header.Register(
                 "Windowed",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, ICalculationTypedConfiguration>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<ICalculationTypedConfiguration>>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -72,7 +72,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
                     sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         CalculationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ICalculationEntityImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ICalculationEntityImplementationConfiguration>>(
                 sp => sp.GetRequiredService<CalculationConfigurationProvider>());
 
             RegisterImplementationProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
@@ -90,9 +90,9 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         where TConfig : class, ICalculationTypedConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration>>(sp =>
-            new ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration>(
-                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<ICalculationTypedConfiguration>>(sp =>
+            new ImplementationConfigurationProviderBase<ICalculationTypedConfiguration>(
+                sp.GetService<ILogger<ImplementationConfigurationProviderBase<IImplementationConfiguration>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "PlatformConfiguration",
                 "calc"));

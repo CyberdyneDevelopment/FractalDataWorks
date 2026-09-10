@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies ForwardedHeaders configuration. Registered and resolved as this type -- never as the base.
 /// </summary>
 public interface IForwardedHeadersConfigurationProvider
-    : IDomainConfigurationProvider<IForwardedHeadersImplementationConfiguration>
+    : IImplementationConfigurationProvider<IForwardedHeadersImplementationConfiguration>
 {
 }

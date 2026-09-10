@@ -36,10 +36,10 @@ namespace Fdw.Services.Data;
 /// in memory by the per-transport <c>DataStoreBuilderBase</c> from the nested store configuration
 /// (the same builder mechanism ConfigurationGateway and ConfigurationGatewayDataStoreProvider.Load feed).
 /// </remarks>
-public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DomainConfiguration, IDataStoreImplementationConfiguration>
+public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration>
 {
 
-    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration> _containerProvider;
+    private readonly ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> _containerProvider;
 
     private readonly ILogger<DataStoreConfigurationProvider> _logger;
 
@@ -47,7 +47,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
     public DataStoreConfigurationProvider(
         ILogger<DataStoreConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration> containerProvider,
+        ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> containerProvider,
         string dataStoreName,
         string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,

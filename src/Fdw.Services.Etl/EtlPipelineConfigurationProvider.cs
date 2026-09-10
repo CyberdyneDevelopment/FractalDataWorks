@@ -30,7 +30,7 @@ namespace Fdw.Services.Etl;
 /// domain's implementation contract so the Pipeline provider can register it.
 /// </remarks>
 public class EtlPipelineConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IEtlPipelineImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IEtlPipelineImplementationConfiguration>,
       IImplementationConfigurationProvider<IPipelineImplementationConfiguration>
 {
 

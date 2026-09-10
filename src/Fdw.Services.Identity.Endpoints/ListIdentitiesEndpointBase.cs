@@ -23,7 +23,7 @@ public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<Identity
     }
 
     /// <summary>Gets the configuration provider identities are read through.</summary>
-    protected abstract IDomainConfigurationProvider<IIdentityServiceImplementationConfiguration> Identities { get; }
+    protected abstract IImplementationConfigurationProvider<IIdentityServiceImplementationConfiguration> Identities { get; }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "identities";

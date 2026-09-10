@@ -32,19 +32,19 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     where TService : IGenericService
     where TConfiguration : class, IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IImplementationConfigurationProvider<TConfiguration>
 {
     private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
     private readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _factories
         = new(StringComparer.OrdinalIgnoreCase);
     private readonly IServiceProvider? _services;
-    private IDomainConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
+    private IImplementationConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
 
     /// <summary>Gets the registered factory resolvers keyed by implementation.</summary>
     protected IDictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> Factories => _factories;
 
     /// <summary>Gets the domain's parent configuration provider.</summary>
-    protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
+    protected IImplementationConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
 
     private static readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _registered
         = new(StringComparer.OrdinalIgnoreCase);
@@ -183,7 +183,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         return GenericResult.Success();
     }
     /// <inheritdoc />
-    public IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider)
+    public IGenericResult Register(IImplementationConfigurationProvider<TConfiguration> domainConfigurationProvider)
     {
         _domainConfigurationProvider = domainConfigurationProvider;
         ServiceLogger.DomainConfigurationProviderRegistered(_logger);

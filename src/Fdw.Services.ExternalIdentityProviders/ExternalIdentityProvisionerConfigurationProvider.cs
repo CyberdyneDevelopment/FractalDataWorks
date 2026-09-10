@@ -19,7 +19,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// section.
 /// </summary>
 public class ExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IExternalIdentityProvisionerImplementationConfiguration>,
       IExternalIdentityProvisionerConfigurationProvider
 {
 

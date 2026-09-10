@@ -72,7 +72,7 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     /// <see cref="IDomainConfiguration.Implementation"/>.
     /// </summary>
     /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
-    IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider);
+    IGenericResult Register(IImplementationConfigurationProvider<TConfiguration> domainConfigurationProvider);
 
 }
 
@@ -88,6 +88,6 @@ public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TC
     where TService : IGenericService
     where TConfiguration : IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IImplementationConfigurationProvider<TConfiguration>
 {
 }

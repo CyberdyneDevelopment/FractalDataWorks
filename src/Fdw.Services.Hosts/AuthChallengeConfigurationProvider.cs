@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies AuthChallenge configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class AuthChallengeConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthChallengeImplementationConfiguration>,
+    : ImplementationConfigurationProviderBase<IAuthChallengeImplementationConfiguration>,
       IAuthChallengeConfigurationProvider
 {
 

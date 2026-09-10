@@ -26,7 +26,7 @@ namespace Fdw.Services.Scheduling;
 /// is the one source of truth for which schedules should be live, so a write here is the moment
 /// that changes.
 /// </remarks>
-public class ScheduleConfigurationProvider : ImplementationConfigurationProviderBase<DomainConfiguration, IScheduleImplementationConfiguration>
+public class ScheduleConfigurationProvider : ImplementationConfigurationProviderBase<IScheduleImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationProvider"/> class.</summary>

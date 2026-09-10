@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Operations;
 
 /// <summary>Configuration provider for escalation policy configurations.</summary>
-public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, IEscalationPolicyImplementationConfiguration>
+public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<IEscalationPolicyImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>

@@ -40,11 +40,11 @@ public sealed class DataStoreProviderClientType : ApiClientTypeBase<IDataStorePr
     public DataStoreProviderClientType() : base("DataStoreProviderClient", "DataStore Provider (Clients-backed)") {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddScoped<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>, ClientsDataStoreConfigurationProvider>();
+            builder.Services.TryAddScoped<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>, ClientsDataStoreConfigurationProvider>();
             builder.Services.TryAddScoped<IDataStoreBuilderSelector, GenericBuilderSelector>();
             builder.Services.TryAddScoped<IDataStoreProvider>(sp => new ConfiguredDataStoreProvider(
                 sp.GetService<ILogger<ConfiguredDataStoreProvider>>(),
-                sp.GetRequiredService<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(),
+                sp.GetRequiredService<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>>(),
                 sp.GetRequiredService<IDataStoreBuilderSelector>()));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

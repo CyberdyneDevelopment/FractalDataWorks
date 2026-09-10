@@ -99,9 +99,9 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(
                 sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, ISchedulerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ISchedulerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ISchedulerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
 
             builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
@@ -109,9 +109,9 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         SchedulerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IScheduleImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IScheduleImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IScheduleImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IScheduleImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
@@ -140,7 +140,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(SchedulerTypes),
                             provider.GetType().Name,
-                            typeof(IDomainConfigurationProvider<ISchedulerImplementationConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<ISchedulerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

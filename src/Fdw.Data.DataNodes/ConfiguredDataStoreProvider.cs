@@ -33,7 +33,7 @@ namespace Fdw.Services.Data;
 public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
 {
     private readonly ILogger<ConfiguredDataStoreProvider> _logger;
-    private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _configurationProvider;
+    private readonly IImplementationConfigurationProvider<IDataStoreImplementationConfiguration> _configurationProvider;
     private readonly IDataStoreBuilderSelector _builderSelector;
 
     /// <summary>
@@ -44,7 +44,7 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
     /// <param name="builderSelector">Selects the per-transport <see cref="IDataStoreBuilder"/> for a resolved configuration.</param>
     public ConfiguredDataStoreProvider(
         ILogger<ConfiguredDataStoreProvider>? logger,
-        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> configurationProvider,
+        IImplementationConfigurationProvider<IDataStoreImplementationConfiguration> configurationProvider,
         IDataStoreBuilderSelector builderSelector)
     {
         _logger = logger ?? NullLogger<ConfiguredDataStoreProvider>.Instance;
