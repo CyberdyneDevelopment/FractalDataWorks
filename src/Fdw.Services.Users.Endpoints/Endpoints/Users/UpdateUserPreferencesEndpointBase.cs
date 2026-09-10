@@ -13,7 +13,7 @@ namespace Fdw.Services.Users.Endpoints;
 /// </summary>
 public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPreferencesRequest>
 {
-    private readonly UserPreferenceConfigurationProvider _preferenceProvider;
+    private readonly IUserPreferenceConfigurationProvider _preferenceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -22,7 +22,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <param name="preferenceProvider">The user preference configuration provider.</param>
     /// <param name="logger">The logger.</param>
     protected UpdateUserPreferencesEndpointBase(
-        UserPreferenceConfigurationProvider preferenceProvider,
+        IUserPreferenceConfigurationProvider preferenceProvider,
         ILogger logger)
     {
         _preferenceProvider = preferenceProvider;
@@ -32,7 +32,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <summary>
     /// Gets the user preference configuration provider.
     /// </summary>
-    protected UserPreferenceConfigurationProvider PreferenceProvider => _preferenceProvider;
+    protected IUserPreferenceConfigurationProvider PreferenceProvider => _preferenceProvider;
 
     /// <summary>
     /// Gets the logger.
@@ -69,7 +69,8 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
 
         try
         {
-            var loadResult = await _preferenceProvider.GetPreferences(userId, ct).ConfigureAwait(false);
+            // A user's preferences are found by the name the row was written under -- the user's id.
+            var loadResult = await _preferenceProvider.Get(userId.ToString(), ct).ConfigureAwait(false);
             if (!loadResult.IsSuccess)
             {
                 AddError(loadResult.CurrentMessage ?? "Failed to load existing preferences.");
@@ -83,6 +84,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
                 : new UserPreferencesImplementationConfiguration
                 {
                     Id = Guid.CreateVersion7(),
+                    Name = userId.ToString(),
                     UserId = userId,
                     IsCurrent = true,
                     IsDeleted = false,
@@ -93,7 +95,9 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
             if (req.Language is not null) record.Language = req.Language;
             if (req.Timezone is not null) record.Timezone = req.Timezone;
 
-            var saveResult = await _preferenceProvider.Save(record, ct).ConfigureAwait(false);
+            var saveResult = await _preferenceProvider
+                .Save(record, "UserPreferences", "UserPreferences", userId.ToString(), ct)
+                .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
             {
                 AddError(saveResult.CurrentMessage ?? "Failed to save preferences.");

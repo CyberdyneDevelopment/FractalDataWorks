@@ -201,11 +201,16 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
                     _logger, typeof(TConfiguration).Name, _commands.TableName));
 
         var domain = fk.ReferencedContainer;
-        var domainKeys = domain.Keys.Count > 0
-            ? domain.Keys
-            : container.Value.Container(domain.Name) is { IsSuccess: true, Value: not null } resolved
-                ? resolved.Value.Keys
-                : domain.Keys;
+        var domainKeys = domain.Keys;
+        if (domainKeys.Count == 0)
+        {
+            var resolved = container.Value.Container(domain.Name);
+            if (!resolved.IsSuccess)
+                return resolved.ToNewResult<IEnumerable<TConfiguration>>();
+
+            if (resolved.Value is not null)
+                domainKeys = resolved.Value.Keys;
+        }
 
         var joinColumn = KeyField(domainKeys, "Physical");   // the domain's RowId — what the FK points at
         var keyColumn = KeyField(domainKeys, "Logical");     // the domain's durable Id — what filters

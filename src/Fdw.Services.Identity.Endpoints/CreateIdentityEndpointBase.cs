@@ -1,3 +1,4 @@
+using Fdw.Services.Identity;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,13 +26,15 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     where TConfig : class, IIdentityServiceImplementationConfiguration
     where TRequest : CreateIdentityRequest, new()
 {
+    private const string IdentityServiceDomain = "IdentityService";
+
     /// <summary>Initializes a new instance of the <see cref="CreateIdentityEndpointBase{TConfig, TRequest}"/> class.</summary>
     protected CreateIdentityEndpointBase(ILogger<CreateIdentityEndpointBase<TConfig, TRequest>> logger) : base(logger)
     {
     }
 
     /// <summary>Gets the provider that reads and writes identity configuration.</summary>
-    protected abstract IImplementationConfigurationProvider<IIdentityServiceImplementationConfiguration> Identities { get; }
+    protected abstract IIdentityServiceConfigurationProvider Identities { get; }
 
     /// <inheritdoc />
     protected override string ResourceName => "identities";
@@ -71,25 +74,20 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
         var identityId = Guid.CreateVersion7();
         var typedBody = CreateTypedBody(request, identityId);
 
-        var identity = new IdentityServiceConfiguration
-        {
-            Id = identityId,
-            Name = request.Name,
-            Implementation = request.Implementation,
-            Description = request.Description,
-            Configuration = typedBody,
-        };
+        typedBody.Name = request.Name;
 
-        // One save for the whole aggregate: the provider writes the header, then dispatches on
-        // Implementation so the registered typed provider writes the body.
-        var saved = await Identities.Save(identity, ct).ConfigureAwait(false);
+        // The implementation is what is written; the domain provider writes its row alongside and
+        // hands the write to the provider registered under the named implementation.
+        var saved = await Identities
+            .Save(typedBody, IdentityServiceDomain, request.Implementation, request.Name, ct)
+            .ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<IdentityDetailResponse>();
         }
 
         IdentityEndpointLog.IdentityCreated(Logger, request.Name, request.Implementation);
-        return GenericResult<IdentityDetailResponse>.Success(MapToDetail(identity, typedBody));
+        return GenericResult<IdentityDetailResponse>.Success(MapToDetail(typedBody));
     }
 
     /// <summary>Builds the mechanism's typed body from the request.</summary>
@@ -102,7 +100,5 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     /// <param name="identity">The header that was written.</param>
     /// <param name="typedBody">The body that was written beneath it.</param>
     /// <returns>The detail returned to the caller.</returns>
-    protected abstract IdentityDetailResponse MapToDetail(
-        IdentityServiceConfiguration identity,
-        TConfig typedBody);
+    protected abstract IdentityDetailResponse MapToDetail(TConfig typedBody);
 }

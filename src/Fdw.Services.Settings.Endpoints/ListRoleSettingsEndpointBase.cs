@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -16,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSettingSummaryDto>
 {
-    private readonly IImplementationConfigurationProvider<IRoleSettingImplementationConfiguration> _provider;
+    private readonly IRoleSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IImplementationConfigurationProvider<IRoleSettingImplementationConfiguration> provider) : base(logger)
+    protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
