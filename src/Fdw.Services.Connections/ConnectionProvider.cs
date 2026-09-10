@@ -36,6 +36,24 @@ public sealed class ConnectionProvider
       IConnectionProvider,
       IDataConnectionProvider
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
     private readonly ILogger<ConnectionProvider> _logger;
 
     /// <summary>

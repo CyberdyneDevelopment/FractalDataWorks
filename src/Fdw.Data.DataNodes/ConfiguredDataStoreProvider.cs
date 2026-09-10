@@ -23,17 +23,17 @@ namespace Fdw.Services.Data;
 /// dependency on <c>IDataConnectionProvider</c> or <c>IConfigurationGateway</c> (both excluded from
 /// <c>Fdw.Data.DataNodes</c>), so it never merges in ConfigurationDb's own gateway-owned DataStores and
 /// never resolves connections directly. Config reads go through the abstract
-/// <see cref="IServiceConfigurationProvider{TConfig}"/> and transport dispatch through
+/// <see cref="IDomainConfigurationProvider{TImplementationConfiguration}"/> and transport dispatch through
 /// <see cref="IDataStoreBuilderSelector"/> — both supplied by the caller, which CAN reference the
 /// excluded packages. Each store is built once by its selected <c>IDataStoreBuilder</c> from the
-/// cascaded <c>DomainConfiguration</c> (Paths → Containers → Fields); path and container lookups
+/// cascaded <c>IDataStoreImplementationConfiguration</c> (Paths → Containers → Fields); path and container lookups
 /// dot-walk the built tree, mirroring <c>DataStoreProvider</c>'s instance members minus the gateway
 /// shortcut branches.
 /// </remarks>
 public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
 {
     private readonly ILogger<ConfiguredDataStoreProvider> _logger;
-    private readonly IImplementationConfigurationProvider<IDataStoreImplementationConfiguration> _configurationProvider;
+    private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _configurationProvider;
     private readonly IDataStoreBuilderSelector _builderSelector;
 
     /// <summary>
@@ -44,7 +44,7 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
     /// <param name="builderSelector">Selects the per-transport <see cref="IDataStoreBuilder"/> for a resolved configuration.</param>
     public ConfiguredDataStoreProvider(
         ILogger<ConfiguredDataStoreProvider>? logger,
-        IImplementationConfigurationProvider<IDataStoreImplementationConfiguration> configurationProvider,
+        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> configurationProvider,
         IDataStoreBuilderSelector builderSelector)
     {
         _logger = logger ?? NullLogger<ConfiguredDataStoreProvider>.Instance;
@@ -67,7 +67,7 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
 
         var buildResult = await BuildStore(cfgResult.Value, cancellationToken).ConfigureAwait(false);
         if (buildResult.IsSuccess)
-            ConfiguredDataStoreProviderLog.StoreBuilt(_logger, name, cfgResult.Value.Implementation ?? "(none)");
+            ConfiguredDataStoreProviderLog.StoreBuilt(_logger, name, cfgResult.Value.GetType().Name);
         return buildResult;
     }
 
@@ -137,7 +137,7 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
         return pathResult.Value.Container(containerName);
     }
 
-    private async Task<IGenericResult<IDataStore>> BuildStore(DomainConfiguration storeCfg, CancellationToken cancellationToken)
+    private async Task<IGenericResult<IDataStore>> BuildStore(IDataStoreImplementationConfiguration storeCfg, CancellationToken cancellationToken)
     {
         var selectResult = _builderSelector.Select(storeCfg, _logger);
         if (!selectResult.IsSuccess || selectResult.Value is null)

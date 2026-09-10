@@ -20,7 +20,7 @@ public interface IBrowseItem
     bool HasChildren { get; }
 
     /// <summary>
-    /// Arbitrary payload associated with this item (e.g., the raw DataStoreConfiguration).
+    /// Arbitrary payload associated with this item (e.g., the raw DataStoreImplementationConfiguration).
     /// The renderer doesn't inspect it; consumers use it when building the next column.
     /// </summary>
     object? Payload { get; }

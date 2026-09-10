@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies EmptyBody configuration. Registered and resolved as this type -- never as the base.
 /// </summary>
 public interface IEmptyBodyConfigurationProvider
-    : IImplementationConfigurationProvider<IEmptyBodyImplementationConfiguration>
+    : IDomainConfigurationProvider<IEmptyBodyImplementationConfiguration>
 {
 }

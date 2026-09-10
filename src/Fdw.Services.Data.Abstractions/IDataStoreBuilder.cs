@@ -21,7 +21,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// </para>
 /// <para>
 /// A true builder with ONE input source: <see cref="Configure"/> seeds it with a nested
-/// <c>DataStoreConfiguration</c> (Paths → Containers → Fields → Keys) — the shape both
+/// <c>DataStoreImplementationConfiguration</c> (Paths → Containers → Fields → Keys) — the shape both
 /// <c>ConfigurationSchema.DataStores</c> and the DB-loaded path already use — then <see cref="Build"/>
 /// assembles the tree. There is no alternative node-by-node source.
 /// </para>
@@ -36,7 +36,7 @@ public interface IDataStoreBuilder
     /// Seeds the builder from a nested store configuration (its Paths/Containers/Fields/Keys).
     /// </summary>
     /// <param name="storeConfig">
-    /// The store configuration — a <c>DataStoreConfiguration</c>. The concrete builder downcasts to
+    /// The store configuration — a <c>DataStoreImplementationConfiguration</c>. The concrete builder downcasts to
     /// the configuration shape it understands and fails loud if the type is unexpected.
     /// </param>
     /// <returns>Success when the configuration was accepted; Failure (with MessageLogging) otherwise.</returns>

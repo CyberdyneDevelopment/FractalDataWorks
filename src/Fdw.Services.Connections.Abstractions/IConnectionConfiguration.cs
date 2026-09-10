@@ -7,7 +7,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// kind's own configuration.
 /// </summary>
 /// <remarks>
-/// The interface of <c>ConnectionConfiguration</c>. The implementation contract is
+/// The interface of <c>IConnectionImplementationConfiguration</c>. The implementation contract is
 /// <see cref="IConnectionImplementationConfiguration"/>.
 /// </remarks>
 public interface IConnectionConfiguration : IDomainConfiguration

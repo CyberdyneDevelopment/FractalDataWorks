@@ -81,7 +81,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         var aggregatesValidation = DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
         if (aggregatesValidation.IsFailure) return aggregatesValidation.ToNewResult<DataSetDetailResponse>();
 
-        var config = new DataSetConfiguration
+        var config = new DataSetImplementationConfiguration
         {
             Name = request.Name,
             Description = request.Description ?? string.Empty,

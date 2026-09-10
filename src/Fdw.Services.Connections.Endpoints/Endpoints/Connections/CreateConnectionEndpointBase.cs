@@ -15,7 +15,7 @@ namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for creating a new connection configuration.
-/// Composes the whole aggregate — the <see cref="ConnectionConfiguration"/> header plus its typed body —
+/// Composes the whole aggregate — the <see cref="IConnectionImplementationConfiguration"/> header plus its typed body —
 /// and saves it through the connection provider in ONE call.
 /// </summary>
 /// <typeparam name="TConfig">The concrete typed body configuration type this endpoint builds.</typeparam>
@@ -106,14 +106,14 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
     }
 
     /// <summary>
-    /// Builds the parent <see cref="ConnectionConfiguration"/> from the create request.
+    /// Builds the parent <see cref="IConnectionImplementationConfiguration"/> from the create request.
     /// The default implementation sets Name, Implementation from <see cref="CreateConnectionRequest.ServiceType"/>,
     /// and Id from <paramref name="connectionId"/>.
     /// Override to customize header fields (Description, Environment, etc.).
     /// </summary>
-    protected virtual ConnectionConfiguration CreateConnectionRecord(CreateConnectionRequest request, Guid connectionId)
+    protected virtual IConnectionImplementationConfiguration CreateConnectionRecord(CreateConnectionRequest request, Guid connectionId)
     {
-        return new ConnectionConfiguration
+        return new IConnectionImplementationConfiguration
         {
             Id = connectionId,
             Name = request.Name,
@@ -136,7 +136,7 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
     /// Maps the saved parent connection and typed body to a detail DTO.
     /// Override to add type-specific fields to the response.
     /// </summary>
-    protected abstract ConnectionDetailDto MapToDetail(ConnectionConfiguration connection, TConfig typedBody, Guid connectionId);
+    protected abstract ConnectionDetailDto MapToDetail(IConnectionImplementationConfiguration connection, TConfig typedBody, Guid connectionId);
 
     /// <summary>Sends a 201 Created response with the connection detail.</summary>
     protected override Task SendCreatedResponse(ConnectionDetailDto detail, CancellationToken ct)

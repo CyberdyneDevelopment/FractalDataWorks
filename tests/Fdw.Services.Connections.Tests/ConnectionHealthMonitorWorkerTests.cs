@@ -35,9 +35,9 @@ public sealed class ConnectionHealthMonitorWorkerTests
     /// </summary>
     private sealed class StubConnectionConfigurationProvider : ConnectionConfigurationProvider
     {
-        private readonly IGenericResult<IReadOnlyList<ConnectionConfiguration>> _result;
+        private readonly IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> _result;
 
-        public StubConnectionConfigurationProvider(IGenericResult<IReadOnlyList<ConnectionConfiguration>> result)
+        public StubConnectionConfigurationProvider(IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> result)
             : base(
                 NullLogger<ConnectionConfigurationProvider>.Instance,
                 new ConfigurationGatewayProvider(),
@@ -48,7 +48,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
         public int GetCallCount { get; private set; }
 
-        public override Task<IGenericResult<IReadOnlyList<ConnectionConfiguration>>> Get(CancellationToken ct = default)
+        public override Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(CancellationToken ct = default)
         {
             GetCallCount++;
             return Task.FromResult(_result);
@@ -112,24 +112,24 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
     // ── Result builders ─────────────────────────────────────────────────────
 
-    private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> PathNotRegistered() =>
-        GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
+    private static IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> PathNotRegistered() =>
+        GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Chain(
             DataStoresResultCodes.DataPathNotFound,
             GenericResult.Failure(new GenericMessage("Path 'conn' not found in DataStore 'ConfigurationDb'")),
             ResultDetails.Create("PathName", "conn", "DataStoreName", "PlatformConfiguration"));
 
-    private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> ContainerNotRegistered() =>
-        GenericResult<IReadOnlyList<ConnectionConfiguration>>.Chain(
+    private static IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> ContainerNotRegistered() =>
+        GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Chain(
             DataStoresResultCodes.ContainerNotFoundInPath,
             GenericResult.Failure(new GenericMessage("Container 'Connection' not found in path 'conn'")),
             ResultDetails.Create("ContainerName", "Connection", "PathName", "conn", "DataStoreName", "PlatformConfiguration"));
 
-    private static IGenericResult<IReadOnlyList<ConnectionConfiguration>> TransientFailure() =>
-        GenericResult<IReadOnlyList<ConnectionConfiguration>>.Failure(
+    private static IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> TransientFailure() =>
+        GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Failure(
             new GenericMessage("A network-related or instance-specific error occurred"));
 
     private static (ConnectionHealthMonitorWorker Worker, RecordingLogger Logger, StubConnectionConfigurationProvider Provider) CreateWorker(
-        IGenericResult<IReadOnlyList<ConnectionConfiguration>> loadResult)
+        IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> loadResult)
     {
         var provider = new StubConnectionConfigurationProvider(loadResult);
         var services = new ServiceCollection();
@@ -225,7 +225,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
     public async Task ExecuteWhenStoreRegistersConnectionContainerKeepsMonitoring()
     {
         var (worker, logger, _) = CreateWorker(
-            GenericResult<IReadOnlyList<ConnectionConfiguration>>.Success([]));
+            GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success([]));
 
         await worker.StartAsync(TestContext.Current.CancellationToken);
 

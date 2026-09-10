@@ -35,7 +35,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
             return configsResult.ToNewResult<List<DataStoreContainerWithPathDto>>();
         }
 
-        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreConfiguration>)[];
+        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreImplementationConfiguration>)[];
 
         var containers = configs
             .Where(config => !string.IsNullOrWhiteSpace(config.Name))
@@ -49,7 +49,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
 
     /// <summary>Maps a container with its parent path and data store information.</summary>
     protected virtual DataStoreContainerWithPathDto MapContainerWithPath(
-        DataStoreConfiguration dataStore,
+        DataStoreImplementationConfiguration dataStore,
         DataPathConfiguration path,
         DataContainerConfiguration container)
     {

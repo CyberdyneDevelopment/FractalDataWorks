@@ -23,5 +23,5 @@ public interface IConnectionCreateCommand : IConnectionCommand
     /// <summary>
     /// Gets the configuration for the connection.
     /// </summary>
-    IGenericConfiguration ConnectionConfiguration { get; }
+    IGenericConfiguration IConnectionImplementationConfiguration { get; }
 }

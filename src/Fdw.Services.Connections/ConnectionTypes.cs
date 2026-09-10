@@ -40,7 +40,7 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, ConnectionConfiguration>, ConnectionConfiguration>),
+    typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration>),
     typeof(IConnectionType),
     typeof(ConnectionTypes),
     ServiceInterface = typeof(IGenericConnection),
@@ -48,9 +48,27 @@ namespace Fdw.Services.Connections;
     ProviderInterface = typeof(IConnectionProvider),
     ServiceCategory = "Connection")]
 public partial class ConnectionTypes : ServiceTypeCollectionBase<
-    ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, ConnectionConfiguration>, ConnectionConfiguration>,
-    IConnectionType<IGenericConnection, ConnectionConfiguration, IConnectionFactory<IGenericConnection, ConnectionConfiguration>>>
+    ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration>,
+    IConnectionType<IGenericConnection, IConnectionImplementationConfiguration, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>>>
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
     /// <summary>
     /// Sets this collection's Register body: the option collect, then this domain's provider.
     /// </summary>
@@ -107,8 +125,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
             builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(
                 sp => sp.GetRequiredService<ConnectionConfigurationProvider>());

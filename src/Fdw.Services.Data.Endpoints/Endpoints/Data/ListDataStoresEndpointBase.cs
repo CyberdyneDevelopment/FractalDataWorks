@@ -47,14 +47,14 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
 
         var connectionNameMap = await BuildConnectionNameMap(ct).ConfigureAwait(false);
 
-        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreConfiguration>)[];
+        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreImplementationConfiguration>)[];
         var items = MapConfigurations(configs, connectionNameMap).ToList();
         return GenericResult<List<DataStoreSummaryResponse>>.Success(items);
     }
 
     /// <summary>Filters and deduplicates configurations, then maps them to summary DTOs.</summary>
     protected virtual IReadOnlyList<DataStoreSummaryResponse> MapConfigurations(
-        IReadOnlyList<DataStoreConfiguration> configurations,
+        IReadOnlyList<DataStoreImplementationConfiguration> configurations,
         IReadOnlyDictionary<Guid, string> connectionNameMap)
     {
         return configurations
@@ -69,7 +69,7 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
 
     /// <summary>Maps a single data store configuration to a summary DTO.</summary>
     protected virtual DataStoreSummaryResponse MapToSummary(
-        DataStoreConfiguration config,
+        DataStoreImplementationConfiguration config,
         IReadOnlyDictionary<Guid, string> connectionNameMap)
     {
         connectionNameMap.TryGetValue(config.ConnectionId, out var connectionName);

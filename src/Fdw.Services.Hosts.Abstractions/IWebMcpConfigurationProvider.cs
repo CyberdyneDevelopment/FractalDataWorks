@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies WebMcp configuration. Registered and resolved as this type -- never as the base.
 /// </summary>
 public interface IWebMcpConfigurationProvider
-    : IImplementationConfigurationProvider<IWebMcpImplementationConfiguration>
+    : IDomainConfigurationProvider<IWebMcpImplementationConfiguration>
 {
 }

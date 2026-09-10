@@ -293,7 +293,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         }
     }
 
-    private IGenericResult<CalculationEntityConfiguration> BuildAggregate(
+    private IGenericResult<ICalculationEntityImplementationConfiguration> BuildAggregate(
         Guid id,
         string name,
         string? description,
@@ -304,7 +304,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         IGenericConfiguration? typedConfiguration)
     {
         if (CalculationEntityTypes.ByName(calculationEntityType) == CalculationEntityTypes.NotFound)
-            return GenericResult<CalculationEntityConfiguration>.Failure(
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
                 CalculationEntityLog.TypedConfigurationSaveUnknownType(_logger, calculationEntityType));
 
         var inputRecords = new List<CalculationEntityInputRecord>(inputs.Count);
@@ -312,7 +312,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         {
             var input = inputs[i];
             if (input.Kind is null)
-                return GenericResult<CalculationEntityConfiguration>.Failure(
+                return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
                     CalculationEntityLog.CalculationValidationFailed(
                         _logger, input.InputAlias, "Calculation input Kind is required"));
 
@@ -335,7 +335,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         if (typedConfiguration is not null)
         {
             if (typedConfiguration is not ICalculationTypedConfiguration tc)
-                return GenericResult<CalculationEntityConfiguration>.Failure(
+                return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
                     CalculationEntityLog.CalculationValidationFailed(
                         _logger, name,
                         $"Typed configuration '{typedConfiguration.GetType().Name}' does not implement ICalculationTypedConfiguration"));
@@ -343,7 +343,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
             typedBody = tc;
         }
 
-        return GenericResult<CalculationEntityConfiguration>.Success(new CalculationEntityConfiguration
+        return GenericResult<ICalculationEntityImplementationConfiguration>.Success(new ICalculationEntityImplementationConfiguration
         {
             Id = id,
             Name = name,
@@ -359,7 +359,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         });
     }
 
-    private static CalculationEntity MapToEntity(CalculationEntityConfiguration config)
+    private static CalculationEntity MapToEntity(ICalculationEntityImplementationConfiguration config)
     {
         var output = new CalculationOutputSpec
         {

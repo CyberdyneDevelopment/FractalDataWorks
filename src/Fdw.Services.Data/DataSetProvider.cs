@@ -152,13 +152,13 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<DataSetConfiguration>> Get(string name, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<DataSetImplementationConfiguration>> Get(string name, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetEntry(_logger, name);
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<DataSetImplementationConfiguration>.Failure(
                 DataServiceResultCodes.ByName("DataSetNameRequired"), _logger);
         }
 
@@ -173,13 +173,13 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.DataSetNotFound(_logger, name);
-        return GenericResult<DataSetConfiguration>.Failure(
+        return GenericResult<DataSetImplementationConfiguration>.Failure(
             DataServiceResultCodes.ByName("DataSetNotFound"),
             ResultDetails.Create().With("DataSetName", name));
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<DataSetConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<DataSetImplementationConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetByIdEntry(_logger, id);
 
@@ -194,17 +194,17 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.DataSetByIdNotFound(_logger, id);
-        return GenericResult<DataSetConfiguration>.Failure(
+        return GenericResult<DataSetImplementationConfiguration>.Failure(
             DataServiceResultCodes.ByName("DataSetNotFound"),
             ResultDetails.Create().With("DataSetId", id));
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<DataSetConfiguration>>> Get(CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IReadOnlyList<DataSetImplementationConfiguration>>> Get(CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetAllDataSetsEntry(_logger);
 
-        var dataSets = new List<DataSetConfiguration>();
+        var dataSets = new List<DataSetImplementationConfiguration>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (_configurationProvider != null)
@@ -225,7 +225,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.AllDataSetsRetrieved(_logger, dataSets.Count);
-        return GenericResult<IReadOnlyList<DataSetConfiguration>>.Success(dataSets.AsReadOnly());
+        return GenericResult<IReadOnlyList<DataSetImplementationConfiguration>>.Success(dataSets.AsReadOnly());
     }
 
     // ============================================================
@@ -237,7 +237,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// </summary>
     /// <param name="configuration">The configuration to validate.</param>
     /// <returns>Success if valid; failure with a structured message otherwise.</returns>
-    public IGenericResult ValidateDataSet(DataSetConfiguration configuration)
+    public IGenericResult ValidateDataSet(DataSetImplementationConfiguration configuration)
     {
         var propertiesResult = ValidateDataSetProperties(configuration);
         if (!propertiesResult.IsSuccess)
@@ -250,7 +250,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         return ValidateDataSetSources(configuration);
     }
 
-    private IGenericResult ValidateDataSetProperties(DataSetConfiguration configuration)
+    private IGenericResult ValidateDataSetProperties(DataSetImplementationConfiguration configuration)
     {
         if (configuration == null)
         {
@@ -279,10 +279,10 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         return GenericResult.Success();
     }
 
-    private static IGenericResult ValidateKeyFieldsExist(DataSetConfiguration configuration)
+    private static IGenericResult ValidateKeyFieldsExist(DataSetImplementationConfiguration configuration)
         => GenericResult.Success();
 
-    private static IGenericResult ValidateDataSetSources(DataSetConfiguration configuration)
+    private static IGenericResult ValidateDataSetSources(DataSetImplementationConfiguration configuration)
     {
         foreach (var source in configuration.Sources)
         {

@@ -77,7 +77,7 @@ public class CalculationConfigurationProviderTests
         public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
 
         private readonly IReadOnlyList<IDataStore> _stores;
-        private readonly List<CalculationEntityConfiguration> _entities;
+        private readonly List<ICalculationEntityImplementationConfiguration> _entities;
         private readonly List<CalculationEntityInputRecord> _inputs;
         private readonly List<CalculationStepConfiguration> _steps;
         private readonly List<CalculationStepFieldConfiguration> _fields;
@@ -86,7 +86,7 @@ public class CalculationConfigurationProviderTests
 
         public AggregateGateway()
         {
-            _entities = [new CalculationEntityConfiguration { Id = EntityId, Name = "Calc1", Implementation = "Formula" }];
+            _entities = [new ICalculationEntityImplementationConfiguration { Id = EntityId, Name = "Calc1", Implementation = "Formula" }];
             _inputs =
             [
                 new CalculationEntityInputRecord { Id = Guid.NewGuid(), InputAlias = "A", InputKind = "DataSet", Ordinal = 0 },
@@ -110,7 +110,7 @@ public class CalculationConfigurationProviderTests
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            if (typeof(T) == typeof(IEnumerable<CalculationEntityConfiguration>))
+            if (typeof(T) == typeof(IEnumerable<ICalculationEntityImplementationConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)_entities.AsEnumerable()));
             if (typeof(T) == typeof(IEnumerable<FormulaCalculationConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)_formula.AsEnumerable()));

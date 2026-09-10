@@ -23,9 +23,9 @@ namespace Fdw.Services.Data;
 
 /// <summary>
 /// Domain-specific configuration provider for DataStore configurations.
-/// The polymorphic typed-body read (dispatch on <see cref="DataStoreConfiguration.Implementation"/> to
+/// The polymorphic typed-body read (dispatch on <see cref="DataStoreImplementationConfiguration.Implementation"/> to
 /// load the typed body row, e.g. <c>data.MsSqlDataStore</c>, and attach it to
-/// <see cref="DataStoreConfiguration.Configuration"/>) is composed uniformly by
+/// <see cref="DataStoreImplementationConfiguration.Configuration"/>) is composed uniformly by
 /// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>; typed providers are registered via the
 /// inherited <c>Register</c>.
 /// </summary>
@@ -100,24 +100,24 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
         return GenericResult<DataContainerConfiguration>.Success(container);
     }
     /// <inheritdoc />
-    public override async Task<IGenericResult<IReadOnlyList<DataStoreConfiguration>>> Get(CancellationToken ct = default)
+    public override async Task<IGenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>> Get(CancellationToken ct = default)
     {
         DataStoreConfigurationProviderLog.ComposingDataStoreList(_logger);
         var headers = await base.Get(ct).ConfigureAwait(false);
         if (!headers.IsSuccess || headers.Value is null) return headers;
 
-        var composed = new List<DataStoreConfiguration>(headers.Value.Count);
+        var composed = new List<DataStoreImplementationConfiguration>(headers.Value.Count);
         foreach (var header in headers.Value)
         {
             var aggregate = await ComposeAggregate(header, ct).ConfigureAwait(false);
             if (!aggregate.IsSuccess || aggregate.Value is null)
-                return GenericResult<IReadOnlyList<DataStoreConfiguration>>.Failure(
+                return GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Failure(
                     DataStoreConfigurationProviderLog.DataStoreListComposeFailed(_logger, header.Name));
             composed.Add(aggregate.Value);
         }
 
         DataStoreConfigurationProviderLog.DataStoreListComposed(_logger, composed.Count);
-        return GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success(composed);
+        return GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success(composed);
     }
 
 

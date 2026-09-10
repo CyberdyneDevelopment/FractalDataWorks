@@ -16,7 +16,7 @@ public class DataSetConfigurationTests
     public void DefaultValues_AreSetCorrectly()
     {
         // Arrange & Act
-        var config = new DataSetConfiguration();
+        var config = new DataSetImplementationConfiguration();
 
         // Assert
         config.Name.ShouldBe(string.Empty);
@@ -39,7 +39,7 @@ public class DataSetConfigurationTests
     public void Name_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Name = "TestDataSet" };
+        var config = new DataSetImplementationConfiguration { Name = "TestDataSet" };
 
         // Assert
         config.Name.ShouldBe("TestDataSet");
@@ -51,7 +51,7 @@ public class DataSetConfigurationTests
     public void Description_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Description = "Test Description" };
+        var config = new DataSetImplementationConfiguration { Description = "Test Description" };
 
         // Assert
         config.Description.ShouldBe("Test Description");
@@ -63,7 +63,7 @@ public class DataSetConfigurationTests
     public void Version_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Version = "2.0" };
+        var config = new DataSetImplementationConfiguration { Version = "2.0" };
 
         // Assert
         config.Version.ShouldBe("2.0");
@@ -75,7 +75,7 @@ public class DataSetConfigurationTests
     public void Category_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Category = "Custom" };
+        var config = new DataSetImplementationConfiguration { Category = "Custom" };
 
         // Assert
         config.Category.ShouldBe("Custom");
@@ -87,7 +87,7 @@ public class DataSetConfigurationTests
     public void RecordTypeName_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { RecordTypeName = "MyNamespace.MyType" };
+        var config = new DataSetImplementationConfiguration { RecordTypeName = "MyNamespace.MyType" };
 
         // Assert
         config.RecordTypeName.ShouldBe("MyNamespace.MyType");
@@ -100,7 +100,7 @@ public class DataSetConfigurationTests
     {
         // Arrange
         var field = new DataSetFieldConfiguration { Name = "Id", TypeName = "System.Int32" };
-        var config = new DataSetConfiguration();
+        var config = new DataSetImplementationConfiguration();
 
         // Act
         config.Fields.Add(field);
@@ -116,7 +116,7 @@ public class DataSetConfigurationTests
     public void KeyFields_CanBePopulated()
     {
         // Arrange
-        var config = new DataSetConfiguration();
+        var config = new DataSetImplementationConfiguration();
 
         // Act
         config.KeyFields.Add(new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 });
@@ -135,7 +135,7 @@ public class DataSetConfigurationTests
     {
         // Arrange
         var sourceId = Guid.NewGuid();
-        var config = new DataSetConfiguration();
+        var config = new DataSetImplementationConfiguration();
 
         // Act
         config.Sources.Add(new DataSetSourceConfiguration { Id = sourceId });
@@ -153,7 +153,7 @@ public class DataSetConfigurationTests
         // Arrange
         var sourceId1 = Guid.NewGuid();
         var sourceId2 = Guid.NewGuid();
-        var config = new DataSetConfiguration();
+        var config = new DataSetImplementationConfiguration();
 
         // Act
         config.Sources.Add(new DataSetSourceConfiguration { Id = sourceId1 });
@@ -171,7 +171,7 @@ public class DataSetConfigurationTests
     public void Aggregates_CanBePopulated()
     {
         // Arrange
-        var config = new DataSetConfiguration();
+        var config = new DataSetImplementationConfiguration();
 
         // Act
         config.Aggregates.Add(new DataSetAggregateConfiguration
@@ -197,7 +197,7 @@ public class DataSetConfigurationTests
     {
         // Arrange
         var cachingConfig = new CachingConfiguration { Enabled = true, DurationMinutes = 30 };
-        var config = new DataSetConfiguration { Caching = cachingConfig };
+        var config = new DataSetImplementationConfiguration { Caching = cachingConfig };
 
         // Assert
         config.Caching.ShouldNotBeNull();
@@ -212,7 +212,7 @@ public class DataSetConfigurationTests
     public void AllProperties_CanBeSetTogether()
     {
         // Arrange
-        var config = new DataSetConfiguration
+        var config = new DataSetImplementationConfiguration
         {
             Name = "Users",
             Description = "User dataset",

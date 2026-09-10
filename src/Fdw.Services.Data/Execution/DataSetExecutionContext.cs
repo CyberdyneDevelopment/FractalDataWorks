@@ -26,7 +26,7 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
     /// <param name="pushdown">Translates logical filters to physical for predicate pushdown.</param>
     /// <param name="logger">Logger for execution diagnostics.</param>
     public DataSetExecutionContext(
-        DataSetConfiguration config,
+        DataSetImplementationConfiguration config,
         IDataConnectionProvider connectionProvider,
         IDataStoreProvider dataStoreProvider,
         PredicatePushdownAnalyzer pushdown,
@@ -43,7 +43,7 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
     IGenericConfiguration IDataSetExecutionContext.Configuration => Config;
 
     /// <summary>Gets the resolved (composed) dataset configuration this execution runs against.</summary>
-    public DataSetConfiguration Config { get; }
+    public DataSetImplementationConfiguration Config { get; }
 
     /// <summary>Gets the provider that resolves named connections.</summary>
     public IDataConnectionProvider ConnectionProvider { get; }

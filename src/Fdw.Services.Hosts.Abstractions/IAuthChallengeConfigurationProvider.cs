@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Supplies AuthChallenge configuration. Registered and resolved as this type -- never as the base.
 /// </summary>
 public interface IAuthChallengeConfigurationProvider
-    : IImplementationConfigurationProvider<IAuthChallengeImplementationConfiguration>
+    : IDomainConfigurationProvider<IAuthChallengeImplementationConfiguration>
 {
 }

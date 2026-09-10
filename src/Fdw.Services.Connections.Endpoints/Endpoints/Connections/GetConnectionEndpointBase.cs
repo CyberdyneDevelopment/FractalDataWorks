@@ -11,9 +11,9 @@ namespace Fdw.Services.Connections.Endpoints;
 /// <summary>
 /// Base endpoint for retrieving a specific connection configuration by name. Type-agnostic: it reads
 /// the parent header (which <see cref="ConnectionConfigurationProvider"/> populates with the
-/// polymorphic typed body in <see cref="ConnectionConfiguration.Configuration"/>) and hands that body
+/// polymorphic typed body in <see cref="IConnectionImplementationConfiguration.Configuration"/>) and hands that body
 /// to <see cref="MapToDetail"/>. The concrete endpoint maps the typed body to the DTO by dispatching
-/// on <see cref="ConnectionConfiguration.Implementation"/> — so one GET-by-name endpoint renders
+/// on <see cref="IConnectionImplementationConfiguration.Implementation"/> — so one GET-by-name endpoint renders
 /// every connection type (MsSql, Http, PostgreSql, FileSystem, RoslynWorkspace) rather than being
 /// locked to a single typed provider.
 /// </summary>
@@ -35,7 +35,7 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
 
     /// <summary>
     /// Finds a connection by name (or Guid id) and maps it — together with its polymorphic typed
-    /// body (<see cref="ConnectionConfiguration.Configuration"/>) — to a detail DTO.
+    /// body (<see cref="IConnectionImplementationConfiguration.Configuration"/>) — to a detail DTO.
     /// </summary>
     protected override async Task<IGenericResult<ConnectionDetailDto?>> FindByIdentifier(ConnectionNameRequest request, CancellationToken ct)
     {
@@ -53,8 +53,8 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
 
     /// <summary>
     /// Maps the parent connection and its polymorphic typed body to a detail DTO. Implementations
-    /// dispatch the type-specific projection on <see cref="ConnectionConfiguration.Implementation"/>.
+    /// dispatch the type-specific projection on <see cref="IConnectionImplementationConfiguration.Implementation"/>.
     /// The body may be null if the typed row does not exist yet (header-only render).
     /// </summary>
-    protected abstract ConnectionDetailDto MapToDetail(ConnectionConfiguration connection, IConnectionImplementationConfiguration? body);
+    protected abstract ConnectionDetailDto MapToDetail(IConnectionImplementationConfiguration connection, IConnectionImplementationConfiguration? body);
 }

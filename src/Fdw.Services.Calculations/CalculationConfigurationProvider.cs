@@ -55,8 +55,8 @@ public class CalculationConfigurationProvider
     /// SecretManagerConfigurationProvider.Save stamping SecretManagerId. NO FALLBACKS — only stamps when a
     /// typed body is present and its mapper exists.
     /// </remarks>
-    protected override Task<IGenericResult<CalculationEntityConfiguration>> WriteRow(
-        CalculationEntityConfiguration record, CancellationToken ct = default)
+    protected override Task<IGenericResult<ICalculationEntityImplementationConfiguration>> WriteRow(
+        ICalculationEntityImplementationConfiguration record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
 

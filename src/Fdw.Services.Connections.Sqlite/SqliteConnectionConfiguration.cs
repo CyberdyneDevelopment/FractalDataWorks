@@ -19,6 +19,24 @@ namespace Fdw.Services.Connections.Sqlite;
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "Sqlite")]
 public partial class SqliteConnectionConfiguration : IConnectionImplementationConfiguration
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;

@@ -12,7 +12,7 @@ namespace Fdw.Services.Connections.PostgreSql;
 
 /// <summary>
 /// Configuration for PostgreSQL connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>.
+/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>.
 /// Persisted to <c>conn.PostgreSqlConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
 /// </summary>
 /// <remarks>
@@ -23,7 +23,7 @@ namespace Fdw.Services.Connections.PostgreSql;
 /// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.PostgreSqlConnectionAuthentication).
 /// </para>
 /// <para>
-/// The endpoint creates a <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>
+/// The endpoint creates a <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>
 /// first (writing conn.Connection), then creates this record with <see cref="ConnectionId"/> pointing to
 /// the parent's <see cref="Fdw.Configuration.IGenericConfiguration.Id"/>.
 /// </para>
@@ -33,6 +33,24 @@ namespace Fdw.Services.Connections.PostgreSql;
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "PostgreSql")]
 public partial class PostgreSqlConnectionConfiguration : IConnectionImplementationConfiguration
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;

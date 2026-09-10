@@ -36,7 +36,7 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
             return allResult.ToNewResult<List<ConnectionSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<ConnectionConfiguration>)[])
+        var items = (allResult.Value ?? (IReadOnlyList<IConnectionImplementationConfiguration>)[])
             .Where(config => !string.IsNullOrWhiteSpace(config.Name)
                 && !string.IsNullOrWhiteSpace(config.Implementation)
                 && !string.Equals(config.Implementation, "Connection", StringComparison.OrdinalIgnoreCase))
@@ -49,7 +49,7 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
     }
 
     /// <summary>Maps a single connection configuration to a summary DTO.</summary>
-    protected virtual ConnectionSummaryDto MapToSummary(ConnectionConfiguration config)
+    protected virtual ConnectionSummaryDto MapToSummary(IConnectionImplementationConfiguration config)
     {
         return new ConnectionSummaryDto
         {

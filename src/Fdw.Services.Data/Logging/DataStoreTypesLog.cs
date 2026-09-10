@@ -70,7 +70,7 @@ public static partial class DataStoreTypesLog
     public static partial IGenericMessage TreeBuilderInputs(ILogger logger, int dataStoreCount, int dataPathCount, int dataContainerCount, int connectionCount, int msSqlDataContainerCount);
 
     /// <summary>
-    /// Logs each DataStoreConfiguration as fed into DataStoreBuilder.Build (Id+Name+TypeId).
+    /// Logs each DataStoreImplementationConfiguration as fed into DataStoreBuilder.Build (Id+Name+TypeId).
     /// </summary>
     [MessageLogging(
         EventId = 11204,

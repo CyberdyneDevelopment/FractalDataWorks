@@ -126,7 +126,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
             ? GenericResult<bool>.Success(true)
             : DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
 
-    private static void ApplyRequestedChildren(DataSetConfiguration existing, UpdateDataSetRequest request)
+    private static void ApplyRequestedChildren(DataSetImplementationConfiguration existing, UpdateDataSetRequest request)
     {
             if (request.KeyFields is not null)
             {

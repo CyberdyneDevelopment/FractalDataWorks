@@ -19,7 +19,7 @@ namespace Fdw.Configuration.Abstractions;
 /// </para>
 /// <para>
 /// Configuration discriminators are defined on domain-specific interfaces
-/// (e.g., ConnectionConfiguration.ConnectionType).
+/// (e.g., IConnectionImplementationConfiguration.ConnectionType).
 /// </para>
 /// <example>
 /// <code>

@@ -90,7 +90,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     /// named here. It also composes the aggregate — sources, and each source's field mappings —
     /// which is why the three separate reads this endpoint used to issue are one call.
     /// </remarks>
-    protected virtual async Task<DataSetConfiguration?> FindDataSet(string name, CancellationToken ct)
+    protected virtual async Task<DataSetImplementationConfiguration?> FindDataSet(string name, CancellationToken ct)
     {
         var result = await _dataSetProvider.Get(name, ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value : null;
@@ -98,7 +98,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
 
     /// <summary>The DataSet's sources, in priority order.</summary>
     /// <remarks>Ordered here rather than in a query: they arrive on the aggregate already.</remarks>
-    protected static IReadOnlyList<DataSetSourceConfiguration> GetSources(DataSetConfiguration dataSet) =>
+    protected static IReadOnlyList<DataSetSourceConfiguration> GetSources(DataSetImplementationConfiguration dataSet) =>
         [.. (dataSet.Sources ?? []).OrderBy(s => s.Priority)];
 
     /// <summary>Builds upstream source DTOs from source records, classifying source types by their physical location.</summary>

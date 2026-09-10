@@ -9,7 +9,7 @@ using Fdw.Data.Builders.Results;
 namespace Fdw.Data.Builders;
 
 /// <summary>
-/// Provides a fluent builder API for constructing <see cref="DataSetConfiguration"/> instances.
+/// Provides a fluent builder API for constructing <see cref="DataSetImplementationConfiguration"/> instances.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -40,7 +40,7 @@ public sealed class DataSetConfigurationBuilder
     /// </summary>
     /// <remarks>
     /// These are populated after <see cref="Build"/> is called. The caller is responsible
-    /// for persisting these configurations separately from the DataSetConfiguration.
+    /// for persisting these configurations separately from the DataSetImplementationConfiguration.
     /// </remarks>
     public IReadOnlyList<DataSetSourceConfiguration> SourceConfigurations => _sources;
 
@@ -361,13 +361,13 @@ public sealed class DataSetConfigurationBuilder
     }
 
     /// <summary>
-    /// Builds a <see cref="DataSetConfiguration"/> instance from the configured values.
+    /// Builds a <see cref="DataSetImplementationConfiguration"/> instance from the configured values.
     /// </summary>
     /// <returns>
-    /// A result containing the constructed <see cref="DataSetConfiguration"/> if validation succeeds,
+    /// A result containing the constructed <see cref="DataSetImplementationConfiguration"/> if validation succeeds,
     /// or a failure result with error details if validation fails.
     /// </returns>
-    public IGenericResult<DataSetConfiguration> Build()
+    public IGenericResult<DataSetImplementationConfiguration> Build()
     {
         var validationResult = ValidateBuildInputs(out var dataSetName, out var recordTypeName);
         if (validationResult is not null)
@@ -381,7 +381,7 @@ public sealed class DataSetConfigurationBuilder
             source.DataSetId = _dataSetId;
         }
 
-        var config = new DataSetConfiguration
+        var config = new DataSetImplementationConfiguration
         {
             Id = _dataSetId,
             Name = dataSetName,
@@ -402,34 +402,34 @@ public sealed class DataSetConfigurationBuilder
             Caching = _caching
         };
 
-        return GenericResult<DataSetConfiguration>.Success(config);
+        return GenericResult<DataSetImplementationConfiguration>.Success(config);
     }
 
-    private IGenericResult<DataSetConfiguration>? ValidateBuildInputs(out string dataSetName, out string recordTypeName)
+    private IGenericResult<DataSetImplementationConfiguration>? ValidateBuildInputs(out string dataSetName, out string recordTypeName)
     {
         dataSetName = _dataSetName ?? string.Empty;
         recordTypeName = _recordTypeName ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(_dataSetName))
         {
-            return GenericResult<DataSetConfiguration>.Failure(BuilderResultCodes.ByName("DatasetNameRequired"));
+            return GenericResult<DataSetImplementationConfiguration>.Failure(BuilderResultCodes.ByName("DatasetNameRequired"));
         }
 
         if (string.IsNullOrWhiteSpace(_recordTypeName))
         {
-            return GenericResult<DataSetConfiguration>.Failure(BuilderResultCodes.ByName("RecordTypeNameRequired"));
+            return GenericResult<DataSetImplementationConfiguration>.Failure(BuilderResultCodes.ByName("RecordTypeNameRequired"));
         }
 
         if (_fields.Count == 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<DataSetImplementationConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetMissingFields"),
                 ResultDetails.Create().With("DatasetName", _dataSetName));
         }
 
         if (_keyFields.Count == 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<DataSetImplementationConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetMissingKeyFields"),
                 ResultDetails.Create().With("DatasetName", _dataSetName));
         }
@@ -442,7 +442,7 @@ public sealed class DataSetConfigurationBuilder
 
         if (duplicateFields.Count > 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<DataSetImplementationConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetDuplicateFields"),
                 ResultDetails.Create()
                     .With("DatasetName", _dataSetName)
@@ -452,7 +452,7 @@ public sealed class DataSetConfigurationBuilder
         var invalidKeyFields = _keyFields.Where(kf => !fieldNames.Contains(kf)).ToList();
         if (invalidKeyFields.Count > 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<DataSetImplementationConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetInvalidKeyFields"),
                 ResultDetails.Create()
                     .With("DatasetName", _dataSetName)

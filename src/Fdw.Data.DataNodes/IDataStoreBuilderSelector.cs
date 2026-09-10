@@ -29,5 +29,5 @@ public interface IDataStoreBuilderSelector
     /// Success with the resolved builder, or Failure (with MessageLogging) when no builder is registered
     /// for the configuration's transport.
     /// </returns>
-    IGenericResult<IDataStoreBuilder> Select(DomainConfiguration configuration, ILogger? logger = null);
+    IGenericResult<IDataStoreBuilder> Select(IDataStoreImplementationConfiguration configuration, ILogger? logger = null);
 }

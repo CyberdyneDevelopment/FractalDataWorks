@@ -23,13 +23,13 @@ public sealed class DataStoreBackReferenceTests
 {
     private const string StoreName = "TestStore";
 
-    private static DataStoreConfiguration CreateStoreConfig()
+    private static DataStoreImplementationConfiguration CreateStoreConfig()
     {
         var storeId = Guid.NewGuid();
         var connPathId = Guid.NewGuid();
         var dataPathId = Guid.NewGuid();
 
-        return new DataStoreConfiguration
+        return new DataStoreImplementationConfiguration
         {
             Id = storeId,
             Name = StoreName,

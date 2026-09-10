@@ -10,7 +10,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 
 /// <summary>
 /// Configuration for RoslynWorkspace connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>.
+/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>.
 /// Persisted to <c>conn.RoslynWorkspaceConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
 /// </summary>
 [ExcludeFromCodeCoverage]
@@ -18,6 +18,24 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "RoslynWorkspace")]
 public partial class RoslynWorkspaceConnectionConfiguration : IConnectionImplementationConfiguration
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;

@@ -35,7 +35,7 @@ public class CalculationEntityServiceTests
             "PlatformConfiguration",
             "calc");
 
-    private static CalculationEntityConfiguration SampleConfig(Guid id, string name = "Calc1", string type = "Formula") => new()
+    private static ICalculationEntityImplementationConfiguration SampleConfig(Guid id, string name = "Calc1", string type = "Formula") => new()
     {
         Id = id,
         Name = name,
@@ -60,7 +60,7 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id = Guid.NewGuid();
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(id)));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(id)));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculation("Calc1", TestContext.Current.CancellationToken);
@@ -96,7 +96,7 @@ public class CalculationEntityServiceTests
             }
         ];
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(config));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculation("Calc1", TestContext.Current.CancellationToken);
@@ -114,7 +114,7 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get("Missing", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Failure(new GenericMessage("boom")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Failure(new GenericMessage("boom")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculation("Missing", TestContext.Current.CancellationToken);
@@ -128,7 +128,7 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get("Missing", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(null!));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(null!));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculation("Missing", TestContext.Current.CancellationToken);
@@ -159,7 +159,7 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id = Guid.NewGuid();
         providerMock.Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(id)));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(id)));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculationById(id, TestContext.Current.CancellationToken);
@@ -174,7 +174,7 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id = Guid.NewGuid();
         providerMock.Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Failure(new GenericMessage("boom")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Failure(new GenericMessage("boom")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculationById(id, TestContext.Current.CancellationToken);
@@ -188,7 +188,7 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id = Guid.NewGuid();
         providerMock.Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(null!));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(null!));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.GetCalculationById(id, TestContext.Current.CancellationToken);
@@ -221,12 +221,12 @@ public class CalculationEntityServiceTests
         var id1 = Guid.NewGuid();
         var id2 = Guid.NewGuid();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<CalculationEntityConfiguration>>.Success(
+            .ReturnsAsync(GenericResult<IReadOnlyList<ICalculationEntityImplementationConfiguration>>.Success(
                 [SampleConfig(id1, "Calc1"), SampleConfig(id2, "Calc2")]));
         providerMock.Setup(p => p.Get(id1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(id1, "Calc1")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(id1, "Calc1")));
         providerMock.Setup(p => p.Get(id2, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(id2, "Calc2")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(id2, "Calc2")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.ListCalculations(TestContext.Current.CancellationToken);
@@ -242,7 +242,7 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<CalculationEntityConfiguration>>.Failure(new GenericMessage("boom")));
+            .ReturnsAsync(GenericResult<IReadOnlyList<ICalculationEntityImplementationConfiguration>>.Failure(new GenericMessage("boom")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.ListCalculations(TestContext.Current.CancellationToken);
@@ -257,9 +257,9 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id1 = Guid.NewGuid();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<CalculationEntityConfiguration>>.Success([SampleConfig(id1)]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<ICalculationEntityImplementationConfiguration>>.Success([SampleConfig(id1)]));
         providerMock.Setup(p => p.Get(id1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Failure(new GenericMessage("boom")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Failure(new GenericMessage("boom")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.ListCalculations(TestContext.Current.CancellationToken);
@@ -273,9 +273,9 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id1 = Guid.NewGuid();
         providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<CalculationEntityConfiguration>>.Success([SampleConfig(id1)]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<ICalculationEntityImplementationConfiguration>>.Success([SampleConfig(id1)]));
         providerMock.Setup(p => p.Get(id1, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(null!));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(null!));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.ListCalculations(TestContext.Current.CancellationToken);
@@ -353,7 +353,7 @@ public class CalculationEntityServiceTests
 
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("CALCULATIONS-41000");
-        providerMock.Verify(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        providerMock.Verify(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public class CalculationEntityServiceTests
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
         result.CurrentMessage.ShouldContain("Kind is required");
-        providerMock.Verify(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        providerMock.Verify(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -385,15 +385,15 @@ public class CalculationEntityServiceTests
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNull();
         result.CurrentMessage.ShouldContain("does not implement ICalculationTypedConfiguration");
-        providerMock.Verify(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        providerMock.Verify(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task CreateCalculationSaveFailurePropagates()
     {
         var providerMock = CreateProviderMock();
-        providerMock.Setup(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Failure(new GenericMessage("save failed")));
+        providerMock.Setup(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Failure(new GenericMessage("save failed")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.CreateCalculation(
@@ -408,11 +408,11 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         var savedId = Guid.NewGuid();
-        CalculationEntityConfiguration? captured = null;
-        providerMock.Setup(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()))
-            .Callback<CalculationEntityConfiguration, CancellationToken>((record, _) => captured = record)
-            .ReturnsAsync((CalculationEntityConfiguration record, CancellationToken _) =>
-                GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(savedId)));
+        ICalculationEntityImplementationConfiguration? captured = null;
+        providerMock.Setup(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()))
+            .Callback<ICalculationEntityImplementationConfiguration, CancellationToken>((record, _) => captured = record)
+            .ReturnsAsync((ICalculationEntityImplementationConfiguration record, CancellationToken _) =>
+                GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(savedId)));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
         var typedConfig = new FormulaCalculationConfiguration { Id = Guid.NewGuid(), FormulaBody = "1+1", FormulaLanguage = "CSharp" };
 
@@ -430,7 +430,7 @@ public class CalculationEntityServiceTests
     public async Task CreateCalculationThrowsReturnsCreateCalculationFailed()
     {
         var providerMock = CreateProviderMock();
-        providerMock.Setup(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()))
+        providerMock.Setup(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
@@ -454,7 +454,7 @@ public class CalculationEntityServiceTests
 
         result.IsSuccess.ShouldBeFalse();
         providerMock.Verify(p => p.Delete(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-        providerMock.Verify(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        providerMock.Verify(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -477,7 +477,7 @@ public class CalculationEntityServiceTests
             id, "Name", null, "Formula", [], new CalculationOutputSpec(), true, null, TestContext.Current.CancellationToken);
 
         providerMock.Verify(p => p.Delete(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-        providerMock.Verify(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+        providerMock.Verify(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
         result.CurrentMessage.ShouldNotBe("delete failed", "a Delete that is never called cannot influence the outcome");
     }
 
@@ -487,8 +487,8 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id = Guid.NewGuid();
         providerMock.Setup(p => p.Delete(id, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
-        providerMock.Setup(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Failure(new GenericMessage("save failed")));
+        providerMock.Setup(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Failure(new GenericMessage("save failed")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.UpdateCalculation(
@@ -504,8 +504,8 @@ public class CalculationEntityServiceTests
         var providerMock = CreateProviderMock();
         var id = Guid.NewGuid();
         providerMock.Setup(p => p.Delete(id, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult.Success());
-        providerMock.Setup(p => p.Save(It.IsAny<CalculationEntityConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(id, "Renamed")));
+        providerMock.Setup(p => p.Save(It.IsAny<ICalculationEntityImplementationConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(id, "Renamed")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.UpdateCalculation(
@@ -580,7 +580,7 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Failure(new GenericMessage("not found")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Failure(new GenericMessage("not found")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.ExecuteCalculation("Calc1", Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
@@ -594,7 +594,7 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(Guid.NewGuid(), type: "Bogus")));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(Guid.NewGuid(), type: "Bogus")));
         var service = new CalculationEntityService(providerMock.Object, Mock.Of<ICalculationInputResolver>(), null);
 
         var result = await service.ExecuteCalculation("Calc1", Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
@@ -609,7 +609,7 @@ public class CalculationEntityServiceTests
     {
         var providerMock = CreateProviderMock();
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(SampleConfig(Guid.NewGuid())));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(SampleConfig(Guid.NewGuid())));
         var resolverMock = new Mock<ICalculationInputResolver>();
         resolverMock.Setup(r => r.Resolve(It.IsAny<IReadOnlyList<CalculationInput>>(), It.IsAny<ICalculationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Failure(new GenericMessage("resolve failed")));
@@ -628,7 +628,7 @@ public class CalculationEntityServiceTests
         var config = SampleConfig(Guid.NewGuid());
         config.Configuration = null;
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(config));
         var resolverMock = new Mock<ICalculationInputResolver>();
         resolverMock.Setup(r => r.Resolve(It.IsAny<IReadOnlyList<CalculationInput>>(), It.IsAny<ICalculationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Success([]));
@@ -647,7 +647,7 @@ public class CalculationEntityServiceTests
         var config = SampleConfig(Guid.NewGuid());
         config.Configuration = new FormulaCalculationConfiguration { FormulaBody = "1+1", FormulaLanguage = "CSharp" };
         providerMock.Setup(p => p.Get("Calc1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<CalculationEntityConfiguration>.Success(config));
+            .ReturnsAsync(GenericResult<ICalculationEntityImplementationConfiguration>.Success(config));
         var resolverMock = new Mock<ICalculationInputResolver>();
         resolverMock.Setup(r => r.Resolve(It.IsAny<IReadOnlyList<CalculationInput>>(), It.IsAny<ICalculationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Success([]));

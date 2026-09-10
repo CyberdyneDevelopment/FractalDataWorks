@@ -25,7 +25,7 @@ using Fdw.Services.Abstractions;
 namespace Fdw.Data.DataStores.SqlServer;
 
 /// <summary>
-/// Persists discovered SQL Server schema (a <see cref="DataStoreConfiguration"/>) to ManagedConfiguration tables.
+/// Persists discovered SQL Server schema (a <see cref="DataStoreImplementationConfiguration"/>) to ManagedConfiguration tables.
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires SQL Server connection
 public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
@@ -57,7 +57,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
     /// <inheritdoc />
 #pragma warning disable MA0051 // Method is too long - sequential persistence orchestration
     public async Task<IGenericResult<Guid>> Persist(
-        DataStoreConfiguration discovered,
+        DataStoreImplementationConfiguration discovered,
         Guid connectionId,
         CancellationToken cancellationToken = default)
 #pragma warning restore MA0051
@@ -72,7 +72,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
             return GenericResult<Guid>.Failure(SqlServerDataStoreResultCodes.ByName("ConnectionIdEmpty"));
         }
 
-        var dataStoreConfig = new DataStoreConfiguration
+        var dataStoreConfig = new DataStoreImplementationConfiguration
         {
             Id = Guid.NewGuid(),
             Name = discovered.Name,
@@ -118,7 +118,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
     [ConventionOverride(MaxMethodLines = 75)]
     public async Task<IGenericResult<SchemaImportSyncResult>> Sync(
         Guid existingDataStoreId,
-        DataStoreConfiguration discovered,
+        DataStoreImplementationConfiguration discovered,
         CancellationToken cancellationToken = default)
     {
         if (existingDataStoreId == Guid.Empty)
@@ -645,7 +645,7 @@ public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
             return;
         }
 
-        // DataStoreConfigurationProvider returns DataStoreConfiguration (general model), not MsSqlDataStoreConfiguration.
+        // DataStoreConfigurationProvider returns DataStoreImplementationConfiguration (general model), not MsSqlDataStoreConfiguration.
         // Schema hash tracking requires IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>.
         // TODO(FDW-235): Restore schema hash tracking after the FDW-220/221 cache migration.
         _ = dataStoreResult.Value;

@@ -6,6 +6,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// Resolves configured notification channels and routes each to the implementation provider that owns it.
 /// </summary>
 public interface INotificationConfigurationProvider
-    : IImplementationConfigurationProvider<INotificationImplementationConfiguration>
+    : IDomainConfigurationProvider<INotificationImplementationConfiguration>
 {
 }

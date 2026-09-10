@@ -12,7 +12,7 @@ namespace Fdw.Services.Data.Configuration;
 /// <remarks>
 /// The three child lists mirror the top-level JSON keys under the "ConfigurationSchema" wrapper.
 /// <c>DataStores</c> carries the full nested graph (Paths → Containers → Fields + Keys) because the
-/// existing <see cref="DataStoreConfiguration"/> already declares nested <see cref="DataStoreConfiguration.Paths"/>
+/// existing <see cref="DataStoreImplementationConfiguration"/> already declares nested <see cref="DataStoreImplementationConfiguration.Paths"/>
 /// using <c>List&lt;DataPathConfiguration&gt;</c>, which in turn nests Containers → Fields + Keys.
 /// No parallel POCO hierarchy is needed — IOptions binding uses the same types the rest of FDW uses.
 /// </remarks>
@@ -23,7 +23,7 @@ public sealed class ConfigurationSchema
     /// Corresponds to the <c>ConfigurationSchema:Connections</c> configuration section.
     /// </summary>
 #pragma warning disable MA0016 // Prefer collection abstraction — required for IOptions binding
-    public IList<ConnectionConfiguration> Connections { get; set; } = new List<ConnectionConfiguration>();
+    public IList<IConnectionImplementationConfiguration> Connections { get; set; } = new List<IConnectionImplementationConfiguration>();
 
     /// <summary>
     /// Gets or sets the secret managers available to the entry-point app.
@@ -35,7 +35,7 @@ public sealed class ConfigurationSchema
     /// Gets or sets the data stores (with their full Paths → Containers → Fields + Keys hierarchy).
     /// Corresponds to the <c>ConfigurationSchema:DataStores</c> configuration section.
     /// </summary>
-    public IList<DataStoreConfiguration> DataStores { get; set; } = new List<DataStoreConfiguration>();
+    public IList<DataStoreImplementationConfiguration> DataStores { get; set; } = new List<DataStoreImplementationConfiguration>();
 
     /// <summary>
     /// Gets or sets the Aegis Gateway commands declared for this entry-point app.
@@ -44,7 +44,7 @@ public sealed class ConfigurationSchema
     /// <remarks>
     /// Why here rather than in the net10 <c>Fdw.Aegis</c> package (G2): <c>AegisCommandConfiguration</c>
     /// lives in <c>Fdw.Aegis.Configuration</c>, a package this project can reference without a cycle —
-    /// mirrors how <see cref="ConnectionConfiguration"/> sits in <c>Fdw.Services.Connections</c> rather
+    /// mirrors how <see cref="IConnectionImplementationConfiguration"/> sits in <c>Fdw.Services.Connections</c> rather
     /// than a hypothetical package that itself depends on <c>Fdw.Services.Data</c>.
     /// </remarks>
     public IList<AegisCommandConfiguration> Commands { get; set; } = new List<AegisCommandConfiguration>();

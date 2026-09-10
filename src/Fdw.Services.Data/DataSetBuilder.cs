@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using DataSetFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataSetFieldConfiguration;
 using DataSetCompositionTypes = Fdw.Data.Abstractions.DataSetCompositionTypes;
-using DataSetConfiguration = Fdw.Data.DataSets.Abstractions.DataSetConfiguration;
+using DataSetImplementationConfiguration = Fdw.Data.DataSets.Abstractions.DataSetImplementationConfiguration;
 using DataSetSourceConfiguration = Fdw.Data.DataSets.Abstractions.DataSetSourceConfiguration;
 using IDataSetBuilder = Fdw.Data.DataSets.Abstractions.IDataSetBuilder;
 using JoinConfiguration = Fdw.Data.DataSets.Abstractions.JoinConfiguration;
@@ -18,7 +18,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>
 /// Default implementation of <see cref="IDataSetBuilder"/>.
-/// Builds live <see cref="IDataSet"/> runtime instances from <see cref="DataSetConfiguration"/> records.
+/// Builds live <see cref="IDataSet"/> runtime instances from <see cref="DataSetImplementationConfiguration"/> records.
 /// </summary>
 public sealed class DataSetBuilder : IDataSetBuilder
 {
@@ -34,10 +34,10 @@ public sealed class DataSetBuilder : IDataSetBuilder
     }
 
     /// <inheritdoc />
-    private DataSetConfiguration? _config;
+    private DataSetImplementationConfiguration? _config;
 
     /// <inheritdoc />
-    public IGenericResult Configure(DataSetConfiguration dataSetConfig)
+    public IGenericResult Configure(DataSetImplementationConfiguration dataSetConfig)
     {
         ArgumentNullException.ThrowIfNull(dataSetConfig);
         _config = dataSetConfig;
@@ -130,7 +130,7 @@ public sealed class DataSetBuilder : IDataSetBuilder
     /// <summary>
     /// Determines the composition strategy from the configuration.
     /// </summary>
-    private static IDataSetCompositionType ResolveComposition(DataSetConfiguration config)
+    private static IDataSetCompositionType ResolveComposition(DataSetImplementationConfiguration config)
     {
         var sourceCount = config.Sources?.Count ?? 0;
         if (sourceCount <= 1 || config.Joins.Count == 0)

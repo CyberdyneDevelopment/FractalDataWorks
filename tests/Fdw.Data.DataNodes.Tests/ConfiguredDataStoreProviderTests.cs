@@ -22,7 +22,7 @@ namespace Fdw.Data.DataNodes.Tests;
 public sealed class ConfiguredDataStoreProviderTests
 {
     private readonly Mock<ILogger<ConfiguredDataStoreProvider>> _logger = new();
-    private readonly Mock<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>> _configurationProvider = new();
+    private readonly Mock<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>> _configurationProvider = new();
     private readonly Mock<IDataStoreBuilderSelector> _builderSelector = new();
 
     private ConfiguredDataStoreProvider CreateSut()
@@ -96,7 +96,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Failure(new GenericMessage("not found")));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("not found")));
         var sut = CreateSut();
 
         // Act
@@ -105,7 +105,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         _builderSelector.Verify(
-            s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()), Times.Never);
+            s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()), Times.Never);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(null!));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(null!));
         var sut = CreateSut();
 
         // Act
@@ -125,7 +125,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         _builderSelector.Verify(
-            s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()), Times.Never);
+            s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()), Times.Never);
     }
 
     [Fact]
@@ -134,12 +134,12 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetByNameReturnsFailureWhenSelectorFails()
     {
         // Arrange
-        var cfg = new DataStoreConfiguration { Name = "Store1" };
+        var cfg = new DataStoreImplementationConfiguration { Name = "Store1" };
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Failure(new GenericMessage("no builder")));
         var sut = CreateSut();
 
@@ -156,16 +156,16 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetByNameReturnsFailureWhenConfigureFailsAndBuildIsNeverCalled()
     {
         // Arrange
-        var cfg = new DataStoreConfiguration { Name = "Store1" };
+        var cfg = new DataStoreImplementationConfiguration { Name = "Store1" };
         var builder = new Mock<IDataStoreBuilder>();
         builder
             .Setup(b => b.Configure(It.IsAny<IGenericConfiguration>()))
             .Returns(GenericResult.Failure(new GenericMessage("bad config")));
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
         var sut = CreateSut();
 
@@ -183,7 +183,7 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetByNameReturnsSuccessWithBuiltStoreWhenPipelineSucceeds()
     {
         // Arrange
-        var cfg = new DataStoreConfiguration { Name = "Store1", Implementation = "File" };
+        var cfg = new DataStoreImplementationConfiguration { Name = "Store1" };
         var builtStore = new Mock<IDataStore>().Object;
         var builder = new Mock<IDataStoreBuilder>();
         builder
@@ -194,9 +194,9 @@ public sealed class ConfiguredDataStoreProviderTests
             .ReturnsAsync(GenericResult<IDataStore>.Success(builtStore));
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
         var sut = CreateSut();
 
@@ -214,7 +214,7 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetByNameReturnsFailureWhenBuildFails()
     {
         // Arrange
-        var cfg = new DataStoreConfiguration { Name = "Store1" };
+        var cfg = new DataStoreImplementationConfiguration { Name = "Store1" };
         var builder = new Mock<IDataStoreBuilder>();
         builder
             .Setup(b => b.Configure(It.IsAny<IGenericConfiguration>()))
@@ -224,9 +224,9 @@ public sealed class ConfiguredDataStoreProviderTests
             .ReturnsAsync(GenericResult<IDataStore>.Failure(new GenericMessage("build failed")));
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
         var sut = CreateSut();
 
@@ -250,7 +250,7 @@ public sealed class ConfiguredDataStoreProviderTests
         var id = Guid.NewGuid();
         _configurationProvider
             .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Failure(new GenericMessage("not found")));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("not found")));
         var sut = CreateSut();
 
         // Act
@@ -271,7 +271,7 @@ public sealed class ConfiguredDataStoreProviderTests
         var id = Guid.NewGuid();
         _configurationProvider
             .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(null!));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(null!));
         var sut = CreateSut();
 
         // Act
@@ -290,7 +290,7 @@ public sealed class ConfiguredDataStoreProviderTests
         var id = Guid.NewGuid();
         _configurationProvider
             .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(new DataStoreConfiguration { Id = id, Name = "   " }));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(new DataStoreImplementationConfiguration { Id = id, Name = "   " }));
         var sut = CreateSut();
 
         // Act
@@ -309,19 +309,19 @@ public sealed class ConfiguredDataStoreProviderTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var cfg = new DataStoreConfiguration { Id = id, Name = "Store1" };
+        var cfg = new DataStoreImplementationConfiguration { Id = id, Name = "Store1" };
         var builtStore = new Mock<IDataStore>().Object;
         var builder = new Mock<IDataStoreBuilder>();
         builder.Setup(b => b.Configure(It.IsAny<IGenericConfiguration>())).Returns(GenericResult.Success());
         builder.Setup(b => b.Build(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDataStore>.Success(builtStore));
         _configurationProvider
             .Setup(p => p.Get(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
         var sut = CreateSut();
 
@@ -346,7 +346,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreConfiguration>>.Failure(new GenericMessage("load failed")));
+            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Failure(new GenericMessage("load failed")));
         var sut = CreateSut();
 
         // Act
@@ -355,7 +355,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         _builderSelector.Verify(
-            s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()), Times.Never);
+            s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()), Times.Never);
     }
 
     [Fact]
@@ -366,7 +366,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success([]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success([]));
         var sut = CreateSut();
 
         // Act
@@ -385,8 +385,8 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success(
-                [new DataStoreConfiguration { Name = "   " }]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success(
+                [new DataStoreImplementationConfiguration { Name = "   " }]));
         var sut = CreateSut();
 
         // Act
@@ -405,18 +405,18 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetAllComposesEachStoreViaGetByNameWhenComposedFetchSucceeds()
     {
         // Arrange
-        var shallow = new DataStoreConfiguration { Name = "StoreA" };
-        var composed = new DataStoreConfiguration { Name = "StoreA", Description = "composed" };
+        var shallow = new DataStoreImplementationConfiguration { Name = "StoreA" };
+        var composed = new DataStoreImplementationConfiguration { Name = "StoreA", Description = "composed" };
         var builtStore = new Mock<IDataStore>().Object;
         var builder = new Mock<IDataStoreBuilder>();
         builder.Setup(b => b.Configure(It.IsAny<IGenericConfiguration>())).Returns(GenericResult.Success());
         builder.Setup(b => b.Build(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDataStore>.Success(builtStore));
         _configurationProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success([shallow]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success([shallow]));
         _configurationProvider
             .Setup(p => p.Get("StoreA", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(composed));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(composed));
         _builderSelector
             .Setup(s => s.Select(composed, It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
@@ -439,17 +439,17 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetAllFallsBackToShallowConfigurationWhenComposedFetchFails()
     {
         // Arrange
-        var shallow = new DataStoreConfiguration { Name = "StoreA" };
+        var shallow = new DataStoreImplementationConfiguration { Name = "StoreA" };
         var builtStore = new Mock<IDataStore>().Object;
         var builder = new Mock<IDataStoreBuilder>();
         builder.Setup(b => b.Configure(It.IsAny<IGenericConfiguration>())).Returns(GenericResult.Success());
         builder.Setup(b => b.Build(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDataStore>.Success(builtStore));
         _configurationProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success([shallow]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success([shallow]));
         _configurationProvider
             .Setup(p => p.Get("StoreA", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Failure(new GenericMessage("composed fetch failed")));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("composed fetch failed")));
         _builderSelector
             .Setup(s => s.Select(shallow, It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
@@ -471,15 +471,15 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetAllExcludesStoresWhoseBuildFailsButStillReturnsSuccess()
     {
         // Arrange
-        var shallow = new DataStoreConfiguration { Name = "StoreA" };
+        var shallow = new DataStoreImplementationConfiguration { Name = "StoreA" };
         _configurationProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreConfiguration>>.Success([shallow]));
+            .ReturnsAsync(GenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>.Success([shallow]));
         _configurationProvider
             .Setup(p => p.Get("StoreA", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(shallow));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(shallow));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Failure(new GenericMessage("no builder")));
         var sut = CreateSut();
 
@@ -503,7 +503,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Failure(new GenericMessage("not found")));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("not found")));
         var sut = CreateSut();
 
         // Act
@@ -565,7 +565,7 @@ public sealed class ConfiguredDataStoreProviderTests
         // Arrange
         _configurationProvider
             .Setup(p => p.Get("Store1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Failure(new GenericMessage("not found")));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Failure(new GenericMessage("not found")));
         var sut = CreateSut();
 
         // Act
@@ -625,15 +625,15 @@ public sealed class ConfiguredDataStoreProviderTests
 
     private void SetupSuccessfulBuild(string storeName, IDataStore builtStore)
     {
-        var cfg = new DataStoreConfiguration { Name = storeName };
+        var cfg = new DataStoreImplementationConfiguration { Name = storeName };
         var builder = new Mock<IDataStoreBuilder>();
         builder.Setup(b => b.Configure(It.IsAny<IGenericConfiguration>())).Returns(GenericResult.Success());
         builder.Setup(b => b.Build(It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<IDataStore>.Success(builtStore));
         _configurationProvider
             .Setup(p => p.Get(storeName, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<DataStoreConfiguration>.Success(cfg));
+            .ReturnsAsync(GenericResult<DataStoreImplementationConfiguration>.Success(cfg));
         _builderSelector
-            .Setup(s => s.Select(It.IsAny<DataStoreConfiguration>(), It.IsAny<ILogger>()))
+            .Setup(s => s.Select(It.IsAny<DataStoreImplementationConfiguration>(), It.IsAny<ILogger>()))
             .Returns(GenericResult<IDataStoreBuilder>.Success(builder.Object));
     }
 }

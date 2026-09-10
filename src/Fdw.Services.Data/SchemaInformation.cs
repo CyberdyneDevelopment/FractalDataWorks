@@ -10,7 +10,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// This is the read model returned by <see cref="ISchemaInformationService"/>.
-/// It wraps the persisted <see cref="DataStoreConfiguration"/> and its nested collections
+/// It wraps the persisted <see cref="DataStoreImplementationConfiguration"/> and its nested collections
 /// so callers receive one coherent snapshot without needing to query multiple providers.
 /// </remarks>
 public sealed class SchemaInformation
@@ -18,7 +18,7 @@ public sealed class SchemaInformation
     /// <summary>
     /// Gets the DataStore configuration that this schema belongs to.
     /// </summary>
-    public DataStoreConfiguration DataStore { get; }
+    public DataStoreImplementationConfiguration DataStore { get; }
 
     /// <summary>
     /// Gets the DataPaths (schemas) within the DataStore, each containing their containers and fields.
@@ -39,7 +39,7 @@ public sealed class SchemaInformation
     /// Initializes a new instance of <see cref="SchemaInformation"/>.
     /// </summary>
     /// <param name="dataStore">The DataStore configuration including nested paths and containers.</param>
-    public SchemaInformation(DataStoreConfiguration dataStore)
+    public SchemaInformation(DataStoreImplementationConfiguration dataStore)
     {
         DataStore = dataStore;
         Paths = dataStore.Paths;

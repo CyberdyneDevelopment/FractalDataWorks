@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using Fdw.Configuration;
 
@@ -28,4 +29,7 @@ public interface IDataStoreImplementationConfiguration : IImplementationConfigur
 
     /// <summary>Gets or sets whether this store is in use.</summary>
     bool IsActive { get; set; }
+
+    /// <summary>Gets or sets the paths (schemas) within this store, cascaded on read.</summary>
+    List<DataPathConfiguration> Paths { get; set; }
 }

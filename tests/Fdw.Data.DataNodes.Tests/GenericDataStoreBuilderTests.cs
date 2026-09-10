@@ -16,13 +16,13 @@ namespace Fdw.Data.DataNodes.Tests;
 /// </summary>
 public sealed class GenericDataStoreBuilderTests
 {
-    private static DataStoreConfiguration CreateStoreConfig(string? containerFormat)
+    private static DataStoreImplementationConfiguration CreateStoreConfig(string? containerFormat)
     {
         var storeId = Guid.NewGuid();
         var pathId = Guid.NewGuid();
         var containerId = Guid.NewGuid();
 
-        return new DataStoreConfiguration
+        return new DataStoreImplementationConfiguration
         {
             Id = storeId,
             Name = "TestStore",

@@ -17,7 +17,7 @@ namespace Fdw.Data.Components.Tests.DataStores;
 /// <summary>
 /// Tests for <see cref="ClientsDataStoreConfigurationProvider"/> — the UI-side
 /// <see cref="Fdw.Services.Abstractions.IServiceConfigurationProvider{TConfig}"/> that maps
-/// <see cref="DataStoreApiClient"/> DTOs to <see cref="DataStoreConfiguration"/>.
+/// <see cref="DataStoreApiClient"/> DTOs to <see cref="DataStoreImplementationConfiguration"/>.
 /// </summary>
 public sealed class ClientsDataStoreConfigurationProviderTests
 {
@@ -282,7 +282,7 @@ public sealed class ClientsDataStoreConfigurationProviderTests
     {
         var sut = CreateSut();
 
-        var result = await sut.Save(new DataStoreConfiguration { Name = "Store1" }, TestContext.Current.CancellationToken);
+        var result = await sut.Save(new DataStoreImplementationConfiguration { Name = "Store1" }, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }

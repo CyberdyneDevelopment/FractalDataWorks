@@ -98,19 +98,19 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
     /// Maps the existing parent connection and typed body to a detail DTO for the find phase.
     /// Override to include type-specific fields in the response.
     /// </summary>
-    protected abstract ConnectionDetailDto MapExistingToDetail(ConnectionConfiguration connection, TConfig body);
+    protected abstract ConnectionDetailDto MapExistingToDetail(IConnectionImplementationConfiguration connection, TConfig body);
 
     /// <summary>
     /// Merges the update request into the existing parent connection and typed body.
     /// Returns a tuple of the updated records. Override to handle type-specific field merges.
     /// </summary>
-    protected abstract (ConnectionConfiguration connection, TConfig body) MergeUpdate(
+    protected abstract (IConnectionImplementationConfiguration connection, TConfig body) MergeUpdate(
         UpdateConnectionRequest request,
-        ConnectionConfiguration existingConnection,
+        IConnectionImplementationConfiguration existingConnection,
         TConfig existingBody);
 
     /// <summary>
     /// Maps the saved updated records to a detail DTO. Override to include type-specific fields.
     /// </summary>
-    protected abstract ConnectionDetailDto MapUpdatedToDetail(ConnectionConfiguration connection, TConfig body);
+    protected abstract ConnectionDetailDto MapUpdatedToDetail(IConnectionImplementationConfiguration connection, TConfig body);
 }

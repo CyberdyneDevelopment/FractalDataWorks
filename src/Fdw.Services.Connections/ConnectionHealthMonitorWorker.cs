@@ -17,22 +17,22 @@ namespace Fdw.Services.Connections;
 
 /// <summary>
 /// Periodic background worker that probes <c>conn.Connection</c> rows with
-/// <see cref="ConnectionConfiguration.HealthCheckEnabled"/> set, honoring each row's own
-/// <see cref="ConnectionConfiguration.HealthCheckOnStartup"/> and
-/// <see cref="ConnectionConfiguration.HealthCheckIntervalSeconds"/>, and persisting results.
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckEnabled"/> set, honoring each row's own
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckOnStartup"/> and
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckIntervalSeconds"/>, and persisting results.
 /// </summary>
 /// <remarks>
 /// Why this exists alongside <see cref="ConnectionsHealthCheckable"/>: that class is a pull-only
 /// aggregate snapshot for <c>GET /api/v1/health/system</c> — it never persists anything and ignores
 /// <c>HealthCheckOnStartup</c>/<c>HealthCheckIntervalSeconds</c>. This worker is the actual engine
 /// those two columns were designed for: it runs unattended, writes <c>LastTested*</c> back through
-/// <c>ConnectionConfigurationProvider.Save(ConnectionConfiguration, CancellationToken)</c> (inherited,
+/// <c>ConnectionConfigurationProvider.Save(IConnectionImplementationConfiguration, CancellationToken)</c> (inherited,
 /// generic-closed; not a resolvable cref target),
 /// and records history through <see cref="IConnectionHealthService"/> — the same two writes
 /// <c>TestConnectionEndpointBase</c> performs for a manual test, just on a timer instead of a click.
 /// <para>
 /// Why a fixed internal scan tick rather than a config value: each row's own
-/// <see cref="ConnectionConfiguration.HealthCheckIntervalSeconds"/> is the domain value that governs
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckIntervalSeconds"/> is the domain value that governs
 /// how often THAT connection is actually probed (never defaulted — NO FALLBACKS). <see cref="ScanTick"/>
 /// is only the resolution at which this worker re-evaluates "has enough time elapsed" against every
 /// enabled row, analogous to a file-watcher's poll granularity — it is not standing in for a missing
@@ -185,7 +185,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     private static bool IsConnectionContainerAbsent(IGenericResult result) =>
         result.CodeChain.Any(code => code is DataPathNotFoundCode or ContainerNotFoundInPathCode);
 
-    private async Task ProbeAndPersist(IServiceProvider services, ConnectionConfiguration connection, CancellationToken ct)
+    private async Task ProbeAndPersist(IServiceProvider services, IConnectionImplementationConfiguration connection, CancellationToken ct)
     {
         ConnectionHealthMonitorWorkerLog.ProbingConnection(_logger, connection.Name);
 
@@ -227,7 +227,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
 
     private async Task PersistResult(
         IConnectionHealthService healthService,
-        ConnectionConfiguration connection,
+        IConnectionImplementationConfiguration connection,
         bool success,
         string? message,
         int? responseTimeMs,

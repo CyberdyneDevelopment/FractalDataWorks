@@ -63,7 +63,7 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     }
 
     /// <summary>Maps a data store configuration to a detail DTO. Override for type-specific fields.</summary>
-    protected virtual DataStoreDetailResponse MapToDetail(DataStoreConfiguration config)
+    protected virtual DataStoreDetailResponse MapToDetail(DataStoreImplementationConfiguration config)
     {
         return new DataStoreDetailResponse
         {

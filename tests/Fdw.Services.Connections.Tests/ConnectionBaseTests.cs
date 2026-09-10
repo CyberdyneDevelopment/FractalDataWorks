@@ -403,6 +403,24 @@ public sealed class ConnectionBaseTests : IDisposable
 
     public class TestConnectionConfiguration : IConnectionImplementationConfiguration
     {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
         public Guid Id { get; set; }
 
         public string Name { get; set; } = string.Empty;

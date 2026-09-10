@@ -112,7 +112,7 @@ public sealed class DataSetQueryDocumentProcessor : IDocumentProcessor
 
     private static void EnrichDescription(
         OpenApiOperation operation,
-        IReadOnlyList<DataSetConfiguration> allDataSets)
+        IReadOnlyList<DataSetImplementationConfiguration> allDataSets)
     {
         var description = operation.Description ?? string.Empty;
         description += "\n\n---\n\n## Available DataSets\n\n";
@@ -156,7 +156,7 @@ public sealed class DataSetQueryDocumentProcessor : IDocumentProcessor
         OpenApiDocument document,
         OpenApiPathItem originalPathItem,
         OpenApiOperation originalOperation,
-        IReadOnlyList<DataSetConfiguration> allDataSets)
+        IReadOnlyList<DataSetImplementationConfiguration> allDataSets)
     {
         // Find and remove the generic path
         string? genericPath = null;
@@ -259,7 +259,7 @@ public sealed class DataSetQueryDocumentProcessor : IDocumentProcessor
         document.Paths.Remove(genericPath);
     }
 
-    private static string BuildDataSetDescription(DataSetConfiguration dataSet)
+    private static string BuildDataSetDescription(DataSetImplementationConfiguration dataSet)
     {
         var description = $"Query the **{dataSet.Name}** dataset.";
 

@@ -19,16 +19,16 @@ namespace Fdw.Configuration;
 /// <example>
 /// <code>
 /// // Heterogeneous list of connection configurations
-/// var configs = new List&lt;ConfigurationWrapper&lt;ConnectionConfiguration&gt;&gt;
+/// var configs = new List&lt;ConfigurationWrapper&lt;IConnectionImplementationConfiguration&gt;&gt;
 /// {
-///     new ConfigurationWrapper&lt;ConnectionConfiguration&gt;
+///     new ConfigurationWrapper&lt;IConnectionImplementationConfiguration&gt;
 ///     {
 ///         Id = guid1,
 ///         Name = "Primary",
 ///         ServiceType = "MsSql",
 ///         Settings = new MsSqlConfiguration { Server = "localhost", Database = "mydb" }
 ///     },
-///     new ConfigurationWrapper&lt;ConnectionConfiguration&gt;
+///     new ConfigurationWrapper&lt;IConnectionImplementationConfiguration&gt;
 ///     {
 ///         Id = guid2,
 ///         Name = "Archive",

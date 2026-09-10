@@ -33,7 +33,7 @@ namespace Fdw.Commands.Data;
 /// Example usage:
 /// <code>
 /// var call = new DataGatewayCall(
-///     new ConfigurationSaveCommand&lt;DataSetConfiguration&gt;(config),
+///     new ConfigurationSaveCommand&lt;DataSetImplementationConfiguration&gt;(config),
 ///     new DataStoreTarget("PlatformConfiguration", "cfg", "DataSet"));
 /// var result = await gateway.Execute&lt;int&gt;(call, ct);
 /// </code>

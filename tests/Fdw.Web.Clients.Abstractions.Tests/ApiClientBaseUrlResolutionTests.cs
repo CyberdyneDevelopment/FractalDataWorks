@@ -43,7 +43,7 @@ public sealed class ApiClientBaseUrlResolutionTests
             => Task.FromResult(
                 string.Equals(name, connectionName, StringComparison.Ordinal) && baseUrl is not null
                     ? GenericResult<IDomainConfiguration>.Success(
-                        new ConnectionConfiguration
+                        new IConnectionImplementationConfiguration
                         {
                             Name = name,
                             Implementation = "Http",

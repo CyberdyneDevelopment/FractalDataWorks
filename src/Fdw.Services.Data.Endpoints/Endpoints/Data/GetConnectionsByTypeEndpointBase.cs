@@ -48,7 +48,7 @@ public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<Get
     }
 
     /// <summary>Maps a connection configuration to a connection by type DTO.</summary>
-    protected virtual ConnectionByTypeDto MapToDto(ConnectionConfiguration connection)
+    protected virtual ConnectionByTypeDto MapToDto(IConnectionImplementationConfiguration connection)
     {
         return new ConnectionByTypeDto
         {

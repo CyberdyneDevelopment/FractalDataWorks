@@ -45,7 +45,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     public IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration)
     {
 
-        if (configuration is ConnectionConfiguration composedHeader
+        if (configuration is IConnectionImplementationConfiguration composedHeader
             && composedHeader.Configuration is RoslynWorkspaceConnectionConfiguration)
         {
             return GenericResult<IGenericConnection>.Failure(
@@ -73,7 +73,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         ISecretManager? secretManager,
         CancellationToken cancellationToken = default)
     {
-        if (configuration is ConnectionConfiguration header
+        if (configuration is IConnectionImplementationConfiguration header
             && header.Configuration is RoslynWorkspaceConnectionConfiguration typedBody)
         {
             return await Create(typedBody, header.Name, cancellationToken).ConfigureAwait(false);

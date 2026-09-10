@@ -30,8 +30,8 @@ internal static class DataSetQueryHelper
             Operator = LogicalOperator.And,
             Nodes =
             [
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsDeleted), Operator = EqualOperator, Value = false },
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.IsDeleted), Operator = EqualOperator, Value = false },
                 new FilterCondition { PropertyName = propertyName, Operator = EqualOperator, Value = value }
             ]
         }
@@ -44,8 +44,8 @@ internal static class DataSetQueryHelper
             Operator = LogicalOperator.And,
             Nodes =
             [
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsDeleted), Operator = EqualOperator, Value = false }
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.IsDeleted), Operator = EqualOperator, Value = false }
             ]
         }
     };
@@ -58,9 +58,9 @@ internal static class DataSetQueryHelper
             Operator = LogicalOperator.And,
             Nodes =
             [
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.Name), Operator = EqualOperator, Value = name },
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
-                new FilterCondition { PropertyName = nameof(DataSetConfiguration.IsDeleted), Operator = EqualOperator, Value = false }
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.Name), Operator = EqualOperator, Value = name },
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.IsCurrent), Operator = EqualOperator, Value = true },
+                new FilterCondition { PropertyName = nameof(DataSetImplementationConfiguration.IsDeleted), Operator = EqualOperator, Value = false }
             ]
         }
     };
@@ -80,7 +80,7 @@ internal static class DataSetQueryHelper
         }
     };
 
-    internal static DataSetDetailResponse MapToDetail(DataSetConfiguration config) => new()
+    internal static DataSetDetailResponse MapToDetail(DataSetImplementationConfiguration config) => new()
     {
         Id = config.Id,
         Name = config.Name,
@@ -151,7 +151,7 @@ internal static class DataSetQueryHelper
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf
     };
 
-    internal static DataSetSummaryResponse MapToSummary(DataSetConfiguration config, int sourceCount) => new()
+    internal static DataSetSummaryResponse MapToSummary(DataSetImplementationConfiguration config, int sourceCount) => new()
     {
         Id = config.Id,
         Name = config.Name,

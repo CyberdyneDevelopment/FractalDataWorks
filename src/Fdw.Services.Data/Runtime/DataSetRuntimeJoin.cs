@@ -8,7 +8,7 @@ namespace Fdw.Services.Data.Runtime;
 
 /// <summary>
 /// Runtime implementation of <see cref="IDataSetJoin"/> built from a <c>JoinConfiguration</c> record
-/// and the resolved source map for the parent <c>DataSetConfiguration</c>.
+/// and the resolved source map for the parent <c>DataSetImplementationConfiguration</c>.
 /// </summary>
 internal sealed class DataSetRuntimeJoin : IDataSetJoin
 {

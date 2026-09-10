@@ -4,9 +4,9 @@ using Fdw.Validation;
 namespace Fdw.Services.Connections.Validation;
 
 /// <summary>
-/// Validator for <see cref="DataStoreConfiguration"/>.
+/// Validator for <see cref="DataStoreImplementationConfiguration"/>.
 /// </summary>
-public sealed class DataStoreConfigurationValidator : FdwConfigurationValidator<DataStoreConfiguration>
+public sealed class DataStoreConfigurationValidator : FdwConfigurationValidator<DataStoreImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataStoreConfigurationValidator"/> class.

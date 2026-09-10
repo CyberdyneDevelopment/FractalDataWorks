@@ -194,13 +194,13 @@ public static partial class DataStoreLoaderLog
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// Logs that the DataStoreBuilder Configure call received an unexpected configuration type instead of a DataStoreConfiguration.
+    /// Logs that the DataStoreBuilder Configure call received an unexpected configuration type instead of a DataStoreImplementationConfiguration.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="actualType">The actual configuration type that was received.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 91016, Level = LogLevel.Error,
-        Message = "[DataStoreBuilder] Configure received unexpected configuration type '{actualType}' (expected DataStoreConfiguration)")]
+        Message = "[DataStoreBuilder] Configure received unexpected configuration type '{actualType}' (expected DataStoreImplementationConfiguration)")]
     public static partial IGenericMessage BuilderConfigureWrongType(ILogger logger, string actualType);
 
     /// <summary>

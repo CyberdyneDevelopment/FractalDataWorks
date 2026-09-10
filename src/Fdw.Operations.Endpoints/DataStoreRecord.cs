@@ -7,7 +7,7 @@ namespace Fdw.Operations.Endpoints;
 /// Database record representing a data store, as declared by the data.DataStore container.
 /// </summary>
 /// <remarks>
-/// This type modelled the DataStoreConfiguration table, which no longer exists. The container
+/// This type modelled the DataStoreImplementationConfiguration table, which no longer exists. The container
 /// name was corrected to DataStore, so the query began succeeding and then failed one step
 /// later on the mapper -- the SELECT projects the container's declared fields and nothing here
 /// matched them. Location and TranslatorType have no counterpart on data.DataStore at all:

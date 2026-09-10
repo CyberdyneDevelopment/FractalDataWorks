@@ -127,32 +127,32 @@ public sealed class SchemaInformationService : ISchemaInformationService
         return await DiscoverAndReturn(config, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<IGenericResult<ConnectionConfiguration>> ResolveConnectionConfig(
+    private async Task<IGenericResult<IConnectionImplementationConfiguration>> ResolveConnectionConfig(
         string connectionName,
         CancellationToken cancellationToken)
     {
         var result = await _configProvider.Get(connectionName, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess || result.Value is null)
         {
-            return GenericResult<ConnectionConfiguration>.Failure(
+            return GenericResult<IConnectionImplementationConfiguration>.Failure(
                 SchemaInformationLog.ConnectionConfigNotFound(_logger, connectionName));
         }
 
-        return GenericResult<ConnectionConfiguration>.Success(result.Value);
+        return GenericResult<IConnectionImplementationConfiguration>.Success(result.Value);
     }
 
     private async Task<SchemaInformation?> TryGetFromCache(
-        ConnectionConfiguration config,
+        IConnectionImplementationConfiguration config,
         CancellationToken cancellationToken)
     {
         var allConfigsResult = await _dataStoreProvider.Get(cancellationToken).ConfigureAwait(false);
-        var allConfigs = allConfigsResult.IsSuccess ? allConfigsResult.Value! : (IReadOnlyList<DataStoreConfiguration>)[];
+        var allConfigs = allConfigsResult.IsSuccess ? allConfigsResult.Value! : (IReadOnlyList<DataStoreImplementationConfiguration>)[];
         var dataStore = allConfigs.FirstOrDefault(ds => ds.ConnectionId == config.Id);
         return dataStore != null ? new SchemaInformation(dataStore) : null;
     }
 
     private async Task<IGenericResult<SchemaInformation>> DiscoverAndReturn(
-        ConnectionConfiguration config,
+        IConnectionImplementationConfiguration config,
         CancellationToken cancellationToken)
     {
         var connectionName = config.Name;
@@ -223,7 +223,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         return GenericResult<SchemaInformation>.Success(info);
     }
 
-    private static DataStoreDiscoveryOptions BuildDiscoveryOptions(ConnectionConfiguration config)
+    private static DataStoreDiscoveryOptions BuildDiscoveryOptions(IConnectionImplementationConfiguration config)
         => DataStoreDiscoveryOptions.Default;
 
     /// <summary>
@@ -266,7 +266,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         return GenericResult.Success();
     }
 
-    private async Task<IGenericResult<DataStoreConfiguration>> ResolveOrCreateDataStore(
+    private async Task<IGenericResult<DataStoreImplementationConfiguration>> ResolveOrCreateDataStore(
         string dataStoreName,
         string connectionType,
         Guid connectionId,
@@ -274,16 +274,16 @@ public sealed class SchemaInformationService : ISchemaInformationService
         CancellationToken ct)
     {
         var allDataStoresResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        var allDataStores = allDataStoresResult.IsSuccess ? allDataStoresResult.Value! : (IReadOnlyList<DataStoreConfiguration>)[];
+        var allDataStores = allDataStoresResult.IsSuccess ? allDataStoresResult.Value! : (IReadOnlyList<DataStoreImplementationConfiguration>)[];
         var existingDataStore = allDataStores.FirstOrDefault(ds => ds.ConnectionId == connectionId);
 
         if (existingDataStore != null)
         {
             SchemaDiscoveryLog.ExistingDataStoreFound(_logger, dataStoreName, existingDataStore.Id);
-            return GenericResult<DataStoreConfiguration>.Success(existingDataStore);
+            return GenericResult<DataStoreImplementationConfiguration>.Success(existingDataStore);
         }
 
-        var dataStoreConfig = new DataStoreConfiguration
+        var dataStoreConfig = new DataStoreImplementationConfiguration
         {
             Name = dataStoreName,
             ConnectionId = connectionId,
@@ -297,10 +297,10 @@ public sealed class SchemaInformationService : ISchemaInformationService
                 SchemaDiscoveryLog.PersistFailed(_logger, dataStoreName, upstreamError);
             else
                 SchemaDiscoveryLog.DataStoreSaveFailed(_logger, dataStoreName);
-            return savedResult.ToNewResult<DataStoreConfiguration>();
+            return savedResult.ToNewResult<DataStoreImplementationConfiguration>();
         }
 
-        return GenericResult<DataStoreConfiguration>.Success(savedResult.Value);
+        return GenericResult<DataStoreImplementationConfiguration>.Success(savedResult.Value);
     }
 
     private async Task<IGenericResult> PersistPathGroups(
@@ -473,7 +473,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     }
 
     private async Task UpdateLastDiscoveredAt(
-        DataStoreConfiguration dataStoreConfig,
+        DataStoreImplementationConfiguration dataStoreConfig,
         string dataStoreName,
         ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration> writer,
         CancellationToken ct)

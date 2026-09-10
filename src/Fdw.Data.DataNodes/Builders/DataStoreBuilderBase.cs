@@ -19,7 +19,7 @@ namespace Fdw.Services.Data.Builders;
 /// <summary>
 /// Shared base for the per-transport <see cref="IDataStoreBuilder"/>s. Owns the transport-agnostic
 /// assembly of the uniform <see cref="IDataStore"/> tree (store → paths → containers → fields → keys)
-/// from a nested <see cref="DomainConfiguration"/>, including the FK-direct key resolution
+/// from a nested <see cref="IDataStoreImplementationConfiguration"/>, including the FK-direct key resolution
 /// (Addendum-B). Transport subclasses override only the two genuinely transport-specific steps:
 /// <see cref="BuildField"/> and <see cref="BuildContainer"/>.
 /// </summary>
@@ -49,7 +49,7 @@ namespace Fdw.Services.Data.Builders;
 public abstract class DataStoreBuilderBase : IDataStoreBuilder
 {
     private readonly ILogger _logger;
-    private DomainConfiguration? _config;
+    private IDataStoreImplementationConfiguration? _config;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataStoreBuilderBase"/> class.
@@ -68,7 +68,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     {
         ArgumentNullException.ThrowIfNull(storeConfig);
 
-        if (storeConfig is not DomainConfiguration cfg)
+        if (storeConfig is not IDataStoreImplementationConfiguration cfg)
         {
             return GenericResult.Failure(
                 DataStoreLoaderLog.BuilderConfigureWrongType(_logger, storeConfig.GetType().Name));
@@ -173,7 +173,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// </summary>
     /// <param name="config">The store configuration seeded via <see cref="Configure"/>.</param>
     /// <returns>Success to proceed with the build; a failure to reject it (Build returns that failure).</returns>
-    protected virtual IGenericResult ValidateConfiguration(DomainConfiguration config) => GenericResult.Success();
+    protected virtual IGenericResult ValidateConfiguration(IDataStoreImplementationConfiguration config) => GenericResult.Success();
 
     /// <summary>
     /// Builds one field node for this transport from its configuration.

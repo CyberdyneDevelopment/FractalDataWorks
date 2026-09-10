@@ -24,7 +24,7 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     where TService : IGenericService
     where TConfiguration : class, IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
-    where TConfigurationProvider : IImplementationConfigurationProvider<TConfiguration>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the

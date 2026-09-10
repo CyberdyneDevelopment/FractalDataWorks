@@ -57,8 +57,7 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
             builder.Services.TryAddSingleton<MainDataGatewayConfigurationProvider>(sp =>
                 new MainDataGatewayConfigurationProvider(
                     sp.GetService<ILogger<MainDataGatewayConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataGatewayServiceTypes.ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
 
             // Why the domain provider and not the implementation one: the domain record says which

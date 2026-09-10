@@ -52,33 +52,33 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
     // ============================================================================
 
     /// <inheritdoc />
-    public override async Task<IGenericResult<DataSetConfiguration>> Get(string name, CancellationToken ct = default)
+    public override async Task<IGenericResult<DataSetImplementationConfiguration>> Get(string name, CancellationToken ct = default)
     {
         var result = await base.Get(name, ct).ConfigureAwait(false);
         if (result.IsSuccess && result.Value is not null)
         {
             var mappingResult = await PopulateFieldMappings(result.Value, ct).ConfigureAwait(false);
             if (!mappingResult.IsSuccess)
-                return mappingResult.ToNewResult<DataSetConfiguration>();
+                return mappingResult.ToNewResult<DataSetImplementationConfiguration>();
         }
         return result;
     }
 
     /// <inheritdoc />
-    public override async Task<IGenericResult<DataSetConfiguration>> Get(Guid id, CancellationToken ct = default)
+    public override async Task<IGenericResult<DataSetImplementationConfiguration>> Get(Guid id, CancellationToken ct = default)
     {
         var result = await base.Get(id, ct).ConfigureAwait(false);
         if (result.IsSuccess && result.Value is not null)
         {
             var mappingResult = await PopulateFieldMappings(result.Value, ct).ConfigureAwait(false);
             if (!mappingResult.IsSuccess)
-                return mappingResult.ToNewResult<DataSetConfiguration>();
+                return mappingResult.ToNewResult<DataSetImplementationConfiguration>();
         }
         return result;
     }
 
     /// <inheritdoc />
-    public override async Task<IGenericResult<IReadOnlyList<DataSetConfiguration>>> Get(CancellationToken ct = default)
+    public override async Task<IGenericResult<IReadOnlyList<DataSetImplementationConfiguration>>> Get(CancellationToken ct = default)
     {
         var result = await base.Get(ct).ConfigureAwait(false);
         if (result.IsSuccess && result.Value is not null)
@@ -87,7 +87,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
             {
                 var mappingResult = await PopulateFieldMappings(config, ct).ConfigureAwait(false);
                 if (!mappingResult.IsSuccess)
-                    return mappingResult.ToNewResult<IReadOnlyList<DataSetConfiguration>>();
+                    return mappingResult.ToNewResult<IReadOnlyList<DataSetImplementationConfiguration>>();
             }
         }
         return result;
@@ -107,7 +107,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
     /// Returns a failure result if any gatewayProvider query fails — the caller propagates this so the
     /// composed DataSet config is never returned with silently empty field mappings.
     /// </summary>
-    private async Task<IGenericResult<bool>> PopulateFieldMappings(DataSetConfiguration config, CancellationToken ct)
+    private async Task<IGenericResult<bool>> PopulateFieldMappings(DataSetImplementationConfiguration config, CancellationToken ct)
     {
         if (config.Sources == null || config.Sources.Count == 0)
             return GenericResult<bool>.Success(true);
@@ -274,7 +274,7 @@ public class DataSetConfigurationProvider : ImplementationConfigurationProviderB
 
     /// <inheritdoc />
     /// <remarks>
-    /// A DataSet has no parent. DataSetConfiguration is declared with no parent type — a top-level
+    /// A DataSet has no parent. DataSetImplementationConfiguration is declared with no parent type — a top-level
     /// named configuration like a Connection or a Pipeline — so there is nothing to look for and this
     /// does not look.
     ///

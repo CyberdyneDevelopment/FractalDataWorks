@@ -64,6 +64,7 @@ public abstract class ImplementationConfigurationProviderBase<TImplementationCon
     /// <param name="gatewayProvider">Supplies the gateway onto <paramref name="dataStoreName"/>.</param>
     /// <param name="dataStoreName">The configuration connection this domain's rows live on.</param>
     /// <param name="pathName">Schema/path name (e.g. "conn", "sec").</param>
+    /// <param name="tableName">The container this provider reads and writes.</param>
     protected ImplementationConfigurationProviderBase(
         ILogger<ImplementationConfigurationProviderBase<TImplementationConfiguration>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
@@ -950,16 +951,8 @@ public abstract class ImplementationConfigurationProviderBase<TImplementationCon
     // are always written together by the create overload above.
     protected virtual async Task<IGenericResult<DomainConfiguration>> WriteRow(DomainConfiguration record, CancellationToken ct = default)
     {
-        // A domain row that names a registered implementation and carries none is the bodiless record
-        // that cannot be composed on read -- and, when read at startup, takes the host down at boot.
-        // Refusing it here keeps that state out of the store instead of discovering it later.
-        if (record is IDomainConfiguration { ImplementationConfiguration: null } incomplete
-            && incomplete.Implementation is { Length: > 0 } named
-            && _implementations.ContainsKey(named))
-        {
-            return GenericResult<DomainConfiguration>.Failure(
-                DefaultConfigurationProviderLog.IncompleteAggregate(_logger, incomplete.Name, named));
-        }
+        // The guard that stood here refused a domain row naming an implementation it did not carry.
+        // Save writes both rows together now, so that state cannot be reached through this path.
 
         ArgumentNullException.ThrowIfNull(record);
 

@@ -8,7 +8,7 @@ namespace Fdw.Data.SchemaImporters.Abstractions;
 
 /// <summary>
 /// Persists discovered schema to the configuration database.
-/// Maps the discovered <see cref="DataStoreConfiguration"/> hierarchy
+/// Maps the discovered <see cref="DataStoreImplementationConfiguration"/> hierarchy
 /// (DataStore/DataPath/DataContainer/DataContainerField) to ManagedConfiguration tables.
 /// </summary>
 public interface ISchemaImportPersister
@@ -21,7 +21,7 @@ public interface ISchemaImportPersister
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result containing the persisted DataStore configuration ID.</returns>
     Task<IGenericResult<Guid>> Persist(
-        DataStoreConfiguration discovered,
+        DataStoreImplementationConfiguration discovered,
         Guid connectionId,
         CancellationToken cancellationToken = default);
 
@@ -35,6 +35,6 @@ public interface ISchemaImportPersister
     /// <returns>Result containing sync statistics.</returns>
     Task<IGenericResult<SchemaImportSyncResult>> Sync(
         Guid existingDataStoreId,
-        DataStoreConfiguration discovered,
+        DataStoreImplementationConfiguration discovered,
         CancellationToken cancellationToken = default);
 }

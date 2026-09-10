@@ -95,14 +95,14 @@ public sealed class AegisTestFixture : IAsyncLifetime
 
     private static ConfigurationSchema BuildSchema(string stubAddress, string hostileAddress)
     {
-        var syntheticConnection = new ConnectionConfiguration
+        var syntheticConnection = new IConnectionImplementationConfiguration
         {
             Name = "synthetic-echo",
             Implementation = "Http",
             Configuration = new HttpConnectionConfiguration { BaseUrl = stubAddress },
         };
 
-        var hostileConnection = new ConnectionConfiguration
+        var hostileConnection = new IConnectionImplementationConfiguration
         {
             Name = "hostile-echo",
             Implementation = "Http",

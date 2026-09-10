@@ -11,7 +11,7 @@ namespace Fdw.Services.Calculations.Configuration;
 /// </summary>
 /// <remarks>
 /// Why: implements IGenericConfiguration so [GenerateMapper] emits a cascade child descriptor for the
-/// parent <see cref="CalculationEntityConfiguration.Inputs"/> collection — the keystone base read
+/// parent <see cref="ICalculationEntityImplementationConfiguration.Inputs"/> collection — the keystone base read
 /// composes calc.CalculationEntityInput rows (matched by the child's ConfigurationCommand container name)
 /// and the cascade-save persists them.
 /// </remarks>

@@ -25,7 +25,7 @@ namespace Fdw.Data.Components.DataStores;
 public sealed class GenericBuilderSelector : IDataStoreBuilderSelector
 {
     /// <inheritdoc/>
-    public IGenericResult<IDataStoreBuilder> Select(DataStoreConfiguration configuration, ILogger? logger = null)
+    public IGenericResult<IDataStoreBuilder> Select(DataStoreImplementationConfiguration configuration, ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 

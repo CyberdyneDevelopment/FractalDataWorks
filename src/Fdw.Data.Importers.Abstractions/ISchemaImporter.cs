@@ -39,9 +39,9 @@ public interface ISchemaImporter
     /// <param name="options">Optional configuration options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    /// A <see cref="DataStoreConfiguration"/> with discovered paths, containers, and fields, or a failure result.
+    /// A <see cref="DataStoreImplementationConfiguration"/> with discovered paths, containers, and fields, or a failure result.
     /// </returns>
-    Task<IGenericResult<DataStoreConfiguration>> Import(
+    Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default);
@@ -64,7 +64,7 @@ public interface ISchemaImporter<TConfiguration> : ISchemaImporter
     /// <summary>
     /// Imports schema and returns the discovered DataStore configuration.
     /// </summary>
-    new Task<IGenericResult<DataStoreConfiguration>> Import(
+    new Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default);

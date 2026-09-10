@@ -10,6 +10,6 @@ namespace Fdw.Services.Authorization.Abstractions;
 /// the roles rather than a domain record it would have to unwrap.
 /// </remarks>
 public interface IRoleMappingConfigurationProvider
-    : IImplementationConfigurationProvider<IRoleMappingImplementationConfiguration>
+    : IDomainConfigurationProvider<IRoleMappingImplementationConfiguration>
 {
 }

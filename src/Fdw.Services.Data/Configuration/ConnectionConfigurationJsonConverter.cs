@@ -7,11 +7,11 @@ using Fdw.Services.Connections.Abstractions;
 namespace Fdw.Services.Data.Configuration;
 
 /// <summary>
-/// STJ JsonConverter for <see cref="ConnectionConfiguration"/> that dispatches to the correct
+/// STJ JsonConverter for <see cref="IConnectionImplementationConfiguration"/> that dispatches to the correct
 /// concrete derived type using the <c>Implementation</c> discriminator field.
 /// </summary>
 /// <remarks>
-/// Why: <see cref="ConnectionConfiguration"/> is the base type in <c>Services.Connections</c>,
+/// Why: <see cref="IConnectionImplementationConfiguration"/> is the base type in <c>Services.Connections</c>,
 /// but derived types (<c>MsSqlConnectionConfiguration</c>, etc.) live in separate packages that
 /// <c>Services.Connections</c> cannot reference. <c>[JsonPolymorphic]</c> attributes on the base
 /// would create circular package dependencies. Instead, this converter reads
@@ -19,8 +19,26 @@ namespace Fdw.Services.Data.Configuration;
 /// from <see cref="ConnectionTypes"/> (populated by module initializers at assembly load time),
 /// and delegates deserialization to the resolved type — zero hardcoded type names.
 /// </remarks>
-public sealed class ConnectionConfigurationJsonConverter : JsonConverter<ConnectionConfiguration>
+public sealed class ConnectionConfigurationJsonConverter : JsonConverter<IConnectionImplementationConfiguration>
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public bool DiscoveryEnabled { get; set; } = true;
+
     private const string DiscriminatorPropertyName = "Implementation";
     private const string SettingsPropertyName = "Configuration";
 
@@ -38,10 +56,10 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
     }
 
     /// <inheritdoc />
-    public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(ConnectionConfiguration);
+    public override bool CanConvert(Type typeToConvert) => typeToConvert == typeof(IConnectionImplementationConfiguration);
 
     /// <inheritdoc />
-    public override ConnectionConfiguration? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override IConnectionImplementationConfiguration? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
@@ -61,7 +79,7 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
         }
         var parentJson = System.Text.Encoding.UTF8.GetString(stream.ToArray());
 
-        var connection = JsonSerializer.Deserialize<ConnectionConfiguration>(parentJson, innerOptions);
+        var connection = JsonSerializer.Deserialize<IConnectionImplementationConfiguration>(parentJson, innerOptions);
         if (connection is null) return null;
 
         // Resolve the implementation configuration type via Implementation, deserialize the nested Configuration.
@@ -95,7 +113,7 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
     }
 
     /// <inheritdoc />
-    public override void Write(Utf8JsonWriter writer, ConnectionConfiguration value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, IConnectionImplementationConfiguration value, JsonSerializerOptions options)
     {
         JsonSerializer.Serialize(writer, value, value.GetType(), GetInnerOptions(options));
     }

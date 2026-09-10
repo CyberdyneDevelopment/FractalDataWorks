@@ -28,7 +28,7 @@ namespace Fdw.Services.Connections;
 /// <typeparam name="TService">The connection service interface type.</typeparam>
 /// <typeparam name="TFactory">The factory type for creating connection service instances.</typeparam>
 /// <typeparam name="TConfiguration">The typed body configuration type (e.g. MsSqlConnectionConfiguration).
-/// Must implement <see cref="IGenericConfiguration"/> — no longer required to extend <see cref="ConnectionConfiguration"/>
+/// Must implement <see cref="IGenericConfiguration"/> — no longer required to extend <see cref="IConnectionImplementationConfiguration"/>
 /// after the parent/typed-body split.</typeparam>
 public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
     ServiceTypeBase<TService, TFactory, TConfiguration>,

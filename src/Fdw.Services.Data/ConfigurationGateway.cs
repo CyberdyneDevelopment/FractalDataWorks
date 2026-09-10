@@ -498,7 +498,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     {
         ConfigurationGatewayLog.BuildConnectionEntry(_logger, ConnectionName);
 
-        ConnectionConfiguration? configDbEntry = null;
+        IConnectionImplementationConfiguration? configDbEntry = null;
 
         for (var i = 0; i < _schema.Connections.Count; i++)
         {
@@ -579,7 +579,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         return builtStores;
     }
 
-    private static IDataStore? BuildStore(DataStoreConfiguration storeCfg, ILogger logger)
+    private static IDataStore? BuildStore(DataStoreImplementationConfiguration storeCfg, ILogger logger)
     {
         var storeType = string.IsNullOrEmpty(storeCfg.Implementation)
             ? null

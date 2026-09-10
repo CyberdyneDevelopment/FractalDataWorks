@@ -35,7 +35,7 @@ public sealed class GenericBuilderSelectorTests
     public void SelectReturnsSuccessWithAGenericDataStoreBuilder()
     {
         var sut = new GenericBuilderSelector();
-        var configuration = new DataStoreConfiguration { Name = "Store1" };
+        var configuration = new DataStoreImplementationConfiguration { Name = "Store1" };
 
         var result = sut.Select(configuration);
 
@@ -50,7 +50,7 @@ public sealed class GenericBuilderSelectorTests
     {
         var container = new DataContainerConfiguration { Id = Guid.NewGuid(), Name = "Customers" };
         var path = new DataPathConfiguration { Id = Guid.NewGuid(), Name = "dbo", Containers = [container] };
-        var storeConfig = new DataStoreConfiguration { Name = "Store1", Paths = [path] };
+        var storeConfig = new DataStoreImplementationConfiguration { Name = "Store1", Paths = [path] };
         var sut = new GenericBuilderSelector();
 
         var selectResult = sut.Select(storeConfig);
@@ -80,7 +80,7 @@ public sealed class GenericBuilderSelectorTests
     public void SelectPassesThroughSuppliedLoggerToTheBuilder()
     {
         var sut = new GenericBuilderSelector();
-        var configuration = new DataStoreConfiguration { Name = "Store1" };
+        var configuration = new DataStoreImplementationConfiguration { Name = "Store1" };
 
         var result = sut.Select(configuration, NullLoggerFactory.Instance.CreateLogger(nameof(GenericBuilderSelectorTests)));
 

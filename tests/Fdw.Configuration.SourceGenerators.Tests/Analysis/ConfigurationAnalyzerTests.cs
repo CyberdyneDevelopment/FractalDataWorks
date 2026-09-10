@@ -82,7 +82,7 @@ namespace Test
     [Trait("Category", "SourceGen")]
     public void AnalyzeInfersServiceCategoryFromClassName()
     {
-        // Arrange - class name ends with "ConnectionConfiguration"
+        // Arrange - class name ends with "IConnectionImplementationConfiguration"
         var source = @"
 
 namespace Test

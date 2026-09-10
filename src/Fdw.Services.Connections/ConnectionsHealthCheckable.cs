@@ -16,7 +16,7 @@ namespace Fdw.Services.Connections;
 
 /// <summary>
 /// Domain-level <see cref="IHealthCheckable"/> for the Connections domain. At check time, enumerates
-/// every <c>conn.Connection</c> row with <see cref="ConnectionConfiguration.HealthCheckEnabled"/> set,
+/// every <c>conn.Connection</c> row with <see cref="IConnectionImplementationConfiguration.HealthCheckEnabled"/> set,
 /// resolves each through <see cref="IConnectionProvider"/>, and probes it via
 /// <see cref="ISupportsHealthProbe"/> when the resolved connection implements that capability.
 /// </summary>
@@ -116,7 +116,7 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
     }
 
     private async Task<(IHealthState Status, string Detail)> ProbeOne(
-        ConnectionConfiguration connection,
+        IConnectionImplementationConfiguration connection,
         IConnectionProvider connectionProvider,
         CancellationToken cancellationToken)
     {

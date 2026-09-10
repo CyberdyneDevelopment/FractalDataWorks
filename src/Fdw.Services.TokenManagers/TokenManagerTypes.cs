@@ -63,8 +63,7 @@ public static class TokenManagerTypes
         builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp =>
             new TokenManagerConfigurationProvider(
                 sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                ConfigurationConnection));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
         builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
             sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
         builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ITokenManagerImplementationConfiguration>>(
@@ -75,8 +74,7 @@ public static class TokenManagerTypes
         builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
             new JwtTokenManagerConfigurationProvider(
                 sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                ConfigurationConnection));
+                sp.GetRequiredService<IConfigurationGatewayProvider>()));
 
         builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
             new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));

@@ -95,8 +95,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp =>
                 new SchedulerConfigurationProvider(
                     sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
             builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(
                 sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ISchedulerImplementationConfiguration>>(

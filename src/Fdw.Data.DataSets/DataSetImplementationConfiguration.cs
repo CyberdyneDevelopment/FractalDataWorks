@@ -1,0 +1,97 @@
+using Fdw.Configuration;
+using Fdw.Data;
+using Fdw.Schema.Keys;
+using Fdw.Schema.Properties;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+
+namespace Fdw.Data.DataSets.Abstractions;
+
+/// <summary>The DataSet implementation's own configuration.</summary>
+/// <remarks>
+/// Every property here was on the domain record until the split. None of it is something the
+/// DataSet domain could hold an opinion about for every implementation of itself.
+/// </remarks>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[GenerateMapper]
+public sealed partial class DataSetImplementationConfiguration : IDataSetImplementationConfiguration
+{
+    /// <inheritdoc/>
+    /// <summary>Gets or sets the id.</summary>
+    public Guid Id { get; set; }
+
+    /// <summary>Gets or sets the name.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain.</summary>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the data set id.</summary>
+    public Guid DataSetId { get; set; }
+
+    /// <summary>Gets or sets the data set row id.</summary>
+    public int DataSetRowId { get; set; }
+
+    /// <summary>Gets or sets the display name.</summary>
+    public string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets the abbreviation.</summary>
+    public string? Abbreviation { get; set; }
+
+    /// <summary>Gets or sets the is sortable.</summary>
+    public bool IsSortable { get; set; }
+
+    /// <summary>Gets or sets the is filterable.</summary>
+    public bool IsFilterable { get; set; }
+
+    /// <summary>Gets or sets the transform expression.</summary>
+    public string? TransformExpression { get; set; }
+
+    /// <summary>Gets or sets the source data set name.</summary>
+    public string? SourceDataSetName { get; set; }
+
+    /// <summary>Gets or sets the federation strategy.</summary>
+    public string? FederationStrategy { get; set; }
+
+    /// <summary>Gets or sets the description.</summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the version.</summary>
+    public string Version { get; set; } = "1.0";
+
+    /// <summary>Gets or sets the category.</summary>
+    public string Category { get; set; } = "Dataset";
+
+    /// <summary>Gets or sets the category id.</summary>
+    public Guid? CategoryId { get; set; }
+
+    /// <summary>Gets or sets the record type name.</summary>
+    public string RecordTypeName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the fields.</summary>
+    public IList<DataSetFieldConfiguration> Fields { get; set; } = new List<DataSetFieldConfiguration>();
+
+    /// <summary>Gets or sets the sources.</summary>
+    public IList<DataSetSourceConfiguration> Sources { get; set; } = new List<DataSetSourceConfiguration>();
+
+    /// <summary>Gets or sets the joins.</summary>
+    public IList<JoinConfiguration> Joins { get; set; } = new List<JoinConfiguration>();
+
+    /// <summary>Gets or sets the caching.</summary>
+    public CachingConfiguration? Caching { get; set; }
+
+    /// <summary>Gets or sets the filters.</summary>
+    public IList<DataSetFilterConditionConfiguration> Filters { get; set; } = new List<DataSetFilterConditionConfiguration>();
+
+    /// <summary>Gets or sets the aggregates.</summary>
+    public IList<DataSetAggregateConfiguration> Aggregates { get; set; } = new List<DataSetAggregateConfiguration>();
+
+    /// <summary>Gets or sets the key fields.</summary>
+    public List<DataSetKeyFieldConfiguration> KeyFields { get; set; } = [];
+
+    /// <summary>Gets the durable ids of this dataset's sources.</summary>
+    public IReadOnlyList<Guid> SourceIds => Sources?.Select(s => s.Id).ToList() ?? [];
+}

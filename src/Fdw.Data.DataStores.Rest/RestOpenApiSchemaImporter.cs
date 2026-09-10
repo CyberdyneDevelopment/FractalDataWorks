@@ -22,7 +22,7 @@ namespace Fdw.Data.DataStores.Rest;
 
 /// <summary>
 /// Imports schema from OpenAPI 3.0/Swagger 2.0 specifications.
-/// Returns a discovered <see cref="DataStoreConfiguration"/> with HttpPath rows containing
+/// Returns a discovered <see cref="DataStoreImplementationConfiguration"/> with HttpPath rows containing
 /// one Endpoint container per operation.
 /// </summary>
 [TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "OpenApi", RestrictToCurrentCompilation = true)]
@@ -54,7 +54,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
     /// <param name="options">Optional import options.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result containing the discovered DataStore configuration or failure information.</returns>
-    public override async Task<IGenericResult<DataStoreConfiguration>> Import(
+    public override async Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -62,24 +62,24 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
         try
         {
             if (string.IsNullOrWhiteSpace(source))
-                return GenericResult<DataStoreConfiguration>.Failure(
+                return GenericResult<DataStoreImplementationConfiguration>.Failure(
                     RestDataStoreResultCodes.ByName("OpenApiSpecRequired"));
 
             RestImporterLogger.OpenApiImportStarted(_logger, source);
 
             var specContentResult = await FetchSpec(source, cancellationToken).ConfigureAwait(false);
             if (!specContentResult.IsSuccess)
-                return specContentResult.ToNewResult<DataStoreConfiguration>();
+                return specContentResult.ToNewResult<DataStoreImplementationConfiguration>();
 
             var parseResult = ParseOpenApiSpec(specContentResult.Value!);
             if (!parseResult.IsSuccess)
-                return parseResult.ToNewResult<DataStoreConfiguration>();
+                return parseResult.ToNewResult<DataStoreImplementationConfiguration>();
 
             var openApiDocument = parseResult.Value!;
             var baseUrl = openApiDocument.Servers?.FirstOrDefault()?.Url ?? source;
             var storeName = openApiDocument.Info?.Title ?? "OpenAPI DataStore";
 
-            var dataStore = new DataStoreConfiguration
+            var dataStore = new DataStoreImplementationConfiguration
             {
                 Name = storeName,
                 Implementation = "Rest",
@@ -89,11 +89,11 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
 
             RestImporterLogger.OpenApiImportCompleted(_logger, storeName, totalEndpoints);
 
-            return GenericResult<DataStoreConfiguration>.Success(dataStore);
+            return GenericResult<DataStoreImplementationConfiguration>.Success(dataStore);
         }
         catch (Exception ex)
         {
-            return GenericResult<DataStoreConfiguration>.Failure(
+            return GenericResult<DataStoreImplementationConfiguration>.Failure(
                 RestImporterLogger.OpenApiImportFailed(_logger, ex));
         }
     }
@@ -116,7 +116,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
     private int ImportEndpoints(
         OpenApiDocument document,
         string baseUrl,
-        DataStoreConfiguration dataStore,
+        DataStoreImplementationConfiguration dataStore,
         SchemaImporterOptions? options)
     {
         var totalEndpoints = 0;

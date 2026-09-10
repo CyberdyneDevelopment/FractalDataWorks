@@ -397,7 +397,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
 
     /// <summary>
     /// SQL-aggregate function keywords this translator will emit. The producer (a DataSet strategy
-    /// building an <see cref="IAggregationExpression"/> from <c>DataSetConfiguration.Aggregates</c>) is
+    /// building an <see cref="IAggregationExpression"/> from <c>DataSetImplementationConfiguration.Aggregates</c>) is
     /// responsible for mapping domain function names to one of these; anything else fails loud here.
     /// </summary>
     private static readonly HashSet<string> AllowedAggregateFunctions =

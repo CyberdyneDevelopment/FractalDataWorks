@@ -33,9 +33,9 @@ public abstract class SchemaImporterBase<TConfig> : TypeOptionBase<int, SchemaIm
 
     /// <summary>
     /// Implements the schema import logic. Derived classes must implement this.
-    /// Returns the discovered <see cref="DataStoreConfiguration"/> with its paths, containers, and fields.
+    /// Returns the discovered <see cref="DataStoreImplementationConfiguration"/> with its paths, containers, and fields.
     /// </summary>
-    public abstract Task<IGenericResult<DataStoreConfiguration>> Import(
+    public abstract Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default);

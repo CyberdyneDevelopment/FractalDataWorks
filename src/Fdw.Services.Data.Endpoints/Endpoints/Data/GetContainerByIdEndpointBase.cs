@@ -39,7 +39,7 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
             return GenericResult<DataStoreContainerDetailDto?>.Success(null);
         }
 
-        var allConfigs = allResult.Value ?? (IReadOnlyList<DataStoreConfiguration>)[];
+        var allConfigs = allResult.Value ?? (IReadOnlyList<DataStoreImplementationConfiguration>)[];
 
         DataContainerConfiguration? container = null;
 
