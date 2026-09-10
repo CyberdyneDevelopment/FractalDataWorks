@@ -43,9 +43,14 @@ public partial class AdHocCommandConfiguration : IApprovalPolicyConfiguration
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent <c>AegisCommandConfiguration.Id</c>.
+    /// Gets or sets the domain record's durable id.
     /// </summary>
     public Guid AegisCommandId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the declared connection this command runs against.
+    /// </summary>
+    public string ConnectionName { get; set; } = string.Empty;
 
     // ========================================
     // Approval-policy properties

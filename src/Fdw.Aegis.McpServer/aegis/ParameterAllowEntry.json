@@ -1,0 +1,12 @@
+[
+  {
+    "RowId": 1,
+    "Id": "019f8a20-0000-7000-a000-000000000101",
+    "PreApprovedCommandId": "019f8a20-0000-7000-a000-000000000001",
+    "PreApprovedCommandRowId": 1,
+    "ParameterName": "mode",
+    "Required": true,
+    "IsCurrent": true,
+    "IsDeleted": false
+  }
+]

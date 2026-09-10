@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Fdw.Aegis;
 using Fdw.Aegis.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,9 +80,21 @@ public static class Program
             return 1;
         }
 
+        // The declared commands are the AegisCommand domain. Reading them here fails the start the
+        // same way a failed phase does, rather than serving tools over a store that cannot be read.
+        var commands = await app.Services.GetRequiredService<IAegisCommandConfigurationProvider>()
+            .Get().ConfigureAwait(false);
+        if (!commands.IsSuccess)
+        {
+            await Console.Error.WriteLineAsync(
+                "Aegis MCP server: the declared commands could not be read: " + (commands.CurrentMessage ?? string.Empty))
+                .ConfigureAwait(false);
+            return 1;
+        }
+
         AegisLog.ServerReady(
             app.Services.GetRequiredService<ILogger<AegisToolService>>(),
-            schema.Commands.Count,
+            commands.Value!.Count,
             schema.Connections.Count);
 
         await app.RunAsync().ConfigureAwait(false);

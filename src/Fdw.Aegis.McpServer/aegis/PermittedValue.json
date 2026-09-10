@@ -1,0 +1,11 @@
+[
+  {
+    "RowId": 1,
+    "Id": "019f8a20-0000-7000-a000-000000000201",
+    "ParameterAllowEntryId": "019f8a20-0000-7000-a000-000000000101",
+    "ParameterAllowEntryRowId": 1,
+    "Value": "echo",
+    "IsCurrent": true,
+    "IsDeleted": false
+  }
+]

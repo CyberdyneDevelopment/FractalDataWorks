@@ -11,7 +11,6 @@ using Fdw.Aegis.Configuration;
 using Fdw.Aegis.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace Fdw.Aegis.McpServer;
@@ -42,7 +41,7 @@ public sealed class AegisToolService
         PropertyNameCaseInsensitive = true,
     };
 
-    private readonly IOptions<AegisCommandsOptions> _commands;
+    private readonly IAegisCommandConfigurationProvider _commands;
     private readonly IApprovalPolicyEvaluator _evaluator;
     private readonly AegisInjector _injector;
     private readonly ILogger<AegisToolService> _logger;
@@ -51,7 +50,7 @@ public sealed class AegisToolService
     /// Initializes a new instance of the <see cref="AegisToolService"/> class.
     /// </summary>
     public AegisToolService(
-        IOptions<AegisCommandsOptions> commands,
+        IAegisCommandConfigurationProvider commands,
         IApprovalPolicyEvaluator evaluator,
         AegisInjector injector,
         ILogger<AegisToolService>? logger = null)
@@ -64,11 +63,15 @@ public sealed class AegisToolService
 
     [McpServerTool(Name = "list_connections")]
     [Description("List the Aegis commands declared for this host: name, target connection, and approval policy kind. Never includes secret references.")]
-    public Task<string> ListConnections(CancellationToken cancellationToken = default)
+    public async Task<string> ListConnections(CancellationToken cancellationToken = default)
     {
         AegisLog.ToolInvoked(_logger, "list_connections");
 
-        var payload = _commands.Value.Commands.Select(c => new
+        var declared = await _commands.Get(cancellationToken).ConfigureAwait(false);
+        if (!declared.IsSuccess)
+            return ReadFailed(declared.CurrentMessage, "list_connections");
+
+        var payload = declared.Value!.Select(c => new
         {
             name = c.Name,
             connectionName = c.ConnectionName,
@@ -77,22 +80,26 @@ public sealed class AegisToolService
 
         AegisLog.ConnectionsListed(_logger, payload.Length);
 
-        return Task.FromResult(JsonSerializer.Serialize(payload, JsonOptions));
+        return JsonSerializer.Serialize(payload, JsonOptions);
     }
 
     [McpServerTool(Name = "describe_action")]
     [Description("Describe the declared parameter allow-list for one Aegis command. Never emits the secret manager or key name.")]
-    public Task<string> DescribeAction(
+    public async Task<string> DescribeAction(
         [Description("The declared command name (see list_connections).")] string commandName,
         CancellationToken cancellationToken = default)
     {
         AegisLog.ToolInvoked(_logger, "describe_action");
 
-        var command = FindCommand(commandName);
-        if (command is null)
-            return Task.FromResult(Error($"Command '{commandName}' is not declared. Use list_connections to discover available commands."));
+        var declared = await _commands.Get(cancellationToken).ConfigureAwait(false);
+        if (!declared.IsSuccess)
+            return ReadFailed(declared.CurrentMessage, "describe_action");
 
-        var (allowList, _, _) = ExtractPolicyDetails(command.Configuration);
+        var command = declared.Value!.FirstOrDefault(c => string.Equals(c.Name, commandName, StringComparison.Ordinal));
+        if (command is null)
+            return Error($"Command '{commandName}' is not declared. Use list_connections to discover available commands.");
+
+        var (allowList, _, _) = ExtractPolicyDetails(command);
 
         AegisLog.ActionDescribed(_logger, command.Name, allowList.Count);
 
@@ -105,12 +112,12 @@ public sealed class AegisToolService
             parameters = allowList.Select(p => new
             {
                 name = p.ParameterName,
-                permittedValues = p.PermittedValues,
+                permittedValues = p.PermittedValues.Select(v => v.Value).ToArray(),
                 required = p.Required,
             }).ToArray(),
         };
 
-        return Task.FromResult(JsonSerializer.Serialize(payload, JsonOptions));
+        return JsonSerializer.Serialize(payload, JsonOptions);
     }
 
     [McpServerTool(Name = "request_action")]
@@ -127,7 +134,11 @@ public sealed class AegisToolService
         if (submitted is null)
             return Error(parseError);
 
-        var command = _commands.Value.Commands.FirstOrDefault(c =>
+        var declared = await _commands.Get(cancellationToken).ConfigureAwait(false);
+        if (!declared.IsSuccess)
+            return ReadFailed(declared.CurrentMessage, "request_action");
+
+        var command = declared.Value!.FirstOrDefault(c =>
             string.Equals(c.ConnectionName, connectionName, StringComparison.Ordinal)
             && string.Equals(c.Name, commandName, StringComparison.Ordinal));
         if (command is null)
@@ -136,7 +147,7 @@ public sealed class AegisToolService
             return Error(message.Message);
         }
 
-        var (allowList, secretManagerName, secretKeyName) = ExtractPolicyDetails(command.Configuration);
+        var (allowList, secretManagerName, secretKeyName) = ExtractPolicyDetails(command);
         var invalidParameter = FindInvalidParameter(submitted, allowList);
         if (invalidParameter is not null)
         {
@@ -159,7 +170,7 @@ public sealed class AegisToolService
 
         AegisLog.ActionRequested(_logger, connectionName, commandName, request.CorrelationId);
 
-        var verdictResult = _evaluator.Evaluate(request);
+        var verdictResult = await _evaluator.Evaluate(request, cancellationToken).ConfigureAwait(false);
         if (!verdictResult.IsSuccess || verdictResult.Value is null)
         {
             var reason = verdictResult.CurrentMessage;
@@ -229,20 +240,16 @@ public sealed class AegisToolService
         }
     }
 
-    private AegisCommandConfiguration? FindCommand(string commandName) =>
-        _commands.Value.Commands.FirstOrDefault(c => string.Equals(c.Name, commandName, StringComparison.Ordinal));
-
-    private static (IReadOnlyList<ParameterAllowEntry> AllowList, string? SecretManagerName, string? SecretKeyName) ExtractPolicyDetails(
-        IApprovalPolicyConfiguration? configuration) => configuration switch
+    private static (IReadOnlyList<ParameterAllowEntryConfiguration> AllowList, string SecretManagerName, string SecretKeyName) ExtractPolicyDetails(
+        IApprovalPolicyConfiguration command) => command switch
         {
             PreApprovedCommandConfiguration pre => (pre.ParameterAllowList.ToList(), pre.SecretManagerName, pre.SecretKeyName),
-            AdHocCommandConfiguration adHoc => (Array.Empty<ParameterAllowEntry>(), adHoc.SecretManagerName, adHoc.SecretKeyName),
-            _ => (Array.Empty<ParameterAllowEntry>(), null, null),
+            _ => (Array.Empty<ParameterAllowEntryConfiguration>(), command.SecretManagerName, command.SecretKeyName),
         };
 
     private static string? FindInvalidParameter(
         Dictionary<string, object?> submitted,
-        IReadOnlyList<ParameterAllowEntry> allowList)
+        IReadOnlyList<ParameterAllowEntryConfiguration> allowList)
     {
         foreach (var kvp in submitted)
         {
@@ -251,7 +258,8 @@ public sealed class AegisToolService
             if (entry is null || kvp.Value is null)
                 return kvp.Key;
 
-            if (kvp.Value.ToString() is not { } value || !entry.PermittedValues.Contains(value, StringComparer.Ordinal))
+            if (kvp.Value.ToString() is not { } value
+                || !entry.PermittedValues.Any(v => string.Equals(v.Value, value, StringComparison.Ordinal)))
                 return kvp.Key;
         }
 
@@ -263,6 +271,11 @@ public sealed class AegisToolService
 
         return null;
     }
+
+    private string ReadFailed(string? reason, string toolName) =>
+        reason is not null
+            ? Error(reason)
+            : Error(AegisLog.CommandsNotRead(_logger, toolName).Message);
 
     private static string Error(string message) =>
         JsonSerializer.Serialize(new { success = false, error = message }, JsonOptions);

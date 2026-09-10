@@ -173,4 +173,11 @@ public static partial class AegisLog
         Level = LogLevel.Error,
         Message = "Injection failed for command '{commandName}': {reason}")]
     public static partial IGenericMessage InjectionFailed(ILogger logger, string commandName, string reason);
+
+    /// <summary>Logs that a tool could not read the declared Aegis commands.</summary>
+    [MessageLogging(
+        EventId = 71002,
+        Level = LogLevel.Error,
+        Message = "Tool '{toolName}' could not read the declared Aegis commands.")]
+    public static partial IGenericMessage CommandsNotRead(ILogger logger, string toolName);
 }

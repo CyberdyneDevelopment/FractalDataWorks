@@ -25,6 +25,8 @@
 
   <ItemGroup>
     <None Include="aegisSchema.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The AegisCommand domain's rows: one file per container (domain, implementations, children). -->
+    <None Include="aegis\*.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Ships the Serilog sink + level configuration. Program.cs fails loud when the "Serilog"
          section is absent, so this file is a hard requirement of the deployed layout, not an
          optional override. -->

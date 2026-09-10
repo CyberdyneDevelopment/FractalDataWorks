@@ -4,18 +4,28 @@ using Fdw.Configuration;
 namespace Fdw.Aegis.Abstractions;
 
 /// <summary>
-/// Marker interface for typed Aegis command approval-policy bodies (<c>PreApprovedCommandConfiguration</c>,
-/// <c>AdHocCommandConfiguration</c>). Each typed body implements this interface directly without
-/// inheriting from <c>AegisCommandConfiguration</c>.
+/// The contract every Aegis command implementation carries (<c>PreApprovedCommandConfiguration</c>,
+/// <c>AdHocCommandConfiguration</c>).
 /// </summary>
 /// <remarks>
-/// Mirrors <c>IConnectionImplementationConfiguration</c>. Approval-policy bodies are (Phase 2) persisted in their
-/// own tables and linked to the parent <c>AegisCommandConfiguration</c> row via an
-/// <see cref="AegisCommandId"/> foreign key property. The parent carries an
-/// <c>IApprovalPolicyConfiguration? Configuration</c> property populated on the read path.
+/// The AegisCommand domain row is Id, Name, Domain and Implementation only. Everything a reader needs
+/// about a command -- the connection it runs against and the secret it may inject -- is here, on the
+/// implementation, whose row hangs from the domain row by <see cref="AegisCommandId"/>.
 /// </remarks>
 public interface IApprovalPolicyConfiguration : IGenericConfiguration, IImplementationConfiguration
 {
-    /// <summary>Gets or sets the logical FK to the parent <c>AegisCommandConfiguration.Id</c>.</summary>
+    /// <summary>Gets or sets the domain record's durable id.</summary>
     Guid AegisCommandId { get; set; }
+
+    /// <summary>Gets or sets the declared connection this command runs against.</summary>
+    string ConnectionName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the secret manager that owns the secret this command may inject. A
+    /// reference only -- never the secret value.
+    /// </summary>
+    string SecretManagerName { get; set; }
+
+    /// <summary>Gets or sets the key name of the secret within <see cref="SecretManagerName"/>.</summary>
+    string SecretKeyName { get; set; }
 }
