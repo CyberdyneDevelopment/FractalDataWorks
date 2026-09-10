@@ -20,7 +20,7 @@ public class HealthMonitorSelectionConfigurationProvider
         ILogger<HealthMonitorSelectionConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "settings")
+        string pathName = "hlth")
         : base(logger ?? NullLogger<HealthMonitorSelectionConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,

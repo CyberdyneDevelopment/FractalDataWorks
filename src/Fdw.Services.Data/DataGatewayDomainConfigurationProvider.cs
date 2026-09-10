@@ -24,7 +24,7 @@ public class DataGatewayDomainConfigurationProvider
         ILogger<DataGatewayDomainConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "settings")
+        string pathName = "dg")
         : base(logger ?? NullLogger<DataGatewayDomainConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,

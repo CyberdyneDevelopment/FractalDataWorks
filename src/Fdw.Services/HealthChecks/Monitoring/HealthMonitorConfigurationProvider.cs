@@ -35,7 +35,7 @@ public sealed class HealthMonitorConfigurationProvider
         ILogger<HealthMonitorConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "settings")
+        string pathName = "hlth")
         : base(logger ?? NullLogger<HealthMonitorConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
