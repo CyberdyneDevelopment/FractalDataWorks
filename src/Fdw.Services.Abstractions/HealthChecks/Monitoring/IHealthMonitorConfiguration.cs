@@ -7,6 +7,6 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// holding that implementation's own configuration.
 /// </summary>
 public interface IHealthMonitorConfiguration
-    : IPlatformServiceConfiguration<IHealthMonitorImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

@@ -7,6 +7,6 @@ namespace Fdw.Services.Credentials.Abstractions;
 /// holding that implementation's own configuration.
 /// </summary>
 public interface ICredentialServiceConfiguration
-    : IPlatformServiceConfiguration<ICredentialServiceImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

@@ -11,6 +11,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// "the host implementation" was never singular.
 /// </remarks>
 public interface IWebMcpConfiguration
-    : IPlatformServiceConfiguration<IWebMcpImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

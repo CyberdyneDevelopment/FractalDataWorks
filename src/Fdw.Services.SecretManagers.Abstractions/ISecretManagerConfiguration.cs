@@ -7,6 +7,6 @@ namespace Fdw.Services.SecretManagers.Abstractions;
 /// and holding that implementation's own configuration.
 /// </summary>
 public interface ISecretManagerConfiguration
-    : IPlatformServiceConfiguration<ISecretManagerImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

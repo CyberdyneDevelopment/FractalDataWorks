@@ -27,7 +27,7 @@ namespace Fdw.Services.SecretManagers;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "SecretManager")]
-public partial class SecretManagerConfiguration : ISecretManagerConfiguration
+public partial class SecretManagerConfiguration : DomainConfigurationBase, ISecretManagerConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SecretManagerConfiguration"/> class.
@@ -48,57 +48,11 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     }
 
 
-    /// <summary>
-    /// Gets or sets the durable logical identifier (matches sec.SecretManager.Id).
-    /// </summary>
-    public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of this secret manager for lookup and display.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the implementation this record names.</summary>
-    [ValuesFrom(typeof(SecretManagerTypes))]
-    public string? Implementation { get; set; }
 
-    /// <summary>
-    /// Gets the secret manager type name. Alias for <see cref="Implementation"/>.
-    /// </summary>
-    public string? SecretManagerType => Implementation;
 
-    /// <summary>
-    /// Gets or sets the optional description of this secret manager.
-    /// </summary>
-    public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets the deployment environment this secret manager targets (e.g., Local, Dev, QA, Prod).
-    /// </summary>
-    [ValuesFrom(typeof(EnvironmentTypes))]
-    public string? Environment { get; set; }
-
-    /// <summary>
-    /// Gets or sets the typed secret manager body for this header row.
-    /// Populated on the read path after loading the typed body table row.
-    /// Not persisted — the typed body is saved separately to its own table.
-    /// </summary>
-    [NotMapped]
-    public ISecretManagerImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (ISecretManagerImplementationConfiguration?)value;
-    }
 
 }

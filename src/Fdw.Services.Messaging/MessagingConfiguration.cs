@@ -25,43 +25,13 @@ namespace Fdw.Services.Messaging;
     ServiceType = "Messaging",
     DisplayName = "Messaging",
     Description = "Where this deployment keeps its messages, and which messaging implementation delivers them.")]
-public sealed partial class MessagingConfiguration : IMessagingConfiguration
+public partial class MessagingConfiguration : DomainConfigurationBase, IMessagingConfiguration
 {
-    /// <inheritdoc/>
-    public Guid Id { get; set; }
 
-    /// <inheritdoc/>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the implementation this record names.</summary>
-    [ValuesFrom(typeof(MessagingServiceTypes))]
-    public string? Implementation { get; set; }
 
-    /// <inheritdoc/>
-    public string? Description { get; set; }
 
-    /// <inheritdoc/>
-    public string? DataStoreName { get; set; }
 
-    /// <inheritdoc/>
-    public string? PathName { get; set; }
-
-    /// <inheritdoc/>
-    public IMessagingImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IMessagingImplementationConfiguration?)value;
-    }
 
 }

@@ -33,7 +33,7 @@ namespace Fdw.Services.Connections;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "DataStore")]
-public partial class DataStoreConfiguration : IGenericConfiguration
+public partial class DataStoreConfiguration : DomainConfigurationBase, IGenericConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataStoreConfiguration"/> class.
@@ -44,109 +44,17 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     }
 
 
-    /// <summary>
-    /// Gets or sets the unique identifier for this data store.
-    /// </summary>
-    public Guid Id { get; set; } = Guid.CreateVersion7();
-
-    /// <summary>
-    /// Gets or sets the name of this data store for lookup and display.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the implementation this data store names (e.g., "MsSql", "Rest", "OData").
-    /// </summary>
-    [ValuesFrom(typeof(DataStoreTypes))]
-    public string? Implementation { get; set; }
 
 
-    /// <summary>
-    /// Gets or sets the connection ID this data store is accessed through.
-    /// Required - a DataStore cannot exist without a Connection.
-    /// </summary>
-    public Guid ConnectionId { get; set; }
 
-    /// <summary>
-    /// Gets the store type name. Alias for <see cref="Implementation"/>.
-    /// </summary>
-    public string? StoreType => Implementation;
 
-    /// <summary>
-    /// Gets or sets the optional description of this data store.
-    /// </summary>
-    public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets the write mode for data operations (e.g., Append, Upsert, Replace, Merge).
-    /// </summary>
-    public string? WriteMode { get; set; }
 
-    /// <summary>
-    /// Gets or sets the timestamp of the last successful schema discovery operation.
-    /// </summary>
-    public DateTimeOffset? LastDiscoveredAt { get; set; }
 
-    /// <summary>
-    /// Gets the timestamp when the record was created in this system.
-    /// </summary>
-    public DateTimeOffset CreateDate { get; set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>
-    /// Gets the database user who created the record.
-    /// </summary>
-    public string CreateBy { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the application user on whose behalf the record was created.
-    /// </summary>
-    public string CreateOnBehalfOf { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the timestamp when the record was last modified.
-    /// </summary>
-    public DateTimeOffset ModifyDate { get; set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>
-    /// Gets or sets the database user who last modified the record.
-    /// </summary>
-    public string ModifyBy { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the application user on whose behalf the record was last modified.
-    /// </summary>
-    public string ModifyOnBehalfOf { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the paths (schemas) within this data store.
-    /// </summary>
-    /// <remarks>
-    /// List{T} is required for IOptions binding - configuration system needs concrete collection types.
-    /// </remarks>
-#pragma warning disable MA0016 // Prefer collection abstraction - required for IOptions binding
-    public List<DataPathConfiguration> Paths { get; set; } = [];
-#pragma warning restore MA0016
-
-    /// <summary>
-    /// Gets or sets the typed data store body for this header row.
-    /// Populated on the read path after loading the typed body table row.
-    /// Not persisted — the typed body is saved separately to its own table.
-    /// </summary>
-    /// <summary>
-    /// Gets or sets the human-facing display name. Transient — not persisted to data.DataStore (no column yet).
-    /// Populated from the create/update request and echoed back in the response for round-trip fidelity.
-    /// </summary>
-    [NotMapped]
-    public string? DisplayName { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether this data store is active. Transient — not persisted to data.DataStore.
-    /// Echoed back from the create/update request for round-trip fidelity.
-    /// </summary>
-    [NotMapped]
-    public bool IsActive { get; set; }
-
-    /// <summary>Gets or sets the typed configuration body. Not stored as a column — written separately and populated by the typed provider on read.</summary>
-    [NotMapped]
-    public IDataStoreConfiguration? Configuration { get; set; }
 }

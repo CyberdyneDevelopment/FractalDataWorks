@@ -18,7 +18,7 @@ namespace Fdw.Services.Authentication.Validation;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AuthenticationService")]
-public partial class AuthenticationServiceConfiguration : IAuthenticationServiceConfiguration
+public partial class AuthenticationServiceConfiguration : DomainConfigurationBase, IAuthenticationServiceConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="AuthenticationServiceConfiguration"/> class.</summary>
     public AuthenticationServiceConfiguration()
@@ -35,52 +35,11 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
         Implementation = implementation;
     }
 
-    /// <inheritdoc />
-    public Guid Id { get; set; }
 
-    /// <inheritdoc />
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the implementation this record names.</summary>
-    [ValuesFrom(typeof(AuthenticationServiceTypes))]
-    public string? Implementation { get; set; }
 
-    /// <inheritdoc />
-    public string? Description { get; set; }
 
-    /// <summary>Gets or sets whether this service is trusted.</summary>
-    /// <remarks>
-    /// A declared service that is not enabled is not registered, so a token naming its issuer routes
-    /// to no scheme and is refused. Turning one off is how a host stops trusting an issuer without
-    /// deleting what it knows about it.
-    /// </remarks>
-    public bool Enabled { get; set; }
 
-    /// <summary>Gets or sets the issuer a token must name to be routed to this service.</summary>
-    /// <remarks>
-    /// Every kind has one, which is why it is here and not on the implementation: the issuer is what
-    /// selects the scheme, and that selection happens before any kind-specific check runs.
-    /// </remarks>
-    public string? Authority { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>Held, never inherited — see <see cref="IAuthenticationServiceImplementationConfiguration"/>.</remarks>
-    [NotMapped]
-    public IAuthenticationServiceImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IAuthenticationServiceImplementationConfiguration?)value;
-    }
 
 }

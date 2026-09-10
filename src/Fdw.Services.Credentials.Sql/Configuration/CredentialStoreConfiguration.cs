@@ -16,27 +16,10 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "CredentialStore")]
-public partial class CredentialStoreConfiguration : IDomainConfiguration
+public partial class CredentialStoreConfiguration : DomainConfigurationBase, IDomainConfiguration
 {
-    /// <summary>Gets or sets the identifier assigned by the store.</summary>
-    public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the implementation this record names.</summary>
-    public string? Implementation { get; set; }
 
-    /// <summary>Gets or sets the implementation's own configuration.</summary>
-    public ICredentialStoreImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (ICredentialStoreImplementationConfiguration?)value;
-    }
 }

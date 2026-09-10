@@ -10,6 +10,6 @@ namespace Fdw.Services.Connections.Abstractions;
 /// The interface of <c>ConnectionConfiguration</c>. The implementation contract is
 /// <see cref="IConnectionImplementationConfiguration"/>.
 /// </remarks>
-public interface IConnectionConfiguration : IPlatformServiceConfiguration<IConnectionImplementationConfiguration>
+public interface IConnectionConfiguration : IDomainConfiguration
 {
 }

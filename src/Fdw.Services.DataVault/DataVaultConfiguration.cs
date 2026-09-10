@@ -25,7 +25,7 @@ namespace Fdw.Services.DataVault;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataVault")]
-public partial class DataVaultConfiguration : IDataVaultConfiguration
+public partial class DataVaultConfiguration : DomainConfigurationBase, IDataVaultConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataVaultConfiguration"/> class.
@@ -48,61 +48,12 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     }
 
 
-    /// <summary>
-    /// Gets or sets the durable logical identifier (matches sec.DataVault.Id).
-    /// </summary>
-    public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of this vault for lookup and display.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the implementation this record names.</summary>
-    [ValuesFrom(typeof(DataVaultTypes))]
-    public string? Implementation { get; set; }
 
-    /// <summary>
-    /// Gets the vault type name. Alias for <see cref="Implementation"/>.
-    /// </summary>
-    public string? VaultType => Implementation;
 
-    /// <summary>
-    /// Gets or sets the optional description of this vault.
-    /// </summary>
-    public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets whether this is the current (active) version of this vault configuration.
-    /// </summary>
-    public bool IsCurrent { get; set; }
 
-    /// <summary>
-    /// Gets or sets whether this vault configuration has been soft-deleted.
-    /// </summary>
-    public bool IsDeleted { get; set; }
-
-    /// <summary>
-    /// Gets or sets the typed vault body for this header row.
-    /// Populated on the read path after loading the typed body table row.
-    /// Not persisted — the typed body is saved separately to its own table.
-    /// </summary>
-    [NotMapped]
-    public IDataVaultImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IDataVaultImplementationConfiguration?)value;
-    }
 
 }

@@ -7,6 +7,6 @@ namespace Fdw.Services.Identity.Abstractions;
 /// that implementation's own configuration.
 /// </summary>
 public interface IIdentityServiceConfiguration
-    : IPlatformServiceConfiguration<IIdentityServiceImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

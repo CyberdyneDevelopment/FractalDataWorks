@@ -27,7 +27,7 @@ namespace Fdw.Services.Notifications;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Notification")]
-public partial class NotificationConfiguration : INotificationConfiguration
+public partial class NotificationConfiguration : DomainConfigurationBase, INotificationConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationConfiguration"/> class.
@@ -47,47 +47,11 @@ public partial class NotificationConfiguration : INotificationConfiguration
         Implementation = implementation;
     }
 
-    /// <summary>
-    /// Gets or sets the unique identifier for this notification.
-    /// </summary>
-    public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of this notification for lookup and display.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the service option type (e.g., "Email", "Sms", "Push").
-    /// </summary>
-    public string? Implementation { get; set; }
 
-    /// <summary>
-    /// Gets the notification type name. Alias for <see cref="Implementation"/>.
-    /// </summary>
-    public string? NotificationType => Implementation;
 
-    /// <summary>
-    /// Gets or sets the optional description of this notification channel.
-    /// </summary>
-    public string? Description { get; set; }
 
-    /// <inheritdoc/>
-    public INotificationImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (INotificationImplementationConfiguration?)value;
-    }
 
 }

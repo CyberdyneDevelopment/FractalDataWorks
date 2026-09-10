@@ -24,7 +24,7 @@ namespace Fdw.Aegis.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AegisCommand")]
-public partial class AegisCommandConfiguration : IDomainConfiguration
+public partial class AegisCommandConfiguration : DomainConfigurationBase, IDomainConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AegisCommandConfiguration"/> class.
@@ -34,47 +34,8 @@ public partial class AegisCommandConfiguration : IDomainConfiguration
     {
     }
 
-    /// <summary>
-    /// Gets or sets the durable logical identifier.
-    /// </summary>
-    public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of this command for lookup and display.
-    /// </summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the name of the declared connection this command targets.
-    /// </summary>
-    public string ConnectionName { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the approval-policy implementation this record names (e.g., "PreApproved", "AdHoc").
-    /// </summary>
-    [ValuesFrom(typeof(ApprovalPolicyTypes))]
-    public string? Implementation { get; set; }
-
-    /// <summary>
-    /// Gets or sets the typed approval-policy body for this command header row. Populated on the
-    /// read path by the provider after loading the typed body table row. Not persisted — the typed
-    /// body is saved separately to its own table.
-    /// </summary>
-    /// <remarks>
-    /// Why: [NotMapped] — this property is not a column on the AegisCommand domain row. The read
-    /// path populates it by dispatching on <see cref="Implementation"/> to that implementation's own
-    /// provider, mirroring <c>ConnectionConfiguration.Configuration</c>.
-    /// </remarks>
-    [NotMapped]
-    public IApprovalPolicyConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IApprovalPolicyConfiguration?)value;
-    }
 }

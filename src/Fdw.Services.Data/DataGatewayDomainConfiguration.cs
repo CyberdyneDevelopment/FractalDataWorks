@@ -17,38 +17,12 @@ namespace Fdw.Services.Data;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataGateway")]
-public partial class DataGatewayDomainConfiguration : IDataGatewayConfiguration
+public partial class DataGatewayDomainConfiguration : DomainConfigurationBase, IDataGatewayConfiguration
 {
-    // Why no generated default: the store assigns identity. A value minted here reaches Get(id) as a
-    // real-looking id matching no row, and the miss reads as a data problem rather than an unsaved record.
-    /// <summary>Gets or sets the identifier assigned by the store.</summary>
-    public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the name of this configuration row.</summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets which implementation this record names.</summary>
-    public string? Implementation { get; set; }
 
-    /// <summary>Gets or sets the implementation for the implementation this record names.</summary>
-    public IDataGatewayImplementationConfiguration? Configuration { get; set; }
 
-    /// <inheritdoc />
-    public string? Description { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IDataGatewayImplementationConfiguration?)value;
-    }
 
 }

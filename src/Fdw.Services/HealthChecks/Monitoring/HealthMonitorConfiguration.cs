@@ -27,36 +27,12 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     ServiceType = "HealthMonitor",
     DisplayName = "Health Monitor",
     Description = "Configuration for the health monitoring service including check intervals and retention.")]
-public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfiguration
+public partial class HealthMonitorConfiguration : DomainConfigurationBase, IHealthMonitorConfiguration
 {
-    /// <inheritdoc/>
-    public Guid Id { get; set; }
 
-    /// <inheritdoc/>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public string? Implementation { get; set; }
 
-    /// <inheritdoc/>
-    public string? Description { get; set; }
 
-    /// <inheritdoc/>
-    public IHealthMonitorImplementationConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The non-generic view of <see cref="Configuration"/>. The platform service provider reads the
-    /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
-    /// a default interface implementation, so each domain record states it.
-    /// </remarks>
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IHealthMonitorImplementationConfiguration?)value;
-    }
 
 }

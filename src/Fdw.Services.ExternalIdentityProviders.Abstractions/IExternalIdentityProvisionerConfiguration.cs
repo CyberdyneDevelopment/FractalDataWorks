@@ -7,6 +7,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// and holding that implementation's own configuration.
 /// </summary>
 public interface IExternalIdentityProvisionerConfiguration
-    : IPlatformServiceConfiguration<IExternalIdentityProvisionerImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

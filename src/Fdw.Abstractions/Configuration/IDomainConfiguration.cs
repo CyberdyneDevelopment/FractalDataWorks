@@ -22,13 +22,4 @@ public interface IDomainConfiguration : IGenericConfiguration
     /// Read from the domain row.
     /// </summary>
     string? Implementation { get; set; }
-
-    /// <summary>Gets or sets the implementation's own configuration, or null when it has not been composed.</summary>
-    /// <remarks>
-    /// Settable because the domain provider is what fills it: it reads the row, resolves the provider
-    /// the row's <see cref="Implementation"/> names, and attaches what comes back. A get-only view
-    /// forced every domain record to hand-write a constructor the provider could call instead, which
-    /// is 28 identical bodies doing what one assignment does.
-    /// </remarks>
-    IImplementationConfiguration? ImplementationConfiguration { get; set; }
 }

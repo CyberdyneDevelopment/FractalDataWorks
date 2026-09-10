@@ -22,68 +22,19 @@ namespace Fdw.Services.Calculations.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Calculation", ServiceType = "Entity", Temporal = true)]
-public partial class CalculationEntityConfiguration : IDomainConfiguration
+public partial class CalculationEntityConfiguration : DomainConfigurationBase, IDomainConfiguration
 {
 
 
-    /// <summary>Gets or sets the unique identifier for this calculation entity.</summary>
-    public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the calculation entity name.</summary>
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the optional description.</summary>
-    public string? Description { get; set; }
 
-    /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the implementation this record names (e.g. "Formula", "Windowed").</summary>
-    public string? Implementation { get; set; }
 
-    /// <summary>
-    /// Gets or sets the name of the <c>CalculationSourceTypes</c> option that wrote this row
-    /// (provenance — stamped by the writer, e.g. "Configuration" for the built-in write path).
-    /// </summary>
-    public string CalculationSource { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the target DataSet name for output.</summary>
-    public string? OutputDataSetName { get; set; }
 
-    /// <summary>Gets or sets the result field name written to the output DataSet.</summary>
-    public string? ResultFieldName { get; set; }
 
-    /// <summary>Gets or sets the data type name for the result (e.g. "Decimal", "Int32").</summary>
-    public string ResultDataTypeName { get; set; } = "Decimal";
 
-    /// <summary>Gets or sets whether this calculation entity is active.</summary>
-    public bool IsEnabled { get; set; } = true;
 
-    /// <summary>
-    /// Gets or sets the polymorphic typed body (FormulaCalculationConfiguration / WindowedCalculationConfiguration).
-    /// Composed on read by the base ComposeTypedBody (dispatch on <see cref="Implementation"/>); cascade-saved
-    /// by base.Save on insert. Not a column on calc.CalculationEntity.
-    /// </summary>
-    [NotMapped]
-    public ICalculationTypedConfiguration? Configuration { get; set; }
 
-    /// <inheritdoc />
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (ICalculationTypedConfiguration?)value;
-    }
-
-    /// <summary>
-    /// Gets or sets the input declarations. Composed from calc.CalculationEntityInput on read; cascade-saved on insert.
-    /// </summary>
-#pragma warning disable MA0016
-    public List<CalculationEntityInputRecord> Inputs { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the calculation steps (each owning Fields + Operands). Composed recursively from
-    /// calc.CalculationStep on read; cascade-saved on insert.
-    /// </summary>
-    public List<CalculationStepConfiguration> Steps { get; set; } = [];
-#pragma warning restore MA0016
 }

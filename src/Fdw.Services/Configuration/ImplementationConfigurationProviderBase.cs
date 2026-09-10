@@ -31,7 +31,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     : IServiceConfigurationProvider,
       IDomainConfigurationProvider<TImplementationConfiguration>,
       IImplementationConfigurationProvider<TImplementationConfiguration>
-    where TDomainConfiguration : class, IPlatformServiceConfiguration<TImplementationConfiguration>
+    where TDomainConfiguration : class, IDomainConfiguration
     where TImplementationConfiguration : IImplementationConfiguration
     where TCommand : ConfigurationCommandBase<TDomainConfiguration>
 {
@@ -445,8 +445,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
             loaded.Value.Domain = row.Domain;
         }
 
-        row.Configuration = loaded.Value;
-        return GenericResult<TImplementationConfiguration>.Success(row.Configuration!);
+        return loaded;
     }
 
     /// <summary>

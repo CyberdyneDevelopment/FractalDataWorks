@@ -7,6 +7,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// implementation's own configuration.
 /// </summary>
 public interface IPipelineConfiguration
-    : IPlatformServiceConfiguration<IPipelineImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

@@ -14,7 +14,7 @@ namespace Fdw.Services.Scheduling.Abstractions.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Schedule")]
-public partial class ScheduleConfiguration : IScheduleDefinition
+public partial class ScheduleConfiguration : DomainConfigurationBase, IScheduleDefinition
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ScheduleConfiguration"/> class.
@@ -34,118 +34,26 @@ public partial class ScheduleConfiguration : IScheduleDefinition
         Implementation = implementation;
     }
 
-    /// <summary>Gets or sets the schedule kind this record is.</summary>
-    [ValuesFrom(typeof(TriggerTypes))]
-    public string? Implementation { get; set; }
 
-    /// <inheritdoc />
-    public Guid Id { get; set; } = Guid.CreateVersion7();
 
-    /// <inheritdoc />
-    public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public virtual string ScheduleType => Implementation ?? "Unknown";
 
-    /// <inheritdoc />
-    public string PipelineName { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public bool IsEnabled { get; set; } = true;
 
-    /// <inheritdoc />
-    public DateTimeOffset? NextRunTime { get; set; }
 
-    /// <inheritdoc />
-    public DateTimeOffset? LastRunTime { get; set; }
 
-    /// <inheritdoc />
-    public string? LastRunStatus { get; set; }
 
-    /// <summary>
-    /// Gets or sets an optional description of the schedule.
-    /// </summary>
-    public string? Description { get; set; }
 
-    /// <summary>
-    /// Gets or sets the maximum number of retry attempts on failure.
-    /// </summary>
-    public int MaxRetries { get; set; } = 3;
 
-    /// <summary>
-    /// Gets or sets the delay in seconds between retry attempts.
-    /// </summary>
-    public int RetryDelaySeconds { get; set; } = 60;
 
-    /// <summary>
-    /// Gets or sets the execution timeout in seconds.
-    /// </summary>
-    public int TimeoutSeconds { get; set; } = 3600;
 
-    /// <summary>
-    /// Gets or sets the IANA timezone ID for schedule evaluation (e.g., "America/New_York").
-    /// Null defaults to UTC.
-    /// </summary>
-    public string? TimeZoneId { get; set; }
 
-    /// <summary>
-    /// Gets or sets the cron expression for Cron-type schedules.
-    /// Null for non-Cron schedules.
-    /// </summary>
-    public string? CronExpression { get; set; }
 
-    /// <summary>
-    /// Gets or sets the interval in seconds for Interval-type schedules.
-    /// Null for non-Interval schedules.
-    /// </summary>
-    public int? IntervalSeconds { get; set; }
 
-    /// <summary>
-    /// Gets or sets the one-time execution date and time for Once-type schedules.
-    /// Null for non-Once schedules.
-    /// </summary>
-    public DateTimeOffset? OneTimeDateTime { get; set; }
 
-    /// <summary>
-    /// Gets or sets the triggering event name for Event-type schedules.
-    /// Null for non-Event schedules.
-    /// </summary>
-    public string? EventName { get; set; }
 
-    /// <summary>
-    /// Gets or sets the tenant identifier for tenant isolation.
-    /// Null means system-wide (visible to all tenants).
-    /// </summary>
-    public Guid? TenantId { get; set; }
 
-    /// <summary>
-    /// Gets the timestamp when the record was created in this system.
-    /// </summary>
-    public DateTimeOffset CreateDate { get; set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>
-    /// Gets the database user who created the record.
-    /// </summary>
-    public string CreateBy { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the application user on whose behalf the record was created.
-    /// </summary>
-    public string CreateOnBehalfOf { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the timestamp when the record was last modified.
-    /// </summary>
-    public DateTimeOffset ModifyDate { get; set; } = DateTimeOffset.UtcNow;
-
-    /// <summary>
-    /// Gets or sets the database user who last modified the record.
-    /// </summary>
-    public string ModifyBy { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the application user on whose behalf the record was last modified.
-    /// </summary>
-    public string ModifyOnBehalfOf { get; set; } = string.Empty;
 
 }

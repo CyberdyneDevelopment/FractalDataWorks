@@ -25,44 +25,13 @@ namespace Fdw.Services.Etl;
 [GenerateMapper]
 [ExcludeFromCodeCoverage]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Etl")]
-public partial class EtlPipelineConfiguration : IPipelineImplementationConfiguration, IDomainConfiguration
+public partial class EtlPipelineConfiguration : DomainConfigurationBase, IPipelineImplementationConfiguration, IDomainConfiguration
 {
 
-    /// <inheritdoc/>
-    public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the parent pipeline's logical Id (FK to pipe.Pipeline.Id).</summary>
-    public Guid PipelineId { get; set; }
 
-    /// <summary>Gets the domain this record is, for the engines it names.</summary>
-    public string Domain { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the engine this record names (e.g. "BatchCopy", "Streaming").</summary>
-    public string? Implementation { get; set; }
 
-    /// <inheritdoc/>
-    // Why it maps with no column of its own: the name is the domain's, and there is one
-    // name for a configured member. The domain provider joins the domain row to this one,
-    // and the join's result set is what carries it in.
-    public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the pipeline transform configurations (ETL-specific child collection of
-    /// <c>pipe.PipelineOperation</c>, FK <c>EtlPipelineId</c> → pipe.EtlPipeline).
-    /// </summary>
-    public IList<PipelineTransformConfiguration>? Transforms { get; set; }
 
-    /// <summary>
-    /// Gets or sets the engine typed-body configuration corresponding to <see cref="Implementation"/>
-    /// (e.g. <c>BatchCopyPipelineConfiguration</c>, <c>StreamingPipelineConfiguration</c>). Composed on
-    /// read and cascade-saved on write by the keystone.
-    /// </summary>
-    public IEtlPipelineTypedConfiguration? Configuration { get; set; }
-
-    /// <inheritdoc />
-    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
-    {
-        get => Configuration;
-        set => Configuration = (IEtlPipelineTypedConfiguration?)value;
-    }
 }

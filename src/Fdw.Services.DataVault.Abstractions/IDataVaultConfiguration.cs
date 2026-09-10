@@ -7,6 +7,6 @@ namespace Fdw.Services.DataVault.Abstractions;
 /// that implementation's own configuration.
 /// </summary>
 public interface IDataVaultConfiguration
-    : IPlatformServiceConfiguration<IDataVaultImplementationConfiguration>
+    : IDomainConfiguration
 {
 }
