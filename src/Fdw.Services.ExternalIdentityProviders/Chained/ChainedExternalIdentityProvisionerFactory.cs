@@ -31,7 +31,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// </para>
 /// </remarks>
 internal sealed class ChainedExternalIdentityProvisionerFactory
-    : IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>
+    : IChainedExternalIdentityProvisionerFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ChainedExternalIdentityProvisionerFactory> _logger;

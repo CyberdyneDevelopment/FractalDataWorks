@@ -23,7 +23,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// stay pure does not apply here.
 /// </summary>
 internal sealed class ClaimMappedProvisionerFactory
-    : IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>
+    : IClaimMappedProvisionerFactory
 {
     private readonly UserConfigurationProvider _users;
     private readonly UserRoleConfigurationProvider _userRoles;

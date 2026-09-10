@@ -71,9 +71,8 @@ public sealed class ChainedExternalIdentityProvisionerType
                     DataStore,
                     PathName));
 
-            builder.Services.TryAddScoped<ChainedExternalIdentityProvisionerFactory>();
-            builder.Services.TryAddScoped<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(
-                sp => sp.GetRequiredService<ChainedExternalIdentityProvisionerFactory>());
+            ExternalIdentityProvisionerServiceProvider.Register<IChainedExternalIdentityProvisionerFactory, ChainedExternalIdentityProvisionerFactory>(
+                builder, Name, ServiceLifetime.Scoped);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

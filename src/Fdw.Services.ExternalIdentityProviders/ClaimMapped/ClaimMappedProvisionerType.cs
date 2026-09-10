@@ -44,9 +44,8 @@ public sealed class ClaimMappedProvisionerType
                     DataStore,
                     PathName));
 
-            builder.Services.TryAddScoped<ClaimMappedProvisionerFactory>();
-            builder.Services.TryAddScoped<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(
-                sp => sp.GetRequiredService<ClaimMappedProvisionerFactory>());
+            ExternalIdentityProvisionerServiceProvider.Register<IClaimMappedProvisionerFactory, ClaimMappedProvisionerFactory>(
+                builder, Name, ServiceLifetime.Scoped);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
