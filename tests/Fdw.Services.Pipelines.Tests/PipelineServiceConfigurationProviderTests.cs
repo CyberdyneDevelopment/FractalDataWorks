@@ -16,10 +16,10 @@ namespace Fdw.Services.Pipelines.Tests;
 /// <summary>
 /// Covers <see cref="PipelineServiceConfigurationProvider.RegisterDomainConfiguration"/>: the header
 /// provider must be resolvable under all three contracts it registers itself against (concrete type,
-/// the open <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> base, and
+/// the open <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> base, and
 /// <see cref="IServiceConfigurationProvider{T}"/>) as the very same singleton instance, targeting this
 /// domain's own default DataStore/path (no arguments — <see cref="RegisterDomainConfiguration"/> is
-/// parameterless; overriding the location is <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}.SetConfiguration"/>
+/// parameterless; overriding the location is <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}.SetConfiguration"/>
 /// on the resolved instance, not a registration-time argument).
 /// </summary>
 [Trait("Category", "Configuration")]

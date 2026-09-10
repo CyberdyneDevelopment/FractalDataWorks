@@ -18,7 +18,7 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Services.Scheduling;
 
 /// <summary>Configuration provider for schedule configurations. Thin wrapper over
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>.</summary>
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>.</summary>
 /// <remarks>
 /// Raises <see cref="Changed"/> after a successful write so a scheduler implementation's own
 /// reconciliation loop can react immediately rather than waiting for its next poll — configuration

@@ -17,7 +17,7 @@ namespace Fdw.Services.Credentials;
 /// Domain-specific configuration provider for credential services.
 /// The polymorphic typed-body read (dispatch on <c>Implementation</c> to load the typed body row and
 /// attach it to <see cref="CredentialServiceConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>; typed providers are registered via the
 /// inherited <c>Register</c>.
 /// </summary>
 public class CredentialServiceConfigurationProvider

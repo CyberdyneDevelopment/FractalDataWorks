@@ -43,7 +43,7 @@ public partial class PostgreSqlConnectionConfiguration : IConnectionImplementati
 
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (conn.PostgreSqlConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
+    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>
     /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
     public Guid Id { get; set; }

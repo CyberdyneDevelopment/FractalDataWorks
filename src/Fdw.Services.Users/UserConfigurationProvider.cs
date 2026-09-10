@@ -21,7 +21,7 @@ namespace Fdw.Services.Users;
 
 /// <summary>
 /// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gatewayProvider access.
-/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with
 /// by-id, by-username, and CRUD convenience methods.
 /// </summary>
 /// <remarks>

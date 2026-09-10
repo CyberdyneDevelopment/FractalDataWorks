@@ -15,7 +15,7 @@ namespace Fdw.Services.Pipelines;
 /// The general pipeline header provider over <c>pipe.Pipeline</c>. The full aggregate — the
 /// ETL-kind typed body (pipe.EtlPipeline), its engine typed body (pipe.BatchCopyPipeline /
 /// pipe.StreamingPipeline), and the kind body's Transforms — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. The "Etl"
+/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>. The "Etl"
 /// kind typed provider is attached to this header from the Services.Etl side (the ETL domain the general header
 /// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
 /// </summary>

@@ -16,9 +16,9 @@ namespace Fdw.UI.Themes;
 
 /// <summary>
 /// Configuration provider for themes. Thin wrapper over
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with theme-specific logging.
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with theme-specific logging.
 /// </summary>
-public class ThemeConfigurationProvider : ImplementationConfigurationProviderBase<ThemeManagedConfiguration, IThemeManagedImplementationConfiguration, ThemeManagedConfigurationCommand>
+public class ThemeConfigurationProvider : ImplementationConfigurationProviderBase<ThemeManagedConfiguration, IThemeManagedImplementationConfiguration, ThemeConfigurationCommand>
 {
 
     private readonly ILogger _logger;

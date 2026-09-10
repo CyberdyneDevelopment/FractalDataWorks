@@ -26,7 +26,7 @@ namespace Fdw.Services.SecretManagers;
 /// <see cref="Fdw.Configuration.IDomainConfiguration.Implementation"/>, e.g.
 /// "EnvironmentVariable"/"AzureKeyVault", to load the typed body row and attach it to
 /// <see cref="SecretManagerConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. This subclass additionally captures the
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>. This subclass additionally captures the
 /// concrete typed CLR type (for endpoint deserialization) and a reflection-free factory (for default-body
 /// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
@@ -61,5 +61,5 @@ public class SecretManagerConfigurationProvider
     /// plugin-removed types).
     /// </summary>
     public Task<IGenericResult<SecretManagerConfiguration>> GetHeader(string name, CancellationToken ct = default)
-        => GetByName(name, ct);
+        => GetByName(name, null, ct);
 }
