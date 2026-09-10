@@ -10,7 +10,6 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 
 /// <summary>
 /// Configuration for RoslynWorkspace connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>.
 /// Persisted to <c>conn.RoslynWorkspaceConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
 /// </summary>
 [ExcludeFromCodeCoverage]
@@ -46,8 +45,7 @@ public partial class RoslynWorkspaceConnectionConfiguration : IConnectionImpleme
 
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (conn.RoslynWorkspaceConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>
-    /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
+    /// Minted via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
     public Guid Id { get; set; }
 

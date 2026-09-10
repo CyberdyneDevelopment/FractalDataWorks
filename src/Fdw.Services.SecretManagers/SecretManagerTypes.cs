@@ -95,16 +95,10 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // SecretManager configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
-            builder.Services.TryAddSingleton<ISecretManagerConfigurationProvider>(sp =>
-                new SecretManagerConfigurationProvider(
-                    sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
-                sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ISecretManagerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>();
+            builder.Services.TryAddSingleton<ISecretManagerConfigurationProvider>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ISecretManagerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

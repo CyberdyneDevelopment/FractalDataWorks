@@ -82,15 +82,10 @@ public partial class NotificationServiceTypes
 
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            builder.Services.TryAddSingleton<INotificationConfigurationProvider>(sp =>
-                new NotificationConfigurationProvider(
-                    sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
-            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
-                sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<INotificationImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<NotificationConfigurationProvider>();
+            builder.Services.TryAddSingleton<INotificationConfigurationProvider>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<INotificationImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IImplementationConfigurationProvider<INotificationRuleImplementationConfiguration>>(sp =>

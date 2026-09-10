@@ -92,25 +92,14 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
-            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp =>
-                new SchedulerConfigurationProvider(
-                    sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
-            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(
-                sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ISchedulerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>();
+            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ISchedulerImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
-                new ScheduleConfigurationProvider(
-                    sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        SchedulerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IScheduleImplementationConfiguration>>(
-                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IScheduleImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>();
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IScheduleImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>

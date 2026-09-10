@@ -15,7 +15,7 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// both are spelled <c>IServiceConfigurationProvider&lt;T&gt;</c>, and nothing catches the swap.
 /// </remarks>
 public interface IAuthenticationServiceConfigurationProvider
-    : IImplementationConfigurationProvider<IAuthenticationServiceImplementationConfiguration>
+    : IDomainConfigurationProvider<IAuthenticationServiceImplementationConfiguration>
 {
 
 }

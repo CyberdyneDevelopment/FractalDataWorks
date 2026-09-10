@@ -12,7 +12,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>
 /// Builds <see cref="JwtAssertionIdentityService"/> instances from a resolved
-/// <see cref="IdentityServiceConfiguration"/> header whose <c>Configuration</c> property carries the
+/// <c>IIdentityServiceImplementationConfiguration</c> header whose <c>Configuration</c> property carries the
 /// composed <see cref="JwtAssertionConfiguration"/> typed body.
 /// </summary>
 /// <remarks>

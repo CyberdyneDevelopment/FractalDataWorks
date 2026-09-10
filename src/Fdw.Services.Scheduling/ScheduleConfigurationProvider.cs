@@ -12,7 +12,7 @@ namespace Fdw.Services.Scheduling;
 
 /// <summary>Supplies the Schedule configuration.</summary>
 public sealed class ScheduleConfigurationProvider
-    : ImplementationConfigurationProviderBase<IScheduleImplementationConfiguration>
+    : DomainConfigurationProviderBase<IScheduleImplementationConfiguration>
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduleConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

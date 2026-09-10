@@ -13,7 +13,7 @@ namespace Fdw.Services.SecretManagers;
 
 /// <summary>Supplies the SecretManager configuration.</summary>
 public sealed class SecretManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<ISecretManagerImplementationConfiguration>,
+    : DomainConfigurationProviderBase<ISecretManagerImplementationConfiguration>,
       ISecretManagerConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="SecretManagerConfigurationProvider"/> class.</summary>

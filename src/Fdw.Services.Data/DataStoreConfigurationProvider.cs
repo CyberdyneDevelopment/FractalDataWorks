@@ -13,7 +13,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>Supplies the DataStore configuration.</summary>
 public sealed class DataStoreConfigurationProvider
-    : ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration>
+    : DomainConfigurationProviderBase<IDataStoreImplementationConfiguration>
 {
     /// <summary>Initializes a new instance of the <see cref="DataStoreConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

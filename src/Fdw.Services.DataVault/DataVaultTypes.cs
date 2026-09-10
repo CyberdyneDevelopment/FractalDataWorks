@@ -68,17 +68,10 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
 
             // The configuration provider for this domain, registered once here rather than by every
             // caller that happens to need it.
-            builder.Services.TryAddSingleton<IDataVaultConfigurationProvider>(sp =>
-                new DataVaultConfigurationProvider(
-                    sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
-            builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(
-                sp => (DataVaultConfigurationProvider)sp.GetRequiredService<IDataVaultConfigurationProvider>());
-
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataVaultImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<DataVaultConfigurationProvider>();
+            builder.Services.TryAddSingleton<IDataVaultConfigurationProvider>(
                 sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
-
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IDataVaultImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataVaultImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
 
             var declaredOptions = Options;

@@ -11,7 +11,7 @@ namespace Fdw.Services.Messaging;
 
 /// <summary>Supplies the Messaging configuration.</summary>
 public sealed class MessagingConfigurationProvider
-    : ImplementationConfigurationProviderBase<IMessagingImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IMessagingImplementationConfiguration>,
       IMessagingConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="MessagingConfigurationProvider"/> class.</summary>

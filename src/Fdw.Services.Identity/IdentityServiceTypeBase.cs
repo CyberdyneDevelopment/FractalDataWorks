@@ -13,7 +13,7 @@ namespace Fdw.Services.Identity;
 /// Lives in the concrete <c>Fdw.Services.Identity</c> package (net10.0) rather than
 /// <c>Fdw.Services.Identity.Abstractions</c> (netstandard2.0), for the same reason as
 /// <c>TokenManagerTypeBase</c>: this class closes <c>TConfiguration</c> over
-/// <see cref="IdentityServiceConfiguration"/>, whose <c>[GenerateMapper]</c> /
+/// <c>IIdentityServiceImplementationConfiguration</c>, whose <c>[GenerateMapper]</c> /
 /// <c>[ManagedConfiguration]</c> generators are net10.0-only.
 /// </remarks>
 /// <typeparam name="TService">The identity service type.</typeparam>

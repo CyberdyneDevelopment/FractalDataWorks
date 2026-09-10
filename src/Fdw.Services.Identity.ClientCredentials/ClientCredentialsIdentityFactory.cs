@@ -15,7 +15,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 
 /// <summary>
 /// Builds <see cref="ClientCredentialsIdentityService"/> instances from a resolved
-/// <see cref="IdentityServiceConfiguration"/> header whose <c>Configuration</c> property carries the
+/// <c>IIdentityServiceImplementationConfiguration</c> header whose <c>Configuration</c> property carries the
 /// composed <see cref="ClientCredentialsConfiguration"/> typed body.
 /// </summary>
 /// <remarks>

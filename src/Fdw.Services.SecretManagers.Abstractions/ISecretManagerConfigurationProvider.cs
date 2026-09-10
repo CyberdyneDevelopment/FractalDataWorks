@@ -6,6 +6,6 @@ namespace Fdw.Services.SecretManagers.Abstractions;
 /// Resolves configured secret managers and routes each to the implementation provider that owns it.
 /// </summary>
 public interface ISecretManagerConfigurationProvider
-    : IImplementationConfigurationProvider<ISecretManagerImplementationConfiguration>
+    : IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>
 {
 }

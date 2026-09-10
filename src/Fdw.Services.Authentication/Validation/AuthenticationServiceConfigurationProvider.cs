@@ -11,7 +11,7 @@ namespace Fdw.Services.Authentication.Validation;
 
 /// <summary>Supplies the AuthenticationService configuration.</summary>
 public sealed class AuthenticationServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IAuthenticationServiceImplementationConfiguration>,
       IAuthenticationServiceConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="AuthenticationServiceConfigurationProvider"/> class.</summary>

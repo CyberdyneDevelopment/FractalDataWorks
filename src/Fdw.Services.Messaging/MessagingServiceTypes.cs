@@ -51,15 +51,10 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
-            builder.Services.TryAddSingleton<IMessagingConfigurationProvider>(sp =>
-                new MessagingConfigurationProvider(
-                    sp.GetService<ILogger<MessagingConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
-            builder.Services.TryAddSingleton<MessagingConfigurationProvider>(
-                sp => (MessagingConfigurationProvider)sp.GetRequiredService<IMessagingConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IMessagingImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<MessagingConfigurationProvider>();
+            builder.Services.TryAddSingleton<IMessagingConfigurationProvider>(
                 sp => sp.GetRequiredService<MessagingConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IMessagingImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IMessagingImplementationConfiguration>>(
                 sp => sp.GetRequiredService<MessagingConfigurationProvider>());
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);

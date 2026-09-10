@@ -14,7 +14,7 @@ namespace Fdw.Services.Messaging.Abstractions;
 /// are spelled <c>IImplementationConfigurationProvider&lt;T&gt;</c>, and nothing catches the swap.
 /// </remarks>
 public interface IMessagingConfigurationProvider
-    : IImplementationConfigurationProvider<IMessagingImplementationConfiguration>
+    : IDomainConfigurationProvider<IMessagingImplementationConfiguration>
 {
 
 }
