@@ -55,7 +55,7 @@ public class DuplicateTypeOptionAnalyzer : DiagnosticAnalyzer
 
         // Check if this type has EnumOption attribute
         var enumOptionAttr = typeSymbol.GetAttributes()
-            .FirstOrDefault(a => string.Equals(a.AttributeClass?.Name, "ServiceServiceTypeOptionAttribute", StringComparison.Ordinal) ||
+            .FirstOrDefault(a => string.Equals(a.AttributeClass?.Name, "ServiceImplementationAttribute", StringComparison.Ordinal) ||
                                 string.Equals(a.AttributeClass?.Name, "EnumOptionAttribute", StringComparison.Ordinal) ||
                                 string.Equals(a.AttributeClass?.Name, "EnumOption", StringComparison.Ordinal));
 
@@ -102,7 +102,7 @@ public class DuplicateTypeOptionAnalyzer : DiagnosticAnalyzer
 
             // Check if this type has EnumOption attribute
             var attrs = type.GetAttributes()
-                .Where(a => string.Equals(a.AttributeClass?.Name, "ServiceServiceTypeOptionAttribute", StringComparison.Ordinal) ||
+                .Where(a => string.Equals(a.AttributeClass?.Name, "ServiceImplementationAttribute", StringComparison.Ordinal) ||
                            string.Equals(a.AttributeClass?.Name, "EnumOptionAttribute", StringComparison.Ordinal) ||
                            string.Equals(a.AttributeClass?.Name, "EnumOption", StringComparison.Ordinal))
                 .ToList();

@@ -93,7 +93,7 @@ public sealed class MissingTypeOptionAnalyzer : DiagnosticAnalyzer
     {
         // Get required attribute types
         var typeCollectionAttribute = context.Compilation.GetTypeByMetadataName("Fdw.ServiceTypes.Attributes.ServiceTypeCollectionAttribute");
-        var typeOptionAttribute = context.Compilation.GetTypeByMetadataName("Fdw.ServiceTypes.Attributes.ServiceTypeOptionAttribute");
+        var typeOptionAttribute = context.Compilation.GetTypeByMetadataName("Fdw.ServiceTypes.Attributes.ImplementationAttribute");
 
         if (typeCollectionAttribute == null || typeOptionAttribute == null)
             return; // Attributes not available in this compilation
@@ -198,7 +198,7 @@ public sealed class MissingTypeOptionAnalyzer : DiagnosticAnalyzer
         // Check types in current namespace
         foreach (var type in namespaceSymbol.GetTypeMembers())
         {
-            if (InheritsFromBaseType(type, baseType) && !HasServiceTypeOptionAttribute(type, typeOptionAttribute))
+            if (InheritsFromBaseType(type, baseType) && !HasImplementationAttribute(type, typeOptionAttribute))
             {
                 // Only report for types in the current compilation (not referenced assemblies)
                 if (SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, context.Compilation.Assembly))
@@ -225,7 +225,7 @@ public sealed class MissingTypeOptionAnalyzer : DiagnosticAnalyzer
     {
         foreach (var nestedType in parentType.GetTypeMembers())
         {
-            if (InheritsFromBaseType(nestedType, baseType) && !HasServiceTypeOptionAttribute(nestedType, typeOptionAttribute))
+            if (InheritsFromBaseType(nestedType, baseType) && !HasImplementationAttribute(nestedType, typeOptionAttribute))
             {
                 // Only report for types in the current compilation
                 if (SymbolEqualityComparer.Default.Equals(nestedType.ContainingAssembly, context.Compilation.Assembly))
@@ -264,7 +264,7 @@ public sealed class MissingTypeOptionAnalyzer : DiagnosticAnalyzer
     /// <summary>
     /// Checks if a type has the [TypeOption] attribute.
     /// </summary>
-    private static bool HasServiceTypeOptionAttribute(INamedTypeSymbol type, INamedTypeSymbol typeOptionAttribute)
+    private static bool HasImplementationAttribute(INamedTypeSymbol type, INamedTypeSymbol typeOptionAttribute)
     {
         return type.GetAttributes()
             .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, typeOptionAttribute));

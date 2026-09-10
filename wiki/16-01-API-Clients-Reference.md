@@ -23,7 +23,7 @@ Every typed API client:
 
 1. **Inherits from `ApiClientBase`** — shared HTTP methods with JSON serialization, structured error handling, and logging.
 2. **Returns `IGenericResult<T>`** — railway-oriented results that carry either a value or a structured error message. Never throws for business-logic failures.
-3. **Registers via `ApiClientTypes`** — each client package contains a `[ServiceTypeOption(typeof(ApiClientTypes), "...")]` class inheriting `ApiClientTypeBase<TClient>` that is registered automatically by `Registration.SourceGenerators`.
+3. **Registers via `ApiClientTypes`** — each client package contains a `[Implementation(typeof(ApiClientTypes), "...")]` class inheriting `ApiClientTypeBase<TClient>` that is registered automatically by `Registration.SourceGenerators`.
 
 ## ApiClientBase
 
@@ -41,7 +41,7 @@ Client packages register through the `ApiClientTypes` TypeCollection:
 
 ```csharp
 // In Services.Connections.Clients package:
-[ServiceTypeOption(typeof(ApiClientTypes), "ConnectionClient")]
+[Implementation(typeof(ApiClientTypes), "ConnectionClient")]
 public sealed class ConnectionClientType : ApiClientTypeBase<ConnectionApiClient>
 {
     // ...
@@ -66,7 +66,7 @@ The full client-package inventory is large (30+ packages) and changes over time.
 
 Every client follows the same shape:
 - `XxxApiClient : ApiClientBase` — typed methods returning `IGenericResult<T>`
-- `XxxClientType : ApiClientTypeBase<XxxApiClient>` — `[ServiceTypeOption(typeof(ApiClientTypes), "...")]`
+- `XxxClientType : ApiClientTypeBase<XxxApiClient>` — `[Implementation(typeof(ApiClientTypes), "...")]`
 - DTOs / requests / responses live in the matching `Abstractions` package
 
 For the canonical wiring of clients into an app, see `reference-ui/public/Program.cs` and `reference-aui/public/src/Reference.Aui.Host/Program.cs`.

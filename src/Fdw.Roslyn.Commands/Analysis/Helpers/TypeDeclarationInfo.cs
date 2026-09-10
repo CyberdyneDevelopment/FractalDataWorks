@@ -28,7 +28,7 @@ public sealed class TypeDeclarationInfo
     public string TypeName { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the type carries <c>[TypeOption]</c> or <c>[ServiceTypeOption]</c>.
+    /// Gets a value indicating whether the type carries <c>[TypeOption]</c> or <c>[Implementation]</c>.
     /// </summary>
     public bool IsTypeOption { get; }
 }

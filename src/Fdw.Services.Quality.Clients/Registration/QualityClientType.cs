@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Quality.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Quality API client.
+/// Implementation for the Quality API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "QualityClient")]
+[Implementation(typeof(ApiClientTypes), "QualityClient")]
 public sealed class QualityClientType : ApiClientTypeBase<QualityApiClient>
 {
     /// <summary>

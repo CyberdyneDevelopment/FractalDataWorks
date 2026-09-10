@@ -18,7 +18,7 @@ To build a new InteractiveServer skin:
 1. **Create a Blazor Web project** (Microsoft.NET.Sdk.Web, target net10.0) with InteractiveServer enabled.
 2. **Reference the FDW UI packages:**
    - `Fdw.UI` (for `PageTypes`)
-   - The per-domain `*.UI.Pages` packages you want surfaced (each registers its own `[ServiceTypeOption(typeof(PageTypes), "...")]`)
+   - The per-domain `*.UI.Pages` packages you want surfaced (each registers its own `[Implementation(typeof(PageTypes), "...")]`)
    - The per-domain `*.Components` packages (transitively pulled by `*.UI.Pages`)
    - The per-domain `*.Clients` packages (transitively pulled by `*.Components`)
 3. **Wire `Routes.razor`** to enumerate `PageTypes.All()` and pass `.Select(p => p.PageAssembly).ToArray()` into `<Router AdditionalAssemblies="...">`.

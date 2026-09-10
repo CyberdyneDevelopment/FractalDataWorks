@@ -37,7 +37,7 @@ namespace Fdw.Services.Etl.Projects.Registration;
 /// orchestration types it registers, and a collection in the pipeline package could name neither.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(PipelineServiceTypes), "Orchestration")]
+[Implementation(typeof(PipelineServiceTypes), "Orchestration")]
 public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
 {
     /// <summary>

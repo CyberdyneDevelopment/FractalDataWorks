@@ -178,7 +178,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 { }
 ```
 
-**ServiceTypeOption:** concrete options live in the implementation assembly
+**Implementation:** concrete options live in the implementation assembly
 (e.g. `MsSqlConnectionType` in `Fdw.Services.Connections.MsSql`)
 and are registered via the `[ModuleInitializer]` emitted by
 `Fdw.Registration.SourceGenerators` in each entry-point project.
@@ -516,7 +516,7 @@ Services.{Domain}/                  # Collection, provider
 └── Logging/{Domain}Log.cs          # MessageLogging
 
 Services.{Domain}.{Impl}/           # Concrete implementations
-├── {Impl}Type.cs                   # ServiceTypeOption
+├── {Impl}Type.cs                   # Implementation
 ├── {Impl}Factory.cs                # Factory implementation
 ├── {Impl}Configuration.cs          # ManagedConfiguration
 └── Logging/{Impl}Log.cs            # Impl-specific logging

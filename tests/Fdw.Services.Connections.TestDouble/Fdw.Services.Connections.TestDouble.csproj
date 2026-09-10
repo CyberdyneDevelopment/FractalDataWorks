@@ -8,7 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Configuration\Fdw.Configuration.csproj" />
-    <!-- Why here and not in the test project: the ServiceTypeOption module-initializer generator scans
+    <!-- Why here and not in the test project: the Implementation module-initializer generator scans
          REFERENCED assemblies only, never the compilation it runs in. An option declared alongside the
          generator is silently never registered, so the option must live in its own assembly that the
          consumer references. This is the same reason Fdw.Services.SecretManagers.TestDouble exists. -->

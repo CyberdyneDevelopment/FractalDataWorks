@@ -9,7 +9,7 @@ namespace Fdw.Services.Identity.Abstractions;
 /// Obtains a short-lived token proving that <em>this process</em> is the subject it claims to be,
 /// scoped to a named audience. One implementation backs one mechanism for proving that (client
 /// credentials, or a signed JWT assertion), registered as an <c>IdentityServiceTypes</c>
-/// <c>[ServiceTypeOption]</c>. The mechanism is the axis, not the authorization server: both are
+/// <c>[Implementation]</c>. The mechanism is the axis, not the authorization server: both are
 /// standard grants and work against any server implementing them.
 /// </summary>
 /// <remarks>

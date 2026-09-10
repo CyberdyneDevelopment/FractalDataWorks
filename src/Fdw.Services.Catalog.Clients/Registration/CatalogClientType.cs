@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Catalog.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Catalog API client.
+/// Implementation for the Catalog API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "CatalogClient")]
+[Implementation(typeof(ApiClientTypes), "CatalogClient")]
 public sealed class CatalogClientType : ApiClientTypeBase<CatalogApiClient>
 {
     /// <summary>

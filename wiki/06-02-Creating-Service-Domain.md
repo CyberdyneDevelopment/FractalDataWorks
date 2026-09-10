@@ -10,7 +10,7 @@ category (`conn`, `data`, `auth`, `pipe`, `sched`, `notify`, `transform`, `workf
 `catalog`). All `[ManagedConfiguration]` records are writable through their domain's
 `IServiceConfigurationWriter<T> (or IDynamicConfigurationWriter)`.
 
-ServiceTypeOption metadata (e.g. `OdbcConnectionType`) is registered at assembly load via
+Implementation metadata (e.g. `OdbcConnectionType`) is registered at assembly load via
 the `Registration.SourceGenerators` module initialiser — it doesn't need a database row.
 ServiceConfiguration **instances** (e.g. `OdbcConnectionConfiguration`) live as runtime
 rows in the domain schema and are written through `IServiceConfigurationWriter<T> (or IDynamicConfigurationWriter)`.
@@ -39,7 +39,7 @@ src/
 | `I{Domain}Provider` interface | `.Abstractions` | `IConnectionProvider` |
 | `Default{Domain}Provider` | Base package | `DefaultConnectionProvider` |
 | `{Domain}Log` MessageLogging | Base package | `ConnectionLog` |
-| `{Name}Type` ServiceTypeOption | `.{Implementation}` | `MsSqlConnectionType` |
+| `{Name}Type` Implementation | `.{Implementation}` | `MsSqlConnectionType` |
 | `{Name}Factory` | `.{Implementation}` | `MsSqlConnectionFactory` |
 | `{Name}Configuration` | `.{Implementation}` | `MsSqlConnectionConfiguration` |
 | `{Name}Log` MessageLogging | `.{Implementation}` | `MsSqlConnectionLog` |
@@ -244,11 +244,11 @@ public static partial class {Domain}Log
 
 ## Step 3: Implementation Package
 
-### 3.1 ServiceTypeOption
+### 3.1 Implementation
 
 ```csharp
 // Services.{Domain}.{Implementation}/{Implementation}Type.cs
-[ServiceTypeOption(typeof({Domain}Types), "{Implementation}")]
+[Implementation(typeof({Domain}Types), "{Implementation}")]
 public sealed class {Implementation}Type
     : {Domain}TypeBase<I{Domain}, I{Implementation}Factory, {Implementation}Configuration>
 {
@@ -444,7 +444,7 @@ public static partial class {Implementation}Log
 The `Registration.SourceGenerators` package automatically generates a module initializer in each implementation package:
 
 ```csharp
-// Generated: ServiceTypeOptionModuleInitializer.g.cs
+// Generated: ImplementationModuleInitializer.g.cs
 [ModuleInitializer]
 internal static void Initialize()
 {
@@ -452,7 +452,7 @@ internal static void Initialize()
 }
 ```
 
-This runs before `Main()`, ensuring the ServiceTypeOption is registered with the collection before `{Domain}Types.Configure()` or `{Domain}Types.Register()` is called.
+This runs before `Main()`, ensuring the Implementation is registered with the collection before `{Domain}Types.Configure()` or `{Domain}Types.Register()` is called.
 
 ## Checklist
 
@@ -472,7 +472,7 @@ This runs before `Main()`, ensuring the ServiceTypeOption is registered with the
 - [ ] Embedded Registration generator for NuGet
 
 ### Implementation Package
-- [ ] `{Implementation}Type` with `[ServiceTypeOption]`
+- [ ] `{Implementation}Type` with `[Implementation]`
 - [ ] `{Implementation}Factory` with MessageLogging
 - [ ] `{Implementation}Configuration` with `[ManagedConfiguration]`
 - [ ] `{Implementation}Log` MessageLogging class
@@ -579,9 +579,9 @@ When configurations are loaded from the database via `MsSqlConfigurationProvider
 
 This organization allows `IOptions<List<TConfiguration>>` binding to work correctly, grouping all configurations of the same type together so the provider can look them up by Name at runtime.
 
-### Configuration Binding in ServiceTypeOption
+### Configuration Binding in Implementation
 
-The `Configure()` method in each ServiceTypeOption binds `IOptions<List<TConfiguration>>` from the section organized by ServiceType:
+The `Configure()` method in each Implementation binds `IOptions<List<TConfiguration>>` from the section organized by ServiceType:
 
 ```csharp
 public override void Configure(

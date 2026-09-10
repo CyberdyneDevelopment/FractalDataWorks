@@ -6,7 +6,7 @@ using Fdw.Results.Abstractions;
 namespace Fdw.ServiceTypes.Results;
 
 /// <summary>
-/// A single ServiceTypeOption's registration phase did not complete.
+/// A single Implementation's registration phase did not complete.
 /// </summary>
 /// <remarks>
 /// Carried when the option's own phase body threw. An option that fails deliberately returns its own

@@ -29,7 +29,7 @@ namespace Fdw.Services.Authentication.Flow.StepTypes;
 /// is the thing that runs.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthenticationStepTypes), "BakePermissions")]
+[Implementation(typeof(AuthenticationStepTypes), "BakePermissions")]
 public sealed class BakePermissionsStepType
     : AuthenticationStepTypeBase<IGenericService, IServiceFactory<IGenericService, IServiceConfiguration>>,
       IAuthenticationStep

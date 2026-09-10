@@ -41,7 +41,7 @@ namespace Fdw.Services.Authentication.Flow.StepTypes;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthenticationStepTypes), "PasswordCredential")]
+[Implementation(typeof(AuthenticationStepTypes), "PasswordCredential")]
 public sealed class PasswordCredentialStepType
     : AuthenticationStepTypeBase<IGenericService, IServiceFactory<IGenericService, IServiceConfiguration>>,
       IAuthenticationStep

@@ -342,11 +342,11 @@ public sealed class MisplacedImplementationTypeAnalyzer : DiagnosticAnalyzer
         if (name.Contains("Configuration") || name.Contains("Service") || name.Contains("Factory"))
             return true;
 
-        // Check for TypeOption/ServiceTypeOption attributes
+        // Check for TypeOption/Implementation attributes
         foreach (var attr in typeSymbol.GetAttributes())
         {
             var attrName = attr.AttributeClass?.Name ?? string.Empty;
-            if (attrName.Contains("TypeOption") || attrName.Contains("ServiceTypeOption"))
+            if (attrName.Contains("TypeOption") || attrName.Contains("Implementation"))
                 return true;
         }
 

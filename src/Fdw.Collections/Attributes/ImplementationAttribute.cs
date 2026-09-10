@@ -4,15 +4,15 @@ using System.Diagnostics.CodeAnalysis;
 namespace Fdw.Collections;
 
 /// <summary>
-/// Marks a class as a ServiceTypeOption that belongs to a ServiceTypeCollection.
+/// Marks a class as a Implementation that belongs to a ServiceTypeCollection.
 /// Can be in any project that references the collection's assembly.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
-public sealed class ServiceTypeOptionAttribute : Attribute
+public sealed class ImplementationAttribute : Attribute
 {
     /// <summary>
-    /// Marks this class as a ServiceTypeOption belonging to the specified collection.
+    /// Marks this class as a Implementation belonging to the specified collection.
     /// </summary>
     /// <param name="collectionType">The ServiceTypeCollection this option belongs to.</param>
     /// <param name="name">
@@ -30,7 +30,7 @@ public sealed class ServiceTypeOptionAttribute : Attribute
     /// after the first without a word. Two options in one collection cannot share a name without colliding
     /// in <c>ByName</c> first, which is why the name is the right source.
     /// </remarks>
-    public ServiceTypeOptionAttribute(Type collectionType, string name)
+    public ImplementationAttribute(Type collectionType, string name)
     {
         CollectionType = collectionType;
         Name = name;

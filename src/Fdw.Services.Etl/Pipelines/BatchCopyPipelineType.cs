@@ -47,7 +47,7 @@ namespace Fdw.Services.Etl.Pipelines;
 /// </code>
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(EtlPipelineTypes), "BatchCopy")]
+[Implementation(typeof(EtlPipelineTypes), "BatchCopy")]
 public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IBatchCopyPipelineFactory, BatchCopyPipelineConfiguration>
 {
     /// <summary>

@@ -15,7 +15,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ChainedExternalIdentityProvisionerType` | class | Chained ServiceTypeOption. Registers the header + typed-body gateway-backed configuration providers and… |
+| `ChainedExternalIdentityProvisionerType` | class | Chained Implementation. Registers the header + typed-body gateway-backed configuration providers and… |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.
 

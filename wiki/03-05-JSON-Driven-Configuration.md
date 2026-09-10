@@ -122,7 +122,7 @@ builder.Services.AddSingleton(sp =>
 // 3. ONE PlatformServices sweep — Configure + Register before Build.
 //    Every [ServiceTypeCollection] discovered by the generated module initializer participates
 //    (DataGateway, SecretManager, Connection, DataStore, DataSet, …). Each domain's own
-//    [ServiceTypeOption] registers the *ConfigurationProvider it depends on (idempotent
+//    [Implementation] registers the *ConfigurationProvider it depends on (idempotent
 //    TryAddSingleton), so there are no hand-written per-domain RegisterDomainServices lines here.
 PlatformServices.Configure(builder, loggerFactory);
 PlatformServices.Register(builder.Services, loggerFactory);

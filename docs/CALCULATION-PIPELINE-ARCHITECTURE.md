@@ -51,7 +51,7 @@ Calculations are **reusable**: a single named Calculation entity can be referenc
 | `CalculationBase<TInput, TOutput>` | `Fdw.Calculations` | Base for runtime execution |
 | `ICalculationType` / `CalculationTypeBase` | `Fdw.Calculations.Abstractions` | TypeOption for aggregation math (Sum, Avg, etc.) |
 | `CalculationTypes` TypeCollection | `Fdw.Calculations.Abstractions` | Compile-time math function registry |
-| `CalculationTransformationType` | `Fdw.Services.Transformations.Calculation` | ServiceTypeOption for transformation pipeline use |
+| `CalculationTransformationType` | `Fdw.Services.Transformations.Calculation` | Implementation for transformation pipeline use |
 | `CalculationDetailDto` | `Fdw.Web.Calculations.Clients.Abstractions` | API contract for existing formula-based calculations |
 | `cfg.PipelineTransformCalculation` | ControlDb | Inline formula calculations within pipeline transforms |
 

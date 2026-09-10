@@ -27,7 +27,7 @@ namespace Fdw.Aegis;
 /// specific secret manager, never holds a directory of declared
 /// <c>SecretManagerConfiguration</c>s, and never switches on secret SOURCE kind
 /// (MsSql/AzureKeyVault/EnvironmentVariable/...) — swapping the declared backend requires zero
-/// changes here. Each backend's <c>[ServiceTypeOption]</c> self-wires via its own
+/// changes here. Each backend's <c>[Implementation]</c> self-wires via its own
 /// <c>Configuration</c>/<c>Registration</c> bodies, so the set of reachable managers is decided by
 /// which option packages the host references, not by anything in Aegis.
 /// </para>

@@ -14,7 +14,7 @@ namespace Fdw.Services.Agents;
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AgentActionTypes), "Default")]
+[Implementation(typeof(AgentActionTypes), "Default")]
 public sealed class DefaultAgentActionServiceType : AgentActionTypeBase<IGenericService, IAgentActionFactory>
 {
     /// <summary>

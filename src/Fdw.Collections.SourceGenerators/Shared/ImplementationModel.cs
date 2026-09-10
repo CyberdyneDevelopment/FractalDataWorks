@@ -4,9 +4,9 @@ using System.Collections.Immutable;
 namespace Fdw.Collections.SourceGenerators.Shared;
 
 /// <summary>
-/// Model for a discovered ServiceTypeOption.
+/// Model for a discovered Implementation.
 /// </summary>
-internal readonly record struct ServiceTypeOptionModel(
+internal readonly record struct ImplementationModel(
     string TypeName,
     string FullTypeName,
     string Namespace,

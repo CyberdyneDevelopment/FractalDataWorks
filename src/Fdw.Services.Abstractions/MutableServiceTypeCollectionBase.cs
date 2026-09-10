@@ -11,7 +11,7 @@ public abstract class MutableServiceTypeCollectionBase<TBase, TInterface>
     where TInterface : class
 {
     // Source generator provides:
-    // - Static properties for each ServiceTypeOption
+    // - Static properties for each Implementation
     // - RegisterMember(TInterface) method for runtime additions
     // - Unregister(TInterface) method for runtime removal
     // - ById(TKey) method

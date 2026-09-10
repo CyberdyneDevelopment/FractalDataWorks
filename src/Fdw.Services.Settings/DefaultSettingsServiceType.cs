@@ -24,7 +24,7 @@ namespace Fdw.Services.Settings;
 /// (server/tenant/role settings) and the layered IEffectiveSettingsProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(SettingsServiceTypes), "Default")]
+[Implementation(typeof(SettingsServiceTypes), "Default")]
 public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
 {
     /// <summary>

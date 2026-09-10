@@ -12,30 +12,30 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Fdw.Collections.SourceGenerators.Shared;
 
 /// <summary>
-/// Shared logic for discovering ServiceTypeOptions across assemblies.
+/// Shared logic for discovering Implementations across assemblies.
 /// </summary>
-internal static class ServiceTypeOptionDiscovery
+internal static class ImplementationDiscovery
 {
-    private const string ServiceTypeOptionAttributeName = "Fdw.Collections.ServiceTypeOptionAttribute";
+    private const string ImplementationAttributeName = "Fdw.Collections.ImplementationAttribute";
     private const string TypeLookupAttributeName = "Fdw.Collections.Attributes.TypeLookupAttribute";
 
     /// <summary>
-    /// Discovers all ServiceTypeOptions in the compilation and optionally referenced assemblies.
+    /// Discovers all Implementations in the compilation and optionally referenced assemblies.
     /// </summary>
-    public static ImmutableArray<ServiceTypeOptionModel> DiscoverAll(
+    public static ImmutableArray<ImplementationModel> DiscoverAll(
         Compilation compilation,
         bool restrictToCurrentCompilation)
     {
-        var results = new List<ServiceTypeOptionModel>();
+        var results = new List<ImplementationModel>();
 
-        var optionAttrType = compilation.GetTypeByMetadataName(ServiceTypeOptionAttributeName);
+        var optionAttrType = compilation.GetTypeByMetadataName(ImplementationAttributeName);
         var lookupAttrType = compilation.GetTypeByMetadataName(TypeLookupAttributeName);
 
         if (optionAttrType == null)
-            return ImmutableArray<ServiceTypeOptionModel>.Empty;
+            return ImmutableArray<ImplementationModel>.Empty;
 
         // Always scan current assembly
-        var visitor = new ServiceTypeOptionVisitor(optionAttrType, lookupAttrType, results);
+        var visitor = new ImplementationVisitor(optionAttrType, lookupAttrType, results);
         visitor.Visit(compilation.Assembly.GlobalNamespace);
 
         // Scan referenced assemblies unless restricted
@@ -137,16 +137,16 @@ internal static class ServiceTypeOptionDiscovery
         }
     }
 
-    private sealed class ServiceTypeOptionVisitor : SymbolVisitor
+    private sealed class ImplementationVisitor : SymbolVisitor
     {
         private readonly INamedTypeSymbol _optionAttrType;
         private readonly INamedTypeSymbol? _lookupAttrType;
-        private readonly List<ServiceTypeOptionModel> _results;
+        private readonly List<ImplementationModel> _results;
 
-        public ServiceTypeOptionVisitor(
+        public ImplementationVisitor(
             INamedTypeSymbol optionAttrType,
             INamedTypeSymbol? lookupAttrType,
-            List<ServiceTypeOptionModel> results)
+            List<ImplementationModel> results)
         {
             _optionAttrType = optionAttrType;
             _lookupAttrType = lookupAttrType;
@@ -167,7 +167,7 @@ internal static class ServiceTypeOptionDiscovery
 
             if (attr != null)
             {
-                var model = ExtractServiceTypeOptionModel(symbol, attr);
+                var model = ExtractImplementationModel(symbol, attr);
                 if (model != null)
                     _results.Add(model.Value);
             }
@@ -176,7 +176,7 @@ internal static class ServiceTypeOptionDiscovery
                 nested.Accept(this);
         }
 
-        private ServiceTypeOptionModel? ExtractServiceTypeOptionModel(
+        private ImplementationModel? ExtractImplementationModel(
             INamedTypeSymbol typeSymbol,
             AttributeData attribute)
         {
@@ -194,7 +194,7 @@ internal static class ServiceTypeOptionDiscovery
             var constructors = ExtractConstructors(typeSymbol);
             var lookupProperties = DiscoverLookupProperties(typeSymbol, _lookupAttrType);
 
-            return new ServiceTypeOptionModel(
+            return new ImplementationModel(
                 TypeName: typeSymbol.Name,
                 FullTypeName: typeSymbol.ToDisplayString(),
                 Namespace: typeSymbol.ContainingNamespace.ToDisplayString(),

@@ -29,7 +29,7 @@ public class DuplicateTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-                public class ServiceServiceTypeOptionAttribute : Attribute
+                public class ServiceImplementationAttribute : Attribute
                 {
                     public string? Name { get; set; }
                     public string? CollectionName { get; set; }
@@ -43,10 +43,10 @@ public class DuplicateTypeOptionAnalyzerTests
                 [EnhancedEnumBase(CollectionName = "Colors")]
                 public abstract class ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class {|#0:RedColor|} : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class {|#1:AnotherRed|} : ColorBase { }
             }
             """;
@@ -129,7 +129,7 @@ public class DuplicateTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-                public class ServiceServiceTypeOptionAttribute : Attribute
+                public class ServiceImplementationAttribute : Attribute
                 {
                     public string? Name { get; set; }
                     public string? CollectionName { get; set; }
@@ -146,10 +146,10 @@ public class DuplicateTypeOptionAnalyzerTests
                 [EnhancedEnumBase(CollectionName = "Sizes")]
                 public abstract class SizeBase { }
 
-                [ServiceServiceTypeOption(Name = "Large", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Large", CollectionName = "Colors")]
                 public class LargeColor : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Large", CollectionName = "Sizes")]
+                [ServiceImplementation(Name = "Large", CollectionName = "Sizes")]
                 public class LargeSize : SizeBase { }
             }
             """;
@@ -174,7 +174,7 @@ public class DuplicateTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-                public class ServiceServiceTypeOptionAttribute : Attribute
+                public class ServiceImplementationAttribute : Attribute
                 {
                     public string? Name { get; set; }
                     public string? CollectionName { get; set; }
@@ -188,13 +188,13 @@ public class DuplicateTypeOptionAnalyzerTests
                 [EnhancedEnumBase(CollectionName = "Colors")]
                 public abstract class ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class RedColor : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Blue", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Blue", CollectionName = "Colors")]
                 public class BlueColor : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Green", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Green", CollectionName = "Colors")]
                 public class GreenColor : ColorBase { }
             }
             """;
@@ -250,7 +250,7 @@ public class DuplicateTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-                public class ServiceServiceTypeOptionAttribute : Attribute
+                public class ServiceImplementationAttribute : Attribute
                 {
                     public string? Name { get; set; }
                     public string? CollectionName { get; set; }
@@ -264,10 +264,10 @@ public class DuplicateTypeOptionAnalyzerTests
                 [EnhancedEnumBase(CollectionName = "Statuses")]
                 public abstract class StatusBase { }
 
-                [ServiceServiceTypeOption(CollectionName = "Statuses")]
+                [ServiceImplementation(CollectionName = "Statuses")]
                 public class {|#0:Active|} : StatusBase { }
 
-                [ServiceServiceTypeOption(Name = "Active", CollectionName = "Statuses")]
+                [ServiceImplementation(Name = "Active", CollectionName = "Statuses")]
                 public class {|#1:ActiveStatus|} : StatusBase { }
             }
             """;
@@ -300,7 +300,7 @@ public class DuplicateTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-                public class ServiceServiceTypeOptionAttribute : Attribute
+                public class ServiceImplementationAttribute : Attribute
                 {
                     public string? Name { get; set; }
                     public string? CollectionName { get; set; }
@@ -314,10 +314,10 @@ public class DuplicateTypeOptionAnalyzerTests
                 [EnhancedEnumBase(CollectionName = "Colors")]
                 public abstract class ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class {|#0:RedColor|} : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "RED", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "RED", CollectionName = "Colors")]
                 public class {|#1:RedUppercase|} : ColorBase { }
             }
             """;
@@ -349,7 +349,7 @@ public class DuplicateTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-                public class ServiceServiceTypeOptionAttribute : Attribute
+                public class ServiceImplementationAttribute : Attribute
                 {
                     public string? Name { get; set; }
                     public string? CollectionName { get; set; }
@@ -363,13 +363,13 @@ public class DuplicateTypeOptionAnalyzerTests
                 [EnhancedEnumBase(CollectionName = "Colors")]
                 public abstract class ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class {|#0:RedColor1|} : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class {|#1:RedColor2|} : ColorBase { }
 
-                [ServiceServiceTypeOption(Name = "Red", CollectionName = "Colors")]
+                [ServiceImplementation(Name = "Red", CollectionName = "Colors")]
                 public class {|#2:RedColor3|} : ColorBase { }
             }
             """;

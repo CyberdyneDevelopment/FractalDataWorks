@@ -46,7 +46,7 @@ namespace Fdw.Services.Authentication.Flow.StepTypes;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthenticationStepTypes), "ResolvePrincipal")]
+[Implementation(typeof(AuthenticationStepTypes), "ResolvePrincipal")]
 public sealed class ResolvePrincipalStepType
     : AuthenticationStepTypeBase<IGenericService, IServiceFactory<IGenericService, IServiceConfiguration>>,
       IAuthenticationStep

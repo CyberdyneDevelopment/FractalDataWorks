@@ -79,7 +79,7 @@ hardcoded string.
 - `ClientsDataStoreConfigurationProvider` — an `IServiceConfigurationProvider<DataStoreConfiguration>`
   backed by API-fetched configs instead of a gateway;
 - `GenericBuilderSelector` — an `IDataStoreBuilderSelector`;
-- `DataStoreProviderClientType` — a `[ServiceTypeOption(ApiClientTypes)]`.
+- `DataStoreProviderClientType` — a `[Implementation(ApiClientTypes)]`.
 
 With those three, the UI constructs the identical `IDataNode` trees from configs it fetched over
 HTTP — building on the same `Fdw.Data.DataNodes` core the server uses, with no reference to any

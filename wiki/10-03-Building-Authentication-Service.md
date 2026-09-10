@@ -15,10 +15,10 @@ Authentication in FDW is a standard [service domain](06-01-Service-Domains-Overv
 | Header config | `TokenManagerConfiguration` (`auth.TokenManager`) | `Fdw.Services.TokenManagers` |
 | Config provider | `TokenManagerConfigurationProvider` | `Fdw.Services.TokenManagers` |
 | Generic authN service | `AuthenticationService` (`IAuthenticationService`) | `Fdw.Services.TokenManagers` |
-| First option | `OpenIddictTokenManagerType` (`[ServiceTypeOption(..., "OpenIddict")]`) | `Fdw.Services.Authentication.OpenIddict` |
+| First option | `OpenIddictTokenManagerType` (`[Implementation(..., "OpenIddict")]`) | `Fdw.Services.Authentication.OpenIddict` |
 | First implementation | `OpenIdTokenManager` | `Fdw.Services.Authentication.OpenIddict` |
 
-The generic `AuthenticationService` knows nothing about any specific provider. It resolves the **one active** token manager by configured name through `IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>` and delegates to it. Swapping OpenIddict for Entra (or any other IdP) is adding one more `[ServiceTypeOption]` — no consumer changes.
+The generic `AuthenticationService` knows nothing about any specific provider. It resolves the **one active** token manager by configured name through `IFdwServiceProvider<ITokenManager, TokenManagerConfiguration>` and delegates to it. Swapping OpenIddict for Entra (or any other IdP) is adding one more `[Implementation]` — no consumer changes.
 
 ## The `ITokenManager` Contract
 
@@ -95,7 +95,7 @@ public async Task<IGenericResult<ClaimsPrincipal>> Authenticate(
 
 ## The OpenIddict Option (exemplar)
 
-`OpenIddictTokenManagerType` is `[ServiceTypeOption(typeof(TokenManagerTypes), "OpenIddict")]`. It registers everything OpenIddict's engine needs (`AddCore` + `AddServer` + `AddValidation`, the DataGateway-backed stores, the sign-in claim handler) in its `RegisterRequiredServices` — the one registration surface. `OpenIdTokenManager` is the `ITokenManager` implementation.
+`OpenIddictTokenManagerType` is `[Implementation(typeof(TokenManagerTypes), "OpenIddict")]`. It registers everything OpenIddict's engine needs (`AddCore` + `AddServer` + `AddValidation`, the DataGateway-backed stores, the sign-in claim handler) in its `RegisterRequiredServices` — the one registration surface. `OpenIdTokenManager` is the `ITokenManager` implementation.
 
 ### Grant routing (`OpenIdTokenManager.Issue`)
 
@@ -159,7 +159,7 @@ Mirror `OpenIddictTokenManagerType`:
 1. **Create `Fdw.Services.Authentication.MyProvider`.** Reference `Fdw.Services.TokenManagers.Abstractions`.
 2. **Implement `MyTokenManager : ITokenManager`** — the four operations (`Issue` / `Validate` / `Invalidate` / `ExtractClaims`). Do all provider-specific credential/secret validation inside `Issue`.
 3. **Create `MyTokenManagerConfiguration : ITokenManagerConfiguration`** as a standalone typed body with `[ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "MyProvider")]` and a `TokenManagerId` FK. Put every field your manager reads at runtime on this typed body (parent header stays identity-only).
-4. **Create `MyTokenManagerType : TokenManagerTypeBase<...>`** decorated with `[ServiceTypeOption(typeof(TokenManagerTypes), "MyProvider")]`. Override `RegisterRequiredServices` (register your factory, header + typed config providers, and any runtime deps) and `RegisterFactory` (wire the typed provider onto the header provider and register the factory by name).
+4. **Create `MyTokenManagerType : TokenManagerTypeBase<...>`** decorated with `[Implementation(typeof(TokenManagerTypes), "MyProvider")]`. Override `RegisterRequiredServices` (register your factory, header + typed config providers, and any runtime deps) and `RegisterFactory` (wire the typed provider onto the header provider and register the factory by name).
 5. **Nothing in `Program.cs`.** `TokenManagerTypes` is discovered by PlatformServices; the option's `Registration.SourceGenerators` module initializer registers it on package reference. Point the deployment at your provider by seeding a single enabled `auth.TokenManager` row with `ServiceOptionType = 'MyProvider'` plus its typed-body row.
 
 For an external IdP, you can reuse the `external_identity` grant + `auth.ExternalIdentity` mapping rows instead of writing a full credential path — the vault path (`IUserCredentialService.Verify`) is invoked only for `password` / `agent_key`.

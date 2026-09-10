@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Agents.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Agent Action API client.
+/// Implementation for the Agent Action API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "AgentActionClient")]
+[Implementation(typeof(ApiClientTypes), "AgentActionClient")]
 public sealed class AgentActionClientType : ApiClientTypeBase<AgentActionClient>
 {
     /// <summary>

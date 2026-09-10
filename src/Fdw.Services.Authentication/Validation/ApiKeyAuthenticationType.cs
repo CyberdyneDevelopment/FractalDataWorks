@@ -31,7 +31,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// nothing to exchange. Validating an inbound credential per request is what this collection is.
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(AuthenticationServiceTypes), "ApiKey")]
+[Implementation(typeof(AuthenticationServiceTypes), "ApiKey")]
 public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
 {
     /// <summary>The bearer prefix every credential of this kind carries.</summary>

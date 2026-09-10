@@ -31,14 +31,14 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             .Where(static m => m != null)
             .Select(static (m, _) => m!.Value);
 
-        // Discover all ServiceTypeOptions
+        // Discover all Implementations
         var optionsProvider = context.CompilationProvider
             .Combine(collectionsProvider.Collect())
             .Select(static (pair, _) =>
             {
                 var (compilation, collections) = pair;
                 var restrictToCurrentCompilation = collections.Any(c => c.RestrictToCurrentCompilation);
-                return ServiceTypeOptionDiscovery.DiscoverAll(compilation, restrictToCurrentCompilation);
+                return ImplementationDiscovery.DiscoverAll(compilation, restrictToCurrentCompilation);
             });
 
         // Combine collections, options, and compilation for abstract member extraction
@@ -100,10 +100,10 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             FullName: classSymbol.ToDisplayString(),
             BaseTypeName: resolvedBaseType,
             InterfaceTypeName: resolvedInterfaceType,
-            MatchKey: ServiceTypeOptionDiscovery.GetMatchKey(collectionType),
+            MatchKey: ImplementationDiscovery.GetMatchKey(collectionType),
             Kind: CollectionKind.Immutable,
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
-            ParentCollectionMatchKey: parentCollection != null ? ServiceTypeOptionDiscovery.GetMatchKey(parentCollection) : null,
+            ParentCollectionMatchKey: parentCollection != null ? ImplementationDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
             ServiceInterfaceTypeName: serviceInterface?.ToDisplayString(),
             ConfigurationInterfaceTypeName: configurationInterface?.ToDisplayString(),
@@ -172,7 +172,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
 
     private static void Execute(
         SourceProductionContext context,
-        ((ImmutableArray<ServiceTypeCollectionModel> Collections, ImmutableArray<ServiceTypeOptionModel> Options) Data, Compilation Compilation) source)
+        ((ImmutableArray<ServiceTypeCollectionModel> Collections, ImmutableArray<ImplementationModel> Options) Data, Compilation Compilation) source)
     {
         var (collections, allOptions) = source.Data;
         var compilation = source.Compilation;
@@ -185,7 +185,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
                 .Where(o => string.Equals(o.CollectionMatchKey, collection.MatchKey, StringComparison.Ordinal))
                 .ToImmutableArray();
 
-            options = ReplacesDiscovery.FilterReplacedServiceTypeOptions(options, replacementMap, context);
+            options = ReplacesDiscovery.FilterReplacedImplementations(options, replacementMap, context);
 
             // Find child collections for this parent
             var childCollections = collections
@@ -218,9 +218,9 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
     private static void ValidateOptions(
         SourceProductionContext context,
         ServiceTypeCollectionModel collection,
-        ImmutableArray<ServiceTypeOptionModel> options)
+        ImmutableArray<ImplementationModel> options)
     {
-        // Empty collections are valid - ServiceTypeOptions may be added in other packages
+        // Empty collections are valid - Implementations may be added in other packages
         if (options.Length == 0)
         {
             return;
@@ -231,7 +231,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
         {
             context.ReportDiagnostic(Diagnostic.Create(
-                TypeCollectionGeneratorDiagnostics.ReservedServiceTypeOptionName,
+                TypeCollectionGeneratorDiagnostics.ReservedImplementationName,
                 Location.None,
                 reserved.FullTypeName,
                 reserved.OptionName));
@@ -275,7 +275,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
     private static void ValidateLookupPropertyValues(
         SourceProductionContext context,
         string collectionName,
-        ImmutableArray<ServiceTypeOptionModel> options)
+        ImmutableArray<ImplementationModel> options)
     {
         if (options.Length == 0)
             return;
@@ -314,7 +314,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
 #pragma warning disable MA0051 // Source generator emits complete ServiceTypeCollection class — splitting scatters the template
     private static string GenerateCode(
         ServiceTypeCollectionModel collection,
-        ImmutableArray<ServiceTypeOptionModel> options,
+        ImmutableArray<ImplementationModel> options,
         ImmutableArray<ChildCollectionModel> childCollections,
         ImmutableArray<AbstractMemberModel> abstractMembers,
         HashSet<string>? userDeclaredMembers = null)

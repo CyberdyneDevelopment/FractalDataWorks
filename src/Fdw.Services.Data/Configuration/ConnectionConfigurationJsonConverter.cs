@@ -75,7 +75,7 @@ public sealed class ConnectionConfigurationJsonConverter : JsonConverter<Connect
                 throw new JsonException(
                     $"Connection '{connection.Name}' names implementation '{connection.Implementation}', "
                     + "which is not registered in ConnectionTypes. Reference the package that provides that "
-                    + "[ServiceTypeOption] so its module initializer registers it before configuration is loaded.");
+                    + "[Implementation] so its module initializer registers it before configuration is loaded.");
             }
 
             var settingsType = connectionType.ConfigurationType;

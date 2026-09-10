@@ -19,13 +19,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
 /// <summary>
-/// ClaimMapped <see cref="ExternalIdentityProvisionerTypes"/> ServiceTypeOption. Registers the header
+/// ClaimMapped <see cref="ExternalIdentityProvisionerTypes"/> Implementation. Registers the header
 /// + typed-body gateway-backed configuration providers and the
 /// <see cref="ClaimMappedProvisionerFactory"/> that builds <see cref="ClaimMappedProvisioner"/>
 /// instances. Mirrors <see cref="Chained.ChainedExternalIdentityProvisionerType"/> structurally.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ExternalIdentityProvisionerTypes), "ClaimMapped")]
+[Implementation(typeof(ExternalIdentityProvisionerTypes), "ClaimMapped")]
 public sealed class ClaimMappedProvisionerType
     : ExternalIdentityProvisionerTypeBase<
         IExternalIdentityProvisioner,

@@ -14,7 +14,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `IVsCodeCommandType` | interface | Non-generic marker for a VS Code command declared as a [ServiceTypeOption]. The collection is keyed on… |
+| `IVsCodeCommandType` | interface | Non-generic marker for a VS Code command declared as a [Implementation]. The collection is keyed on… |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.
 

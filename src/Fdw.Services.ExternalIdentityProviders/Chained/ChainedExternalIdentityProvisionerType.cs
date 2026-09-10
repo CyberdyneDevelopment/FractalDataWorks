@@ -19,13 +19,13 @@ using Fdw.Configuration;
 namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
-/// Chained <see cref="ExternalIdentityProvisionerTypes"/> ServiceTypeOption. Registers the header +
+/// Chained <see cref="ExternalIdentityProvisionerTypes"/> Implementation. Registers the header +
 /// typed-body gateway-backed configuration providers and the
 /// <see cref="ChainedExternalIdentityProvisionerFactory"/> that builds
 /// <see cref="ChainedExternalIdentityProvisioner"/> instances.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ExternalIdentityProvisionerTypes), "Chained")]
+[Implementation(typeof(ExternalIdentityProvisionerTypes), "Chained")]
 public sealed class ChainedExternalIdentityProvisionerType
     : ExternalIdentityProvisionerTypeBase<
         IExternalIdentityProvisioner,

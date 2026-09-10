@@ -7,7 +7,7 @@ secret that was copied into both ends.
 `Fdw.Services.Identity` is the domain that obtains those tokens. Its options are named for the
 **mechanism** by which a service proves itself, not for the authorization server that happens to be
 answering: both shipped mechanisms are standard OAuth2 grants and work against any server that
-implements them. A third mechanism is a new package with a new `[ServiceTypeOption]`, nothing more.
+implements them. A third mechanism is a new package with a new `[Implementation]`, nothing more.
 
 ---
 
@@ -99,13 +99,13 @@ Fdw.Services.Identity                (net10.0)
 
 Fdw.Services.Identity.ClientCredentials  (net10.0)
 ├── ClientCredentialsConfiguration        typed body (sec.ClientCredentialsIdentity)
-├── ClientCredentialsIdentityType         [ServiceTypeOption(…, "ClientCredentials")]
+├── ClientCredentialsIdentityType         [Implementation(…, "ClientCredentials")]
 ├── ClientCredentialsIdentityFactory
 └── ClientCredentialsIdentityService      RFC 6749 §4.4 token-endpoint client
 
 Fdw.Services.Identity.JwtAssertion       (net10.0)
 ├── JwtAssertionConfiguration             typed body (sec.JwtAssertionIdentity)
-├── JwtAssertionIdentityType              [ServiceTypeOption(…, "JwtAssertion")]
+├── JwtAssertionIdentityType              [Implementation(…, "JwtAssertion")]
 ├── JwtAssertionIdentityFactory
 ├── JwtAssertionIdentityService           RFC 7523 token-endpoint client
 └── Assertions/                           IFederatedAssertionSource + env/file sources

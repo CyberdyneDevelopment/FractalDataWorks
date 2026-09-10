@@ -192,7 +192,7 @@ var app = builder.Build();
 DataVaultServiceTypes.Initialize(app.Services, loggerFactory);
 ```
 
-`DataVaultServiceTypes` is a `ServiceTypeCollection`. `DefaultDataVaultType` is its built-in `[ServiceTypeOption]`. The vault is consumed by a **credential service** (the [Credentials Service Domain](06-08-Credentials-Service-Domain.md)), which resolves a vault by name through `IDataVaultProvider` and forwards vault commands.
+`DataVaultServiceTypes` is a `ServiceTypeCollection`. `DefaultDataVaultType` is its built-in `[Implementation]`. The vault is consumed by a **credential service** (the [Credentials Service Domain](06-08-Credentials-Service-Domain.md)), which resolves a vault by name through `IDataVaultProvider` and forwards vault commands.
 
 ### How PAT / Agent-Key Services Reach the Vault
 
@@ -201,7 +201,7 @@ PAT and agent-key services are **no longer grafted onto `UserServiceTypes`** as 
 `DefaultUserServiceType` continues to register the user-facing services via the same package-reference-as-registration-intent pattern:
 
 ```csharp
-[ServiceTypeOption(typeof(UserServiceTypes), "Default")]
+[Implementation(typeof(UserServiceTypes), "Default")]
 public sealed class DefaultUserServiceType : UserServiceTypeBase
 {
     // Registers: IUserService (Scoped), IUserRoleService (Scoped),
@@ -262,7 +262,7 @@ internal sealed class ValidateMySecretCommand
 }
 ```
 
-3. **Register in your `ServiceTypeOption`**:
+3. **Register in your `Implementation`**:
 
 ```csharp
 services.TryAddSingleton<IMySecretVaultCommands, MySecretVaultCommands>();
@@ -288,7 +288,7 @@ var vaultResult = await _vaultProvider
 Follow the same pattern as `DefaultDataVaultType`:
 
 1. Create `MyDataVaultConfiguration : IDataVaultConfiguration` with `ConnectionId` and any additional properties.
-2. Create `MyDataVaultType : DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>` decorated with `[ServiceTypeOption(typeof(DataVaultServiceTypes), "MyType")]`.
+2. Create `MyDataVaultType : DataVaultTypeBase<IDataVault, IDataVaultFactory<IDataVault, DataVaultConfiguration>, DataVaultConfiguration>` decorated with `[Implementation(typeof(DataVaultServiceTypes), "MyType")]`.
 3. Override `Configure`, `RegisterRequiredServices`, and `RegisterFactory` following `DefaultDataVaultType` as the exemplar.
 4. Call `DataVaultConfigurationProvider.Register(Name, typedProvider)` in `RegisterFactory`.
 5. If your vault base takes an `IDataConnection` by constructor (resolved by the provider in system context and handed to the immutable vault), mark that parameter `[ServiceOptionDependency]` so it opts out of FDW044 — see [above](#serviceoptiondependency-on-the-vaults-connection).
@@ -305,5 +305,5 @@ Follow the same pattern as `DefaultDataVaultType`:
 - [Secret Management](12-10-Secret-Management.md) — SecretManager domain (HMAC keys, signing keys, connection passwords)
 - [JWT Authentication Architecture](12-11-JWT-Authentication-Architecture.md) — OpenIddict auth flow; vault in the login path
 - [Service Domains Overview](06-01-Service-Domains-Overview.md) — ServiceTypeCollection plugin architecture
-- [TypeCollection Patterns](10-TypeCollection-Patterns.md) — Cross-assembly registration via ServiceTypeOption
+- [TypeCollection Patterns](10-TypeCollection-Patterns.md) — Cross-assembly registration via Implementation
 - [Configuration Provider Registration](03-05-Configuration-Provider-Registration-Pattern.md) — Three-phase DI lifecycle

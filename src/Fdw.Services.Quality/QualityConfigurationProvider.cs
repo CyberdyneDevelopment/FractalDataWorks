@@ -29,7 +29,7 @@ public class QualityConfigurationProvider
     /// Registers the QualityConfigurationProvider with DI, targeting this domain's own default
     /// location (this class's own constructor default). Pure Phase-1b registration — IOptions
     /// binding from IConfiguration is a Phase-1a concern and lives in the consuming
-    /// <c>[ServiceTypeOption].Configure</c>, not here.
+    /// <c>[Implementation].Configure</c>, not here.
     /// </summary>
     private readonly ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand> _qualityRuleProvider;
     private readonly ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand> _annotationProvider;

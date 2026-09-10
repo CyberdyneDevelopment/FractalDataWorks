@@ -151,7 +151,7 @@ public static partial class ConfigurationGatewayLog
     /// <summary>Logged when the schema names a connection type that is not registered in ConnectionTypes.</summary>
     [MessageLogging(EventId = 71004, Level = LogLevel.Error,
         Message = "ConfigurationGateway: connection type '{connectionType}' declared in '{schemaFile}' is not "
-                + "registered. Is the package that provides it referenced? A [ServiceTypeOption] registers itself "
+                + "registered. Is the package that provides it referenced? A [Implementation] registers itself "
                 + "at assembly load, so an unreferenced package contributes nothing. Registered types: {registeredTypes}")]
     public static partial IGenericMessage ConnectionTypeNotRegistered(
         ILogger logger, string connectionType, string schemaFile, string registeredTypes);

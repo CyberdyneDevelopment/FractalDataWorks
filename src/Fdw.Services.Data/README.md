@@ -16,7 +16,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ConfigurationGatewayServiceType` | class | ServiceTypeOption that registers Lazy&lt;IConfigurationGateway&gt; and . itself is registered externally… |
+| `ConfigurationGatewayServiceType` | class | Implementation that registers Lazy&lt;IConfigurationGateway&gt; and . itself is registered externally… |
 | `DataGatewayServiceType` | class | Default DataGateway service type that registers , , and with the dependency injection container. |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.

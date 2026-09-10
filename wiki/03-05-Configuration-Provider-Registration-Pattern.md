@@ -8,7 +8,7 @@ below is supported.
 
 ## Principle
 
-**Each ServiceTypeOption registers its own requirements.** The Configure / Register /
+**Each Implementation registers its own requirements.** The Configure / Register /
 Initialize three-phase lifecycle is the only registration path. There is no separate
 `AddFramework<Domain>()` extension and no `RegisterOverrides` registry — the package
 reference + the `[TypeOption]` attribute + the module-initialiser emitted by

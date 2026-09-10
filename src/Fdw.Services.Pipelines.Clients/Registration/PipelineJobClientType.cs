@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Services.Pipelines.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Pipeline Job API client.
+/// Implementation for the Pipeline Job API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "PipelineJobClient")]
+[Implementation(typeof(ApiClientTypes), "PipelineJobClient")]
 public sealed class PipelineJobClientType : ApiClientTypeBase<IPipelineJobClient>
 {
     /// <summary>

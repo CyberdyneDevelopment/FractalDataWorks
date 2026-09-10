@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Web.Calculations.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Calculation API client.
+/// Implementation for the Calculation API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "CalculationClient")]
+[Implementation(typeof(ApiClientTypes), "CalculationClient")]
 public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClient>
 {
     /// <summary>

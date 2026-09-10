@@ -28,7 +28,7 @@ namespace Fdw.Services.Notifications;
 
 /// <summary>
 /// ServiceTypeCollection for all notification service implementations.
-/// The source generator populates this with discovered [ServiceTypeOption] types.
+/// The source generator populates this with discovered [Implementation] types.
 /// </summary>
 /// <remarks>
 /// PlatformServices runs Register(services), which invokes each option's Register phase.

@@ -10,7 +10,7 @@ namespace Fdw.Services.SecretManagers.TestDouble;
 /// </summary>
 /// <remarks>
 /// Why a test-owned backend rather than a shipped one: FDW deliberately ships no concrete
-/// SecretManager <c>[ServiceTypeOption]</c> — secret custody lives with the consuming application
+/// SecretManager <c>[Implementation]</c> — secret custody lives with the consuming application
 /// (see <c>ReferenceSecretManagers.*</c>). This suite is such a consumer, so it declares its own
 /// option in its OWN assembly, exactly as the downstream-extensible model intends. That keeps the
 /// non-exposure proof self-contained and keeps Aegis ignorant of any specific backend.

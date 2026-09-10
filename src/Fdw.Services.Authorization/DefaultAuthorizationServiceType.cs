@@ -33,7 +33,7 @@ namespace Fdw.Services.Authorization;
 /// and ASP.NET Core authorization bridge components with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthorizationServiceTypes), "Default")]
+[Implementation(typeof(AuthorizationServiceTypes), "Default")]
 public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGenericService, IAuthorizationFactory>
 {
     /// <summary>

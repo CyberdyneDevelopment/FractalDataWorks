@@ -33,7 +33,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// it is a secret-manager operation rather than a deployment.
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(AuthenticationServiceTypes), "LocalKey")]
+[Implementation(typeof(AuthenticationServiceTypes), "LocalKey")]
 public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationType"/> class.</summary>

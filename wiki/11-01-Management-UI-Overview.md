@@ -58,7 +58,7 @@ Both skins require the Reference.Api backend (from the `reference-api` repositor
 
 Each FDW domain ships a `*.UI.Pages` package that contributes:
 
-- A `[ServiceTypeOption(typeof(PageTypes), "...")]` registration carrying the page assembly and `NavDescriptor` entries
+- A `[Implementation(typeof(PageTypes), "...")]` registration carrying the page assembly and `NavDescriptor` entries
 - The page implementations themselves (`@page "/route"` Razor components)
 - A headless provider in the matching `*.Components` package
 
@@ -72,7 +72,7 @@ Both reference UI variants are **rendering-only skins** — they contain zero bu
 
 - **Logic providers** (per-domain `*.Components` packages) — headless Blazor components that manage state, error handling, loading states, and complex workflows via `RenderFragment<TContext>`.
 - **Per-domain API clients** (`*.Clients` packages) — typed HTTP clients registered via `ApiClientTypes` TypeCollection. Application code never instantiates `HttpClient` directly.
-- **Page packages** (`*.UI.Pages`) — default page implementations and the `[ServiceTypeOption(typeof(PageTypes), "...")]` registration.
+- **Page packages** (`*.UI.Pages`) — default page implementations and the `[Implementation(typeof(PageTypes), "...")]` registration.
 
 ### What the Reference UI Skins Provide
 

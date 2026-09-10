@@ -29,7 +29,7 @@ public sealed class CollectionBuilderConfiguration
     public string CollectionAttributeName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the name of the attribute that marks collection value/option types (e.g., "TypeOption", "ServiceTypeOption").
+    /// Gets the name of the attribute that marks collection value/option types (e.g., "TypeOption", "Implementation").
     /// </summary>
     public string ValueAttributeName { get; init; } = string.Empty;
 
@@ -54,7 +54,7 @@ public sealed class CollectionBuilderConfiguration
         BaseCollectionArity = 5,
         BaseNamespace = "Fdw.ServiceTypes",
         CollectionAttributeName = "ServiceTypeCollection",
-        ValueAttributeName = "ServiceTypeOption"
+        ValueAttributeName = "Implementation"
     };
 
     /// <summary>

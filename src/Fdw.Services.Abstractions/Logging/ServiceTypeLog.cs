@@ -844,7 +844,7 @@ public static partial class ServiceTypeLog
         Message = "[{collectionName}] {phase} (collection #{sequence}) ran with NO options registered. "
             + "Nothing joined this collection, so every lookup against it will miss. If that is not "
             + "intended, the entry point is missing a reference to the package holding the "
-            + "[ServiceTypeOption] or [TypeOption] classes — a library never self-registers a plain "
+            + "[Implementation] or [TypeOption] classes — a library never self-registers a plain "
             + "[TypeOption]; the entry point's module initializer scans its referenced assemblies. "
             + "Reference the implementation (or its .Registration package) from the entry point and "
             + "the count here will be non-zero.")]
@@ -1231,7 +1231,7 @@ public static partial class ServiceTypeLog
     [MessageLogging(
         EventId = 61016,
         Level = LogLevel.Warning,
-        Message = "[{collectionName}] registered '{providerServiceType}' but collected ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [ServiceTypeOption] types.")]
+        Message = "[{collectionName}] registered '{providerServiceType}' but collected ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [Implementation] types.")]
     public static partial IGenericMessage DomainRegisteredWithNoOptions(
         ILogger logger,
         string collectionName,

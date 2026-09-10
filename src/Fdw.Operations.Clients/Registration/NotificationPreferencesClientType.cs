@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Operations.Clients.Registration;
 
 /// <summary>
-/// ServiceTypeOption for the Notification Preferences API client.
+/// Implementation for the Notification Preferences API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "NotificationPreferencesClient")]
+[Implementation(typeof(ApiClientTypes), "NotificationPreferencesClient")]
 public sealed class NotificationPreferencesClientType : ApiClientTypeBase<NotificationPreferencesApiClient>
 {
     /// <summary>

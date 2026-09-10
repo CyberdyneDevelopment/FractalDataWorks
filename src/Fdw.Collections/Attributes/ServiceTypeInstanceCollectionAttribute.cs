@@ -44,12 +44,12 @@ public sealed class ServiceTypeInstanceCollectionAttribute : Attribute
     }
 
     /// <summary>
-    /// The abstract base type that all ServiceTypeOptions must inherit from.
+    /// The abstract base type that all Implementations must inherit from.
     /// </summary>
     public Type BaseType { get; }
 
     /// <summary>
-    /// The interface type used for return values. All ServiceTypeOptions must implement this.
+    /// The interface type used for return values. All Implementations must implement this.
     /// </summary>
     public Type InterfaceType { get; }
 
@@ -72,7 +72,7 @@ public sealed class ServiceTypeInstanceCollectionAttribute : Attribute
     public string? Name { get; }
 
     /// <summary>
-    /// If true, only discovers ServiceTypeOptions in the current compilation (not referenced assemblies).
+    /// If true, only discovers Implementations in the current compilation (not referenced assemblies).
     /// Default is false (discovers across all referenced assemblies).
     /// </summary>
     public bool RestrictToCurrentCompilation { get; set; }

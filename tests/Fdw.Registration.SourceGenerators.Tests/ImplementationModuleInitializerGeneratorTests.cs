@@ -5,12 +5,12 @@ using Xunit;
 
 namespace Fdw.Registration.SourceGenerators.Tests;
 
-public class ServiceTypeOptionModuleInitializerGeneratorTests
+public class ImplementationModuleInitializerGeneratorTests
 {
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "SourceGen")]
-    public void GeneratorSkipsAssemblyDefiningServiceTypeOptions()
+    public void GeneratorSkipsAssemblyDefiningImplementations()
     {
         var source = @"
 using Fdw.Collections;
@@ -26,21 +26,21 @@ public abstract class ServiceBase : TypeOptionBase<int, ServiceBase>
 [ServiceTypeCollection(typeof(ServiceBase), typeof(ServiceBase), typeof(Services))]
 public abstract partial class Services : TypeCollectionBase<ServiceBase, ServiceBase> { }
 
-[ServiceTypeOption(typeof(Services), ""LocalService"")]
+[Implementation(typeof(Services), ""LocalService"")]
 public sealed class LocalService : ServiceBase
 {
     public LocalService() : base(1, ""LocalService"") { }
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(source, outputKind: OutputKind.DynamicallyLinkedLibrary);
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(source, outputKind: OutputKind.DynamicallyLinkedLibrary);
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldBeNull();
 
-        var diagnostic = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.Diagnostics.g.cs");
+        var diagnostic = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.Diagnostics.g.cs");
         diagnostic.ShouldBeNull();
     }
 
@@ -63,7 +63,7 @@ public abstract class ConnectionBase : TypeOptionBase<int, ConnectionBase>
 [ServiceTypeCollection(typeof(ConnectionBase), typeof(ConnectionBase), typeof(Connections))]
 public abstract partial class Connections : TypeCollectionBase<ConnectionBase, ConnectionBase> { }
 
-[ServiceTypeOption(typeof(Connections), ""MsSql"")]
+[Implementation(typeof(Connections), ""MsSql"")]
 public sealed class MsSqlConnection : ConnectionBase
 {
     public MsSqlConnection() : base(1, ""MsSql"") { }
@@ -83,13 +83,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(
             consumingSource,
             new[] { libraryReference });
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldNotBeNull();
         generated.ShouldContain("ModuleInitializer");
         generated.ShouldContain("Connections.RegisterMember");
@@ -123,13 +123,13 @@ public abstract class AuthBase : TypeOptionBase<int, AuthBase>
 [ServiceTypeCollection(typeof(AuthBase), typeof(AuthBase), typeof(AuthProviders))]
 public abstract partial class AuthProviders : TypeCollectionBase<AuthBase, AuthBase> { }
 
-[ServiceTypeOption(typeof(Connections), ""MsSql"")]
+[Implementation(typeof(Connections), ""MsSql"")]
 public sealed class MsSqlConnection : ConnectionBase
 {
     public MsSqlConnection() : base(1, ""MsSql"") { }
 }
 
-[ServiceTypeOption(typeof(AuthProviders), ""OAuth"")]
+[Implementation(typeof(AuthProviders), ""OAuth"")]
 public sealed class OAuthProvider : AuthBase
 {
     public OAuthProvider() : base(1, ""OAuth"") { }
@@ -149,13 +149,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(
             consumingSource,
             new[] { libraryReference });
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldNotBeNull();
         generated.ShouldContain("Connections.RegisterMember");
         generated.ShouldContain("MsSqlConnection");
@@ -182,13 +182,13 @@ public abstract class ServiceBase : TypeOptionBase<int, ServiceBase>
 [ServiceTypeCollection(typeof(ServiceBase), typeof(ServiceBase), typeof(Services))]
 public abstract partial class Services : TypeCollectionBase<ServiceBase, ServiceBase> { }
 
-[ServiceTypeOption(typeof(Services), ""Abstract"")]
+[Implementation(typeof(Services), ""Abstract"")]
 public abstract class AbstractService : ServiceBase
 {
     protected AbstractService() : base(1, ""Abstract"") { }
 }
 
-[ServiceTypeOption(typeof(Services), ""Concrete"")]
+[Implementation(typeof(Services), ""Concrete"")]
 public sealed class ConcreteService : ServiceBase
 {
     public ConcreteService() : base(2, ""Concrete"") { }
@@ -208,13 +208,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(
             consumingSource,
             new[] { libraryReference });
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldNotBeNull();
         generated.ShouldContain("ConcreteService");
         generated.ShouldNotContain("AbstractService");
@@ -239,13 +239,13 @@ public abstract class ServiceBase : TypeOptionBase<int, ServiceBase>
 [ServiceTypeCollection(typeof(ServiceBase), typeof(ServiceBase), typeof(Services))]
 public abstract partial class Services : TypeCollectionBase<ServiceBase, ServiceBase> { }
 
-[ServiceTypeOption(typeof(Services), ""Generic"")]
+[Implementation(typeof(Services), ""Generic"")]
 public sealed class GenericService<T> : ServiceBase
 {
     public GenericService() : base(1, ""Generic"") { }
 }
 
-[ServiceTypeOption(typeof(Services), ""Concrete"")]
+[Implementation(typeof(Services), ""Concrete"")]
 public sealed class ConcreteService : ServiceBase
 {
     public ConcreteService() : base(2, ""Concrete"") { }
@@ -265,13 +265,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(
             consumingSource,
             new[] { libraryReference });
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldNotBeNull();
         generated.ShouldContain("ConcreteService");
         generated.ShouldNotContain("GenericService");
@@ -296,13 +296,13 @@ public abstract class ServiceBase : TypeOptionBase<int, ServiceBase>
 [ServiceTypeCollection(typeof(ServiceBase), typeof(ServiceBase), typeof(Services))]
 public abstract partial class Services : TypeCollectionBase<ServiceBase, ServiceBase> { }
 
-[ServiceTypeOption(typeof(Services), ""NoParameterless"")]
+[Implementation(typeof(Services), ""NoParameterless"")]
 public sealed class NoParameterlessService : ServiceBase
 {
     public NoParameterlessService(string param) : base(1, ""NoParameterless"") { }
 }
 
-[ServiceTypeOption(typeof(Services), ""Valid"")]
+[Implementation(typeof(Services), ""Valid"")]
 public sealed class ValidService : ServiceBase
 {
     public ValidService() : base(2, ""Valid"") { }
@@ -322,13 +322,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(
             consumingSource,
             new[] { libraryReference });
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldNotBeNull();
         generated.ShouldContain("ValidService");
         generated.ShouldNotContain("NoParameterlessService");
@@ -348,13 +348,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(source);
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(source);
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var diagnostic = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.Diagnostics.g.cs");
+        var diagnostic = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.Diagnostics.g.cs");
         diagnostic.ShouldNotBeNull();
-        diagnostic.ShouldContain("ServiceTypeOptionModuleInitializerGenerator");
+        diagnostic.ShouldContain("ImplementationModuleInitializerGenerator");
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public abstract class ConnectionBase : TypeOptionBase<int, ConnectionBase>
 [ServiceTypeCollection(typeof(ConnectionBase), typeof(ConnectionBase), typeof(Connections))]
 public abstract partial class Connections : TypeCollectionBase<ConnectionBase, ConnectionBase> { }
 
-[ServiceTypeOption(typeof(Connections), ""MsSql"")]
+[Implementation(typeof(Connections), ""MsSql"")]
 public sealed class MsSqlConnection : ConnectionBase
 {
     public MsSqlConnection() : base(1, ""MsSql"") { }
@@ -396,13 +396,13 @@ public class Program
 }
 ";
 
-        var (compilation, diagnostics) = CompilationHelper.RunServiceTypeOptionGenerator(
+        var (compilation, diagnostics) = CompilationHelper.RunImplementationGenerator(
             consumingSource,
             new[] { libraryReference });
 
         diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
 
-        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ServiceTypeOptionModuleInitializer.g.cs");
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "ImplementationModuleInitializer.g.cs");
         generated.ShouldNotBeNull();
         generated.ShouldContain("global::Library.Services.Connections.RegisterMember");
         generated.ShouldContain("global::Library.Services.MsSqlConnection");

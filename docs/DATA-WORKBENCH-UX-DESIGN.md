@@ -113,10 +113,10 @@ ICanvasModel : IPageModel                  (UI.Abstractions — zero lib refs)
 ServiceTypeCollection<ICanvasRenderer>     (renderer registry — SAME pattern as charts)
   ICanvasRenderer.Render(ICanvasModel, IRenderContext) → RenderResult
   + capability flags: SupportsEditing, SupportsPorts, SupportsLargeGraphs, LayoutAlgorithms
-  [ServiceTypeOption] BlazorDiagramsRenderer  (Blazor-native node/port/link editor — default for Edit)
-  [ServiceTypeOption] CytoscapeRenderer       (JS interop — large lineage + layout algorithms; default for big View)
-  [ServiceTypeOption] SvgCanvasRenderer       (hand-rolled SVG — zero-dep, fully themeable baseline)
-  [ServiceTypeOption] SpectreCanvasRenderer   (TUI — tree/adjacency view of the same model)
+  [Implementation] BlazorDiagramsRenderer  (Blazor-native node/port/link editor — default for Edit)
+  [Implementation] CytoscapeRenderer       (JS interop — large lineage + layout algorithms; default for big View)
+  [Implementation] SvgCanvasRenderer       (hand-rolled SVG — zero-dep, fully themeable baseline)
+  [Implementation] SpectreCanvasRenderer   (TUI — tree/adjacency view of the same model)
 ```
 
 - **Default by capability/mode:** Edit → an editor-capable renderer (Blazor.Diagrams); large View → a layout/perf renderer (Cytoscape); a **renderer dropdown** switches per-canvas to showcase interop (same UX as the chart-renderer dropdown).
@@ -216,11 +216,11 @@ ServiceTypeCollection<IChartRenderer>      (the renderer registry — FDW plugin
   + capability flags (SupportsGeo, SupportsLargeSeries, SupportsCrossfilter…)
   + SupportedChartTypes  (which ChartTypes this renderer can draw)
 
-  [ServiceTypeOption] ApexChartsRenderer   (Blazor — polished default)
-  [ServiceTypeOption] EChartsRenderer      (Blazor — large data / exotic)
-  [ServiceTypeOption] RadzenChartRenderer  (Blazor — zero-JS)
-  [ServiceTypeOption] SyncfusionRenderer   (Blazor — max breadth)
-  [ServiceTypeOption] SpectreChartRenderer (TUI — bar/breakdown)
+  [Implementation] ApexChartsRenderer   (Blazor — polished default)
+  [Implementation] EChartsRenderer      (Blazor — large data / exotic)
+  [Implementation] RadzenChartRenderer  (Blazor — zero-JS)
+  [Implementation] SyncfusionRenderer   (Blazor — max breadth)
+  [Implementation] SpectreChartRenderer (TUI — bar/breakdown)
 ```
 
 **UI: two coupled, data-driven pickers**

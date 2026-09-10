@@ -7,7 +7,7 @@ This is the **polymorphic configuration pattern**. It is the official FDW patter
 ## When the pattern applies
 
 A domain needs polymorphic configuration if and only if **both** are true:
-1. It has 2+ `[ServiceTypeOption]` impls under one `[ServiceTypeCollection]`.
+1. It has 2+ `[Implementation]` impls under one `[ServiceTypeCollection]`.
 2. The variants have **different runtime field shapes** (not just different values for the same fields).
 
 | Situation | Pattern |
@@ -116,7 +116,7 @@ The variant-specific columns (`MaxParallelism`/`LoadMode`/`TruncateBeforeLoad` f
 ## Auditing an existing domain
 
 A domain is **broken** in this respect if both:
-- Multiple `[ServiceTypeOption]` impls exist, AND
+- Multiple `[Implementation]` impls exist, AND
 - The parent table contains columns that any factory reads at runtime.
 
 Symptom at runtime: the factory log shows `Configuration loaded: ''` (empty Name / source / destination), and the runtime fails with `Container '' not found in configuration` or similar empty-config errors.
@@ -140,7 +140,7 @@ Pick (2) when an audit confirms the runtime never reaches the typed-body tables.
 
 ## Single-type domains
 
-A `[ServiceTypeCollection]` with a single `[ServiceTypeOption]` impl does not need a typed body. Use one flat table; runtime fields live on the parent. This is acceptable until a second variant is added; at that point migrate to polymorphic configuration.
+A `[ServiceTypeCollection]` with a single `[Implementation]` impl does not need a typed body. Use one flat table; runtime fields live on the parent. This is acceptable until a second variant is added; at that point migrate to polymorphic configuration.
 
 ## Related skills and patterns
 
@@ -155,6 +155,6 @@ The following internal Claude skills (in `claude-tools/`, not shipped publicly) 
 
 - [ManagedConfiguration](03-01-ManagedConfiguration.md) — attribute and DDL conventions
 - [Configuration Provider Registration Pattern](03-05-Configuration-Provider-Registration-Pattern.md) — DI registration for parent + typed providers
-- [TypeCollections Overview](04-01-Overview.md) — `[ServiceTypeCollection]` and `[ServiceTypeOption]`
+- [TypeCollections Overview](04-01-Overview.md) — `[ServiceTypeCollection]` and `[Implementation]`
 - [Service Domains Overview](06-01-Service-Domains-Overview.md) — how factories consume configuration
 - [Connections Service Domain](06-03-Connections-Service-Domain.md) — gold-standard implementation

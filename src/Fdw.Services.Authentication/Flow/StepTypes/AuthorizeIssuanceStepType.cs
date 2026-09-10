@@ -24,7 +24,7 @@ namespace Fdw.Services.Authentication.Flow.StepTypes;
 /// step: a flow names it, the collection answers by that name, and what answers is what runs.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthenticationStepTypes), "AuthorizeIssuance")]
+[Implementation(typeof(AuthenticationStepTypes), "AuthorizeIssuance")]
 public sealed class AuthorizeIssuanceStepType
     : AuthenticationStepTypeBase<IGenericService, IServiceFactory<IGenericService, IServiceConfiguration>>,
       IAuthenticationStep

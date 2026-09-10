@@ -73,7 +73,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     public static string? OperationalConnection { get; set; }
 
     // Configure(), Register() and Initialize() are source-generated.
-    // Each pipeline type (BatchCopy, Streaming) registers its own configuration via its ServiceTypeOption.
+    // Each pipeline type (BatchCopy, Streaming) registers its own configuration via its Implementation.
 
     /// <summary>
     /// Registers execution-inspection singletons consumed by test-mode endpoints.
@@ -82,7 +82,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     /// <remarks>
     /// Why: IPipelineExecutionInspector / IPipelineTestController are consumed by
     /// InspectEdgeEndpoint, StepExecutionEndpoint, and ResumeTestExecutionEndpoint at
-    /// FastEndpoints activation time. They have no ServiceTypeOption of their own — they
+    /// FastEndpoints activation time. They have no Implementation of their own — they
     /// are cross-cutting singletons that belong to the ETL execution subsystem, not to a
     /// pipeline type variant. RegisterAdditionalServices is the canonical home for
     /// non-variant singletons inside a ServiceTypeCollection.

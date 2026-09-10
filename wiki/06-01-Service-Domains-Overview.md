@@ -42,7 +42,7 @@ graph TB
     end
 
     subgraph "Concrete Package (e.g., MsSql)"
-        Type[{Name}Type<br/>ServiceTypeOption]
+        Type[{Name}Type<br/>Implementation]
         ConcreteFactory[{Name}Factory]
         ConcreteConfig[{Name}Configuration]
         ConcreteLog[{Name}Log]

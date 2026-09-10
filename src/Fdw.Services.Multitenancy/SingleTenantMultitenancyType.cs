@@ -20,7 +20,7 @@ namespace Fdw.Services.Multitenancy;
 /// reports "no tenant"/"no organization" rather than crashing the host.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(MultitenancyTypes), "SingleTenant")]
+[Implementation(typeof(MultitenancyTypes), "SingleTenant")]
 public sealed class SingleTenantMultitenancyType : MultitenancyTypeBase<ISingleTenantMultitenancyFactory>
 {
     /// <summary>

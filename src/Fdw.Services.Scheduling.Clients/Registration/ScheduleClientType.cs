@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Services.Scheduling.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Schedule API client.
+/// Implementation for the Schedule API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "ScheduleClient")]
+[Implementation(typeof(ApiClientTypes), "ScheduleClient")]
 public sealed class ScheduleClientType : ApiClientTypeBase<IScheduleClient>
 {
     /// <summary>

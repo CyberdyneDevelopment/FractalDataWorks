@@ -51,7 +51,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// </para>
     /// <para>
     /// The name is the right source because it is already the thing that distinguishes options within a
-    /// collection: it is what <c>[ServiceTypeOption(..., "MsSql")]</c> declares, what <c>ByName</c>
+    /// collection: it is what <c>[Implementation(..., "MsSql")]</c> declares, what <c>ByName</c>
     /// resolves, and what the generated metadata already hashes. Two options in one collection cannot
     /// share a name without colliding in that lookup first.
     /// </para>
@@ -136,7 +136,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Sets the body this service type runs during Configure — the phase that binds settings from configuration, before any service is registered.
     /// </summary>
     /// <remarks>
-    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// This is the call a <c>[Implementation]</c> or <c>[ServiceTypeCollection]</c> class makes, and
     /// the only one it should need. A phase holds one body and the class declaring the phase owns that
     /// body outright, so setting it states what this service type contributes rather than overwriting
     /// somebody's work. Reach for <see cref="AppendConfiguration"/> or <see cref="PrependConfiguration"/> only from
@@ -217,7 +217,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Sets the body this service type runs during Register — the phase that puts services into the container, before the host is built.
     /// </summary>
     /// <remarks>
-    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// This is the call a <c>[Implementation]</c> or <c>[ServiceTypeCollection]</c> class makes, and
     /// the only one it should need. A phase holds one body and the class declaring the phase owns that
     /// body outright, so setting it states what this service type contributes rather than overwriting
     /// somebody's work. Reach for <see cref="AppendRegistration"/> or <see cref="PrependRegistration"/> only from
@@ -326,7 +326,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Sets the body this service type runs during Initialize — the phase that runs against the built host, where the container can be resolved from.
     /// </summary>
     /// <remarks>
-    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// This is the call a <c>[Implementation]</c> or <c>[ServiceTypeCollection]</c> class makes, and
     /// the only one it should need. A phase holds one body and the class declaring the phase owns that
     /// body outright, so setting it states what this service type contributes rather than overwriting
     /// somebody's work. Reach for <see cref="AppendInitialization"/> or <see cref="PrependInitialization"/> only from

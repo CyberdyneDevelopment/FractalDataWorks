@@ -16,7 +16,7 @@ Five channels are declared in the `NotificationChannels` collection; four have r
 
 `NotificationDispatcher` is the single fan-out seam: it routes an `INotificationRequest` to the `INotificationService` whose `Channel.Name` matches `request.ChannelName` — deterministic name-based routing, no per-channel branching.
 
-> **Not built:** SMS, Slack, PagerDuty, native OS toast, web-push, and desktop system-tray transports do not exist anywhere in the ecosystem. The browser-native substitute for a tray toast is the in-app SignalR `MessageHub`/`NotificationBell` push. A new sending channel is one `[ServiceTypeOption]`/`INotificationService` subclass.
+> **Not built:** SMS, Slack, PagerDuty, native OS toast, web-push, and desktop system-tray transports do not exist anywhere in the ecosystem. The browser-native substitute for a tray toast is the in-app SignalR `MessageHub`/`NotificationBell` push. A new sending channel is one `[Implementation]`/`INotificationService` subclass.
 
 ## Package Structure
 
@@ -32,7 +32,7 @@ Services.Notifications.Endpoints/    # REST endpoints
 
 ## Registration
 
-Each notification implementation package contains a `[ServiceTypeOption(typeof(NotificationTypes), "<name>")]` class. With `Fdw.Registration.SourceGenerators` in the entry-point app, the emitted `[ModuleInitializer]` registers every referenced `[ServiceTypeOption]` at assembly load — **adding the package reference IS the registration intent**.
+Each notification implementation package contains a `[Implementation(typeof(NotificationTypes), "<name>")]` class. With `Fdw.Registration.SourceGenerators` in the entry-point app, the emitted `[ModuleInitializer]` registers every referenced `[Implementation]` at assembly load — **adding the package reference IS the registration intent**.
 
 `NotificationTypes` is an ordinary `[ServiceTypeCollection]`, so its three-phase methods run inside
 the single `PlatformServices.Configure`/`Register`/`Initialize` sweep — there is no
@@ -161,10 +161,10 @@ public class OrderService(IFdwServiceProvider<IGenericNotification, INotificatio
 
 ## Adding a New Channel
 
-1. Create a `ServiceTypeOption` extending `NotificationTypeBase<,,>`:
+1. Create a `Implementation` extending `NotificationTypeBase<,,>`:
 
 ```csharp
-[ServiceTypeOption(typeof(NotificationTypes), "Teams")]
+[Implementation(typeof(NotificationTypes), "Teams")]
 public sealed class TeamsNotificationType
     : NotificationTypeBase<INotificationService, ITeamsNotificationFactory, TeamsNotificationConfiguration>
 {

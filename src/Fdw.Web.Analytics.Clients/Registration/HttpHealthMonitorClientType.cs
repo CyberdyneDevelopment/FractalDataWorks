@@ -26,7 +26,7 @@ namespace Fdw.Web.Analytics.Clients;
 /// health source (e.g. UI hosts) and query the API's health endpoints instead.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(HealthMonitorTypes), "HttpClient")]
+[Implementation(typeof(HealthMonitorTypes), "HttpClient")]
 public sealed class HttpHealthMonitorClientType
     : HealthMonitorTypeBase<IHealthMonitorService, IHttpHealthMonitorFactory, HealthMonitorConfiguration>
 {

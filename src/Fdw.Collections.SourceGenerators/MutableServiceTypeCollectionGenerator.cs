@@ -39,7 +39,7 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
             {
                 var (compilation, collections) = pair;
                 var restrictToCurrentCompilation = collections.Any(c => c.RestrictToCurrentCompilation);
-                return ServiceTypeOptionDiscovery.DiscoverAll(compilation, restrictToCurrentCompilation);
+                return ImplementationDiscovery.DiscoverAll(compilation, restrictToCurrentCompilation);
             });
 
         // Combine collections, options, and compilation for abstract member extraction
@@ -89,10 +89,10 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
             FullName: classSymbol.ToDisplayString(),
             BaseTypeName: resolvedBaseType,
             InterfaceTypeName: resolvedInterfaceType,
-            MatchKey: ServiceTypeOptionDiscovery.GetMatchKey(collectionType),
+            MatchKey: ImplementationDiscovery.GetMatchKey(collectionType),
             Kind: CollectionKind.Mutable,
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
-            ParentCollectionMatchKey: parentCollection != null ? ServiceTypeOptionDiscovery.GetMatchKey(parentCollection) : null,
+            ParentCollectionMatchKey: parentCollection != null ? ImplementationDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
             ServiceInterfaceTypeName: null,
             ConfigurationInterfaceTypeName: null,
@@ -153,7 +153,7 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
 
     private static void Execute(
         SourceProductionContext context,
-        ((ImmutableArray<ServiceTypeCollectionModel> Collections, ImmutableArray<ServiceTypeOptionModel> Options) Data, Compilation Compilation) source)
+        ((ImmutableArray<ServiceTypeCollectionModel> Collections, ImmutableArray<ImplementationModel> Options) Data, Compilation Compilation) source)
     {
         var (collections, allOptions) = source.Data;
         var compilation = source.Compilation;
@@ -191,13 +191,13 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
     private static void ValidateOptions(
         SourceProductionContext context,
         ServiceTypeCollectionModel collection,
-        ImmutableArray<ServiceTypeOptionModel> options)
+        ImmutableArray<ImplementationModel> options)
     {
         // Check for names the generated collection already uses for its own members
         foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
         {
             context.ReportDiagnostic(Diagnostic.Create(
-                TypeCollectionGeneratorDiagnostics.ReservedServiceTypeOptionName,
+                TypeCollectionGeneratorDiagnostics.ReservedImplementationName,
                 Location.None,
                 reserved.FullTypeName,
                 reserved.OptionName));
@@ -240,7 +240,7 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
     private static void ValidateLookupPropertyValues(
         SourceProductionContext context,
         string collectionName,
-        ImmutableArray<ServiceTypeOptionModel> options)
+        ImmutableArray<ImplementationModel> options)
     {
         if (options.Length == 0)
             return;
@@ -281,7 +281,7 @@ public class MutableServiceTypeCollectionGenerator : IIncrementalGenerator
 #pragma warning disable FDW006, FDW007
     private static string GenerateCode(
         ServiceTypeCollectionModel collection,
-        ImmutableArray<ServiceTypeOptionModel> options,
+        ImmutableArray<ImplementationModel> options,
         ImmutableArray<ChildCollectionModel> childCollections,
         ImmutableArray<AbstractMemberModel> abstractMembers)
     {

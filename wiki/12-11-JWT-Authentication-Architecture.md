@@ -14,7 +14,7 @@ The token service is the `TokenManagerTypes` provider axis. `ITokenManager` (`Is
 Services.TokenManagers.Abstractions   ITokenManager, IAuthenticationService, TokenIssuanceRequest
 Services.TokenManagers                TokenManagerTypes ([ServiceTypeCollection]), AuthenticationService
                                       (generic, provider-agnostic authN), TokenManagerConfigurationProvider
-Services.Authentication.OpenIddict    OpenIddictTokenManagerType ([ServiceTypeOption "OpenIddict"]),
+Services.Authentication.OpenIddict    OpenIddictTokenManagerType ([Implementation "OpenIddict"]),
                                       OpenIdTokenManager, ConnectTokenEndpoint, ProcessSignInClaimsHandler,
                                       ExternalIdentityService, RevokedAccessTokenStore
 Services.Users(.Abstractions)         IUserService, IUserCredentialService (vault-backed)
@@ -99,16 +99,16 @@ The RS256 signing key and issuer are resolved on demand by `OpenIddictSigningKey
 
 ### Provider-Swap Story
 
-The token service is a `[ServiceTypeOption]` on `TokenManagerTypes`. Swapping providers (e.g. adding Entra/external IdP support) requires:
+The token service is a `[Implementation]` on `TokenManagerTypes`. Swapping providers (e.g. adding Entra/external IdP support) requires:
 
-1. Create `Services.Authentication.MyProvider` with a new `[ServiceTypeOption(typeof(TokenManagerTypes), "MyProvider")]` implementing `ITokenManager`.
+1. Create `Services.Authentication.MyProvider` with a new `[Implementation(typeof(TokenManagerTypes), "MyProvider")]` implementing `ITokenManager`.
 2. Or reuse the `external_identity` grant + `auth.ExternalIdentity` mapping rows to route external subjects to FDW user IDs — no new option needed.
 3. The `password` vault path is simply not invoked for external-IdP users.
 4. PATs and agent keys remain vault-backed (`Services.Credentials.Sql`, the `Sql` option of `CredentialServiceTypes`) regardless of IdP — the vault is IdP-agnostic.
 
 ### Registration (OpenIddict)
 
-`TokenManagerTypes` is a `[ServiceTypeCollection]` and is **discovered by PlatformServices** like every other domain — there is **no** hand-written `TokenManagerTypes.Configure/Register/Initialize` call in `Program.cs`, and it is not `Manual`. `OpenIddictTokenManagerType` is the `[ServiceTypeOption]` that registers OpenIddict's infrastructure (`AddCore` + `AddServer` + `AddValidation`, the DataGateway-backed stores, `ConnectTokenEndpoint`, `ProcessSignInClaimsHandler`) inside its `RegisterRequiredServices` — the one registration surface. Its `Registration.SourceGenerators` module initializer registers the option on package reference. No app-side `services.AddXxx` calls for token-service internals. Point a deployment at a provider by seeding one enabled `auth.TokenManager` row (`ServiceOptionType`) plus its typed-body row.
+`TokenManagerTypes` is a `[ServiceTypeCollection]` and is **discovered by PlatformServices** like every other domain — there is **no** hand-written `TokenManagerTypes.Configure/Register/Initialize` call in `Program.cs`, and it is not `Manual`. `OpenIddictTokenManagerType` is the `[Implementation]` that registers OpenIddict's infrastructure (`AddCore` + `AddServer` + `AddValidation`, the DataGateway-backed stores, `ConnectTokenEndpoint`, `ProcessSignInClaimsHandler`) inside its `RegisterRequiredServices` — the one registration surface. Its `Registration.SourceGenerators` module initializer registers the option on package reference. No app-side `services.AddXxx` calls for token-service internals. Point a deployment at a provider by seeding one enabled `auth.TokenManager` row (`ServiceOptionType`) plus its typed-body row.
 
 ## Client-Side Architecture
 
@@ -339,11 +339,11 @@ The `ITokenRefreshCoordinator` prevents a race condition where multiple simultan
 
 ### Adding a New Token-Manager Provider
 
-Token-service implementations are `[ServiceTypeOption]`s on `TokenManagerTypes`, each implementing `ITokenManager`. There is no `switch` on auth type — the active provider is resolved by name. To add one:
+Token-service implementations are `[Implementation]`s on `TokenManagerTypes`, each implementing `ITokenManager`. There is no `switch` on auth type — the active provider is resolved by name. To add one:
 
 1. Create a `Services.Authentication.MyProvider` project referencing `Fdw.Services.TokenManagers.Abstractions`.
 2. Implement `MyTokenManager : ITokenManager` (`Issue` / `Validate` / `Invalidate` / `ExtractClaims`); do all provider-specific credential/secret validation inside `Issue`.
-3. Add `MyTokenManagerType : TokenManagerTypeBase<...>` decorated with `[ServiceTypeOption(typeof(TokenManagerTypes), "MyProvider")]`; override `RegisterRequiredServices()` and `RegisterFactory()`.
+3. Add `MyTokenManagerType : TokenManagerTypeBase<...>` decorated with `[Implementation(typeof(TokenManagerTypes), "MyProvider")]`; override `RegisterRequiredServices()` and `RegisterFactory()`.
 4. Add a standalone typed-body config (`[ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "MyProvider")]`) with a `TokenManagerId` FK for any runtime fields your manager reads.
 5. For external-IdP user mapping, add `auth.ExternalIdentity` rows linking provider + external subject to a FDW `userId`, then use the `external_identity` grant.
 6. `Registration.SourceGenerators` discovers the option automatically — no app-side registration.

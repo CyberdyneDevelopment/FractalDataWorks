@@ -23,7 +23,7 @@ This project contains 6 source generators for TypeCollections that enable compil
 |------|---------|
 | `Models.cs` | Value-equatable `record struct` models for caching |
 | `TypeOptionDiscovery.cs` | Cross-assembly TypeOption discovery via SymbolVisitor |
-| `ServiceTypeOptionDiscovery.cs` | Cross-assembly ServiceTypeOption discovery |
+| `ImplementationDiscovery.cs` | Cross-assembly Implementation discovery |
 | `CodeGeneration.cs` | Shared code generation helpers |
 | `Diagnostics.cs` | Diagnostic descriptors (TC001-TC007, ST001-ST004) |
 
@@ -97,7 +97,7 @@ public void Initialize(IncrementalGeneratorInitializationContext context)
 [TypeOption(typeof(CollectionClass), "OptionName")]
 public class MyOption : BaseClass { }
 
-[ServiceTypeOption(typeof(ServiceTypeCollection), "ServiceName")]
+[Implementation(typeof(ServiceTypeCollection), "ServiceName")]
 public class MyServiceType : ServiceTypeBase { }
 ```
 

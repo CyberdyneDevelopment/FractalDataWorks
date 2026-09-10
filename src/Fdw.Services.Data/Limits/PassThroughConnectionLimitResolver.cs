@@ -9,7 +9,7 @@ namespace Fdw.Services.Data.Limits;
 /// Default <see cref="IConnectionLimitResolver"/> that returns an empty list for all connections,
 /// effectively disabling limit enforcement.
 ///
-/// This resolver is registered by the ServiceTypeOption when no domain-specific resolver has
+/// This resolver is registered by the Implementation when no domain-specific resolver has
 /// been registered. It is replaced at runtime by any IConnectionLimitResolver registered with
 /// higher priority (e.g., the configuration-backed resolver in Services.Connections.MsSql).
 /// </summary>

@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Data.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the DataStore API client.
+/// Implementation for the DataStore API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "DataStoreClient")]
+[Implementation(typeof(ApiClientTypes), "DataStoreClient")]
 public sealed class DataStoreClientType : ApiClientTypeBase<DataStoreApiClient>
 {
     /// <summary>

@@ -35,7 +35,7 @@ For the inventory of which packages and pages exist per domain, see [16-03 UI Do
                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │  {Domain}.Clients                                                               │
-│  HTTP client + ServiceTypeOption registration                                   │
+│  HTTP client + Implementation registration                                   │
 └──────────────────────────┬──────────────────────────────────────────────────────┘
                            │  PackageReference → *.Clients.Abstractions
                            ▼
@@ -89,7 +89,7 @@ Concrete HTTP client and the `ApiClientTypes` registration hook. One `*ApiClient
                                     virtual methods (for Moq testability)
 
 Registration/
-  {Domain}ClientType.cs           — [ServiceTypeOption(typeof(ApiClientTypes), "{Domain}Client")]
+  {Domain}ClientType.cs           — [Implementation(typeof(ApiClientTypes), "{Domain}Client")]
                                     Configure() calls services.Add{Domain}ApiClient(baseUrl)
                                                               .AddBearerTokenHandler()
 ```
@@ -226,7 +226,7 @@ The API layer has its own three-project structure, separate from the UI layers a
     {Domain}Log.cs                — [MessageLogging] for service operations
 
 {Domain}.{Implementation}         — net10.0 (e.g., MsSql, Webhook, EnvSecrets)
-  {Impl}{Domain}Type.cs           — [ServiceTypeOption(typeof({Domain}Types), "{Impl}")]
+  {Impl}{Domain}Type.cs           — [Implementation(typeof({Domain}Types), "{Impl}")]
                                     Configure() → binds IOptions<{Impl}Configuration>
                                     Register()  → registers factory
   {Impl}{Domain}Factory.cs        — creates IService instances from configuration

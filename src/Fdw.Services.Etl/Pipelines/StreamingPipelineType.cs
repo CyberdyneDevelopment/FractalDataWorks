@@ -48,7 +48,7 @@ namespace Fdw.Services.Etl.Pipelines;
 /// </code>
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(EtlPipelineTypes), "Streaming")]
+[Implementation(typeof(EtlPipelineTypes), "Streaming")]
 public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IStreamingPipelineFactory, StreamingPipelineConfiguration>
 {
     /// <summary>

@@ -27,7 +27,7 @@ namespace Fdw.Services.Calculations;
 /// the gateway-backed CalculationConfigurationProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(CalculationServiceTypes), "Default")]
+[Implementation(typeof(CalculationServiceTypes), "Default")]
 public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 {
     /// <summary>

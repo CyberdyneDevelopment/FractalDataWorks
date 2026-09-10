@@ -12,7 +12,7 @@ using Fdw.Conventions;
 namespace Fdw.Collections.SourceGenerators;
 
 /// <summary>
-/// Generates C# 14 static extension methods for TypeOption and ServiceTypeOption classes.
+/// Generates C# 14 static extension methods for TypeOption and Implementation classes.
 /// Each TypeOption gets extension methods on its collection class for type-safe access.
 /// </summary>
 /// <remarks>
@@ -36,11 +36,11 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
         "Fdw.Collections.Attributes.TypeOptionAttribute"
     };
 
-    private static readonly HashSet<string> ServiceTypeOptionAttributeNames = new(StringComparer.Ordinal)
+    private static readonly HashSet<string> ImplementationAttributeNames = new(StringComparer.Ordinal)
     {
-        "Fdw.Collections.ServiceTypeOptionAttribute",
-        "Fdw.Collections.Attributes.ServiceTypeOptionAttribute",
-        "Fdw.ServiceTypes.Attributes.ServiceTypeOptionAttribute"
+        "Fdw.Collections.ImplementationAttribute",
+        "Fdw.Collections.Attributes.ImplementationAttribute",
+        "Fdw.ServiceTypes.Attributes.ImplementationAttribute"
     };
 
     // Collection attribute names for determining CollectionKind
@@ -99,8 +99,8 @@ public class TypeOptionExtensionGenerator : IIncrementalGenerator
         if (classSymbol == null)
             return null;
 
-        // Find the TypeOption or ServiceTypeOption attribute
-        var attributeNames = isServiceType ? ServiceTypeOptionAttributeNames : TypeOptionAttributeNames;
+        // Find the TypeOption or Implementation attribute
+        var attributeNames = isServiceType ? ImplementationAttributeNames : TypeOptionAttributeNames;
         AttributeData? attribute = null;
 
         foreach (var attr in classSymbol.GetAttributes())

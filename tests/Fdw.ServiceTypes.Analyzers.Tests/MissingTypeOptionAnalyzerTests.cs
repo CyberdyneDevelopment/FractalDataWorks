@@ -29,7 +29,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -79,7 +79,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -98,7 +98,7 @@ public class MissingTypeOptionAnalyzerTests
                     public string Name { get; set; } = string.Empty;
                 }
 
-                [ServiceTypeOption]
+                [Implementation]
                 public class CreateCommand : CommandBase
                 {
                     public override string Name { get; } = "Create";
@@ -126,7 +126,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -213,7 +213,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -232,7 +232,7 @@ public class MissingTypeOptionAnalyzerTests
                     public string Name { get; set; } = string.Empty;
                 }
 
-                [ServiceTypeOption]
+                [Implementation]
                 public class CreateCommand : CommandBase
                 {
                     public override string Name { get; } = "Create";
@@ -276,7 +276,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -329,7 +329,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -383,7 +383,7 @@ public class MissingTypeOptionAnalyzerTests
                 }
 
                 [AttributeUsage(AttributeTargets.Class)]
-                public class ServiceTypeOptionAttribute : Attribute { }
+                public class ImplementationAttribute : Attribute { }
             }
 
             namespace TestNamespace
@@ -412,7 +412,7 @@ public class MissingTypeOptionAnalyzerTests
                     public override string Name { get; } = "Create";
                 }
 
-                [ServiceTypeOption]
+                [Implementation]
                 public class GetQuery : QueryBase
                 {
                     public override string Name { get; } = "Get";

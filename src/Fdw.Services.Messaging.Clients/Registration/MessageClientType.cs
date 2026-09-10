@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Services.Messaging.Clients.Registration;
 
 /// <summary>
-/// ServiceTypeOption for the Message API client.
+/// Implementation for the Message API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "MessageClient")]
+[Implementation(typeof(ApiClientTypes), "MessageClient")]
 public sealed class MessageClientType : ApiClientTypeBase<MessageApiClient>
 {
     /// <summary>

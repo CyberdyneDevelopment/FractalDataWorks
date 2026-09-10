@@ -8,7 +8,7 @@
     <ProjectReference Include="..\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
     <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
     <!-- Analyzer-only: emits the [ModuleInitializer] that registers cross-assembly [TypeOption]/
-         [ServiceTypeOption]s (e.g. EnvironmentVariableSecretManagerType, HttpConnectionType) into
+         [Implementation]s (e.g. EnvironmentVariableSecretManagerType, HttpConnectionType) into
          their TypeCollections at assembly load. This entry-point exe is the one place this
          Registration.SourceGenerators reference belongs (registration-sourcegenerators-scope). -->
     <ProjectReference Include="..\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />

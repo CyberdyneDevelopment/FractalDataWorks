@@ -13,7 +13,7 @@ using Fdw.Results;
 namespace Fdw.Data.Components.DataStores;
 
 /// <summary>
-/// ServiceTypeOption that wires the UI's .Clients-fetched <see cref="IDataStoreProvider"/> —
+/// Implementation that wires the UI's .Clients-fetched <see cref="IDataStoreProvider"/> —
 /// <see cref="ConfiguredDataStoreProvider"/> (<c>Fdw.Data.DataNodes</c>, gateway-free tree composition)
 /// fed by <see cref="ClientsDataStoreConfigurationProvider"/> (reads over the already-registered
 /// <c>DataStoreApiClient</c>) and <see cref="GenericBuilderSelector"/> (the UI's single builder).
@@ -31,7 +31,7 @@ namespace Fdw.Data.Components.DataStores;
 /// matches every other option in this collection.
 /// </remarks>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "DataStoreProviderClient")]
+[Implementation(typeof(ApiClientTypes), "DataStoreProviderClient")]
 public sealed class DataStoreProviderClientType : ApiClientTypeBase<IDataStoreProvider>
 {
     /// <summary>

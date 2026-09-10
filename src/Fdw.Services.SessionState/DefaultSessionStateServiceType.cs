@@ -17,7 +17,7 @@ namespace Fdw.Services.SessionState;
 /// with DataGateway-backed persistence and the Blazor circuit handler.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(SessionStateTypes), "Default")]
+[Implementation(typeof(SessionStateTypes), "Default")]
 public sealed class DefaultSessionStateServiceType : SessionStateServiceTypeBase<IGenericService, ISessionStateServiceFactory>
 {
     /// <summary>

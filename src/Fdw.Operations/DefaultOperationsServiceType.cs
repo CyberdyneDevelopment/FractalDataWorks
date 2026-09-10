@@ -33,7 +33,7 @@ namespace Fdw.Operations;
 /// escalation (IEscalationService), and the gateway-backed EscalationConfigurationProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(OperationsServiceTypes), "Default")]
+[Implementation(typeof(OperationsServiceTypes), "Default")]
 public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
 {
     /// <summary>

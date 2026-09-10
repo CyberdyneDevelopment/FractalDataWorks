@@ -25,7 +25,7 @@ namespace Fdw.Services.Data;
 /// declared in <c>configurationSchema.json</c>, and held by <c>IConfigurationGatewayProvider</c>.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ConfigurationGatewayTypes), "ConfigGateway")]
+[Implementation(typeof(ConfigurationGatewayTypes), "ConfigGateway")]
 public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBase<IGenericService, IConfigurationGatewayFactory>
 {
     /// <summary>

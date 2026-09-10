@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.UI.Pipelines.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Pipeline Designer API client.
+/// Implementation for the Pipeline Designer API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "PipelineDesignerClient")]
+[Implementation(typeof(ApiClientTypes), "PipelineDesignerClient")]
 public sealed class PipelineDesignerClientType : ApiClientTypeBase<IPipelineDesignerClient>
 {
     /// <summary>

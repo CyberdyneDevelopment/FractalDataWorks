@@ -29,13 +29,13 @@ namespace Fdw.Services.Data;
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(DataGatewayServiceTypes), "Main")]
-public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGenericService, IDataGatewayFactory>
+[Implementation(typeof(DataGatewayServiceTypes), "Main")]
+public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGenericService, IDataGatewayFactory>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="MainDataGatewayServiceTypeOption"/> class.
+    /// Initializes a new instance of the <see cref="MainDataGatewayImplementation"/> class.
     /// </summary>
-    public MainDataGatewayServiceTypeOption()
+    public MainDataGatewayImplementation()
         : base(
             "Main",
             "DataGateway:Main",
@@ -102,8 +102,8 @@ public sealed class MainDataGatewayServiceTypeOption : DataGatewayTypeBase<IGene
             // The settings live on the implementation; the domain record carries it.
             if (result.Value.ImplementationConfiguration is not MainDataGatewayConfiguration configuration)
             {
-                var log = loggerFactory?.CreateLogger<MainDataGatewayServiceTypeOption>()
-                    ?? NullLogger<MainDataGatewayServiceTypeOption>.Instance;
+                var log = loggerFactory?.CreateLogger<MainDataGatewayImplementation>()
+                    ?? NullLogger<MainDataGatewayImplementation>.Instance;
                 return GenericResult<IHostApplicationBuilder>.Failure(
                     DataGatewayProviderLog.ConfigurationTypeMismatch(
                         log, result.Value.ImplementationConfiguration?.GetType().Name ?? "(no implementation)"));

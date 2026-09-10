@@ -29,7 +29,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace.Registration;
 /// <see cref="RoslynWorkspaceConnectionConfiguration"/> from <c>Connections:RoslynWorkspace</c>.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ConnectionTypes), "RoslynWorkspace")]
+[Implementation(typeof(ConnectionTypes), "RoslynWorkspace")]
 public sealed class RoslynWorkspaceConnectionType
     : ConnectionTypeBase<IGenericConnection, IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionConfiguration>
 {

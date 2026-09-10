@@ -51,7 +51,7 @@ Every FDW server references at minimum:
 
 - `Fdw.MessageLogging.Abstractions`
 - `Fdw.MessageLogging.SourceGenerators` (analyzer-only)
-- `Fdw.Registration.SourceGenerators` (analyzer-only — emits `[ModuleInitializer]` to register `[ServiceTypeOption]` instances into their TypeCollections at assembly load)
+- `Fdw.Registration.SourceGenerators` (analyzer-only — emits `[ModuleInitializer]` to register `[Implementation]` instances into their TypeCollections at assembly load)
 - `Fdw.Services.Registration` + `Fdw.Services.Registration.SourceGenerators` (analyzer-only — emits the `[ModuleInitializer]` that populates `PlatformServices` from every discovered `[ServiceTypeCollection]` / `[PlatformServiceProvider]`)
 - `Fdw.Hosting`, `Fdw.Hosting.MsSql`
 - Per-domain implementation packages for whichever ServiceTypeCollections the server hosts

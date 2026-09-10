@@ -14,7 +14,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 /// <remarks>
 /// Why: sources the engine-type list from the live TypeCollection — never a hardcoded
-/// "BatchCopy"/"Streaming" literal — so a new <c>[ServiceTypeOption(typeof(EtlPipelineTypes), "...")]</c>
+/// "BatchCopy"/"Streaming" literal — so a new <c>[Implementation(typeof(EtlPipelineTypes), "...")]</c>
 /// registered by any assembly appears here automatically with no code change.
 /// </remarks>
 public abstract class GetPipelineTypesEndpointBase : EndpointWithoutRequest<IReadOnlyList<PipelineTypeSummary>>

@@ -91,7 +91,7 @@ builder.Services.AddConfigurationGateway<MsSqlConnectionFactory, EnvironmentVari
 
 // 3. ONE PlatformServices sweep — every [ServiceTypeCollection] discovered by the
 //    generated module initializer participates (ConnectionTypes among them). Each connection-kind
-//    [ServiceTypeOption] registers ConnectionConfigurationProvider itself (idempotent) — no
+//    [Implementation] registers ConnectionConfigurationProvider itself (idempotent) — no
 //    hand-written RegisterDomainServices call here.
 PlatformServices.Configure(builder, loggerFactory);
 PlatformServices.Register(builder.Services, loggerFactory);

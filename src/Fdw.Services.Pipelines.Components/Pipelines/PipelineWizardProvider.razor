@@ -152,7 +152,7 @@
     /// <summary>
     /// Loads the pluggable pipeline engine-type list from <see cref="IPipelineClient.GetPipelineTypes"/>
     /// (backed by the <c>EtlPipelineTypes</c> ServiceTypeCollection). A new engine type registered via
-    /// <c>[ServiceTypeOption(typeof(EtlPipelineTypes), "...")]</c> appears here with no code change.
+    /// <c>[Implementation(typeof(EtlPipelineTypes), "...")]</c> appears here with no code change.
     /// </summary>
     public async Task LoadEngineTypes(CancellationToken cancellationToken = default)
     {

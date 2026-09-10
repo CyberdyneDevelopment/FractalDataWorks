@@ -10,7 +10,7 @@ namespace Fdw.Collections;
 /// <remarks>
 /// Generated code provides:
 /// - FrozenDictionary-based lookups (O(1), immutable)
-/// - Static property accessors for each ServiceTypeOption
+/// - Static property accessors for each Implementation
 /// - ById(), ByName(), All() methods
 /// - Custom lookup methods from [TypeLookup] attributes
 /// - Empty sentinel value
@@ -44,13 +44,13 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     }
 
     /// <summary>
-    /// The abstract base type that all ServiceTypeOptions must inherit from.
+    /// The abstract base type that all Implementations must inherit from.
     /// Supports unbound generics: typeof(ConnectionTypeBase&lt;,,,&gt;)
     /// </summary>
     public Type BaseType { get; }
 
     /// <summary>
-    /// The interface type used for return values. All ServiceTypeOptions must implement this.
+    /// The interface type used for return values. All Implementations must implement this.
     /// Supports unbound generics: typeof(IConnectionType&lt;,,&gt;)
     /// </summary>
     public Type InterfaceType { get; }
@@ -74,7 +74,7 @@ public sealed class ServiceTypeCollectionAttribute : Attribute
     public string? Name { get; }
 
     /// <summary>
-    /// If true, only discovers ServiceTypeOptions in the current compilation (not referenced assemblies).
+    /// If true, only discovers Implementations in the current compilation (not referenced assemblies).
     /// Default is false (discovers across all referenced assemblies).
     /// </summary>
     public bool RestrictToCurrentCompilation { get; set; }

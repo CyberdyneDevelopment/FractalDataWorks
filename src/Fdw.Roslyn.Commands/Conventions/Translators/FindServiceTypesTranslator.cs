@@ -60,7 +60,7 @@ public sealed class FindServiceTypesTranslator
                     var serviceTypeAttr = classDecl.AttributeLists
                         .SelectMany(al => al.Attributes)
                         .FirstOrDefault(a =>
-                            a.Name.ToString().Contains("ServiceTypeOption", StringComparison.Ordinal) ||
+                            a.Name.ToString().Contains("Implementation", StringComparison.Ordinal) ||
                             a.Name.ToString().Contains("ServiceTypeCollection", StringComparison.Ordinal));
 
                     if (serviceTypeAttr is null) continue;

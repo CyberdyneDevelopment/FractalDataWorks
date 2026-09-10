@@ -134,7 +134,7 @@ public static class Program
     /// </summary>
     /// <remarks>
     /// The clients themselves already exist — every <c>.Clients</c> package registers its own
-    /// <c>[ServiceTypeOption(typeof(ApiClientTypes), ...)]</c> with a named HttpClient and the shared
+    /// <c>[Implementation(typeof(ApiClientTypes), ...)]</c> with a named HttpClient and the shared
     /// bearer-token handler. All this app supplies is the two seams that make them instance-aware:
     /// the credential (<see cref="InstanceAccessTokenProvider"/>) and the address
     /// (<see cref="InstanceRoutingHandler"/>).

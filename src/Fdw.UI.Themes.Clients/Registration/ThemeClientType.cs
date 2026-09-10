@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.UI.Themes.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Theme API client.
+/// Implementation for the Theme API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "ThemeClient")]
+[Implementation(typeof(ApiClientTypes), "ThemeClient")]
 public sealed class ThemeClientType : ApiClientTypeBase<ThemeApiClient>
 {
     /// <summary>

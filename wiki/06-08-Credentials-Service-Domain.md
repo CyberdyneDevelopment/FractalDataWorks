@@ -2,7 +2,7 @@
 
 The Credentials domain is a thin, **named indirection in front of a credential `IDataVault`**. Consumers — the Users domain, the personal-access-token (PAT) service, and the agent-key service — resolve a credential service *by name* and execute vault commands through it, exactly as a connection resolves its secret manager by name. The credential service owns which vault its commands run against; the vault remains the only hash-bearing plane.
 
-This domain replaces the earlier graft where SQL credential services were registered as a cross-assembly `[ServiceTypeOption(typeof(UserServiceTypes), "SqlCredentials")]`. Credentials is now a first-class `ServiceTypeCollection` domain, structurally identical to Connections and DataVault.
+This domain replaces the earlier graft where SQL credential services were registered as a cross-assembly `[Implementation(typeof(UserServiceTypes), "SqlCredentials")]`. Credentials is now a first-class `ServiceTypeCollection` domain, structurally identical to Connections and DataVault.
 
 ## Why a Domain Instead of a UserServiceTypes Graft
 
@@ -106,7 +106,7 @@ CredentialServiceTypes.Initialize(app.Services, loggerFactory);
 ### SqlCredentialServiceType (the `Sql` option)
 
 ```csharp
-[ServiceTypeOption(typeof(CredentialServiceTypes), "Sql")]
+[Implementation(typeof(CredentialServiceTypes), "Sql")]
 public sealed class SqlCredentialServiceType
     : CredentialServiceTypeBase<ICredentialService, ICredentialServiceFactory<…>, CredentialServiceConfiguration>
 {
@@ -149,4 +149,4 @@ The factory is **Scoped** because it holds the scoped `IDataVaultProvider` — a
 - [Secret Management](12-10-Secret-Management.md) — SecretManager domain (HMAC keys, signing keys, connection passwords)
 - [JWT Authentication Architecture](12-11-JWT-Authentication-Architecture.md) — OpenIddict auth flow; credentials in the login path
 - [Service Domains Overview](06-01-Service-Domains-Overview.md) — ServiceTypeCollection plugin architecture
-- [TypeCollection Patterns](10-TypeCollection-Patterns.md) — Cross-assembly registration via ServiceTypeOption
+- [TypeCollection Patterns](10-TypeCollection-Patterns.md) — Cross-assembly registration via Implementation

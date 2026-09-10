@@ -138,7 +138,7 @@ Services.{Domain}.Endpoints/            # FastEndpoints API
 4. **No service locator pattern.** Never store `IServiceProvider`. Inject dependencies directly.
 5. **Catch, log, return.** Never throw exceptions. Return `GenericResult.Failure(DomainLog.Failed(...))`.
 6. **Configuration properties use `{ get; set; }`** (not `{ get; init; }`). IOptions binding requires mutable setters.
-7. **ServiceTypeOption implementers** must override `Configure()`, `Register()`, and `RegisterFactory()`.
+7. **Implementation implementers** must override `Configure()`, `Register()`, and `RegisterFactory()`.
 
 ## Reference Implementations
 

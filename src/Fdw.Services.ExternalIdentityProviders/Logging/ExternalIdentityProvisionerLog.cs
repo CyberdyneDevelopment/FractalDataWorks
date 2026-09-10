@@ -88,7 +88,7 @@ public static partial class ExternalIdentityProvisionerLog
         Message = "External identity provisioner factory failed to create service for configName='{configName}': {message}")]
     public static partial IGenericMessage FactoryCreateFailed(ILogger logger, string configName, string message);
 
-    /// <summary>Logs that an external identity provisioner ServiceTypeOption completed registration.</summary>
+    /// <summary>Logs that an external identity provisioner Implementation completed registration.</summary>
     [MessageLogging(
         EventId = 11004,
         Level = LogLevel.Information,

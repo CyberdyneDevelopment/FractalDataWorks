@@ -20,7 +20,7 @@ namespace Fdw.Services.Quality;
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(QualityServiceTypes), "Default")]
+[Implementation(typeof(QualityServiceTypes), "Default")]
 public sealed class DefaultQualityServiceType : QualityServiceTypeBase
 {
     /// <summary>

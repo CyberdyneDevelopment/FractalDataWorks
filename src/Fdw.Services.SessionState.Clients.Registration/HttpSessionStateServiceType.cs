@@ -19,7 +19,7 @@ namespace Fdw.Services.SessionState.Clients.Registration;
 /// configured with bearer token authentication.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(SessionStateTypes), "Http")]
+[Implementation(typeof(SessionStateTypes), "Http")]
 public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IGenericService, ISessionStateServiceFactory>
 {
     internal const string HttpClientName = "SessionStateApi";

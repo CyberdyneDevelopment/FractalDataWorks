@@ -12,7 +12,7 @@ namespace Fdw.Services.Pipelines;
 /// <see cref="PipelineServiceConfigurationProvider"/> that the pipeline endpoints depend on.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(PipelineServiceTypes), "Default")]
+[Implementation(typeof(PipelineServiceTypes), "Default")]
 public sealed class DefaultPipelineServiceType : PipelineServiceTypeBase
 {
     /// <summary>

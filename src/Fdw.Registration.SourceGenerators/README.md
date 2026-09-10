@@ -10,7 +10,7 @@ This package is a Roslyn incremental source generator. It is referenced with `Ou
 |---|---|---|
 | `ConfigurationTypeModuleInitializerGenerator` | class | Generates module initializers in ENTRY POINT assemblies to register ConfigurationTypes from REFERENCED… |
 | `PocoMapperModuleInitializerGenerator` | class | Generates module initializers in CONSUMING assemblies to register POCO mappers from REFERENCED… |
-| `ServiceTypeOptionModuleInitializerGenerator` | class | Generates module initializers to register [ServiceTypeOption] types cross-assembly. |
+| `ImplementationModuleInitializerGenerator` | class | Generates module initializers to register [Implementation] types cross-assembly. |
 | `TypeOptionModuleInitializerGenerator` | class | Generates module initializers in CONSUMING executable assemblies to register [TypeOption] types from… |
 
 Generated sources are emitted per compilation. To read what a generator produced, build with `EmitCompilerGeneratedFiles` and look under `obj/generated/`.

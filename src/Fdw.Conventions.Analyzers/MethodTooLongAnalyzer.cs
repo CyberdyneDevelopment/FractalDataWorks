@@ -261,7 +261,7 @@ public sealed class MethodTooLongAnalyzer : DiagnosticAnalyzer
             foreach (var attribute in type.GetAttributes())
             {
                 var name = attribute.AttributeClass?.Name;
-                if (string.Equals(name, "ServiceTypeOptionAttribute", StringComparison.Ordinal)
+                if (string.Equals(name, "ImplementationAttribute", StringComparison.Ordinal)
                     || string.Equals(name, "ServiceTypeCollectionAttribute", StringComparison.Ordinal)
                     || string.Equals(name, "TypeOptionAttribute", StringComparison.Ordinal)
                     || string.Equals(name, "TypeCollectionAttribute", StringComparison.Ordinal)

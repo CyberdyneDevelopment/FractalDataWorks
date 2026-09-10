@@ -12,7 +12,7 @@ namespace Fdw.Services.Pipelines.Clients.Abstractions;
 /// values (e.g. "Batch Copy" / "Batch copy pipeline for ETL operations with configurable
 /// parallelism"), but neither member is declared on <c>ITypeOption</c>/<c>IServiceType</c>. A
 /// pluggable enumeration endpoint — one that must keep working for ANY future
-/// <c>[ServiceTypeOption(typeof(EtlPipelineTypes), "...")]</c> registered by a downstream assembly,
+/// <c>[Implementation(typeof(EtlPipelineTypes), "...")]</c> registered by a downstream assembly,
 /// with no code change here — can only read what the shared interface declares; reaching
 /// DisplayName/Description would require an unsafe per-concrete-type cast that breaks the moment an
 /// engine type closes a different generic factory (which BatchCopyPipelineType/StreamingPipelineType

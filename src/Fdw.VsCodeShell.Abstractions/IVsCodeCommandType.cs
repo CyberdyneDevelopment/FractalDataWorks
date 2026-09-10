@@ -4,7 +4,7 @@ using Fdw.ServiceTypes;
 namespace Fdw.VsCodeShell.Abstractions;
 
 /// <summary>
-/// Non-generic marker for a VS Code command declared as a <c>[ServiceTypeOption]</c>.
+/// Non-generic marker for a VS Code command declared as a <c>[Implementation]</c>.
 /// The collection is keyed on this interface, and the manifest is projected from it.
 /// </summary>
 /// <remarks>
@@ -18,7 +18,7 @@ public interface IVsCodeCommandType : IServiceType
     /// The id VS Code invokes and the bootstrap POSTs to <c>/vscode/commands/{id}</c> — e.g. <c>pidgin.openCanvas</c>.
     /// </summary>
     /// <remarks>
-    /// Distinct from <c>Name</c>. <c>Name</c> is the <c>[ServiceTypeOption]</c> option name and must be a valid
+    /// Distinct from <c>Name</c>. <c>Name</c> is the <c>[Implementation]</c> option name and must be a valid
     /// C# identifier, which a dotted command id is not. The two are separate keyspaces with separate lookups.
     /// </remarks>
     string CommandId { get; }

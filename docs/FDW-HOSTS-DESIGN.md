@@ -37,7 +37,7 @@ The centralization the instinct actually wants is a single central **mechanism**
 | `Fdw.Hosting.Abstractions` (existing, **shrinks**) | netstandard2.0 | **DELETE** `IFdwHost`, `IFdwHostBuilder`, `IFdwHostBuilderContext`, `IFdwHostLifetime`, `IFdwHostApplicationLifetime`, `FdwHostOptions`, `FeatureOptions`, and the unconsumed `LogLevels`/`Sinks`/`TelemetryExporters` catalogs (all grep-confirmed dead). |
 | `Fdw.Services.Registration` (+ `.SourceGenerators`) (in-flight, extended) | netstandard2.0 | `Group` attribute argument, async `Initialize` returning `IGenericResult`, `Verify` member, `InitializeAllAsync`/`VerifyAllAsync`, `Entries()` (§5). `SetGroup` **deleted** — one mechanism. |
 | `Fdw.Services.HostRegistry.Abstractions` **(NEW)** | netstandard2.0 | `MonitoredHostTypes` `[ServiceTypeCollection(ServiceCategory = "MonitoredHost")]`, `IHostRegistryClient`, registration payload records. |
-| `Fdw.Services.HostRegistry.Client` **(NEW)** | net10.0 | `ApiRegisteredHostType` `[ServiceTypeOption]` + `MonitoredHostRegistrar : IHostedService` (registered by the **option's** `RegisterRequiredServices`, never by the spine). |
+| `Fdw.Services.HostRegistry.Client` **(NEW)** | net10.0 | `ApiRegisteredHostType` `[Implementation]` + `MonitoredHostRegistrar : IHostedService` (registered by the **option's** `RegisterRequiredServices`, never by the spine). |
 | `Fdw.Services.HostRegistry` **(NEW)** | net10.0 | Server side: registration endpoints, storage, `LocalRegisteredHostType` option (in-process registration for the host that hosts the registry), permission seed `hostregistry.register`. |
 | D-bucket relocation targets | | `Fdw.Services.Scheduling` gains the scheduler mechanism (`SchedulerBackgroundService`, `EtlDispatchService`, dispatch client wiring, `SchedulerTypes.Verify` gate); `Fdw.Calculations.PreCompute` **(NEW)** gains `PreComputeCalculationsJob` + `CalculationApiClient`; `Fdw.UI.Themes.Scalar` **(NEW)** gains the ~150 lines of Scalar theming/tenants-js/preview-hosts (hosts from config); `Fdw.Web.Http.Authentication.Blazor` gains `AddFdwBlazorTokenClient` (cookie scheme, ROPC/refresh via `IHttpClientFactory` — the raw `new HttpClient` in `OnValidatePrincipal` dies) + `MapFdwBlazorAuthEndpoints` (login/logout minimal APIs); `Fdw.Services.Credentials` gains `OutboundIdentityTypes` (§4). |
 
@@ -78,7 +78,7 @@ public static class PlatformServices
 }
 ```
 
-Both sweeps return `IGenericResult` so there is **one** fail-loud exit path (Initialize failure and Verify failure are both `HostLog.BootStepFailed` + exit 1). Additional uniformity fixes riding on the same branch: `ConnectionTypes.RegisterAdditionalInterfaces` folds into its `Register`; `DataStoreProvider`/`DataSetProvider` get conforming `[ServiceTypeCollection]` descriptors registered by module initializer in their own packages; the three hardcoded root `RegisterDomainServices("ConfigurationDb","sec"/"data"/"notify")` calls finish their migration into the owning domains' ServiceTypeOptions.
+Both sweeps return `IGenericResult` so there is **one** fail-loud exit path (Initialize failure and Verify failure are both `HostLog.BootStepFailed` + exit 1). Additional uniformity fixes riding on the same branch: `ConnectionTypes.RegisterAdditionalInterfaces` folds into its `Register`; `DataStoreProvider`/`DataSetProvider` get conforming `[ServiceTypeCollection]` descriptors registered by module initializer in their own packages; the three hardcoded root `RegisterDomainServices("ConfigurationDb","sec"/"data"/"notify")` calls finish their migration into the owning domains' Implementations.
 
 ### 2.3 Public API — bootstrap, context, builders
 
@@ -130,7 +130,7 @@ public abstract class FdwHttpHostBuilderBase<TSelf> : FdwHostBuilderBase<TSelf>
 }
 ```
 
-**There is deliberately NO `WithHostedService<T>()`.** Hosted services are domain services; they are registered exclusively by their owning `[ServiceTypeOption].RegisterRequiredServices` and arrive by package reference + config row (doctrine #5). This resolves the tournament's double-registration contradiction in `Verify`'s favor (§9-C1). Likewise there is **no `WithBackgroundExecutor`** — ETL's pipeline background executor is registered by the Orchestration/EtlPipeline domain option with queue capacity from its config row.
+**There is deliberately NO `WithHostedService<T>()`.** Hosted services are domain services; they are registered exclusively by their owning `[Implementation].RegisterRequiredServices` and arrive by package reference + config row (doctrine #5). This resolves the tournament's double-registration contradiction in `Verify`'s favor (§9-C1). Likewise there is **no `WithBackgroundExecutor`** — ETL's pipeline background executor is registered by the Orchestration/EtlPipeline domain option with queue capacity from its config row.
 
 ```csharp
 namespace Fdw.Hosting.Api;
@@ -290,7 +290,7 @@ return await FdwWorkerHost
     .RunAsync();
 ```
 
-That is the whole file. `SchedulerBackgroundService`, `EtlDispatchService`, `IFrameworkSchedulingService` wiring, dispatch clients, and config binds live in `Fdw.Services.Scheduling`'s `[ServiceTypeOption].RegisterRequiredServices`/`Configure` (they were doctrine-#3 bugs in app code); the fail-loud gate is `SchedulerTypes.Verify`. `PreComputeCalculationsJob` + `CalculationApiClient` arrive from `Fdw.Calculations.PreCompute` by package reference + its config rows (`ClientCredentials` identity). `ICalculationUsageRepository` is renamed and re-homed during the move (no Repository pattern, ever). ETL's Program.cs is byte-identical in shape (name + swagger text differ); hubs and the background executor arrive via its package graph and config rows.
+That is the whole file. `SchedulerBackgroundService`, `EtlDispatchService`, `IFrameworkSchedulingService` wiring, dispatch clients, and config binds live in `Fdw.Services.Scheduling`'s `[Implementation].RegisterRequiredServices`/`Configure` (they were doctrine-#3 bugs in app code); the fail-loud gate is `SchedulerTypes.Verify`. `PreComputeCalculationsJob` + `CalculationApiClient` arrive from `Fdw.Calculations.PreCompute` by package reference + its config rows (`ClientCredentials` identity). `ICalculationUsageRepository` is renamed and re-homed during the move (no Repository pattern, ever). ETL's Program.cs is byte-identical in shape (name + swagger text differ); hubs and the background executor arrive via its package graph and config rows.
 
 **`reference-ui/public/src/Reference.Ui/Program.cs`**
 
@@ -314,7 +314,7 @@ The UI stops being a hosting orphan: it gains `AddFrameworkSerilog`, the try/cat
 
 **The mechanism splits now; the deployment stays in reference-api for now.**
 
-Prerequisite: split the fused `OpenIddict` `[ServiceTypeOption]` into two options of `AuthenticationServiceTypes`:
+Prerequisite: split the fused `OpenIddict` `[Implementation]` into two options of `AuthenticationServiceTypes`:
 
 - **`OpenIddictServer`** — issuance: `AddOpenIddict().AddCore(...).AddServer(...)`, `/connect/token` + jwks + revoke/introspect, `ConnectTokenEndpoint`, `OpenIddictSigningKeyLoader`/`Configurator`, `OpenIddictClientSecretProvisioner`, `ProcessSignInClaimsHandler`.
 - **`OpenIddictValidation`** — resource side, with a **required, explicit `Mode`** on its config row: `LocalServer` | `Remote` (Remote additionally **requires** `Authority`). Missing `Mode`, or `Remote` without `Authority` ⇒ MessageLogging error + exit 1. **There is no auto-detection of a co-hosted server** — "validation silently chooses `UseLocalServer()` when the server option happens to be present" is exactly the banned "I'll figure out which" guesser (this replaces the marker-guard auto-detect idea from the losing design; see §9-G1).
@@ -410,7 +410,7 @@ There are **no** `Action<WebApplicationBuilder>` / `Action<WebApplication>` hook
 - **R5 — Generic `Action<WebApplicationBuilder>` / `Action<WebApplication>` escape hooks.** Program.cs with extra steps; the soup, verbatim. Only named, typed, position-fixed slots.
 - **R6 — Auto-detecting co-hosted issuance** (validation choosing `UseLocalServer()` iff the server option is present — including via the marker guard). A banned "I'll figure out which" guesser. `Mode` is explicit required config; missing ⇒ exit 1.
 - **R7 — `Fdw.Hosting.Scheduler` (or distinct Etl/Scheduler archetypes).** Worker is the shape; scheduler/etl are domains arriving via package refs + rows. A domain-named host package inevitably accretes domain values; archetype-per-app recreates the drift problem one level up.
-- **R8 — `WithHostedService<T>()` / `WithBackgroundExecutor` on the builders.** Hosted services and executors are domain services owned by `[ServiceTypeOption].RegisterRequiredServices` (doctrine #5). An app-side registration path would be a second, competing mechanism — the tournament's own double-registration contradiction proved the hazard.
+- **R8 — `WithHostedService<T>()` / `WithBackgroundExecutor` on the builders.** Hosted services and executors are domain services owned by `[Implementation].RegisterRequiredServices` (doctrine #5). An app-side registration path would be a second, competing mechanism — the tournament's own double-registration contradiction proved the hazard.
 - **R9 — `dotnet new` templates as the fix.** Templates copy code; copies drift — precisely today's disease (the copy-paste fossils prove the lineage). Templates may emit the ~10-line Program.cs; mechanism lives in packages.
 - **R10 — Auto-enabling self-registration / defaulting a registry URL when no row exists.** No rows = feature off with an Info log; substituting a default endpoint is a textbook forbidden fallback.
 - **R11 — Fatal self-registration boot gate.** Circular (the registry's own host must boot; every host self-registers) and conflates transient remote unavailability with missing configuration. Documented in the package so nobody "hardens" it later.

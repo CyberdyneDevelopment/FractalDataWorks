@@ -13,9 +13,9 @@ using Fdw.Results;
 namespace Fdw.Services.Etl.Projects.Clients.Registration;
 
 /// <summary>
-/// ServiceTypeOption for the Project API client.
+/// Implementation for the Project API client.
 /// </summary>
-[ServiceTypeOption(typeof(ApiClientTypes), "ProjectClient")]
+[Implementation(typeof(ApiClientTypes), "ProjectClient")]
 public sealed class ProjectClientType : ApiClientTypeBase<ProjectApiClient>
 {
     /// <summary>

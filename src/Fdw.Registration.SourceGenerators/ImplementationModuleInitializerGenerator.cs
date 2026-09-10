@@ -9,33 +9,33 @@ using Fdw.Conventions;
 namespace Fdw.Registration.SourceGenerators;
 
 /// <summary>
-/// Generates module initializers to register [ServiceTypeOption] types cross-assembly.
+/// Generates module initializers to register [Implementation] types cross-assembly.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>This generator is referenced only by entry point projects</b> (executables like Reference.Api,
-/// Reference.UI). Library packages do NOT reference it — they only define [ServiceTypeOption] types.
+/// Reference.UI). Library packages do NOT reference it — they only define [Implementation] types.
 /// </para>
 /// <para>
 /// Two modes exist (selected automatically based on OutputKind):
 /// </para>
 /// <list type="number">
 /// <item>
-/// <b>DLL mode</b> (DynamicallyLinkedLibrary): Scans the DLL's OWN types for [ServiceTypeOption]
+/// <b>DLL mode</b> (DynamicallyLinkedLibrary): Scans the DLL's OWN types for [Implementation]
 /// attributes that reference a collection in a DIFFERENT assembly. Generates a [ModuleInitializer]
 /// in the DLL itself so that when the DLL loads, it self-registers into the external collection.
 /// </item>
 /// <item>
 /// <b>Executable mode</b> (ConsoleApplication, WindowsApplication, etc.): Scans ALL referenced
-/// assemblies for [ServiceTypeOption] types and generates a single [ModuleInitializer] in the
+/// assemblies for [Implementation] types and generates a single [ModuleInitializer] in the
 /// executable that registers every discovered option. This is the primary registration path.
 /// </item>
 /// </list>
 /// </remarks>
 [Generator]
-public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
+public class ImplementationModuleInitializerGenerator : IIncrementalGenerator
 {
-    private const string ServiceTypeOptionAttributeName = "Fdw.Collections.ServiceTypeOptionAttribute";
+    private const string ImplementationAttributeName = "Fdw.Collections.ImplementationAttribute";
     private const string ReplacesAttributeName = "Fdw.Collections.Attributes.ReplacesAttribute";
 
     /// <inheritdoc />
@@ -56,17 +56,17 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
 
         if (isDll)
         {
-            // DLL mode: find own [ServiceTypeOption] types that reference collections in OTHER
+            // DLL mode: find own [Implementation] types that reference collections in OTHER
             // assemblies. The DLL self-registers when it loads, before any user code runs.
             // If there are no cross-assembly options, emit nothing at all (not even diagnostics).
-            (options, diagnosticInfo) = DiscoverOwnCrossAssemblyServiceTypeOptions(compilation);
+            (options, diagnosticInfo) = DiscoverOwnCrossAssemblyImplementations(compilation);
 
             if (options.Count == 0)
                 return;
         }
         else
         {
-            // Executable mode: scan referenced assemblies for [ServiceTypeOption] types.
+            // Executable mode: scan referenced assemblies for [Implementation] types.
             (options, diagnosticInfo) = DiscoverOptionsInReferencedAssembliesWithDiagnostics(compilation);
         }
 
@@ -85,7 +85,7 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
         // Always generate a diagnostic file for executables so we can see what happened.
         // DLL mode only reaches here when there are cross-assembly options to register.
         var diagCode = GenerateDiagnosticFile(assemblyName, diagnosticInfo, options.Count);
-        context.AddSource("ServiceTypeOptionModuleInitializer.Diagnostics.g.cs", SourceText.From(diagCode, Encoding.UTF8));
+        context.AddSource("ImplementationModuleInitializer.Diagnostics.g.cs", SourceText.From(diagCode, Encoding.UTF8));
 
         if (options.Count == 0)
             return;
@@ -97,7 +97,7 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
 
         var code = GenerateModuleInitializer(byCollection, assemblyName);
         context.AddSource(
-            "ServiceTypeOptionModuleInitializer.g.cs",
+            "ImplementationModuleInitializer.g.cs",
             SourceText.From(code, Encoding.UTF8));
     }
 
@@ -142,10 +142,10 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
         sb.AppendLine($"namespace {safeAssemblyName}.Generated");
         sb.AppendLine("{");
         sb.AppendLine("    /// <summary>");
-        sb.AppendLine("    /// Module initializer for registering ServiceTypeOptions from referenced assemblies.");
+        sb.AppendLine("    /// Module initializer for registering Implementations from referenced assemblies.");
         sb.AppendLine("    /// This runs automatically when this assembly loads, before any user code executes.");
         sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    internal static class ServiceTypeOptionRegistration");
+        sb.AppendLine("    internal static class ImplementationRegistration");
         sb.AppendLine("    {");
         sb.AppendLine("        [ModuleInitializer]");
         sb.AppendLine("        internal static void Initialize()");
@@ -170,20 +170,20 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
         sb.AppendLine("            catch (global::System.InvalidOperationException ex) when (ex.Message.Contains(\"frozen\", global::System.StringComparison.Ordinal))");
         sb.AppendLine("            {");
         sb.AppendLine($"                throw new global::System.InvalidOperationException(");
-        sb.AppendLine($"                    \"[ServiceTypeOption Registration] Assembly '{assemblyName}' could not register service type options because one or more \" +");
+        sb.AppendLine($"                    \"[Implementation Registration] Assembly '{assemblyName}' could not register service type options because one or more \" +");
         sb.AppendLine($"                    \"target collections were already frozen. Ensure this assembly is loaded before any \" +");
         sb.AppendLine($"                    \"code accesses the collection. Detail: \" + ex.Message, ex);");
         sb.AppendLine("            }");
         sb.AppendLine("            catch (global::System.Exception ex)");
         sb.AppendLine("            {");
         sb.AppendLine($"                throw new global::System.InvalidOperationException(");
-        sb.AppendLine($"                    \"[ServiceTypeOption Registration] Assembly '{assemblyName}' failed to register service type options \" +");
+        sb.AppendLine($"                    \"[Implementation Registration] Assembly '{assemblyName}' failed to register service type options \" +");
         sb.AppendLine($"                    \"during module initialization. Detail: \" + ex.Message, ex);");
         sb.AppendLine("            }");
         sb.AppendLine("            finally");
         sb.AppendLine("            {");
         sb.AppendLine($"                global::System.Diagnostics.Debug.WriteLine(");
-        sb.AppendLine($"                    \"[ServiceTypeOption Registration] Module initializer complete for '{assemblyName}'.\");");
+        sb.AppendLine($"                    \"[Implementation Registration] Module initializer complete for '{assemblyName}'.\");");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
@@ -202,31 +202,31 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
     );
 
     /// <summary>
-    /// DLL mode: finds [ServiceTypeOption] types in the current compilation that point to
+    /// DLL mode: finds [Implementation] types in the current compilation that point to
     /// a collection in a DIFFERENT assembly (cross-assembly registration candidates).
     /// Same-assembly options are handled by Collections.SourceGenerators static constructors.
     /// </summary>
-    private static (List<ModuleInitOptionModel> Options, List<string> DiagnosticInfo) DiscoverOwnCrossAssemblyServiceTypeOptions(
+    private static (List<ModuleInitOptionModel> Options, List<string> DiagnosticInfo) DiscoverOwnCrossAssemblyImplementations(
         Compilation compilation)
     {
         var options = new List<ModuleInitOptionModel>();
         var diagnostics = new List<string>();
         var currentAssemblyName = compilation.AssemblyName ?? "";
 
-        diagnostics.Add($"Assembly: {currentAssemblyName} (DLL mode — scanning own types for cross-assembly ServiceTypeOptions)");
+        diagnostics.Add($"Assembly: {currentAssemblyName} (DLL mode — scanning own types for cross-assembly Implementations)");
 
-        var attributeSymbol = compilation.GetTypeByMetadataName(ServiceTypeOptionAttributeName);
-        diagnostics.Add($"ServiceTypeOptionAttribute found: {attributeSymbol != null}");
+        var attributeSymbol = compilation.GetTypeByMetadataName(ImplementationAttributeName);
+        diagnostics.Add($"ImplementationAttribute found: {attributeSymbol != null}");
 
         if (attributeSymbol == null)
         {
-            diagnostics.Add("ServiceTypeOptionAttribute not in compilation — skipping DLL scan");
+            diagnostics.Add("ImplementationAttribute not in compilation — skipping DLL scan");
             return (options, diagnostics);
         }
 
         ScanNamespaceForOwnOptions(compilation.GlobalNamespace, attributeSymbol, currentAssemblyName, options, diagnostics);
 
-        diagnostics.Add($"Total cross-assembly ServiceTypeOptions found: {options.Count}");
+        diagnostics.Add($"Total cross-assembly Implementations found: {options.Count}");
         return (options, diagnostics);
     }
 
@@ -298,14 +298,14 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
     {
         var options = new List<ModuleInitOptionModel>();
         var diagnostics = new List<string>();
-        var attributeSymbol = compilation.GetTypeByMetadataName(ServiceTypeOptionAttributeName);
+        var attributeSymbol = compilation.GetTypeByMetadataName(ImplementationAttributeName);
 
         diagnostics.Add($"Assembly: {compilation.AssemblyName}");
         diagnostics.Add($"AttributeSymbol found: {attributeSymbol != null}");
 
         if (attributeSymbol == null)
         {
-            diagnostics.Add("ERROR: Could not find ServiceTypeOptionAttribute in compilation");
+            diagnostics.Add("ERROR: Could not find ImplementationAttribute in compilation");
             return (options, diagnostics);
         }
 
@@ -336,7 +336,7 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
             scannedAssemblies++;
             var foundInAssembly = new List<string>();
 
-            // Find types with [ServiceTypeOption] attribute
+            // Find types with [Implementation] attribute
             ScanNamespaceForOptionsWithDiagnostics(assemblySymbol.GlobalNamespace, attributeSymbol, options, foundInAssembly);
 
             if (foundInAssembly.Count > 0)
@@ -397,7 +397,7 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
         if (!hasParameterlessConstructor)
             return;
 
-        // Check for [ServiceTypeOption] attribute
+        // Check for [Implementation] attribute
         foreach (var attr in type.GetAttributes())
         {
             if (!SymbolEqualityComparer.Default.Equals(attr.AttributeClass, attributeSymbol))
@@ -428,7 +428,7 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
     /// </summary>
     /// <remarks>
     /// Why: Identical logic to TypeOptionModuleInitializerGenerator.BuildReplacementMap — both generators
-    /// need the same [Replaces] resolution because TypeOptions and ServiceTypeOptions can both be replaced.
+    /// need the same [Replaces] resolution because TypeOptions and Implementations can both be replaced.
     /// </remarks>
     private static Dictionary<string, string> BuildReplacementMap(
         Compilation compilation,
@@ -581,7 +581,7 @@ public class ServiceTypeOptionModuleInitializerGenerator : IIncrementalGenerator
     {
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated />");
-        sb.AppendLine("// Diagnostic output from ServiceTypeOptionModuleInitializerGenerator");
+        sb.AppendLine("// Diagnostic output from ImplementationModuleInitializerGenerator");
         sb.AppendLine();
         sb.AppendLine("/*");
         sb.AppendLine($"Generator ran for: {assemblyName}");

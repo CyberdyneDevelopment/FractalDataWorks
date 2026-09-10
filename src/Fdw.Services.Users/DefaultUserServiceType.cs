@@ -26,7 +26,7 @@ namespace Fdw.Services.Users;
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(UserServiceTypes), "Default")]
+[Implementation(typeof(UserServiceTypes), "Default")]
 public sealed class DefaultUserServiceType : UserServiceTypeBase
 {
     /// <summary>

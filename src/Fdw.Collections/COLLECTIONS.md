@@ -158,7 +158,7 @@ a type nothing declares is `TC011`.
 
 This is the most consequential difference between the two families and the easiest to get wrong.
 
-| | `[TypeOption]` | `[ServiceTypeOption]` |
+| | `[TypeOption]` | `[Implementation]` |
 |---|---|---|
 | base | `TypeOptionBase<int, T>` | `TypeOptionBase<Guid, IServiceType<Guid>>` |
 | key type | `int` | `Guid` |
@@ -212,9 +212,9 @@ from the host.
 | generator | emits for | scope |
 |---|---|---|
 | `TypeOptionModuleInitializerGenerator` | **executables only** — returns early for `DynamicallyLinkedLibrary` | scans every referenced assembly |
-| `ServiceTypeOptionModuleInitializerGenerator` | executables **and libraries** | DLL mode scans the DLL's own types for options targeting a collection in a *different* assembly |
+| `ImplementationModuleInitializerGenerator` | executables **and libraries** | DLL mode scans the DLL's own types for options targeting a collection in a *different* assembly |
 
-**A plain `[TypeOption]` in a library has no self-registration path.** A `[ServiceTypeOption]` does.
+**A plain `[TypeOption]` in a library has no self-registration path.** A `[Implementation]` does.
 That asymmetry is what makes an option package viable for service types and not for plain options.
 
 **Requirement:** an option package that must register itself references
@@ -391,7 +391,7 @@ public partial class ThingTypes : ServiceTypeCollectionBase<ThingTypeBase<...>, 
     }
 }
 
-[ServiceTypeOption(typeof(ThingTypes), "MsSql")]
+[Implementation(typeof(ThingTypes), "MsSql")]
 public sealed class MsSqlThingType : ThingTypeBase<...>
 {
     public MsSqlThingType() : base(name: "MsSql", ...)
@@ -425,7 +425,7 @@ The child is simultaneously a collection and an option of its parent. Both `Type
 Read for this document: `Fdw.Collections/Attributes/{TypeOption,TypeCollection,TypeLookup,Replaces}Attribute.cs`,
 `Fdw.Collections/{TypeOptionBase,TypeCollectionBase,OptionId}.cs`,
 `Fdw.Collections.SourceGenerators/{TypeCollectionGenerator,ServiceTypeCollectionGenerator,TypeOptionExtensionGenerator}.cs`,
-`Fdw.Collections.SourceGenerators/Shared/{LookupPropertyModel,TypeOptionDiscovery,ServiceTypeOptionDiscovery,TypeCollectionGeneratorDiagnostics,ReservedMemberNames}.cs`,
-`Fdw.Registration.SourceGenerators/{TypeOptionModuleInitializerGenerator,ServiceTypeOptionModuleInitializerGenerator}.cs`,
+`Fdw.Collections.SourceGenerators/Shared/{LookupPropertyModel,TypeOptionDiscovery,ImplementationDiscovery,TypeCollectionGeneratorDiagnostics,ReservedMemberNames}.cs`,
+`Fdw.Registration.SourceGenerators/{TypeOptionModuleInitializerGenerator,ImplementationModuleInitializerGenerator}.cs`,
 `Fdw.Services.Abstractions/{ServiceTypeBase,IServiceType}.cs`, and the generated
 `ConnectionStates.TypeCollection.g.cs` plus ReferenceApi's `TypeOptionModuleInitializer.g.cs`.

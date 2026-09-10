@@ -22,7 +22,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// source (e.g. the API host aggregates its own <c>IHealthCheckable</c> services).
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(HealthMonitorTypes), "Local")]
+[Implementation(typeof(HealthMonitorTypes), "Local")]
 public sealed class LocalHealthMonitorType
     : HealthMonitorTypeBase<IHealthMonitorService, ILocalHealthMonitorFactory, LocalHealthMonitorConfiguration>
 {

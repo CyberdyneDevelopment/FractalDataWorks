@@ -418,7 +418,7 @@ ServiceTypeCollections extend TypeCollections with dependency injection support 
 |  - Uses Guid keys (UUID v5 derived from the type)                   |
 |  - Base class has RegisterServices() and RegisterFactory() methods  |
 |  - Collection has RegisterAll() and InitializeFactories() methods   |
-|  - Uses [TypeOption] attribute (NOT [ServiceTypeOption])            |
+|  - Uses [TypeOption] attribute (NOT [Implementation])            |
 |  - Three-phase registration pattern for proper DI lifecycle         |
 +---------------------------------------------------------------------+
 ```

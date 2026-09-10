@@ -27,7 +27,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// The token proves who called; the entry's declared roles say what that caller may do here.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthenticationServiceTypes), "JwtBearer")]
+[Implementation(typeof(AuthenticationServiceTypes), "JwtBearer")]
 public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationType"/> class.</summary>

@@ -1,6 +1,6 @@
 # Transformations Service Domain
 
-The Transformations domain applies data transformations — calculations, aggregations, pivots, and lookups — using the standard service domain pattern. Each transformation type is a `ServiceTypeOption` in the `TransformationTypes` collection, dispatched by the `TransformationEngine`.
+The Transformations domain applies data transformations — calculations, aggregations, pivots, and lookups — using the standard service domain pattern. Each transformation type is a `Implementation` in the `TransformationTypes` collection, dispatched by the `TransformationEngine`.
 
 ## Service Type Options
 
@@ -26,7 +26,7 @@ Services.Transformations.Lookup/        # LookupTransformationType + factory
 
 ## Registration
 
-Each transformation implementation package contains a `[ServiceTypeOption(typeof(TransformationTypes), "<name>")]` class. With `Fdw.Registration.SourceGenerators` in the entry-point app, the emitted `[ModuleInitializer]` registers every referenced `[ServiceTypeOption]` at assembly load — **adding the package reference IS the registration intent**.
+Each transformation implementation package contains a `[Implementation(typeof(TransformationTypes), "<name>")]` class. With `Fdw.Registration.SourceGenerators` in the entry-point app, the emitted `[ModuleInitializer]` registers every referenced `[Implementation]` at assembly load — **adding the package reference IS the registration intent**.
 
 `TransformationTypes` is an ordinary `[ServiceTypeCollection]`, so its three-phase methods run inside
 the single `PlatformServices.Configure`/`Register`/`Initialize` sweep — there is no
@@ -131,10 +131,10 @@ var metrics = await transformationsService.GetTransformationMetrics(ct);
 
 ## Adding a New Transformation Type
 
-1. Create a `ServiceTypeOption` class extending `TransformationTypeBase<,,>`:
+1. Create a `Implementation` class extending `TransformationTypeBase<,,>`:
 
 ```csharp
-[ServiceTypeOption(typeof(TransformationTypes), "MyCustom")]
+[Implementation(typeof(TransformationTypes), "MyCustom")]
 public sealed class MyCustomTransformationType
     : TransformationTypeBase<IGenericTransformation, IMyCustomFactory, MyCustomConfiguration>
 {
@@ -172,7 +172,7 @@ public sealed class MyCustomTransformationType
 
 2. Add a factory command to `TransformationsCommands` and a `[ManagedConfiguration]` class.
 
-The source generator discovers the `[ServiceTypeOption]` attribute and registers it in `TransformationTypes` automatically.
+The source generator discovers the `[Implementation]` attribute and registers it in `TransformationTypes` automatically.
 
 ## See Also
 

@@ -5,7 +5,7 @@ using Fdw.Services.Connections.Abstractions;
 namespace Fdw.Services.Connections.TestDouble;
 
 /// <summary>
-/// The <c>MockConnection</c> <c>[ServiceTypeOption]</c> this assembly supplies to
+/// The <c>MockConnection</c> <c>[Implementation]</c> this assembly supplies to
 /// <see cref="ConnectionTypes"/>.
 /// </summary>
 /// <remarks>
@@ -26,7 +26,7 @@ namespace Fdw.Services.Connections.TestDouble;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ConnectionTypes), OptionName)]
+[Implementation(typeof(ConnectionTypes), OptionName)]
 public sealed class MockConnectionType
     : ConnectionTypeBase<IGenericConnection, IMockConnectionFactory, MockConnectionConfiguration>
 {

@@ -82,7 +82,7 @@ Two source generator packages work together for TypeCollections:
 | Package | Purpose | When to Use |
 |---------|---------|-------------|
 | `Collections.SourceGenerators` | Generates collection implementations | Defining `[TypeCollection]` classes |
-| `Registration.SourceGenerators` | Generates module initializers | Defining `[TypeOption]`, `[ServiceTypeOption]`, or `[GenerateMapper]` in separate assemblies |
+| `Registration.SourceGenerators` | Generates module initializers | Defining `[TypeOption]`, `[Implementation]`, or `[GenerateMapper]` in separate assemblies |
 
 **Projects defining TypeCollections** need the full generator:
 
@@ -138,7 +138,7 @@ POCO property names must match the database column names exactly. The DataGatewa
 
 ### Transitive Generator Flow
 
-The Registration generator handles **cross-assembly registration** via module initializers for `[TypeOption]`, `[ServiceTypeOption]`, and `[GenerateMapper]` types:
+The Registration generator handles **cross-assembly registration** via module initializers for `[TypeOption]`, `[Implementation]`, and `[GenerateMapper]` types:
 
 ```mermaid
 flowchart LR
@@ -157,13 +157,13 @@ flowchart LR
 When your app references `Services.Connections.MsSql`:
 1. NuGet restores MsSql and its dependencies (including Services.Connections)
 2. The Registration generator embedded in Services.Connections flows to your project
-3. The generator scans for `[ServiceTypeOption]` types in referenced assemblies
+3. The generator scans for `[Implementation]` types in referenced assemblies
 4. It generates a module initializer in YOUR assembly:
 
 ```csharp
 // Generated in your application
 [ModuleInitializer]
-internal static void RegisterServiceTypeOptions()
+internal static void RegisterImplementations()
 {
     ConnectionTypes.RegisterMember(new MsSqlConnectionType());
 }

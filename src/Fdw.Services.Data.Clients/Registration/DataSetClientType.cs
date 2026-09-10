@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Data.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the DataSet API client.
+/// Implementation for the DataSet API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "DataSetClient")]
+[Implementation(typeof(ApiClientTypes), "DataSetClient")]
 public sealed class DataSetClientType : ApiClientTypeBase<DataSetApiClient>
 {
     /// <summary>

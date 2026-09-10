@@ -38,8 +38,8 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
         Compilation compilation)
     {
         // Library assemblies skip module initializer generation — only executables need it.
-        // ServiceTypeOption cross-assembly registration for DLL assemblies is handled by
-        // ServiceTypeOptionModuleInitializerGenerator.
+        // Implementation cross-assembly registration for DLL assemblies is handled by
+        // ImplementationModuleInitializerGenerator.
         if (compilation.Options.OutputKind == OutputKind.DynamicallyLinkedLibrary)
             return;
 

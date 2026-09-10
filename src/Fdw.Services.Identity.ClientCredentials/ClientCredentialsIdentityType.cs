@@ -24,7 +24,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// client id and secret, for service-to-service calls that have no user in the loop.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(IdentityServiceTypes), "ClientCredentials")]
+[Implementation(typeof(IdentityServiceTypes), "ClientCredentials")]
 public sealed class ClientCredentialsIdentityType
     : IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>
 {

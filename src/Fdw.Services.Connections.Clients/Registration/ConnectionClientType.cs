@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Connections.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Connection API client.
+/// Implementation for the Connection API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "ConnectionClient")]
+[Implementation(typeof(ApiClientTypes), "ConnectionClient")]
 public sealed class ConnectionClientType : ApiClientTypeBase<ConnectionApiClient>
 {
     /// <summary>

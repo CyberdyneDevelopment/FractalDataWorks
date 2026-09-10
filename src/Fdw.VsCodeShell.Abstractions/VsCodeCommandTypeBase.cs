@@ -37,7 +37,7 @@ public abstract class VsCodeCommandTypeBase<THandler>
     /// <summary>
     /// Initializes a new instance of the <see cref="VsCodeCommandTypeBase{THandler}"/> class.
     /// </summary>
-    /// <param name="name">The <c>[ServiceTypeOption]</c> option name. Must be a valid C# identifier, so it
+    /// <param name="name">The <c>[Implementation]</c> option name. Must be a valid C# identifier, so it
     /// is NOT the dotted command id — pass that as <paramref name="commandId"/>.</param>
     /// <param name="commandId">The id VS Code invokes, e.g. <c>pidgin.openCanvas</c>.</param>
     /// <param name="title">Palette title WITHOUT a category prefix — VS Code renders <c>Category: Title</c>,
@@ -65,7 +65,7 @@ public abstract class VsCodeCommandTypeBase<THandler>
     /// <inheritdoc />
     /// <remarks>
     /// Deliberately NOT marked <c>[TypeLookup]</c>. The generator gathers lookups from the
-    /// <c>[ServiceTypeOption]</c> types it discovers in the collection's own compilation, and every command
+    /// <c>[Implementation]</c> types it discovers in the collection's own compilation, and every command
     /// is declared downstream of this assembly — so a lookup declared here would emit nothing. Verified:
     /// <c>ApiClientTypes</c>, in the same position, generates no lookup methods either. The command-id index
     /// is therefore built once from <c>All()</c> when the shell is registered.

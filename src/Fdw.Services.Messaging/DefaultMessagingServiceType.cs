@@ -12,7 +12,7 @@ namespace Fdw.Services.Messaging;
 /// and <see cref="IAccessRequestService"/> with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(MessagingServiceTypes), "Default")]
+[Implementation(typeof(MessagingServiceTypes), "Default")]
 public sealed class DefaultMessagingServiceType : MessagingServiceTypeBase
 {
     /// <summary>

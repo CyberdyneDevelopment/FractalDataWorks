@@ -80,7 +80,7 @@ internal static class TypeCollectionGeneratorDiagnostics
         category: "ServiceType",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Multiple ServiceTypeOptions have the same auto-generated Id. This should be extremely rare with Guid.");
+        description: "Multiple Implementations have the same auto-generated Id. This should be extremely rare with Guid.");
 
     public static readonly DiagnosticDescriptor ServiceTypeInterfaceNotImplemented = new(
         id: "ST002",
@@ -91,28 +91,28 @@ internal static class TypeCollectionGeneratorDiagnostics
         isEnabledByDefault: true,
         description: "ServiceTypes require dual inheritance - both base class and interface must be implemented.");
 
-    public static readonly DiagnosticDescriptor NoServiceTypeOptionsFound = new(
+    public static readonly DiagnosticDescriptor NoImplementationsFound = new(
         id: "ST003",
-        title: "No ServiceTypeOptions Found",
-        messageFormat: "ServiceTypeCollection '{0}' has no ServiceTypeOptions",
+        title: "No Implementations Found",
+        messageFormat: "ServiceTypeCollection '{0}' has no Implementations",
         category: "ServiceType",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "The ServiceTypeCollection has no discovered ServiceTypeOptions.");
+        description: "The ServiceTypeCollection has no discovered Implementations.");
 
     public static readonly DiagnosticDescriptor DuplicateServiceTypeName = new(
         id: "ST004",
         title: "Duplicate ServiceType Name",
-        messageFormat: "ServiceTypeCollection '{0}' has multiple ServiceTypeOptions named '{1}': {2}",
+        messageFormat: "ServiceTypeCollection '{0}' has multiple Implementations named '{1}': {2}",
         category: "ServiceType",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "ServiceTypeOption names must be unique within a collection.");
+        description: "Implementation names must be unique within a collection.");
 
     public static readonly DiagnosticDescriptor DuplicateServiceTypeLookupValue = new(
         id: "ST005",
         title: "Duplicate ServiceType Lookup Value",
-        messageFormat: "ServiceTypeCollection '{0}' has multiple ServiceTypeOptions with {1} = '{2}': {3}",
+        messageFormat: "ServiceTypeCollection '{0}' has multiple Implementations with {1} = '{2}': {3}",
         category: "ServiceType",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
@@ -137,14 +137,14 @@ internal static class TypeCollectionGeneratorDiagnostics
         isEnabledByDefault: true,
         description: "The type targeted by [Replaces] was not found. The replacement type will still be registered.");
 
-    public static readonly DiagnosticDescriptor ReservedServiceTypeOptionName = new(
+    public static readonly DiagnosticDescriptor ReservedImplementationName = new(
         id: "ST006",
-        title: "ServiceTypeOption Name Is Reserved",
-        messageFormat: "ServiceTypeOption '{0}' cannot be named '{1}': the generated collection already defines a member with that name. Rename the option.",
+        title: "Implementation Name Is Reserved",
+        messageFormat: "Implementation '{0}' cannot be named '{1}': the generated collection already defines a member with that name. Rename the option.",
         category: "ServiceType",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Each ServiceTypeOption gets a static accessor named after it, which would collide with a member the collection generates for itself (All, ByName, ById, ByCategory, Categories, GetMetadata, NotFound, RegisterMember). Reported here rather than left to the C# compiler, which would report a duplicate member inside generated code the author cannot open.");
+        description: "Each Implementation gets a static accessor named after it, which would collide with a member the collection generates for itself (All, ByName, ById, ByCategory, Categories, GetMetadata, NotFound, RegisterMember). Reported here rather than left to the C# compiler, which would report a duplicate member inside generated code the author cannot open.");
 
     public static readonly DiagnosticDescriptor ReservedOptionName = new(
         id: "TC012",

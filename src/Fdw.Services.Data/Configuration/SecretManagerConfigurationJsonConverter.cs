@@ -70,7 +70,7 @@ public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<Secr
                 throw new JsonException(
                     $"SecretManager '{secretManager.Name}' names implementation '{secretManager.Implementation}', "
                     + "which is not registered in SecretManagerTypes. Reference the package that provides that "
-                    + "[ServiceTypeOption] so its module initializer registers it before configuration is loaded.");
+                    + "[Implementation] so its module initializer registers it before configuration is loaded.");
             }
 
             var settingsType = secretManagerType.ConfigurationType;

@@ -32,7 +32,7 @@ The MsSql connection implementation demonstrates the processor pattern for exten
 
 ```
 Services.Connections.MsSql/
-├── MsSqlConnectionType.cs              # ServiceTypeOption registration
+├── MsSqlConnectionType.cs              # Implementation registration
 ├── MsSqlConnectionFactory.cs           # Factory implementation
 ├── MsSqlConnectionConfiguration.cs     # Configuration class
 ├── Processors/

@@ -22,7 +22,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 /// already minted for this workload, with no static secret anywhere.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(IdentityServiceTypes), "JwtAssertion")]
+[Implementation(typeof(IdentityServiceTypes), "JwtAssertion")]
 public sealed class JwtAssertionIdentityType
     : IdentityServiceTypeBase<IIdentityService, IIdentityServiceImplementationConfiguration, IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>>
 {

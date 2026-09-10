@@ -14,7 +14,7 @@ This package is a Roslyn incremental source generator. It is referenced with `Ou
 | `ServiceTypeInstanceCollectionGenerator` | class | Generator for factory-based ServiceTypeCollections that create new instances. |
 | `TypeCollectionGenerator` | class | Generator for immutable TypeCollections using FrozenDictionary. |
 | `TypeInstanceCollectionGenerator` | class | Generator for factory-based TypeCollections that create new instances. |
-| `TypeOptionExtensionGenerator` | class | Generates C# 14 static extension methods for TypeOption and ServiceTypeOption classes. Each TypeOption… |
+| `TypeOptionExtensionGenerator` | class | Generates C# 14 static extension methods for TypeOption and Implementation classes. Each TypeOption… |
 
 Generated sources are emitted per compilation. To read what a generator produced, build with `EmitCompilerGeneratedFiles` and look under `obj/generated/`.
 
