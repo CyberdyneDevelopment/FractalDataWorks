@@ -1,3 +1,5 @@
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -53,7 +55,13 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
     internal static void RegisterOverrides()
     {
         Configuration(SelectAndConfigureSingleOption);
-        Registration(static (builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder));
+        Registration(static (builder, _) =>
+        {
+            builder.Services.TryAddSingleton<MultitenancyConfigurationProvider>();
+            builder.Services.TryAddSingleton<IMultitenancyConfigurationProvider>(
+                sp => sp.GetRequiredService<MultitenancyConfigurationProvider>());
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
         Initialization(static (host, _) => GenericResult<IHost>.Success(host));
     }
 #pragma warning restore CA2255

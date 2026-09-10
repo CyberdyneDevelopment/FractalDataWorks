@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -13,6 +14,7 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// be built with a parameterless constructor and populate what it needs during initialization.
 /// </remarks>
 public interface IOidcAuthorityConfigurationProvider
+    : IDomainConfigurationProvider<IOidcAuthorityImplementationConfiguration>
 {
 
 }

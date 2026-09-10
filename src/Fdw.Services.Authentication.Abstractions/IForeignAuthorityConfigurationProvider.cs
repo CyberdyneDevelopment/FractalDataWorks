@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -13,6 +14,7 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// than a deployment.
 /// </remarks>
 public interface IForeignAuthorityConfigurationProvider
+    : IDomainConfigurationProvider<IForeignAuthorityImplementationConfiguration>
 {
 
 }
