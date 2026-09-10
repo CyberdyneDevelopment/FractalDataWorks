@@ -52,7 +52,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <summary>
     /// Registers one implementation's factory by type pair, letting the container construct it.
     /// </summary>
-    /// <typeparam name="TFactory">The implementation's own factory interface.</typeparam>
+    /// <typeparam name="TImplementationFactory">The implementation's own factory interface.</typeparam>
     /// <typeparam name="TImplementation">The concrete factory.</typeparam>
     /// <param name="builder">The builder whose container the factory is registered in.</param>
     /// <param name="implementation">The implementation name a domain row carries.</param>
@@ -63,26 +63,26 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// injects them, so its constructor stays the one place they are named. Take the delegate
     /// overload only when construction needs something the container cannot supply.
     /// </remarks>
-    public static IGenericResult Register<TFactory, TImplementation>(
+    public static IGenericResult Register<TImplementationFactory, TImplementation>(
         IHostApplicationBuilder builder,
         string implementation,
         ServiceLifetime lifetime)
-        where TFactory : class, IServiceFactory<TService>
-        where TImplementation : class, TFactory
+        where TImplementationFactory : class, IServiceFactory<TService>
+        where TImplementation : class, TImplementationFactory
     {
         if (builder is null) return GenericResult.Failure(ServicesResultCodes.ByName("BuilderRequired"));
         if (string.IsNullOrEmpty(implementation))
             return GenericResult.Failure(ServicesResultCodes.ByName("ImplementationRequired"));
 
-        builder.Services.TryAdd(new ServiceDescriptor(typeof(TFactory), typeof(TImplementation), lifetime));
-        _registered[implementation] = static sp => sp.GetRequiredService<TFactory>();
+        builder.Services.TryAdd(new ServiceDescriptor(typeof(TImplementationFactory), typeof(TImplementation), lifetime));
+        _registered[implementation] = static sp => sp.GetRequiredService<TImplementationFactory>();
         return GenericResult.Success();
     }
 
     /// <summary>
     /// Registers one implementation's factory: its DI registration and the resolver that reaches it.
     /// </summary>
-    /// <typeparam name="TFactory">The implementation's own factory interface.</typeparam>
+    /// <typeparam name="TImplementationFactory">The implementation's own factory interface.</typeparam>
     /// <param name="builder">The builder whose container the factory is registered in.</param>
     /// <param name="implementation">The implementation name a domain row carries.</param>
     /// <param name="lifetime">How the application wants the factory built.</param>
@@ -93,23 +93,23 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// lifetime is the application's to state and has no default: a factory holding a connection and
     /// one that is a pure function want opposite answers, and neither is the framework's to assume.
     /// </remarks>
-    public static IGenericResult Register<TFactory>(
+    public static IGenericResult Register<TImplementationFactory>(
         IHostApplicationBuilder builder,
         string implementation,
         ServiceLifetime lifetime,
-        Func<IServiceProvider, TFactory> factory)
-        where TFactory : class, IServiceFactory<TService>
+        Func<IServiceProvider, TImplementationFactory> factory)
+        where TImplementationFactory : class, IServiceFactory<TService>
     {
         if (builder is null) return GenericResult.Failure(ServicesResultCodes.ByName("BuilderRequired"));
         if (string.IsNullOrEmpty(implementation))
             return GenericResult.Failure(ServicesResultCodes.ByName("ImplementationRequired"));
         if (factory is null) return GenericResult.Failure(ServicesResultCodes.ByName("FactoryRequired"));
 
-        builder.Services.TryAdd(new ServiceDescriptor(typeof(TFactory), factory, lifetime));
+        builder.Services.TryAdd(new ServiceDescriptor(typeof(TImplementationFactory), factory, lifetime));
 
         // The resolver, not the factory: it is invoked at each use, so a transient registration hands
         // back a new instance and a singleton the same one -- whichever the application asked for.
-        _registered[implementation] = static sp => sp.GetRequiredService<TFactory>();
+        _registered[implementation] = static sp => sp.GetRequiredService<TImplementationFactory>();
         return GenericResult.Success();
     }
 
