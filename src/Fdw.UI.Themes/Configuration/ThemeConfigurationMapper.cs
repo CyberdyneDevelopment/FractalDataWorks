@@ -3,16 +3,16 @@ using Fdw.UI.Themes.Clients.Models;
 namespace Fdw.UI.Themes.Configuration;
 
 /// <summary>
-/// Extension methods for mapping between <see cref="ThemeManagedConfiguration"/> (database)
+/// Extension methods for mapping between <see cref="ThemeImplementationConfiguration"/> (database)
 /// and <see cref="ThemeConfiguration"/> (API DTO).
 /// </summary>
 public static class ThemeConfigurationMapper
 {
     /// <summary>
-    /// Converts a database-backed <see cref="ThemeManagedConfiguration"/> to a
+    /// Converts a database-backed <see cref="ThemeImplementationConfiguration"/> to a
     /// <see cref="ThemeConfiguration"/> DTO for API transport.
     /// </summary>
-    public static ThemeConfiguration ToDto(this ThemeManagedConfiguration managed)
+    public static ThemeConfiguration ToDto(this ThemeImplementationConfiguration managed)
     {
         return new ThemeConfiguration
         {
@@ -50,11 +50,11 @@ public static class ThemeConfigurationMapper
 
     /// <summary>
     /// Converts a <see cref="ThemeConfiguration"/> DTO to a
-    /// <see cref="ThemeManagedConfiguration"/> for database persistence.
+    /// <see cref="ThemeImplementationConfiguration"/> for database persistence.
     /// </summary>
-    public static ThemeManagedConfiguration ToManaged(this ThemeConfiguration dto)
+    public static ThemeImplementationConfiguration ToManaged(this ThemeConfiguration dto)
     {
-        return new ThemeManagedConfiguration
+        return new ThemeImplementationConfiguration
         {
             Id = dto.Id,
             TenantId = dto.TenantId,
@@ -88,9 +88,9 @@ public static class ThemeConfigurationMapper
     }
 
     /// <summary>
-    /// Converts a <see cref="ThemeManagedConfiguration"/> to a <see cref="ThemeSummaryPayload"/>.
+    /// Converts a <see cref="ThemeImplementationConfiguration"/> to a <see cref="ThemeSummaryPayload"/>.
     /// </summary>
-    public static ThemeSummaryPayload ToSummary(this ThemeManagedConfiguration managed)
+    public static ThemeSummaryPayload ToSummary(this ThemeImplementationConfiguration managed)
     {
         return new ThemeSummaryPayload
         {

@@ -8,11 +8,14 @@ namespace Fdw.UI.Themes.Configuration;
 /// <summary>The contract every Theme implementation carries.</summary>
 public interface IThemeImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets or sets the Theme DisplayName.</summary>
-    string? DisplayName { get; set; }
+    /// <summary>Gets or sets the Theme TenantId.</summary>
+    Guid? TenantId { get; set; }
 
-    /// <summary>Gets or sets the Theme Description.</summary>
-    string? Description { get; set; }
+    /// <summary>Gets or sets the Theme CreateDate.</summary>
+    DateTimeOffset CreateDate { get; set; }
+
+    /// <summary>Gets or sets the Theme ModifyDate.</summary>
+    DateTimeOffset ModifyDate { get; set; }
 
     /// <summary>Gets or sets the Theme PrimaryColor.</summary>
     string PrimaryColor { get; set; }
@@ -82,4 +85,10 @@ public interface IThemeImplementationConfiguration : IImplementationConfiguratio
 
     /// <summary>Gets or sets the Theme FaviconUrl.</summary>
     string? FaviconUrl { get; set; }
+
+    /// <summary>Gets or sets the Theme DisplayName.</summary>
+    string? DisplayName { get; set; }
+
+    /// <summary>Gets or sets the Theme Description.</summary>
+    string? Description { get; set; }
 }

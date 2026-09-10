@@ -6,7 +6,7 @@ namespace Fdw.UI.Themes.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the Theme configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "Theme")]
-public sealed class ThemeConfigurationCommand : ConfigurationCommandBase<ThemeManagedConfiguration>
+public sealed class ThemeConfigurationCommand : ConfigurationCommandBase<ThemeImplementationConfiguration>
 {
     /// <inheritdoc/>
     public ThemeConfigurationCommand() : base("Theme") { }
