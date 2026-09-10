@@ -81,7 +81,7 @@ public sealed class EscalationAggregateCompositionTests
         public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
 
         private readonly IReadOnlyList<IDataStore> _stores;
-        private readonly List<EscalationPolicyConfiguration> _policies;
+        private readonly List<EscalationPolicyImplementationConfiguration> _policies;
         private readonly List<EscalationLevelConfiguration> _levels;
         private readonly Dictionary<Guid, List<EscalationLevelRecipientConfiguration>> _recipientsByLevelId;
 
@@ -89,7 +89,7 @@ public sealed class EscalationAggregateCompositionTests
         {
             _policies =
             [
-                new EscalationPolicyConfiguration { Id = PolicyId, Name = "P1", IsEnabled = true }
+                new EscalationPolicyImplementationConfiguration { Id = PolicyId, Name = "P1", IsEnabled = true }
             ];
             // Single policy in this fixture, so the level read returns all levels for the policy.
             _levels =
@@ -121,7 +121,7 @@ public sealed class EscalationAggregateCompositionTests
         // Header read: WHERE Id = @id → the single policy.
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            if (typeof(T) == typeof(IEnumerable<EscalationPolicyConfiguration>))
+            if (typeof(T) == typeof(IEnumerable<EscalationPolicyImplementationConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)_policies.AsEnumerable()));
             return Task.FromResult(GenericResult<T>.Success((T)(object)Array.Empty<object>().AsEnumerable()));
         }

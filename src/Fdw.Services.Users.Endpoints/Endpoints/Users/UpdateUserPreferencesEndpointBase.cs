@@ -80,7 +80,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
             var existing = loadResult.Value;
             var record = existing is not null
                 ? existing
-                : new UserPreferencesConfiguration
+                : new UserPreferencesImplementationConfiguration
                 {
                     Id = Guid.CreateVersion7(),
                     UserId = userId,

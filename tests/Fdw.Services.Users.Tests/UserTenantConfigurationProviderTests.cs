@@ -28,16 +28,16 @@ public class UserTenantConfigurationProviderTests
 
     private static UserTenantConfigurationProvider MakeProvider(
         Mock<IConfigurationGateway>? gateway = null,
-        params UserTenantConfiguration[] storedRows)
+        params UserTenantImplementationConfiguration[] storedRows)
     {
 
         var gw = gateway ?? new Mock<IConfigurationGateway>();
 
         if (gateway is null)
         {
-            gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
+            gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
                     It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(GenericResult<IEnumerable<UserTenantConfiguration>>.Success(storedRows));
+              .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(storedRows));
         }
 
         return new UserTenantConfigurationProvider(
@@ -46,7 +46,7 @@ public class UserTenantConfigurationProviderTests
             "PlatformConfiguration", "tenant");
     }
 
-    private static UserTenantConfiguration Membership(
+    private static UserTenantImplementationConfiguration Membership(
         Guid userId,
         Guid tenantId,
         bool isDefault = false)
@@ -74,9 +74,9 @@ public class UserTenantConfigurationProviderTests
 
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantConfiguration>>.Success(new[]
+          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(new[]
           {
               Membership(userId, tenantA),
               Membership(userId, tenantB),
@@ -100,10 +100,10 @@ public class UserTenantConfigurationProviderTests
     {
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantConfiguration>>.Success(
-              Enumerable.Empty<UserTenantConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserTenantImplementationConfiguration>()));
 
         var provider = MakeProvider(gw);
 
@@ -126,9 +126,9 @@ public class UserTenantConfigurationProviderTests
 
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantConfiguration>>.Success(new[]
+          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(new[]
           {
               Membership(userId, defaultTenantId, isDefault: true),
           }));
@@ -149,10 +149,10 @@ public class UserTenantConfigurationProviderTests
     {
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantConfiguration>>.Success(
-              Enumerable.Empty<UserTenantConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserTenantImplementationConfiguration>()));
 
         var provider = MakeProvider(gw);
 

@@ -97,7 +97,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
                 return;
             }
 
-            var config = new UserRoleConfiguration
+            var config = new UserRoleImplementationConfiguration
             {
                 Id = Guid.NewGuid(),
                 UserId = userIdString,
@@ -140,7 +140,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     }
 
     private async Task<Fdw.Results.IGenericResult> AssignRoleAtomically(
-        Guid userId, UserRoleConfiguration config, string userIdString, CancellationToken ct)
+        Guid userId, UserRoleImplementationConfiguration config, string userIdString, CancellationToken ct)
     {
         var txnResult = await _userRoleProvider.BeginTransaction(ct).ConfigureAwait(false);
         if (!txnResult.IsSuccess || txnResult.Value == null)

@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Projects.Providers;
 
 /// <summary>Supplies the OrchestrationNode configuration.</summary>
 public sealed class OrchestrationNodeConfigurationProvider
-    : ImplementationConfigurationProviderBase<IOrchestrationNodeImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IOrchestrationNodeImplementationConfiguration>,
       IOrchestrationNodeConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="OrchestrationNodeConfigurationProvider"/> class.</summary>

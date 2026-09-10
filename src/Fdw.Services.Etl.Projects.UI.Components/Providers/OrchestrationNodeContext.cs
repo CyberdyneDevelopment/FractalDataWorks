@@ -15,10 +15,10 @@ public sealed class OrchestrationNodeContext : ProviderContextBase
     // ── State ──────────────────────────────────────────────────────────────────
 
     /// <summary>Gets the list of root nodes (nodes with no parent).</summary>
-    public IReadOnlyList<OrchestrationNodeConfiguration> RootNodes { get; init; } = [];
+    public IReadOnlyList<OrchestrationNodeImplementationConfiguration> RootNodes { get; init; } = [];
 
     /// <summary>Gets the currently selected node, or <c>null</c> when none is selected.</summary>
-    public OrchestrationNodeConfiguration? CurrentNode { get; init; }
+    public OrchestrationNodeImplementationConfiguration? CurrentNode { get; init; }
 
 
 
@@ -26,7 +26,7 @@ public sealed class OrchestrationNodeContext : ProviderContextBase
     public string SearchString { get; init; } = string.Empty;
 
     /// <summary>Gets root nodes filtered by <see cref="SearchString"/>.</summary>
-    public IEnumerable<OrchestrationNodeConfiguration> FilteredRootNodes { get; init; } = [];
+    public IEnumerable<OrchestrationNodeImplementationConfiguration> FilteredRootNodes { get; init; } = [];
 
     // ── Callbacks ──────────────────────────────────────────────────────────────
 
@@ -34,19 +34,19 @@ public sealed class OrchestrationNodeContext : ProviderContextBase
     public Func<Task> OnLoadData { get; init; } = () => Task.CompletedTask;
 
     /// <summary>Gets a node by identifier, optionally expanding child depth.</summary>
-    public Func<Guid, int?, Task<OrchestrationNodeConfiguration?>> OnGetNode { get; init; } = (_, _) => Task.FromResult<OrchestrationNodeConfiguration?>(null);
+    public Func<Guid, int?, Task<OrchestrationNodeImplementationConfiguration?>> OnGetNode { get; init; } = (_, _) => Task.FromResult<OrchestrationNodeImplementationConfiguration?>(null);
 
     /// <summary>Creates a new orchestration node.</summary>
-    public Func<OrchestrationNodeConfiguration, Task<OrchestrationNodeConfiguration?>> OnCreateNode { get; init; } = _ => Task.FromResult<OrchestrationNodeConfiguration?>(null);
+    public Func<OrchestrationNodeImplementationConfiguration, Task<OrchestrationNodeImplementationConfiguration?>> OnCreateNode { get; init; } = _ => Task.FromResult<OrchestrationNodeImplementationConfiguration?>(null);
 
     /// <summary>Updates an existing orchestration node.</summary>
-    public Func<Guid, OrchestrationNodeConfiguration, Task<OrchestrationNodeConfiguration?>> OnUpdateNode { get; init; } = (_, _) => Task.FromResult<OrchestrationNodeConfiguration?>(null);
+    public Func<Guid, OrchestrationNodeImplementationConfiguration, Task<OrchestrationNodeImplementationConfiguration?>> OnUpdateNode { get; init; } = (_, _) => Task.FromResult<OrchestrationNodeImplementationConfiguration?>(null);
 
     /// <summary>Deletes an orchestration node by identifier.</summary>
     public Func<Guid, Task<bool>> OnDeleteNode { get; init; } = _ => Task.FromResult(false);
 
     /// <summary>Sets the currently selected node.</summary>
-    public Action<OrchestrationNodeConfiguration?> OnSelectNode { get; init; } = _ => { };
+    public Action<OrchestrationNodeImplementationConfiguration?> OnSelectNode { get; init; } = _ => { };
 
     /// <summary>Sets the search string for filtering root nodes.</summary>
     public Action<string> OnSearchStringChanged { get; init; } = _ => { };

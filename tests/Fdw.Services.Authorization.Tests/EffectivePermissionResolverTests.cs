@@ -47,7 +47,7 @@ public sealed class EffectivePermissionResolverTests
 
     // Full catalog used by adversarial tests: GlobalRole + TenantRole + AdminRole + ViewerRole.
     // Total catalog = 4 roles, 5 permissions.
-    private static readonly RoleConfiguration[] AllRoles =
+    private static readonly RoleImplementationConfiguration[] AllRoles =
     [
         new() { Id = GlobalRoleId, Name = "GlobalAdmin",  IsTenantScoped = false },
         new() { Id = TenantRoleId, Name = "TenantUser",   IsTenantScoped = true, TenantId = TenantId },
@@ -55,7 +55,7 @@ public sealed class EffectivePermissionResolverTests
         new() { Id = ViewerRoleId, Name = "Viewer",       IsTenantScoped = false },
     ];
 
-    private static readonly PermissionConfiguration[] AllPermissions =
+    private static readonly PermissionImplementationConfiguration[] AllPermissions =
     [
         new() { Id = GlobalPermId,   Name = "global:admin" },
         new() { Id = TenantPermId,   Name = "tenant:read" },
@@ -64,7 +64,7 @@ public sealed class EffectivePermissionResolverTests
         new() { Id = ViewerPermId2,  Name = "viewer:read2" },
     ];
 
-    private static readonly RolePermissionConfiguration[] AllRolePermissions =
+    private static readonly RolePermissionImplementationConfiguration[] AllRolePermissions =
     [
         new() { RoleId = GlobalRoleId, PermissionId = GlobalPermId },
         new() { RoleId = TenantRoleId, PermissionId = TenantPermId },
@@ -81,13 +81,13 @@ public sealed class EffectivePermissionResolverTests
     /// with user role assignments determined by <paramref name="userAssignments"/>.
     /// </summary>
     private static EffectivePermissionResolver BuildResolverWithAssignments(
-        IEnumerable<UserRoleConfiguration> userAssignments,
+        IEnumerable<UserRoleImplementationConfiguration> userAssignments,
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
         IOrgAccessProvider? orgAccessProvider = null)
     {
-        var roleProvider     = MockCatalog<RoleConfigurationProvider, RoleConfiguration>(AllRoles);
-        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(AllPermissions);
-        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(AllRolePermissions);
+        var roleProvider     = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(AllRoles);
+        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(AllPermissions);
+        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(AllRolePermissions);
         var userRoleProvider = MockUserRoleProvider(userAssignments);
 
         if (orgAccessProvider is null && orgGrants is not null)
@@ -119,11 +119,11 @@ public sealed class EffectivePermissionResolverTests
         bool includeGlobalRole = true,
         bool includeTenantRole = true)
     {
-        var assignments = new List<UserRoleConfiguration>();
+        var assignments = new List<UserRoleImplementationConfiguration>();
         if (includeGlobalRole)
-            assignments.Add(new UserRoleConfiguration { UserId = userId, RoleId = GlobalRoleId, TenantId = null });
+            assignments.Add(new UserRoleImplementationConfiguration { UserId = userId, RoleId = GlobalRoleId, TenantId = null });
         if (includeTenantRole)
-            assignments.Add(new UserRoleConfiguration { UserId = userId, RoleId = TenantRoleId, TenantId = TenantId });
+            assignments.Add(new UserRoleImplementationConfiguration { UserId = userId, RoleId = TenantRoleId, TenantId = TenantId });
 
         return BuildResolverWithAssignments(assignments, orgGrants, orgAccessProvider);
     }
@@ -194,10 +194,10 @@ public sealed class EffectivePermissionResolverTests
         // Arrange: role provider returns failure — fail-closed
         var roleProviderMock = new Mock<RoleConfigurationProvider>();
         roleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<RoleConfiguration>>.Failure(new GenericMessage("Role query failed")));
+            .ReturnsAsync(GenericResult<IReadOnlyList<RoleImplementationConfiguration>>.Failure(new GenericMessage("Role query failed")));
 
-        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(new[] { new PermissionConfiguration() });
-        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(Array.Empty<RolePermissionConfiguration>());
+        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(new[] { new PermissionImplementationConfiguration() });
+        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(Array.Empty<RolePermissionImplementationConfiguration>());
         var userRoleProvider = MockUserRoleProvider([]);
 
         var sut = new EffectivePermissionResolver(
@@ -224,7 +224,7 @@ public sealed class EffectivePermissionResolverTests
         // The catalog has 4 roles (including Admin with admin:delete + global:admin) and 5 perms total.
         // Before FDW-532 fix, this user would have received all 5 permissions.
         // After fix, they must receive only viewer:read1 and viewer:read2.
-        var viewerAssignment = new UserRoleConfiguration
+        var viewerAssignment = new UserRoleImplementationConfiguration
         {
             UserId = "viewer-user",
             RoleId = ViewerRoleId,
@@ -263,7 +263,7 @@ public sealed class EffectivePermissionResolverTests
         // Arrange: Admin user assigned ONLY the AdminRole (admin:delete + global:admin).
         // Before FDW-532 fix, admin would have gotten all 5 perms (including viewer perms).
         // After fix, they get exactly the 2 admin role permissions.
-        var adminAssignment = new UserRoleConfiguration
+        var adminAssignment = new UserRoleImplementationConfiguration
         {
             UserId = "admin-user",
             RoleId = AdminRoleId,
@@ -319,9 +319,9 @@ public sealed class EffectivePermissionResolverTests
         // Before FDW-532 fix (the bug): there was no user-role provider call at all;
         // the resolver would bake all perms regardless.
         // After fix: failure MUST return Failure (fail-closed). No token issued.
-        var roleProvider     = MockCatalog<RoleConfigurationProvider, RoleConfiguration>(AllRoles);
-        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(AllPermissions);
-        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(AllRolePermissions);
+        var roleProvider     = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(AllRoles);
+        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(AllPermissions);
+        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(AllRolePermissions);
 
         // UserRoleProvider fails
         var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
@@ -331,7 +331,7 @@ public sealed class EffectivePermissionResolverTests
             "TestStore", "authz");
         userRoleProviderMock.CallBase = true;
         userRoleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Failure(new GenericMessage("DB unavailable")));
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Failure(new GenericMessage("DB unavailable")));
 
         var sut = new EffectivePermissionResolver(
             roleProvider.Object,
@@ -354,7 +354,7 @@ public sealed class EffectivePermissionResolverTests
     {
         // Arrange: Viewer with 2 perms out of 5 total in catalog.
         // This test explicitly quantifies the attack surface closed by FDW-532.
-        var viewerAssignment = new UserRoleConfiguration
+        var viewerAssignment = new UserRoleImplementationConfiguration
         {
             UserId = "viewer-sub",
             RoleId = ViewerRoleId,
@@ -390,7 +390,7 @@ public sealed class EffectivePermissionResolverTests
         // Arrange: user assigned to both ViewerRole and AdminRole (not TenantUser).
         // Should get viewer:read1, viewer:read2, admin:delete, global:admin (4 perms).
         // Must NOT get tenant:read (not assigned to TenantUser role).
-        var assignments = new List<UserRoleConfiguration>
+        var assignments = new List<UserRoleImplementationConfiguration>
         {
             new() { UserId = "multi-role-user", RoleId = ViewerRoleId, TenantId = null },
             new() { UserId = "multi-role-user", RoleId = AdminRoleId,  TenantId = null },
@@ -417,7 +417,7 @@ public sealed class EffectivePermissionResolverTests
         // Arrange: user has tenant-scoped assignment for TenantId only.
         // When resolving for a DIFFERENT tenant, that tenant role must not contribute.
         var otherTenantId = Guid.NewGuid();
-        var tenantAssignment = new UserRoleConfiguration
+        var tenantAssignment = new UserRoleImplementationConfiguration
         {
             UserId = "tenant-user",
             RoleId = TenantRoleId,
@@ -466,9 +466,9 @@ public sealed class EffectivePermissionResolverTests
     }
 
     private static Mock<UserRoleConfigurationProvider> MockUserRoleProvider(
-        IEnumerable<UserRoleConfiguration> assignments)
+        IEnumerable<UserRoleImplementationConfiguration> assignments)
     {
-        var list = new List<UserRoleConfiguration>(assignments);
+        var list = new List<UserRoleImplementationConfiguration>(assignments);
         var mock = new Mock<UserRoleConfigurationProvider>(
             MockBehavior.Loose,
             NullLogger<UserRoleConfigurationProvider>.Instance,
@@ -476,7 +476,7 @@ public sealed class EffectivePermissionResolverTests
             "TestStore", "authz");
         mock.CallBase = true;
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(list));
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(list));
         return mock;
     }
 }

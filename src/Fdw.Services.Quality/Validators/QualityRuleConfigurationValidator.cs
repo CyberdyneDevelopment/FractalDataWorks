@@ -5,9 +5,9 @@ using Fdw.Services.Quality.Configuration;
 namespace Fdw.Services.Quality.Validators;
 
 /// <summary>
-/// Validator for <see cref="QualityRuleConfiguration"/>.
+/// Validator for <see cref="QualityRuleImplementationConfiguration"/>.
 /// </summary>
-public sealed class QualityRuleConfigurationValidator : FdwConfigurationValidator<QualityRuleConfiguration>
+public sealed class QualityRuleConfigurationValidator : FdwConfigurationValidator<QualityRuleImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="QualityRuleConfigurationValidator"/> class.

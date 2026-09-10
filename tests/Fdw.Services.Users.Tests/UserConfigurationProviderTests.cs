@@ -53,16 +53,16 @@ public class UserConfigurationProviderTests
 
     private static UserConfigurationProvider MakeProvider(
         Mock<IConfigurationGateway>? gateway = null,
-        params UserConfiguration[] storedRows)
+        params UserImplementationConfiguration[] storedRows)
     {
 
         var gw = gateway ?? new Mock<IConfigurationGateway>();
 
         if (gateway is null)
         {
-            gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+            gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                     It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(storedRows));
+              .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(storedRows));
         }
 
         return new UserConfigurationProvider(
@@ -71,7 +71,7 @@ public class UserConfigurationProviderTests
             "PlatformConfiguration", "usr");
     }
 
-    private static UserConfiguration User(
+    private static UserImplementationConfiguration User(
         string username = "alice",
         string email = "alice@example.com")
         => new()
@@ -96,9 +96,9 @@ public class UserConfigurationProviderTests
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(new[] { stored }));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
 
         var provider = MakeProvider(gw);
 
@@ -118,10 +118,10 @@ public class UserConfigurationProviderTests
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(
-              Enumerable.Empty<UserConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserImplementationConfiguration>()));
 
         var provider = MakeProvider(gw);
 
@@ -143,10 +143,10 @@ public class UserConfigurationProviderTests
 
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
           .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommand = cmd)
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(new[] { stored }));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
 
         var provider = MakeProvider(gw);
 
@@ -157,7 +157,7 @@ public class UserConfigurationProviderTests
         result.Value.Username.ShouldBe("bob");
 
         capturedCommand.ShouldNotBeNull();
-        var queryCmd = capturedCommand.ShouldBeOfType<QueryCommand<UserConfiguration>>();
+        var queryCmd = capturedCommand.ShouldBeOfType<QueryCommand<UserImplementationConfiguration>>();
         queryCmd.Filter.ShouldNotBeNull();
 
         // Walk the filter conditions and assert at least one targets "Username".
@@ -174,10 +174,10 @@ public class UserConfigurationProviderTests
     {
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(
-              Enumerable.Empty<UserConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserImplementationConfiguration>()));
 
         var provider = MakeProvider(gw);
 
@@ -199,10 +199,10 @@ public class UserConfigurationProviderTests
 
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
           .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommand = cmd)
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(new[] { stored }));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
 
         var result = await MakeProvider(gw).ResolveUser(stored.Id.ToString(), TestContext.Current.CancellationToken);
 
@@ -211,7 +211,7 @@ public class UserConfigurationProviderTests
         result.Value.Id.ShouldBe(stored.Id);
 
         capturedCommand.ShouldNotBeNull();
-        CollectConditions((capturedCommand as QueryCommand<UserConfiguration>)?.Filter?.Root)
+        CollectConditions((capturedCommand as QueryCommand<UserImplementationConfiguration>)?.Filter?.Root)
             .ShouldNotContain(
                 c => string.Equals(c.PropertyName, "Username", StringComparison.Ordinal),
                 "a Guid must resolve by id — filtering on [Username] is the revocation bug");
@@ -227,10 +227,10 @@ public class UserConfigurationProviderTests
 
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
           .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommand = cmd)
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(new[] { stored }));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
 
         var result = await MakeProvider(gw).ResolveUser("bob", TestContext.Current.CancellationToken);
 
@@ -239,7 +239,7 @@ public class UserConfigurationProviderTests
         result.Value.Username.ShouldBe("bob");
 
         capturedCommand.ShouldNotBeNull();
-        CollectConditions((capturedCommand as QueryCommand<UserConfiguration>)?.Filter?.Root)
+        CollectConditions((capturedCommand as QueryCommand<UserImplementationConfiguration>)?.Filter?.Root)
             .ShouldContain(
                 c => string.Equals(c.PropertyName, "Username", StringComparison.Ordinal),
                 "a non-Guid segment must resolve by [Username]");
@@ -252,10 +252,10 @@ public class UserConfigurationProviderTests
     {
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(
-              Enumerable.Empty<UserConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserImplementationConfiguration>()));
 
         var result = await MakeProvider(gw).ResolveUser("nobody", TestContext.Current.CancellationToken);
 
@@ -273,9 +273,9 @@ public class UserConfigurationProviderTests
 
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(users));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(users));
 
         var provider = MakeProvider(gw);
 
@@ -294,10 +294,10 @@ public class UserConfigurationProviderTests
     {
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(
-              Enumerable.Empty<UserConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserImplementationConfiguration>()));
 
         var provider = MakeProvider(gw);
 
@@ -318,15 +318,15 @@ public class UserConfigurationProviderTests
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(
-              Enumerable.Empty<UserConfiguration>()));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
+              Enumerable.Empty<UserImplementationConfiguration>()));
 
-        gw.Setup(g => g.Execute<UserConfiguration>(
+        gw.Setup(g => g.Execute<UserImplementationConfiguration>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
           .ReturnsAsync((IDataCommand _, DataStoreTarget _, CancellationToken _) =>
-              GenericResult<UserConfiguration>.Success(new UserConfiguration()));
+              GenericResult<UserImplementationConfiguration>.Success(new UserImplementationConfiguration()));
 
         var provider = MakeProvider(gw);
 
@@ -346,9 +346,9 @@ public class UserConfigurationProviderTests
         var gw = new Mock<IConfigurationGateway>();
         gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
 
-        gw.Setup(g => g.Execute<IEnumerable<UserConfiguration>>(
+        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserConfiguration>>.Success(new[] { existing }));
+          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { existing }));
 
         var provider = MakeProvider(gw);
 

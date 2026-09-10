@@ -20,11 +20,11 @@ public sealed class ConfigurationContractTests
     public void ServerSettingDefaultsAreCorrect()
     {
         // Arrange
-        var config = new ServerSettingConfiguration();
+        var config = new ServerSettingImplementationConfiguration();
 
         // Assert
         config.Id.ShouldNotBe(Guid.Empty);
-        config.SettingName.ShouldBe(string.Empty);
+        config.Name.ShouldBe(string.Empty);
         config.SettingValue.ShouldBe(string.Empty);
         config.DataType.ShouldBe(string.Empty);
         config.Description.ShouldBeNull();
@@ -39,12 +39,12 @@ public sealed class ConfigurationContractTests
     public void TenantSettingDefaultsAreCorrect()
     {
         // Arrange
-        var config = new TenantSettingConfiguration();
+        var config = new TenantSettingImplementationConfiguration();
 
         // Assert
         config.Id.ShouldNotBe(Guid.Empty);
         config.TenantId.ShouldBe(Guid.Empty);
-        config.SettingName.ShouldBe(string.Empty);
+        config.Name.ShouldBe(string.Empty);
         config.SettingValue.ShouldBe(string.Empty);
         config.IsActive.ShouldBeTrue();
     }
@@ -55,13 +55,13 @@ public sealed class ConfigurationContractTests
     public void RoleSettingDefaultsAreCorrect()
     {
         // Arrange
-        var config = new RoleSettingConfiguration();
+        var config = new RoleSettingImplementationConfiguration();
 
         // Assert
         config.Id.ShouldNotBe(Guid.Empty);
         config.TenantId.ShouldBe(Guid.Empty);
         config.RoleName.ShouldBe(string.Empty);
-        config.SettingName.ShouldBe(string.Empty);
+        config.Name.ShouldBe(string.Empty);
         config.SettingValue.ShouldBe(string.Empty);
         config.IsActive.ShouldBeTrue();
     }

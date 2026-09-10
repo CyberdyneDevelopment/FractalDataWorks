@@ -6,6 +6,7 @@ namespace Fdw.Services.Authorization;
 /// <summary>
 /// Reads the role-to-permission grants.
 /// </summary>
-public interface IRolePermissionConfigurationProvider : IDomainConfigurationProvider<IRolePermissionImplementationConfiguration>
+public interface IRolePermissionConfigurationProvider 
+    : IDomainConfigurationProvider<IRolePermissionImplementationConfiguration>
 {
 }

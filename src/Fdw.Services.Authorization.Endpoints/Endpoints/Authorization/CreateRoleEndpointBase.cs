@@ -86,12 +86,12 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     }
 
     /// <summary>
-    /// Builds the RoleConfiguration from the create request.
+    /// Builds the RoleImplementationConfiguration from the create request.
     /// Override to customize configuration creation.
     /// </summary>
-    protected virtual RoleConfiguration BuildConfiguration(CreateRoleRequest request, Guid? parentRoleId)
+    protected virtual RoleImplementationConfiguration BuildConfiguration(CreateRoleRequest request, Guid? parentRoleId)
     {
-        return new RoleConfiguration
+        return new RoleImplementationConfiguration
         {
             Name = request.Name,
             DisplayName = request.DisplayName,
@@ -102,10 +102,10 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     }
 
     /// <summary>
-    /// Maps a RoleConfiguration to a summary DTO.
+    /// Maps a RoleImplementationConfiguration to a summary DTO.
     /// Override to customize the mapping.
     /// </summary>
-    protected virtual RoleSummaryResponse MapToSummary(RoleConfiguration role)
+    protected virtual RoleSummaryResponse MapToSummary(RoleImplementationConfiguration role)
     {
         return new RoleSummaryResponse
         {

@@ -16,9 +16,9 @@ public sealed class ServerSettingConfigurationValidatorTests
     public void ValidConfigurationPassesValidation()
     {
         // Arrange
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            SettingName = "MaxRows",
+            Name = "MaxRows",
             SettingValue = "1000",
             DataType = "Int32"
         };
@@ -36,9 +36,9 @@ public sealed class ServerSettingConfigurationValidatorTests
     public void EmptySettingNameFailsValidation()
     {
         // Arrange
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            SettingName = string.Empty,
+            Name = string.Empty,
             SettingValue = "1000",
             DataType = "Int32"
         };
@@ -56,9 +56,9 @@ public sealed class ServerSettingConfigurationValidatorTests
     public void EmptySettingValueFailsValidation()
     {
         // Arrange
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            SettingName = "MaxRows",
+            Name = "MaxRows",
             SettingValue = string.Empty,
             DataType = "Int32"
         };
@@ -76,9 +76,9 @@ public sealed class ServerSettingConfigurationValidatorTests
     public void EmptyDataTypeFailsValidation()
     {
         // Arrange
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            SettingName = "MaxRows",
+            Name = "MaxRows",
             SettingValue = "1000",
             DataType = string.Empty
         };
@@ -96,9 +96,9 @@ public sealed class ServerSettingConfigurationValidatorTests
     public void DataTypeExceedingMaxLengthFailsValidation()
     {
         // Arrange
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            SettingName = "MaxRows",
+            Name = "MaxRows",
             SettingValue = "1000",
             DataType = new string('x', 65)
         };
@@ -116,9 +116,9 @@ public sealed class ServerSettingConfigurationValidatorTests
     public void NullDescriptionPassesValidation()
     {
         // Arrange
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            SettingName = "MaxRows",
+            Name = "MaxRows",
             SettingValue = "1000",
             DataType = "Int32",
             Description = null

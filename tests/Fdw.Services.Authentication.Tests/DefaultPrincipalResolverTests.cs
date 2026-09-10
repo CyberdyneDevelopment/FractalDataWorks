@@ -185,10 +185,10 @@ public sealed class DefaultPrincipalResolverTests
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
         f.UserRoleProvider
             .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(Array.Empty<UserRoleConfiguration>()));
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(Array.Empty<UserRoleImplementationConfiguration>()));
         f.RoleProvider
             .Setup(p => p.GetAllRoles(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<RoleConfiguration>());
+            .ReturnsAsync(Array.Empty<RoleImplementationConfiguration>());
 
         var sut = f.CreateSut();
 
@@ -309,7 +309,7 @@ public sealed class DefaultPrincipalResolverTests
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
         f.UserRoleProvider
             .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Failure(new GenericMessage("assignments query failed")));
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Failure(new GenericMessage("assignments query failed")));
 
         var sut = f.CreateSut();
 
@@ -347,19 +347,19 @@ public sealed class DefaultPrincipalResolverTests
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
         f.UserRoleProvider
             .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(new[]
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(new[]
             {
-                new UserRoleConfiguration { RoleId = matchedRoleId },
-                new UserRoleConfiguration { RoleId = blankNameRoleId },
-                new UserRoleConfiguration { RoleId = danglingAssignmentRoleId },
+                new UserRoleImplementationConfiguration { RoleId = matchedRoleId },
+                new UserRoleImplementationConfiguration { RoleId = blankNameRoleId },
+                new UserRoleImplementationConfiguration { RoleId = danglingAssignmentRoleId },
             }));
         f.RoleProvider
             .Setup(p => p.GetAllRoles(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[]
             {
-                new RoleConfiguration { Id = matchedRoleId, Name = "Editor" },
-                new RoleConfiguration { Id = blankNameRoleId, Name = string.Empty },
-                new RoleConfiguration { Id = unassignedRoleId, Name = "NeverAssigned" },
+                new RoleImplementationConfiguration { Id = matchedRoleId, Name = "Editor" },
+                new RoleImplementationConfiguration { Id = blankNameRoleId, Name = string.Empty },
+                new RoleImplementationConfiguration { Id = unassignedRoleId, Name = "NeverAssigned" },
             });
 
         var sut = f.CreateSut();
@@ -395,13 +395,13 @@ public sealed class DefaultPrincipalResolverTests
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
         f.UserRoleProvider
             .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(new[]
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(new[]
             {
-                new UserRoleConfiguration { RoleId = editorRoleId },
+                new UserRoleImplementationConfiguration { RoleId = editorRoleId },
             }));
         f.RoleProvider
             .Setup(p => p.GetAllRoles(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { new RoleConfiguration { Id = editorRoleId, Name = "editor" } });
+            .ReturnsAsync(new[] { new RoleImplementationConfiguration { Id = editorRoleId, Name = "editor" } });
 
         var sut = f.CreateSut();
 

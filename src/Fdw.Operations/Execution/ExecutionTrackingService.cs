@@ -846,7 +846,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     }
 
     /// <summary>
-    /// Maps <see cref="NotificationRuleConfiguration.Severity"/> vocabulary to the priority
+    /// Maps <see cref="NotificationRuleImplementationConfiguration.Severity"/> vocabulary to the priority
     /// TypeCollection using an explicit, case-insensitive total mapping. Returns
     /// <see cref="NotificationPriorities.NotFound"/> for unrecognised strings so the caller
     /// can fail loud rather than silently defaulting.
@@ -891,7 +891,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         return NotificationPriorities.NotFound;
     }
 
-    private static bool RuleMatchesExecution(NotificationRuleConfiguration rule, ExecutionItemRecord record)
+    private static bool RuleMatchesExecution(NotificationRuleImplementationConfiguration rule, ExecutionItemRecord record)
     {
         // Catch-all rule: no scope constraints.
         if (rule.PipelineId is null && rule.WorkflowId is null && rule.ScheduleId is null)
@@ -926,7 +926,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     }
 
     private static string BuildNotificationMessage(
-        NotificationRuleConfiguration rule,
+        NotificationRuleImplementationConfiguration rule,
         ExecutionItemRecord record,
         IExecutionStateType targetState)
     {

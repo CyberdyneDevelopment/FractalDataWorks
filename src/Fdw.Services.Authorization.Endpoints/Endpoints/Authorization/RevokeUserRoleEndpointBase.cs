@@ -125,7 +125,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     }
 
     private async Task<IGenericResult> RevokeRoleAtomically(
-        UserRoleConfiguration existing, Guid userId, string userIdString, CancellationToken ct)
+        UserRoleImplementationConfiguration existing, Guid userId, string userIdString, CancellationToken ct)
     {
         var txnResult = await _userRoleProvider.BeginTransaction(ct).ConfigureAwait(false);
         if (!txnResult.IsSuccess || txnResult.Value == null)

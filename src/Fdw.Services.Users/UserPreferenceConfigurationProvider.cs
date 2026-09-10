@@ -12,7 +12,8 @@ namespace Fdw.Services.Users;
 
 /// <summary>Supplies the UserPreferences configuration.</summary>
 public sealed class UserPreferenceConfigurationProvider
-    : ImplementationConfigurationProviderBase<IUserPreferencesImplementationConfiguration>
+    : DomainConfigurationProviderBase<IUserPreferencesImplementationConfiguration>,
+      IUserPreferenceConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="UserPreferenceConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

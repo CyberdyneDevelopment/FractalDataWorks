@@ -7,7 +7,8 @@ namespace Fdw.Services.Dataverses;
 
 /// <summary>Supplies the SavedView configuration.</summary>
 public sealed class SavedViewConfigurationProvider
-    : ImplementationConfigurationProviderBase<ISavedViewImplementationConfiguration>
+    : DomainConfigurationProviderBase<ISavedViewImplementationConfiguration>,
+      ISavedViewConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="SavedViewConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

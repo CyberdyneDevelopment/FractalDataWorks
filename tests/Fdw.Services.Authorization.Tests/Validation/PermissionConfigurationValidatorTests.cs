@@ -17,7 +17,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithValidConfiguration()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Domain = "connections",
@@ -38,7 +38,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithEmptyName()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = string.Empty,
             Resource = "connections",
@@ -58,7 +58,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithInvalidNamePattern()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "1permission",
             Resource = "connections",
@@ -78,7 +78,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithEmptyResource()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Resource = string.Empty,
@@ -98,7 +98,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithLongResource()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "test-read",
             Resource = new string('a', 101),
@@ -118,7 +118,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithUppercaseResource()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Resource = "Connections",
@@ -138,7 +138,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithResourceStartingWithNumber()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "test-read",
             Resource = "1connections",
@@ -158,7 +158,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithResourceContainingDashesAndUnderscores()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "test-read",
             Resource = "data_store-items",
@@ -178,7 +178,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithEmptyAction()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-test",
             Resource = "connections",
@@ -198,7 +198,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithInvalidAction()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-browse",
             Resource = "connections",
@@ -223,7 +223,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithValidActions(string action)
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = $"connections-{action}",
             Resource = "connections",
@@ -246,7 +246,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithValidActionsInDifferentCase(string action)
     {
         // Arrange - validator uses OrdinalIgnoreCase
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-test",
             Resource = "connections",
@@ -266,7 +266,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithNullCategory()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Domain = "connections",
@@ -288,7 +288,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithValidCategory()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Domain = "connections",
@@ -310,7 +310,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithLongCategory()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Resource = "connections",
@@ -331,7 +331,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithNullDescription()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Domain = "connections",
@@ -353,7 +353,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithControlCharactersInDescription()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Resource = "connections",
@@ -374,7 +374,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateFailsWithNegativeSortOrder()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Resource = "connections",
@@ -395,7 +395,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidatePassesWithZeroSortOrder()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Resource = "connections",
@@ -416,7 +416,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateOptionsReturnsSuccessForValidConfig()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = "connections-read",
             Domain = "connections",
@@ -437,7 +437,7 @@ public sealed class PermissionConfigurationValidatorTests
     public void ValidateOptionsReturnsFailureForInvalidConfig()
     {
         // Arrange
-        var config = new PermissionConfiguration
+        var config = new PermissionImplementationConfiguration
         {
             Name = string.Empty,
             Resource = string.Empty,

@@ -10,7 +10,8 @@ namespace Fdw.UI.Themes;
 
 /// <summary>Supplies the Theme configuration.</summary>
 public sealed class ThemeConfigurationProvider
-    : ImplementationConfigurationProviderBase<IThemeManagedImplementationConfiguration>
+    : DomainConfigurationProviderBase<IThemeImplementationConfiguration>,
+      IThemeConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="ThemeConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

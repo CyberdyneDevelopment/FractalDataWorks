@@ -22,7 +22,7 @@ public sealed class OrchestrationPageTests : IDisposable
 {
     private readonly BunitContext _ctx = new();
 
-    private static OrchestrationNodeConfiguration Node(string name, bool enabled = true,
+    private static OrchestrationNodeImplementationConfiguration Node(string name, bool enabled = true,
         string? description = null, string? stagePolicy = null) =>
         new()
         {
@@ -151,7 +151,7 @@ public sealed class OrchestrationPageTests : IDisposable
             OnCreateNode = _ =>
             {
                 created = true;
-                return Task.FromResult<OrchestrationNodeConfiguration?>(null);
+                return Task.FromResult<OrchestrationNodeImplementationConfiguration?>(null);
             },
         }, id: null);
 
@@ -163,13 +163,13 @@ public sealed class OrchestrationPageTests : IDisposable
     [Fact]
     public void EditorCreateWithNameInvokesCreate()
     {
-        OrchestrationNodeConfiguration? created = null;
+        OrchestrationNodeImplementationConfiguration? created = null;
         var cut = RenderEditor(new OrchestrationNodeContext
         {
             OnCreateNode = config =>
             {
                 created = config;
-                return Task.FromResult<OrchestrationNodeConfiguration?>(config);
+                return Task.FromResult<OrchestrationNodeImplementationConfiguration?>(config);
             },
         }, id: null);
 
@@ -191,7 +191,7 @@ public sealed class OrchestrationPageTests : IDisposable
             OnUpdateNode = (id, config) =>
             {
                 updatedId = id;
-                return Task.FromResult<OrchestrationNodeConfiguration?>(config);
+                return Task.FromResult<OrchestrationNodeImplementationConfiguration?>(config);
             },
         }, id: node.Id);
 

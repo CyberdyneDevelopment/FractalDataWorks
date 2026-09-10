@@ -12,7 +12,7 @@ namespace Fdw.Services.Dataverses;
 
 /// <summary>Supplies the Dataverse configuration.</summary>
 public sealed class DataverseConfigurationProvider
-    : ImplementationConfigurationProviderBase<IDataverseImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IDataverseImplementationConfiguration>,
       IDataverseConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="DataverseConfigurationProvider"/> class.</summary>

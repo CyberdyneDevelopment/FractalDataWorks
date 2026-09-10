@@ -19,7 +19,7 @@ public interface ICatalogService
     /// <param name="category">Optional category filter.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing matching glossary terms.</returns>
-    Task<IGenericResult<IReadOnlyList<GlossaryTermConfiguration>>> SearchTerms(string? query, string? category, CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>> SearchTerms(string? query, string? category, CancellationToken ct = default);
 
     /// <summary>
     /// Creates a new glossary term.
@@ -27,7 +27,7 @@ public interface ICatalogService
     /// <param name="term">The term configuration to create.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the created term configuration.</returns>
-    Task<IGenericResult<GlossaryTermConfiguration>> CreateTerm(GlossaryTermConfiguration term, CancellationToken ct = default);
+    Task<IGenericResult<GlossaryTermImplementationConfiguration>> CreateTerm(GlossaryTermImplementationConfiguration term, CancellationToken ct = default);
 
     /// <summary>
     /// Updates an existing glossary term.
@@ -36,7 +36,7 @@ public interface ICatalogService
     /// <param name="term">The updated term configuration.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the updated term configuration.</returns>
-    Task<IGenericResult<GlossaryTermConfiguration>> UpdateTerm(Guid id, GlossaryTermConfiguration term, CancellationToken ct = default);
+    Task<IGenericResult<GlossaryTermImplementationConfiguration>> UpdateTerm(Guid id, GlossaryTermImplementationConfiguration term, CancellationToken ct = default);
 
     /// <summary>
     /// Deletes a glossary term.
@@ -52,7 +52,7 @@ public interface ICatalogService
     /// <param name="id">The term identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the term configuration.</returns>
-    Task<IGenericResult<GlossaryTermConfiguration>> GetTerm(Guid id, CancellationToken ct = default);
+    Task<IGenericResult<GlossaryTermImplementationConfiguration>> GetTerm(Guid id, CancellationToken ct = default);
 
     /// <summary>
     /// Gets the annotation for a DataSet.
@@ -60,7 +60,7 @@ public interface ICatalogService
     /// <param name="dataSetName">The DataSet name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the annotation configuration.</returns>
-    Task<IGenericResult<DataSetAnnotationConfiguration>> GetAnnotation(string dataSetName, CancellationToken ct = default);
+    Task<IGenericResult<DataSetAnnotationImplementationConfiguration>> GetAnnotation(string dataSetName, CancellationToken ct = default);
 
     /// <summary>
     /// Updates the annotation for a DataSet.
@@ -69,7 +69,7 @@ public interface ICatalogService
     /// <param name="annotation">The updated annotation configuration.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the updated annotation configuration.</returns>
-    Task<IGenericResult<DataSetAnnotationConfiguration>> UpdateAnnotation(string dataSetName, DataSetAnnotationConfiguration annotation, CancellationToken ct = default);
+    Task<IGenericResult<DataSetAnnotationImplementationConfiguration>> UpdateAnnotation(string dataSetName, DataSetAnnotationImplementationConfiguration annotation, CancellationToken ct = default);
 
     /// <summary>
     /// Searches the catalog for items matching a query.

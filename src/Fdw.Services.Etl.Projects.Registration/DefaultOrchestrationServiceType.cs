@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Fdw.Services.Data.Abstractions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
@@ -60,6 +62,18 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
 
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.TryAddSingleton<OrchestrationNodeImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<IOrchestrationNodeImplementationConfigurationProvider>(sp => sp.GetRequiredService<OrchestrationNodeImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<OrchestrationNodeConfigurationProvider>(sp =>
+            {
+                var domain = new OrchestrationNodeConfigurationProvider(
+                    sp.GetRequiredService<ILogger<OrchestrationNodeConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("OrchestrationNode", sp.GetRequiredService<IOrchestrationNodeImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
+
             var services = builder.Services;
 
             // Policy implementations.
@@ -68,10 +82,9 @@ public sealed class DefaultOrchestrationServiceType : PipelineServiceTypeBase
             services.TryAddSingleton<IEffectivePolicyResolver, EffectivePolicyResolver>();
 
             // Node provider (canonical, single-table).
-            OrchestrationNodeConfigurationProvider.RegisterDomainConfiguration(services);
 
             // Validators.
-            services.TryAddTransient<IValidator<OrchestrationNodeConfiguration>>(sp =>
+            services.TryAddTransient<IValidator<OrchestrationNodeImplementationConfiguration>>(sp =>
                 new OrchestrationNodeConfigurationValidator(
                     sp.GetRequiredService<IServerPolicyDefaults>()));
 

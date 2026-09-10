@@ -15,7 +15,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The users list cannot answer this. `UserRoleConfiguration` carries a `RoleId` rather than a role
+/// The users list cannot answer this. `UserRoleImplementationConfiguration` carries a `RoleId` rather than a role
 /// name, so resolving names needs the role provider — and the dependency runs authorization to
 /// users, not the other way round. A users-domain response carrying role names would either invert
 /// that or, as it did, ship a field nothing ever filled: `GET /users` returned an empty roles array

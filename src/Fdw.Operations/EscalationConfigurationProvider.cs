@@ -12,7 +12,8 @@ namespace Fdw.Operations;
 
 /// <summary>Supplies the EscalationPolicy configuration.</summary>
 public sealed class EscalationConfigurationProvider
-    : ImplementationConfigurationProviderBase<IEscalationPolicyImplementationConfiguration>
+    : DomainConfigurationProviderBase<IEscalationPolicyImplementationConfiguration>,
+      IEscalationConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

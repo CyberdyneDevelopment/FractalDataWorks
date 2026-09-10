@@ -81,8 +81,8 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
         await Send.OkAsync(annotations, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a DataSetAnnotationConfiguration to its corresponding DTO.</summary>
-    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationConfiguration config)
+    /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationImplementationConfiguration config)
     {
         return new DataSetAnnotationPayload
         {

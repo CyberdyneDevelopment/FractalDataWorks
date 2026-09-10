@@ -99,11 +99,11 @@ public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<Upd
         return GenericResult<RoleSettingSummaryDto>.Success(dto);
     }
 
-    private async Task<RoleSettingConfiguration?> FindRoleSetting(
+    private async Task<RoleSettingImplementationConfiguration?> FindRoleSetting(
         Guid tenantId, string roleName, string settingName, CancellationToken ct)
     {
         var roleSettingsResult = await _provider.GetRoleSettings(ct).ConfigureAwait(false);
-        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingConfiguration>)[];
+        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingImplementationConfiguration>)[];
         return roleSettings
             .FirstOrDefault(s => s.TenantId == tenantId
                                  && string.Equals(s.RoleName, roleName, StringComparison.OrdinalIgnoreCase)

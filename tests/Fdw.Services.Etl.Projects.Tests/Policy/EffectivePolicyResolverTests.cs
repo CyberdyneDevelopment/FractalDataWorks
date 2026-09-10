@@ -93,7 +93,7 @@ public sealed class EffectivePolicyResolverTests
             ResiliencyPolicyId = resiliencyPolicyId,
         };
 
-    private static OrchestrationNodeConfiguration CreateNode(
+    private static OrchestrationNodeImplementationConfiguration CreateNode(
         string? stepFailurePolicy = null,
         string? stageFailurePolicy = null,
         int? maxParallelPipelines = null,

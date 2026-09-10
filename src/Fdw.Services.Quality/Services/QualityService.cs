@@ -17,8 +17,8 @@ namespace Fdw.Services.Quality.Services;
 public sealed class QualityService : IQualityService
 {
     private readonly ILogger _logger;
-    private readonly IOptionsMonitor<List<QualityRuleConfiguration>> _rulesMonitor;
-    private readonly List<QualityRuleConfiguration> _inMemoryRules = new();
+    private readonly IOptionsMonitor<List<QualityRuleImplementationConfiguration>> _rulesMonitor;
+    private readonly List<QualityRuleImplementationConfiguration> _inMemoryRules = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QualityService"/> class.
@@ -27,20 +27,20 @@ public sealed class QualityService : IQualityService
     /// <param name="rulesMonitor">The rules configuration monitor.</param>
     public QualityService(
         ILoggerFactory loggerFactory,
-        IOptionsMonitor<List<QualityRuleConfiguration>> rulesMonitor)
+        IOptionsMonitor<List<QualityRuleImplementationConfiguration>> rulesMonitor)
     {
         _logger = loggerFactory.CreateLogger<QualityService>();
         _rulesMonitor = rulesMonitor;
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<QualityRuleConfiguration>> CreateRule(QualityRuleConfiguration rule, CancellationToken ct = default)
+    public Task<IGenericResult<QualityRuleImplementationConfiguration>> CreateRule(QualityRuleImplementationConfiguration rule, CancellationToken ct = default)
     {
         try
         {
             if (string.IsNullOrWhiteSpace(rule.RuleType))
             {
-                return Task.FromResult(GenericResult<QualityRuleConfiguration>.Failure(
+                return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Failure(
                     QualityLog.InvalidRuleType(_logger, rule.RuleType ?? string.Empty)));
             }
 
@@ -48,22 +48,22 @@ public sealed class QualityService : IQualityService
             _inMemoryRules.Add(rule);
 
             QualityLog.RuleCreated(_logger, rule.RuleType, rule.DataSetName);
-            return Task.FromResult(GenericResult<QualityRuleConfiguration>.Success(rule));
+            return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Success(rule));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(GenericResult<QualityRuleConfiguration>.Failure(
+            return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Failure(
                 QualityLog.RuleSaveFailed(_logger, ex, rule.RuleType)));
         }
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<QualityRuleConfiguration>> UpdateRule(Guid id, QualityRuleConfiguration rule, CancellationToken ct = default)
+    public Task<IGenericResult<QualityRuleImplementationConfiguration>> UpdateRule(Guid id, QualityRuleImplementationConfiguration rule, CancellationToken ct = default)
     {
         var existing = _inMemoryRules.FirstOrDefault(r => r.Id == id);
         if (existing == null)
         {
-            return Task.FromResult(GenericResult<QualityRuleConfiguration>.Failure(
+            return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Failure(
                 QualityLog.RuleNotFound(_logger, id)));
         }
 
@@ -72,7 +72,7 @@ public sealed class QualityService : IQualityService
         _inMemoryRules.Add(rule);
 
         QualityLog.RuleUpdated(_logger, rule.RuleType);
-        return Task.FromResult(GenericResult<QualityRuleConfiguration>.Success(rule));
+        return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Success(rule));
     }
 
     /// <inheritdoc/>
@@ -91,31 +91,31 @@ public sealed class QualityService : IQualityService
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<QualityRuleConfiguration>> GetRule(Guid id, CancellationToken ct = default)
+    public Task<IGenericResult<QualityRuleImplementationConfiguration>> GetRule(Guid id, CancellationToken ct = default)
     {
         var rule = _inMemoryRules.FirstOrDefault(r => r.Id == id);
         if (rule == null)
         {
-            return Task.FromResult(GenericResult<QualityRuleConfiguration>.Failure(
+            return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Failure(
                 QualityLog.RuleNotFound(_logger, id)));
         }
 
-        return Task.FromResult(GenericResult<QualityRuleConfiguration>.Success(rule));
+        return Task.FromResult(GenericResult<QualityRuleImplementationConfiguration>.Success(rule));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<IReadOnlyList<QualityRuleConfiguration>>> GetRulesForDataSet(string dataSetName, CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<QualityRuleImplementationConfiguration>>> GetRulesForDataSet(string dataSetName, CancellationToken ct = default)
     {
         QualityLog.LoadingRules(_logger, dataSetName);
         var rules = _inMemoryRules.Where(r => string.Equals(r.DataSetName, dataSetName, StringComparison.Ordinal)).ToList();
         QualityLog.RulesLoaded(_logger, rules.Count, dataSetName);
-        return Task.FromResult(GenericResult<IReadOnlyList<QualityRuleConfiguration>>.Success(rules));
+        return Task.FromResult(GenericResult<IReadOnlyList<QualityRuleImplementationConfiguration>>.Success(rules));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<IReadOnlyList<QualityRuleConfiguration>>> GetAllRules(CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<QualityRuleImplementationConfiguration>>> GetAllRules(CancellationToken ct = default)
     {
-        return Task.FromResult(GenericResult<IReadOnlyList<QualityRuleConfiguration>>.Success(_inMemoryRules.ToList()));
+        return Task.FromResult(GenericResult<IReadOnlyList<QualityRuleImplementationConfiguration>>.Success(_inMemoryRules.ToList()));
     }
 
     /// <inheritdoc/>
@@ -156,7 +156,7 @@ public sealed class QualityService : IQualityService
             return rulesResult.ToNewResult<IReadOnlyList<QualityCheckResult>>();
         }
 
-        var rules = rulesResult.Value ?? new List<QualityRuleConfiguration>();
+        var rules = rulesResult.Value ?? new List<QualityRuleImplementationConfiguration>();
         QualityLog.CheckStarted(_logger, dataSetName, rules.Count);
 
         var results = new List<QualityCheckResult>();

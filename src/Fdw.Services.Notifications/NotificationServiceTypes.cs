@@ -88,11 +88,18 @@ public partial class NotificationServiceTypes
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<INotificationRuleImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<INotificationRuleImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<INotificationRuleImplementationConfiguration>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    "PlatformConfiguration", "notify"));
+            builder.Services.TryAddSingleton<NotificationRuleImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<INotificationRuleImplementationConfigurationProvider>(sp => sp.GetRequiredService<NotificationRuleImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<NotificationRuleConfigurationProvider>(sp =>
+            {
+                var domain = new NotificationRuleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<NotificationRuleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("NotificationRule", sp.GetRequiredService<INotificationRuleImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<INotificationRuleConfigurationProvider>(sp => sp.GetRequiredService<NotificationRuleConfigurationProvider>());
+
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

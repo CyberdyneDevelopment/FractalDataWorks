@@ -13,7 +13,7 @@ internal static class DataverseResponseMapper
 {
     /// <summary>Projects a configuration onto its list shape.</summary>
     /// <param name="config">The dataverse configuration.</param>
-    internal static DataverseSummaryResponse ToSummary(DataverseConfiguration config) => new()
+    internal static DataverseSummaryResponse ToSummary(DataverseImplementationConfiguration config) => new()
     {
         Id = config.Id,
         Name = config.Name,
@@ -28,7 +28,7 @@ internal static class DataverseResponseMapper
     };
     /// <summary>Projects a configuration onto its detail shape, children included.</summary>
     /// <param name="config">The dataverse configuration.</param>
-    internal static DataverseDetailResponse ToDetail(DataverseConfiguration config) => new()
+    internal static DataverseDetailResponse ToDetail(DataverseImplementationConfiguration config) => new()
     {
         Id = config.Id,
         Name = config.Name,

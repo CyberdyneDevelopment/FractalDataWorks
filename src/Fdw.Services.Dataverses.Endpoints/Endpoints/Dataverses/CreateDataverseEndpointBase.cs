@@ -91,7 +91,7 @@ public abstract class CreateDataverseEndpointBase : CrudCreateEndpointBase<Creat
                 ResultDetails.Create("name", request.Name, "reason", "UserId is not a Guid"));
         }
 
-        var config = new DataverseConfiguration
+        var config = new DataverseImplementationConfiguration
         {
             Id = Guid.CreateVersion7(),
             OwnerUserId = ownerUserId,

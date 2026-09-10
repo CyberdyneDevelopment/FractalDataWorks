@@ -103,7 +103,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         return GenericResult<IReadOnlyCollection<string>>.Success(permissions);
     }
 
-    private async Task<(IReadOnlyList<RoleConfiguration>, IReadOnlyList<PermissionConfiguration>, IReadOnlyList<RolePermissionConfiguration>)?> LoadCatalog(
+    private async Task<(IReadOnlyList<RoleImplementationConfiguration>, IReadOnlyList<PermissionImplementationConfiguration>, IReadOnlyList<RolePermissionImplementationConfiguration>)?> LoadCatalog(
         CancellationToken cancellationToken)
     {
         var allRolesResult = await _roleProvider.Get(cancellationToken).ConfigureAwait(false);
@@ -132,9 +132,9 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
     private (int GlobalCount, int TenantCount) ApplyRoleTiers(
         string userId,
-        IReadOnlyList<RoleConfiguration> allRoles,
-        IReadOnlyList<PermissionConfiguration> allPermissions,
-        IReadOnlyList<RolePermissionConfiguration> allRolePermissions,
+        IReadOnlyList<RoleImplementationConfiguration> allRoles,
+        IReadOnlyList<PermissionImplementationConfiguration> allPermissions,
+        IReadOnlyList<RolePermissionImplementationConfiguration> allRolePermissions,
         Dictionary<string, Guid> roleNameToId,
         Guid? currentTenantId,
         bool isGlobalTenant,
@@ -233,13 +233,13 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
             ? 1
             : 0;
 
-    private static bool RoleContributesToTenant(RoleConfiguration? roleDef, Guid? currentTenantId, bool isGlobalTenant)
+    private static bool RoleContributesToTenant(RoleImplementationConfiguration? roleDef, Guid? currentTenantId, bool isGlobalTenant)
         => isGlobalTenant
            || (roleDef is not null && roleDef.IsTenantScoped
                && currentTenantId.HasValue
                && roleDef.TenantId == currentTenantId.Value);
 
-    private static PermissionConfiguration? FindPermission(IReadOnlyList<PermissionConfiguration> permissions, Guid permissionId)
+    private static PermissionImplementationConfiguration? FindPermission(IReadOnlyList<PermissionImplementationConfiguration> permissions, Guid permissionId)
     {
         for (var i = 0; i < permissions.Count; i++)
         {

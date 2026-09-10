@@ -70,8 +70,8 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         await Send.OkAsync(MapToDto(result.Value!), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a QualityRuleConfiguration to its corresponding DTO.</summary>
-    protected virtual QualityRuleDto MapToDto(QualityRuleConfiguration config)
+    /// <summary>Maps a QualityRuleImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual QualityRuleDto MapToDto(QualityRuleImplementationConfiguration config)
     {
         return new QualityRuleDto
         {

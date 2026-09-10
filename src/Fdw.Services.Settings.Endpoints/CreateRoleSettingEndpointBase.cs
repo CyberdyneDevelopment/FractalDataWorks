@@ -38,7 +38,7 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
     protected override async Task<IGenericResult<bool>> CheckExists(CreateRoleSettingRequest request, CancellationToken ct)
     {
         var roleSettingsResult = await _provider.GetRoleSettings(ct).ConfigureAwait(false);
-        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingConfiguration>)[];
+        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingImplementationConfiguration>)[];
         var existing = roleSettings
             .FirstOrDefault(s => s.TenantId == request.TenantId
                                  && string.Equals(s.RoleName, request.RoleName, StringComparison.OrdinalIgnoreCase)
@@ -49,7 +49,7 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
     /// <inheritdoc />
     protected override async Task<IGenericResult<RoleSettingSummaryDto>> Create(CreateRoleSettingRequest request, CancellationToken ct)
     {
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
             Id = Guid.NewGuid(),
             TenantId = request.TenantId,

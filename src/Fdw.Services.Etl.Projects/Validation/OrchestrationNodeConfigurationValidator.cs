@@ -7,10 +7,10 @@ using Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 namespace Fdw.Services.Etl.Projects.Validation;
 
 /// <summary>
-/// FluentValidation validator for <see cref="OrchestrationNodeConfiguration"/>.
+/// FluentValidation validator for <see cref="OrchestrationNodeImplementationConfiguration"/>.
 /// Validates name, NodeTypeId, parent constraints, policy fields, and cross-tenant rules.
 /// </summary>
-public sealed class OrchestrationNodeConfigurationValidator : AbstractValidator<OrchestrationNodeConfiguration>
+public sealed class OrchestrationNodeConfigurationValidator : AbstractValidator<OrchestrationNodeImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchestrationNodeConfigurationValidator"/> class.

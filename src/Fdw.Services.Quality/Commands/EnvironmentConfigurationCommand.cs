@@ -6,7 +6,7 @@ namespace Fdw.Services.Quality.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the Environment configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "Environment")]
-public sealed class EnvironmentConfigurationCommand : ConfigurationCommandBase<EnvironmentConfiguration>
+public sealed class EnvironmentConfigurationCommand : ConfigurationCommandBase<EnvironmentImplementationConfiguration>
 {
     /// <inheritdoc/>
     public EnvironmentConfigurationCommand() : base("Environment") { }

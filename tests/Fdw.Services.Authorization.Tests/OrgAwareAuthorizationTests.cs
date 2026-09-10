@@ -182,29 +182,29 @@ public sealed class OrgAwareAuthorizationTests
     private static EffectivePermissionResolver BuildResolver(
         IReadOnlyList<TenantOrgAccessConfiguration> orgGrants)
     {
-        var globalRole = new RoleConfiguration { Id = GlobalRoleId, Name = "GlobalAdmin", IsTenantScoped = false };
-        var tenantRole = new RoleConfiguration { Id = TenantRoleId, Name = "TenantUser", IsTenantScoped = true, TenantId = TenantId };
+        var globalRole = new RoleImplementationConfiguration { Id = GlobalRoleId, Name = "GlobalAdmin", IsTenantScoped = false };
+        var tenantRole = new RoleImplementationConfiguration { Id = TenantRoleId, Name = "TenantUser", IsTenantScoped = true, TenantId = TenantId };
 
-        var globalPerm = new PermissionConfiguration { Id = GlobalPermId, Name = "global:admin" };
-        var tenantPerm = new PermissionConfiguration { Id = TenantPermId, Name = "tenant:read" };
+        var globalPerm = new PermissionImplementationConfiguration { Id = GlobalPermId, Name = "global:admin" };
+        var tenantPerm = new PermissionImplementationConfiguration { Id = TenantPermId, Name = "tenant:read" };
 
-        var rolePermissions = new List<RolePermissionConfiguration>
+        var rolePermissions = new List<RolePermissionImplementationConfiguration>
         {
             new() { RoleId = GlobalRoleId, PermissionId = GlobalPermId },
             new() { RoleId = TenantRoleId, PermissionId = TenantPermId }
         };
 
-        var userRoleAssignments = new List<UserRoleConfiguration>
+        var userRoleAssignments = new List<UserRoleImplementationConfiguration>
         {
             new() { UserId = User1Id.ToString(), RoleId = GlobalRoleId, TenantId = null },
             new() { UserId = User1Id.ToString(), RoleId = TenantRoleId, TenantId = TenantId },
         };
 
-        var roleProviderMock = MockCatalog<RoleConfigurationProvider, RoleConfiguration>(
-            new List<RoleConfiguration> { globalRole, tenantRole });
-        var permProviderMock = MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(
-            new List<PermissionConfiguration> { globalPerm, tenantPerm });
-        var rolePermProviderMock = MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(
+        var roleProviderMock = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(
+            new List<RoleImplementationConfiguration> { globalRole, tenantRole });
+        var permProviderMock = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(
+            new List<PermissionImplementationConfiguration> { globalPerm, tenantPerm });
+        var rolePermProviderMock = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(
             rolePermissions);
 
         var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
@@ -214,7 +214,7 @@ public sealed class OrgAwareAuthorizationTests
             "TestStore", "authz");
         userRoleProviderMock.CallBase = true;
         userRoleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(userRoleAssignments));
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(userRoleAssignments));
 
         var orgAccessMock = new Mock<IOrgAccessProvider>();
         orgAccessMock

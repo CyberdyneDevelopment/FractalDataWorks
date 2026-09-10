@@ -7,7 +7,7 @@ namespace Fdw.Services.Quality.Configuration;
 
 /// <summary>
 /// Configuration for an individual quality rule reference value.
-/// Child of QualityRuleConfiguration.
+/// Child of QualityRuleImplementationConfiguration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

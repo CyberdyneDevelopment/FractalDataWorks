@@ -25,13 +25,13 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static ExternalIdentityProvisionerBindingConfigurationProvider BuildSut(
-        params ExternalIdentityProvisionerBindingConfiguration[] rows)
+        params ExternalIdentityProvisionerBindingImplementationConfiguration[] rows)
     {
         var gatewayMock = new Mock<IConfigurationGateway>(MockBehavior.Strict);
         gatewayMock
-            .Setup(g => g.Execute<IEnumerable<ExternalIdentityProvisionerBindingConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<ExternalIdentityProvisionerBindingImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<ExternalIdentityProvisionerBindingConfiguration>>.Success(rows));
+            .ReturnsAsync(GenericResult<IEnumerable<ExternalIdentityProvisionerBindingImplementationConfiguration>>.Success(rows));
 
         return new ExternalIdentityProvisionerBindingConfigurationProvider(
             NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
@@ -45,7 +45,7 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
     public async Task ExactTenantMatchResolvesToItsProvisioner()
     {
         var tenantId = Guid.NewGuid();
-        var sut = BuildSut(new ExternalIdentityProvisionerBindingConfiguration
+        var sut = BuildSut(new ExternalIdentityProvisionerBindingImplementationConfiguration
         {
             TenantId = tenantId,
             ProviderName = "p1",
@@ -63,7 +63,7 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
     [Trait("Category", "Security")]
     public async Task GlobalMatchResolvesWhenTenantIdIsExplicitlyNull()
     {
-        var sut = BuildSut(new ExternalIdentityProvisionerBindingConfiguration
+        var sut = BuildSut(new ExternalIdentityProvisionerBindingImplementationConfiguration
         {
             TenantId = null,
             ProviderName = "p1",
@@ -94,7 +94,7 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
     [Trait("Category", "Security")]
     public async Task TenantScopedLookupDoesNotFallThroughToGlobalBinding()
     {
-        var sut = BuildSut(new ExternalIdentityProvisionerBindingConfiguration
+        var sut = BuildSut(new ExternalIdentityProvisionerBindingImplementationConfiguration
         {
             TenantId = null,
             ProviderName = "p1",
@@ -114,8 +114,8 @@ public sealed class ExternalIdentityProvisionerBindingConfigurationProviderTests
     {
         var tenantId = Guid.NewGuid();
         var sut = BuildSut(
-            new ExternalIdentityProvisionerBindingConfiguration { TenantId = tenantId, ProviderName = "p1", ProvisionerName = "ProvA" },
-            new ExternalIdentityProvisionerBindingConfiguration { TenantId = tenantId, ProviderName = "p1", ProvisionerName = "ProvB" });
+            new ExternalIdentityProvisionerBindingImplementationConfiguration { TenantId = tenantId, ProviderName = "p1", ProvisionerName = "ProvA" },
+            new ExternalIdentityProvisionerBindingImplementationConfiguration { TenantId = tenantId, ProviderName = "p1", ProvisionerName = "ProvB" });
 
         var result = await sut.ResolveProvisionerName(tenantId, "p1", Ct);
 

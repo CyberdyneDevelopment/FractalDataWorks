@@ -17,7 +17,7 @@ public sealed class PromotionService : IPromotionService
 {
     private readonly ILogger _logger;
     private readonly QualityConfigurationProvider _qualityProvider;
-    private readonly List<PromotionRequestConfiguration> _inMemoryRequests = new();
+    private readonly List<PromotionRequestImplementationConfiguration> _inMemoryRequests = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PromotionService"/> class.
@@ -31,36 +31,36 @@ public sealed class PromotionService : IPromotionService
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IReadOnlyList<EnvironmentConfiguration>>> GetEnvironments(CancellationToken ct = default)
+    public async Task<IGenericResult<IReadOnlyList<EnvironmentImplementationConfiguration>>> GetEnvironments(CancellationToken ct = default)
     {
         var result = await _qualityProvider.GetAllEnvironments(ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
         var environments = (result.Value ?? []).OrderBy(e => e.PromotionOrder).ToList();
-        return GenericResult<IReadOnlyList<EnvironmentConfiguration>>.Success(environments);
+        return GenericResult<IReadOnlyList<EnvironmentImplementationConfiguration>>.Success(environments);
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<PromotionRequestConfiguration>> CreateRequest(PromotionRequestConfiguration request, CancellationToken ct = default)
+    public async Task<IGenericResult<PromotionRequestImplementationConfiguration>> CreateRequest(PromotionRequestImplementationConfiguration request, CancellationToken ct = default)
     {
         try
         {
             if (request.SourceEnvironment.Equals(request.TargetEnvironment, StringComparison.OrdinalIgnoreCase))
             {
-                return GenericResult<PromotionRequestConfiguration>.Failure(
+                return GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                     PromotionLog.SameEnvironmentError(_logger, request.SourceEnvironment));
             }
 
             var sourceLookup = await _qualityProvider.GetEnvironment(request.SourceEnvironment, ct).ConfigureAwait(false);
             if (!sourceLookup.IsSuccess || sourceLookup.Value is null)
             {
-                return GenericResult<PromotionRequestConfiguration>.Failure(
+                return GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                     PromotionLog.EnvironmentNotFound(_logger, request.SourceEnvironment));
             }
 
             var targetLookup = await _qualityProvider.GetEnvironment(request.TargetEnvironment, ct).ConfigureAwait(false);
             if (!targetLookup.IsSuccess || targetLookup.Value is null)
             {
-                return GenericResult<PromotionRequestConfiguration>.Failure(
+                return GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                     PromotionLog.EnvironmentNotFound(_logger, request.TargetEnvironment));
             }
 
@@ -70,32 +70,32 @@ public sealed class PromotionService : IPromotionService
             _inMemoryRequests.Add(request);
 
             PromotionLog.RequestCreated(_logger, request.SourceEnvironment, request.TargetEnvironment, request.RequestedBy);
-            return GenericResult<PromotionRequestConfiguration>.Success(request);
+            return GenericResult<PromotionRequestImplementationConfiguration>.Success(request);
         }
         catch (Exception ex)
         {
-            return GenericResult<PromotionRequestConfiguration>.Failure(
+            return GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                 PromotionLog.PromotionFailed(_logger, ex, request.Id));
         }
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<PromotionRequestConfiguration>> GetRequest(Guid requestId, CancellationToken ct = default)
+    public Task<IGenericResult<PromotionRequestImplementationConfiguration>> GetRequest(Guid requestId, CancellationToken ct = default)
     {
         PromotionLog.LoadingRequest(_logger, requestId);
 
         var request = _inMemoryRequests.FirstOrDefault(r => r.Id == requestId);
         if (request == null)
         {
-            return Task.FromResult(GenericResult<PromotionRequestConfiguration>.Failure(
+            return Task.FromResult(GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                 PromotionLog.RequestNotFound(_logger, requestId)));
         }
 
-        return Task.FromResult(GenericResult<PromotionRequestConfiguration>.Success(request));
+        return Task.FromResult(GenericResult<PromotionRequestImplementationConfiguration>.Success(request));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<IReadOnlyList<PromotionRequestConfiguration>>> GetRequests(string? status, CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<PromotionRequestImplementationConfiguration>>> GetRequests(string? status, CancellationToken ct = default)
     {
         var requests = _inMemoryRequests.AsEnumerable();
 
@@ -105,16 +105,16 @@ public sealed class PromotionService : IPromotionService
         }
 
         var list = requests.OrderByDescending(r => r.CreatedAt).ToList();
-        return Task.FromResult(GenericResult<IReadOnlyList<PromotionRequestConfiguration>>.Success(list));
+        return Task.FromResult(GenericResult<IReadOnlyList<PromotionRequestImplementationConfiguration>>.Success(list));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<PromotionRequestConfiguration>> ApproveRequest(Guid requestId, string approvedBy, CancellationToken ct = default)
+    public Task<IGenericResult<PromotionRequestImplementationConfiguration>> ApproveRequest(Guid requestId, string approvedBy, CancellationToken ct = default)
     {
         var request = _inMemoryRequests.FirstOrDefault(r => r.Id == requestId);
         if (request == null)
         {
-            return Task.FromResult(GenericResult<PromotionRequestConfiguration>.Failure(
+            return Task.FromResult(GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                 PromotionLog.RequestNotFound(_logger, requestId)));
         }
 
@@ -123,16 +123,16 @@ public sealed class PromotionService : IPromotionService
         request.ApprovedAt = DateTimeOffset.UtcNow;
 
         PromotionLog.RequestApproved(_logger, requestId, approvedBy);
-        return Task.FromResult(GenericResult<PromotionRequestConfiguration>.Success(request));
+        return Task.FromResult(GenericResult<PromotionRequestImplementationConfiguration>.Success(request));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<PromotionRequestConfiguration>> RejectRequest(Guid requestId, string rejectedBy, string reason, CancellationToken ct = default)
+    public Task<IGenericResult<PromotionRequestImplementationConfiguration>> RejectRequest(Guid requestId, string rejectedBy, string reason, CancellationToken ct = default)
     {
         var request = _inMemoryRequests.FirstOrDefault(r => r.Id == requestId);
         if (request == null)
         {
-            return Task.FromResult(GenericResult<PromotionRequestConfiguration>.Failure(
+            return Task.FromResult(GenericResult<PromotionRequestImplementationConfiguration>.Failure(
                 PromotionLog.RequestNotFound(_logger, requestId)));
         }
 
@@ -140,7 +140,7 @@ public sealed class PromotionService : IPromotionService
         request.Notes = reason;
 
         PromotionLog.RequestRejected(_logger, requestId, rejectedBy, reason);
-        return Task.FromResult(GenericResult<PromotionRequestConfiguration>.Success(request));
+        return Task.FromResult(GenericResult<PromotionRequestImplementationConfiguration>.Success(request));
     }
 
     /// <inheritdoc/>

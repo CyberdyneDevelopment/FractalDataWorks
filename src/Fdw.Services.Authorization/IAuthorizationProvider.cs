@@ -17,30 +17,30 @@ public interface IAuthorizationProvider
     /// <summary>
     /// Gets a role configuration by name.
     /// </summary>
-    Task<RoleConfiguration?> GetRole(string name, CancellationToken cancellationToken = default);
+    Task<RoleImplementationConfiguration?> GetRole(string name, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a role configuration by ID.
     /// </summary>
-    Task<RoleConfiguration?> GetRole(Guid id, CancellationToken cancellationToken = default);
+    Task<RoleImplementationConfiguration?> GetRole(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all role configurations (system + user, deduplicated).
     /// </summary>
-    Task<IReadOnlyList<RoleConfiguration>> GetAllRoles(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RoleImplementationConfiguration>> GetAllRoles(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets role configurations filtered by request context visibility rules.
     /// </summary>
-    Task<IReadOnlyList<RoleConfiguration>> GetRoles(IRequestContext context, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RoleImplementationConfiguration>> GetRoles(IRequestContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets all permission configurations.
     /// </summary>
-    Task<IReadOnlyList<PermissionConfiguration>> GetPermissions(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PermissionImplementationConfiguration>> GetPermissions(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets role-permission assignments for a specific role.
     /// </summary>
-    Task<IReadOnlyList<RolePermissionConfiguration>> GetRolePermissions(Guid roleId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RolePermissionImplementationConfiguration>> GetRolePermissions(Guid roleId, CancellationToken cancellationToken = default);
 }

@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -15,10 +16,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class CreateServerSettingEndpointBase : CrudCreateEndpointBase<CreateServerSettingRequest, ServerSettingDetailDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IServerSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateServerSettingEndpointBase(ILogger<CreateServerSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected CreateServerSettingEndpointBase(ILogger<CreateServerSettingEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -35,17 +36,18 @@ public abstract class CreateServerSettingEndpointBase : CrudCreateEndpointBase<C
     /// <inheritdoc />
     protected override async Task<IGenericResult<bool>> CheckExists(CreateServerSettingRequest request, CancellationToken ct)
     {
-        var existingResult = await _provider.GetServerSetting(request.SettingName, ct).ConfigureAwait(false);
-        return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value is not null);
+        var existingResult = await _provider.Get(request.SettingName, ct).ConfigureAwait(false);
+        if (!existingResult.IsSuccess)
+            return existingResult.ToNewResult<bool>();
+        return GenericResult<bool>.Success(existingResult.Value is not null);
     }
 
     /// <inheritdoc />
     protected override async Task<IGenericResult<ServerSettingDetailDto>> Create(CreateServerSettingRequest request, CancellationToken ct)
     {
-        var config = new ServerSettingConfiguration
+        var config = new ServerSettingImplementationConfiguration
         {
-            Id = Guid.NewGuid(),
-            SettingName = request.SettingName,
+            Name = request.SettingName,
             SettingValue = request.SettingValue,
             DataType = request.DataType,
             Description = request.Description,
@@ -54,7 +56,7 @@ public abstract class CreateServerSettingEndpointBase : CrudCreateEndpointBase<C
             IsActive = true
         };
 
-        var saveResult = await _provider.SaveServerSetting(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "ServerSetting", "ServerSetting", config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<ServerSettingDetailDto>();
@@ -65,7 +67,7 @@ public abstract class CreateServerSettingEndpointBase : CrudCreateEndpointBase<C
         var detail = new ServerSettingDetailDto
         {
             Id = config.Id,
-            SettingName = config.SettingName,
+            SettingName = config.Name,
             SettingValue = config.SettingValue,
             DataType = config.DataType,
             Description = config.Description,

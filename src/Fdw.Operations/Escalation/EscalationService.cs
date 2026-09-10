@@ -92,7 +92,7 @@ public sealed class EscalationService : IEscalationService
         => GetPolicyMatching(c => c.ScheduleId == scheduleId, cancellationToken);
 
     private async Task<IGenericResult<IEscalationPolicy?>> GetPolicyMatching(
-        Func<EscalationPolicyConfiguration, bool> predicate,
+        Func<EscalationPolicyImplementationConfiguration, bool> predicate,
         CancellationToken cancellationToken)
     {
         var headers = await _provider.Get(cancellationToken).ConfigureAwait(false);
@@ -164,7 +164,7 @@ public sealed class EscalationService : IEscalationService
         return GenericResult.Success();
     }
 
-    private static EscalationPolicyConfiguration BuildConfig(IEscalationPolicy policy, Guid? id)
+    private static EscalationPolicyImplementationConfiguration BuildConfig(IEscalationPolicy policy, Guid? id)
         => new()
         {
             Id = id ?? Guid.Empty,

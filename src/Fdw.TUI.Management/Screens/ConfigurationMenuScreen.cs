@@ -898,13 +898,13 @@ public sealed class ConfigurationMenuScreen : ScreenBase
     /// through the render-agnostic seam.
     /// </summary>
     private Task ShowEtlNodesList() =>
-        LoadAndRenderList<OrchestrationNodeConfiguration>(
+        LoadAndRenderList<OrchestrationNodeImplementationConfiguration>(
             "ETL Node",
             "Loading root orchestration nodes from the instance...",
             _nodeApiClient.ListRootNodes,
             BuildEtlNodesPage);
 
-    private static ListPageModel BuildEtlNodesPage(IReadOnlyList<OrchestrationNodeConfiguration> nodes)
+    private static ListPageModel BuildEtlNodesPage(IReadOnlyList<OrchestrationNodeImplementationConfiguration> nodes)
     {
         var page = new ListPageModel
         {

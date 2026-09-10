@@ -65,9 +65,9 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
     }
 
     /// <summary>
-    /// Maps a RoleConfiguration to a summary DTO. Override for custom mapping.
+    /// Maps a RoleImplementationConfiguration to a summary DTO. Override for custom mapping.
     /// </summary>
-    protected virtual RoleSummaryResponse MapToSummary(RoleConfiguration role)
+    protected virtual RoleSummaryResponse MapToSummary(RoleImplementationConfiguration role)
     {
         return new RoleSummaryResponse
         {

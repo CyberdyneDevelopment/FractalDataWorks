@@ -12,7 +12,8 @@ namespace Fdw.Services.Users;
 
 /// <summary>Supplies the UserTenants configuration.</summary>
 public sealed class UserTenantConfigurationProvider
-    : ImplementationConfigurationProviderBase<IUserTenantImplementationConfiguration>
+    : DomainConfigurationProviderBase<IUserTenantImplementationConfiguration>,
+      IUserTenantConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="UserTenantConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

@@ -15,6 +15,8 @@ namespace Fdw.Services.Dataverses;
 /// filtered slice — the aggregate the provider returns is already navigable.
 /// </remarks>
 public interface IDataverseConfigurationProvider
+
+    : IDomainConfigurationProvider<IDataverseImplementationConfiguration>
 {
 
 }

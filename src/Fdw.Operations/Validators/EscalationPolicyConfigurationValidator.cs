@@ -5,9 +5,9 @@ using Fdw.Operations.Configuration;
 namespace Fdw.Operations.Validators;
 
 /// <summary>
-/// Validator for <see cref="EscalationPolicyConfiguration"/>.
+/// Validator for <see cref="EscalationPolicyImplementationConfiguration"/>.
 /// </summary>
-public sealed class EscalationPolicyConfigurationValidator : FdwConfigurationValidator<EscalationPolicyConfiguration>
+public sealed class EscalationPolicyConfigurationValidator : FdwConfigurationValidator<EscalationPolicyImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EscalationPolicyConfigurationValidator"/> class.

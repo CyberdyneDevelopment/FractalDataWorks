@@ -15,17 +15,23 @@ namespace Fdw.Services.Settings;
 /// </summary>
 public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvider
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IServerSettingConfigurationProvider _server;
+    private readonly ITenantSettingConfigurationProvider _tenant;
+    private readonly IRoleSettingConfigurationProvider _role;
     private readonly ILogger<DefaultEffectiveSettingsProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultEffectiveSettingsProvider"/> class.
     /// </summary>
     public DefaultEffectiveSettingsProvider(
-        SettingsConfigurationProvider provider,
+        IServerSettingConfigurationProvider server,
+        ITenantSettingConfigurationProvider tenant,
+        IRoleSettingConfigurationProvider role,
         ILogger<DefaultEffectiveSettingsProvider>? logger)
     {
-        _provider = provider;
+        _server = server;
+        _tenant = tenant;
+        _role = role;
         _logger = logger ?? NullLogger<DefaultEffectiveSettingsProvider>.Instance;
     }
 
@@ -45,12 +51,12 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
 
 #pragma warning disable VSTHRD002 // Synchronously waiting on tasks
 #pragma warning disable FDW007 // Why: Sequential layered resolution (server -> tenant -> role) is inherently branchy but straightforward
-    private (string Value, ServerSettingConfiguration? ServerSetting) ResolveSettingValue(
+    private (string Value, IServerSettingImplementationConfiguration? ServerSetting) ResolveSettingValue(
         string settingName,
         Guid? tenantId,
         string? roleName)
     {
-        var serverSettingResult = _provider.GetServerSetting(settingName).GetAwaiter().GetResult();
+        var serverSettingResult = _server.Get(settingName).GetAwaiter().GetResult();
         var serverSetting = serverSettingResult.IsSuccess ? serverSettingResult.Value : null;
 
         if (serverSetting is null || !serverSetting.IsActive)
@@ -64,8 +70,8 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
 
         if (tenantId.HasValue)
         {
-            var tenantSettingsResult = _provider.GetTenantSettings().GetAwaiter().GetResult();
-            var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingConfiguration>)[];
+            var tenantSettingsResult = _tenant.Get().GetAwaiter().GetResult();
+            var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<ITenantSettingImplementationConfiguration>)[];
 
             foreach (var ts in tenantSettings)
             {
@@ -81,8 +87,8 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
 
             if (roleName is not null)
             {
-                var roleSettingsResult = _provider.GetRoleSettings().GetAwaiter().GetResult();
-                var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingConfiguration>)[];
+                var roleSettingsResult = _role.Get().GetAwaiter().GetResult();
+                var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<IRoleSettingImplementationConfiguration>)[];
 
                 foreach (var rs in roleSettings)
                 {
@@ -107,7 +113,7 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
     private string ClampIfNumeric(
         string settingName,
         string value,
-        ServerSettingConfiguration serverSetting)
+        IServerSettingImplementationConfiguration serverSetting)
     {
         if (serverSetting.MinValue is null && serverSetting.MaxValue is null)
         {

@@ -66,8 +66,8 @@ public abstract class ListGlossaryTermsEndpointBase : EndpointWithoutRequest<Lis
         await Send.OkAsync(terms.Select(MapToDto).ToList(), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a GlossaryTermConfiguration to its corresponding DTO.</summary>
-    protected virtual GlossaryTermResponse MapToDto(GlossaryTermConfiguration config)
+    /// <summary>Maps a GlossaryTermImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual GlossaryTermResponse MapToDto(GlossaryTermImplementationConfiguration config)
     {
         return new GlossaryTermResponse
         {

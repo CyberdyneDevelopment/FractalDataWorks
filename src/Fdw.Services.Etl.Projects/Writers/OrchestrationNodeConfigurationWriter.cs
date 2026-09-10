@@ -14,14 +14,14 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Etl.Projects.Writers;
 
 /// <summary>
-/// Validates and persists <see cref="OrchestrationNodeConfiguration"/> records.
+/// Validates and persists <see cref="OrchestrationNodeImplementationConfiguration"/> records.
 /// Calls FluentValidation before persist, and invalidates the "pipe.OrchestrationNode" cache tag
 /// after successful save or delete.
 /// </summary>
 public sealed class OrchestrationNodeConfigurationWriter
 {
     private readonly IOrchestrationNodeConfigurationProvider _provider;
-    private readonly IValidator<OrchestrationNodeConfiguration> _validator;
+    private readonly IValidator<OrchestrationNodeImplementationConfiguration> _validator;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -29,7 +29,7 @@ public sealed class OrchestrationNodeConfigurationWriter
     /// </summary>
     public OrchestrationNodeConfigurationWriter(
         IOrchestrationNodeConfigurationProvider provider,
-        IValidator<OrchestrationNodeConfiguration> validator,
+        IValidator<OrchestrationNodeImplementationConfiguration> validator,
         ILogger<OrchestrationNodeConfigurationWriter>? logger = null)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
@@ -40,8 +40,8 @@ public sealed class OrchestrationNodeConfigurationWriter
     /// <summary>
     /// Validates and persists the orchestration node configuration.
     /// </summary>
-    public async Task<IGenericResult<OrchestrationNodeConfiguration>> Save(
-        OrchestrationNodeConfiguration config,
+    public async Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> Save(
+        OrchestrationNodeImplementationConfiguration config,
         CancellationToken cancellationToken = default)
     {
         if (config == null) throw new ArgumentNullException(nameof(config));
@@ -51,7 +51,7 @@ public sealed class OrchestrationNodeConfigurationWriter
         if (!validationResult.IsValid)
         {
             var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            return GenericResult<OrchestrationNodeConfiguration>.Failure(
+            return GenericResult<OrchestrationNodeImplementationConfiguration>.Failure(
                 OrchestrationNodeConfigurationLog.ValidationFailed(_logger, "OrchestrationNode", config.Name, errors));
         }
 
@@ -59,14 +59,14 @@ public sealed class OrchestrationNodeConfigurationWriter
         {
             var saveResult = await _provider.Save(config, cancellationToken).ConfigureAwait(false);
             if (!saveResult.IsSuccess)
-                return saveResult.ToNewResult<OrchestrationNodeConfiguration>();
+                return saveResult.ToNewResult<OrchestrationNodeImplementationConfiguration>();
 
             OrchestrationNodeConfigurationLog.NodeSaved(_logger, config.Name, config.Id);
-            return GenericResult<OrchestrationNodeConfiguration>.Success(saveResult.Value!);
+            return GenericResult<OrchestrationNodeImplementationConfiguration>.Success(saveResult.Value!);
         }
         catch (Exception ex)
         {
-            return GenericResult<OrchestrationNodeConfiguration>.Failure(
+            return GenericResult<OrchestrationNodeImplementationConfiguration>.Failure(
                 OrchestrationNodeConfigurationLog.NodeSaveFailed(_logger, ex, config.Name, ex.Message));
         }
     }

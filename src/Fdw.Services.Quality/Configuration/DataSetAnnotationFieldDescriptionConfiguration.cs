@@ -7,7 +7,7 @@ namespace Fdw.Services.Quality.Configuration;
 
 /// <summary>
 /// Configuration for a data set annotation field description.
-/// Child of DataSetAnnotationConfiguration.
+/// Child of DataSetAnnotationImplementationConfiguration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

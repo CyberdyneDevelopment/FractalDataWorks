@@ -12,7 +12,7 @@ namespace Fdw.Services.Authorization;
 
 /// <summary>Supplies the Role configuration.</summary>
 public sealed class RoleConfigurationProvider
-    : ImplementationConfigurationProviderBase<IRoleImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IRoleImplementationConfiguration>,
       IRoleConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="RoleConfigurationProvider"/> class.</summary>

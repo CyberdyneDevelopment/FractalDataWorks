@@ -5,6 +5,7 @@ namespace Fdw.Services.Quality;
 
 /// <summary>Supplies the configured DataSetAnnotation members.</summary>
 public interface IDataSetAnnotationConfigurationProvider
+    
     : IDomainConfigurationProvider<IDataSetAnnotationImplementationConfiguration>
 {
 }

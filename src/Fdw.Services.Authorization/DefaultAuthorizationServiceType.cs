@@ -78,28 +78,58 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.AddAuthorization();
 
 
-            // Role provider. Registered here beside the other two because the three are read
-            // together - a role means nothing without the permissions it grants - and leaving this
-            // one out is what made every consumer of it unresolvable while the other two looked
-            // fine. RoleConfigurationProvider rather than the bare base, because DefaultPrincipalResolver
-            // takes the concrete type and both should be the same instance.
-            builder.Services.TryAddSingleton<RoleConfigurationProvider>();
+            builder.Services.TryAddSingleton<RoleImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<IRoleImplementationConfigurationProvider>(sp => sp.GetRequiredService<RoleImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<RoleConfigurationProvider>(sp =>
+            {
+                var domain = new RoleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<RoleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("Role", sp.GetRequiredService<IRoleImplementationConfigurationProvider>());
+                return domain;
+            });
             builder.Services.TryAddSingleton<IRoleConfigurationProvider>(sp => sp.GetRequiredService<RoleConfigurationProvider>());
 
 
-            // UserRole provider. Consumed by EffectivePermissionResolver here, by
-            // DefaultPrincipalResolver in the Authentication package, and by GetMeEndpoint - which
-            // is where its absence actually surfaced, as FastEndpoints activating an endpoint at
-            // MapFastEndpoints rather than as a phase failure, because the resolver takes it
-            // through a factory that is not called until something asks.
-            builder.Services.TryAddSingleton<UserRoleConfigurationProvider>();
 
-            builder.Services.TryAddSingleton<PermissionConfigurationProvider>();
+            builder.Services.TryAddSingleton<UserRoleImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<IUserRoleImplementationConfigurationProvider>(sp => sp.GetRequiredService<UserRoleImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
+            {
+                var domain = new UserRoleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<UserRoleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("UserRole", sp.GetRequiredService<IUserRoleImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IUserRoleConfigurationProvider>(sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+
+
+            builder.Services.TryAddSingleton<PermissionImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<IPermissionImplementationConfigurationProvider>(sp => sp.GetRequiredService<PermissionImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<PermissionConfigurationProvider>(sp =>
+            {
+                var domain = new PermissionConfigurationProvider(
+                    sp.GetRequiredService<ILogger<PermissionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("Permission", sp.GetRequiredService<IPermissionImplementationConfigurationProvider>());
+                return domain;
+            });
             builder.Services.TryAddSingleton<IPermissionConfigurationProvider>(sp => sp.GetRequiredService<PermissionConfigurationProvider>());
 
-            // RolePermission junction provider.
-            builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>();
+
+            builder.Services.TryAddSingleton<RolePermissionImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<IRolePermissionImplementationConfigurationProvider>(sp => sp.GetRequiredService<RolePermissionImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>(sp =>
+            {
+                var domain = new RolePermissionConfigurationProvider(
+                    sp.GetRequiredService<ILogger<RolePermissionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("RolePermission", sp.GetRequiredService<IRolePermissionImplementationConfigurationProvider>());
+                return domain;
+            });
             builder.Services.TryAddSingleton<IRolePermissionConfigurationProvider>(sp => sp.GetRequiredService<RolePermissionConfigurationProvider>());
+
 
             // Hands over the gateway provider, not a gateway. Resolving one here meant .Value! on a
             // result that can fail — a null-forgive that turns "no gateway for this connection" into
@@ -144,11 +174,11 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
         Configuration(builder =>
         {
 
-            builder.Services.AddOptions<List<RoleConfiguration>>()
+            builder.Services.AddOptions<List<RoleImplementationConfiguration>>()
                 .BindConfiguration("Roles");
-            builder.Services.AddOptions<List<PermissionConfiguration>>()
+            builder.Services.AddOptions<List<PermissionImplementationConfiguration>>()
                 .BindConfiguration("Permissions");
-            builder.Services.AddOptions<List<UserRoleConfiguration>>()
+            builder.Services.AddOptions<List<UserRoleImplementationConfiguration>>()
                 .BindConfiguration("UserRoles");
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);

@@ -82,7 +82,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
     /// Applies updates from the request to the existing configuration.
     /// Override to customize update logic.
     /// </summary>
-    protected virtual RoleConfiguration ApplyUpdates(RoleConfiguration existing, UpdateRoleRequest request)
+    protected virtual RoleImplementationConfiguration ApplyUpdates(RoleImplementationConfiguration existing, UpdateRoleRequest request)
     {
         if (request.DisplayName is not null)
         {

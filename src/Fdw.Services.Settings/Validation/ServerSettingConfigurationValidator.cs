@@ -7,14 +7,14 @@ namespace Fdw.Services.Settings.Validation;
 /// <summary>
 /// Validator for <see cref="ServerSettingConfiguration"/>.
 /// </summary>
-public sealed class ServerSettingConfigurationValidator : FdwConfigurationValidator<ServerSettingConfiguration>
+public sealed class ServerSettingConfigurationValidator : FdwConfigurationValidator<ServerSettingImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ServerSettingConfigurationValidator"/> class.
     /// </summary>
     public ServerSettingConfigurationValidator()
     {
-        RuleFor(x => x.SettingName)
+        RuleFor(x => x.Name)
             .IsValidName(256);
 
         RuleFor(x => x.SettingValue)

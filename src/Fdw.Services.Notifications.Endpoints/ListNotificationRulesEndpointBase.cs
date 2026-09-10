@@ -44,7 +44,7 @@ public abstract class ListNotificationRulesEndpointBase : CrudListEndpointBase<N
             return allResult.ToNewResult<List<NotificationRuleSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<NotificationRuleConfiguration>)[])
+        var items = (allResult.Value ?? (IReadOnlyList<NotificationRuleImplementationConfiguration>)[])
             .Select(r => new NotificationRuleSummaryDto
             {
                 Id = r.Id,

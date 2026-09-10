@@ -21,7 +21,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// </summary>
 /// <remarks>
 /// A standalone typed-body shape, same pattern as
-/// <c>Fdw.Operations.Configuration.EscalationPolicyConfiguration</c>'s ordered-children shape
+/// <c>Fdw.Operations.Configuration.EscalationPolicyImplementationConfiguration</c>'s ordered-children shape
 /// (<c>Levels</c> there, <see cref="Steps"/> here).
 /// </remarks>
 [ExcludeFromCodeCoverage]

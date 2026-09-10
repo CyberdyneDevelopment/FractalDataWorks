@@ -5,9 +5,9 @@ using Fdw.Services.Quality.Configuration;
 namespace Fdw.Services.Quality.Validators;
 
 /// <summary>
-/// Validator for <see cref="DataSetAnnotationConfiguration"/>.
+/// Validator for <see cref="DataSetAnnotationImplementationConfiguration"/>.
 /// </summary>
-public sealed class DataSetAnnotationConfigurationValidator : FdwConfigurationValidator<DataSetAnnotationConfiguration>
+public sealed class DataSetAnnotationConfigurationValidator : FdwConfigurationValidator<DataSetAnnotationImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetAnnotationConfigurationValidator"/> class.

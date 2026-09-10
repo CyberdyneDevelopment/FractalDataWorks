@@ -1,14 +1,25 @@
 using Fdw.Configuration;
+using Fdw.Data;
+using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Services.Users.Configuration;
 
-/// <summary>
-/// The contract every UserTenant implementation carries.
-/// </summary>
-/// <remarks>
-/// The marker is what keeps the domain closed: only a configuration carrying it can be
-/// registered against this domain or handed back by a read of it.
-/// </remarks>
+/// <summary>The contract every UserTenants implementation carries.</summary>
 public interface IUserTenantImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the UserTenants UserId.</summary>
+    Guid UserId { get; set; }
+
+    /// <summary>Gets or sets the UserTenants TenantId.</summary>
+    Guid TenantId { get; set; }
+
+    /// <summary>Gets or sets the UserTenants IsDefault.</summary>
+    bool IsDefault { get; set; }
+
+    /// <summary>Gets or sets the UserTenants IsCurrent.</summary>
+    bool IsCurrent { get; set; }
+
+    /// <summary>Gets or sets the UserTenants IsDeleted.</summary>
+    bool IsDeleted { get; set; }
 }

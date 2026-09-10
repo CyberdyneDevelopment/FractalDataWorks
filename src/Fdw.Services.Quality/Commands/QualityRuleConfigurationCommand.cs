@@ -6,7 +6,7 @@ namespace Fdw.Services.Quality.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the QualityRule configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "QualityRule")]
-public sealed class QualityRuleConfigurationCommand : ConfigurationCommandBase<QualityRuleConfiguration>
+public sealed class QualityRuleConfigurationCommand : ConfigurationCommandBase<QualityRuleImplementationConfiguration>
 {
     /// <inheritdoc/>
     public QualityRuleConfigurationCommand() : base("QualityRule") { }

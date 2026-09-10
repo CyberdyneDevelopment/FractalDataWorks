@@ -57,7 +57,7 @@ public sealed class DataverseAccessPolicy : IDataverseAccessPolicy
 
     /// <inheritdoc />
     public async Task<IGenericResult> MayWrite(
-        DataverseConfiguration dataverse, CancellationToken cancellationToken = default)
+        DataverseImplementationConfiguration dataverse, CancellationToken cancellationToken = default)
     {
         if (dataverse is null) throw new ArgumentNullException(nameof(dataverse));
 

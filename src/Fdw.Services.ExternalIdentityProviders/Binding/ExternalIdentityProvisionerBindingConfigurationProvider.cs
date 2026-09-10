@@ -10,7 +10,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>Supplies the ExternalIdentityProvisionerBinding configuration.</summary>
 public sealed class ExternalIdentityProvisionerBindingConfigurationProvider
-    : ImplementationConfigurationProviderBase<IExternalIdentityProvisionerBindingImplementationConfiguration>
+    : DomainConfigurationProviderBase<IExternalIdentityProvisionerBindingImplementationConfiguration>,
+      IExternalIdentityProvisionerBindingConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerBindingConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

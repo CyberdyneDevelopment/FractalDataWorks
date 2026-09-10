@@ -139,7 +139,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
     }
 
     /// <summary>Executes a single quality rule against the provided data and returns the result.</summary>
-    protected virtual QualityCheckResultResponse ExecuteRule(QualityRuleConfiguration rule, IReadOnlyList<Dictionary<string, object>> data, int totalCount)
+    protected virtual QualityCheckResultResponse ExecuteRule(QualityRuleImplementationConfiguration rule, IReadOnlyList<Dictionary<string, object>> data, int totalCount)
     {
         return rule.RuleType switch
         {

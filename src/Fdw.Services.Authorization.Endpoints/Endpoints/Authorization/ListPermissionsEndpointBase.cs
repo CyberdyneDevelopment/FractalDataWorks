@@ -79,12 +79,12 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
     }
 
     /// <summary>
-    /// Maps a <see cref="PermissionConfiguration"/> to a summary DTO. Override for custom mapping.
+    /// Maps a <see cref="PermissionImplementationConfiguration"/> to a summary DTO. Override for custom mapping.
     /// </summary>
     /// <param name="permission">The permission row.</param>
     /// <param name="orgPrefix">The current tenant's OrgPrefix already followed by ':' (e.g. "acme:"),
     /// or null if no prefix should be applied.</param>
-    protected virtual PermissionSummaryDto MapToSummary(PermissionConfiguration permission, string? orgPrefix)
+    protected virtual PermissionSummaryDto MapToSummary(PermissionImplementationConfiguration permission, string? orgPrefix)
     {
         return new PermissionSummaryDto
         {

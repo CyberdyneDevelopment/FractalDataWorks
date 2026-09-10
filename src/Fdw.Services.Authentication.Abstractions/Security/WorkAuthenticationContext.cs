@@ -23,7 +23,7 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 /// would see only shared/system rows, never its own tenant's data. This type gives background
 /// executions a real, minimal <see cref="IAuthenticationContext"/> sourced directly from the
 /// execution's own known <c>TenantId</c> (e.g. <c>ScheduleConfiguration.TenantId</c>,
-/// <c>OrchestrationNodeConfiguration.TenantId</c>), so the same RLS session-context mechanism that
+/// <c>OrchestrationNodeImplementationConfiguration.TenantId</c>), so the same RLS session-context mechanism that
 /// protects HTTP requests also protects background work — subject to the UserId caveat below.
 /// </para>
 /// <para>

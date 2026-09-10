@@ -16,11 +16,11 @@ public sealed class QualityServiceTests
     private static QualityService CreateService()
     {
         var loggerFactory = LoggerFactory.Create(_ => { });
-        var rulesMonitor = new Mock<IOptionsMonitor<System.Collections.Generic.List<QualityRuleConfiguration>>>();
+        var rulesMonitor = new Mock<IOptionsMonitor<System.Collections.Generic.List<QualityRuleImplementationConfiguration>>>();
         return new QualityService(loggerFactory, rulesMonitor.Object);
     }
 
-    private static QualityRuleConfiguration MakeRule(string ruleType = "Range", string dataSetName = "Orders", bool isEnabled = true)
+    private static QualityRuleImplementationConfiguration MakeRule(string ruleType = "Range", string dataSetName = "Orders", bool isEnabled = true)
         => new()
         {
             RuleType = ruleType,

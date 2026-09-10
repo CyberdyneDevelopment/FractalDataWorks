@@ -1,0 +1,109 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+
+namespace Fdw.Services.Quality.Configuration;
+
+/// <summary>
+/// Configuration for quality validation rules.
+/// Stored in quality.QualityRule table.
+/// </summary>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration( ServiceCategory = "Quality",
+    ServiceType = "Rule")]
+public sealed partial class QualityRuleImplementationConfiguration
+    : IQualityRuleImplementationConfiguration
+{
+    /// <summary>The domain record's durable id.</summary>
+    public Guid QualityRuleId { get; set; }
+
+    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
+    public int QualityRuleRowId { get; set; }
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+
+    /// <summary>
+    /// Gets or sets the display name for this quality rule.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the unique identifier for this rule.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the DataSet this rule applies to.
+    /// </summary>
+    public string DataSetName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets when the rule was created.</summary>
+    /// <remarks>
+    /// quality.QualityRule.CreateDate is NOT NULL and the shipped container declares it; this
+    /// type simply did not carry it, so every read returned the default and the create endpoint
+    /// invented DateTimeOffset.UtcNow for its response instead. The stored value was there and
+    /// unreachable, which is why the same row answered two different dates. See FDW-734.
+    /// </remarks>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the field name this rule applies to (null for aggregate rules).
+    /// </summary>
+    public string? FieldName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the rule type (from QualityRuleTypes TypeCollection).
+    /// </summary>
+    public string RuleType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the severity level (from QualitySeverityTypes TypeCollection).
+    /// </summary>
+    public string Severity { get; set; } = "Error";
+
+    /// <summary>
+    /// Gets or sets whether this rule is enabled.
+    /// </summary>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the optional description of this rule.
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the minimum value for range validation.
+    /// </summary>
+    public string? MinValue { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum value for range validation.
+    /// </summary>
+    public string? MaxValue { get; set; }
+
+    /// <summary>
+    /// Gets or sets the regex pattern for pattern validation.
+    /// </summary>
+    public string? Pattern { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SQL expression for custom validation.
+    /// </summary>
+    public string? Expression { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether failed rules should attempt automatic remediation.
+    /// </summary>
+    public bool AutoRemediate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reference values for this quality rule.
+    /// </summary>
+    public IList<QualityRuleReferenceValueConfiguration> ReferenceValues { get; set; } = [];
+}

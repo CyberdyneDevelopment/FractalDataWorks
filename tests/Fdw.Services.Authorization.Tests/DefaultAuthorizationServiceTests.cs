@@ -26,9 +26,9 @@ public sealed class DefaultAuthorizationServiceTests
     public DefaultAuthorizationServiceTests()
     {
         _sut = new DefaultAuthorizationService(
-            CreateProviderMock<RoleConfiguration, RoleConfigurationCommand>(),
-            CreateProviderMock<PermissionConfiguration, PermissionConfigurationCommand>(),
-            CreateProviderMock<RolePermissionConfiguration, RolePermissionConfigurationCommand>(),
+            CreateProviderMock<RoleImplementationConfiguration, RoleConfigurationCommand>(),
+            CreateProviderMock<PermissionImplementationConfiguration, PermissionConfigurationCommand>(),
+            CreateProviderMock<RolePermissionImplementationConfiguration, RolePermissionConfigurationCommand>(),
             NullLogger<DefaultAuthorizationService>.Instance);
     }
 

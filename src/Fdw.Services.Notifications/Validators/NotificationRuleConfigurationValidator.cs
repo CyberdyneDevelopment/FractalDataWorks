@@ -5,9 +5,9 @@ using Fdw.Services.Notifications.Configuration;
 namespace Fdw.Services.Notifications.Validators;
 
 /// <summary>
-/// Validator for <see cref="NotificationRuleConfiguration"/>.
+/// Validator for <see cref="NotificationRuleImplementationConfiguration"/>.
 /// </summary>
-public sealed class NotificationRuleConfigurationValidator : FdwConfigurationValidator<NotificationRuleConfiguration>
+public sealed class NotificationRuleConfigurationValidator : FdwConfigurationValidator<NotificationRuleImplementationConfiguration>
 {
     private static readonly string[] ValidConditionOperators = ["And", "Or"];
     private static readonly string[] ValidSeverities = ["Info", "Warning", "Error", "Critical"];

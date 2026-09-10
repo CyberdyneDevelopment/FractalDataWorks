@@ -6,7 +6,7 @@ namespace Fdw.Operations.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the EscalationPolicy configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "EscalationPolicy")]
-public sealed class EscalationPolicyConfigurationCommand : ConfigurationCommandBase<EscalationPolicyConfiguration>
+public sealed class EscalationPolicyConfigurationCommand : ConfigurationCommandBase<EscalationPolicyImplementationConfiguration>
 {
     /// <inheritdoc/>
     public EscalationPolicyConfigurationCommand() : base("EscalationPolicy") { }

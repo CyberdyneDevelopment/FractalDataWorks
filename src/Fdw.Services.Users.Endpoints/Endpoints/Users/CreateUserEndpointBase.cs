@@ -193,7 +193,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         if (role is null)
             return GenericResult.Failure(UserEndpointLog.RoleNotFoundDuringCreate(EndpointLogger, roleName));
 
-        var config = new UserRoleConfiguration
+        var config = new UserRoleImplementationConfiguration
         {
             Id = Guid.NewGuid(),
             UserId = userId.ToString(),

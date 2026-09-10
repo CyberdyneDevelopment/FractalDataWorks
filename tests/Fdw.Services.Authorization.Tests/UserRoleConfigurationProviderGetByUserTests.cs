@@ -35,15 +35,15 @@ public class UserRoleConfigurationProviderGetByUserTests
     private const string AdminIdUpper = "CA520AE5-1234-4ABC-9DEF-0123456789AB";
     private static readonly string AdminIdLower = AdminIdUpper.ToLowerInvariant();
 
-    private static UserRoleConfigurationProvider MakeProvider(params UserRoleConfiguration[] storedRows)
+    private static UserRoleConfigurationProvider MakeProvider(params UserRoleImplementationConfiguration[] storedRows)
     {
 
         var gateway = new Mock<IConfigurationGateway>();
         gateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
         gateway
-            .Setup(g => g.Execute<IEnumerable<UserRoleConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<UserRoleImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<UserRoleConfiguration>>.Success(storedRows));
+            .ReturnsAsync(GenericResult<IEnumerable<UserRoleImplementationConfiguration>>.Success(storedRows));
 
         return new UserRoleConfigurationProvider(
             NullLogger<UserRoleConfigurationProvider>.Instance,
@@ -51,7 +51,7 @@ public class UserRoleConfigurationProviderGetByUserTests
             "PlatformConfiguration", "authz");
     }
 
-    private static UserRoleConfiguration Assignment(string userId)
+    private static UserRoleImplementationConfiguration Assignment(string userId)
         => new()
         {
             Id = Guid.NewGuid(),

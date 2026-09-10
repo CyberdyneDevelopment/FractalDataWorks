@@ -91,7 +91,7 @@ public abstract class ListDataverseNotesEndpointBase : CrudGetEndpointBase<Datav
     /// <param name="notes">The notes to project.</param>
     /// <param name="ct">Cancellation token.</param>
     protected async Task<List<DataverseNoteResponse>> ToResponses(
-        IReadOnlyList<NoteConfiguration> notes, CancellationToken ct)
+        IReadOnlyList<NoteImplementationConfiguration> notes, CancellationToken ct)
     {
         // Resolved once per distinct author rather than once per note: a busy dataverse is mostly
         // one person's notes, and the same lookup repeated per row is the shape that turns a list

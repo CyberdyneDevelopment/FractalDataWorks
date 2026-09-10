@@ -16,7 +16,7 @@ public sealed class TenantSettingConfigurationValidatorTests
     public void ValidConfigurationPassesValidation()
     {
         // Arrange
-        var config = new TenantSettingConfiguration
+        var config = new TenantSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             SettingName = "MaxRows",
@@ -36,7 +36,7 @@ public sealed class TenantSettingConfigurationValidatorTests
     public void EmptyTenantIdFailsValidation()
     {
         // Arrange
-        var config = new TenantSettingConfiguration
+        var config = new TenantSettingImplementationConfiguration
         {
             TenantId = Guid.Empty,
             SettingName = "MaxRows",
@@ -56,7 +56,7 @@ public sealed class TenantSettingConfigurationValidatorTests
     public void EmptySettingNameFailsValidation()
     {
         // Arrange
-        var config = new TenantSettingConfiguration
+        var config = new TenantSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             SettingName = string.Empty,
@@ -76,7 +76,7 @@ public sealed class TenantSettingConfigurationValidatorTests
     public void EmptySettingValueFailsValidation()
     {
         // Arrange
-        var config = new TenantSettingConfiguration
+        var config = new TenantSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             SettingName = "MaxRows",

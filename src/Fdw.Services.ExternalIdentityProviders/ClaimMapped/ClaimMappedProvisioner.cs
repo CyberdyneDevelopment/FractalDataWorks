@@ -125,7 +125,7 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
                 return GenericResult<Guid>.Failure(
                     ExternalIdentityProvisionerLog.RuleReferencesUnknownRole(_logger, rule.Name, roleName));
 
-            var grant = await _userRoles.Save(new Fdw.Services.Authorization.Configuration.UserRoleConfiguration
+            var grant = await _userRoles.Save(new Fdw.Services.Authorization.Configuration.UserRoleImplementationConfiguration
             {
                 Name = $"{userId.Value}:{role.Id}",
                 UserId = userId.Value.ToString(),

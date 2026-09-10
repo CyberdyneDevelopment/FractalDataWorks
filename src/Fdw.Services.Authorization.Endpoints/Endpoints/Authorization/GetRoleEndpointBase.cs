@@ -57,7 +57,7 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     public override async Task HandleAsync(GetRoleRequest req, CancellationToken ct)
     {
         
-        RoleConfiguration? role = Guid.TryParse(req.Name, out var id)
+        RoleImplementationConfiguration? role = Guid.TryParse(req.Name, out var id)
             ? await _roleProvider.GetRole(id, ct).ConfigureAwait(false)
             : await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
 
@@ -75,9 +75,9 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     }
 
     /// <summary>
-    /// Maps a RoleConfiguration to a detail DTO. Override for custom mapping.
+    /// Maps a RoleImplementationConfiguration to a detail DTO. Override for custom mapping.
     /// </summary>
-    protected virtual async Task<RoleDetailResponse> MapToDetail(RoleConfiguration role, CancellationToken ct)
+    protected virtual async Task<RoleDetailResponse> MapToDetail(RoleImplementationConfiguration role, CancellationToken ct)
     {
         var rolePermissions = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
         var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);

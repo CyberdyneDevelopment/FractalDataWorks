@@ -38,7 +38,7 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
     protected override async Task<IGenericResult<bool>> CheckExists(CreateTenantSettingRequest request, CancellationToken ct)
     {
         var tenantSettingsResult = await _provider.GetTenantSettings(ct).ConfigureAwait(false);
-        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingConfiguration>)[];
+        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingImplementationConfiguration>)[];
         var existing = tenantSettings
             .FirstOrDefault(s => s.TenantId == request.TenantId
                                  && string.Equals(s.SettingName, request.SettingName, StringComparison.OrdinalIgnoreCase));
@@ -48,7 +48,7 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
     /// <inheritdoc />
     protected override async Task<IGenericResult<TenantSettingSummaryDto>> Create(CreateTenantSettingRequest request, CancellationToken ct)
     {
-        var config = new TenantSettingConfiguration
+        var config = new TenantSettingImplementationConfiguration
         {
             Id = Guid.NewGuid(),
             TenantId = request.TenantId,

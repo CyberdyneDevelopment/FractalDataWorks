@@ -12,7 +12,8 @@ namespace Fdw.Services.Authorization;
 
 /// <summary>Supplies the UserRole configuration.</summary>
 public sealed class UserRoleConfigurationProvider
-    : ImplementationConfigurationProviderBase<IUserRoleImplementationConfiguration>
+    : DomainConfigurationProviderBase<IUserRoleImplementationConfiguration>,
+      IUserRoleConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="UserRoleConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

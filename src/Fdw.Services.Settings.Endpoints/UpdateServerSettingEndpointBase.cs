@@ -15,10 +15,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<UpdateServerSettingRequest, ServerSettingDetailDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IServerSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected UpdateServerSettingEndpointBase(ILogger<UpdateServerSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected UpdateServerSettingEndpointBase(ILogger<UpdateServerSettingEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -38,8 +38,10 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
     /// <inheritdoc />
     protected override async Task<IGenericResult<ServerSettingDetailDto?>> FindForUpdate(UpdateServerSettingRequest request, CancellationToken ct)
     {
-        var settingResult = await _provider.GetServerSetting(request.SettingName, ct).ConfigureAwait(false);
-        var setting = settingResult.IsSuccess ? settingResult.Value : null;
+        var settingResult = await _provider.Get(request.SettingName, ct).ConfigureAwait(false);
+        if (!settingResult.IsSuccess)
+            return settingResult.ToNewResult<ServerSettingDetailDto?>();
+        IServerSettingImplementationConfiguration? setting = settingResult.Value;
 
         if (setting is null)
         {
@@ -48,7 +50,7 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
                 return GenericResult<ServerSettingDetailDto?>.Success(new ServerSettingDetailDto
                 {
                     Id = Guid.Empty,
-                    SettingName = request.SettingName,
+                    Name = request.SettingName,
                     SettingValue = string.Empty,
                     DataType = definition.DataType,
                     Description = definition.Description,
@@ -63,7 +65,7 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
         var detail = new ServerSettingDetailDto
         {
             Id = setting.Id,
-            SettingName = setting.SettingName,
+            SettingName = setting.Name,
             SettingValue = setting.SettingValue,
             DataType = setting.DataType,
             Description = setting.Description,
@@ -81,8 +83,10 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
         ServerSettingDetailDto existing,
         CancellationToken ct)
     {
-        var settingResult = await _provider.GetServerSetting(request.SettingName, ct).ConfigureAwait(false);
-        var setting = settingResult.IsSuccess ? settingResult.Value : null;
+        var settingResult = await _provider.Get(request.SettingName, ct).ConfigureAwait(false);
+        if (!settingResult.IsSuccess)
+            return settingResult.ToNewResult<ServerSettingDetailDto>();
+        IServerSettingImplementationConfiguration? setting = settingResult.Value;
 
         if (setting is null)
         {
@@ -93,9 +97,9 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
                     SettingsEndpointLog.ServerSettingNotFound(Logger, request.SettingName));
             }
 
-            setting = new ServerSettingConfiguration
+            setting = new ServerSettingImplementationConfiguration
             {
-                SettingName = request.SettingName,
+                Name = request.SettingName,
                 DataType = definition.DataType,
                 Description = definition.Description,
                 IsActive = true
@@ -108,7 +112,7 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
         if (request.MaxValue is not null) setting.MaxValue = request.MaxValue;
         if (request.IsActive.HasValue) setting.IsActive = request.IsActive.Value;
 
-        var saveResult = await _provider.SaveServerSetting(setting, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(setting, "ServerSetting", "ServerSetting", setting.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<ServerSettingDetailDto>();
@@ -119,7 +123,7 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
         var detail = new ServerSettingDetailDto
         {
             Id = setting.Id,
-            SettingName = setting.SettingName,
+            SettingName = setting.Name,
             SettingValue = setting.SettingValue,
             DataType = setting.DataType,
             Description = setting.Description,

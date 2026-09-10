@@ -17,10 +17,10 @@ namespace Fdw.Services.Quality.Services;
 public sealed class CatalogService : ICatalogService
 {
     private readonly ILogger _logger;
-    private readonly IOptionsMonitor<List<GlossaryTermConfiguration>> _termsMonitor;
-    private readonly IOptionsMonitor<List<DataSetAnnotationConfiguration>> _annotationsMonitor;
-    private readonly List<GlossaryTermConfiguration> _inMemoryTerms = new();
-    private readonly Dictionary<string, DataSetAnnotationConfiguration> _inMemoryAnnotations = new(StringComparer.Ordinal);
+    private readonly IOptionsMonitor<List<GlossaryTermImplementationConfiguration>> _termsMonitor;
+    private readonly IOptionsMonitor<List<DataSetAnnotationImplementationConfiguration>> _annotationsMonitor;
+    private readonly List<GlossaryTermImplementationConfiguration> _inMemoryTerms = new();
+    private readonly Dictionary<string, DataSetAnnotationImplementationConfiguration> _inMemoryAnnotations = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatalogService"/> class.
@@ -30,8 +30,8 @@ public sealed class CatalogService : ICatalogService
     /// <param name="annotationsMonitor">The annotations configuration monitor.</param>
     public CatalogService(
         ILoggerFactory loggerFactory,
-        IOptionsMonitor<List<GlossaryTermConfiguration>> termsMonitor,
-        IOptionsMonitor<List<DataSetAnnotationConfiguration>> annotationsMonitor)
+        IOptionsMonitor<List<GlossaryTermImplementationConfiguration>> termsMonitor,
+        IOptionsMonitor<List<DataSetAnnotationImplementationConfiguration>> annotationsMonitor)
     {
         _logger = loggerFactory.CreateLogger<CatalogService>();
         _termsMonitor = termsMonitor;
@@ -39,7 +39,7 @@ public sealed class CatalogService : ICatalogService
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<IReadOnlyList<GlossaryTermConfiguration>>> SearchTerms(string? query, string? category, CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>> SearchTerms(string? query, string? category, CancellationToken ct = default)
     {
         CatalogLog.SearchingTerms(_logger, query ?? string.Empty, category);
 
@@ -58,17 +58,17 @@ public sealed class CatalogService : ICatalogService
         }
 
         var list = results.ToList();
-        return Task.FromResult(GenericResult<IReadOnlyList<GlossaryTermConfiguration>>.Success(list));
+        return Task.FromResult(GenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>.Success(list));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<GlossaryTermConfiguration>> CreateTerm(GlossaryTermConfiguration term, CancellationToken ct = default)
+    public Task<IGenericResult<GlossaryTermImplementationConfiguration>> CreateTerm(GlossaryTermImplementationConfiguration term, CancellationToken ct = default)
     {
         try
         {
             if (_inMemoryTerms.Any(t => t.Name.Equals(term.Name, StringComparison.OrdinalIgnoreCase)))
             {
-                return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Failure(
+                return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Failure(
                     CatalogLog.DuplicateTermName(_logger, term.Name)));
             }
 
@@ -76,22 +76,22 @@ public sealed class CatalogService : ICatalogService
             _inMemoryTerms.Add(term);
 
             CatalogLog.TermCreated(_logger, term.Name, term.Category);
-            return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Success(term));
+            return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Success(term));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Failure(
+            return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Failure(
                 CatalogLog.OperationFailed(_logger, ex, "CreateTerm")));
         }
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<GlossaryTermConfiguration>> UpdateTerm(Guid id, GlossaryTermConfiguration term, CancellationToken ct = default)
+    public Task<IGenericResult<GlossaryTermImplementationConfiguration>> UpdateTerm(Guid id, GlossaryTermImplementationConfiguration term, CancellationToken ct = default)
     {
         var existing = _inMemoryTerms.FirstOrDefault(t => t.Id == id);
         if (existing == null)
         {
-            return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Failure(
+            return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Failure(
                 CatalogLog.TermNotFound(_logger, id)));
         }
 
@@ -100,7 +100,7 @@ public sealed class CatalogService : ICatalogService
         _inMemoryTerms.Add(term);
 
         CatalogLog.TermUpdated(_logger, term.Name);
-        return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Success(term));
+        return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Success(term));
     }
 
     /// <inheritdoc/>
@@ -119,41 +119,41 @@ public sealed class CatalogService : ICatalogService
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<GlossaryTermConfiguration>> GetTerm(Guid id, CancellationToken ct = default)
+    public Task<IGenericResult<GlossaryTermImplementationConfiguration>> GetTerm(Guid id, CancellationToken ct = default)
     {
         var term = _inMemoryTerms.FirstOrDefault(t => t.Id == id);
         if (term == null)
         {
-            return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Failure(
+            return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Failure(
                 CatalogLog.TermNotFound(_logger, id)));
         }
 
-        return Task.FromResult(GenericResult<GlossaryTermConfiguration>.Success(term));
+        return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Success(term));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<DataSetAnnotationConfiguration>> GetAnnotation(string dataSetName, CancellationToken ct = default)
+    public Task<IGenericResult<DataSetAnnotationImplementationConfiguration>> GetAnnotation(string dataSetName, CancellationToken ct = default)
     {
         CatalogLog.LoadingAnnotation(_logger, dataSetName);
 
         if (!_inMemoryAnnotations.TryGetValue(dataSetName, out var annotation))
         {
-            return Task.FromResult(GenericResult<DataSetAnnotationConfiguration>.Failure(
+            return Task.FromResult(GenericResult<DataSetAnnotationImplementationConfiguration>.Failure(
                 CatalogLog.AnnotationNotFound(_logger, dataSetName)));
         }
 
-        return Task.FromResult(GenericResult<DataSetAnnotationConfiguration>.Success(annotation));
+        return Task.FromResult(GenericResult<DataSetAnnotationImplementationConfiguration>.Success(annotation));
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<DataSetAnnotationConfiguration>> UpdateAnnotation(string dataSetName, DataSetAnnotationConfiguration annotation, CancellationToken ct = default)
+    public Task<IGenericResult<DataSetAnnotationImplementationConfiguration>> UpdateAnnotation(string dataSetName, DataSetAnnotationImplementationConfiguration annotation, CancellationToken ct = default)
     {
         annotation.DataSetName = dataSetName;
         _inMemoryAnnotations[dataSetName] = annotation;
 
         var owner = annotation.BusinessOwner ?? annotation.TechnicalOwner ?? "Unknown";
         CatalogLog.AnnotationUpdated(_logger, dataSetName);
-        return Task.FromResult(GenericResult<DataSetAnnotationConfiguration>.Success(annotation));
+        return Task.FromResult(GenericResult<DataSetAnnotationImplementationConfiguration>.Success(annotation));
     }
 
     /// <inheritdoc/>

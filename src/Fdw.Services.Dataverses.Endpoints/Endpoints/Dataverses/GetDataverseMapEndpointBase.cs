@@ -58,7 +58,7 @@ public abstract class GetDataverseMapEndpointBase : CrudGetEndpointBase<Datavers
 
     /// <summary>Projects a dataverse onto its graph shape.</summary>
     /// <param name="config">The dataverse, with its resources and relationships loaded.</param>
-    protected static DataverseMapResponse ToMap(DataverseConfiguration config) => new()
+    protected static DataverseMapResponse ToMap(DataverseImplementationConfiguration config) => new()
     {
         Nodes = config.Resources.Select(r => new DataverseMapNodeDto
         {

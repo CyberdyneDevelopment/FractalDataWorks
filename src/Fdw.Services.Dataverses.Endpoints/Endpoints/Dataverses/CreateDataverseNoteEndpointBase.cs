@@ -138,7 +138,7 @@ public abstract class CreateDataverseNoteEndpointBase : CrudCreateEndpointBase<C
         }
 
         var now = DateTimeOffset.UtcNow;
-        var config = new NoteConfiguration
+        var config = new NoteImplementationConfiguration
         {
             // Why CreateVersion7: the database mints no Id, and a time-ordered id keeps insert
             // order and sort order the same thing.

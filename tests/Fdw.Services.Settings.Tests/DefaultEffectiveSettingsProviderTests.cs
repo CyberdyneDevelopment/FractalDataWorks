@@ -22,8 +22,8 @@ public sealed class DefaultEffectiveSettingsProviderTests
     private readonly Mock<SettingsConfigurationProvider> _provider;
 
     private readonly List<ServerSettingConfiguration> _serverSettings = [];
-    private readonly List<TenantSettingConfiguration> _tenantSettings = [];
-    private readonly List<RoleSettingConfiguration> _roleSettings = [];
+    private readonly List<TenantSettingImplementationConfiguration> _tenantSettings = [];
+    private readonly List<RoleSettingImplementationConfiguration> _roleSettings = [];
 
     private static readonly Guid TenantA = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
 
@@ -85,12 +85,12 @@ public sealed class DefaultEffectiveSettingsProviderTests
                     GenericResult<ServerSettingConfiguration>.Success(result!));
             });
         _provider.Setup(p => p.GetTenantSettings(It.IsAny<CancellationToken>()))
-            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<TenantSettingConfiguration>>>(
-                GenericResult<IReadOnlyList<TenantSettingConfiguration>>.Success(_tenantSettings)));
+            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<TenantSettingImplementationConfiguration>>>(
+                GenericResult<IReadOnlyList<TenantSettingImplementationConfiguration>>.Success(_tenantSettings)));
         _provider.Setup(p => p.GetTenantSetting(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns((string name, CancellationToken _) =>
             {
-                TenantSettingConfiguration? result = null;
+                TenantSettingImplementationConfiguration? result = null;
                 foreach (var s in _tenantSettings)
                 {
                     if (string.Equals(s.SettingName, name, StringComparison.OrdinalIgnoreCase))
@@ -100,16 +100,16 @@ public sealed class DefaultEffectiveSettingsProviderTests
                     }
                 }
 
-                return Task.FromResult<IGenericResult<TenantSettingConfiguration>>(
-                    GenericResult<TenantSettingConfiguration>.Success(result!));
+                return Task.FromResult<IGenericResult<TenantSettingImplementationConfiguration>>(
+                    GenericResult<TenantSettingImplementationConfiguration>.Success(result!));
             });
         _provider.Setup(p => p.GetRoleSettings(It.IsAny<CancellationToken>()))
-            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<RoleSettingConfiguration>>>(
-                GenericResult<IReadOnlyList<RoleSettingConfiguration>>.Success(_roleSettings)));
+            .Returns(() => Task.FromResult<IGenericResult<IReadOnlyList<RoleSettingImplementationConfiguration>>>(
+                GenericResult<IReadOnlyList<RoleSettingImplementationConfiguration>>.Success(_roleSettings)));
         _provider.Setup(p => p.GetRoleSetting(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns((string name, CancellationToken _) =>
             {
-                RoleSettingConfiguration? result = null;
+                RoleSettingImplementationConfiguration? result = null;
                 foreach (var s in _roleSettings)
                 {
                     if (string.Equals(s.SettingName, name, StringComparison.OrdinalIgnoreCase))
@@ -119,8 +119,8 @@ public sealed class DefaultEffectiveSettingsProviderTests
                     }
                 }
 
-                return Task.FromResult<IGenericResult<RoleSettingConfiguration>>(
-                    GenericResult<RoleSettingConfiguration>.Success(result!));
+                return Task.FromResult<IGenericResult<RoleSettingImplementationConfiguration>>(
+                    GenericResult<RoleSettingImplementationConfiguration>.Success(result!));
             });
     }
 

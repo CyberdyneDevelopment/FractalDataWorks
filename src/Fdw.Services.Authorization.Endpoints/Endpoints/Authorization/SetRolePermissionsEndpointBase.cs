@@ -113,7 +113,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     private List<PermissionSummaryDto> ResolvePermissions(
         SetRolePermissionsRequest req,
-        IReadOnlyList<PermissionConfiguration> allPermissions)
+        IReadOnlyList<PermissionImplementationConfiguration> allPermissions)
     {
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var tenantPrefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
@@ -147,9 +147,9 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     private async Task<IGenericResult> SetPermissionsAtomically(
         SetRolePermissionsRequest req,
-        RoleConfiguration role,
+        RoleImplementationConfiguration role,
         List<PermissionSummaryDto> resolved,
-        IReadOnlyList<RolePermissionConfiguration> existingMappings,
+        IReadOnlyList<RolePermissionImplementationConfiguration> existingMappings,
         CancellationToken ct)
     {
         var txnResult = await _rolePermissionProvider.BeginTransaction(ct).ConfigureAwait(false);
@@ -195,7 +195,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     private async Task<IGenericResult> DeleteExistingMappings(
         SetRolePermissionsRequest req,
-        IReadOnlyList<RolePermissionConfiguration> existingMappings,
+        IReadOnlyList<RolePermissionImplementationConfiguration> existingMappings,
         IDataGatewayTransaction txn,
         CancellationToken ct)
     {
@@ -219,14 +219,14 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     private async Task<IGenericResult> SaveNewMappings(
         SetRolePermissionsRequest req,
-        RoleConfiguration role,
+        RoleImplementationConfiguration role,
         List<PermissionSummaryDto> resolved,
         IDataGatewayTransaction txn,
         CancellationToken ct)
     {
         foreach (var perm in resolved)
         {
-            var mapping = new RolePermissionConfiguration
+            var mapping = new RolePermissionImplementationConfiguration
             {
                 Id = Guid.NewGuid(),
                 Name = $"{role.Id}:{perm.Id}",

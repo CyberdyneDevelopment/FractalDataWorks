@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -14,10 +15,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class GetServerSettingEndpointBase : CrudGetEndpointBase<SettingNameRequest, ServerSettingDetailDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IServerSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetServerSettingEndpointBase(ILogger<GetServerSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected GetServerSettingEndpointBase(ILogger<GetServerSettingEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -39,8 +40,10 @@ public abstract class GetServerSettingEndpointBase : CrudGetEndpointBase<Setting
     {
         SettingsEndpointLog.GettingServerSetting(Logger, request.SettingName);
 
-        var settingResult = await _provider.GetServerSetting(request.SettingName, ct).ConfigureAwait(false);
-        var setting = settingResult.IsSuccess ? settingResult.Value : null;
+        var settingResult = await _provider.Get(request.SettingName, ct).ConfigureAwait(false);
+        if (!settingResult.IsSuccess)
+            return settingResult.ToNewResult<ServerSettingDetailDto?>();
+        IServerSettingImplementationConfiguration? setting = settingResult.Value;
 
         if (setting is null)
         {
@@ -51,7 +54,7 @@ public abstract class GetServerSettingEndpointBase : CrudGetEndpointBase<Setting
         var detail = new ServerSettingDetailDto
         {
             Id = setting.Id,
-            SettingName = setting.SettingName,
+            SettingName = setting.Name,
             SettingValue = setting.SettingValue,
             DataType = setting.DataType,
             Description = setting.Description,

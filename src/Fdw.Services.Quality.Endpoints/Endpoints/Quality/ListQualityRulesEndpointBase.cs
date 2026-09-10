@@ -57,7 +57,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
             return;
         }
 
-        IEnumerable<QualityRuleConfiguration> rules = result.Value ?? [];
+        IEnumerable<QualityRuleImplementationConfiguration> rules = result.Value ?? [];
 
         if (!string.IsNullOrWhiteSpace(req.DataSetName))
         {
@@ -68,8 +68,8 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
         await Send.OkAsync(rules.Select(MapToDto).ToList(), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a QualityRuleConfiguration to its corresponding DTO.</summary>
-    protected virtual QualityRuleDto MapToDto(QualityRuleConfiguration config)
+    /// <summary>Maps a QualityRuleImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual QualityRuleDto MapToDto(QualityRuleImplementationConfiguration config)
     {
         return new QualityRuleDto
         {

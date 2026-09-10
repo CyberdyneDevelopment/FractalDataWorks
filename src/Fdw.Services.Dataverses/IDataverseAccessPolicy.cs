@@ -29,5 +29,5 @@ public interface IDataverseAccessPolicy
     /// A result rather than a bool, so a refusal reaches the caller as the refusal it is instead of
     /// as a value somebody has to remember to turn back into one.
     /// </returns>
-    Task<IGenericResult> MayWrite(DataverseConfiguration dataverse, CancellationToken cancellationToken = default);
+    Task<IGenericResult> MayWrite(DataverseImplementationConfiguration dataverse, CancellationToken cancellationToken = default);
 }

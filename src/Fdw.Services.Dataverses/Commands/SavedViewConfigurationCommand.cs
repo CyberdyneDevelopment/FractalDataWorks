@@ -7,7 +7,7 @@ namespace Fdw.Services.Dataverses.Commands;
 /// <summary>ConfigurationCommands TypeOption for the SavedView configuration domain.</summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConfigurationCommands), "SavedView")]
-public sealed class SavedViewConfigurationCommand : ConfigurationCommandBase<SavedViewConfiguration>
+public sealed class SavedViewConfigurationCommand : ConfigurationCommandBase<SavedViewImplementationConfiguration>
 {
     /// <inheritdoc/>
     public SavedViewConfigurationCommand() : base("SavedView") { }

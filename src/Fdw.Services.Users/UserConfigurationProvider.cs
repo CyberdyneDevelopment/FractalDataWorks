@@ -14,7 +14,8 @@ namespace Fdw.Services.Users;
 
 /// <summary>Supplies the Users configuration.</summary>
 public sealed class UserConfigurationProvider
-    : ImplementationConfigurationProviderBase<IUserImplementationConfiguration>
+    : DomainConfigurationProviderBase<IUserImplementationConfiguration>,
+      IUserConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="UserConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

@@ -15,6 +15,8 @@ namespace Fdw.Services.Etl.Projects.Abstractions;
 /// IStepConfigurationProvider) are thin wrappers over this interface.
 /// </summary>
 public interface IOrchestrationNodeConfigurationProvider
+
+    : IDomainConfigurationProvider<IOrchestrationNodeImplementationConfiguration>
 {
 
 }

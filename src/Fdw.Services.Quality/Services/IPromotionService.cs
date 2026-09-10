@@ -17,7 +17,7 @@ public interface IPromotionService
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the list of environment configurations.</returns>
-    Task<IGenericResult<IReadOnlyList<EnvironmentConfiguration>>> GetEnvironments(CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<EnvironmentImplementationConfiguration>>> GetEnvironments(CancellationToken ct = default);
 
     /// <summary>
     /// Creates a new promotion request.
@@ -25,7 +25,7 @@ public interface IPromotionService
     /// <param name="request">The promotion request configuration.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the created request configuration.</returns>
-    Task<IGenericResult<PromotionRequestConfiguration>> CreateRequest(PromotionRequestConfiguration request, CancellationToken ct = default);
+    Task<IGenericResult<PromotionRequestImplementationConfiguration>> CreateRequest(PromotionRequestImplementationConfiguration request, CancellationToken ct = default);
 
     /// <summary>
     /// Gets a promotion request by identifier.
@@ -33,7 +33,7 @@ public interface IPromotionService
     /// <param name="requestId">The request identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the request configuration.</returns>
-    Task<IGenericResult<PromotionRequestConfiguration>> GetRequest(Guid requestId, CancellationToken ct = default);
+    Task<IGenericResult<PromotionRequestImplementationConfiguration>> GetRequest(Guid requestId, CancellationToken ct = default);
 
     /// <summary>
     /// Gets promotion requests filtered by status.
@@ -41,7 +41,7 @@ public interface IPromotionService
     /// <param name="status">Optional status filter.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing matching promotion requests.</returns>
-    Task<IGenericResult<IReadOnlyList<PromotionRequestConfiguration>>> GetRequests(string? status, CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<PromotionRequestImplementationConfiguration>>> GetRequests(string? status, CancellationToken ct = default);
 
     /// <summary>
     /// Approves a promotion request.
@@ -50,7 +50,7 @@ public interface IPromotionService
     /// <param name="approvedBy">The username of the approver.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the approved request configuration.</returns>
-    Task<IGenericResult<PromotionRequestConfiguration>> ApproveRequest(Guid requestId, string approvedBy, CancellationToken ct = default);
+    Task<IGenericResult<PromotionRequestImplementationConfiguration>> ApproveRequest(Guid requestId, string approvedBy, CancellationToken ct = default);
 
     /// <summary>
     /// Rejects a promotion request.
@@ -60,7 +60,7 @@ public interface IPromotionService
     /// <param name="reason">The reason for rejection.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the rejected request configuration.</returns>
-    Task<IGenericResult<PromotionRequestConfiguration>> RejectRequest(Guid requestId, string rejectedBy, string reason, CancellationToken ct = default);
+    Task<IGenericResult<PromotionRequestImplementationConfiguration>> RejectRequest(Guid requestId, string rejectedBy, string reason, CancellationToken ct = default);
 
     /// <summary>
     /// Executes a promotion request.

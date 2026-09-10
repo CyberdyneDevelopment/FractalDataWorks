@@ -48,15 +48,18 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.TryAddSingleton<EscalationPolicyImplementationConfigurationProvider>();
+            builder.Services.TryAddSingleton<IEscalationPolicyImplementationConfigurationProvider>(sp => sp.GetRequiredService<EscalationPolicyImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
-                new EscalationConfigurationProvider(
-                    sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        OperationsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IEscalationPolicyImplementationConfiguration>>(
-                sp => sp.GetRequiredService<EscalationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IEscalationPolicyImplementationConfiguration>>(
-                sp => sp.GetRequiredService<EscalationConfigurationProvider>());
+            {
+                var domain = new EscalationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<EscalationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("EscalationPolicy", sp.GetRequiredService<IEscalationPolicyImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IEscalationConfigurationProvider>(sp => sp.GetRequiredService<EscalationConfigurationProvider>());
+
 
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
             {

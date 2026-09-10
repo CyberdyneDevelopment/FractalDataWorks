@@ -112,7 +112,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 #pragma warning restore MA0051
 
-    private IGenericResult<ICredentialOutcome> RunDecoyAndDeny(Guid userId, string plaintext, UsersServiceConfiguration policy)
+    private IGenericResult<ICredentialOutcome> RunDecoyAndDeny(Guid userId, string plaintext, UsersServiceImplementationConfiguration policy)
     {
         var decoyAlgorithm = PasswordHashAlgorithms.ByName(policy.PasswordHashAlgorithm);
         if (decoyAlgorithm != PasswordHashAlgorithms.NotFound)
@@ -124,7 +124,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     private async Task<IGenericResult<ICredentialOutcome>> ComposeSuccessOutcome(
-        Guid userId, UserConfiguration userCfg, UsersServiceConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, UserImplementationConfiguration userCfg, UsersServiceImplementationConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         if (userCfg.LockoutEnd is { } lockoutEnd && lockoutEnd > now)
         {
@@ -154,7 +154,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     private async Task<IGenericResult<ICredentialOutcome>> OnNoMatch(
-        Guid userId, UserConfiguration userCfg, UsersServiceConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, UserImplementationConfiguration userCfg, UsersServiceImplementationConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var newCount = userCfg.FailedLoginCount + 1;
         DateTimeOffset? lockoutEnd = userCfg.LockoutEnd;
@@ -258,14 +258,14 @@ public sealed class UserCredentialService : IUserCredentialService
 
     // Why a helper: every caller needs the row and a non-null value, and folding the two checks
     // into one keeps each call site to a single branch.
-    private async Task<IGenericResult<UsersServiceConfiguration>> LoadConfiguration(CancellationToken cancellationToken)
+    private async Task<IGenericResult<UsersServiceImplementationConfiguration>> LoadConfiguration(CancellationToken cancellationToken)
     {
         var result = await _configuration.Get(ConfigurationName, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
             return result;
 
         return result.Value is null
-            ? GenericResult<UsersServiceConfiguration>.Failure(
+            ? GenericResult<UsersServiceImplementationConfiguration>.Failure(
                 UserLog.CredentialServiceNameMissing(_logger))
             : result;
     }
@@ -296,11 +296,11 @@ public sealed class UserCredentialService : IUserCredentialService
         return GenericResult<ICredentialService>.Success(_credentialService);
     }
 
-    private Task<IGenericResult<UserConfiguration?>> GetUserSecurity(Guid userId, CancellationToken cancellationToken)
+    private Task<IGenericResult<UserImplementationConfiguration?>> GetUserSecurity(Guid userId, CancellationToken cancellationToken)
         => _userProvider.GetUser(userId, cancellationToken);
 
     private async Task<IGenericResult<int>> WriteLoginAttempt(
-        Guid userId, UserConfiguration cfg, int failedCount, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
+        Guid userId, UserImplementationConfiguration cfg, int failedCount, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
     {
         cfg.FailedLoginCount = failedCount;
         cfg.LockoutEnd = lockoutEnd;
@@ -310,7 +310,7 @@ public sealed class UserCredentialService : IUserCredentialService
             : saveResult.ToNewResult<int>();
     }
 
-    private async Task ResetLockout(Guid userId, UserConfiguration cfg, CancellationToken cancellationToken)
+    private async Task ResetLockout(Guid userId, UserImplementationConfiguration cfg, CancellationToken cancellationToken)
     {
         var write = await WriteLoginAttempt(userId, cfg, 0, null, cancellationToken).ConfigureAwait(false);
         if (!write.IsSuccess)

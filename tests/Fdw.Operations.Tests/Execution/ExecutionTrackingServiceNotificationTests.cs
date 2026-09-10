@@ -104,9 +104,9 @@ public sealed class ExecutionTrackingServiceNotificationTests
     // Helper: build a catch-all enabled rule
     // ==========================================================================
 
-    private static NotificationRuleConfiguration BuildCatchAllRule(string name, string serviceName, string severity = "Info")
+    private static NotificationRuleImplementationConfiguration BuildCatchAllRule(string name, string serviceName, string severity = "Info")
     {
-        return new NotificationRuleConfiguration
+        return new NotificationRuleImplementationConfiguration
         {
             Name = name,
             IsEnabled = true,
@@ -137,8 +137,8 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var rule = BuildCatchAllRule("CatchAll", "console-channel");
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleConfiguration>>.Success(
-                new List<NotificationRuleConfiguration> { rule }));
+            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
+                new List<NotificationRuleImplementationConfiguration> { rule }));
 
         _mockNotificationProvider
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))
@@ -191,8 +191,8 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var rule = BuildCatchAllRule("CatchAll", "console-channel");
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleConfiguration>>.Success(
-                new List<NotificationRuleConfiguration> { rule }));
+            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
+                new List<NotificationRuleImplementationConfiguration> { rule }));
 
         var sut = new ExecutionTrackingService(
             new StubGatewayProvider(_mockGateway.Object),
@@ -225,7 +225,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var item = BuildRunningRootItem(itemId);
         SetupGatewayForComplete(item);
 
-        var disabledRule = new NotificationRuleConfiguration
+        var disabledRule = new NotificationRuleImplementationConfiguration
         {
             Name = "DisabledRule",
             IsEnabled = false,
@@ -235,8 +235,8 @@ public sealed class ExecutionTrackingServiceNotificationTests
         };
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleConfiguration>>.Success(
-                new List<NotificationRuleConfiguration> { disabledRule }));
+            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
+                new List<NotificationRuleImplementationConfiguration> { disabledRule }));
 
         var sut = new ExecutionTrackingService(
             new StubGatewayProvider(_mockGateway.Object),
@@ -270,7 +270,7 @@ public sealed class ExecutionTrackingServiceNotificationTests
         SetupGatewayForComplete(item);
 
         // Rule scoped to a specific workflow that doesn't match this execution
-        var scopedRule = new NotificationRuleConfiguration
+        var scopedRule = new NotificationRuleImplementationConfiguration
         {
             Name = "ScopedRule",
             IsEnabled = true,
@@ -281,8 +281,8 @@ public sealed class ExecutionTrackingServiceNotificationTests
         };
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleConfiguration>>.Success(
-                new List<NotificationRuleConfiguration> { scopedRule }));
+            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
+                new List<NotificationRuleImplementationConfiguration> { scopedRule }));
 
         var sut = new ExecutionTrackingService(
             new StubGatewayProvider(_mockGateway.Object),
@@ -352,8 +352,8 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var rule = BuildCatchAllRule("BogusRule", "console-channel", severity: "Bogus");
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleConfiguration>>.Success(
-                new List<NotificationRuleConfiguration> { rule }));
+            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
+                new List<NotificationRuleImplementationConfiguration> { rule }));
 
         _mockNotificationProvider
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))
@@ -393,8 +393,8 @@ public sealed class ExecutionTrackingServiceNotificationTests
         var rule = BuildCatchAllRule("CatchAll", "console-channel");
         _mockRuleProvider
             .Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleConfiguration>>.Success(
-                new List<NotificationRuleConfiguration> { rule }));
+            .ReturnsAsync(GenericResult<IReadOnlyList<NotificationRuleImplementationConfiguration>>.Success(
+                new List<NotificationRuleImplementationConfiguration> { rule }));
 
         _mockNotificationProvider
             .Setup(p => p.Get("console-channel", It.IsAny<CancellationToken>()))

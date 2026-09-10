@@ -42,28 +42,28 @@ public sealed class PromotionServiceTests
         return (new PromotionService(loggerFactory, qualityProvider), gatewayMock);
     }
 
-    private static EnvironmentConfiguration MakeEnvironment(string name, int order = 0)
+    private static EnvironmentImplementationConfiguration MakeEnvironment(string name, int order = 0)
         => new() { Id = Guid.NewGuid(), Name = name, PromotionOrder = order, ConnectionName = "conn" };
 
-    private static void SetupEnvironmentQuery(Mock<IConfigurationGateway> gateway, params EnvironmentConfiguration[] found)
+    private static void SetupEnvironmentQuery(Mock<IConfigurationGateway> gateway, params EnvironmentImplementationConfiguration[] found)
     {
         gateway
-            .Setup(g => g.Execute<IEnumerable<EnvironmentConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<EnvironmentImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<EnvironmentConfiguration>>.Success(found));
+            .ReturnsAsync(GenericResult<IEnumerable<EnvironmentImplementationConfiguration>>.Success(found));
     }
 
-    private static void SetupEnvironmentQuerySequence(Mock<IConfigurationGateway> gateway, params IReadOnlyList<EnvironmentConfiguration>[] responses)
+    private static void SetupEnvironmentQuerySequence(Mock<IConfigurationGateway> gateway, params IReadOnlyList<EnvironmentImplementationConfiguration>[] responses)
     {
-        var sequence = gateway.SetupSequence(g => g.Execute<IEnumerable<EnvironmentConfiguration>>(
+        var sequence = gateway.SetupSequence(g => g.Execute<IEnumerable<EnvironmentImplementationConfiguration>>(
             It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()));
         foreach (var response in responses)
         {
-            sequence = sequence.ReturnsAsync(GenericResult<IEnumerable<EnvironmentConfiguration>>.Success(response));
+            sequence = sequence.ReturnsAsync(GenericResult<IEnumerable<EnvironmentImplementationConfiguration>>.Success(response));
         }
     }
 
-    private static PromotionRequestConfiguration MakeRequest(string source = "Dev", string target = "Staging", string requestedBy = "alice")
+    private static PromotionRequestImplementationConfiguration MakeRequest(string source = "Dev", string target = "Staging", string requestedBy = "alice")
         => new() { SourceEnvironment = source, TargetEnvironment = target, RequestedBy = requestedBy };
 
     // ── GetEnvironments ─────────────────────────────────────────────────────
@@ -89,9 +89,9 @@ public sealed class PromotionServiceTests
     {
         var (service, gateway) = CreateService();
         gateway
-            .Setup(g => g.Execute<IEnumerable<EnvironmentConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<EnvironmentImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<EnvironmentConfiguration>>.Failure(new GenericMessage("boom")));
+            .ReturnsAsync(GenericResult<IEnumerable<EnvironmentImplementationConfiguration>>.Failure(new GenericMessage("boom")));
 
         var result = await service.GetEnvironments(TestContext.Current.CancellationToken);
 
@@ -169,7 +169,7 @@ public sealed class PromotionServiceTests
     {
         var (service, gateway) = CreateService();
         gateway
-            .Setup(g => g.Execute<IEnumerable<EnvironmentConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<EnvironmentImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 
@@ -423,7 +423,7 @@ public sealed class PromotionServiceTests
     {
         var (service, gateway) = CreateService();
         gateway
-            .Setup(g => g.Execute<IEnumerable<EnvironmentConfiguration>>(
+            .Setup(g => g.Execute<IEnumerable<EnvironmentImplementationConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 

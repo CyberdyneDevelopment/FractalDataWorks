@@ -30,19 +30,19 @@ public sealed class RolePermissionResolverTests
     private static readonly Guid ReadPermId = new("88888888-0000-0000-0000-000000000002");
     private static readonly Guid OrphanPermId = new("88888888-0000-0000-0000-00000000dead");
 
-    private static readonly RoleConfiguration[] Roles =
+    private static readonly RoleImplementationConfiguration[] Roles =
     [
         new() { Id = RunnerRoleId, Name = "ServicePipelineRunner", IsTenantScoped = false },
         new() { Id = ViewerRoleId, Name = "Viewer", IsTenantScoped = false },
     ];
 
-    private static readonly PermissionConfiguration[] Permissions =
+    private static readonly PermissionImplementationConfiguration[] Permissions =
     [
         new() { Id = ExecutePermId, Name = "pipelines:execute" },
         new() { Id = ReadPermId, Name = "pipelines:read" },
     ];
 
-    private static readonly RolePermissionConfiguration[] RolePermissions =
+    private static readonly RolePermissionImplementationConfiguration[] RolePermissions =
     [
         new() { RoleId = RunnerRoleId, PermissionId = ExecutePermId },
         new() { RoleId = ViewerRoleId, PermissionId = ReadPermId },
@@ -99,7 +99,7 @@ public sealed class RolePermissionResolverTests
     {
         var resolver = Build(rolePermissions:
         [
-            new RolePermissionConfiguration { RoleId = RunnerRoleId, PermissionId = OrphanPermId },
+            new RolePermissionImplementationConfiguration { RoleId = RunnerRoleId, PermissionId = OrphanPermId },
         ]);
 
         var result = await resolver.Resolve(["ServicePipelineRunner"], TestContext.Current.CancellationToken);
@@ -110,14 +110,14 @@ public sealed class RolePermissionResolverTests
     [Fact]
     public async Task Resolve_fails_when_the_role_catalogue_cannot_be_read()
     {
-        var roles = MockCatalog<RoleConfigurationProvider, RoleConfiguration>(Roles);
+        var roles = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(Roles);
         roles.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<RoleConfiguration>>.Failure(new GenericMessage("the catalogue is unreachable")));
+            .ReturnsAsync(GenericResult<IReadOnlyList<RoleImplementationConfiguration>>.Failure(new GenericMessage("the catalogue is unreachable")));
 
         var resolver = new RolePermissionResolver(
             roles.Object,
-            MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(Permissions).Object,
-            MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(RolePermissions).Object,
+            MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(Permissions).Object,
+            MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(RolePermissions).Object,
             NullLogger<RolePermissionResolver>.Instance);
 
         var result = await resolver.Resolve(["ServicePipelineRunner"], TestContext.Current.CancellationToken);
@@ -128,11 +128,11 @@ public sealed class RolePermissionResolverTests
     }
 
     private static RolePermissionResolver Build(
-        IReadOnlyList<RolePermissionConfiguration>? rolePermissions = null)
+        IReadOnlyList<RolePermissionImplementationConfiguration>? rolePermissions = null)
         => new RolePermissionResolver(
-            MockCatalog<RoleConfigurationProvider, RoleConfiguration>(Roles).Object,
-            MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(Permissions).Object,
-            MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(
+            MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(Roles).Object,
+            MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(Permissions).Object,
+            MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(
                 rolePermissions ?? RolePermissions).Object,
             NullLogger<RolePermissionResolver>.Instance);
 

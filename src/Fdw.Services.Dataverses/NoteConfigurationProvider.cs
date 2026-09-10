@@ -7,7 +7,8 @@ namespace Fdw.Services.Dataverses;
 
 /// <summary>Supplies the Note configuration.</summary>
 public sealed class NoteConfigurationProvider
-    : ImplementationConfigurationProviderBase<INoteImplementationConfiguration>
+    : DomainConfigurationProviderBase<INoteImplementationConfiguration>,
+      INoteConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="NoteConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

@@ -6,9 +6,9 @@ using Fdw.Validation;
 namespace Fdw.Services.Authorization.Validation;
 
 /// <summary>
-/// Validator for <see cref="RoleConfiguration"/>.
+/// Validator for <see cref="RoleImplementationConfiguration"/>.
 /// </summary>
-public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleConfiguration>
+public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RoleConfigurationValidator"/> class.

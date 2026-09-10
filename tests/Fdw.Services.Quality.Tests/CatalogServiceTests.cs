@@ -18,12 +18,12 @@ public sealed class CatalogServiceTests
     private static CatalogService CreateService()
     {
         var loggerFactory = LoggerFactory.Create(_ => { });
-        var termsMonitor = new Mock<IOptionsMonitor<List<GlossaryTermConfiguration>>>();
-        var annotationsMonitor = new Mock<IOptionsMonitor<List<DataSetAnnotationConfiguration>>>();
+        var termsMonitor = new Mock<IOptionsMonitor<List<GlossaryTermImplementationConfiguration>>>();
+        var annotationsMonitor = new Mock<IOptionsMonitor<List<DataSetAnnotationImplementationConfiguration>>>();
         return new CatalogService(loggerFactory, termsMonitor.Object, annotationsMonitor.Object);
     }
 
-    private static GlossaryTermConfiguration MakeTerm(string name, string definition = "def", string category = "Finance")
+    private static GlossaryTermImplementationConfiguration MakeTerm(string name, string definition = "def", string category = "Finance")
         => new() { Name = name, Definition = definition, Category = category };
 
     // ── SearchTerms ─────────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ public sealed class CatalogServiceTests
     public async Task GetAnnotationWithExistingDataSetReturnsSuccess()
     {
         var service = CreateService();
-        await service.UpdateAnnotation("Orders", new DataSetAnnotationConfiguration(), TestContext.Current.CancellationToken);
+        await service.UpdateAnnotation("Orders", new DataSetAnnotationImplementationConfiguration(), TestContext.Current.CancellationToken);
 
         var result = await service.GetAnnotation("Orders", TestContext.Current.CancellationToken);
 
@@ -242,7 +242,7 @@ public sealed class CatalogServiceTests
 
         var result = await service.UpdateAnnotation(
             "Orders",
-            new DataSetAnnotationConfiguration { BusinessOwner = "alice" },
+            new DataSetAnnotationImplementationConfiguration { BusinessOwner = "alice" },
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
@@ -256,9 +256,9 @@ public sealed class CatalogServiceTests
     public async Task UpdateAnnotationWithExistingDataSetReplacesPriorAnnotation()
     {
         var service = CreateService();
-        await service.UpdateAnnotation("Orders", new DataSetAnnotationConfiguration { BusinessOwner = "alice" }, TestContext.Current.CancellationToken);
+        await service.UpdateAnnotation("Orders", new DataSetAnnotationImplementationConfiguration { BusinessOwner = "alice" }, TestContext.Current.CancellationToken);
 
-        var result = await service.UpdateAnnotation("Orders", new DataSetAnnotationConfiguration { BusinessOwner = "bob" }, TestContext.Current.CancellationToken);
+        var result = await service.UpdateAnnotation("Orders", new DataSetAnnotationImplementationConfiguration { BusinessOwner = "bob" }, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.BusinessOwner.ShouldBe("bob");
@@ -276,7 +276,7 @@ public sealed class CatalogServiceTests
     {
         var service = CreateService();
         await service.CreateTerm(MakeTerm("Revenue", definition: "total income for the period"), TestContext.Current.CancellationToken);
-        await service.UpdateAnnotation("RevenueReport", new DataSetAnnotationConfiguration { Description = "revenue dataset" }, TestContext.Current.CancellationToken);
+        await service.UpdateAnnotation("RevenueReport", new DataSetAnnotationImplementationConfiguration { Description = "revenue dataset" }, TestContext.Current.CancellationToken);
 
         var result = await service.Search("Revenue", TestContext.Current.CancellationToken);
 
@@ -319,7 +319,7 @@ public sealed class CatalogServiceTests
     public async Task SearchWithDescriptionOnlyMatchAddsRelevanceBoost()
     {
         var service = CreateService();
-        await service.UpdateAnnotation("Orders", new DataSetAnnotationConfiguration { Description = "contains revenue figures" }, TestContext.Current.CancellationToken);
+        await service.UpdateAnnotation("Orders", new DataSetAnnotationImplementationConfiguration { Description = "contains revenue figures" }, TestContext.Current.CancellationToken);
 
         var result = await service.Search("revenue", TestContext.Current.CancellationToken);
 
@@ -334,7 +334,7 @@ public sealed class CatalogServiceTests
     public async Task SearchWithAnnotationHavingNullDescriptionDoesNotThrow()
     {
         var service = CreateService();
-        await service.UpdateAnnotation("RevenueOrders", new DataSetAnnotationConfiguration(), TestContext.Current.CancellationToken);
+        await service.UpdateAnnotation("RevenueOrders", new DataSetAnnotationImplementationConfiguration(), TestContext.Current.CancellationToken);
 
         var result = await service.Search("Revenue", TestContext.Current.CancellationToken);
 
