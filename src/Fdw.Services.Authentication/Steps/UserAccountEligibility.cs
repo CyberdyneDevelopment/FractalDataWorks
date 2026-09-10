@@ -5,7 +5,7 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
-using Fdw.Services.Configuration;
+using Fdw.Services.Users;
 using Fdw.Services.Users.Commands;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,14 +22,14 @@ namespace Fdw.Services.Authentication.Steps;
 /// </remarks>
 public sealed class UserAccountEligibility : IIssuanceEligibility
 {
-    private readonly ImplementationConfigurationProviderBase<IUserImplementationConfiguration> _users;
+    private readonly IUserConfigurationProvider _users;
     private readonly ILogger<UserAccountEligibility> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserAccountEligibility"/> class.</summary>
     /// <param name="users">Reads user records.</param>
     /// <param name="logger">The logger.</param>
     public UserAccountEligibility(
-        ImplementationConfigurationProviderBase<IUserImplementationConfiguration> users,
+        IUserConfigurationProvider users,
         ILogger<UserAccountEligibility>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
