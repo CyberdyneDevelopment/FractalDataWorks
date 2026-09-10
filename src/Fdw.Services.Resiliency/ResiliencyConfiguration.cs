@@ -26,10 +26,10 @@ public class ResiliencyConfiguration : IResiliencyConfiguration
     /// Gets the strategy type identifier used to select the corresponding <see cref="ResiliencyTypeBase"/> instance.
     /// </summary>
     /// <remarks>
-    /// Why: StrategyType is the discriminator that maps this config to the
+    /// Why: Implementation is the discriminator that maps this config to the
     /// <see cref="ResiliencyTypeBase"/> instance via <see cref="ResiliencyTypes.ByName"/>.
     /// </remarks>
-    public virtual string StrategyType => string.Empty;
+    public virtual string Implementation => string.Empty;
 
     /// <summary>
     /// Gets or sets the optional description.

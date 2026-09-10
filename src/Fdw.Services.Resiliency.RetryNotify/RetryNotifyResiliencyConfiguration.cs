@@ -12,7 +12,7 @@ public sealed class RetryNotifyResiliencyConfiguration : ResiliencyConfiguration
 {
 
     /// <inheritdoc/>
-    public override string StrategyType => "RetryNotify";
+    public override string Implementation => "RetryNotify";
 
     /// <summary>
     /// Gets or sets the maximum number of retry attempts (not counting the initial attempt).

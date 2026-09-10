@@ -35,7 +35,7 @@ public abstract class ResiliencyTypeBase
     /// Constructor for concrete TypeOptions.
     /// </summary>
     /// <param name="id">Unique integer identifier within ResiliencyTypes.</param>
-    /// <param name="name">The TypeOption name — matches the StrategyType discriminator in the database.</param>
+    /// <param name="name">The TypeOption name — matches the Implementation discriminator in the database.</param>
     /// <param name="displayName">Human-readable display name.</param>
     /// <param name="description">Description of this strategy's behavior.</param>
     protected ResiliencyTypeBase(

@@ -9,13 +9,13 @@ public sealed class PollyRetryResiliencyConfigurationTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Configuration")]
-    public void StrategyTypeReturnsPollyRetry()
+    public void ImplementationReturnsPollyRetry()
     {
         // Arrange
         var config = new PollyRetryResiliencyConfiguration();
 
         // Act
-        var strategyType = config.StrategyType;
+        var strategyType = config.Implementation;
 
         // Assert
         strategyType.ShouldBe("PollyRetry");

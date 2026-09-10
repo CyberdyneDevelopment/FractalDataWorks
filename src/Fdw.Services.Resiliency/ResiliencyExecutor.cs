@@ -58,20 +58,20 @@ public sealed class ResiliencyExecutor : IResiliencyExecutor
 
         var config = configResult.Value as ResiliencyConfiguration;
         if (config is null) { return GenericResult.Failure(ResiliencyLog.PolicyNotFound(_logger, ctx.ExecutionId, policyId.Value.ToString("N"))); }
-        var strategyType = ResiliencyTypes.ByName(config.StrategyType);
+        var implementation = ResiliencyTypes.ByName(config.Implementation);
 
-        if (strategyType == ResiliencyTypes.NotFound)
+        if (implementation == ResiliencyTypes.NotFound)
         {
             return GenericResult.Failure(ResiliencyLog.StrategyNotFound(
-                _logger, ctx.ExecutionId, config.StrategyType));
+                _logger, ctx.ExecutionId, config.Implementation));
         }
 
-        ResiliencyLog.PolicyResolved(_logger, ctx.ExecutionId, policyId.Value, config.StrategyType);
-        ResiliencyLog.StrategyDispatched(_logger, ctx.ExecutionId, config.StrategyType);
+        ResiliencyLog.PolicyResolved(_logger, ctx.ExecutionId, policyId.Value, config.Implementation);
+        ResiliencyLog.StrategyDispatched(_logger, ctx.ExecutionId, config.Implementation);
 
         try
         {
-            var result = await strategyType.Execute(runStage, config, ctx, cancellationToken)
+            var result = await implementation.Execute(runStage, config, ctx, cancellationToken)
                 .ConfigureAwait(false);
 
             if (result.IsSuccess)

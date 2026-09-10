@@ -20,7 +20,7 @@ public class CredentialsSqlConfigurationProvider
         ILogger<CredentialsSqlConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "settings")
+        string pathName = "cred")
         : base(logger ?? NullLogger<CredentialsSqlConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,

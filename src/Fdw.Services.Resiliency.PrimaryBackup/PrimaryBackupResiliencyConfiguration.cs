@@ -12,7 +12,7 @@ public sealed class PrimaryBackupResiliencyConfiguration : ResiliencyConfigurati
 {
 
     /// <inheritdoc/>
-    public override string StrategyType => "PrimaryBackup";
+    public override string Implementation => "PrimaryBackup";
 
     /// <summary>
     /// Gets or sets the backup data set identifier to use when primary fails.
