@@ -71,8 +71,9 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// Gets or sets the path type. Alias for <see cref="TypeId"/>.
     /// </summary>
     /// <remarks>
-    /// Why: Legacy consumers reference PathType. Bridge property keeps them working while
-    /// the column name in the database is TypeId.
+    /// Why: there is no TypeId column on data.DataPath. The save translator intersects the mapper's
+    /// property names with the container's declared fields, so TypeId is dropped from the write and
+    /// this alias over the same value -- which does name the column -- is what persists.
     /// </remarks>
     public string? PathType
     {

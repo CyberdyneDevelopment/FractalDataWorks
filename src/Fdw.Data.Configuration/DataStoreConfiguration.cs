@@ -56,7 +56,10 @@ public partial class DataStoreConfiguration : IGenericConfiguration
 
     /// <summary>
     /// Gets or sets the DataStore type discriminator (e.g., "MsSql", "Rest", "OData").
-    /// Maps to the <c>TypeId</c> column on <c>data.DataStore</c>.
+    /// There is no TypeId column. The save translator intersects the mapper's property names with
+    /// the container's declared fields, so this name is dropped from the write and the
+    /// <see cref="ServiceOptionType"/> alias over the same value -- which does name a column on
+    /// <c>data.DataStore</c> -- is what persists.
     /// </summary>
     [ValuesFrom(typeof(DataStoreTypes))]
     public string? TypeId { get; set; }
