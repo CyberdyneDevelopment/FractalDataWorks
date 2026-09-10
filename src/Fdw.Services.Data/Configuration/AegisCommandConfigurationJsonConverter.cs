@@ -8,19 +8,19 @@ namespace Fdw.Services.Data.Configuration;
 
 /// <summary>
 /// STJ JsonConverter for <see cref="AegisCommandConfiguration"/> that dispatches to the correct
-/// concrete typed body using the <c>ServiceOptionType</c> discriminator field.
+/// concrete typed body using the <c>Implementation</c> discriminator field.
 /// </summary>
 /// <remarks>
 /// Mirrors <see cref="ConnectionConfigurationJsonConverter"/> exactly: <see cref="AegisCommandConfiguration"/>
 /// is the parent-header type in <c>Fdw.Aegis.Configuration</c>, but typed bodies
 /// (<c>PreApprovedCommandConfiguration</c>, <c>AdHocCommandConfiguration</c>) are resolved by reading
-/// <c>ServiceOptionType</c> at the start of each object and looking up the resolved <see cref="Type"/>
+/// <c>Implementation</c> at the start of each object and looking up the resolved <see cref="Type"/>
 /// from <see cref="ApprovalPolicyTypes"/> (populated by module initializers at assembly load time) —
 /// zero hardcoded type names.
 /// </remarks>
 public sealed class AegisCommandConfigurationJsonConverter : JsonConverter<AegisCommandConfiguration>
 {
-    private const string DiscriminatorPropertyName = "ServiceOptionType";
+    private const string DiscriminatorPropertyName = "Implementation";
     private const string SettingsPropertyName = "Configuration";
 
     private JsonSerializerOptions? _innerOptions;

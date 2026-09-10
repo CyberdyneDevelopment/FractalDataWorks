@@ -5,7 +5,7 @@ namespace Fdw.Services.Identity.Endpoints;
 /// </summary>
 public sealed class IdentityMechanismDto
 {
-    /// <summary>Gets or sets the mechanism name — the value an identity configuration's ServiceOptionType carries.</summary>
+    /// <summary>Gets or sets the mechanism name — the value an identity configuration's Implementation carries.</summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets a human-readable description of the mechanism.</summary>

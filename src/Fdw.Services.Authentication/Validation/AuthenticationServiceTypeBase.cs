@@ -23,7 +23,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// <remarks>
 /// <para>
 /// The collection reads the declared entries once, through the domain configuration provider, and
-/// hands each to the option its <c>ServiceOptionType</c> names. A mechanism supplies only
+/// hands each to the option its <c>Implementation</c> names. A mechanism supplies only
 /// <see cref="TakeScheme"/> — what a scheme for one entry actually is — and the binding it returns is
 /// what lets <see cref="IssuerSchemeSelector"/> route to it.
 /// </para>
@@ -40,7 +40,7 @@ public abstract class AuthenticationServiceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AuthenticationServiceTypeBase"/> class.
     /// </summary>
-    /// <param name="name">The mechanism name, matched against an entry's <c>ServiceOptionType</c>.</param>
+    /// <param name="name">The mechanism name, matched against an entry's <c>Implementation</c>.</param>
     /// <param name="displayName">The display name for this option.</param>
     /// <param name="description">What this option validates.</param>
     protected AuthenticationServiceTypeBase(string name, string displayName, string description)

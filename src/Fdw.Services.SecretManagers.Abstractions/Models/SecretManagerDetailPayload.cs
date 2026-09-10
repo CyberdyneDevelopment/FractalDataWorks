@@ -20,5 +20,5 @@ public sealed class SecretManagerDetailPayload
     public string? Description { get; set; }
 
     /// <summary>Gets or sets the service option type.</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 }

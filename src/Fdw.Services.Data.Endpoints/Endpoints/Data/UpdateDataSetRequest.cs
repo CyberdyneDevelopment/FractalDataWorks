@@ -31,15 +31,15 @@ public class UpdateDataSetRequest
     public IList<DataSetFilterConditionPayload>? Filters { get; set; }
 
     /// <summary>
-    /// Gets or sets the dataset discriminator. Bound from the wizard's <c>serviceOptionType</c> field.
+    /// Gets or sets the dataset discriminator. Bound from the wizard's <c>implementation</c> field.
     /// </summary>
-    [JsonPropertyName("serviceOptionType")]
-    public string? ServiceOptionType { get; set; }
+    [JsonPropertyName("implementation")]
+    public string? Implementation { get; set; }
 
     /// <summary>
     /// Gets or sets the federation strategy used to combine sources for a Federated dataset (e.g.
     /// "Sequential", "Parallel", "Optimized" — a registered <c>FederationStrategies</c> member).
-    /// Required when <see cref="ServiceOptionType"/> is "Federated"; must be null otherwise.
+    /// Required when <see cref="Implementation"/> is "Federated"; must be null otherwise.
     /// </summary>
     public string? FederationStrategy { get; set; }
 

@@ -51,7 +51,7 @@ public sealed class ConfigurationSchema
 #pragma warning restore MA0016
 
     /// <summary>
-    /// Gets or sets the <c>ServiceOptionType</c> name of the single Multitenancy option (e.g.
+    /// Gets or sets the <c>Implementation</c> name of the single Multitenancy option (e.g.
     /// "SingleTenant", "Sql") this host runs. Corresponds to the
     /// <c>ConfigurationSchema:Multitenancy</c> configuration key.
     /// </summary>

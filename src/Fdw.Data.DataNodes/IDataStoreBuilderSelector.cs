@@ -12,7 +12,7 @@ namespace Fdw.Services.Data;
 /// Why: <c>Fdw.Data.DataNodes</c> must stay connection-agnostic — it cannot reference
 /// <c>ServiceTypeCollection</c>/<c>DataStoreTypes</c> (those live in the core connections/service-type
 /// packages this package excludes). The transport-to-builder dispatch that used to happen inline via
-/// <c>DataStoreTypes.ByName(store.ServiceOptionType).SupplyBuilder(...)</c> is now expressed behind this
+/// <c>DataStoreTypes.ByName(store.Implementation).SupplyBuilder(...)</c> is now expressed behind this
 /// interface, so a caller outside this package (which CAN reference <c>DataStoreTypes</c>) supplies the
 /// implementation while the pure, gateway-free <see cref="ConfiguredDataStoreProvider"/> only depends on
 /// the abstraction.

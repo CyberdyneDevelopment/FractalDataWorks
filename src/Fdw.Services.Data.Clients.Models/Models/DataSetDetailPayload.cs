@@ -23,7 +23,7 @@ public sealed class DataSetDetailPayload
     /// <summary>Gets or sets the category.</summary>
     public string Category { get; set; } = "Standard";
     /// <summary>Gets or sets the service option type.</summary>
-    public string ServiceOptionType { get; set; } = "Standard";
+    public string Implementation { get; set; } = "Standard";
     /// <summary>Gets or sets the record type name.</summary>
     public string? RecordTypeName { get; set; }
     /// <summary>Gets or sets the fields.</summary>

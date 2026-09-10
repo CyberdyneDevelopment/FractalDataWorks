@@ -62,7 +62,7 @@ public sealed class IdentityHostBootTests
         //
         // The failure this guards against is the one the framework calls out by name: an option whose
         // Register body never put its factory in the registry resolves to "No registered service type
-        // matches ServiceOptionType" at the first request, which reads like a configuration fault and
+        // matches Implementation" at the first request, which reads like a configuration fault and
         // is not one.
         var builder = Builder();
         IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);

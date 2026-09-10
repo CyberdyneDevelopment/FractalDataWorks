@@ -25,7 +25,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Why: registered as the <c>"Simple"</c> member of <see cref="DataSetTypes"/>; selected when a
-/// dataset's authored <c>ServiceOptionType</c> is <c>"Simple"</c>. The type option is a module-init
+/// dataset's authored <c>Implementation</c> is <c>"Simple"</c>. The type option is a module-init
 /// singleton with a parameterless constructor and no DI — it is stateless and reads everything it needs
 /// for one execution from the <see cref="DataSetExecutionContext"/>.
 /// </remarks>

@@ -28,10 +28,10 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     /// Initializes a new instance of the <see cref="ScheduleConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceOptionType">The schedule kind (e.g., "Interval", "Cron").</param>
-    public ScheduleConfiguration(string? serviceOptionType)
+    /// <param name="implementation">The schedule kind (e.g., "Interval", "Cron").</param>
+    public ScheduleConfiguration(string? implementation)
     {
-        Implementation = serviceOptionType;
+        Implementation = implementation;
     }
 
     /// <summary>Gets or sets the schedule kind this record is.</summary>

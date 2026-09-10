@@ -60,7 +60,7 @@ public class PipelineLineageProjectionTests
 
         record.Id.ShouldBe(aggregate.Id);
         record.Name.ShouldBe("UsgsDailyLoad");
-        record.ServiceOptionType.ShouldBe("Etl");
+        record.Implementation.ShouldBe("Etl");
         record.SourceDataSet.ShouldBe("UsgsDailyRaw");
         record.DestinationDataSet.ShouldBe("UsgsDailySink");
         record.SourceConnectionName.ShouldBe("UsgsHttp");

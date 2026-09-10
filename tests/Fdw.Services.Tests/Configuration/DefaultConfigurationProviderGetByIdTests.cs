@@ -230,7 +230,7 @@ public class DefaultConfigurationProviderGetByIdTests
         public string Name { get; set; } = string.Empty;
         public string SectionName => "TestChildSection";
         public string ServiceType => "TestChild";
-        public string? ServiceOptionType => "Default";
+        public string? Implementation => "Default";
         public Guid SecretManagerId { get; set; }
     }
 

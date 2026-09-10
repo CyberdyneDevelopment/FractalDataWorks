@@ -41,10 +41,10 @@ public partial class ConnectionConfiguration : IConnectionConfiguration
     /// Initializes a new instance of the <see cref="ConnectionConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceOptionType">The implementation this record names (e.g., "MsSql", "Rest", "Http").</param>
-    protected ConnectionConfiguration(string? serviceOptionType)
+    /// <param name="implementation">The implementation this record names (e.g., "MsSql", "Rest", "Http").</param>
+    protected ConnectionConfiguration(string? implementation)
     {
-        Implementation = serviceOptionType;
+        Implementation = implementation;
     }
 
 

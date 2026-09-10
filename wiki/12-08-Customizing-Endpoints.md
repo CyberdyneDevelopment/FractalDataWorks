@@ -53,7 +53,7 @@ public sealed class GetConnectionEndpoint : GetConnectionEndpointBase<MsSqlConne
         {
             Id = connection.Id,
             Name = connection.Name,
-            ServiceType = connection.ServiceOptionType,
+            ServiceType = connection.Implementation,
             Server = body?.Server,
             Port = body?.Port,
             Database = body?.Database,

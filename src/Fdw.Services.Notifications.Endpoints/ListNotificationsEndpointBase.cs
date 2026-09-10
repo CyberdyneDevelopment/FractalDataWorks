@@ -48,7 +48,7 @@ public abstract class ListNotificationsEndpointBase : CrudListEndpointBase<Notif
             {
                 Id = n.Id,
                 Name = n.Name,
-                ServiceOptionType = n.Implementation,
+                Implementation = n.Implementation,
                 Description = n.Description
             })
             .ToList();

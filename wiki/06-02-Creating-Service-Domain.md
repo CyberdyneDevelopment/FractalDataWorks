@@ -180,8 +180,8 @@ public sealed class Default{Domain}Provider
 ```
 
 The `DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>` base class provides:
-- `Register(string serviceOptionType, IServiceFactory<TService> factory)`
-- `Register(string serviceOptionType, IServiceConfigurationProvider<TConfiguration> configurationProvider)`
+- `Register(string implementation, IServiceFactory<TService> factory)`
+- `Register(string implementation, IServiceConfigurationProvider<TConfiguration> configurationProvider)`
 - `Get(string name)` / `Get(Guid id)` - looks up configuration, finds factory, creates service
 - `Get<T>(string name)` / `Get<T>(Guid id)` - typed variants
 

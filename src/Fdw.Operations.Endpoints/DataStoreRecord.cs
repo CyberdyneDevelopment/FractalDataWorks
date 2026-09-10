@@ -23,7 +23,7 @@ public partial class DataStoreRecord
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the store kind (MsSql, Http, FileSystem).</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets the optional description.</summary>
     public string? Description { get; set; }

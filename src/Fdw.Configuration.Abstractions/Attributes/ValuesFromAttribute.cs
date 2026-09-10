@@ -8,7 +8,7 @@ namespace Fdw.Configuration;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Use this attribute on discriminator properties (e.g., ServiceOptionType) to indicate
+/// Use this attribute on discriminator properties (e.g., Implementation) to indicate
 /// which TypeCollection provides the valid values. The UI can use this to render a dropdown
 /// or selection list of available TypeOption names.
 /// </para>
@@ -21,7 +21,7 @@ namespace Fdw.Configuration;
 /// <code>
 /// // Type-safe reference (when TypeCollection assembly is available):
 /// [ValuesFrom(typeof(ConnectionTypes))]
-/// public string ServiceOptionType { get; set; } = string.Empty;
+/// public string Implementation { get; set; } = string.Empty;
 ///
 /// // String-based reference (for client DTOs without assembly dependency):
 /// [ValuesFrom("CalculationTypes")]

@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions;
 /// Typed body for an ETL ENGINE (e.g. <c>BatchCopyPipelineConfiguration</c>,
 /// <c>StreamingPipelineConfiguration</c>). The ETL-kind body <c>EtlPipelineConfiguration</c> carries
 /// an <c>IEtlPipelineTypedConfiguration? Configuration</c> property whose runtime type is the engine
-/// body selected by the kind body's <c>ServiceOptionType</c> discriminator (e.g. "BatchCopy").
+/// body selected by the kind body's <c>Implementation</c> discriminator (e.g. "BatchCopy").
 /// </summary>
 /// <remarks>
 /// Why: a bare <see cref="IGenericConfiguration"/>-typed <c>Configuration</c> property does NOT trigger

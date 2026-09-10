@@ -26,7 +26,7 @@ public abstract class HealthMonitorTypeBase<TService, TFactory, TConfiguration> 
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthMonitorTypeBase{TService,TFactory,TConfiguration}"/> class.
     /// </summary>
-    /// <param name="name">The name of this health monitor type (matches a configuration row's <c>ServiceOptionType</c>).</param>
+    /// <param name="name">The name of this health monitor type (matches a configuration row's <c>Implementation</c>).</param>
     /// <param name="sectionName">The configuration section name.</param>
     /// <param name="displayName">The display name for this service type.</param>
     /// <param name="description">The description of what this service type provides.</param>

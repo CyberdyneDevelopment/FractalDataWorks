@@ -74,10 +74,10 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
 
         if (string.IsNullOrEmpty(pipeline.Implementation))
         {
-            OnPipelineFetchFailed(req.Name, $"Pipeline '{req.Name}' has no kind (ServiceOptionType).");
+            OnPipelineFetchFailed(req.Name, $"Pipeline '{req.Name}' has no kind (Implementation).");
             HttpContext.Response.StatusCode = 500;
             await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Invalid pipeline", Details = $"Pipeline '{req.Name}' has no kind (ServiceOptionType)." }, ct).ConfigureAwait(false);
+                new { Error = "Invalid pipeline", Details = $"Pipeline '{req.Name}' has no kind (Implementation)." }, ct).ConfigureAwait(false);
             return;
         }
 

@@ -12,7 +12,7 @@ namespace Fdw.Services.Abstractions;
 /// <typeparam name="TConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <remarks>
 /// It queries its <c>IConfigurationGateway</c> for the domain's configurations, finds the member
-/// by name or id, reads the <c>ServiceOptionType</c> that member names, and passes the member's
+/// by name or id, reads the <c>Implementation</c> that member names, and passes the member's
 /// durable <c>Id</c> to the implementation provider registered under that type. What comes back is
 /// the implementation configuration, ready for a factory.
 /// <para>
@@ -45,13 +45,13 @@ public interface IDomainConfigurationProvider<TConfiguration>
 
     /// <summary>Writes a configured member — its domain row and its implementation row.</summary>
     /// <typeparam name="T">The implementation configuration being written.</typeparam>
-    /// <param name="serviceOptionType">Which implementation this member is.</param>
+    /// <param name="implementation">Which implementation this member is.</param>
     /// <param name="name">The member's name.</param>
     /// <param name="implementationConfiguration">The implementation's own configuration.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>Success, or a structured failure.</returns>
     Task<IGenericResult> Save<T>(
-        string serviceOptionType,
+        string implementation,
         string name,
         T implementationConfiguration,
         CancellationToken cancellationToken = default)
@@ -69,9 +69,9 @@ public interface IDomainConfigurationProvider<TConfiguration>
     /// <returns>Success, or a structured failure.</returns>
     Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default);
 
-    /// <summary>Registers the implementation configuration provider for one ServiceOptionType.</summary>
+    /// <summary>Registers the implementation configuration provider for one Implementation.</summary>
     /// <typeparam name="T">The implementation provider being registered.</typeparam>
-    /// <param name="name">The ServiceOptionType this provider owns.</param>
+    /// <param name="name">The Implementation this provider owns.</param>
     /// <param name="implementationConfigurationProvider">The provider.</param>
     /// <returns>Success, or a structured failure.</returns>
     IGenericResult Register<T>(string name, T implementationConfigurationProvider)

@@ -22,9 +22,9 @@ public interface IEtlRowMapperProvider
     /// <summary>
     /// Registers a mapper factory for a service option type.
     /// </summary>
-    /// <param name="serviceOptionType">The service type name (e.g., "Pooled", "Dynamic").</param>
+    /// <param name="implementation">The service type name (e.g., "Pooled", "Dynamic").</param>
     /// <param name="factory">The factory to register.</param>
-    void Register(string serviceOptionType, IEtlRowMapperFactory factory);
+    void Register(string implementation, IEtlRowMapperFactory factory);
 
     /// <summary>
     /// Gets the default mapper type name.

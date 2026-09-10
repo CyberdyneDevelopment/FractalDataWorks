@@ -17,7 +17,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </summary>
 /// <remarks>
 /// The domain half of the pair. It holds the gateway onto the store the rows live on and a registry
-/// of implementation providers keyed by <c>ServiceOptionType</c>; an option registers itself into
+/// of implementation providers keyed by <c>Implementation</c>; an option registers itself into
 /// that registry during Initialize, when both providers can be resolved.
 /// <para>
 /// A caller asks by name or by id. This reads the domain row, takes the kind it names, and hands the

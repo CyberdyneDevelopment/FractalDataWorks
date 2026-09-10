@@ -12,8 +12,8 @@ public partial class PipelineLineageRecord
     public Guid Id { get; set; }
     /// <summary>Gets or sets the pipeline name.</summary>
     public string Name { get; set; } = string.Empty;
-    /// <summary>Gets or sets the pipeline type (maps to ServiceOptionType column).</summary>
-    public string ServiceOptionType { get; set; } = string.Empty;
+    /// <summary>Gets or sets the pipeline type (maps to Implementation column).</summary>
+    public string Implementation { get; set; } = string.Empty;
     /// <summary>Gets or sets the source DataSet name.</summary>
     public string? SourceDataSet { get; set; }
     /// <summary>Gets or sets the destination DataSet name.</summary>

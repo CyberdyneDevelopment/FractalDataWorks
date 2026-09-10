@@ -182,7 +182,7 @@ Eight names in this codebase are shared that way.
 
 - **Renaming a plain option's type or namespace changes its Id.** Moving the *project* never does.
 - **That costs nothing.** Option Ids are not persisted: a configuration row stores a NAME —
-  `ConnectionConfiguration.ServiceType` and `.ServiceOptionType` are both `string` — and the provider
+  `ConnectionConfiguration.ServiceType` and `.Implementation` are both `string` — and the provider
   dispatches on that string. An Id is an in-memory lookup key, recomputed every run.
   Even when Ids do get persisted, the databases are rebuilt from an idempotent seed, so a changed Id
   costs a reseed rather than a migration. **Namespace moves and type renames are ordinary work.** Use

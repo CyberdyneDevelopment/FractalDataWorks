@@ -30,7 +30,7 @@ The version-on-write pattern means **every child row carries both the parent's l
 
 `configurationSchema.json` ships in each entry-point app (Reference.Api, Reference.Etl, …). It is loaded into `IConfiguration` at the very start of `Program.cs` via `AddConfigurationGateway<TConnectionFactory, TSecretManager>(filename)`. It declares only the connections, secret managers, and data stores the host needs to reach ConfigurationDb.
 
-The file has three top-level lists under `ConfigurationSchema`: `Connections`, `SecretManagers`, and `DataStores`. A connection's and secret manager's body nests under a `Configuration` object; a connection's auth fields nest under `Configuration.Properties`; a DataStore identifies its type with `TypeId` (not `ServiceOptionType`).
+The file has three top-level lists under `ConfigurationSchema`: `Connections`, `SecretManagers`, and `DataStores`. A connection's and secret manager's body nests under a `Configuration` object; a connection's auth fields nest under `Configuration.Properties`; a DataStore identifies its type with `TypeId` (not `Implementation`).
 
 ```json
 {
@@ -38,7 +38,7 @@ The file has three top-level lists under `ConfigurationSchema`: `Connections`, `
     "Connections": [
       {
         "Name": "ConfigurationDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "sql.example.local",
           "Database": "ConfigurationDb",
@@ -54,7 +54,7 @@ The file has three top-level lists under `ConfigurationSchema`: `Connections`, `
       },
       {
         "Name": "AuthDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "sql.example.local",
           "Database": "AuthDb",
@@ -72,7 +72,7 @@ The file has three top-level lists under `ConfigurationSchema`: `Connections`, `
     "SecretManagers": [
       {
         "Name": "EnvSecrets",
-        "ServiceOptionType": "EnvironmentVariable",
+        "Implementation": "EnvironmentVariable",
         "Configuration": { "Prefix": "FDW_SECRET_" }
       }
     ],
@@ -163,11 +163,11 @@ Connections resolve passwords at runtime via secret managers. `EnvSecrets` reads
 This mirrors the real seed (`02-seed-cfg-runtime-config.sql`). The typed body `SELECT`s the parent row and copies both `Id` and `RowId`:
 
 ```sql
-INSERT INTO sec.SecretManager (Id, Name, ServiceOptionType, Description)
-SELECT NEWID(), v.Name, v.ServiceOptionType, v.Description
+INSERT INTO sec.SecretManager (Id, Name, Implementation, Description)
+SELECT NEWID(), v.Name, v.Implementation, v.Description
 FROM (VALUES
     ('EnvSecrets', 'EnvironmentVariable', 'Environment variable secret manager — resolves FDW_SECRET_* vars')
-) v(Name, ServiceOptionType, Description)
+) v(Name, Implementation, Description)
 WHERE NOT EXISTS (
     SELECT 1 FROM sec.SecretManager x
     WHERE x.Name = v.Name AND x.IsCurrent = 1 AND x.IsDeleted = 0
@@ -197,7 +197,7 @@ WHERE NOT EXISTS (
 To store secrets in the database instead of environment variables. `sec.MsSqlSecretManager` has **no `ConnectionString` column** — it uses discrete columns and requires `SecretManagerRowId` (joined to the parent). Actual secret values go in `sec.Secret` (schema `sec`):
 
 ```sql
-INSERT INTO sec.SecretManager (Id, Name, ServiceOptionType, Description)
+INSERT INTO sec.SecretManager (Id, Name, Implementation, Description)
 SELECT NEWID(), 'MsSqlSecrets', 'MsSql', 'SQL Server-based secret manager'
 WHERE NOT EXISTS (
     SELECT 1 FROM sec.SecretManager WHERE Name = 'MsSqlSecrets' AND IsCurrent = 1 AND IsDeleted = 0
@@ -233,11 +233,11 @@ A runtime MsSql connection needs the parent identity row plus its typed body, an
 ### conn.Connection (parent — identity only)
 
 ```sql
-INSERT INTO conn.[Connection] (Id, Name, ServiceOptionType, Description)
-SELECT NEWID(), v.Name, v.ServiceOptionType, v.Description
+INSERT INTO conn.[Connection] (Id, Name, Implementation, Description)
+SELECT NEWID(), v.Name, v.Implementation, v.Description
 FROM (VALUES
     ('MyServiceDb', 'MsSql', 'Connection to myschema for my service')
-) v(Name, ServiceOptionType, Description)
+) v(Name, Implementation, Description)
 WHERE NOT EXISTS (
     SELECT 1 FROM conn.[Connection] x
     WHERE x.Name = v.Name AND x.IsCurrent = 1 AND x.IsDeleted = 0
@@ -251,7 +251,7 @@ The real seeds always mint `Id` with `NEWID()` — there are no fixed GUIDs.
 | `RowId` | (auto) | Version-specific PK, `NEWSEQUENTIALID()` default |
 | `Id` | Yes | Durable logical identity (`NEWID()` in seeds) |
 | `Name` | Yes | Unique among current rows; referenced in code and DataStore config |
-| `ServiceOptionType` | Yes | Discriminator for a registered ConnectionType (`'MsSql'`, `'Http'`, `'FileSystem'`, `'RoslynWorkspace'`, …) |
+| `Implementation` | Yes | Discriminator for a registered ConnectionType (`'MsSql'`, `'Http'`, `'FileSystem'`, `'RoslynWorkspace'`, …) |
 | `Description` | No | Human-readable description |
 | `Environment` | No | Environment filter (NULL = all) |
 
@@ -357,7 +357,7 @@ A DataStore links a connection to the DataGateway. It also splits into a parent 
 ### data.DataStore (parent) + data.MsSqlDataStore (typed body)
 
 ```sql
-INSERT INTO data.DataStore (Id, Name, ServiceOptionType, ConnectionId, ConnectionRowId, Description)
+INSERT INTO data.DataStore (Id, Name, Implementation, ConnectionId, ConnectionRowId, Description)
 SELECT NEWID(), 'MyServiceDb', 'MsSql', c.Id, c.RowId, 'DataStore for myschema tables'
 FROM conn.[Connection] c
 WHERE c.Name = 'MyServiceDb' AND c.IsCurrent = 1 AND c.IsDeleted = 0
@@ -565,7 +565,7 @@ GO
 -- ============================================================================
 -- Connection parent + typed body (run against ConfigurationDb)
 -- ============================================================================
-INSERT INTO conn.[Connection] (Id, Name, ServiceOptionType, Description)
+INSERT INTO conn.[Connection] (Id, Name, Implementation, Description)
 SELECT NEWID(), 'AuthDb', 'MsSql', 'AuthDb — authentication credentials and tokens'
 WHERE NOT EXISTS (
     SELECT 1 FROM conn.[Connection] WHERE Name = 'AuthDb' AND IsCurrent = 1 AND IsDeleted = 0
@@ -602,7 +602,7 @@ GO
 -- DataStore + typed body + DataPath + DataPathSegment + Container + Fields + Keys
 -- (one container per auth table: PersonalAccessToken, RefreshToken, RevokedAccessToken, UserSecret)
 -- ============================================================================
-INSERT INTO data.DataStore (Id, Name, ServiceOptionType, ConnectionId, ConnectionRowId, Description)
+INSERT INTO data.DataStore (Id, Name, Implementation, ConnectionId, ConnectionRowId, Description)
 SELECT NEWID(), 'AuthDb', 'MsSql', c.Id, c.RowId, 'AuthDb — credentials + tokens'
 FROM conn.[Connection] c
 WHERE c.Name = 'AuthDb' AND c.IsCurrent = 1 AND c.IsDeleted = 0

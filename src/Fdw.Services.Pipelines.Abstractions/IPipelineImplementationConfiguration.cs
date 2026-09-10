@@ -6,7 +6,7 @@ namespace Fdw.Services.Pipelines.Abstractions;
 /// Marker interface for a pipeline KIND typed body (e.g. <c>EtlPipelineConfiguration</c>).
 /// The general <c>PipelineConfiguration</c> header carries an
 /// <c>IPipelineImplementationConfiguration? Configuration</c> property whose runtime type is the kind body
-/// selected by the header's <c>ServiceOptionType</c> discriminator (e.g. "Etl").
+/// selected by the header's <c>Implementation</c> discriminator (e.g. "Etl").
 /// </summary>
 /// <remarks>
 /// Why: a bare <see cref="IGenericConfiguration"/>-typed <c>Configuration</c> property does NOT trigger

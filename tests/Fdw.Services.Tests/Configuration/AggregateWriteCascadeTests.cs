@@ -124,7 +124,7 @@ public sealed class AggregateWriteCascadeTests
                 "PlatformConfiguration",
                 "pipe"));
 
-        // ServiceOptionType is fixed to "Default" on TestRootConfiguration — a provider IS registered for
+        // Implementation is fixed to "Default" on TestRootConfiguration — a provider IS registered for
         // it above — yet Configuration (the typed body) is left null.
         var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
 

@@ -130,7 +130,7 @@ public sealed class DeclaredSecretManagerConfigurationProvider
         string name, CancellationToken cancellationToken)
     {
         // The record goes back whole. Unwrapping .Configuration here left the caller holding an
-        // object with no ServiceOptionType to select a factory by.
+        // object with no Implementation to select a factory by.
         var result = await Get(name, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess && result.Value is { } record
             ? GenericResult<IDomainConfiguration>.Success(record)
@@ -142,7 +142,7 @@ public sealed class DeclaredSecretManagerConfigurationProvider
         Guid id, CancellationToken cancellationToken)
     {
         // The record goes back whole. Unwrapping .Configuration here left the caller holding an
-        // object with no ServiceOptionType to select a factory by.
+        // object with no Implementation to select a factory by.
         var result = await Get(id, cancellationToken).ConfigureAwait(false);
         return result.IsSuccess && result.Value is { } record
             ? GenericResult<IDomainConfiguration>.Success(record)
@@ -151,7 +151,7 @@ public sealed class DeclaredSecretManagerConfigurationProvider
 
     /// <inheritdoc />
     Task<IGenericResult> IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>.Save<T>(
-        string serviceOptionType, string name, T implementationConfiguration, CancellationToken cancellationToken)
+        string implementation, string name, T implementationConfiguration, CancellationToken cancellationToken)
         => Task.FromResult<IGenericResult>(GenericResult.Failure(
             AegisResultCodes.ByName("SecretResolutionFailed"),
             ResultDetails.Create("Operation", "Save")));

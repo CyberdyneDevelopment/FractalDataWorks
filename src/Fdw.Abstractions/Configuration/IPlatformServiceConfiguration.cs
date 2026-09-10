@@ -11,7 +11,7 @@ namespace Fdw.Configuration;
 /// without changing the first. A domain given a single flat configuration is closed to that.
 /// <para>
 /// The domain configuration provider returns the list of these; the implementation configuration
-/// provider registered for a member's <c>ServiceOptionType</c> supplies what
+/// provider registered for a member's <c>Implementation</c> supplies what
 /// <see cref="Configuration"/> holds.
 /// </para>
 /// <para>

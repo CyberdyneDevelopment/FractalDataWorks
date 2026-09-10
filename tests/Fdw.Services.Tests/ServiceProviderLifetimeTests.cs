@@ -34,13 +34,10 @@ public class ServiceProviderLifetimeTests
     {
         public string Domain => "TestService";
 
-        public string? Implementation { get; set; }
 
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestServices";
-        public string ServiceType => "TestService";
-        public string? ServiceOptionType { get; set; }
+        public string? Implementation { get; set; }
         public string Value { get; set; } = string.Empty;
 
         // No domain/implementation split in this double: it is its own implementation.
@@ -138,8 +135,8 @@ public class ServiceProviderLifetimeTests
         {
         }
 
-        public new void Register(string serviceOptionType, IServiceFactory<ITestService> factory)
-            => base.Register(serviceOptionType, factory);
+        public new void Register(string implementation, IServiceFactory<ITestService> factory)
+            => base.Register(implementation, factory);
 
         public new IGenericResult Register(IDomainConfigurationProvider<TestServiceConfiguration> domainConfigurationProvider)
             => base.Register(domainConfigurationProvider);
@@ -232,7 +229,7 @@ public class ServiceProviderLifetimeTests
         }
 
         Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
-            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
+            string implementation, string name, T implementationConfiguration, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
         Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
@@ -342,7 +339,7 @@ public class ServiceProviderLifetimeTests
         }
 
         Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
-            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
+            string implementation, string name, T implementationConfiguration, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
         Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
@@ -404,7 +401,7 @@ public class ServiceProviderLifetimeTests
 
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
         services.AddSingleton<TestServiceProvider>();
@@ -444,8 +441,8 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "V1" },
-            new() { Name = "Service2", ServiceOptionType = "TypeA", Value = "V2" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "V1" },
+            new() { Name = "Service2", Implementation = "TypeA", Value = "V2" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -477,7 +474,7 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Initial" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Initial" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -505,7 +502,7 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Initial" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Initial" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -530,7 +527,7 @@ public class ServiceProviderLifetimeTests
         // Arrange - start with one config
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -549,7 +546,7 @@ public class ServiceProviderLifetimeTests
         result2.IsSuccess.ShouldBeFalse();
 
         // Add Service2 dynamically
-        configs.Add(new() { Name = "Service2", ServiceOptionType = "TypeA", Value = "Value2" });
+        configs.Add(new() { Name = "Service2", Implementation = "TypeA", Value = "Value2" });
 
         // Now Service2 exists
         var result3 = await provider.Get("Service2", TestContext.Current.CancellationToken);
@@ -565,8 +562,8 @@ public class ServiceProviderLifetimeTests
         // Arrange - start with two configs
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" },
-            new() { Name = "Service2", ServiceOptionType = "TypeA", Value = "Value2" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" },
+            new() { Name = "Service2", Implementation = "TypeA", Value = "Value2" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -604,12 +601,12 @@ public class ServiceProviderLifetimeTests
         // Arrange - two service types with separate config providers
         var typeAConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceA1", ServiceOptionType = "TypeA", Value = "ValueA1" },
-            new() { Name = "ServiceA2", ServiceOptionType = "TypeA", Value = "ValueA2" }
+            new() { Name = "ServiceA1", Implementation = "TypeA", Value = "ValueA1" },
+            new() { Name = "ServiceA2", Implementation = "TypeA", Value = "ValueA2" }
         };
         var typeBConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceB1", ServiceOptionType = "TypeB", Value = "ValueB1" }
+            new() { Name = "ServiceB1", Implementation = "TypeB", Value = "ValueB1" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -634,7 +631,7 @@ public class ServiceProviderLifetimeTests
         (await provider.Get("ServiceB1", TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
         // Add new service to TypeB
-        typeBConfigs.Add(new() { Name = "ServiceB2", ServiceOptionType = "TypeB", Value = "ValueB2" });
+        typeBConfigs.Add(new() { Name = "ServiceB2", Implementation = "TypeB", Value = "ValueB2" });
 
         // New service is now available
         var result = await provider.Get("ServiceB2", TestContext.Current.CancellationToken);
@@ -654,11 +651,11 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configsA = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceA", ServiceOptionType = "TypeA", Value = "ValueA" }
+            new() { Name = "ServiceA", Implementation = "TypeA", Value = "ValueA" }
         };
         var configsB = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceB", ServiceOptionType = "TypeB", Value = "ValueB" }
+            new() { Name = "ServiceB", Implementation = "TypeB", Value = "ValueB" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -691,7 +688,7 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -725,11 +722,11 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var msSqlConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "DatabaseConnection", ServiceOptionType = "MsSql", Value = "Server=localhost" }
+            new() { Name = "DatabaseConnection", Implementation = "MsSql", Value = "Server=localhost" }
         };
         var restConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "ApiConnection", ServiceOptionType = "Rest", Value = "https://api.example.com" }
+            new() { Name = "ApiConnection", Implementation = "Rest", Value = "https://api.example.com" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -768,7 +765,7 @@ public class ServiceProviderLifetimeTests
         var serviceId = Guid.NewGuid();
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Id = serviceId, Name = "Service1", ServiceOptionType = "TypeA", Value = "TestValue" }
+            new() { Id = serviceId, Name = "Service1", Implementation = "TypeA", Value = "TestValue" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -795,7 +792,7 @@ public class ServiceProviderLifetimeTests
         var customConfig = new TestServiceConfiguration
         {
             Name = "CustomService",
-            ServiceOptionType = "TypeA",
+            Implementation = "TypeA",
             Value = "CustomValue"
         };
 
@@ -823,7 +820,7 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -842,11 +839,11 @@ public class ServiceProviderLifetimeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public async Task CreateWithMissingServiceOptionTypeReturnsFailure()
+    public async Task CreateWithMissingImplementationReturnsFailure()
     {
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = null, Value = "Value" }
+            new() { Name = "Service1", Implementation = null, Value = "Value" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
@@ -858,7 +855,7 @@ public class ServiceProviderLifetimeTests
         // Act
         var result = await provider.Get("Service1", TestContext.Current.CancellationToken);
 
-        // Assert - Fails because ServiceOptionType is null and parent can't dispatch
+        // Assert - Fails because Implementation is null and parent can't dispatch
         result.IsSuccess.ShouldBeFalse();
     }
 
@@ -876,7 +873,7 @@ public class ServiceProviderLifetimeTests
             .Select(i => new TestServiceConfiguration
             {
                 Name = $"Service{i}",
-                ServiceOptionType = "TypeA",
+                Implementation = "TypeA",
                 Value = $"Value{i}"
             })
             .ToList();
@@ -914,11 +911,11 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var typeAConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "PrimaryService", ServiceOptionType = "TypeA", Value = "PrimaryValue" }
+            new() { Name = "PrimaryService", Implementation = "TypeA", Value = "PrimaryValue" }
         };
         var typeBConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "SecondaryService", ServiceOptionType = "TypeB", Value = "SecondaryValue" }
+            new() { Name = "SecondaryService", Implementation = "TypeB", Value = "SecondaryValue" }
         };
 
         var services = new ServiceCollection();
@@ -952,18 +949,18 @@ public class ServiceProviderLifetimeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public async Task ProviderCorrectlyRoutesToFactoryBasedOnServiceOptionType()
+    public async Task ProviderCorrectlyRoutesToFactoryBasedOnImplementation()
     {
         // Arrange - simulate polymorphic configuration (MsSql vs Rest)
         var msSqlConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "OrdersDb", ServiceOptionType = "MsSql", Value = "Server=orders-db" },
-            new() { Name = "InventoryDb", ServiceOptionType = "MsSql", Value = "Server=inventory-db" }
+            new() { Name = "OrdersDb", Implementation = "MsSql", Value = "Server=orders-db" },
+            new() { Name = "InventoryDb", Implementation = "MsSql", Value = "Server=inventory-db" }
         };
         var restConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "PaymentApi", ServiceOptionType = "Rest", Value = "https://payment.api" },
-            new() { Name = "ShippingApi", ServiceOptionType = "Rest", Value = "https://shipping.api" }
+            new() { Name = "PaymentApi", Implementation = "Rest", Value = "https://payment.api" },
+            new() { Name = "ShippingApi", Implementation = "Rest", Value = "https://shipping.api" }
         };
 
         var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);

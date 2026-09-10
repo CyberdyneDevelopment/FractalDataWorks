@@ -14,7 +14,7 @@ public abstract class ApprovalPolicyTypeBase : TypeOptionBase<int, ApprovalPolic
     /// Initializes a new instance of the <see cref="ApprovalPolicyTypeBase"/> class.
     /// </summary>
     /// <param name="id">The unique identifier.</param>
-    /// <param name="name">The policy kind name (matches <c>AegisCommandConfiguration.ServiceOptionType</c>).</param>
+    /// <param name="name">The policy kind name (matches <c>AegisCommandConfiguration.Implementation</c>).</param>
     /// <param name="configurationType">The .NET type of the typed-body configuration for this policy kind.</param>
     protected ApprovalPolicyTypeBase(int id, string name, Type configurationType)
         : base(id, name)

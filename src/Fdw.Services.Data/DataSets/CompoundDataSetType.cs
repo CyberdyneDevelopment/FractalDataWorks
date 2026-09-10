@@ -24,7 +24,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Why: registered as the <c>"Compound"</c> member of <see cref="DataSetTypes"/>; selected when a
-/// dataset's authored <c>ServiceOptionType</c> is <c>"Compound"</c>. The defining property is that the
+/// dataset's authored <c>Implementation</c> is <c>"Compound"</c>. The defining property is that the
 /// join is performed by the backend (not in memory), so all sources must live in one store.
 /// <para>
 /// Builds a single <see cref="QueryCommand{T}"/> carrying JOIN expressions and a multi-source

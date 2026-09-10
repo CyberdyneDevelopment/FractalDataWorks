@@ -78,33 +78,33 @@ public static partial class DataStoreConfigurationProviderLog
     /// Logs that a typed DataStore provider was registered for a given service option type.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceOptionType">The service option type the typed DataStore provider was registered for.</param>
+    /// <param name="implementation">The service option type the typed DataStore provider was registered for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11114, Level = LogLevel.Trace,
-        Message = "Registering typed DataStore provider for service option type '{serviceOptionType}'")]
-    public static partial IGenericMessage TypedProviderRegistered(ILogger logger, string serviceOptionType);
+        Message = "Registering typed DataStore provider for service option type '{implementation}'")]
+    public static partial IGenericMessage TypedProviderRegistered(ILogger logger, string implementation);
 
     /// <summary>
     /// Logs that the typed DataStore body is being loaded using a service option type.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="name">The name of the DataStore whose typed body is being loaded.</param>
-    /// <param name="serviceOptionType">The service option type used to load the typed DataStore body.</param>
+    /// <param name="implementation">The service option type used to load the typed DataStore body.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11115, Level = LogLevel.Trace,
-        Message = "Loading typed DataStore body for '{name}' using service option type '{serviceOptionType}'")]
-    public static partial IGenericMessage LoadingTypedBody(ILogger logger, string name, string serviceOptionType);
+        Message = "Loading typed DataStore body for '{name}' using service option type '{implementation}'")]
+    public static partial IGenericMessage LoadingTypedBody(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logs that no typed DataStore provider is registered for the requested service option type.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceOptionType">The service option type for which no typed DataStore provider was found.</param>
+    /// <param name="implementation">The service option type for which no typed DataStore provider was found.</param>
     /// <param name="name">The name of the DataStore that could not be loaded.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61011, Level = LogLevel.Error,
-        Message = "No typed DataStore provider registered for service option type '{serviceOptionType}' (DataStore '{name}')")]
-    public static partial IGenericMessage NoTypedProviderForServiceOptionType(ILogger logger, string serviceOptionType, string name);
+        Message = "No typed DataStore provider registered for service option type '{implementation}' (DataStore '{name}')")]
+    public static partial IGenericMessage NoTypedProviderForImplementation(ILogger logger, string implementation, string name);
 
     /// <summary>
     /// Logs that loading the typed DataStore body failed.
@@ -112,43 +112,43 @@ public static partial class DataStoreConfigurationProviderLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="exception">The exception that caused the typed body load to fail.</param>
     /// <param name="name">The name of the DataStore whose typed body failed to load.</param>
-    /// <param name="serviceOptionType">The service option type used when the load failed.</param>
+    /// <param name="implementation">The service option type used when the load failed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 91015, Level = LogLevel.Error,
-        Message = "Failed to load typed DataStore body for '{name}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string name, string serviceOptionType);
+        Message = "Failed to load typed DataStore body for '{name}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string name, string implementation);
 
     /// <summary>
-    /// Logs that a DataStore has no ServiceOptionType, so its typed body cannot be loaded.
+    /// Logs that a DataStore has no Implementation, so its typed body cannot be loaded.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="name">The name of the DataStore missing a ServiceOptionType.</param>
+    /// <param name="name">The name of the DataStore missing a Implementation.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61012, Level = LogLevel.Error,
-        Message = "DataStore '{name}' has no ServiceOptionType — typed body cannot be loaded")]
-    public static partial IGenericMessage MissingServiceOptionType(ILogger logger, string name);
+        Message = "DataStore '{name}' has no Implementation — typed body cannot be loaded")]
+    public static partial IGenericMessage MissingImplementation(ILogger logger, string name);
 
     /// <summary>
     /// Logs that the typed DataStore body was successfully loaded.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="name">The name of the DataStore whose typed body was loaded.</param>
-    /// <param name="serviceOptionType">The service option type used to load the typed DataStore body.</param>
+    /// <param name="implementation">The service option type used to load the typed DataStore body.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11116, Level = LogLevel.Trace,
-        Message = "Typed DataStore body loaded for '{name}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string name, string serviceOptionType);
+        Message = "Typed DataStore body loaded for '{name}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logs that a DataStore uses its header as the typed body, with no separate typed-body table.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="name">The name of the DataStore that uses the header as the typed body.</param>
-    /// <param name="serviceOptionType">The service option type of the DataStore.</param>
+    /// <param name="implementation">The service option type of the DataStore.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11117, Level = LogLevel.Trace,
-        Message = "DataStore '{name}' (ServiceOptionType '{serviceOptionType}') uses the header as the typed body — no separate typed-body table")]
-    public static partial IGenericMessage HeaderIsTypedBody(ILogger logger, string name, string serviceOptionType);
+        Message = "DataStore '{name}' (Implementation '{implementation}') uses the header as the typed body — no separate typed-body table")]
+    public static partial IGenericMessage HeaderIsTypedBody(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logs that a DataStore was not found, so a container cannot be added.

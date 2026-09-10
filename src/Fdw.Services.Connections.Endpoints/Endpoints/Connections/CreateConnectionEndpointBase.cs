@@ -20,7 +20,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// </summary>
 /// <typeparam name="TConfig">The concrete typed body configuration type this endpoint builds.</typeparam>
 /// <remarks>
-/// Why one save: the header provider owns the dispatch. It reads <c>ServiceOptionType</c>, resolves the
+/// Why one save: the header provider owns the dispatch. It reads <c>Implementation</c>, resolves the
 /// registered typed provider for it, and hands that provider the body to write along with the body's own
 /// subtree. The endpoint therefore never holds a typed provider — the connection type stays invisible to
 /// the machinery, which is the point of the composed-header pattern. The previous two-save shape let the
@@ -71,7 +71,7 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
         connection.Configuration = typedBody;
 
         // One save for the whole aggregate: the provider writes the header, then dispatches on
-        // ServiceOptionType so the registered typed provider writes the body and everything under it.
+        // Implementation so the registered typed provider writes the body and everything under it.
         var connectionSave = await _connectionProvider.Save(connection, ct).ConfigureAwait(false);
         if (connectionSave.IsFailure)
         {
@@ -107,7 +107,7 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
 
     /// <summary>
     /// Builds the parent <see cref="ConnectionConfiguration"/> from the create request.
-    /// The default implementation sets Name, ServiceOptionType from <see cref="CreateConnectionRequest.ServiceType"/>,
+    /// The default implementation sets Name, Implementation from <see cref="CreateConnectionRequest.ServiceType"/>,
     /// and Id from <paramref name="connectionId"/>.
     /// Override to customize header fields (Description, Environment, etc.).
     /// </summary>

@@ -18,7 +18,7 @@ public sealed class IdentitySummaryResponse
     /// <summary>Gets or sets the name this identity is resolved by.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the mechanism this identity uses (the ServiceOptionType).</summary>
+    /// <summary>Gets or sets the mechanism this identity uses (the Implementation).</summary>
     public string? Mechanism { get; set; }
 
     /// <summary>Gets or sets the optional description.</summary>

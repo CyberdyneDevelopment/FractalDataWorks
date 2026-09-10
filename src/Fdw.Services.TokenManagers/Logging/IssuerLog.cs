@@ -95,7 +95,7 @@ internal static partial class IssuerLog
     /// <param name="declared">The option types that were found.</param>
     // Critical: the host is running and cannot mint, and no request will fix it.
     [MessageLogging(EventId = 91188, Level = LogLevel.Critical,
-        Message = "No enabled auth.TokenManager row declares ServiceOptionType 'Jwt' (found: {declared})")]
+        Message = "No enabled auth.TokenManager row declares Implementation 'Jwt' (found: {declared})")]
     internal static partial IGenericMessage NoJwtTokenManager(
         ILogger<JwtIssuanceResolver> logger, string declared);
 

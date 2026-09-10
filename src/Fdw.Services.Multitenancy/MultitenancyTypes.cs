@@ -68,7 +68,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     /// <returns>
     /// The builder on success. A failure when the host's <see cref="ConfigurationSchema.Multitenancy"/>
-    /// choice is missing, or names a ServiceOptionType that does not match any registered option
+    /// choice is missing, or names a Implementation that does not match any registered option
     /// (NO FALLBACKS — never a silent default).
     /// </returns>
     private static IGenericResult<IHostApplicationBuilder> SelectAndConfigureSingleOption(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)

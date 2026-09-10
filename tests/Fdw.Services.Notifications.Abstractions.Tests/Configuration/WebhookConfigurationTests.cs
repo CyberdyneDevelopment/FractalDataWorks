@@ -69,7 +69,7 @@ public class WebhookConfigurationTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "CoreFramework")]
-    public void ServiceOptionTypeMatchesNotificationType()
+    public void ImplementationMatchesNotificationType()
     {
         // Arrange
         var config = new WebhookConfiguration

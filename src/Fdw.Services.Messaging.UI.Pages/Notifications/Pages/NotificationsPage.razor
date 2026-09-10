@@ -73,7 +73,7 @@
                                     {
                                         <tr>
                                             <td><div class="cellpad nm">@notification.Name</div></td>
-                                            <td class="mut">@(notification.ServiceOptionType ?? "—")</td>
+                                            <td class="mut">@(notification.Implementation ?? "—")</td>
                                             <td class="mut">@(notification.Description ?? "—")</td>
                                             <td class="mut">
                                                 <span class="sw @(notification.IsEnabled ? "on" : "")" title="@(notification.IsEnabled ? "Enabled" : "Disabled")"></span>

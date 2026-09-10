@@ -59,7 +59,7 @@ public class SecretManagerConfigurationProvider
     /// <summary>
     /// Loads the parent header row without dispatching to a typed provider. Use for management
     /// flows (Delete, exists-check) that don't need the typed body and shouldn't fail if no
-    /// typed provider is registered for the header's ServiceOptionType (e.g. stale or
+    /// typed provider is registered for the header's Implementation (e.g. stale or
     /// plugin-removed types).
     /// </summary>
     public Task<IGenericResult<SecretManagerConfiguration>> GetHeader(string name, CancellationToken ct = default)

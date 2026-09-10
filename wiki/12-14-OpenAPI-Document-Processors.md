@@ -35,7 +35,7 @@ Any property decorated with `[ValuesFrom]` that appears in a request or response
 ```csharp
 // Type-safe reference (compile-time)
 [ValuesFrom(typeof(ConnectionTypes))]
-public string ServiceOptionType { get; set; } = string.Empty;
+public string Implementation { get; set; } = string.Empty;
 
 // String-based reference (cross-assembly, no direct dependency)
 [ValuesFrom("CalculationTypes")]

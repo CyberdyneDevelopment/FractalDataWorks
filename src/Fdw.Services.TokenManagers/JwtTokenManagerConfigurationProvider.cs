@@ -11,7 +11,7 @@ namespace Fdw.Services.TokenManagers;
 /// </summary>
 /// <remarks>
 /// The header provider loads <c>auth.TokenManager</c>, then dispatches here on
-/// <c>ServiceOptionType = "Jwt"</c> to fill the typed body. <c>Get(Guid)</c> takes the parent
+/// <c>Implementation = "Jwt"</c> to fill the typed body. <c>Get(Guid)</c> takes the parent
 /// <c>auth.TokenManager.Id</c>, not this row's own id.
 /// </remarks>
 public class JwtTokenManagerConfigurationProvider

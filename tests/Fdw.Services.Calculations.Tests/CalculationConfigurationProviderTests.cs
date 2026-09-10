@@ -27,7 +27,7 @@ namespace Fdw.Services.Calculations.Tests;
 /// Proves the keystone base read composes the FULL calculation aggregate via
 /// <see cref="CalculationConfigurationProvider"/>.Get(id): header → Inputs, Steps→{Fields,Operands}
 /// (recursive, physically keyed by RowId), plus the polymorphic Formula typed body composed via the
-/// registered typed provider (dispatch on ServiceOptionType). Only IConfigurationGateway is faked.
+/// registered typed provider (dispatch on Implementation). Only IConfigurationGateway is faked.
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "DataIntegrity")]

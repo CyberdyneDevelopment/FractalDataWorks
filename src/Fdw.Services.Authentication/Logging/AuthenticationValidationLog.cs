@@ -13,8 +13,8 @@ public static partial class AuthenticationValidationLog
 {
     /// <summary>Logs an AuthenticationServices entry that names no mechanism.</summary>
     [MessageLogging(EventId = 71100, Level = LogLevel.Error,
-        Message = "Authentication service at '{sectionPath}' declares no ServiceOptionType. Set it to a REGISTERED member of AuthenticationServiceTypes - 'OpenIddict' for tokens this host issues, 'JwtBearer' for tokens a remote authority issues. A value that is not a registered member registers no scheme at all, and every request then falls through to UnmatchedIssuerHandler")]
-    public static partial IGenericMessage EntryMissingServiceOptionType(ILogger logger, string sectionPath);
+        Message = "Authentication service at '{sectionPath}' declares no Implementation. Set it to a REGISTERED member of AuthenticationServiceTypes - 'OpenIddict' for tokens this host issues, 'JwtBearer' for tokens a remote authority issues. A value that is not a registered member registers no scheme at all, and every request then falls through to UnmatchedIssuerHandler")]
+    public static partial IGenericMessage EntryMissingImplementation(ILogger logger, string sectionPath);
 
     /// <summary>Logs an enabled AuthenticationServices entry with no name.</summary>
     [MessageLogging(EventId = 71101, Level = LogLevel.Error,
@@ -43,7 +43,7 @@ public static partial class AuthenticationValidationLog
 
     /// <summary>Logs a host that registered a validation mechanism but declared no authentication services.</summary>
     [MessageLogging(EventId = 71106, Level = LogLevel.Error,
-        Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a ServiceOptionType and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
+        Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a Implementation and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
     public static partial IGenericMessage NoAuthenticationServicesDeclared(ILogger logger, string sectionName);
 
     /// <summary>Logs a mechanism that returned success without producing a scheme binding.</summary>
@@ -53,7 +53,7 @@ public static partial class AuthenticationValidationLog
 
     /// <summary>Logs an AuthenticationServices section that could not be read.</summary>
     [MessageLogging(EventId = 71108, Level = LogLevel.Error,
-        Message = "The AuthenticationServices declarations for mechanism '{mechanism}' reported success with no entries. The section was readable and empty - check that an entry names ServiceOptionType '{mechanism}' exactly, since a mechanism name that matches no registered option is silently skipped rather than rejected")]
+        Message = "The AuthenticationServices declarations for mechanism '{mechanism}' reported success with no entries. The section was readable and empty - check that an entry names Implementation '{mechanism}' exactly, since a mechanism name that matches no registered option is silently skipped rather than rejected")]
     public static partial IGenericMessage SectionUnreadable(ILogger logger, string mechanism);
 
     /// <summary>Logs a validated token that carried no claims identity.</summary>

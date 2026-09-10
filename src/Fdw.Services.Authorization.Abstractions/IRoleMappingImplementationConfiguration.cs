@@ -8,7 +8,7 @@ namespace Fdw.Services.Authorization.Abstractions;
 /// <remarks>
 /// A role mapping answers "which role names carry which authority". Implementations differ in whose
 /// authority they describe — the System implementation names the roles that carry system authority —
-/// and the domain configuration holds one of these, named by its <c>ServiceOptionType</c>.
+/// and the domain configuration holds one of these, named by its <c>Implementation</c>.
 /// </remarks>
 public interface IRoleMappingImplementationConfiguration : IImplementationConfiguration
 {

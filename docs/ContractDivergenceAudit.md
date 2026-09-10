@@ -24,7 +24,7 @@ design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 | `DataSetFieldDto` | Services.Data.Clients.Abstractions | `IsNullable`, `TypeName` | `DefaultValue`, `IsIndexed` | **REVIEW** | — |
 | `DataSetSourceDto` | Services.Data.Clients.Abstractions | `ContainerId`, `IsActive`, `PathName`, `SourceDataSetId`, `SourceDataSetName`, `SourceKind` | `FieldMappings`, `FileFormat`, `HttpMethod`, `MapperTypeName`, `Path`, `SupportsPredicatePushdown` | **REVIEW** | — |
 | `DataSetSourceRecord` | Operations.Endpoints | — | `SourceDataSetId`, `SourceDataSetName` | **REVIEW** | — |
-| `DataSetSummaryDto` | Services.Data.Clients.Abstractions | — | `Name`, `ServiceOptionType` | **JUSTIFIED** | client-only field is a routing discriminator |
+| `DataSetSummaryDto` | Services.Data.Clients.Abstractions | — | `Name`, `Implementation` | **JUSTIFIED** | client-only field is a routing discriminator |
 | `DataStoreContainerDto` | Services.Data.Clients.Abstractions | — | `PhysicalName`, `SupportedOperations` | **REVIEW** | — |
 | `DataStoreDetailDto` | Services.Data.Clients.Abstractions | `ConnectionId` | `ETag`, `Id`, `Name` | **REVIEW** | — |
 | `DataStoreFieldDto` | Services.Data.Clients.Abstractions | `Description`, `FrameworkDataType` | `MaxLength`, `Precision`, `Scale` | **REVIEW** | — |

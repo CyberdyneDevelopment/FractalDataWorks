@@ -58,7 +58,7 @@ public sealed class JwtAssertionIdentityType
 
         Initialization((host, loggerFactory) =>
         {
-            // The header provider dispatches on ServiceOptionType to the typed provider registered for
+            // The header provider dispatches on Implementation to the typed provider registered for
             // it. Without this hand-over the header loads and Configuration stays null.
             var services = host.Services;
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()

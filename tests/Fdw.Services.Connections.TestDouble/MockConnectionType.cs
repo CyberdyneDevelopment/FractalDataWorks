@@ -11,7 +11,7 @@ namespace Fdw.Services.Connections.TestDouble;
 /// <remarks>
 /// <para>
 /// Why an option rather than a bare configuration class: a schema declaring
-/// <c>"ServiceOptionType": "MockConnection"</c> is resolved by
+/// <c>"Implementation": "MockConnection"</c> is resolved by
 /// <c>ConnectionTypes.ByName</c>, and a configuration type alone registers nothing. The
 /// configuration used to carry only <c>[ManagedConfiguration]</c> and live in the test assembly, where
 /// no module initializer could ever reach it — the generator scans referenced assemblies, never the

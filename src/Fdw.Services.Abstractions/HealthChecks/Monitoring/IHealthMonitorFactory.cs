@@ -14,7 +14,7 @@ public interface IHealthMonitorFactory
 /// Factory contract for creating <see cref="IHealthMonitorService"/> instances from a typed
 /// configuration. One factory per registered <c>[Implementation]</c> ("Local", "HttpClient", …);
 /// the domain provider dispatches to the factory matching the configuration's
-/// <c>ServiceOptionType</c>.
+/// <c>Implementation</c>.
 /// </summary>
 /// <typeparam name="TService">The health monitor service type this factory creates.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type this factory requires.</typeparam>

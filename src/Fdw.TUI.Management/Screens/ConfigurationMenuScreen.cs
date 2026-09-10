@@ -590,7 +590,7 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         {
             var row = new ListRowModel { Id = notification.Name };
             row.SetValue(ColumnName, notification.Name);
-            row.SetValue(ColumnType, notification.ServiceOptionType);
+            row.SetValue(ColumnType, notification.Implementation);
             row.SetValue(ColumnEnabled, DescribeEnabled(notification.IsEnabled));
             row.SetValue(ColumnDescription, notification.Description);
             row.Status = DescribeEnabledStatus(notification.IsEnabled);

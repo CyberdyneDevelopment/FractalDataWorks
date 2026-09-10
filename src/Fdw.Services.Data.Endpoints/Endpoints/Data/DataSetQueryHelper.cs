@@ -89,7 +89,7 @@ internal static class DataSetQueryHelper
         Description = config.Description,
         Category = config.Category,
         Version = config.Version,
-        ServiceOptionType = config.Implementation,
+        Implementation = config.Implementation,
         FederationStrategy = config.FederationStrategy,
         TransformExpression = config.TransformExpression,
         SourceDataSetName = config.SourceDataSetName,
@@ -333,9 +333,9 @@ internal static class DataSetQueryHelper
     /// that a non-Federated dataset does not carry one.
     /// </summary>
     internal static IGenericResult<bool> ValidateFederationStrategy(
-        string? serviceOptionType, string? federationStrategy, string dataSetName, ILogger logger)
+        string? implementation, string? federationStrategy, string dataSetName, ILogger logger)
     {
-        var isFederated = string.Equals(serviceOptionType, "Federated", StringComparison.OrdinalIgnoreCase);
+        var isFederated = string.Equals(implementation, "Federated", StringComparison.OrdinalIgnoreCase);
 
         if (isFederated)
         {
@@ -357,7 +357,7 @@ internal static class DataSetQueryHelper
         {
             return GenericResult<bool>.Failure(
                 DataSetsResultCodes.FederationStrategyNotAllowed, logger,
-                ResultDetails.Create("name", dataSetName, "serviceOptionType", serviceOptionType ?? string.Empty));
+                ResultDetails.Create("name", dataSetName, "implementation", implementation ?? string.Empty));
         }
 
         return GenericResult<bool>.Success(true);

@@ -11,7 +11,7 @@ namespace Fdw.Aegis.McpServer.Tests;
 /// Covers the REAL startup deserialization path — <c>AegisHostRegistration.LoadSchema</c> plus the
 /// three STJ converters (Command / SecretManager / Connection) — that <c>Program.cs</c> runs at boot.
 /// The non-exposure suite builds its schema in-code, so this is the only place the polymorphic
-/// <c>ServiceOptionType</c> discriminator dispatch is exercised end to end.
+/// <c>Implementation</c> discriminator dispatch is exercised end to end.
 /// </summary>
 [Trait("Category", "Security")]
 public sealed class SchemaLoadTests
@@ -23,16 +23,16 @@ public sealed class SchemaLoadTests
         {
           "ConfigurationSchema": {
             "SecretManagers": [
-              { "Name": "EnvSecrets", "ServiceOptionType": "Synthetic", "Configuration": { "Prefix": "FDW_SECRET_" } }
+              { "Name": "EnvSecrets", "Implementation": "Synthetic", "Configuration": { "Prefix": "FDW_SECRET_" } }
             ],
             "Connections": [
-              { "Name": "synthetic-echo", "ServiceOptionType": "MockConnection", "Configuration": { "Root": "config-data" } }
+              { "Name": "synthetic-echo", "Implementation": "MockConnection", "Configuration": { "Root": "config-data" } }
             ],
             "Commands": [
               {
                 "Name": "echo_credential",
                 "ConnectionName": "synthetic-echo",
-                "ServiceOptionType": "PreApproved",
+                "Implementation": "PreApproved",
                 "Configuration": {
                   "SecretManagerName": "EnvSecrets",
                   "SecretKeyName": "AEGIS_SYNTHETIC_TOKEN",

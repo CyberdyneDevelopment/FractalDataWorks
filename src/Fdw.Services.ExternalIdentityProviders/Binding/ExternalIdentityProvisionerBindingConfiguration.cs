@@ -11,7 +11,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// Flat selector row binding a (<see cref="TenantId"/>, <see cref="ProviderName"/>) pair to the named
 /// <c>sec.ExternalIdentityProvisioner</c> that should handle first-login provisioning for that external
 /// identity provider, for that tenant. Persisted to <c>sec.ExternalIdentityProvisionerBinding</c>. A
-/// root configuration — no typed body, no <c>ServiceOptionType</c> discriminator.
+/// root configuration — no typed body, no <c>Implementation</c> discriminator.
 /// </summary>
 /// <remarks>
 /// <see cref="TenantId"/> null means the global/system binding. Matching is EXACT (TenantId, ProviderName)

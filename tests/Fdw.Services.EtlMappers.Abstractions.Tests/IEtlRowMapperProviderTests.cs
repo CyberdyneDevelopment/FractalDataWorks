@@ -54,7 +54,7 @@ public class IEtlRowMapperProviderTests
         var parameters = method.GetParameters();
         parameters.Length.ShouldBe(2);
         parameters[0].ParameterType.ShouldBe(typeof(string));
-        parameters[0].Name.ShouldBe("serviceOptionType");
+        parameters[0].Name.ShouldBe("implementation");
         parameters[1].ParameterType.ShouldBe(typeof(IEtlRowMapperFactory));
         parameters[1].Name.ShouldBe("factory");
     }

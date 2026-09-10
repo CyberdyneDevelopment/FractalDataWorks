@@ -94,7 +94,7 @@ public sealed class RecursiveCascadeSaveTests
     [Trait("Category", "Cascade")]
     public async Task GetFailsLoudWhenKindHasNoRegisteredTypedProvider()
     {
-        // Arrange — header row carries ServiceOptionType "Default" (TestRoot's discriminator).
+        // Arrange — header row carries Implementation "Default" (TestRoot's discriminator).
         var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
         var gateway = new HeaderReturningGateway(header);
         var provider = new TestRootDomainProvider(GatewayProviderFor(gateway));
@@ -165,9 +165,6 @@ public sealed class RecursiveCascadeSaveTests
         public string Domain => "TestRoot";
         public string? Implementation { get; set; } = "Default";
         IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
-        public string SectionName => "TestRoot";
-        public string ServiceType => "TestRoot";
-        public string? ServiceOptionType => "Default";
 
         /// <summary>The typed body whose own child collections must also cascade.</summary>
         public ITestBodyConfiguration? Configuration { get; set; }
@@ -179,9 +176,6 @@ public sealed class RecursiveCascadeSaveTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestBody";
-        public string ServiceType => "TestRoot";
-        public string? ServiceOptionType => "Default";
 
         /// <summary>FK to the root, set by the cascade (Strip(TestRootConfiguration)+"Id").</summary>
         public Guid TestRootId { get; set; }
@@ -195,9 +189,6 @@ public sealed class RecursiveCascadeSaveTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestOp";
-        public string ServiceType => "TestRoot";
-        public string? ServiceOptionType => "Default";
 
         /// <summary>FK to the typed body (immediate owner), set by the cascade (Strip(TestBodyConfiguration)+"Id").</summary>
         public Guid TestBodyId { get; set; }
@@ -211,9 +202,6 @@ public sealed class RecursiveCascadeSaveTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestMap";
-        public string ServiceType => "TestRoot";
-        public string? ServiceOptionType => "Default";
 
         /// <summary>FK to the parent operation, set by the cascade (Strip(TestOpConfiguration)+"Id").</summary>
         public Guid TestOpId { get; set; }

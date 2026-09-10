@@ -46,7 +46,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         // Access via the non-generic IPlatformServiceProvider interface
         IPlatformServiceProvider explicitProvider = _provider;
 
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var testService = new TestService(NullLogger<TestService>.Instance, config);
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
@@ -74,7 +74,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     {
         IPlatformServiceProvider explicitProvider = _provider;
 
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
@@ -118,7 +118,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         IPlatformServiceProvider explicitProvider = _provider;
         var id = Guid.NewGuid();
 
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         var testService = new TestService(NullLogger<TestService>.Instance, config);
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
@@ -147,7 +147,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
         IPlatformServiceProvider explicitProvider = _provider;
         var id = Guid.NewGuid();
 
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
@@ -188,7 +188,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     {
         var id = Guid.NewGuid();
         // Config that does not implement IGenericConfiguration Name property explicitly
-        var config = new TestConfiguration { Id = id, Name = null!, ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = null!, Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
@@ -211,7 +211,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task GetByNameWithFactoryCreateFailureReturnsCorrectMessages()
     {
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
@@ -234,7 +234,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     public async Task GetByIdWithFactoryCreateFailureReturnsCorrectMessages()
     {
         var id = Guid.NewGuid();
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))

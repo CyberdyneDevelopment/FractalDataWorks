@@ -527,7 +527,7 @@ public class DefaultConfigurationProviderTests
         public string Name { get; set; } = string.Empty;
         public string SectionName => "TestSection";
         public string ServiceType => "Test";
-        public string? ServiceOptionType => "Default";
+        public string? Implementation => "Default";
         public string? Description { get; init; }
     }
 
@@ -544,7 +544,7 @@ public class DefaultConfigurationProviderTests
         public string Name { get; set; } = string.Empty;
         public string SectionName => "TestKvp";
         public string ServiceType => "TestKvp";
-        public string? ServiceOptionType => "Default";
+        public string? Implementation => "Default";
 
         [ConfigurationChildTable("TestKvpChild")]
         public IDictionary<string, string?> Properties { get; set; } = new Dictionary<string, string?>(StringComparer.Ordinal);
@@ -563,7 +563,7 @@ public class DefaultConfigurationProviderTests
         public string Name { get; set; } = string.Empty;
         public string SectionName => "TestContainer";
         public string ServiceType => "TestContainer";
-        public string? ServiceOptionType => "Default";
+        public string? Implementation => "Default";
 
         public List<TestContainerFieldConfiguration> Fields { get; set; } = [];
     }
@@ -575,7 +575,7 @@ public class DefaultConfigurationProviderTests
         public string Name { get; set; } = string.Empty;
         public string SectionName => "TestContainerField";
         public string ServiceType => "TestContainer";
-        public string? ServiceOptionType => null;
+        public string? Implementation => null;
 
         // Owner FK — set by CascadeCollections via generated SetValue("TestContainerId", owner.Id).
         public Guid TestContainerId { get; set; }

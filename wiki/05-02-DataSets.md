@@ -87,14 +87,14 @@ public sealed class CustomerMetricsDataSet : DataSetTypeBase
 
 Best for: Ops-managed configuration, CI/CD pipelines.
 
-DataSet entities live under the `data` schema in ConfigurationDb (`data.DataSet` parent + child tables `data.DataSetField`, `data.DataSetKeyField`, `data.DataSetSource`, `data.DataSetFieldMapping`, `data.DataSetJoin`, `data.DataSetNote`, `data.DataSetFieldNote`). The parent row carries `Id` (logical identity), `Name`, `ServiceOptionType`, `Version`, `Category`, `RecordTypeName`, version/audit columns, and tenant/visibility scoping.
+DataSet entities live under the `data` schema in ConfigurationDb (`data.DataSet` parent + child tables `data.DataSetField`, `data.DataSetKeyField`, `data.DataSetSource`, `data.DataSetFieldMapping`, `data.DataSetJoin`, `data.DataSetNote`, `data.DataSetFieldNote`). The parent row carries `Id` (logical identity), `Name`, `Implementation`, `Version`, `Category`, `RecordTypeName`, version/audit columns, and tenant/visibility scoping.
 
 Example SQL seed (mirror the idempotent pattern from `databases/ConfigurationDb/seed/*`):
 
 ```sql
 DECLARE @DataSetId UNIQUEIDENTIFIER = NEWID();
 
-INSERT INTO data.DataSet (Id, Name, ServiceOptionType, Description, Version, Category, RecordTypeName)
+INSERT INTO data.DataSet (Id, Name, Implementation, Description, Version, Category, RecordTypeName)
 VALUES (@DataSetId, 'CustomerMetrics_Seed', 'Default',
         'Customer data configured via SQL', '1.0', 'CRM',
         'ReferenceSolution.Domain.Models.Customer, ReferenceSolution.Domain');

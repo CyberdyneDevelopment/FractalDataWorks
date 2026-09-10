@@ -56,7 +56,7 @@ public sealed class ApiClientBaseUrlResolutionTests
             => Get(string.Empty, cancellationToken);
 
         public Task<IGenericResult> Save<T>(
-            string serviceOptionType, string name, T implementationConfiguration,
+            string implementation, string name, T implementationConfiguration,
             CancellationToken cancellationToken = default)
             where T : IConnectionImplementationConfiguration
             => Task.FromResult(GenericResult.Success());

@@ -139,7 +139,7 @@ erDiagram
         uniqueidentifier RowId PK
         uniqueidentifier Id
         nvarchar(256) Name
-        nvarchar(50) ServiceOptionType
+        nvarchar(50) Implementation
         bit IsCurrent
         bit IsDeleted
     }
@@ -268,7 +268,7 @@ The generator emits a partial class implementing `IConfigurationDdlProvider`, re
 `DdlDefinition` — **not** a `.sql` script. Conceptually the parent and typed-body tables look like:
 
 ```text
-conn.Connection        (header)  RowId PK [NEWID()], Id, Name, ServiceOptionType, IsCurrent, IsDeleted, audit…
+conn.Connection        (header)  RowId PK [NEWID()], Id, Name, Implementation, IsCurrent, IsDeleted, audit…
 conn.MsSqlConnection   (body)    RowId PK [NEWID()], Id, ConnectionId, Server, Database, Port, AuthenticationType
 ```
 

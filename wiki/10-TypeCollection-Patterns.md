@@ -363,7 +363,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     {
         // Why: DataSetTypes holds the static strategy KINDS (Simple/Compound/Federated) — it is NOT a
         // registry of dataset instances. Instances are resolved live from the configuration provider;
-        // DataGatewayService dispatches on the authored ServiceOptionType. No per-instance registration
+        // DataGatewayService dispatches on the authored Implementation. No per-instance registration
         // happens here.
     }
 }

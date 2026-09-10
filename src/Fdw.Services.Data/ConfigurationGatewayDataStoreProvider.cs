@@ -199,7 +199,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         {
             if (string.IsNullOrEmpty(ds.Implementation))
             {
-                DataStoreTypesLog.DataStoreMissingServiceOptionType(logger, ds.Name);
+                DataStoreTypesLog.DataStoreMissingImplementation(logger, ds.Name);
                 continue;
             }
 

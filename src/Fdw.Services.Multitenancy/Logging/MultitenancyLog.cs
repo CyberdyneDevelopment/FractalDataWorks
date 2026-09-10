@@ -23,7 +23,7 @@ public static partial class MultitenancyLog
         ILogger logger);
 
     /// <summary>
-    /// Logs when <c>ConfigurationSchema.Multitenancy</c> names a ServiceOptionType that does not match
+    /// Logs when <c>ConfigurationSchema.Multitenancy</c> names a Implementation that does not match
     /// any registered <see cref="MultitenancyTypes"/> option.
     /// </summary>
     [MessageLogging(

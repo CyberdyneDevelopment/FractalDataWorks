@@ -680,42 +680,42 @@ public static partial class ConnectionProviderLogger
     [LoggerMessage(
         EventId = 7165,
         Level = LogLevel.Warning,
-        Message = "Connection header '{ConnectionName}' (type '{ServiceOptionType}') has no typed body configuration — cannot create connection")]
+        Message = "Connection header '{ConnectionName}' (type '{Implementation}') has no typed body configuration — cannot create connection")]
     public static partial void ComposedHeaderNoConfiguration(
         ILogger<ConnectionProvider> logger,
         string connectionName,
-        string serviceOptionType);
+        string implementation);
 
     /// <summary>Logs when no factory is registered for the service option type on the composed-header path.</summary>
     [LoggerMessage(
         EventId = 7166,
         Level = LogLevel.Error,
-        Message = "No factory registered for service option type '{ServiceOptionType}' (connection '{ConnectionName}') on composed-header path")]
+        Message = "No factory registered for service option type '{Implementation}' (connection '{ConnectionName}') on composed-header path")]
     public static partial void ComposedHeaderNoFactory(
         ILogger<ConnectionProvider> logger,
-        string serviceOptionType,
+        string implementation,
         string connectionName);
 
     /// <summary>Traces the composed-header factory.Create call.</summary>
     [LoggerMessage(
         EventId = 7167,
         Level = LogLevel.Trace,
-        Message = "Creating connection '{ConnectionName}' via composed-header factory (type '{ServiceOptionType}', body '{BodyType}')")]
+        Message = "Creating connection '{ConnectionName}' via composed-header factory (type '{Implementation}', body '{BodyType}')")]
     public static partial void ComposedHeaderCreating(
         ILogger<ConnectionProvider> logger,
         string connectionName,
-        string serviceOptionType,
+        string implementation,
         string bodyType);
 
     /// <summary>Traces successful connection creation on the composed-header path.</summary>
     [LoggerMessage(
         EventId = 7168,
         Level = LogLevel.Trace,
-        Message = "Connection '{ConnectionName}' created from composed header (type '{ServiceOptionType}')")]
+        Message = "Connection '{ConnectionName}' created from composed header (type '{Implementation}')")]
     public static partial void ComposedHeaderCreated(
         ILogger<ConnectionProvider> logger,
         string connectionName,
-        string serviceOptionType);
+        string implementation);
 
     /// <summary>
     /// Logs when the provider subscribes to system (ctrl) configuration change notifications.
@@ -728,7 +728,7 @@ public static partial class ConnectionProviderLogger
     public static partial void SubscribedToSystemConfigurationChanges(ILogger<ConnectionProvider> logger);
 
     /// <summary>
-    /// Logs when a connection header carries no ServiceOptionType, so there is nothing to dispatch on.
+    /// Logs when a connection header carries no Implementation, so there is nothing to dispatch on.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="connectionName">The connection being resolved.</param>
@@ -736,44 +736,44 @@ public static partial class ConnectionProviderLogger
     [MessageLogging(
         EventId = 71006,
         Level = LogLevel.Error,
-        Message = "Cannot resolve connection '{connectionName}' — its configuration header declares no ServiceOptionType, so no connection kind can be selected")]
-    public static partial IGenericMessage ServiceOptionTypeMissing(
+        Message = "Cannot resolve connection '{connectionName}' — its configuration header declares no Implementation, so no connection kind can be selected")]
+    public static partial IGenericMessage ImplementationMissing(
         ILogger<ConnectionProvider> logger,
         string connectionName);
 
     /// <summary>
-    /// Logs when a connection header has a ServiceOptionType but no typed body was composed onto it.
+    /// Logs when a connection header has a Implementation but no typed body was composed onto it.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="connectionName">The connection being resolved.</param>
-    /// <param name="serviceOptionType">The connection's ServiceOptionType.</param>
+    /// <param name="implementation">The connection's Implementation.</param>
     /// <returns>A generic message containing the error information.</returns>
     [MessageLogging(
         EventId = 71011,
         Level = LogLevel.Error,
-        Message = "Cannot resolve connection '{connectionName}' — its '{serviceOptionType}' typed body is missing from the composed header")]
+        Message = "Cannot resolve connection '{connectionName}' — its '{implementation}' typed body is missing from the composed header")]
     public static partial IGenericMessage TypedBodyMissing(
         ILogger<ConnectionProvider> logger,
         string connectionName,
-        string serviceOptionType);
+        string implementation);
 
     /// <summary>
-    /// Logs when the factory registered for a connection's ServiceOptionType does not implement
+    /// Logs when the factory registered for a connection's Implementation does not implement
     /// <see cref="Fdw.Services.Connections.Abstractions.IConnectionFactory"/>, so it cannot receive
     /// the FDW secret-manager provider.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="connectionName">The connection being resolved.</param>
-    /// <param name="serviceOptionType">The connection's ServiceOptionType.</param>
+    /// <param name="implementation">The connection's Implementation.</param>
     /// <returns>A generic message containing the error information.</returns>
     [MessageLogging(
         EventId = 71007,
         Level = LogLevel.Error,
-        Message = "Cannot resolve connection '{connectionName}' — factory for '{serviceOptionType}' does not implement IConnectionFactory")]
+        Message = "Cannot resolve connection '{connectionName}' — factory for '{implementation}' does not implement IConnectionFactory")]
     public static partial IGenericMessage FactoryNotConnectionFactory(
         ILogger<ConnectionProvider> logger,
         string connectionName,
-        string serviceOptionType);
+        string implementation);
 
     /// <summary>
     /// Logs when a connection is requested before the header configuration provider has been wired

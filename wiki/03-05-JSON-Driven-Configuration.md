@@ -40,7 +40,7 @@ This mirrors the real `Reference.Api/configurationSchema.json`: two connections
     "Connections": [
       {
         "Name": "ConfigurationDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "sql.example.local",
           "Database": "ConfigurationDb",
@@ -56,7 +56,7 @@ This mirrors the real `Reference.Api/configurationSchema.json`: two connections
       },
       {
         "Name": "AuthDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "sql.example.local",
           "Database": "AuthDb",
@@ -74,7 +74,7 @@ This mirrors the real `Reference.Api/configurationSchema.json`: two connections
     "SecretManagers": [
       {
         "Name": "EnvSecrets",
-        "ServiceOptionType": "EnvironmentVariable",
+        "Implementation": "EnvironmentVariable",
         "Configuration": {
           "Prefix": "FDW_SECRET_"
         }
@@ -110,7 +110,7 @@ var loggerFactory = builder.AddFrameworkSerilog("Reference.Api");
 
 // 2. ConfigurationGateway — deserialises configurationSchema.json via System.Text.Json so the
 //    polymorphic ConnectionConfiguration / SecretManagerConfiguration bodies dispatch to their
-//    concrete subtypes on the ServiceOptionType discriminator. The loader is the gateway plus STJ —
+//    concrete subtypes on the Implementation discriminator. The loader is the gateway plus STJ —
 //    there is no MsSqlConfigurationSource / SqlServerConfigurationProvider on this path.
 builder.Services.AddConfigurationGateway<MsSqlConnectionFactory, EnvironmentVariableSecretManager>(
     "configurationSchema.json");

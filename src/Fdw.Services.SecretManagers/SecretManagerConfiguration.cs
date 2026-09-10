@@ -41,10 +41,10 @@ public partial class SecretManagerConfiguration : ISecretManagerConfiguration
     /// Initializes a new instance of the <see cref="SecretManagerConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceOptionType">The service option type (e.g., "EnvironmentVariable", "AzureKeyVault").</param>
-    protected SecretManagerConfiguration(string? serviceOptionType)
+    /// <param name="implementation">The service option type (e.g., "EnvironmentVariable", "AzureKeyVault").</param>
+    protected SecretManagerConfiguration(string? implementation)
     {
-        Implementation = serviceOptionType;
+        Implementation = implementation;
     }
 
 

@@ -13,7 +13,7 @@ namespace Fdw.Services.Connections;
 /// </summary>
 /// <remarks>
 /// It reads <c>conn.Connection</c> to find a configured connection by name or id, takes the
-/// <c>ServiceOptionType</c> that row names, and hands the request to the implementation provider
+/// <c>Implementation</c> that row names, and hands the request to the implementation provider
 /// registered under it — <c>MsSql</c> to <c>conn.MsSqlConnection</c>, <c>Sqlite</c> to
 /// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
 /// </remarks>

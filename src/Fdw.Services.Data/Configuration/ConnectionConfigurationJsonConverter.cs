@@ -8,20 +8,20 @@ namespace Fdw.Services.Data.Configuration;
 
 /// <summary>
 /// STJ JsonConverter for <see cref="ConnectionConfiguration"/> that dispatches to the correct
-/// concrete derived type using the <c>ServiceOptionType</c> discriminator field.
+/// concrete derived type using the <c>Implementation</c> discriminator field.
 /// </summary>
 /// <remarks>
 /// Why: <see cref="ConnectionConfiguration"/> is the base type in <c>Services.Connections</c>,
 /// but derived types (<c>MsSqlConnectionConfiguration</c>, etc.) live in separate packages that
 /// <c>Services.Connections</c> cannot reference. <c>[JsonPolymorphic]</c> attributes on the base
 /// would create circular package dependencies. Instead, this converter reads
-/// <c>ServiceOptionType</c> at the start of each object, resolves the concrete <see cref="Type"/>
+/// <c>Implementation</c> at the start of each object, resolves the concrete <see cref="Type"/>
 /// from <see cref="ConnectionTypes"/> (populated by module initializers at assembly load time),
 /// and delegates deserialization to the resolved type — zero hardcoded type names.
 /// </remarks>
 public sealed class ConnectionConfigurationJsonConverter : JsonConverter<ConnectionConfiguration>
 {
-    private const string DiscriminatorPropertyName = "ServiceOptionType";
+    private const string DiscriminatorPropertyName = "Implementation";
     private const string SettingsPropertyName = "Configuration";
 
     private JsonSerializerOptions? _innerOptions;

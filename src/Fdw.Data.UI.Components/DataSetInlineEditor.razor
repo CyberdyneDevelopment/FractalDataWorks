@@ -223,7 +223,7 @@
         var request = new CreateDataSetPayload
         {
             Name = _name.Trim(),
-            ServiceOptionType = "Standard",
+            Implementation = "Standard",
             Sources = string.IsNullOrWhiteSpace(_dataStoreName)
                 ? []
                 : [new CreateDataSetSourcePayload

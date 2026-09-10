@@ -40,11 +40,11 @@ public partial class DataVaultConfiguration : IDataVaultConfiguration
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
     /// <param name="serviceType">The service type (domain) — always "DataVault".</param>
-    /// <param name="serviceOptionType">The service option type (e.g., "Default").</param>
+    /// <param name="implementation">The service option type (e.g., "Default").</param>
     /// <param name="sectionName">The configuration section name for binding.</param>
-    protected DataVaultConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    protected DataVaultConfiguration(string serviceType, string? implementation, string sectionName)
     {
-        Implementation = serviceOptionType;
+        Implementation = implementation;
     }
 
 

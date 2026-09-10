@@ -51,7 +51,7 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
         {
             Id = notification.Id,
             Name = notification.Name,
-            ServiceOptionType = notification.Implementation,
+            Implementation = notification.Implementation,
             Description = notification.Description
         };
 

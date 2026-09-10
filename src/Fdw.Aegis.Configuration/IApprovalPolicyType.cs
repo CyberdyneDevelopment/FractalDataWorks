@@ -4,7 +4,7 @@ using Fdw.Collections;
 namespace Fdw.Aegis.Configuration;
 
 /// <summary>
-/// A discriminator option for the <c>AegisCommandConfiguration.ServiceOptionType</c> column,
+/// A discriminator option for the <c>AegisCommandConfiguration.Implementation</c> column,
 /// resolving to the .NET type of the corresponding typed-body approval-policy configuration.
 /// </summary>
 /// <remarks>

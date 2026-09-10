@@ -49,7 +49,7 @@ public static partial class ExternalIdentityProvisionerLog
         Message = "Chain step {executionOrder}: provisioner '{provisionerName}' returned NotFound — falling through to next step.")]
     public static partial IGenericMessage StepNotFoundFallThrough(ILogger logger, int executionOrder, string provisionerName);
 
-    /// <summary>Logs that a chain step's resolved sibling is itself the Chained ServiceOptionType — rejected, no recursion.</summary>
+    /// <summary>Logs that a chain step's resolved sibling is itself the Chained Implementation — rejected, no recursion.</summary>
     [MessageLogging(
         EventId = 61000,
         Level = LogLevel.Error,
@@ -92,8 +92,8 @@ public static partial class ExternalIdentityProvisionerLog
     [MessageLogging(
         EventId = 11004,
         Level = LogLevel.Information,
-        Message = "External identity provisioner registered: serviceOptionType='{serviceOptionType}'.")]
-    public static partial IGenericMessage ProviderRegistered(ILogger logger, string serviceOptionType);
+        Message = "External identity provisioner registered: implementation='{implementation}'.")]
+    public static partial IGenericMessage ProviderRegistered(ILogger logger, string implementation);
 
     // ── Binding resolution ────────────────────────────────────────────────────────────
 

@@ -131,14 +131,14 @@ public static partial class DataVaultLog
     public static partial IGenericMessage EmptyVaultRequest(ILogger logger);
 
     /// <summary>
-    /// Logs that a typed cache was registered for the given vault ServiceOptionType.
+    /// Logs that a typed cache was registered for the given vault Implementation.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceOptionType">The vault ServiceOptionType the typed cache was registered for.</param>
+    /// <param name="implementation">The vault Implementation the typed cache was registered for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11001, Level = LogLevel.Debug,
-        Message = "Registered typed cache for vault ServiceOptionType '{serviceOptionType}'")]
-    public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string serviceOptionType);
+        Message = "Registered typed cache for vault Implementation '{implementation}'")]
+    public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string implementation);
 
     /// <summary>
     /// Logs that loading the typed vault body failed for the given vault and service option type.
@@ -146,22 +146,22 @@ public static partial class DataVaultLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="exception">The exception that caused the typed body load to fail.</param>
     /// <param name="vaultName">The name of the vault whose typed body failed to load.</param>
-    /// <param name="serviceOptionType">The service option type of the typed body that failed to load.</param>
+    /// <param name="implementation">The service option type of the typed body that failed to load.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 71001, Level = LogLevel.Error,
-        Message = "Failed to load typed vault body for '{vaultName}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, System.Exception exception, string vaultName, string serviceOptionType);
+        Message = "Failed to load typed vault body for '{vaultName}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, System.Exception exception, string vaultName, string implementation);
 
     /// <summary>
     /// Logs that the typed vault body was loaded for the given vault and service option type.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="vaultName">The name of the vault whose typed body was loaded.</param>
-    /// <param name="serviceOptionType">The service option type of the loaded typed body.</param>
+    /// <param name="implementation">The service option type of the loaded typed body.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11002, Level = LogLevel.Trace,
-        Message = "Typed vault body loaded for '{vaultName}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string vaultName, string serviceOptionType);
+        Message = "Typed vault body loaded for '{vaultName}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string vaultName, string implementation);
 
     /// <summary>
     /// Logs that a typed configuration lookup has started for the named vault.

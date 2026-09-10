@@ -92,7 +92,7 @@
                                a fabricated (and possibly stale) list. *@
                             @if (wizCtx.DataSetTypes.Count > 0)
                             {
-                                <select @bind="_model.ServiceOptionType" class="fin">
+                                <select @bind="_model.Implementation" class="fin">
                                     @foreach (var dst in wizCtx.DataSetTypes)
                                     {
                                         <option value="@dst.TypeName">@(string.IsNullOrEmpty(dst.DisplayName) ? dst.TypeName : dst.DisplayName)</option>
@@ -581,7 +581,7 @@
         _model.Description = src.Description;
         _model.Version = src.Version;
         _model.Category = src.Category;
-        _model.ServiceOptionType = src.ServiceOptionType;
+        _model.Implementation = src.Implementation;
         _model.RecordTypeName = src.RecordTypeName;
 
         _model.Fields = src.Fields

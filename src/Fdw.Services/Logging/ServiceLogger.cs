@@ -165,32 +165,32 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs searching a specific service option type for configuration.
     /// </summary>
-    [MessageLogging(EventId = 11025, Level = LogLevel.Trace, Message = "  Searching '{serviceOptionType}' configuration provider for '{identifier}'")]
-    public static partial IGenericMessage SearchingConfigProvider(ILogger logger, string serviceOptionType, string identifier);
+    [MessageLogging(EventId = 11025, Level = LogLevel.Trace, Message = "  Searching '{implementation}' configuration provider for '{identifier}'")]
+    public static partial IGenericMessage SearchingConfigProvider(ILogger logger, string implementation, string identifier);
 
     /// <summary>
     /// Logs when configuration is found in a provider.
     /// </summary>
-    [MessageLogging(EventId = 11026, Level = LogLevel.Debug, Message = "  Found configuration in '{serviceOptionType}' provider: '{name}'")]
-    public static partial IGenericMessage ConfigurationFoundInProvider(ILogger logger, string serviceOptionType, string name);
+    [MessageLogging(EventId = 11026, Level = LogLevel.Debug, Message = "  Found configuration in '{implementation}' provider: '{name}'")]
+    public static partial IGenericMessage ConfigurationFoundInProvider(ILogger logger, string implementation, string name);
 
     /// <summary>
     /// Logs when configuration is not in a specific provider (Trace - expected during search).
     /// </summary>
-    [MessageLogging(EventId = 11027, Level = LogLevel.Trace, Message = "  Not found in '{serviceOptionType}' provider")]
-    public static partial IGenericMessage ConfigurationNotInProvider(ILogger logger, string serviceOptionType);
+    [MessageLogging(EventId = 11027, Level = LogLevel.Trace, Message = "  Not found in '{implementation}' provider")]
+    public static partial IGenericMessage ConfigurationNotInProvider(ILogger logger, string implementation);
 
     /// <summary>
     /// Logs when factory lookup succeeds.
     /// </summary>
-    [MessageLogging(EventId = 11028, Level = LogLevel.Trace, Message = "  Factory found for '{serviceOptionType}'")]
-    public static partial IGenericMessage FactoryLookupSucceeded(ILogger logger, string serviceOptionType);
+    [MessageLogging(EventId = 11028, Level = LogLevel.Trace, Message = "  Factory found for '{implementation}'")]
+    public static partial IGenericMessage FactoryLookupSucceeded(ILogger logger, string implementation);
 
     /// <summary>
     /// Logs when service is created successfully.
     /// </summary>
-    [MessageLogging(EventId = 11029, Level = LogLevel.Debug, Message = "Service created: '{name}' (type: {serviceOptionType})")]
-    public static partial IGenericMessage ServiceCreated(ILogger logger, string name, string serviceOptionType);
+    [MessageLogging(EventId = 11029, Level = LogLevel.Debug, Message = "Service created: '{name}' (type: {implementation})")]
+    public static partial IGenericMessage ServiceCreated(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logs when service creation fails.
@@ -215,8 +215,8 @@ public static partial class ServiceLogger
     /// <summary>
     /// Logs when a service is resolved via parent config (direct lookup, no provider scan).
     /// </summary>
-    [MessageLogging(EventId = 11032, Level = LogLevel.Debug, Message = "Resolved '{name}' via parent config: ServiceOptionType='{serviceOptionType}'")]
-    public static partial IGenericMessage ResolvedViaParentConfig(ILogger logger, string name, string serviceOptionType);
+    [MessageLogging(EventId = 11032, Level = LogLevel.Debug, Message = "Resolved '{name}' via parent config: Implementation='{implementation}'")]
+    public static partial IGenericMessage ResolvedViaParentConfig(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logs when no parent provider is registered and a service lookup is attempted.
@@ -225,10 +225,10 @@ public static partial class ServiceLogger
     public static partial IGenericMessage NoDomainConfigurationProviderRegistered(ILogger logger, string identifier);
 
     /// <summary>
-    /// Logs when no configuration provider is registered for a resolved ServiceOptionType.
+    /// Logs when no configuration provider is registered for a resolved Implementation.
     /// </summary>
-    [MessageLogging(EventId = 61005, Level = LogLevel.Error, Message = "No configuration provider registered for ServiceOptionType '{serviceOptionType}' — cannot resolve '{identifier}'")]
-    public static partial IGenericMessage NoConfigurationProviderRegistered(ILogger logger, string identifier, string serviceOptionType);
+    [MessageLogging(EventId = 61005, Level = LogLevel.Error, Message = "No configuration provider registered for Implementation '{implementation}' — cannot resolve '{identifier}'")]
+    public static partial IGenericMessage NoConfigurationProviderRegistered(ILogger logger, string identifier, string implementation);
 
     /// <summary>
     /// Logs when a parent configuration provider is registered.
@@ -237,16 +237,16 @@ public static partial class ServiceLogger
     public static partial IGenericMessage DomainConfigurationProviderRegistered(ILogger logger);
 
     /// <summary>
-    /// Logs when a configuration entry has no ServiceOptionType set.
+    /// Logs when a configuration entry has no Implementation set.
     /// </summary>
-    [MessageLogging(EventId = 60000, Level = LogLevel.Error, Message = "Configuration '{identifier}' has no ServiceOptionType — cannot resolve factory")]
-    public static partial IGenericMessage ServiceOptionTypeMissing(ILogger logger, string identifier);
+    [MessageLogging(EventId = 60000, Level = LogLevel.Error, Message = "Configuration '{identifier}' has no Implementation — cannot resolve factory")]
+    public static partial IGenericMessage ImplementationMissing(ILogger logger, string identifier);
 
     /// <summary>
     /// Logs the inputs to a typed-configuration lookup before it runs.
     /// </summary>
-    [MessageLogging(EventId = 11038, Level = LogLevel.Trace, Message = "Creating '{name}' from typed configuration: ServiceOptionType='{serviceOptionType}', domainConfigurationId={domainConfigurationId}")]
-    public static partial IGenericMessage CreatingFromTypedConfiguration(ILogger logger, string name, string serviceOptionType, Guid domainConfigurationId);
+    [MessageLogging(EventId = 11038, Level = LogLevel.Trace, Message = "Creating '{name}' from typed configuration: Implementation='{implementation}', domainConfigurationId={domainConfigurationId}")]
+    public static partial IGenericMessage CreatingFromTypedConfiguration(ILogger logger, string name, string implementation, Guid domainConfigurationId);
 
     /// <summary>
     /// Logs when the provider was constructed without the container it resolves factories from.
@@ -255,16 +255,16 @@ public static partial class ServiceLogger
     public static partial IGenericMessage ContainerNotSupplied(ILogger logger, string providerType);
 
     /// <summary>
-    /// Logs when a configuration's ServiceOptionType matches no registered option in the collection.
+    /// Logs when a configuration's Implementation matches no registered option in the collection.
     /// </summary>
-    [MessageLogging(EventId = 91010, Level = LogLevel.Error, Message = "No registered service type matches ServiceOptionType '{serviceOptionType}' for '{name}'")]
-    public static partial IGenericMessage NoServiceTypeForOption(ILogger logger, string serviceOptionType, string name);
+    [MessageLogging(EventId = 91010, Level = LogLevel.Error, Message = "No registered service type matches Implementation '{implementation}' for '{name}'")]
+    public static partial IGenericMessage NoServiceTypeForOption(ILogger logger, string implementation, string name);
 
     /// <summary>
     /// Logs when an option's factory type is not registered in the container.
     /// </summary>
-    [MessageLogging(EventId = 91011, Level = LogLevel.Error, Message = "Factory type '{factoryType}' for '{serviceOptionType}' is not registered in the container")]
-    public static partial IGenericMessage FactoryTypeNotResolved(ILogger logger, string factoryType, string serviceOptionType);
+    [MessageLogging(EventId = 91011, Level = LogLevel.Error, Message = "Factory type '{factoryType}' for '{implementation}' is not registered in the container")]
+    public static partial IGenericMessage FactoryTypeNotResolved(ILogger logger, string factoryType, string implementation);
 
     // ── The factory-registry lifecycle ──────────────────────────────────────────────────────────
 
@@ -277,43 +277,43 @@ public static partial class ServiceLogger
     /// registering on a derived option's behalf reports itself here, so the base's contribution and
     /// the option's own are distinguishable in the log rather than both reading as "the option".
     /// </remarks>
-    [MessageLogging(EventId = 11034, Level = LogLevel.Trace, Message = "Factory registration deferred by {declaringType} for service option '{serviceOptionType}': factory type '{factoryType}' resolves at provider construction")]
-    public static partial IGenericMessage FactoryRegistrationDeferred(ILogger logger, string declaringType, string serviceOptionType, string factoryType);
+    [MessageLogging(EventId = 11034, Level = LogLevel.Trace, Message = "Factory registration deferred by {declaringType} for service option '{implementation}': factory type '{factoryType}' resolves at provider construction")]
+    public static partial IGenericMessage FactoryRegistrationDeferred(ILogger logger, string declaringType, string implementation, string factoryType);
 
     /// <summary>
     /// Logs each deferred registration as the provider resolves it. Trace: one line per factory per
     /// provider instance, naming what was resolved and into which provider.
     /// </summary>
-    [MessageLogging(EventId = 11035, Level = LogLevel.Trace, Message = "{providerType} resolved factory '{factoryType}' for service option '{serviceOptionType}'")]
-    public static partial IGenericMessage FactoryResolvedIntoProvider(ILogger logger, string providerType, string factoryType, string serviceOptionType);
+    [MessageLogging(EventId = 11035, Level = LogLevel.Trace, Message = "{providerType} resolved factory '{factoryType}' for service option '{implementation}'")]
+    public static partial IGenericMessage FactoryResolvedIntoProvider(ILogger logger, string providerType, string factoryType, string implementation);
 
     /// <summary>
     /// Logs the outcome of draining the deferred registry into one provider instance. Debug: one
     /// line per provider instance, summarising what Trace listed individually.
     /// </summary>
-    [MessageLogging(EventId = 11036, Level = LogLevel.Debug, Message = "{providerType} drained {count} deferred factory registration(s): [{serviceOptionTypes}]")]
-    public static partial IGenericMessage ProviderFactoryRegistryDrained(ILogger logger, string providerType, int count, string serviceOptionTypes);
+    [MessageLogging(EventId = 11036, Level = LogLevel.Debug, Message = "{providerType} drained {count} deferred factory registration(s): [{implementations}]")]
+    public static partial IGenericMessage ProviderFactoryRegistryDrained(ILogger logger, string providerType, int count, string implementations);
 
     /// <summary>
     /// Logs that a provider is ready to serve.
     /// </summary>
-    [MessageLogging(EventId = 11037, Level = LogLevel.Debug, Message = "{providerType} ready: {count} service option(s) creatable — [{serviceOptionTypes}]")]
-    public static partial IGenericMessage ProviderReady(ILogger logger, string providerType, int count, string serviceOptionTypes);
+    [MessageLogging(EventId = 11037, Level = LogLevel.Debug, Message = "{providerType} ready: {count} service option(s) creatable — [{implementations}]")]
+    public static partial IGenericMessage ProviderReady(ILogger logger, string providerType, int count, string implementations);
 
     /// <summary>
     /// Logs that a declared factory type could not be resolved from the container. Warning: the
     /// option is loaded but unusable, which is a real defect for that kind and harmless for the rest.
     /// </summary>
-    [MessageLogging(EventId = 61005, Level = LogLevel.Warning, Message = "{providerType}: factory type '{factoryType}' for service option '{serviceOptionType}' did not resolve from the container — '{serviceOptionType}' will not be creatable")]
-    public static partial IGenericMessage FactoryTypeUnresolvable(ILogger logger, string providerType, string factoryType, string serviceOptionType);
+    [MessageLogging(EventId = 61005, Level = LogLevel.Warning, Message = "{providerType}: factory type '{factoryType}' for service option '{implementation}' did not resolve from the container — '{implementation}' will not be creatable")]
+    public static partial IGenericMessage FactoryTypeUnresolvable(ILogger logger, string providerType, string factoryType, string implementation);
 
     /// <summary>
     /// Logs a factory lookup that missed, naming what IS registered. Error: one request failed, and
     /// the registry contents are the single most useful fact for telling "never registered" apart
     /// from "registered under a different discriminator".
     /// </summary>
-    [MessageLogging(EventId = 61006, Level = LogLevel.Error, Message = "{providerType} has no factory for service option '{serviceOptionType}' (requested for '{name}'); registered: [{registered}]")]
-    public static partial IGenericMessage FactoryLookupMiss(ILogger logger, string providerType, string serviceOptionType, string name, string registered);
+    [MessageLogging(EventId = 61006, Level = LogLevel.Error, Message = "{providerType} has no factory for service option '{implementation}' (requested for '{name}'); registered: [{registered}]")]
+    public static partial IGenericMessage FactoryLookupMiss(ILogger logger, string providerType, string implementation, string name, string registered);
 
     /// <summary>
     /// Logs a provider constructed with an entirely empty factory registry. Critical: not one

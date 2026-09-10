@@ -14,7 +14,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </summary>
 /// <remarks>
 /// Physical binding record: one row per source in a DataSet. The strategy discriminator
-/// (Simple/Compound/Federated) lives on the parent <c>DataSetConfiguration.ServiceOptionType</c>,
+/// (Simple/Compound/Federated) lives on the parent <c>DataSetConfiguration.Implementation</c>,
 /// never on the source row.
 /// </remarks>
 [ExcludeFromCodeCoverage]

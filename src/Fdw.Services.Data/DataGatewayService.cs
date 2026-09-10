@@ -405,7 +405,7 @@ public sealed class DataGatewayService : IDataGateway
         {
             return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
-                    _logger, target.DataStore, "the connection declares no ServiceOptionType"));
+                    _logger, target.DataStore, "the connection declares no Implementation"));
         }
 
         if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.Implementation), ConnectionTypes.NotFound))
@@ -480,7 +480,7 @@ public sealed class DataGatewayService : IDataGateway
 
         if (string.IsNullOrWhiteSpace(config.Implementation))
             return GenericResult<T>.Failure(
-                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "DataSet configuration has no ServiceOptionType (strategy kind)"));
+                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "DataSet configuration has no Implementation (strategy kind)"));
 
         var strategy = DataSetTypes.ByName(config.Implementation);
         if (ReferenceEquals(strategy, DataSetTypes.NotFound))

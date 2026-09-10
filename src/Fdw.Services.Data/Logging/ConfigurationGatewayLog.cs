@@ -142,7 +142,7 @@ public static partial class ConfigurationGatewayLog
     /// <summary>Logged when the gateway is registered, naming the connection type it will use.</summary>
     [MessageLogging(EventId = 11014, Level = LogLevel.Information,
         Message = "ConfigurationGateway registered using connection type '{connectionType}' from '{schemaFile}'. "
-                + "To use a different type, set ServiceOptionType on the connection in that file and reference the "
+                + "To use a different type, set Implementation on the connection in that file and reference the "
                 + "package that provides it (e.g. ReferenceConnections.MsSql.ServiceType for 'MsSql'). "
                 + "Registered types: {registeredTypes}")]
     public static partial IGenericMessage RegisteredWithConnectionType(

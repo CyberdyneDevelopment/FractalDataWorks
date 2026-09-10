@@ -664,7 +664,7 @@ CREATE TABLE [conn].[Connection]
     [RowId] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWSEQUENTIALID(),  -- Version PK
     [Id] UNIQUEIDENTIFIER NOT NULL,                               -- Logical identity (durable)
     [Name] VARCHAR(200) NOT NULL,
-    [ServiceOptionType] VARCHAR(100) NOT NULL,
+    [Implementation] VARCHAR(100) NOT NULL,
     [IsCurrent] BIT NOT NULL DEFAULT 1,
     [IsDeleted] BIT NOT NULL DEFAULT 0,
     CONSTRAINT [PK_Connection] PRIMARY KEY ([RowId])

@@ -283,11 +283,11 @@ public static partial class DefaultConfigurationProviderLog
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The header configuration type name the typed provider was registered on.</param>
-    /// <param name="serviceOptionType">The discriminator the typed provider was registered for.</param>
+    /// <param name="implementation">The discriminator the typed provider was registered for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11007, Level = LogLevel.Trace,
-        Message = "Registered typed-body provider for {typeName} discriminator '{serviceOptionType}'")]
-    public static partial IGenericMessage TypedProviderRegistered(ILogger logger, string typeName, string serviceOptionType);
+        Message = "Registered typed-body provider for {typeName} discriminator '{implementation}'")]
+    public static partial IGenericMessage TypedProviderRegistered(ILogger logger, string typeName, string implementation);
 
     /// <summary>
     /// Logs that the typed body is being loaded for a header using its discriminator.
@@ -295,11 +295,11 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The header configuration type name whose typed body is being loaded.</param>
     /// <param name="name">The name of the header whose typed body is being loaded.</param>
-    /// <param name="serviceOptionType">The discriminator used to load the typed body.</param>
+    /// <param name="implementation">The discriminator used to load the typed body.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11008, Level = LogLevel.Trace,
-        Message = "Loading typed body for {typeName} '{name}' using discriminator '{serviceOptionType}'")]
-    public static partial IGenericMessage LoadingTypedBody(ILogger logger, string typeName, string name, string serviceOptionType);
+        Message = "Loading typed body for {typeName} '{name}' using discriminator '{implementation}'")]
+    public static partial IGenericMessage LoadingTypedBody(ILogger logger, string typeName, string name, string implementation);
 
     /// <summary>
     /// Logs that the typed body was successfully loaded and attached to a header.
@@ -307,11 +307,11 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The header configuration type name whose typed body was loaded.</param>
     /// <param name="name">The name of the header whose typed body was loaded.</param>
-    /// <param name="serviceOptionType">The discriminator used to load the typed body.</param>
+    /// <param name="implementation">The discriminator used to load the typed body.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11009, Level = LogLevel.Trace,
-        Message = "Typed body loaded for {typeName} '{name}' (discriminator '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string typeName, string name, string serviceOptionType);
+        Message = "Typed body loaded for {typeName} '{name}' (discriminator '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string typeName, string name, string implementation);
 
     /// <summary>
     /// Logs that a header carries no discriminator, so its typed body cannot be composed.
@@ -321,17 +321,17 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="name">The name of the header missing a discriminator.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11010, Level = LogLevel.Debug,
-        Message = "Header {typeName} '{name}' has no ServiceOptionType — typed body not composed")]
-    public static partial IGenericMessage NoServiceOptionTypeForTypedBody(ILogger logger, string typeName, string name);
+        Message = "Header {typeName} '{name}' has no Implementation — typed body not composed")]
+    public static partial IGenericMessage NoImplementationForTypedBody(ILogger logger, string typeName, string name);
 
-    /// <summary>Logs that no implementation configuration provider is registered for a ServiceOptionType.</summary>
+    /// <summary>Logs that no implementation configuration provider is registered for a Implementation.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="name">The configuration's name.</param>
-    /// <param name="serviceOptionType">The ServiceOptionType the record names.</param>
+    /// <param name="implementation">The Implementation the record names.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61006, Level = LogLevel.Error,
-        Message = "No implementation configuration provider registered for ServiceOptionType '{serviceOptionType}' — cannot compose '{name}'")]
-    public static partial IGenericMessage NoImplementationProvider(ILogger logger, string name, string serviceOptionType);
+        Message = "No implementation configuration provider registered for Implementation '{implementation}' — cannot compose '{name}'")]
+    public static partial IGenericMessage NoImplementationProvider(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logged when a provider offered for registration cannot be erased to the interface the
@@ -343,7 +343,7 @@ public static partial class DefaultConfigurationProviderLog
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     /// <remarks>
     /// Distinct from <see cref="NoImplementationProvider"/> because nothing was looked up: this is a
-    /// failed cast at registration time, and the ServiceOptionType may be registered perfectly well.
+    /// failed cast at registration time, and the Implementation may be registered perfectly well.
     /// Sharing one message sent readers to check a registry that was not the problem.
     /// </remarks>
     [MessageLogging(EventId = 61007, Level = LogLevel.Error,
@@ -351,7 +351,7 @@ public static partial class DefaultConfigurationProviderLog
     public static partial IGenericMessage ProviderNotErasable(ILogger logger, string name, string providerType);
 
     /// <summary>
-    /// Logged when a composed domain record carries no ServiceOptionType to dispatch on.
+    /// Logged when a composed domain record carries no Implementation to dispatch on.
     /// </summary>
     /// <param name="logger">The logger.</param>
     /// <param name="identifier">The name or id the record was read for.</param>
@@ -361,8 +361,24 @@ public static partial class DefaultConfigurationProviderLog
     /// The row itself is incomplete, which is a data problem rather than a registration one.
     /// </remarks>
     [MessageLogging(EventId = 61008, Level = LogLevel.Error,
-        Message = "Domain record '{identifier}' carries no ServiceOptionType, so no implementation provider can be chosen for it")]
-    public static partial IGenericMessage RecordHasNoServiceOptionType(ILogger logger, string identifier);
+        Message = "Domain record '{identifier}' carries no Implementation, so no implementation provider can be chosen for it")]
+    public static partial IGenericMessage RecordHasNoImplementation(ILogger logger, string identifier);
+
+    /// <summary>
+    /// Logged when a domain record names a registered implementation but carries none.
+    /// </summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="identifier">The record's name.</param>
+    /// <param name="implementation">The implementation the record names.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    /// <remarks>
+    /// The write half of the same fault <see cref="NoImplementationProvider"/> names on read. A row
+    /// that names an implementation and carries none is the bodiless domain record that cannot be
+    /// composed later, so it is refused here rather than written and failed at boot.
+    /// </remarks>
+    [MessageLogging(EventId = 61010, Level = LogLevel.Error,
+        Message = "Domain record '{identifier}' names implementation '{implementation}' but carries no implementation configuration, so it would be saved as a record nothing can compose")]
+    public static partial IGenericMessage IncompleteAggregate(ILogger logger, string identifier, string implementation);
 
     /// <summary>
     /// Logs that no POCO mapper was found for a header type, so the loaded typed body was left unattached.
@@ -380,12 +396,12 @@ public static partial class DefaultConfigurationProviderLog
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="typeName">The header configuration type name being composed.</param>
-    /// <param name="serviceOptionType">The discriminator for which no typed provider was found.</param>
+    /// <param name="implementation">The discriminator for which no typed provider was found.</param>
     /// <param name="name">The name of the header that could not be composed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61002, Level = LogLevel.Error,
-        Message = "No typed-body provider registered for {typeName} discriminator '{serviceOptionType}' (header '{name}')")]
-    public static partial IGenericMessage NoTypedProviderForServiceOptionType(ILogger logger, string typeName, string serviceOptionType, string name);
+        Message = "No typed-body provider registered for {typeName} discriminator '{implementation}' (header '{name}')")]
+    public static partial IGenericMessage NoTypedProviderForImplementation(ILogger logger, string typeName, string implementation, string name);
 
     /// <summary>
     /// Logs that the configuration record a caller asked to act on does not exist.
@@ -404,11 +420,11 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="logger">The logger.</param>
     /// <param name="typeName">The header configuration type being saved.</param>
     /// <param name="name">The name of the record being saved.</param>
-    /// <param name="serviceOptionType">The discriminator whose typed provider is registered.</param>
+    /// <param name="implementation">The discriminator whose typed provider is registered.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 20000, Level = LogLevel.Error,
-        Message = "{typeName} '{name}' declares '{serviceOptionType}' but carries no typed body; the aggregate is incomplete and cannot be saved")]
-    public static partial IGenericMessage TypedBodyMissingOnSave(ILogger logger, string typeName, string name, string serviceOptionType);
+        Message = "{typeName} '{name}' declares '{implementation}' but carries no typed body; the aggregate is incomplete and cannot be saved")]
+    public static partial IGenericMessage TypedBodyMissingOnSave(ILogger logger, string typeName, string name, string implementation);
 
     /// <summary>
     /// Logs that loading the typed body failed for a header.
@@ -417,11 +433,11 @@ public static partial class DefaultConfigurationProviderLog
     /// <param name="exception">The exception that caused the typed body load to fail.</param>
     /// <param name="typeName">The header configuration type name whose typed body failed to load.</param>
     /// <param name="name">The name of the header whose typed body failed to load.</param>
-    /// <param name="serviceOptionType">The discriminator used when the load failed.</param>
+    /// <param name="implementation">The discriminator used when the load failed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 71004, Level = LogLevel.Error,
-        Message = "Failed to load typed body for {typeName} '{name}' (discriminator '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string typeName, string name, string serviceOptionType);
+        Message = "Failed to load typed body for {typeName} '{name}' (discriminator '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string typeName, string name, string implementation);
 
     // ── Child composition (9387) — the read mirror of the child-collection save ──
 

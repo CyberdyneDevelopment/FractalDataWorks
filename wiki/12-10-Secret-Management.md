@@ -16,7 +16,7 @@ columns on its own configuration row.
 encode this via each domain's `Group` number — SecretManagers run first so downstream services
 (connections, authentication) can resolve their secrets during `Initialize`.
 
-**The platform's primary secret manager is `MsSqlSecrets`** (`ServiceOptionType = 'MsSql'`), not
+**The platform's primary secret manager is `MsSqlSecrets`** (`Implementation = 'MsSql'`), not
 `EnvSecrets`. `EnvSecrets` (env var `FDW_SECRET_CONFIG_PASSWORD`) resolves **only** the ConfigurationDb
 bootstrap login password — the one secret needed before any database read is possible. `MsSqlSecrets`
 reads the `sec.Secret` table in ConfigurationDb and resolves every other secret in the system: OpenIddict's
@@ -36,7 +36,7 @@ Every secret manager has a row in the parent table:
 | `RowId` | `int identity` | Physical version-on-write PK |
 | `Id` | `uniqueidentifier` | Logical identity (durable across versions) |
 | `Name` | `nvarchar(256)` | Lookup name (e.g., `MsSqlSecrets`, `EnvSecrets`, `ProductionKeyVault`) |
-| `ServiceOptionType` | `nvarchar(100)` | Discriminator: `MsSql`, `EnvironmentVariable`, `AzureKeyVault` |
+| `Implementation` | `nvarchar(100)` | Discriminator: `MsSql`, `EnvironmentVariable`, `AzureKeyVault` |
 | `Description` | `nvarchar(500)` | Human-readable description |
 | `Environment` | `nvarchar(50)` | Optional environment tag |
 | `TenantId` / `VisibilityGroupId` | `uniqueidentifier` | Tenant/visibility scoping |
@@ -102,7 +102,7 @@ two columns every other secret-backed config row uses.
 server options:
 
 ```
-1. Load the enabled auth.TokenManager row where ServiceOptionType = 'OpenIddict'.
+1. Load the enabled auth.TokenManager row where Implementation = 'OpenIddict'.
    Missing → throw (OpenIddict is registered, so a config MUST exist; never fall open to
    OpenIddict's unsigned defaults).
 2. Pin options.Issuer from the typed body's Authority (must be an absolute URI).
@@ -129,7 +129,7 @@ short-lived DI scope, not a hosted service or mutable singleton.
 
 ```sql
 -- MsSqlSecrets header + typed body, bootstrapped via EnvSecrets/CONFIG_PASSWORD.
-INSERT INTO sec.SecretManager (Id, Name, ServiceOptionType, Description)
+INSERT INTO sec.SecretManager (Id, Name, Implementation, Description)
 SELECT NEWID(), 'MsSqlSecrets', 'MsSql',
        'MsSql secret manager — resolves every non-bootstrap secret from ConfigurationDb sec.Secret'
 WHERE NOT EXISTS (SELECT 1 FROM sec.SecretManager WHERE Name = 'MsSqlSecrets' AND IsCurrent = 1 AND IsDeleted = 0);
@@ -147,14 +147,14 @@ WHERE sm.Name = 'MsSqlSecrets' AND sm.IsCurrent = 1 AND sm.IsDeleted = 0
 name, with the OPENIDDICT_SIGNING_KEY lookup key (a name, not a value):
 
 ```sql
-INSERT INTO auth.TokenManager (Id, Name, SectionName, ServiceType, ServiceOptionType, SecretManagerName, SecretKeyName)
+INSERT INTO auth.TokenManager (Id, Name, SectionName, ServiceType, Implementation, SecretManagerName, SecretKeyName)
 SELECT NEWID(), 'ApiOpenIddictServer', 'TokenManagers', 'TokenManager', 'OpenIddict', 'MsSqlSecrets', 'OPENIDDICT_SIGNING_KEY'
-WHERE NOT EXISTS (SELECT 1 FROM auth.TokenManager WHERE ServiceOptionType = 'OpenIddict' AND IsCurrent = 1 AND IsDeleted = 0);
+WHERE NOT EXISTS (SELECT 1 FROM auth.TokenManager WHERE Implementation = 'OpenIddict' AND IsCurrent = 1 AND IsDeleted = 0);
 
 INSERT INTO auth.OpenIddictTokenManager (Id, TokenManagerId, TokenManagerRowId, Authority, TokenEndpoint)
 SELECT NEWID(), h.Id, h.RowId, '$(AuthAuthority)', '/connect/token'
 FROM auth.TokenManager h
-WHERE h.ServiceOptionType = 'OpenIddict' AND h.IsCurrent = 1 AND h.IsDeleted = 0
+WHERE h.Implementation = 'OpenIddict' AND h.IsCurrent = 1 AND h.IsDeleted = 0
   AND NOT EXISTS (SELECT 1 FROM auth.OpenIddictTokenManager x WHERE x.TokenManagerRowId = h.RowId AND x.IsCurrent = 1 AND x.IsDeleted = 0);
 ```
 
@@ -188,7 +188,7 @@ identity is provisioned by Azure.
 ```sql
 DECLARE @AkvId UNIQUEIDENTIFIER = NEWID();
 
-INSERT INTO sec.SecretManager (Id, Name, ServiceOptionType, Description, Environment)
+INSERT INTO sec.SecretManager (Id, Name, Implementation, Description, Environment)
 VALUES (@AkvId, 'ProductionKeyVault', 'AzureKeyVault',
         'Production secrets via Azure Key Vault with system-assigned managed identity', 'Production');
 
@@ -204,7 +204,7 @@ VALUES (@AkvId, 'https://your-vault.vault.azure.net/', 'ManagedIdentity', 1);
 UPDATE auth.TokenManager
 SET SecretManagerName = 'ProductionKeyVault',
     SecretKeyName = 'openiddict-signing-key'
-WHERE ServiceOptionType = 'OpenIddict' AND IsCurrent = 1 AND IsDeleted = 0;
+WHERE Implementation = 'OpenIddict' AND IsCurrent = 1 AND IsDeleted = 0;
 ```
 
 Since the ConfigDb connection uses Entra auth in Azure (no password), there is no chicken-and-egg problem
@@ -260,7 +260,7 @@ through this mechanism. Current consumers:
 ```
 
 The named secret manager doesn't exist in `sec.SecretManager` with `IsCurrent=1 AND IsDeleted=0`, or the
-`ServiceOptionType` doesn't match a registered secret manager type.
+`Implementation` doesn't match a registered secret manager type.
 
 **Check:** `SELECT * FROM sec.SecretManager WHERE Name='ProductionKeyVault' AND IsCurrent=1 AND IsDeleted=0;`
 
@@ -268,7 +268,7 @@ The named secret manager doesn't exist in `sec.SecretManager` with `IsCurrent=1 
 
 ```
 InvalidOperationException: OpenIddict is registered but no enabled OpenIddict token manager
-configuration exists in ConfigurationDb (auth.TokenManager with ServiceOptionType='OpenIddict').
+configuration exists in ConfigurationDb (auth.TokenManager with Implementation='OpenIddict').
 ```
 
 `06b-seed-openiddict-server.sql` was not run, or the row was soft-deleted. This is the same failure mode

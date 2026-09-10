@@ -5,7 +5,7 @@ using Fdw.Results;
 namespace Fdw.Data.DataSets.Results;
 
 /// <summary>
-/// federationStrategy is required when serviceOptionType is 'Federated' but was omitted.
+/// federationStrategy is required when implementation is 'Federated' but was omitted.
 /// Caller-input validation failure — HTTP 400 (Validation category).
 /// </summary>
 [TypeOption(typeof(DataSetsResultCodes), "FederationStrategyRequired", RestrictToCurrentCompilation = true)]
@@ -18,7 +18,7 @@ public sealed class FederationStrategyRequiredCode : DataSetsResultCodeBase
     public FederationStrategyRequiredCode()
         : base(20002, "FederationStrategyRequired",
             ResultSeverities.ByName("Error"),
-            "DataSet '{name}' create/update rejected: federationStrategy is required when serviceOptionType is 'Federated'",
+            "DataSet '{name}' create/update rejected: federationStrategy is required when implementation is 'Federated'",
             isRetryable: false)
     {
     }

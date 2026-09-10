@@ -75,7 +75,7 @@ public class DefaultServiceProviderTests
     [Trait("Category", "CoreFramework")]
     public async Task GetByNameWithMatchingConfigAndFactoryReturnsService()
     {
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
@@ -99,7 +99,7 @@ public class DefaultServiceProviderTests
     [Trait("Category", "CoreFramework")]
     public async Task GetByNameWhenFactoryCreateFailsReturnsFailure()
     {
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
@@ -121,7 +121,7 @@ public class DefaultServiceProviderTests
     public async Task GetByIdWithMatchingConfigAndFactoryReturnsService()
     {
         var id = Guid.NewGuid();
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
@@ -160,7 +160,7 @@ public class DefaultServiceProviderTests
     public async Task GetByIdWhenFactoryCreateFailsReturnsFailure()
     {
         var id = Guid.NewGuid();
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDomainConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
@@ -181,7 +181,7 @@ public class DefaultServiceProviderTests
     [Trait("Category", "CoreFramework")]
     public async Task GetTypedByNameWithCompatibleCastReturnsTypedService()
     {
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var testService = new TestService(NullLogger<TestService>.Instance, config);
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
@@ -208,7 +208,7 @@ public class DefaultServiceProviderTests
     [Trait("Category", "CoreFramework")]
     public async Task GetTypedByNameWithIncompatibleCastReturnsFailure()
     {
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
@@ -233,7 +233,7 @@ public class DefaultServiceProviderTests
     public async Task GetTypedByIdWithCompatibleCastReturnsTypedService()
     {
         var id = Guid.NewGuid();
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         var testService = new TestService(NullLogger<TestService>.Instance, config);
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
@@ -260,7 +260,7 @@ public class DefaultServiceProviderTests
     public async Task GetTypedByIdWithIncompatibleCastReturnsFailure()
     {
         var id = Guid.NewGuid();
-        var config = new TestConfiguration { Id = id, Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get(id, It.IsAny<CancellationToken>()))
@@ -289,7 +289,7 @@ public class DefaultServiceProviderTests
         _provider.Register("TestType", mockFactory1.Object);
         _provider.Register("TestType", mockFactory2.Object);
 
-        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", ServiceOptionType = "TestType" };
+        var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
 
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))

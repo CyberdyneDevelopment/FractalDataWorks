@@ -213,7 +213,7 @@ public sealed class SecretManagersPageTests : IDisposable
                 Name = "Vault1",
                 SecretManagerType = "MsSql",
                 Description = "the desc",
-                ServiceOptionType = "MsSqlSecret"
+                Implementation = "MsSqlSecret"
             }
         });
         var cut = _ctx.Render<SecretManagersPage>();

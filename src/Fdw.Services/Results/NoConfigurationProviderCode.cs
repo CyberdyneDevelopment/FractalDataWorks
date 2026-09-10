@@ -5,10 +5,10 @@ using Fdw.Results;
 namespace Fdw.Services.Results;
 
 /// <summary>
-/// No configuration provider registered for the resolved ServiceOptionType.
+/// No configuration provider registered for the resolved Implementation.
 /// </summary>
 /// <remarks>
-/// The parent provider yields only the child's Id and ServiceOptionType; the configuration itself comes
+/// The parent provider yields only the child's Id and Implementation; the configuration itself comes
 /// from the provider registered for that type. A missing registration is a wiring defect, not a case to
 /// route around by reading the configuration off the parent record.
 /// </remarks>
@@ -22,7 +22,7 @@ public sealed class NoConfigurationProviderCode : ServicesResultCodeBase
     public NoConfigurationProviderCode()
         : base(61005, "NoConfigurationProvider",
             ResultSeverities.ByName("Error"),
-            "No configuration provider registered for ServiceOptionType '{ServiceOptionType}' — cannot resolve '{Identifier}'",
+            "No configuration provider registered for Implementation '{Implementation}' — cannot resolve '{Identifier}'",
             isRetryable: false)
     {
     }

@@ -62,9 +62,9 @@ public static partial class SchemaInformationLog
     public static partial IGenericMessage ConnectionConfigNotFound(ILogger logger, string connectionName);
 
     /// <summary>
-    /// Logs when the connection has no ServiceOptionType set.
+    /// Logs when the connection has no Implementation set.
     /// </summary>
-    [MessageLogging(EventId = 61023, Level = LogLevel.Error, Message = "Connection '{connectionName}' has no ServiceOptionType — cannot resolve connection type for discovery")]
+    [MessageLogging(EventId = 61023, Level = LogLevel.Error, Message = "Connection '{connectionName}' has no Implementation — cannot resolve connection type for discovery")]
     public static partial IGenericMessage ConnectionTypeMissing(ILogger logger, string connectionName);
 
     /// <summary>

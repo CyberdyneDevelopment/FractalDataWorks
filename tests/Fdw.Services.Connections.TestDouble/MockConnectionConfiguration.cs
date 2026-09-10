@@ -12,7 +12,7 @@ namespace Fdw.Services.Connections.TestDouble;
 /// </summary>
 /// <remarks>
 /// Why a mock rather than a real connection: these tests assert that the schema loader
-/// resolves a connection's typed configuration from its ServiceOptionType. Which
+/// resolves a connection's typed configuration from its Implementation. Which
 /// connection it is does not matter — only that one is registered and its body comes back
 /// strongly typed. Every real connection implementation lives in reference-servicetypes,
 /// so reaching for one would give an FDW test a dependency on a downstream repo purely to

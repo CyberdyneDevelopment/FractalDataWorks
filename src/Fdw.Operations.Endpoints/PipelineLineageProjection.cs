@@ -24,7 +24,7 @@ internal static class PipelineLineageProjection
 {
     /// <summary>
     /// Projects one composed pipeline aggregate to a <see cref="PipelineLineageRecord"/>. A pipeline
-    /// whose kind body or engine body is genuinely absent renders NODE-ONLY — Name/Id/ServiceOptionType
+    /// whose kind body or engine body is genuinely absent renders NODE-ONLY — Name/Id/Implementation
     /// set, linkage left null — with a Warning naming the gap. NO FALLBACKS: linkage is never fabricated.
     /// </summary>
     /// <param name="aggregate">The fully composed pipeline aggregate (header + kind body + engine body).</param>
@@ -37,7 +37,7 @@ internal static class PipelineLineageProjection
         {
             Id = aggregate.Id,
             Name = aggregate.Name,
-            ServiceOptionType = aggregate.Implementation ?? string.Empty
+            Implementation = aggregate.Implementation ?? string.Empty
         };
 
         if (aggregate.Configuration is not EtlPipelineConfiguration kindBody ||

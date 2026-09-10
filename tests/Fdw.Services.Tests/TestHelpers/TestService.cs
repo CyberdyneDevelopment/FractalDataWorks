@@ -45,13 +45,10 @@ public sealed class TestConfiguration : IImplementationConfiguration, IDomainCon
 {
         public string Domain => "TestService";
 
-        public string? Implementation { get; set; }
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "test-config";
-    public string SectionName => "TestSection";
-    public string ServiceType => "Test";
-    public string? ServiceOptionType { get; set; } = "Default";
+    public string? Implementation { get; set; } = "Default";
     public string? Description { get; init; }
 
     // No domain/implementation split in this double: it is its own implementation, so the factory

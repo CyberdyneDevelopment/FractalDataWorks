@@ -12,7 +12,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// Reads and writes the <c>sec.ClientCredentialsIdentity</c> typed body.
 /// </summary>
 /// <remarks>
-/// The header provider composes the aggregate by dispatching on ServiceOptionType to whichever
+/// The header provider composes the aggregate by dispatching on Implementation to whichever
 /// typed provider was registered for it, so a mechanism with no provider registered loads its
 /// header and leaves Configuration null — which the factory reports as "typed configuration body
 /// did not load", several layers from the missing registration.

@@ -85,7 +85,7 @@ public class EtlRowMapperProviderTests
     public void CreateReturnsFailureForUnknownMapperType()
     {
         // Arrange
-        var config = new TestEtlRowMapperConfig { ServiceOptionType = "Unknown" };
+        var config = new TestEtlRowMapperConfig { Implementation = "Unknown" };
         // Act
         var result = _provider.Create(config);
 
@@ -100,7 +100,7 @@ public class EtlRowMapperProviderTests
     public void CreateUsesDefaultMapperTypeWhenNotSpecified()
     {
         // Arrange
-        var config = new TestEtlRowMapperConfig { ServiceOptionType = string.Empty };
+        var config = new TestEtlRowMapperConfig { Implementation = string.Empty };
         // Act - will fail because no factory registered but error message shows it tried the default
         var result = _provider.Create(config);
 
@@ -120,7 +120,7 @@ public class EtlRowMapperProviderTests
         factory.Setup(f => f.Create(It.IsAny<EtlRowMapperConfiguration>()))
             .Returns(Fdw.Results.GenericResult<IEtlRowMapper>.Success(mapper.Object));
 
-        var config = new TestEtlRowMapperConfig { ServiceOptionType = "TestMapper" };
+        var config = new TestEtlRowMapperConfig { Implementation = "TestMapper" };
         _provider.Register("TestMapper", factory.Object);
 
         // Act
@@ -143,7 +143,7 @@ public class EtlRowMapperProviderTests
         factory.Setup(f => f.Create(It.IsAny<EtlRowMapperConfiguration>()))
             .Returns(Fdw.Results.GenericResult<IEtlRowMapper>.Success(mapper.Object));
 
-        var config = new TestEtlRowMapperConfig { ServiceOptionType = "TESTMAPPER" };
+        var config = new TestEtlRowMapperConfig { Implementation = "TESTMAPPER" };
         _provider.Register("TestMapper", factory.Object);
 
         // Act
@@ -184,9 +184,9 @@ public class EtlRowMapperProviderTests
 
     private sealed class TestEtlRowMapperConfig : EtlRowMapperConfiguration
     {
-        public override string MapperType => ServiceOptionType ?? string.Empty;
+        public override string MapperType => Implementation ?? string.Empty;
 
-        public string? ServiceOptionType { get; set; }
+        public string? Implementation { get; set; }
 
         public TestEtlRowMapperConfig()
     {

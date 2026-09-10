@@ -23,7 +23,7 @@ namespace Fdw.Services.Connections;
 /// </summary>
 /// <remarks>
 /// The domain configuration provider supplies the implementation configuration; the factory registered
-/// for that ServiceOptionType builds the connection. Nothing is cached — the connection wraps a driver
+/// for that Implementation builds the connection. Nothing is cached — the connection wraps a driver
 /// that pools underneath, so a cache above it would add a disposal lifecycle and a staleness dance for
 /// nothing.
 /// </remarks>

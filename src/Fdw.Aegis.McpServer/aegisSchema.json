@@ -3,7 +3,7 @@
     "Connections": [
       {
         "Name": "synthetic-echo",
-        "ServiceOptionType": "Http",
+        "Implementation": "Http",
         "Configuration": {
           "BaseUrl": "http://localhost:5299"
         }
@@ -12,7 +12,7 @@
     "SecretManagers": [
       {
         "Name": "EnvSecrets",
-        "ServiceOptionType": "EnvironmentVariable",
+        "Implementation": "EnvironmentVariable",
         "Configuration": {
           "Prefix": "FDW_SECRET_"
         }
@@ -22,7 +22,7 @@
       {
         "Name": "echo_credential",
         "ConnectionName": "synthetic-echo",
-        "ServiceOptionType": "PreApproved",
+        "Implementation": "PreApproved",
         "Configuration": {
           "SecretManagerName": "EnvSecrets",
           "SecretKeyName": "AEGIS_SYNTHETIC_TOKEN",
@@ -38,7 +38,7 @@
       {
         "Name": "echo_adhoc",
         "ConnectionName": "synthetic-echo",
-        "ServiceOptionType": "AdHoc",
+        "Implementation": "AdHoc",
         "Configuration": {
           "SecretManagerName": "EnvSecrets",
           "SecretKeyName": "AEGIS_SYNTHETIC_TOKEN"

@@ -137,7 +137,7 @@ The TokenManager domain follows the [polymorphic configuration pattern](03-07-Po
 | Column | Notes |
 |--------|-------|
 | `Id`, `Name` | Logical identity + display name |
-| `ServiceOptionType` | The `TokenManagerTypes` discriminator, e.g. `"OpenIddict"` |
+| `Implementation` | The `TokenManagerTypes` discriminator, e.g. `"OpenIddict"` |
 | `SecretManagerName` | Secret manager that resolves provider secrets (signing key, `OAUTH_*`) |
 | `SecretKeyName` | Signing-key secret name within that manager |
 | `Description`, tenant/visibility/audit block | — |
@@ -150,7 +150,7 @@ The TokenManager domain follows the [polymorphic configuration pattern](03-07-Po
 | `TokenEndpoint` | Absolute or `Authority`-relative; `/connect/token` when empty |
 | `AccessTokenLifetime` / `RefreshTokenLifetime` | ISO-8601 durations; applied via `PostConfigure<OpenIddictServerOptions>` |
 
-The typed body is a standalone POCO — it does **not** inherit `TokenManagerConfiguration`. The header provider loads the header, dispatches on `ServiceOptionType` to the typed provider, and sets `header.Configuration = typedBody`.
+The typed body is a standalone POCO — it does **not** inherit `TokenManagerConfiguration`. The header provider loads the header, dispatches on `Implementation` to the typed provider, and sets `header.Configuration = typedBody`.
 
 ## Adding a New Token-Manager Provider
 
@@ -160,7 +160,7 @@ Mirror `OpenIddictTokenManagerType`:
 2. **Implement `MyTokenManager : ITokenManager`** — the four operations (`Issue` / `Validate` / `Invalidate` / `ExtractClaims`). Do all provider-specific credential/secret validation inside `Issue`.
 3. **Create `MyTokenManagerConfiguration : ITokenManagerConfiguration`** as a standalone typed body with `[ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "MyProvider")]` and a `TokenManagerId` FK. Put every field your manager reads at runtime on this typed body (parent header stays identity-only).
 4. **Create `MyTokenManagerType : TokenManagerTypeBase<...>`** decorated with `[Implementation(typeof(TokenManagerTypes), "MyProvider")]`. Override `RegisterRequiredServices` (register your factory, header + typed config providers, and any runtime deps) and `RegisterFactory` (wire the typed provider onto the header provider and register the factory by name).
-5. **Nothing in `Program.cs`.** `TokenManagerTypes` is discovered by PlatformServices; the option's `Registration.SourceGenerators` module initializer registers it on package reference. Point the deployment at your provider by seeding a single enabled `auth.TokenManager` row with `ServiceOptionType = 'MyProvider'` plus its typed-body row.
+5. **Nothing in `Program.cs`.** `TokenManagerTypes` is discovered by PlatformServices; the option's `Registration.SourceGenerators` module initializer registers it on package reference. Point the deployment at your provider by seeding a single enabled `auth.TokenManager` row with `Implementation = 'MyProvider'` plus its typed-body row.
 
 For an external IdP, you can reuse the `external_identity` grant + `auth.ExternalIdentity` mapping rows instead of writing a full credential path — the vault path (`IUserCredentialService.Verify`) is invoked only for `password` / `agent_key`.
 

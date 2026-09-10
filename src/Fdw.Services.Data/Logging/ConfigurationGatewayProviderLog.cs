@@ -42,7 +42,7 @@ public static partial class ConfigurationGatewayProviderLog
     /// <param name="logger">The logger.</param>
     /// <param name="connectionName">The connection as declared.</param>
     [MessageLogging(EventId = 61024, Level = LogLevel.Error,
-        Message = "configurationSchema.json declares connection '{connectionName}' with no ServiceOptionType, so no connection factory can be chosen for it")]
+        Message = "configurationSchema.json declares connection '{connectionName}' with no Implementation, so no connection factory can be chosen for it")]
     public static partial IGenericMessage ConnectionDeclaresNoKind(ILogger logger, string connectionName);
 
     /// <summary>A caller asked for a connection the schema does not declare.</summary>
@@ -55,10 +55,10 @@ public static partial class ConfigurationGatewayProviderLog
     /// <summary>A declared connection names a kind no connection option registered.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="connectionName">The connection as declared.</param>
-    /// <param name="serviceOptionType">The kind it named.</param>
+    /// <param name="implementation">The kind it named.</param>
     [MessageLogging(EventId = 61025, Level = LogLevel.Error,
-        Message = "configurationSchema.json declares connection '{connectionName}' as kind '{serviceOptionType}', which no connection option registered")]
-    public static partial IGenericMessage ConnectionKindNotRegistered(ILogger logger, string connectionName, string serviceOptionType);
+        Message = "configurationSchema.json declares connection '{connectionName}' as kind '{implementation}', which no connection option registered")]
+    public static partial IGenericMessage ConnectionKindNotRegistered(ILogger logger, string connectionName, string implementation);
 
     /// <summary>The factory a connection kind names is not in the container.</summary>
     /// <param name="logger">The logger.</param>
@@ -80,16 +80,16 @@ public static partial class ConfigurationGatewayProviderLog
     /// <param name="logger">The logger.</param>
     /// <param name="secretManagerName">The secret manager as declared.</param>
     [MessageLogging(EventId = 61029, Level = LogLevel.Error,
-        Message = "configurationSchema.json declares secret manager '{secretManagerName}' without a ServiceOptionType, so no option can be selected to build it")]
+        Message = "configurationSchema.json declares secret manager '{secretManagerName}' without a Implementation, so no option can be selected to build it")]
     public static partial IGenericMessage SecretManagerDeclaresNoKind(ILogger logger, string secretManagerName);
 
     /// <summary>A declared secret manager names a kind no secret manager option registered.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="secretManagerName">The secret manager as declared.</param>
-    /// <param name="serviceOptionType">The kind it named.</param>
+    /// <param name="implementation">The kind it named.</param>
     [MessageLogging(EventId = 61030, Level = LogLevel.Error,
-        Message = "configurationSchema.json declares secret manager '{secretManagerName}' as kind '{serviceOptionType}', which no secret manager option registered")]
-    public static partial IGenericMessage SecretManagerKindNotRegistered(ILogger logger, string secretManagerName, string serviceOptionType);
+        Message = "configurationSchema.json declares secret manager '{secretManagerName}' as kind '{implementation}', which no secret manager option registered")]
+    public static partial IGenericMessage SecretManagerKindNotRegistered(ILogger logger, string secretManagerName, string implementation);
 
     /// <summary>The factory a declared secret manager names is not in the container.</summary>
     /// <param name="logger">The logger.</param>

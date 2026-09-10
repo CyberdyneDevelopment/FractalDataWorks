@@ -95,7 +95,7 @@ public class DataflowGraphConfigurationProviderTests
         gateway.Setup(g => g.Execute<IEnumerable<DataStoreRecord>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<DataStoreRecord>>.Success([
-                new DataStoreRecord { Id = Guid.NewGuid(), Name = "PlatformConfiguration", ServiceOptionType = "MsSql" }
+                new DataStoreRecord { Id = Guid.NewGuid(), Name = "PlatformConfiguration", Implementation = "MsSql" }
             ]));
 
         var result = await MakeProvider(gateway).LoadDataStores(TestContext.Current.CancellationToken);

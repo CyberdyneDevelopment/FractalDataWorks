@@ -66,16 +66,16 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
     {
         DataSetEndpointLog.CreatingDataSet(Logger, request.Name);
 
-        if (string.IsNullOrWhiteSpace(request.ServiceOptionType)
-            || ReferenceEquals(DataSetTypes.ByName(request.ServiceOptionType), DataSetTypes.NotFound))
+        if (string.IsNullOrWhiteSpace(request.Implementation)
+            || ReferenceEquals(DataSetTypes.ByName(request.Implementation), DataSetTypes.NotFound))
         {
             return GenericResult<DataSetDetailResponse>.Failure(
-                DataSetsResultCodes.ServiceOptionTypeInvalid, Logger,
-                ResultDetails.Create("name", request.Name, "serviceOptionType", request.ServiceOptionType ?? string.Empty));
+                DataSetsResultCodes.ImplementationInvalid, Logger,
+                ResultDetails.Create("name", request.Name, "implementation", request.Implementation ?? string.Empty));
         }
 
         var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
-            request.ServiceOptionType, request.FederationStrategy, request.Name, Logger);
+            request.Implementation, request.FederationStrategy, request.Name, Logger);
         if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
 
         var aggregatesValidation = DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
@@ -96,7 +96,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
                     Ordinal = i
                 })
                 .ToList(),
-            Implementation = request.ServiceOptionType,
+            Implementation = request.Implementation,
             FederationStrategy = request.FederationStrategy,
             TransformExpression = request.TransformExpression,
             SourceDataSetName = request.SourceDataSetName,

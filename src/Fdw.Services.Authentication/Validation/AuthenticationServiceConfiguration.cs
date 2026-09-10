@@ -28,11 +28,11 @@ public partial class AuthenticationServiceConfiguration : IAuthenticationService
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationServiceConfiguration"/> class.</summary>
     /// <param name="serviceType">The domain this configuration belongs to.</param>
-    /// <param name="serviceOptionType">The implementation kind, or null before one is read.</param>
+    /// <param name="implementation">The implementation kind, or null before one is read.</param>
     /// <param name="sectionName">The section these rows are read from.</param>
-    protected AuthenticationServiceConfiguration(string serviceType, string? serviceOptionType, string sectionName)
+    protected AuthenticationServiceConfiguration(string serviceType, string? implementation, string sectionName)
     {
-        Implementation = serviceOptionType;
+        Implementation = implementation;
     }
 
     /// <inheritdoc />

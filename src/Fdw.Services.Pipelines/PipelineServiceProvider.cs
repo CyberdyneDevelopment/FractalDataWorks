@@ -8,7 +8,7 @@ namespace Fdw.Services.Pipelines;
 
 /// <summary>
 /// The Pipelines domain provider. Resolves a pipeline service by the row's name or id, dispatching to
-/// the factory registered for the row's <c>ServiceOptionType</c>.
+/// the factory registered for the row's <c>Implementation</c>.
 /// </summary>
 /// <remarks>
 /// Exists so the domain's own <see cref="IPipelineServiceProvider"/> has a concrete type behind it;

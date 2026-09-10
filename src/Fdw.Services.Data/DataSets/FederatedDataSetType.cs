@@ -28,7 +28,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Why: registered as the <c>"Federated"</c> member of <see cref="DataSetTypes"/>; selected when a
-/// dataset's authored <c>ServiceOptionType</c> is <c>"Federated"</c>. A cross-store join cannot be
+/// dataset's authored <c>Implementation</c> is <c>"Federated"</c>. A cross-store join cannot be
 /// pushed down to any single backend, so it is performed in the application. The type option is a
 /// stateless module-init singleton; per-execution state flows through the
 /// <see cref="DataSetExecutionContext"/>.

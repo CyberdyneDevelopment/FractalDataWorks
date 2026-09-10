@@ -29,7 +29,7 @@ public abstract class MultitenancyTypeBase<TFactory> :
     /// <summary>
     /// Initializes a new instance of the <see cref="MultitenancyTypeBase{TFactory}"/> class.
     /// </summary>
-    /// <param name="name">The name of this multitenancy option (matches the host's <c>Multitenancy</c> row's <c>ServiceOptionType</c>).</param>
+    /// <param name="name">The name of this multitenancy option (matches the host's <c>Multitenancy</c> row's <c>Implementation</c>).</param>
     /// <param name="sectionName">The configuration section name for this option's own settings, if any.</param>
     /// <param name="displayName">The display name for this option.</param>
     /// <param name="description">The description of what this option provides.</param>

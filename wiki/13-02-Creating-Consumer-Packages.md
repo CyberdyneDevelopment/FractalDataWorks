@@ -97,7 +97,7 @@ public sealed class GetConnectionEndpoint : GetConnectionEndpointBase<MsSqlConne
         {
             Id = config.Id,
             Name = config.Name,
-            ServiceType = config.ServiceOptionType ?? "MsSql",
+            ServiceType = config.Implementation ?? "MsSql",
             Server = config.Server,
             // ... implementation-specific fields
         };

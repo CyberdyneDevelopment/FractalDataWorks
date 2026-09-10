@@ -18,7 +18,7 @@ namespace Fdw.Services.Connections.Endpoints;
 /// <typeparam name="TConfig">The concrete typed body configuration type this endpoint merges.</typeparam>
 /// <remarks>
 /// Why one read and one save: <c>Get</c> already composes the header AND its typed body by dispatching on
-/// <c>ServiceOptionType</c>, and <c>Save</c> writes the aggregate back the same way. Reading the two halves
+/// <c>Implementation</c>, and <c>Save</c> writes the aggregate back the same way. Reading the two halves
 /// through two providers let them drift apart, and saving them separately meant an update that touched only
 /// the header left the body pointing at the previous version of it.
 /// </remarks>

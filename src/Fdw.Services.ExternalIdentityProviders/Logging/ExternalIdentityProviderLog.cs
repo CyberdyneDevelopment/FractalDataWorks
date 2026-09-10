@@ -89,8 +89,8 @@ public static partial class ExternalIdentityProviderLog
     [MessageLogging(
         EventId = 7466,
         Level = LogLevel.Information,
-        Message = "External identity provider registered: serviceOptionType='{serviceOptionType}'.")]
-    public static partial IGenericMessage ProviderRegistered(ILogger logger, string serviceOptionType);
+        Message = "External identity provider registered: implementation='{implementation}'.")]
+    public static partial IGenericMessage ProviderRegistered(ILogger logger, string implementation);
 
     /// <summary>Logs that the login-discovery endpoint returned the active external identity providers.</summary>
     [MessageLogging(

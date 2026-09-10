@@ -82,13 +82,13 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
         var existing = loadResult.Value;
 
-        var mergedImplementation = request.ServiceOptionType ?? existing.Implementation;
+        var mergedImplementation = request.Implementation ?? existing.Implementation;
         if (string.IsNullOrWhiteSpace(mergedImplementation)
             || ReferenceEquals(DataSetTypes.ByName(mergedImplementation), DataSetTypes.NotFound))
         {
             return GenericResult<DataSetDetailResponse>.Failure(
-                DataSetsResultCodes.ServiceOptionTypeInvalid, Logger,
-                ResultDetails.Create("name", request.Name, "serviceOptionType", mergedImplementation ?? string.Empty));
+                DataSetsResultCodes.ImplementationInvalid, Logger,
+                ResultDetails.Create("name", request.Name, "implementation", mergedImplementation ?? string.Empty));
         }
 
         var mergedFederationStrategy = request.FederationStrategy ?? existing.FederationStrategy;

@@ -157,7 +157,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
                 Id = $"Pipeline_{p.Name}",
                 Type = LineageNodeTypes.ByName("Pipeline"),
                 Name = p.Name,
-                Description = p.ServiceOptionType
+                Description = p.Implementation
             });
         }
 

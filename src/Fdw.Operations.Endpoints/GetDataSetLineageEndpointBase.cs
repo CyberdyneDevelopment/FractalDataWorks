@@ -195,7 +195,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             downstreamConsumers.Add(new LineageConsumerResponse
             {
                 Name = pipeline.Name,
-                ConsumerType = $"Pipeline ({pipeline.ServiceOptionType})"
+                ConsumerType = $"Pipeline ({pipeline.Implementation})"
             });
         }
 
@@ -205,7 +205,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             downstreamConsumers.Add(new LineageConsumerResponse
             {
                 Name = pipeline.Name,
-                ConsumerType = $"Pipeline Producer ({pipeline.ServiceOptionType})"
+                ConsumerType = $"Pipeline Producer ({pipeline.Implementation})"
             });
         }
 

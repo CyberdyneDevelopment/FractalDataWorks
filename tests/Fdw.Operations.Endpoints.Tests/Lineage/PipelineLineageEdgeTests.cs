@@ -28,7 +28,7 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", SourceDataSet = "DS1" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", SourceDataSet = "DS1" }
         };
         var dataSets = new List<DataSetRecord> { new() { Id = Guid.NewGuid(), Name = "DS1" } };
 
@@ -46,7 +46,7 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", DestinationDataSet = "DS2" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", DestinationDataSet = "DS2" }
         };
         var dataSets = new List<DataSetRecord> { new() { Id = Guid.NewGuid(), Name = "DS2" } };
 
@@ -64,7 +64,7 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", DestinationConnectionName = "Conn1" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", DestinationConnectionName = "Conn1" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
@@ -81,7 +81,7 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", SourceConnectionName = "ConnA" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", SourceConnectionName = "ConnA" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
@@ -117,7 +117,7 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "Orphan", ServiceOptionType = "Etl" }
+            new() { Id = Guid.NewGuid(), Name = "Orphan", Implementation = "Etl" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(

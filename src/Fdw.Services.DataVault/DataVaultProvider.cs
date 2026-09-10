@@ -18,7 +18,7 @@ namespace Fdw.Services.DataVault;
 /// </summary>
 /// <remarks>
 /// Holds no implementation dependencies — it loads configuration and dispatches by
-/// ServiceOptionType exactly like every other domain provider (see <c>ConnectionProvider</c>).
+/// Implementation exactly like every other domain provider (see <c>ConnectionProvider</c>).
 /// <see cref="Get(DataVaultRequest, CancellationToken)"/> only adds the empty-request validation the
 /// base <c>Get(string)</c>/<c>Get(Guid)</c> overloads don't have, then delegates to them; the base's
 /// <c>CreateFrom</c> already prefers a factory's <see cref="IAsyncServiceFactory{TService}"/> overload

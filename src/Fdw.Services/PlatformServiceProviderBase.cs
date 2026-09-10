@@ -47,14 +47,14 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <summary>
     /// Registers the factory for one service option type. Called from that option's Register method.
     /// </summary>
-    /// <param name="serviceOptionType">The option's discriminator.</param>
+    /// <param name="implementation">The option's discriminator.</param>
     /// <param name="factory">Resolves the factory once the container exists.</param>
-    public static void Register(string serviceOptionType, Func<IServiceProvider, IServiceFactory<TService>> factory)
+    public static void Register(string implementation, Func<IServiceProvider, IServiceFactory<TService>> factory)
     {
-        if (string.IsNullOrEmpty(serviceOptionType))
-            throw new ArgumentNullException(nameof(serviceOptionType));
+        if (string.IsNullOrEmpty(implementation))
+            throw new ArgumentNullException(nameof(implementation));
 
-        _registered[serviceOptionType] = factory ?? throw new ArgumentNullException(nameof(factory));
+        _registered[implementation] = factory ?? throw new ArgumentNullException(nameof(factory));
     }
 
     /// <summary>
@@ -104,11 +104,11 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     // ── Registration ────────────────────────────────────────────────────────
 
     /// <inheritdoc />
-    public IGenericResult Register(string serviceOptionType, IServiceFactory<TService> factory)
+    public IGenericResult Register(string implementation, IServiceFactory<TService> factory)
     {
-        _factories[serviceOptionType] = factory;
-        _registered[serviceOptionType] = _ => factory;
-        ServiceLogger.ProviderFactoryRegistered(_logger, serviceOptionType);
+        _factories[implementation] = factory;
+        _registered[implementation] = _ => factory;
+        ServiceLogger.ProviderFactoryRegistered(_logger, implementation);
         return GenericResult.Success();
     }
     /// <inheritdoc />
@@ -123,7 +123,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// Invokes the registered factory to build the service. Override to supply additional
     /// already-resolved dependencies to a domain-specific <c>Create</c> overload.
     /// </summary>
-    /// <param name="factory">The factory registered for the configuration's ServiceOptionType.</param>
+    /// <param name="factory">The factory registered for the configuration's Implementation.</param>
     /// <param name="configuration">The resolved (composed) configuration.</param>
     /// <returns>The created service, or a structured failure.</returns>
     private static IGenericResult<TService> Create(IServiceFactory<TService> factory, IGenericConfiguration configuration)
@@ -170,46 +170,46 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
         IDomainConfiguration configuration, string identifier, CancellationToken cancellationToken)
     {
         // Read once, off the row that owns the field. The implementation table has no
-        // ServiceOptionType column -- the discriminator is what selected that table -- so reading it
+        // Implementation column -- the discriminator is what selected that table -- so reading it
         // back off the implementation asked an object a question it cannot answer, and every
         // implementation-shaped container answered the same way: empty.
-        var serviceOptionType = configuration.Implementation;
-        if (string.IsNullOrEmpty(serviceOptionType))
+        var implementation = configuration.Implementation;
+        if (string.IsNullOrEmpty(implementation))
         {
-            ServiceLogger.ServiceOptionTypeMissing(_logger, identifier);
+            ServiceLogger.ImplementationMissing(_logger, identifier);
             return GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("ServiceOptionTypeMissing"),
+                ServicesResultCodes.ByName("ImplementationMissing"),
                 ResultDetails.Create("Identifier", identifier));
         }
 
-        if (!_factories.TryGetValue(serviceOptionType, out var factory))
+        if (!_factories.TryGetValue(implementation, out var factory))
         {
-            ServiceLogger.NoFactoryRegistered(_logger, serviceOptionType);
+            ServiceLogger.NoFactoryRegistered(_logger, implementation);
             ServiceLogger.FactoryLookupMiss(
-                _logger, GetType().Name, serviceOptionType, identifier,
+                _logger, GetType().Name, implementation, identifier,
                 _factories.Count == 0 ? "<empty>" : string.Join(", ", _factories.Keys));
             return GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("NoFactoryRegistered"),
-                ResultDetails.Create("ServiceOptionType", serviceOptionType, "Identifier", identifier));
+                ResultDetails.Create("Implementation", implementation, "Identifier", identifier));
         }
 
-        ServiceLogger.FactoryLookupSucceeded(_logger, serviceOptionType);
+        ServiceLogger.FactoryLookupSucceeded(_logger, implementation);
 
         // The factory builds from the implementation. The domain row has done its one job by naming
         // which factory to use.
-        if (configuration.ImplementationConfiguration is not { } implementation)
+        if (configuration.ImplementationConfiguration is not { } implementationConfiguration)
             return GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("ConfigurationNotFound"),
                 ResultDetails.Create("Identifier", identifier,
-                                     "ServiceOptionType", serviceOptionType));
+                                     "Implementation", implementation));
 
         var created = factory is IAsyncServiceFactory<TService> asyncFactory
-            ? await asyncFactory.Create(implementation, cancellationToken).ConfigureAwait(false)
-            : Create(factory, implementation);
+            ? await asyncFactory.Create(implementationConfiguration, cancellationToken).ConfigureAwait(false)
+            : Create(factory, implementationConfiguration);
 
         return created ?? GenericResult<TService>.Failure(
             ServicesResultCodes.ByName("InvalidFactoryType"),
-            ResultDetails.Create("ServiceOptionType", serviceOptionType,
+            ResultDetails.Create("Implementation", implementation,
                                  "FactoryType", factory.GetType().Name));
     }
 

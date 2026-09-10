@@ -50,7 +50,7 @@ public abstract class ListPipelinesEndpointBase : CrudListEndpointBase<PipelineS
         return GenericResult<List<PipelineSummaryResponse>>.Success(items);
     }
 
-    /// <summary>Maps a pipeline configuration to a summary DTO. Caller guarantees ServiceOptionType is set.</summary>
+    /// <summary>Maps a pipeline configuration to a summary DTO. Caller guarantees Implementation is set.</summary>
     protected virtual PipelineSummaryResponse MapToSummary(PipelineConfiguration config)
     {
         return new PipelineSummaryResponse

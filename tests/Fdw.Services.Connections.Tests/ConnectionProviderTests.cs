@@ -86,7 +86,7 @@ public class ConnectionProviderTests
         public string Name { get; set; } = string.Empty;
         public string SectionName => "Connections";
         public string ServiceType => "Connection";
-        public string? ServiceOptionType { get; set; }
+        public string? Implementation { get; set; }
         public Guid ConnectionId { get; set; }
     }
 
@@ -105,7 +105,7 @@ public class ConnectionProviderTests
         private static ConnectionConfiguration AttachStubConfig(ConnectionConfiguration cfg)
         {
             if (cfg.Configuration is null)
-                cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, ServiceOptionType = cfg.Implementation };
+                cfg.Configuration = new StubConnectionConfiguration { Id = cfg.Id, Name = cfg.Name, Implementation = cfg.Implementation };
             return cfg;
         }
 
@@ -184,7 +184,7 @@ public class ConnectionProviderTests
         }
 
         Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Save<T>(
-            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
+            string implementation, string name, T implementationConfiguration, CancellationToken ct)
             => Task.FromResult<IGenericResult>(GenericResult.Success());
 
         Task<IGenericResult> IDomainConfigurationProvider<IConnectionImplementationConfiguration>.Delete(Guid id, CancellationToken ct)
@@ -242,9 +242,9 @@ public class ConnectionProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public async Task GetByNameWithNoServiceOptionTypeReturnsFailure()
+    public async Task GetByNameWithNoImplementationReturnsFailure()
     {
-        // Arrange - add config with null ServiceOptionType
+        // Arrange - add config with null Implementation
         var config = new ConnectionConfiguration
         {
             Id = Guid.CreateVersion7(),
@@ -253,7 +253,7 @@ public class ConnectionProviderTests
         };
         _configurations.Add(config);
 
-        // Act - Look up by name; the config has null ServiceOptionType
+        // Act - Look up by name; the config has null Implementation
         var result = await _provider.Get("TestConnection");
 
         // Assert - Should fail because no factory for null service type
@@ -596,7 +596,7 @@ public class ConnectionProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public async Task GetByIdWithNoServiceOptionTypeReturnsFailure()
+    public async Task GetByIdWithNoImplementationReturnsFailure()
     {
         // Arrange
         var connectionId = Guid.NewGuid();
@@ -729,7 +729,7 @@ public class ConnectionProviderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public async Task GetByNameSelectsFactoryByHeaderServiceOptionType()
+    public async Task GetByNameSelectsFactoryByHeaderImplementation()
     {
         // Arrange
         _configurations.Add(new ConnectionConfiguration
@@ -850,7 +850,7 @@ public class ConnectionProviderTests
         // takes the IMPLEMENTATION configuration, which is what the domain provider hands back.
         var byName = await _provider.Get("TestConnection");
         var byConfiguration = await _provider.Get(
-            new StubConnectionConfiguration { Id = config.Id, Name = config.Name, ServiceOptionType = config.Implementation });
+            new StubConnectionConfiguration { Id = config.Id, Name = config.Name, Implementation = config.Implementation });
 
         // Assert - the provider no longer caches connections, so each Get calls the factory. This
         // replaces an assertion that the two paths SHARED one cached connection.

@@ -39,10 +39,10 @@ public partial class CredentialServiceConfiguration : ICredentialServiceConfigur
     /// Initializes a new instance of the <see cref="CredentialServiceConfiguration"/> class.
     /// Protected constructor for derived classes to set their type identity.
     /// </summary>
-    /// <param name="serviceOptionType">The service option type (e.g., "Sql").</param>
-    protected CredentialServiceConfiguration(string? serviceOptionType)
+    /// <param name="implementation">The service option type (e.g., "Sql").</param>
+    protected CredentialServiceConfiguration(string? implementation)
     {
-        Implementation = serviceOptionType;
+        Implementation = implementation;
     }
 
 

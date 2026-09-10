@@ -97,8 +97,8 @@ public static partial class DataStoreTypesLog
     [MessageLogging(
         EventId = 11206,
         Level = LogLevel.Debug,
-        Message = "[DataStoreTypes] DataStore: Id={id}, Name='{name}', Type='{serviceOptionType}'")]
-    public static partial IGenericMessage DataStoreLoaded(ILogger logger, Guid id, string name, string serviceOptionType);
+        Message = "[DataStoreTypes] DataStore: Id={id}, Name='{name}', Type='{implementation}'")]
+    public static partial IGenericMessage DataStoreLoaded(ILogger logger, Guid id, string name, string implementation);
 
     /// <summary>
     /// Logs an individual DataPath loaded from configuration.
@@ -168,13 +168,13 @@ public static partial class DataStoreTypesLog
     public static partial IGenericMessage NoDataStoreTypeFound(ILogger logger, string storeType);
 
     /// <summary>
-    /// Logs when a DataStore configuration is missing ServiceOptionType during initialization.
+    /// Logs when a DataStore configuration is missing Implementation during initialization.
     /// </summary>
     [MessageLogging(
         EventId = 61020,
         Level = LogLevel.Error,
-        Message = "[DataStoreTypes] DataStore '{dataStoreName}' has no ServiceOptionType configured. Skipping.")]
-    public static partial IGenericMessage DataStoreMissingServiceOptionType(ILogger logger, string dataStoreName);
+        Message = "[DataStoreTypes] DataStore '{dataStoreName}' has no Implementation configured. Skipping.")]
+    public static partial IGenericMessage DataStoreMissingImplementation(ILogger logger, string dataStoreName);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Hierarchy Diagnostics (5144-5149) - Trace level

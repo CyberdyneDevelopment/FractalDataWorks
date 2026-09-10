@@ -3,7 +3,7 @@ namespace Fdw.Services.Abstractions.Health.Monitoring;
 /// <summary>
 /// Host selector for the health monitor domain: names WHICH <c>settings.HealthMonitor</c> row this
 /// host uses. Selector only — all monitor configuration (implementation choice via
-/// <c>ServiceOptionType</c>, intervals, retention) lives on the ConfigurationDb row.
+/// <c>Implementation</c>, intervals, retention) lives on the ConfigurationDb row.
 /// </summary>
 /// <remarks>
 /// Same species as <c>Users:CredentialServiceName</c> / <c>CredentialsSqlOptions</c>: rows are shared

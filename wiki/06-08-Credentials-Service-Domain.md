@@ -65,7 +65,7 @@ Standard FDW polymorphic header + typed-body pattern.
 
 | Table | Purpose |
 |---|---|
-| `sec.CredentialService` | Header: `Id`, `Name`, `ServiceOptionType` (e.g. `Sql`), `IsCurrent` |
+| `sec.CredentialService` | Header: `Id`, `Name`, `Implementation` (e.g. `Sql`), `IsCurrent` |
 | `sec.SqlCredentialService` | Typed body: `CredentialServiceId` (FK → `sec.CredentialService.Id`), `CredentialVaultName`, `SecretManagerName`, `HmacKeySecretName`, `Environment`, `MaxTokensPerUser` |
 
 All credential **policy** lives in the typed body row. Nothing credential-related remains in appsettings — only the pointer.

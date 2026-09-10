@@ -8,7 +8,7 @@ namespace Fdw.Services.Data.Configuration;
 
 /// <summary>
 /// STJ JsonConverter for <see cref="SecretManagerConfiguration"/> that dispatches to the correct
-/// concrete derived type using the <c>ServiceOptionType</c> discriminator field.
+/// concrete derived type using the <c>Implementation</c> discriminator field.
 /// </summary>
 /// <remarks>
 /// Why: Mirrors <see cref="ConnectionConfigurationJsonConverter"/>. The base type lives in
@@ -17,7 +17,7 @@ namespace Fdw.Services.Data.Configuration;
 /// </remarks>
 public sealed class SecretManagerConfigurationJsonConverter : JsonConverter<SecretManagerConfiguration>
 {
-    private const string DiscriminatorPropertyName = "ServiceOptionType";
+    private const string DiscriminatorPropertyName = "Implementation";
     private const string SettingsPropertyName = "Configuration";
 
     private JsonSerializerOptions? _innerOptions;

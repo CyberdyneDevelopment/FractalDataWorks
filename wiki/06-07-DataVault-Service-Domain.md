@@ -132,7 +132,7 @@ DataVault uses the standard FDW polymorphic header + typed-body pattern.
 
 | Table | Purpose |
 |---|---|
-| `sec.DataVault` | Header: `Id`, `Name`, `ServiceOptionType`, `IsCurrent` |
+| `sec.DataVault` | Header: `Id`, `Name`, `Implementation`, `IsCurrent` |
 | `sec.DefaultDataVault` | Typed body: `DataVaultId` (FK → `sec.DataVault.Id`), `ConnectionId` |
 
 `ConnectionId` is the logical `Id` of the `cnx.Connection` row the vault will use. It is resolved once at vault initialization — never re-queried at request time.
@@ -144,7 +144,7 @@ DataVault uses the standard FDW polymorphic header + typed-body pattern.
   "DataStores": [
     { "Name": "ConfigurationDb", "Schema": "sec",
       "Containers": [
-        { "Name": "DataVault",        "FieldNames": ["RowId","Id","Name","ServiceType","ServiceOptionType","IsCurrent","IsDeleted","Description"] },
+        { "Name": "DataVault",        "FieldNames": ["RowId","Id","Name","ServiceType","Implementation","IsCurrent","IsDeleted","Description"] },
         { "Name": "DefaultDataVault", "FieldNames": ["RowId","Id","DataVaultId","ConnectionId","IsCurrent","IsDeleted"] }
       ]
     }

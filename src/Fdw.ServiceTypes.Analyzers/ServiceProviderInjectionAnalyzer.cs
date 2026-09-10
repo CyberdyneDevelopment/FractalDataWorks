@@ -71,8 +71,8 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
 
         context.RegisterCompilationStartAction(compilationContext =>
         {
-            var serviceOptionType = compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionMetadataName);
-            if (serviceOptionType == null)
+            var implementation = compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionMetadataName);
+            if (implementation == null)
                 return;
 
             var serviceProviderTypes = ServiceProviderMetadataNames
@@ -85,20 +85,20 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
                 compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionDependencyAttributeMetadataName);
 
             compilationContext.RegisterSymbolAction(
-                symbolContext => AnalyzeNamedType(symbolContext, serviceOptionType, serviceProviderTypes, serviceOptionDependencyAttributeType),
+                symbolContext => AnalyzeNamedType(symbolContext, implementation, serviceProviderTypes, serviceOptionDependencyAttributeType),
                 SymbolKind.NamedType);
         });
     }
 
     private static void AnalyzeNamedType(
         SymbolAnalysisContext context,
-        INamedTypeSymbol serviceOptionType,
+        INamedTypeSymbol implementation,
         ImmutableArray<INamedTypeSymbol> serviceProviderTypes,
         INamedTypeSymbol? serviceOptionDependencyAttributeType)
     {
         var classSymbol = (INamedTypeSymbol)context.Symbol;
 
-        if (classSymbol.TypeKind != TypeKind.Class || !IsServiceOptionType(classSymbol, serviceOptionType))
+        if (classSymbol.TypeKind != TypeKind.Class || !IsImplementation(classSymbol, implementation))
             return;
 
         foreach (var constructor in classSymbol.GetMembers().OfType<IMethodSymbol>()
@@ -106,7 +106,7 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
         {
             foreach (var parameter in constructor.Parameters)
             {
-                if (!IsServiceOptionType(parameter.Type, serviceOptionType))
+                if (!IsImplementation(parameter.Type, implementation))
                     continue;
 
                 if (IsServiceProviderType(parameter.Type, serviceProviderTypes))
@@ -128,9 +128,9 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static bool IsServiceOptionType(ITypeSymbol type, INamedTypeSymbol serviceOptionType)
-        => SymbolEqualityComparer.Default.Equals(type, serviceOptionType)
-            || type.AllInterfaces.Contains(serviceOptionType, SymbolEqualityComparer.Default);
+    private static bool IsImplementation(ITypeSymbol type, INamedTypeSymbol implementation)
+        => SymbolEqualityComparer.Default.Equals(type, implementation)
+            || type.AllInterfaces.Contains(implementation, SymbolEqualityComparer.Default);
 
     private static bool IsServiceProviderType(ITypeSymbol type, ImmutableArray<INamedTypeSymbol> serviceProviderTypes)
         => type is INamedTypeSymbol namedType

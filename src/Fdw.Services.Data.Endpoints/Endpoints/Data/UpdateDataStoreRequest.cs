@@ -15,7 +15,7 @@ public class UpdateDataStoreRequest
     /// <summary>Gets or sets the data store name (identifier).</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the updated store type (e.g., "MsSql"). Maps to ServiceOptionType on the configuration.</summary>
+    /// <summary>Gets or sets the updated store type (e.g., "MsSql"). Maps to Implementation on the configuration.</summary>
     public string? StoreType { get; set; }
 
     /// <summary>Gets or sets the updated connection name. Resolved to ConnectionId by the endpoint.</summary>

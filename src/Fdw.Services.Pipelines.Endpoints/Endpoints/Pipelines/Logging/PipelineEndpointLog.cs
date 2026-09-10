@@ -19,7 +19,7 @@ public static partial class PipelineEndpointLog
     [MessageLogging(EventId = 41000, Level = LogLevel.Warning, Message = "Rejected modification of system pipeline '{pipelineName}' — system configurations are read-only")]
     public static partial IGenericMessage SystemPipelineReadOnly(ILogger logger, string pipelineName);
 
-    /// <summary>Logs that a persisted pipeline is missing its required kind (ServiceOptionType).</summary>
-    [MessageLogging(EventId = 21000, Level = LogLevel.Error, Message = "Pipeline '{pipelineName}' has no kind (ServiceOptionType)")]
+    /// <summary>Logs that a persisted pipeline is missing its required kind (Implementation).</summary>
+    [MessageLogging(EventId = 21000, Level = LogLevel.Error, Message = "Pipeline '{pipelineName}' has no kind (Implementation)")]
     public static partial IGenericMessage PipelineMissingKind(ILogger logger, string pipelineName);
 }

@@ -149,7 +149,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 Name = config.Name,
                 SecretManagerType = config.SecretManagerType,
                 Description = config.Description,
-                ServiceOptionType = config.Implementation
+                Implementation = config.Implementation
             };
 
             await Send.ResponseAsync(detail, 201, ct).ConfigureAwait(false);

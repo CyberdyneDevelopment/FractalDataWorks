@@ -43,12 +43,12 @@ public class IGenericConfigurationTests
 
         // Why each is absent: Name belongs to the two tiers that are resolvable by name; SectionName
         // named an appsettings section nothing has read since the gateway became the one source; and
-        // ServiceType/ServiceOptionType were a discriminator every record had to invent whether or
+        // ServiceType/Implementation were a discriminator every record had to invent whether or
         // not it discriminated anything -- which is what let malformed rows claim one.
         type.GetProperty("Name").ShouldBeNull();
         type.GetProperty("SectionName").ShouldBeNull();
         type.GetProperty("ServiceType").ShouldBeNull();
-        type.GetProperty("ServiceOptionType").ShouldBeNull();
+        type.GetProperty("Implementation").ShouldBeNull();
     }
 
     [Fact]

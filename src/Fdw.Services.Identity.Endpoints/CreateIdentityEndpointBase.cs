@@ -75,20 +75,20 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
         {
             Id = identityId,
             Name = request.Name,
-            Implementation = request.ServiceOptionType,
+            Implementation = request.Implementation,
             Description = request.Description,
             Configuration = typedBody,
         };
 
         // One save for the whole aggregate: the provider writes the header, then dispatches on
-        // ServiceOptionType so the registered typed provider writes the body.
+        // Implementation so the registered typed provider writes the body.
         var saved = await Identities.Save(identity, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {
             return saved.ToNewResult<IdentityDetailResponse>();
         }
 
-        IdentityEndpointLog.IdentityCreated(Logger, request.Name, request.ServiceOptionType);
+        IdentityEndpointLog.IdentityCreated(Logger, request.Name, request.Implementation);
         return GenericResult<IdentityDetailResponse>.Success(MapToDetail(identity, typedBody));
     }
 

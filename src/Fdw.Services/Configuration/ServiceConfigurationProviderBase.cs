@@ -22,7 +22,7 @@ namespace Fdw.Services.Configuration;
 /// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <typeparam name="TCommand">The domain record's configuration command.</typeparam>
 /// <remarks>
-/// It owns the dictionary of implementation providers, keyed by <c>ServiceOptionType</c>, and it is the
+/// It owns the dictionary of implementation providers, keyed by <c>Implementation</c>, and it is the
 /// only thing holding a gateway. An implementation provider receives the gateway as an argument, so it
 /// reads and writes in the same connection as the domain it belongs to — which the foreign key already
 /// required, being declared on the domain row's <c>RowId</c>.
@@ -123,7 +123,7 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
     {
         if (string.IsNullOrEmpty(header.Implementation))
         {
-            DefaultConfigurationProviderLog.NoServiceOptionTypeForTypedBody(
+            DefaultConfigurationProviderLog.NoImplementationForTypedBody(
                 _log, typeof(TDomainConfiguration).Name, header.Name);
         }
         else if (!_implementations.TryGetValue(header.Implementation, out var implementationProvider))
@@ -170,6 +170,26 @@ public abstract class ServiceConfigurationProviderBase<TDomainConfiguration, TIm
         }
 
         return await base.ComposeAggregate(header, asOf, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The write half of dispatch. A domain row that names an implementation nobody registered, or
+    /// names one and carries none, is the bodiless record that fails at compose time -- and, when the
+    /// record is read during startup, at boot. Refusing it here keeps that state out of the store
+    /// instead of discovering it later.
+    /// </remarks>
+    public override async Task<IGenericResult<TDomainConfiguration>> Save(
+        TDomainConfiguration record, CancellationToken ct = default)
+    {
+        if (record is { ImplementationConfiguration: null, Implementation: { Length: > 0 } implementation }
+            && _implementations.ContainsKey(implementation))
+        {
+            return GenericResult<TDomainConfiguration>.Failure(
+                DefaultConfigurationProviderLog.IncompleteAggregate(_log, record.Name, implementation));
+        }
+
+        return await base.Save(record, ct).ConfigureAwait(false);
     }
 
     /// <summary>Builds the domain record that carries a member's name, kind and implementation.</summary>

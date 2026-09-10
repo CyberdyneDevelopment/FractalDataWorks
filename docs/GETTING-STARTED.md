@@ -147,7 +147,7 @@ manager(s), and data store(s) needed to reach ConfigurationDb. Add this file to 
     "Connections": [
       {
         "Name": "ConfigurationDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "localhost",
           "Database": "ConfigurationDb",
@@ -165,7 +165,7 @@ manager(s), and data store(s) needed to reach ConfigurationDb. Add this file to 
     "SecretManagers": [
       {
         "Name": "EnvSecrets",
-        "ServiceOptionType": "EnvironmentVariable",
+        "Implementation": "EnvironmentVariable",
         "Configuration": {
           "Prefix": "FDW_SECRET_"
         }
@@ -216,7 +216,7 @@ export FDW_SECRET_CONFIG_PASSWORD='your-password-here'
 
 `AddConfigurationGateway<TConnectionFactory, TSecretManager>(path)` (in
 `Fdw.Services.Data/Extensions/ConfigurationGatewayExtensions.cs`) reads this file with
-`System.Text.Json` (not `IConfiguration` binding — that's what lets `ServiceOptionType: "MsSql"`
+`System.Text.Json` (not `IConfiguration` binding — that's what lets `Implementation: "MsSql"`
 dispatch to the concrete `MsSqlConnectionConfiguration` subtype) and registers the resulting
 `ConfigurationSchema` plus `IConfigurationGateway` as singletons.
 

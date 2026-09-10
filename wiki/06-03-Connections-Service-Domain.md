@@ -316,7 +316,7 @@ Connection configurations are runtime rows in ConfigurationDb's `conn` schema, r
 conn.Connection
   Id: GUID
   Name: 'OrdersDb'
-  ServiceOptionType: 'MsSql'
+  Implementation: 'MsSql'
 
 -- Typed body (every field the factory reads at runtime)
 conn.MsSqlConnection

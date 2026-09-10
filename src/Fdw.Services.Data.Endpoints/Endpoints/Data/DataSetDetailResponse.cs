@@ -29,7 +29,7 @@ public class DataSetDetailResponse : ResourceDetail
     /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", or "Federated"
     /// (a registered <c>DataSetTypes</c> member).
     /// </summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>
     /// Gets or sets the federation strategy used to combine sources for a Federated dataset (a
