@@ -21,7 +21,7 @@ namespace Fdw.Services.Settings;
 
 /// <summary>
 /// Composite configuration provider for the three-layer settings hierarchy: server → tenant → role.
-/// Wraps three two-arity <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> instances.
+/// Wraps three two-arity <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> instances.
 /// </summary>
 public class SettingsConfigurationProvider
 {

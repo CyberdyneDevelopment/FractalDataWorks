@@ -20,7 +20,7 @@ namespace Fdw.Services.Users;
 
 /// <summary>
 /// Domain configuration provider for user-tenant memberships. Sole owner of <c>tenant.UserTenants</c> gatewayProvider access.
-/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
+/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with
 /// tenant-membership query and mutation methods.
 /// </summary>
 /// <remarks>

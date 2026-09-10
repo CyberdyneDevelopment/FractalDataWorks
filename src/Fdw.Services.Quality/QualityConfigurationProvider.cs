@@ -21,7 +21,7 @@ namespace Fdw.Services.Quality;
 
 /// <summary>
 /// Composite configuration provider for the Quality domain. Wraps five two-arity
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> instances (Quality, Catalog, Promotion).
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> instances (Quality, Catalog, Promotion).
 /// </summary>
 public class QualityConfigurationProvider
 {

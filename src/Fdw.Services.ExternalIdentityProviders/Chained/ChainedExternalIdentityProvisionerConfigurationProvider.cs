@@ -10,7 +10,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>
 /// Typed-body configuration provider for <c>sec.ChainedExternalIdentityProvisioner</c> rows.
-/// Extends <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> — all reads go to the gatewayProvider
+/// Extends <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> — all reads go to the gatewayProvider
 /// against ConfigurationDb.
 ///
 /// <c>Get(Guid id)</c> accepts the parent <c>sec.ExternalIdentityProvisioner.Id</c> (the durable

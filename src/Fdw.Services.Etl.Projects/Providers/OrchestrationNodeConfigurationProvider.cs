@@ -23,7 +23,7 @@ namespace Fdw.Services.Etl.Projects.Providers;
 /// </summary>
 /// <remarks>
 /// Why: OrchestrationNode is a self-FK tree (node.ParentRowId → the same table). The keystone base
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> ComposeChildren cannot express its
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> ComposeChildren cannot express its
 /// semantics — a depth-limited Get(id,depth) and a single load-all-then-walk-in-memory pass (instead of
 /// the base's per-relationship child queries, which for a self-tree would be query-per-node and lose the
 /// depth bound). So the tree overloads (Get(name,parentId), Get(id,depth), GetRoots, GetChildren) plus

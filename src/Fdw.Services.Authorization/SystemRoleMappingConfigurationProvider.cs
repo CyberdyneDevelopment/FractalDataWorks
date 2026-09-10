@@ -28,11 +28,11 @@ public class SystemRoleMappingConfigurationProvider
     /// <param name="dataStoreName">The store the domain's rows live in.</param>
     /// <param name="pathName">The path the rows live under.</param>
     public SystemRoleMappingConfigurationProvider(
-        ILogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, ISystemRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>>? logger,
+        ILogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
-        : base(logger ?? NullLogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, ISystemRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>>.Instance,
+        : base(logger ?? NullLogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>>.Instance,
                gatewayProvider,
                dataStoreName,
                pathName)

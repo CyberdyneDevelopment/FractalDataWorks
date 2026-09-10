@@ -19,7 +19,7 @@ namespace Fdw.Services.Notifications;
 
 /// <summary>
 /// Configuration provider for notifications. Thin wrapper over
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. Also registers the
+/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>. Also registers the
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
 public class NotificationConfigurationProvider
