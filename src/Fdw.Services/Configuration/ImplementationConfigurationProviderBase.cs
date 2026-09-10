@@ -31,7 +31,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     : IServiceConfigurationProvider,
       IDomainConfigurationProvider<TImplementationConfiguration>,
       IImplementationConfigurationProvider<TImplementationConfiguration>
-    where TDomainConfiguration : class, IGenericConfiguration
+    where TDomainConfiguration : class, IPlatformServiceConfiguration<TImplementationConfiguration>
     where TImplementationConfiguration : IImplementationConfiguration
     where TCommand : ConfigurationCommandBase<TDomainConfiguration>
 {
@@ -161,7 +161,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var domain = await GetByName(name, null, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
-        return await Dispatch(domain.Value, null, ct).ConfigureAwait(false);
+        return await Implementation(domain.Value, null, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -254,14 +254,15 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var rows = await Get(ct).ConfigureAwait(false);
         if (!rows.IsSuccess) return rows.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
 
-        var widened = new List<TImplementationConfiguration>();
+        // The rows this provider read ARE the implementations. Reading an implementation off them
+        // would be treating them as domain records, which is the other half of the pair.
+        var own = new List<TImplementationConfiguration>();
         foreach (var row in rows.Value ?? [])
         {
-            if (row is IDomainConfiguration { ImplementationConfiguration: TImplementationConfiguration found })
-                widened.Add(found);
+            if (row is TImplementationConfiguration mine) own.Add(mine);
         }
 
-        return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success(widened);
+        return GenericResult<IReadOnlyList<TImplementationConfiguration>>.Success(own);
     }
 
     async Task<IGenericResult<TImplementationConfiguration>> IImplementationConfigurationProvider<TImplementationConfiguration>.Save(
@@ -301,7 +302,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var domain = await GetByName(name, asOf, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
-        return await Dispatch(domain.Value, asOf, ct).ConfigureAwait(false);
+        return await Implementation(domain.Value, asOf, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -394,7 +395,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var domain = await GetHeaderById(id, asOf, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
-        return await Dispatch(domain.Value, asOf, ct).ConfigureAwait(false);
+        return await Implementation(domain.Value, asOf, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -403,48 +404,49 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         var domain = await GetHeaderById(id, null, ct).ConfigureAwait(false);
         if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
 
-        return await Dispatch(domain.Value, null, ct).ConfigureAwait(false);
+        return await Implementation(domain.Value, null, ct).ConfigureAwait(false);
     }
 
     // The domain row names an implementation; that name selects the provider, and the domain's own
     // Id is what the provider joins on. What it returns is the answer -- there is nothing to attach
     // it to and take back off again.
-    private async Task<IGenericResult<TImplementationConfiguration>> Dispatch(
+    // The domain row is the tool, not the answer: it names which implementation is configured, and
+    // its Configuration is already typed to that domain's contract -- so nothing converts here.
+    private async Task<IGenericResult<TImplementationConfiguration>> Implementation(
         TDomainConfiguration? row, DateTimeOffset? asOf, CancellationToken ct)
     {
-        if (row is not IDomainConfiguration domain)
+        if (row is null)
         {
-            return GenericResult<TImplementationConfiguration>.Failure(
-                DefaultConfigurationProviderLog.NoImplementationForTypedBody(
-                    _logger, typeof(TDomainConfiguration).Name, string.Empty));
+            return GenericResult<TImplementationConfiguration>.Success(default!);
         }
 
-        if (domain.Implementation is not { Length: > 0 } implementation)
+        if (row.Implementation is not { Length: > 0 } implementation)
         {
             return GenericResult<TImplementationConfiguration>.Failure(
                 DefaultConfigurationProviderLog.NoImplementationForTypedBody(
-                    _logger, typeof(TDomainConfiguration).Name, domain.Name));
+                    _logger, typeof(TDomainConfiguration).Name, row.Name));
         }
 
         if (!_implementations.TryGetValue(implementation, out var provider))
         {
             return GenericResult<TImplementationConfiguration>.Failure(
-                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, domain.Name, implementation));
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, row.Name, implementation));
         }
 
         var loaded = asOf is { } instant
-            ? await provider.Get(domain.Id, instant, ct).ConfigureAwait(false)
-            : await provider.Get(domain.Id, ct).ConfigureAwait(false);
+            ? await provider.Get(row.Id, instant, ct).ConfigureAwait(false)
+            : await provider.Get(row.Id, ct).ConfigureAwait(false);
         if (!loaded.IsSuccess) return loaded;
 
-        // The name and the domain are the domain row's, read across here so a caller holding the
-        // implementation never has to go back for the row that named it.
+        // One name for a configured member, held on the domain row and carried across here.
         if (loaded.Value is not null)
         {
-            loaded.Value.Name = domain.Name;
-            loaded.Value.Domain = domain.Domain;
+            loaded.Value.Name = row.Name;
+            loaded.Value.Domain = row.Domain;
         }
-        return loaded;
+
+        row.Configuration = loaded.Value;
+        return GenericResult<TImplementationConfiguration>.Success(row.Configuration!);
     }
 
     /// <summary>
