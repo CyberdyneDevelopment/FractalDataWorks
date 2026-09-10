@@ -425,6 +425,10 @@ public sealed class ConnectionBaseTests : IDisposable
 
         public string Name { get; set; } = string.Empty;
 
+        public string Domain { get; set; } = string.Empty;
+
+        public string Implementation { get; set; } = string.Empty;
+
         public Guid ConnectionId { get; set; }
     }
 

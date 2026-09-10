@@ -14,7 +14,6 @@ using Fdw.Messages;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -22,91 +21,27 @@ using Fdw.Services.Data;
 
 namespace Fdw.Services.Tests.Configuration;
 
+/// <summary>
+/// Pins what an implementation provider does with the rows it reads and writes: it lists them,
+/// composes their children onto them, and cascades those children back out on a save.
+/// </summary>
+/// <remarks>
+/// A read keyed by id is the domain's id — the row is reached through the domain it hangs from, so
+/// nothing here looks a configuration up by name. That is the domain provider's job, and the name
+/// lives on the domain row.
+/// </remarks>
 [Collection(nameof(ServicesTestCollection))]
 public class DefaultConfigurationProviderTests
 {
-    private static ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration> MakeProvider(
-        TestDualConfig[] systemConfigs,
-        TestDualConfig[] userConfigs)
+    private static TestDualConfigProvider MakeProvider(params TestDualConfig[] rows)
     {
         var mockGateway = new Mock<IConfigurationGateway>();
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
+        mockGateway.Setup(g => g.DataStores).Returns((IReadOnlyList<IDataStore>)Array.Empty<IDataStore>());
         mockGateway
             .Setup(g => g.Execute<IEnumerable<TestDualConfig>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success(userConfigs));
+            .ReturnsAsync(GenericResult<IEnumerable<TestDualConfig>>.Success(rows));
 
-        var gatewayProvider = GatewayProviderFor(mockGateway.Object);
-
-        return new ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>>.Instance,
-            gatewayProvider,
-            "TestStore",
-            "cfg");
-    }
-
-    // ========================================================================
-    // Constructor
-    // ========================================================================
-
-    // ========================================================================
-    // Get(name)
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task GetByNameReturnsCfgConfigWhenOnlyInCfg()
-    {
-        var userConfig = new TestDualConfig { Id = Guid.NewGuid(), Name = "UserDb" };
-
-        var provider = MakeProvider([], [userConfig]);
-
-        var result = await provider.Get("UserDb", TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.ShouldBe(userConfig);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task GetByNameReturnsNullWhenNotInSystemAndNoUserCache()
-    {
-        var provider = MakeProvider(
-            [new TestDualConfig { Id = Guid.NewGuid(), Name = "Other" }],
-            []);
-
-        var result = await provider.Get("NonExistent", TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    public async Task GetByNameReturnsNullForNullName()
-    {
-        var provider = MakeProvider([], []);
-
-        var result = await provider.Get((string)null!, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Configuration")]
-    public async Task GetByNameReturnsNullForWhitespaceName()
-    {
-        var provider = MakeProvider([], []);
-
-        var result = await provider.Get("   ", TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeNull();
+        return new TestDualConfigProvider(GatewayProviderFor(mockGateway.Object));
     }
 
     // ========================================================================
@@ -118,17 +53,44 @@ public class DefaultConfigurationProviderTests
     [Trait("Category", "Configuration")]
     public async Task GetByIdReturnsNullForEmptyGuid()
     {
-        var provider = MakeProvider([], []);
-
-        var result = await provider.Get(Guid.Empty, TestContext.Current.CancellationToken);
+        var result = await MakeProvider().Get(Guid.Empty, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeNull();
     }
 
     // ========================================================================
-    // Get(name) / Get(id) — still compose typed-list children via the extracted
-    // ComposeAggregate hook (FDW-558 behavior-preservation regression)
+    // Get() — every row this implementation holds
+    // ========================================================================
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Configuration")]
+    public async Task GetReturnsEveryRowTheStoreHolds()
+    {
+        var row = new TestDualConfig { Id = Guid.NewGuid(), Name = "UserDb" };
+
+        var result = await MakeProvider(row).Get(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value!.ShouldHaveSingleItem().ShouldBe(row);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Configuration")]
+    public async Task GetReturnsEmptyWhenTheStoreHoldsNothing()
+    {
+        var result = await MakeProvider().Get(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.ShouldBeEmpty();
+    }
+
+    // ========================================================================
+    // Get() — composes typed-list children onto each row it read
     // ========================================================================
 
     private static List<IDataStore> BuildOwnerKeyTree(string containerName)
@@ -175,7 +137,7 @@ public class DefaultConfigurationProviderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public async Task GetByNameStillComposesTypedListChildrenAfterComposeAggregateExtraction()
+    public async Task GetComposesTypedListChildrenOntoTheRowItRead()
     {
         var owner = new TestContainerConfiguration { Id = Guid.NewGuid(), Name = "Owner" };
 
@@ -197,24 +159,20 @@ public class DefaultConfigurationProviderTests
                 new TestContainerFieldConfiguration { Id = Guid.NewGuid(), Name = "Beta", TypeId = "Int32" },
             }));
 
-        var provider = new ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>>.Instance,
-            GatewayProviderFor(mockGateway.Object),
-            "PlatformConfiguration",
-            "data");
-
-        var result = await provider.Get("Owner", TestContext.Current.CancellationToken);
+        var result = await new TestContainerProvider(GatewayProviderFor(mockGateway.Object))
+            .Get(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value!.Fields.Select(f => f.Name).OrderBy(n => n, StringComparer.Ordinal)
+        result.Value!.ShouldHaveSingleItem().Fields
+            .Select(f => f.Name).OrderBy(n => n, StringComparer.Ordinal)
             .ShouldBe(["Alpha", "Beta"]);
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Configuration")]
-    public async Task GetByNameResolvesRootContainerWithSelfReferencingHierarchyFk()
+    public async Task GetResolvesOwnerKeysWhenTheContainerAlsoCarriesASelfReferencingFk()
     {
         var owner = new TestContainerConfiguration { Id = Guid.NewGuid(), Name = "Admin" };
 
@@ -230,19 +188,14 @@ public class DefaultConfigurationProviderTests
                 It.Is<DataStoreTarget>(t => string.Equals(t.Container, "TestContainerField", StringComparison.Ordinal)),
                 typeof(TestContainerFieldConfiguration),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<object>>.Success(System.Array.Empty<object>()));
+            .ReturnsAsync(GenericResult<IEnumerable<object>>.Success(Array.Empty<object>()));
 
-        var provider = new ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>>.Instance,
-            GatewayProviderFor(mockGateway.Object),
-            "PlatformConfiguration",
-            "data");
-
-        var result = await provider.Get("Admin", TestContext.Current.CancellationToken);
+        var result = await new TestContainerProvider(GatewayProviderFor(mockGateway.Object))
+            .Get(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value!.Name.ShouldBe("Admin");
+        result.Value!.ShouldHaveSingleItem().Name.ShouldBe("Admin");
     }
 
     private static List<IDataStore> BuildSelfReferencingKeyTree(string containerName)
@@ -298,106 +251,6 @@ public class DefaultConfigurationProviderTests
     }
 
     // ========================================================================
-    // GetAll() — deduplication by name, system wins
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task GetAllReturnsOnlyUserWhenNoSystemConfigs()
-    {
-        var userConfig = new TestDualConfig { Id = Guid.NewGuid(), Name = "UserDb" };
-
-        var provider = MakeProvider([], [userConfig]);
-
-        var getAllResult = await provider.Get(TestContext.Current.CancellationToken);
-        getAllResult.IsSuccess.ShouldBeTrue();
-        var result = getAllResult.Value!.ToList();
-
-        result.Count.ShouldBe(1);
-        result[0].ShouldBe(userConfig);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task GetAllReturnsEmptyWhenBothSourcesEmpty()
-    {
-        var provider = MakeProvider([], []);
-
-        var getAllResult = await provider.Get(TestContext.Current.CancellationToken);
-
-        getAllResult.IsSuccess.ShouldBeTrue();
-        getAllResult.Value.ShouldNotBeNull();
-        getAllResult.Value.ShouldBeEmpty();
-    }
-
-    // ========================================================================
-    // Cache invalidation
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task DeleteFailsForEmptyGuid()
-    {
-        var mockGateway = new Mock<IConfigurationGateway>();
-        mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-
-        var provider = new ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>>.Instance,
-            GatewayProviderFor(mockGateway.Object),
-            "TestStore",
-            "cfg");
-
-        var result = await provider.Delete(Guid.Empty, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-        mockGateway.Verify(g => g.InvalidateCachedResults(It.IsAny<DataStoreTarget>()), Times.Never);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public void InvalidateCacheAsksTheGatewayToDropThisContainer()
-    {
-        var mockGateway = new Mock<IConfigurationGateway>();
-        mockGateway.Setup(g => g.DataStores).Returns(Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-
-        new ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestDualConfigImplementationConfiguration>>.Instance,
-            GatewayProviderFor(mockGateway.Object),
-            "TestStore",
-            "cfg").InvalidateCache();
-
-        mockGateway.Verify(
-            g => g.InvalidateCachedResults(
-                It.Is<DataStoreTarget>(t => t.Path == "cfg" && t.Container == "TestDualConfig")),
-            Times.Once);
-    }
-
-    // ========================================================================
-    // GetCount
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public async Task GetCountReflectsDeduplicatedTotal()
-    {
-        var systemConfig = new TestDualConfig { Id = Guid.NewGuid(), Name = "ControlDb" };
-        var userConfig1 = new TestDualConfig { Id = Guid.NewGuid(), Name = "ControlDb" };
-        var userConfig2 = new TestDualConfig { Id = Guid.NewGuid(), Name = "UserDb" };
-
-        // 1 system + 2 user, but "ControlDb" collides -> deduped total = 2
-        var provider = MakeProvider([systemConfig], [userConfig1, userConfig2]);
-
-        var getAllResult = await provider.Get(TestContext.Current.CancellationToken);
-        getAllResult.IsSuccess.ShouldBeTrue();
-        getAllResult.Value!.Count.ShouldBe(2);
-    }
-
-    // ========================================================================
     // Save — KVP property-collection cascade (FDW-547)
     // ========================================================================
 
@@ -418,10 +271,7 @@ public class DefaultConfigurationProviderTests
         };
 
         var mockGateway = new Mock<IConfigurationGateway>();
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestKvpConfiguration>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestKvpConfiguration>>.Success([]));
+        mockGateway.Setup(g => g.DataStores).Returns((IReadOnlyList<IDataStore>)Array.Empty<IDataStore>());
         mockGateway
             .Setup(g => g.Execute<TestKvpConfiguration>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestKvpConfiguration>.Success(owner));
@@ -436,13 +286,8 @@ public class DefaultConfigurationProviderTests
                 return Task.FromResult<IGenericResult>(GenericResult.Success());
             });
 
-        var provider = new ImplementationConfigurationProviderBase<ITestKvpImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestKvpImplementationConfiguration>>.Instance,
-            GatewayProviderFor(mockGateway.Object),
-            "PlatformConfiguration",
-            "conn");
-
-        var result = await provider.Save(owner, TestContext.Current.CancellationToken);
+        var result = await new TestKvpProvider(GatewayProviderFor(mockGateway.Object))
+            .Save(owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         kvpSaves.Count.ShouldBe(2);
@@ -451,10 +296,9 @@ public class DefaultConfigurationProviderTests
             .ShouldBe(["Alpha", "Beta"]);
         foreach (var (command, _) in kvpSaves)
         {
-            var expectedValue = command.Data.Name == "Alpha" ? "1" : "2";
-            command.Data.Value.ShouldBe(expectedValue);
-            // Strip(TestKvpConfiguration)+"Id" = "TestKvpId" — the same FK-name convention CascadeCollections
-            // already applies to typed-list children.
+            command.Data.Value.ShouldBe(command.Data.Name == "Alpha" ? "1" : "2");
+            // Strip(TestKvpConfiguration)+"Id" = "TestKvpId" — the same FK-name convention
+            // CascadeCollections applies to typed-list children.
             command.AdditionalColumnValues["TestKvpId"].ShouldBe(owner.Id);
         }
     }
@@ -480,10 +324,7 @@ public class DefaultConfigurationProviderTests
         };
 
         var mockGateway = new Mock<IConfigurationGateway>();
-        mockGateway.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        mockGateway
-            .Setup(g => g.Execute<IEnumerable<TestContainerConfiguration>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IEnumerable<TestContainerConfiguration>>.Success([]));
+        mockGateway.Setup(g => g.DataStores).Returns((IReadOnlyList<IDataStore>)Array.Empty<IDataStore>());
         mockGateway
             .Setup(g => g.Execute<TestContainerConfiguration>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestContainerConfiguration>.Success(owner));
@@ -498,20 +339,15 @@ public class DefaultConfigurationProviderTests
                 return Task.FromResult<IGenericResult>(GenericResult.Success());
             });
 
-        var provider = new ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestContainerImplementationConfiguration>>.Instance,
-            GatewayProviderFor(mockGateway.Object),
-            "PlatformConfiguration",
-            "data");
-
-        var result = await provider.Save(owner, TestContext.Current.CancellationToken);
+        var result = await new TestContainerProvider(GatewayProviderFor(mockGateway.Object))
+            .Save(owner, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         childSaves.Count.ShouldBe(2);
         childSaves.ShouldAllBe(s => s.Target == new DataStoreTarget("PlatformConfiguration", "data", "TestContainerField"));
         childSaves.ShouldAllBe(s => s.Command.Data.Id != Guid.Empty);
         // Strip(TestContainerConfiguration)+"Id" = "TestContainerId" — the same FK-name convention
-        // CascadeCollections already applies to KVP children (FDW-547) and DataSet.Fields.
+        // CascadeCollections applies to KVP children (FDW-547) and DataSet.Fields.
         childSaves.ShouldAllBe(s => s.Command.Data.TestContainerId == owner.Id);
         childSaves.Select(s => s.Command.Data.Name).OrderBy(n => n, StringComparer.Ordinal)
             .ShouldBe(["Alpha", "Beta"]);
@@ -521,14 +357,27 @@ public class DefaultConfigurationProviderTests
     // Test types
     // ========================================================================
 
-    public sealed class TestDualConfig : IGenericConfiguration
+    public sealed class TestDualConfig : ITestDualConfigImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestSection";
-        public string ServiceType => "Test";
-        public string? Implementation => "Default";
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = "Default";
         public string? Description { get; init; }
+    }
+
+    private sealed class TestDualConfigProvider
+        : ImplementationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>
+    {
+        public TestDualConfigProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestDualConfig, ITestDualConfigImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "TestStore",
+                "cfg",
+                "TestDualConfig")
+        {
+        }
     }
 
     [TypeOption(typeof(ConfigurationCommands), "TestDualConfig")]
@@ -538,16 +387,29 @@ public class DefaultConfigurationProviderTests
     }
 
     [GenerateMapper]
-    public sealed class TestKvpConfiguration : IGenericConfiguration
+    public sealed class TestKvpConfiguration : ITestKvpImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestKvp";
-        public string ServiceType => "TestKvp";
-        public string? Implementation => "Default";
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = "Default";
 
         [ConfigurationChildTable("TestKvpChild")]
         public IDictionary<string, string?> Properties { get; set; } = new Dictionary<string, string?>(StringComparer.Ordinal);
+    }
+
+    private sealed class TestKvpProvider
+        : ImplementationProviderBase<TestKvpConfiguration, ITestKvpImplementationConfiguration>
+    {
+        public TestKvpProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestKvpConfiguration, ITestKvpImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "conn",
+                "TestKvp")
+        {
+        }
     }
 
     [TypeOption(typeof(ConfigurationCommands), "TestKvp")]
@@ -557,15 +419,28 @@ public class DefaultConfigurationProviderTests
     }
 
     [GenerateMapper]
-    public sealed class TestContainerConfiguration : IGenericConfiguration
+    public sealed class TestContainerConfiguration : ITestContainerImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestContainer";
-        public string ServiceType => "TestContainer";
-        public string? Implementation => "Default";
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = "Default";
 
         public List<TestContainerFieldConfiguration> Fields { get; set; } = [];
+    }
+
+    private sealed class TestContainerProvider
+        : ImplementationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>
+    {
+        public TestContainerProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestContainerConfiguration, ITestContainerImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "data",
+                "TestContainer")
+        {
+        }
     }
 
     [GenerateMapper]
@@ -573,9 +448,6 @@ public class DefaultConfigurationProviderTests
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestContainerField";
-        public string ServiceType => "TestContainer";
-        public string? Implementation => null;
 
         // Owner FK — set by CascadeCollections via generated SetValue("TestContainerId", owner.Id).
         public Guid TestContainerId { get; set; }

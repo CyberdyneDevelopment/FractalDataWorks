@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Commands;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,9 +27,9 @@ public sealed class DefaultAuthorizationServiceTests
     public DefaultAuthorizationServiceTests()
     {
         _sut = new DefaultAuthorizationService(
-            CreateProviderMock<RoleImplementationConfiguration, RoleConfigurationCommand>(),
-            CreateProviderMock<PermissionImplementationConfiguration, PermissionConfigurationCommand>(),
-            CreateProviderMock<RolePermissionImplementationConfiguration, RolePermissionConfigurationCommand>(),
+            Mock.Of<IImplementationConfigurationProvider<IRoleImplementationConfiguration>>(),
+            Mock.Of<IImplementationConfigurationProvider<IPermissionImplementationConfiguration>>(),
+            Mock.Of<IImplementationConfigurationProvider<IRolePermissionImplementationConfiguration>>(),
             NullLogger<DefaultAuthorizationService>.Instance);
     }
 
@@ -376,20 +377,6 @@ public sealed class DefaultAuthorizationServiceTests
         mock.Setup(c => c.Roles).Returns(roles);
         mock.Setup(c => c.Permissions).Returns(Array.Empty<string>());
         return mock.Object;
-    }
-
-    private static ImplementationConfigurationProviderBase<IImplementationConfiguration> CreateProviderMock<T, TCommand>()
-        where T : class, Fdw.Configuration.IGenericConfiguration
-        where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<T>
-    {
-        return new Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>>(
-            MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<IImplementationConfiguration>>.Instance,
-            GatewayProviderFor(Mock.Of<IConfigurationGateway>(
-                g => g.DataStores == (System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>())),
-            "TestStore",
-            "cfg") // invalidator
-            .Object;
     }
 
     private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)

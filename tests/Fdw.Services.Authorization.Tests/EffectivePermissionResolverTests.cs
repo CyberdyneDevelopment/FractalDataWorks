@@ -85,10 +85,10 @@ public sealed class EffectivePermissionResolverTests
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
         IOrgAccessProvider? orgAccessProvider = null)
     {
-        var roleProvider     = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(AllRoles);
-        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(AllPermissions);
-        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(AllRolePermissions);
-        var userRoleProvider = MockUserRoleProvider(userAssignments);
+        var roleProvider     = ConfigurationCatalog.Roles(AllRoles);
+        var permProvider     = ConfigurationCatalog.Permissions(AllPermissions);
+        var rolePermProvider = ConfigurationCatalog.RolePermissions(AllRolePermissions);
+        var userRoleProvider = ConfigurationCatalog.UserRoles(userAssignments);
 
         if (orgAccessProvider is null && orgGrants is not null)
         {
@@ -100,10 +100,10 @@ public sealed class EffectivePermissionResolverTests
         }
 
         return new EffectivePermissionResolver(
-            roleProvider.Object,
-            permProvider.Object,
-            rolePermProvider.Object,
-            userRoleProvider.Object,
+            roleProvider,
+            permProvider,
+            rolePermProvider,
+            userRoleProvider,
             NullLogger<EffectivePermissionResolver>.Instance,
             orgAccessProvider);
     }
@@ -192,19 +192,11 @@ public sealed class EffectivePermissionResolverTests
     public async Task Resolve_RoleProviderFails_ReturnsFailure()
     {
         // Arrange: role provider returns failure — fail-closed
-        var roleProviderMock = new Mock<RoleConfigurationProvider>();
-        roleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<RoleImplementationConfiguration>>.Failure(new GenericMessage("Role query failed")));
-
-        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(new[] { new PermissionImplementationConfiguration() });
-        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(Array.Empty<RolePermissionImplementationConfiguration>());
-        var userRoleProvider = MockUserRoleProvider([]);
-
         var sut = new EffectivePermissionResolver(
-            roleProviderMock.Object,
-            permProvider.Object,
-            rolePermProvider.Object,
-            userRoleProvider.Object,
+            ConfigurationCatalog.UnreadableRoles("Role query failed"),
+            ConfigurationCatalog.Permissions(new[] { new PermissionImplementationConfiguration() }),
+            ConfigurationCatalog.RolePermissions(Array.Empty<RolePermissionImplementationConfiguration>()),
+            ConfigurationCatalog.UserRoles([]),
             NullLogger<EffectivePermissionResolver>.Instance);
 
         // Act
@@ -319,25 +311,11 @@ public sealed class EffectivePermissionResolverTests
         // Before FDW-532 fix (the bug): there was no user-role provider call at all;
         // the resolver would bake all perms regardless.
         // After fix: failure MUST return Failure (fail-closed). No token issued.
-        var roleProvider     = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(AllRoles);
-        var permProvider     = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(AllPermissions);
-        var rolePermProvider = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(AllRolePermissions);
-
-        // UserRoleProvider fails
-        var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
-            MockBehavior.Loose,
-            NullLogger<UserRoleConfigurationProvider>.Instance,
-            new ConfigurationGatewayProvider(),
-            "TestStore", "authz");
-        userRoleProviderMock.CallBase = true;
-        userRoleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Failure(new GenericMessage("DB unavailable")));
-
         var sut = new EffectivePermissionResolver(
-            roleProvider.Object,
-            permProvider.Object,
-            rolePermProvider.Object,
-            userRoleProviderMock.Object,
+            ConfigurationCatalog.Roles(AllRoles),
+            ConfigurationCatalog.Permissions(AllPermissions),
+            ConfigurationCatalog.RolePermissions(AllRolePermissions),
+            ConfigurationCatalog.UnreadableUserRoles("DB unavailable"),
             NullLogger<EffectivePermissionResolver>.Instance);
 
         // Act
@@ -440,43 +418,4 @@ public sealed class EffectivePermissionResolverTests
 
     // Mocks the named provider interface the resolver actually asks for, rather than the concrete
     // base it happens to be built on.
-    private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
-        where TProvider : class, IImplementationConfigurationProvider<IImplementationConfiguration>
-        where TConfig : class, Fdw.Configuration.IGenericConfiguration
-    {
-        var mock = new Mock<TProvider>();
-        mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
-        return mock;
-    }
-
-    private static Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>> MockCatalogProvider<TConfig, TCommand>(
-        IEnumerable<TConfig> items)
-        where TConfig : class, Fdw.Configuration.IGenericConfiguration
-        where TCommand : ConfigurationCommandBase<TConfig>
-    {
-        var mock = new Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>>(
-            MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<IImplementationConfiguration>>.Instance,
-            new ConfigurationGatewayProvider(),
-            "TestStore", "cfg");
-        mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
-        return mock;
-    }
-
-    private static Mock<UserRoleConfigurationProvider> MockUserRoleProvider(
-        IEnumerable<UserRoleImplementationConfiguration> assignments)
-    {
-        var list = new List<UserRoleImplementationConfiguration>(assignments);
-        var mock = new Mock<UserRoleConfigurationProvider>(
-            MockBehavior.Loose,
-            NullLogger<UserRoleConfigurationProvider>.Instance,
-            new ConfigurationGatewayProvider(),
-            "TestStore", "authz");
-        mock.CallBase = true;
-        mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(list));
-        return mock;
-    }
 }

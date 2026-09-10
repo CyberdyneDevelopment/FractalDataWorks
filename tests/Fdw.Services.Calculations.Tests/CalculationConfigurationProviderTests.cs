@@ -1,33 +1,28 @@
 ﻿using System;
-using Fdw.Services.Calculations.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Abstractions;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Configuration;
 using Fdw.Data.Abstractions;
-using Fdw.Results;
 using Fdw.Messages;
-using Fdw.Services.Calculations.Commands;
+using Fdw.Results;
 using Fdw.Services.Calculations.Configuration;
-using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Services.Data;
 
-using Fdw.Abstractions;
 namespace Fdw.Services.Calculations.Tests;
 
 /// <summary>
-/// Proves the keystone base read composes the FULL calculation aggregate via
-/// <see cref="CalculationConfigurationProvider"/>.Get(id): header → Inputs, Steps→{Fields,Operands}
-/// (recursive, physically keyed by RowId), plus the polymorphic Formula typed body composed via the
-/// registered typed provider (dispatch on Implementation). Only IConfigurationGateway is faked.
+/// Proves a read through <see cref="CalculationConfigurationProvider"/> composes the FULL calculation:
+/// the domain row names the implementation, the registered implementation provider reads its own row,
+/// and the child cascade fills Inputs and Steps→{Fields, Operands} (recursive, joined on the owner's
+/// RowId). Only <see cref="IConfigurationGateway"/> is faked.
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "DataIntegrity")]
@@ -37,32 +32,33 @@ public class CalculationConfigurationProviderTests
     private static readonly Guid StepId = Guid.NewGuid();
 
     [Fact]
-    public async Task GetComposesInputsStepsFieldsOperandsAndTypedBody()
+    public async Task GetComposesTheImplementationWithItsInputsStepsFieldsAndOperands()
     {
         var gateway = new AggregateGateway();
-        var provider = new CalculationConfigurationProvider(
+        var domain = new CalculationConfigurationProvider(
             NullLogger<CalculationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
             "PlatformConfiguration");
 
-        // Register the Formula typed provider exactly as DefaultCalculationServiceType.RegisterFactory does.
-        var formulaProvider = new ImplementationConfigurationProviderBase<ICalculationTypedConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<IFormulaCalculationImplementationConfiguration>>.Instance,
+        // Registered exactly as DefaultCalculationServiceType registers it.
+        domain.Register("Formula", new FormulaCalculationConfigurationProvider(
+            NullLogger<FormulaCalculationConfigurationProvider>.Instance,
             GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "calc");
-        provider.Register("Formula", formulaProvider);
+            "PlatformConfiguration"));
 
-        var result = await provider.Get(EntityId, TestContext.Current.CancellationToken);
+        var result = await domain.Get(EntityId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value!.Inputs.Count.ShouldBe(2);
-        result.Value.Steps.Count.ShouldBe(1);
-        result.Value.Steps[0].Fields.Count.ShouldBe(2);
-        result.Value.Steps[0].Operands.Count.ShouldBe(1);
-        result.Value.Configuration.ShouldBeOfType<FormulaCalculationConfiguration>();
-        ((FormulaCalculationConfiguration)result.Value.Configuration!).FormulaBody.ShouldBe("[A]+[B]");
+        var formula = result.Value.ShouldBeOfType<FormulaCalculationConfiguration>();
+        formula.FormulaBody.ShouldBe("[A]+[B]");
+        formula.Inputs.Count.ShouldBe(2);
+        formula.Steps.Count.ShouldBe(1);
+        formula.Steps[0].Fields.Count.ShouldBe(2);
+        formula.Steps[0].Operands.Count.ShouldBe(1);
+
+        // The domain row is what names the member; the implementation carries the rest.
+        formula.Name.ShouldBe("Calc1");
+        formula.Implementation.ShouldBe("Formula");
     }
 
     private sealed class AggregateGateway : IConfigurationGateway
@@ -76,7 +72,7 @@ public class CalculationConfigurationProviderTests
         public void InvalidateCachedResults(DataStoreTarget target) => Invalidated.Add(target);
 
         private readonly IReadOnlyList<IDataStore> _stores;
-        private readonly List<ICalculationEntityImplementationConfiguration> _entities;
+        private readonly List<DomainConfiguration> _rows;
         private readonly List<CalculationEntityInputRecord> _inputs;
         private readonly List<CalculationStepConfiguration> _steps;
         private readonly List<CalculationStepFieldConfiguration> _fields;
@@ -85,7 +81,13 @@ public class CalculationConfigurationProviderTests
 
         public AggregateGateway()
         {
-            _entities = [new ICalculationEntityImplementationConfiguration { Id = EntityId, Name = "Calc1", Implementation = "Formula" }];
+            _rows =
+            [
+                new DomainConfiguration
+                {
+                    Id = EntityId, Name = "Calc1", Domain = "CalculationEntity", Implementation = "Formula",
+                }
+            ];
             _inputs =
             [
                 new CalculationEntityInputRecord { Id = Guid.NewGuid(), InputAlias = "A", InputKind = "DataSet", Ordinal = 0 },
@@ -98,7 +100,13 @@ public class CalculationConfigurationProviderTests
                 new CalculationStepFieldConfiguration { Id = Guid.NewGuid(), StepFieldRole = "OrderBy", Ordinal = 1 }
             ];
             _operands = [new CalculationStepOperandConfiguration { Id = Guid.NewGuid(), Name = "op1", OperandType = "Input", InputAlias = "A" }];
-            _formula = [new FormulaCalculationConfiguration { Id = Guid.NewGuid(), CalculationEntityId = EntityId, FormulaBody = "[A]+[B]", FormulaLanguage = "CSharp" }];
+            _formula =
+            [
+                new FormulaCalculationConfiguration
+                {
+                    Id = EntityId, CalculationEntityId = EntityId, FormulaBody = "[A]+[B]", FormulaLanguage = "CSharp",
+                }
+            ];
             _stores = [BuildTree()];
         }
 
@@ -109,8 +117,8 @@ public class CalculationConfigurationProviderTests
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            if (typeof(T) == typeof(IEnumerable<ICalculationEntityImplementationConfiguration>))
-                return Task.FromResult(GenericResult<T>.Success((T)(object)_entities.AsEnumerable()));
+            if (typeof(T) == typeof(IEnumerable<DomainConfiguration>))
+                return Task.FromResult(GenericResult<T>.Success((T)(object)_rows.AsEnumerable()));
             if (typeof(T) == typeof(IEnumerable<FormulaCalculationConfiguration>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)_formula.AsEnumerable()));
             return Task.FromResult(GenericResult<T>.Success((T)(object)Array.Empty<object>().AsEnumerable()));
@@ -143,32 +151,30 @@ public class CalculationConfigurationProviderTests
 
         private static IDataStore BuildTree()
         {
-            var inputContainer = Container("CalculationEntityInput", [], null);
-            var fieldContainer = Container("CalculationStepField", [], null);
-            var operandContainer = Container("CalculationStepOperand", [], null);
-            // CalculationStep is itself an owner of fields/operands — the new child read resolves its
-            // Physical (RowId) + Logical (Id) key columns from metadata to build the JOIN, so it needs both.
+            var inputContainer = Container("CalculationEntityInputRecord", null);
+            var fieldContainer = Container("CalculationStepField", null);
+            var operandContainer = Container("CalculationStepOperand", null);
+
+            // CalculationStep owns fields and operands, so the child read resolves its Physical (RowId)
+            // and Logical (Id) key columns from metadata to build the join — it needs both.
             var stepContainer = Container("CalculationStep",
-            [
-                Binding("CalculationStepRowId", fieldContainer),
-                Binding("CalculationStepRowId", operandContainer)
-            ],
-            [Key("Physical", "PK_CalculationStep", "RowId", null), Key("Logical", "AK_CalculationStep", "Id", null)]);
+                [Key("Physical", "PK_CalculationStep", "RowId", null), Key("Logical", "AK_CalculationStep", "Id", null)]);
 
-            // CalculationEntity is the FK target for the typed body — give it Physical + Logical keys.
+            // The domain container the implementation row joins back to.
             var entityContainer = Container("CalculationEntity",
-            [
-                Binding("CalculationEntityRowId", inputContainer),
-                Binding("CalculationEntityRowId", stepContainer)
-            ],
-            [Key("Physical", "PK_CalculationEntity", "RowId", null), Key("Logical", "AK_CalculationEntity", "Id", null)]);
+                [Key("Physical", "PK_CalculationEntity", "RowId", null), Key("Logical", "AK_CalculationEntity", "Id", null)]);
 
-            // FormulaCalculation carries the outbound Foreign key to CalculationEntity (typed-body join).
-            var formulaContainer = Container("FormulaCalculation", [],
-            [Key("Foreign", "FK_FormulaCalculation_CalculationEntity", "CalculationEntityRowId", entityContainer)]);
+            // The implementation container: it carries the outbound Foreign key to its domain, and its
+            // own keys, because it is the owner the children hang from.
+            var formulaContainer = Container("FormulaCalculation",
+            [
+                Key("Foreign", "FK_FormulaCalculation_CalculationEntity", "CalculationEntityRowId", entityContainer),
+                Key("Physical", "PK_FormulaCalculation", "RowId", null),
+                Key("Logical", "AK_FormulaCalculation", "Id", null)
+            ]);
 
             var containers = new List<IDataContainer>
-            { entityContainer, inputContainer, stepContainer, fieldContainer, operandContainer, formulaContainer };
+            { entityContainer, formulaContainer, inputContainer, stepContainer, fieldContainer, operandContainer };
 
             var path = new Mock<IDataNodePath>();
             path.Setup(p => p.Name).Returns("calc");
@@ -191,28 +197,15 @@ public class CalculationConfigurationProviderTests
             return store.Object;
         }
 
-        private static IDataContainer Container(
-            string name, IReadOnlyList<ReferencingKeyBinding> referencing, IReadOnlyList<IContainerKey>? keys)
+        private static IDataContainer Container(string name, IReadOnlyList<IContainerKey>? keys)
         {
             var c = new Mock<IDataContainer>();
             c.Setup(x => x.Name).Returns(name);
             c.Setup(x => x.Keys).Returns(keys ?? new List<IContainerKey>());
             c.Setup(x => x.Nodes).Returns(new List<IDataNode>());
             c.Setup(x => x.ReferencingKeys).Returns(
-                GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(referencing));
+                GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success(new List<ReferencingKeyBinding>()));
             return c.Object;
-        }
-
-        private static ReferencingKeyBinding Binding(string fkColumn, IDataContainer owner)
-        {
-            var field = new Mock<global::Fdw.Data.Abstractions.IDataField>();
-            field.Setup(f => f.Name).Returns(fkColumn);
-            var keyField = new Mock<IContainerKeyField>();
-            keyField.Setup(k => k.LocalField).Returns(field.Object);
-            var key = new Mock<IContainerKey>();
-            key.Setup(k => k.KeyName).Returns($"FK_{fkColumn}_{owner.Name}");
-            key.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { keyField.Object });
-            return new ReferencingKeyBinding(key.Object, owner);
         }
 
         private static IContainerKey Key(string keyType, string keyName, string localField, IDataContainer? referenced)
@@ -265,5 +258,4 @@ public class CalculationConfigurationProviderTests
 
         public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
     }
-
 }

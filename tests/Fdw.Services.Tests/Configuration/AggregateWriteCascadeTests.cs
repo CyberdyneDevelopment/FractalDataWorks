@@ -11,44 +11,36 @@ using Fdw.Results;
 using Fdw.Messages;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
-using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Shouldly;
 using Xunit;
 
 using TestRootConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestRootConfiguration;
-using TestRootCommand = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestRootCommand;
-using TestBodyConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestBodyConfiguration;
-using TestBodyCommand = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestBodyCommand;
 using TestOpConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestOpConfiguration;
 using TestMapConfiguration = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestMapConfiguration;
-using Fdw.Services.Data;
-using Moq;
+using TestRootImplementationProvider = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestRootImplementationProvider;
+using TestRootDomainProvider = Fdw.Services.Tests.Configuration.RecursiveCascadeSaveTests.TestRootDomainProvider;
 
 using Fdw.Abstractions;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Pins the write/delete-cascade behaviour changed on <c>feature/child-provider-write</c>: the cascade now
-/// runs on EVERY save (not just the first), every header write is the SAME version-on-write
-/// <c>ConfigurationSaveCommand</c> shape, an incomplete polymorphic aggregate fails loud with nothing
-/// written, a header with no registered typed provider still saves as a leaf, and delete retires the whole
-/// aggregate in REVERSE order (deepest child, then typed body, then header) keyed by the row's OWN id.
+/// Pins the WRITE path of an implementation aggregate: the cascade runs on EVERY save (not just the
+/// first), every row write is the same version-on-write <c>ConfigurationSaveCommand</c> shape, a
+/// record with no children still writes, a domain save fails loud and writes nothing when nothing is
+/// registered for the implementation it names, and delete retires the whole aggregate in REVERSE
+/// order — deepest child first, the row it hangs from last.
 /// </summary>
 /// <remarks>
-/// Why a new file rather than adding to RecursiveCascadeSaveTests: that file pins the READ-side recursive
-/// compose + the happy-path save shape. This file pins the WRITE-PATH MECHANISM itself (repeat-save
-/// cascade, single write shape, the completeness gate, and the whole delete cascade) — a distinct set of
-/// regressions the child-provider-write branch fixed, each of which must fail against the OLD behaviour.
+/// Why a separate file from RecursiveCascadeSaveTests: that file pins the read-side compose and the
+/// happy-path save shape. This one pins the write-path MECHANISM — repeat-save, the single write
+/// shape, the registration gate, and the delete cascade — each a distinct regression.
 /// </remarks>
 [Collection(nameof(ServicesTestCollection))]
 public sealed class AggregateWriteCascadeTests
 {
-    private static ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration> MakeProvider(RecordingGateway gateway)
-        => new(
-            NullLogger<ImplementationConfigurationProviderBase<ITestRootImplementationConfiguration>>.Instance,
-            GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "pipe");
+    private static TestRootImplementationProvider MakeProvider(RecordingGateway gateway)
+        => new(GatewayProviderFor(gateway));
 
     // ========================================================================
     // 1. Cascade runs on a repeat save (the update case)
@@ -57,12 +49,11 @@ public sealed class AggregateWriteCascadeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
-    public async Task SaveCascadesTypedBodyAndChildrenOnRepeatSaveNotJustFirst()
+    public async Task SaveCascadesChildrenOnRepeatSaveNotJustFirst()
     {
         var mapping = new TestMapConfiguration { Id = Guid.NewGuid(), Name = "Map" };
         var operation = new TestOpConfiguration { Id = Guid.NewGuid(), Name = "Op", Mappings = { mapping } };
-        var body = new TestBodyConfiguration { Id = Guid.NewGuid(), Name = "Body", Operations = { operation } };
-        var root = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root", Configuration = body };
+        var root = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root", Operations = { operation } };
 
         var gateway = new RecordingGateway();
         var provider = MakeProvider(gateway);
@@ -74,7 +65,7 @@ public sealed class AggregateWriteCascadeTests
         second.IsSuccess.ShouldBeTrue();
 
         // Two full cascades means TWO rows per level — one per Save call — not one.
-        gateway.SavedConfigs.OfType<TestBodyConfiguration>().Count().ShouldBe(2);
+        gateway.SavedConfigs.OfType<TestRootConfiguration>().Count().ShouldBe(2);
         gateway.SavedConfigs.OfType<TestOpConfiguration>().Count().ShouldBe(2);
         gateway.SavedConfigs.OfType<TestMapConfiguration>().Count().ShouldBe(2);
     }
@@ -86,7 +77,7 @@ public sealed class AggregateWriteCascadeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
-    public async Task SaveAlwaysUsesVersionOnWriteSaveCommandForHeaderNeverAPlainUpdate()
+    public async Task SaveAlwaysUsesVersionOnWriteSaveCommandForTheRowNeverAPlainUpdate()
     {
         var root = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
 
@@ -96,63 +87,59 @@ public sealed class AggregateWriteCascadeTests
         await provider.Save(root, TestContext.Current.CancellationToken);
         await provider.Save(root, TestContext.Current.CancellationToken);
 
-        var headerCommands = gateway.AllCommands
+        var rowCommands = gateway.AllCommands
             .Where(c => c.Target.Container == "TestRoot")
             .Select(c => c.Command)
             .ToList();
 
-        headerCommands.Count.ShouldBe(2);
-        headerCommands.ShouldAllBe(c => c is ConfigurationSaveCommand<TestRootConfiguration>);
+        rowCommands.Count.ShouldBe(2);
+        rowCommands.ShouldAllBe(c => c is ConfigurationSaveCommand<TestRootConfiguration>);
     }
 
     // ========================================================================
-    // 3. Fail loud on an incomplete aggregate
+    // 3. A record with no children still writes
     // ========================================================================
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
-    public async Task SaveFailsLoudAndWritesNothingWhenTypedBodyMissingForRegisteredDiscriminator()
+    public async Task SaveWritesTheRowWhenTheAggregateHasNoChildren()
     {
         var gateway = new RecordingGateway();
-        var provider = new RecursiveCascadeSaveTests.TestRootDomainProvider(GatewayProviderFor(gateway));
-        provider.Register(
+        var provider = MakeProvider(gateway);
+
+        var result = await provider.Save(
+            new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" },
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
+    }
+
+    // ========================================================================
+    // 4. Fail loud when nothing answers for the implementation named
+    // ========================================================================
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Cascade")]
+    public async Task DomainSaveFailsLoudAndWritesNothingWhenNoProviderIsRegisteredForTheImplementation()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("SomeOtherKind", MakeProvider(gateway));
+
+        // The save names "Default" — registered above is "SomeOtherKind", so nothing answers for it.
+        var result = await domain.Save(
+            new TestRootConfiguration { Id = Guid.NewGuid() },
+            "TestRoot",
             "Default",
-            new ImplementationConfigurationProviderBase<RecursiveCascadeSaveTests.ITestBodyConfiguration>(
-                NullLogger<ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>>.Instance,
-                GatewayProviderFor(gateway),
-                "PlatformConfiguration",
-                "pipe"));
-
-        // Implementation is fixed to "Default" on TestRootConfiguration — a provider IS registered for
-        // it above — yet Configuration (the typed body) is left null.
-        var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
-
-        var result = await provider.Save(header, TestContext.Current.CancellationToken);
+            "Root",
+            TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
         gateway.AllCommands.ShouldBeEmpty();
         gateway.SavedConfigs.ShouldBeEmpty();
-    }
-
-    // ========================================================================
-    // 4. A header with no registered typed provider still saves
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Cascade")]
-    public async Task SaveSucceedsWhenNoTypedProviderIsRegisteredForTheDiscriminator()
-    {
-        var gateway = new RecordingGateway();
-        var provider = MakeProvider(gateway); // No Register call — registry stays empty.
-
-        var header = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
-
-        var result = await provider.Save(header, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
     }
 
     // ========================================================================
@@ -162,109 +149,37 @@ public sealed class AggregateWriteCascadeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
-    public async Task DeleteCascadesReverseOrderDeepestChildThenTypedBodyThenHeader()
+    public async Task DeleteRetiresDeepestChildFirstAndTheRowItHangsFromLast()
     {
-        var operation = new TestOpConfiguration { Id = Guid.NewGuid(), Name = "Op" };
-        var body = new TestBodyConfiguration { Id = Guid.NewGuid(), Name = "Body", Operations = { operation } };
-        var root = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root", Configuration = body };
+        var mapping = new TestMapConfiguration { Id = Guid.NewGuid(), Name = "Map" };
+        var operation = new TestOpConfiguration { Id = Guid.NewGuid(), Name = "Op", Mappings = { mapping } };
+        var root = new TestRootConfiguration { Id = Guid.NewGuid(), Name = "Root" };
 
-        var gateway = new RecordingGateway { RootHeader = root };
-        var provider = MakeProvider(gateway);
+        // The read that Delete performs answers with the row and, for the child join, its operations —
+        // the operation carries its own mapping, so the whole aggregate is in hand when retiring starts.
+        var gateway = new RecordingGateway
+        {
+            DataStores = SchemaTree(),
+            RootRow = root,
+            ChildRows = { [typeof(TestOpConfiguration)] = [operation] },
+        };
 
-        var result = await provider.Delete(root.Id, TestContext.Current.CancellationToken);
+        var result = await MakeProvider(gateway).Delete(root.Id, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
 
         var deletes = gateway.AllCommands
             .Where(c => c.Command is ConfigurationDeleteCommand)
-            .Select(c => (Container: c.Target.Container, Id: ((ConfigurationDeleteCommand)c.Command).Data))
+            .Select(c => (c.Target.Container, Id: ((ConfigurationDeleteCommand)c.Command).Data))
             .ToList();
 
         deletes.Count.ShouldBe(3);
-        deletes[0].Container.ShouldBe("TestOp");
-        deletes[0].Id.ShouldBe(operation.Id);
-        deletes[1].Container.ShouldBe("TestBody");
-        deletes[1].Id.ShouldBe(body.Id);
+        deletes[0].Container.ShouldBe("TestMap");
+        deletes[0].Id.ShouldBe(mapping.Id);
+        deletes[1].Container.ShouldBe("TestOp");
+        deletes[1].Id.ShouldBe(operation.Id);
         deletes[2].Container.ShouldBe("TestRoot");
         deletes[2].Id.ShouldBe(root.Id);
-    }
-
-    // ========================================================================
-    // 6. Delete fails loud, writing no delete command, for every "nothing to delete" case
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Cascade")]
-    public async Task DeleteFailsLoudForGuidEmptyAndWritesNoCommand()
-    {
-        var gateway = new RecordingGateway();
-        var provider = MakeProvider(gateway);
-
-        var result = await provider.Delete(Guid.Empty, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-        gateway.AllCommands.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Cascade")]
-    public async Task DeleteFailsLoudForNonExistentIdAndWritesNoCommand()
-    {
-        var gateway = new RecordingGateway(); // RootHeader stays null -> "not found".
-        var provider = MakeProvider(gateway);
-
-        var result = await provider.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-        gateway.AllCommands.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Cascade")]
-    public async Task DeleteFailsLoudForEmptyNameAndWritesNoCommand()
-    {
-        var gateway = new RecordingGateway();
-        var provider = MakeProvider(gateway);
-
-        var result = await provider.Delete(string.Empty, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-        gateway.AllCommands.ShouldBeEmpty();
-    }
-
-    // ========================================================================
-    // 7. Delete retires by the record's OWN durable Id, not the argument used to find it
-    // ========================================================================
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Cascade")]
-    public async Task DeleteRetiresByRowsOwnIdNotTheArgumentPassedToFindIt()
-    {
-        var domainConfigurationId = Guid.NewGuid();
-        var body = new TestBodyConfiguration { Id = Guid.NewGuid(), Name = "Body" };
-
-        // The gateway always answers a TestBodyConfiguration header read with `body`, regardless of the
-        // id used to look it up — simulating a parent-join read (caller passes the PARENT's id) that
-        // resolves to a row with its own distinct durable Id.
-        var gateway = new RecordingGateway { BodyHeader = body };
-        var bodyProvider = new ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>(
-            NullLogger<ImplementationConfigurationProviderBase<ITestBodyImplementationConfiguration>>.Instance,
-            GatewayProviderFor(gateway),
-            "PlatformConfiguration",
-            "pipe");
-
-        var result = await bodyProvider.Delete(domainConfigurationId, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-
-        var headerDelete = (ConfigurationDeleteCommand)gateway.AllCommands
-            .Single(c => c.Command is ConfigurationDeleteCommand).Command;
-        headerDelete.Data.ShouldBe(body.Id);
-        headerDelete.Data.ShouldNotBe(domainConfigurationId);
     }
 
     // ========================================================================
@@ -272,10 +187,76 @@ public sealed class AggregateWriteCascadeTests
     // ========================================================================
 
     /// <summary>
-    /// Gateway test double that records every write command (save or delete, generic or non-generic) the
-    /// provider issues, IN CALL ORDER, and answers header reads from settable fields. Query reads never
-    /// land in <see cref="AllCommands"/> — only saves/deletes count toward the cascade order/shape
-    /// assertions these tests make.
+    /// The schema an implementation read needs: the implementation container, its foreign key to the
+    /// domain container, and the domain's own physical (RowId) and logical (Id) keys — the join that
+    /// resolves a domain id to this implementation's row.
+    /// </summary>
+    private static IReadOnlyList<IDataStore> SchemaTree()
+    {
+        var domain = Container("TestRootDomain", KeyOn(KeyTypes.Physical, "RowId"), KeyOn(KeyTypes.Logical, "Id"));
+
+        var foreignKey = new Mock<IContainerKey>();
+        foreignKey.Setup(k => k.KeyType).Returns(KeyTypes.Foreign);
+        foreignKey.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { KeyFieldOn("TestRootDomainRowId") });
+        foreignKey.Setup(k => k.ReferencedContainer).Returns(domain);
+
+        var root = Container("TestRoot", KeyOn(KeyTypes.Physical, "RowId"), KeyOn(KeyTypes.Logical, "Id"), foreignKey.Object);
+
+        var path = new Mock<IDataNodePath>();
+        path.Setup(p => p.Name).Returns("pipe");
+        path.Setup(p => p.Containers).Returns(new List<IDataContainer> { root, domain });
+        path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, "TestRoot", StringComparison.Ordinal))))
+            .Returns(GenericResult<IDataContainer>.Success(root));
+        path.Setup(p => p.Container(It.Is<string>(n => string.Equals(n, "TestRootDomain", StringComparison.Ordinal))))
+            .Returns(GenericResult<IDataContainer>.Success(domain));
+        path.Setup(p => p.Container(It.Is<string>(n =>
+                !string.Equals(n, "TestRoot", StringComparison.Ordinal) &&
+                !string.Equals(n, "TestRootDomain", StringComparison.Ordinal))))
+            .Returns(GenericResult<IDataContainer>.Failure(new GenericMessage("container not found")));
+
+        var store = new Mock<IDataStore>();
+        store.Setup(s => s.Name).Returns("PlatformConfiguration");
+        store.Setup(s => s.Paths).Returns(new List<IDataNodePath> { path.Object });
+        store.Setup(s => s.Path(It.Is<string>(n => string.Equals(n, "pipe", StringComparison.Ordinal))))
+            .Returns(GenericResult<IDataNodePath>.Success(path.Object));
+        store.Setup(s => s.Path(It.Is<string>(n => !string.Equals(n, "pipe", StringComparison.Ordinal))))
+            .Returns(GenericResult<IDataNodePath>.Failure(new GenericMessage("path not found")));
+
+        return new List<IDataStore> { store.Object };
+    }
+
+    private static IDataContainer Container(string name, params IContainerKey[] keys)
+    {
+        var container = new Mock<IDataContainer>();
+        container.Setup(c => c.Name).Returns(name);
+        container.Setup(c => c.Keys).Returns(keys.ToList());
+        container.Setup(c => c.Nodes).Returns(new List<IDataNode>());
+        return container.Object;
+    }
+
+    private static IContainerKey KeyOn(KeyTypeBase keyType, string columnName)
+    {
+        var key = new Mock<IContainerKey>();
+        key.Setup(k => k.KeyType).Returns(keyType);
+        key.Setup(k => k.KeyFields).Returns(new List<IContainerKeyField> { KeyFieldOn(columnName) });
+        key.Setup(k => k.ReferencedContainer).Returns((IDataContainer?)null);
+        return key.Object;
+    }
+
+    private static IContainerKeyField KeyFieldOn(string columnName)
+    {
+        var field = new Mock<IDataField>();
+        field.Setup(f => f.Name).Returns(columnName);
+        var keyField = new Mock<IContainerKeyField>();
+        keyField.Setup(k => k.LocalField).Returns(field.Object);
+        keyField.Setup(k => k.Ordinal).Returns(0);
+        return keyField.Object;
+    }
+
+    /// <summary>
+    /// Gateway test double that records every write command (save or delete, generic or non-generic)
+    /// the provider issues, IN CALL ORDER, and answers reads from settable fields. Reads never land in
+    /// <see cref="AllCommands"/> — only writes count toward the cascade order/shape assertions.
     /// </summary>
     private sealed class RecordingGateway : IConfigurationGateway
     {
@@ -293,16 +274,14 @@ public sealed class AggregateWriteCascadeTests
         /// <summary>Every configuration POCO saved through a ConfigurationSaveCommand, in call order.</summary>
         public List<object> SavedConfigs { get; } = [];
 
-        /// <summary>Root header row returned by any TestRootConfiguration header read. Null = "not found".</summary>
-        public TestRootConfiguration? RootHeader { get; set; }
+        /// <summary>The row returned by any implementation read. Null = "not found".</summary>
+        public TestRootConfiguration? RootRow { get; init; }
 
-        /// <summary>
-        /// Body row returned by any TestBodyConfiguration header read — used to simulate a typed-body
-        /// provider's Get(Guid), which resolves by the PARENT's id yet returns a row with its OWN distinct Id.
-        /// </summary>
-        public TestBodyConfiguration? BodyHeader { get; set; }
+        /// <summary>Child rows answered by row type when the compose issues its child join.</summary>
+        public Dictionary<Type, object[]> ChildRows { get; } = [];
 
-        public IReadOnlyList<IDataStore> DataStores { get; } = [];
+        /// <inheritdoc/>
+        public IReadOnlyList<IDataStore> DataStores { get; init; } = [];
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, CancellationToken cancellationToken = default)
             => Execute<T>(command, default(DataStoreTarget)!, cancellationToken);
@@ -312,23 +291,19 @@ public sealed class AggregateWriteCascadeTests
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
-            // A header READ asks for IEnumerable<TConfig> — answer from the configured header fields.
-            // This is a QUERY, never recorded as a write.
+            // A read asks for IEnumerable<TConfig> — answer from the configured row. This is a QUERY,
+            // never recorded as a write.
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
             {
                 var elementType = typeof(T).GetGenericArguments()[0];
                 if (elementType == typeof(TestRootConfiguration))
-                    return Task.FromResult(GenericResult<T>.Success((T)(object)(RootHeader is null
+                    return Task.FromResult(GenericResult<T>.Success((T)(object)(RootRow is null
                         ? new List<TestRootConfiguration>()
-                        : new List<TestRootConfiguration> { RootHeader })));
-                if (elementType == typeof(TestBodyConfiguration))
-                    return Task.FromResult(GenericResult<T>.Success((T)(object)(BodyHeader is null
-                        ? new List<TestBodyConfiguration>()
-                        : new List<TestBodyConfiguration> { BodyHeader })));
+                        : new List<TestRootConfiguration> { RootRow })));
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(elementType, 0)));
             }
 
-            // Anything else is a header SAVE or a header DELETE — record it in call order.
+            // Anything else is a row SAVE or a row DELETE — record it in call order.
             AllCommands.Add((command, target));
             if (command is IConfigurationSaveCommand save && save.InputData is not null)
                 SavedConfigs.Add(save.InputData);
@@ -338,7 +313,7 @@ public sealed class AggregateWriteCascadeTests
         public Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
             // Every CHILD save/delete routes through the non-generic Execute — record it in the SAME
-            // list as the header writes so cross-level ordering is observable from one sequence.
+            // list as the row's own writes so cross-level ordering is observable from one sequence.
             AllCommands.Add((command, target));
             if (command is IConfigurationSaveCommand save && save.InputData is not null)
                 SavedConfigs.Add(save.InputData);
@@ -346,7 +321,8 @@ public sealed class AggregateWriteCascadeTests
         }
 
         public Task<IGenericResult<IEnumerable<object>>> Execute(IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken = default)
-            => Task.FromResult(GenericResult<IEnumerable<object>>.Success(Array.Empty<object>()));
+            => Task.FromResult(GenericResult<IEnumerable<object>>.Success(
+                ChildRows.TryGetValue(rowType, out var rows) ? rows : Array.Empty<object>()));
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataSetTarget target, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("DataSet routing not supported in RecordingGateway test double")));

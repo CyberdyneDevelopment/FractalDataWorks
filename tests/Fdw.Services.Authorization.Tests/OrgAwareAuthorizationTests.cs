@@ -200,21 +200,12 @@ public sealed class OrgAwareAuthorizationTests
             new() { UserId = User1Id.ToString(), RoleId = TenantRoleId, TenantId = TenantId },
         };
 
-        var roleProviderMock = MockCatalog<RoleConfigurationProvider, RoleImplementationConfiguration>(
+        var roleProvider = ConfigurationCatalog.Roles(
             new List<RoleImplementationConfiguration> { globalRole, tenantRole });
-        var permProviderMock = MockCatalog<PermissionConfigurationProvider, PermissionImplementationConfiguration>(
+        var permProvider = ConfigurationCatalog.Permissions(
             new List<PermissionImplementationConfiguration> { globalPerm, tenantPerm });
-        var rolePermProviderMock = MockCatalog<RolePermissionConfigurationProvider, RolePermissionImplementationConfiguration>(
-            rolePermissions);
-
-        var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
-            MockBehavior.Loose,
-            NullLogger<UserRoleConfigurationProvider>.Instance,
-            new ConfigurationGatewayProvider(),
-            "TestStore", "authz");
-        userRoleProviderMock.CallBase = true;
-        userRoleProviderMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(userRoleAssignments));
+        var rolePermProvider = ConfigurationCatalog.RolePermissions(rolePermissions);
+        var userRoleProvider = ConfigurationCatalog.UserRoles(userRoleAssignments);
 
         var orgAccessMock = new Mock<IOrgAccessProvider>();
         orgAccessMock
@@ -222,36 +213,12 @@ public sealed class OrgAwareAuthorizationTests
             .ReturnsAsync(GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(orgGrants));
 
         return new EffectivePermissionResolver(
-            roleProviderMock.Object,
-            permProviderMock.Object,
-            rolePermProviderMock.Object,
-            userRoleProviderMock.Object,
+            roleProvider,
+            permProvider,
+            rolePermProvider,
+            userRoleProvider,
             NullLogger<EffectivePermissionResolver>.Instance,
             orgAccessMock.Object);
-    }
-
-    private static Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>> MockProvider<TConfig, TCommand>(
-        List<TConfig> items)
-        where TConfig : class, Fdw.Configuration.IGenericConfiguration
-        where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<TConfig>
-    {
-        var mock = new Mock<ImplementationConfigurationProviderBase<IImplementationConfiguration>>(
-            MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<IImplementationConfiguration>>.Instance,
-            new ConfigurationGatewayProvider(),
-            "TestStore", "cfg");
-        mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(items));
-        return mock;
-    }
-    private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
-        where TProvider : class, IImplementationConfigurationProvider<IImplementationConfiguration>
-        where TConfig : class, Fdw.Configuration.IGenericConfiguration
-    {
-        var mock = new Mock<TProvider>();
-        mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<TConfig>>.Success(new List<TConfig>(items)));
-        return mock;
     }
 
 }

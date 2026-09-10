@@ -47,7 +47,7 @@ public sealed class ServerSettingConfigurationValidatorTests
         var result = _validator.TestValidate(config);
 
         // Assert
-        result.ShouldHaveValidationErrorFor(x => x.SettingName);
+        result.ShouldHaveValidationErrorFor(x => x.Name);
     }
 
     [Fact]

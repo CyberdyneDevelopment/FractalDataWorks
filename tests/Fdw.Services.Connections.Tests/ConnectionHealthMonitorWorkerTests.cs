@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Commands.Data.Abstractions;
+using Fdw.Configuration;
 using Fdw.Data.Abstractions.Results;
 using Fdw.Messages;
 using Fdw.Results;
@@ -29,31 +32,33 @@ public sealed class ConnectionHealthMonitorWorkerTests
     // ── Fakes ───────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Substitutes the provider's gateway-backed all-items read so the worker can be driven with an
-    /// exact load result. The base constructor only stores the Lazy gateway, so a gateway that would
-    /// throw on access is safe here: overriding Get means it is never dereferenced.
+    /// The real provider over a faked store: it is sealed and its reads are not virtual, so the
+    /// worker's configuration source is stated the way production states it -- what the gateway
+    /// answers when the provider reads its domain rows.
     /// </summary>
-    private sealed class StubConnectionConfigurationProvider : ConnectionConfigurationProvider
+    private static (ConnectionConfigurationProvider Provider, Mock<IConfigurationGateway> Gateway) ProviderOver(
+        IGenericResult<IEnumerable<DomainConfiguration>> rows)
     {
-        private readonly IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> _result;
+        var gateway = new Mock<IConfigurationGateway>();
+        gateway
+            .Setup(g => g.Execute<IEnumerable<DomainConfiguration>>(
+                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(rows);
 
-        public StubConnectionConfigurationProvider(IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> result)
-            : base(
-                NullLogger<ConnectionConfigurationProvider>.Instance,
-                new ConfigurationGatewayProvider(),
-            "PlatformConfiguration", "conn")
-        {
-            _result = result;
-        }
+        var gateways = new Mock<IConfigurationGatewayProvider>();
+        gateways
+            .Setup(p => p.Get(It.IsAny<string>()))
+            .Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
 
-        public int GetCallCount { get; private set; }
-
-        public override Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(CancellationToken ct = default)
-        {
-            GetCallCount++;
-            return Task.FromResult(_result);
-        }
+        return (
+            new ConnectionConfigurationProvider(
+                NullLogger<ConnectionConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration"),
+            gateway);
     }
+
+    /// <summary>How many times the store was read for the connection rows.</summary>
+    private static int StoreReads(Mock<IConfigurationGateway> gateway) =>
+        gateway.Invocations.Count(i => string.Equals(i.Method.Name, "Execute", StringComparison.Ordinal));
 
     private sealed record LogEntry(LogLevel Level, int EventId);
 
@@ -112,33 +117,33 @@ public sealed class ConnectionHealthMonitorWorkerTests
 
     // ── Result builders ─────────────────────────────────────────────────────
 
-    private static IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> PathNotRegistered() =>
-        GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Chain(
+    private static IGenericResult<IEnumerable<DomainConfiguration>> PathNotRegistered() =>
+        GenericResult<IEnumerable<DomainConfiguration>>.Chain(
             DataStoresResultCodes.DataPathNotFound,
             GenericResult.Failure(new GenericMessage("Path 'conn' not found in DataStore 'ConfigurationDb'")),
             ResultDetails.Create("PathName", "conn", "DataStoreName", "PlatformConfiguration"));
 
-    private static IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> ContainerNotRegistered() =>
-        GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Chain(
+    private static IGenericResult<IEnumerable<DomainConfiguration>> ContainerNotRegistered() =>
+        GenericResult<IEnumerable<DomainConfiguration>>.Chain(
             DataStoresResultCodes.ContainerNotFoundInPath,
             GenericResult.Failure(new GenericMessage("Container 'Connection' not found in path 'conn'")),
             ResultDetails.Create("ContainerName", "Connection", "PathName", "conn", "DataStoreName", "PlatformConfiguration"));
 
-    private static IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> TransientFailure() =>
-        GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Failure(
+    private static IGenericResult<IEnumerable<DomainConfiguration>> TransientFailure() =>
+        GenericResult<IEnumerable<DomainConfiguration>>.Failure(
             new GenericMessage("A network-related or instance-specific error occurred"));
 
-    private static (ConnectionHealthMonitorWorker Worker, RecordingLogger Logger, StubConnectionConfigurationProvider Provider) CreateWorker(
-        IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>> loadResult)
+    private static (ConnectionHealthMonitorWorker Worker, RecordingLogger Logger, Mock<IConfigurationGateway> Gateway) CreateWorker(
+        IGenericResult<IEnumerable<DomainConfiguration>> loadResult)
     {
-        var provider = new StubConnectionConfigurationProvider(loadResult);
+        var (provider, gateway) = ProviderOver(loadResult);
         var services = new ServiceCollection();
 
         services.AddSingleton<ConnectionConfigurationProvider>(provider);
 
         var logger = new RecordingLogger();
         return (new ConnectionHealthMonitorWorker(
-            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(), logger), logger, provider);
+            services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(), logger), logger, gateway);
     }
 
     // ── Absent container: state it once, then stop ──────────────────────────
@@ -191,12 +196,12 @@ public sealed class ConnectionHealthMonitorWorkerTests
     [Trait("Category", "Api")]
     public async Task ExecuteWhenConnectionPathNotRegisteredDoesNotReReadTheStore()
     {
-        var (worker, _, provider) = CreateWorker(PathNotRegistered());
+        var (worker, _, gateway) = CreateWorker(PathNotRegistered());
 
         await worker.StartAsync(TestContext.Current.CancellationToken);
         await worker.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
-        provider.GetCallCount.ShouldBe(1);
+        StoreReads(gateway).ShouldBe(1);
     }
 
     // ── Genuine failure: unchanged fail-loud behaviour ──────────────────────
@@ -225,7 +230,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
     public async Task ExecuteWhenStoreRegistersConnectionContainerKeepsMonitoring()
     {
         var (worker, logger, _) = CreateWorker(
-            GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success([]));
+            GenericResult<IEnumerable<DomainConfiguration>>.Success([]));
 
         await worker.StartAsync(TestContext.Current.CancellationToken);
 
