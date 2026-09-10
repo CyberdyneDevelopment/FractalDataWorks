@@ -81,7 +81,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IIdentityServiceImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
             builder.Services.AddSingleton<IIdentityTokenCache>(sp =>
@@ -122,7 +122,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(IdentityServiceTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<IdentityServiceConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<IIdentityServiceImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

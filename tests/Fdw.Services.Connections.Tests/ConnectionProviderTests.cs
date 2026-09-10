@@ -93,7 +93,7 @@ public class ConnectionProviderTests
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    private class TestConnectionConfigurationProvider : IServiceConfigurationProvider<ConnectionConfiguration>, IServiceConfigurationProvider, IConnectionConfigurationProvider
+    private class TestConnectionConfigurationProvider : IDomainConfigurationProvider<IConnectionImplementationConfiguration>, IServiceConfigurationProvider, IConnectionConfigurationProvider
     {
         private readonly List<ConnectionConfiguration> _configs;
 

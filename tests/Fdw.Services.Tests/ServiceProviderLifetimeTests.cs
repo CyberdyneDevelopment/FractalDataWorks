@@ -145,7 +145,7 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Simple test configuration provider for testing.
     /// </summary>
-    public class TestServiceConfigurationProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
+    public class TestServiceConfigurationProvider : IDomainConfigurationProvider<IImplementationConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
     {
         private readonly List<TestServiceConfiguration> _configs;
 
@@ -245,11 +245,11 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Aggregates multiple config providers into one for parent provider registration.
     /// </summary>
-    public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
+    public class AggregateConfigProvider : IDomainConfigurationProvider<IImplementationConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
     {
-        private readonly IServiceConfigurationProvider<TestServiceConfiguration>[] _providers;
+        private readonly IDomainConfigurationProvider<IImplementationConfiguration>[] _providers;
 
-        public AggregateConfigProvider(params IServiceConfigurationProvider<TestServiceConfiguration>[] providers)
+        public AggregateConfigProvider(params IDomainConfigurationProvider<IImplementationConfiguration>[] providers)
         {
             _providers = providers;
         }

@@ -200,11 +200,11 @@ public sealed class OrgAwareAuthorizationTests
             new() { UserId = User1Id.ToString(), RoleId = TenantRoleId, TenantId = TenantId },
         };
 
-        var roleProviderMock = MockCatalog<IRoleConfigurationProvider, RoleConfiguration>(
+        var roleProviderMock = MockCatalog<RoleConfigurationProvider, RoleConfiguration>(
             new List<RoleConfiguration> { globalRole, tenantRole });
-        var permProviderMock = MockCatalog<IPermissionConfigurationProvider, PermissionConfiguration>(
+        var permProviderMock = MockCatalog<PermissionConfigurationProvider, PermissionConfiguration>(
             new List<PermissionConfiguration> { globalPerm, tenantPerm });
-        var rolePermProviderMock = MockCatalog<IRolePermissionConfigurationProvider, RolePermissionConfiguration>(
+        var rolePermProviderMock = MockCatalog<RolePermissionConfigurationProvider, RolePermissionConfiguration>(
             rolePermissions);
 
         var userRoleProviderMock = new Mock<UserRoleConfigurationProvider>(
@@ -230,14 +230,14 @@ public sealed class OrgAwareAuthorizationTests
             orgAccessMock.Object);
     }
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>> MockProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>> MockProvider<TConfig, TCommand>(
         List<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
@@ -245,7 +245,7 @@ public sealed class OrgAwareAuthorizationTests
         return mock;
     }
     private static Mock<TProvider> MockCatalog<TProvider, TConfig>(IEnumerable<TConfig> items)
-        where TProvider : class, IServiceConfigurationProvider<TConfig>
+        where TProvider : class, IDomainConfigurationProvider<IImplementationConfiguration>
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
     {
         var mock = new Mock<TProvider>();

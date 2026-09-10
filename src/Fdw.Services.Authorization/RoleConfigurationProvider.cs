@@ -24,7 +24,7 @@ namespace Fdw.Services.Authorization;
 /// Domain configuration provider for roles. Thin wrapper over
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with permission-aggregation helpers.
 /// </summary>
-public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, IRoleImplementationConfiguration, RoleConfigurationCommand>, IAuthorizationProvider, IRoleConfigurationProvider
+public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, IRoleImplementationConfiguration, RoleConfigurationCommand>, IAuthorizationProvider, RoleConfigurationProvider
 {
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
@@ -46,47 +46,6 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
         _logger = logger ?? NullLogger<RoleConfigurationProvider>.Instance;
     }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// Overridden to drop superseded and soft-deleted versions. A role is deleted by the versioned
-    /// write path -- the current row is stamped IsCurrent=0 and a copy is inserted with
-    /// IsDeleted=1 -- so nothing is removed and an unfiltered read keeps returning it. Filtering
-    /// here rather than in each caller is the FDW-732 lesson one table across: three callers went
-    /// through that read and none of them filtered.
-    /// </remarks>
-    public override async Task<IGenericResult<IReadOnlyList<RoleConfiguration>>> Get(CancellationToken ct = default)
-    {
-        var all = await base.Get(ct).ConfigureAwait(false);
-        if (!all.IsSuccess || all.Value is null) return all;
-
-        return GenericResult<IReadOnlyList<RoleConfiguration>>.Success(
-            [.. all.Value.Where(r => r.IsCurrent && !r.IsDeleted)]);
-    }
-
-    /// <inheritdoc />
-    /// <remarks>A deleted role answers as absent, not as itself. See <see cref="Get(CancellationToken)"/>.</remarks>
-    public override async Task<IGenericResult<RoleConfiguration>> Get(string name, CancellationToken ct = default)
-    {
-        var role = await base.Get(name, ct).ConfigureAwait(false);
-        return Live(role);
-    }
-
-    /// <inheritdoc />
-    /// <remarks>A deleted role answers as absent, not as itself. See <see cref="Get(CancellationToken)"/>.</remarks>
-    public override async Task<IGenericResult<RoleConfiguration>> Get(Guid id, CancellationToken ct = default)
-    {
-        var role = await base.Get(id, ct).ConfigureAwait(false);
-        return Live(role);
-    }
-
-    // Null rather than a failure: the caller asked whether a role by this name exists, and a
-    // deleted one does not. Callers already treat a null value as not-found.
-    private static IGenericResult<RoleConfiguration> Live(IGenericResult<RoleConfiguration> role)
-        => role.IsSuccess && role.Value is { IsCurrent: true, IsDeleted: false }
-            ? role
-            : role.IsSuccess
-                ? GenericResult<RoleConfiguration>.Success(null!)
-                : role;
 
     /// <inheritdoc />
     public virtual async Task<RoleConfiguration?> GetRole(string name, CancellationToken cancellationToken = default)

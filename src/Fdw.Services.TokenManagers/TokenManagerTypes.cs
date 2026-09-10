@@ -69,7 +69,7 @@ public static class TokenManagerTypes
             sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
         builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, ITokenManagerImplementationConfiguration, TokenManagerConfigurationCommand>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
-        builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
+        builder.Services.TryAddSingleton<IDomainConfigurationProvider<ITokenManagerImplementationConfiguration>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
 
         builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>

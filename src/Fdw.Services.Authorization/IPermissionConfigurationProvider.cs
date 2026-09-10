@@ -6,6 +6,6 @@ namespace Fdw.Services.Authorization;
 /// <summary>
 /// Reads the permissions this platform defines.
 /// </summary>
-public interface IPermissionConfigurationProvider : IServiceConfigurationProvider<PermissionConfiguration>
+public interface IPermissionConfigurationProvider : IDomainConfigurationProvider<IPermissionImplementationConfiguration>
 {
 }

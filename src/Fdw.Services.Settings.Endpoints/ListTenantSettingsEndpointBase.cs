@@ -16,10 +16,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<TenantSettingSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<TenantSettingConfiguration> _provider;
+    private readonly IDomainConfigurationProvider<ITenantSettingImplementationConfiguration> _provider;
 
     /// <inheritdoc />
-    protected ListTenantSettingsEndpointBase(ILogger<ListTenantSettingsEndpointBase> logger, IServiceConfigurationProvider<TenantSettingConfiguration> provider) : base(logger)
+    protected ListTenantSettingsEndpointBase(ILogger<ListTenantSettingsEndpointBase> logger, IDomainConfigurationProvider<ITenantSettingImplementationConfiguration> provider) : base(logger)
     {
         _provider = provider;
     }

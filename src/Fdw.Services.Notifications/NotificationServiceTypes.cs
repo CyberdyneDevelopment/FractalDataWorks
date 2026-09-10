@@ -91,10 +91,10 @@ public partial class NotificationServiceTypes
                 sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<NotificationConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationRuleConfiguration>>(sp =>
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>>(sp =>
                 new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration, NotificationRuleConfigurationCommand>(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration, NotificationRuleConfigurationCommand>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
@@ -132,7 +132,7 @@ public partial class NotificationServiceTypes
                             stLogger,
                             nameof(NotificationServiceTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<NotificationConfiguration>).ToString());
+                            typeof(IDomainConfigurationProvider<INotificationImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

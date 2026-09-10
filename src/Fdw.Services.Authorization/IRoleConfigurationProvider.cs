@@ -11,6 +11,6 @@ namespace Fdw.Services.Authorization;
 /// a consumer asking for the closed generic states a shape, this states which rows it reads, and two
 /// providers over different tables are no longer interchangeable at a constructor.
 /// </remarks>
-public interface IRoleConfigurationProvider : IServiceConfigurationProvider<RoleConfiguration>
+public interface IRoleConfigurationProvider : IDomainConfigurationProvider<IRoleImplementationConfiguration>
 {
 }

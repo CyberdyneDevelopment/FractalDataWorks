@@ -25,7 +25,7 @@ namespace Fdw.Data.Components.DataStores;
 /// — the same two-tier shape <c>ConfiguredDataStoreProvider.Get(CancellationToken)</c> already composes by
 /// calling back into <c>Get(name)</c> per shallow header.
 /// </summary>
-public sealed class ClientsDataStoreConfigurationProvider : IServiceConfigurationProvider<DataStoreConfiguration>, IServiceConfigurationProvider
+public sealed class ClientsDataStoreConfigurationProvider : IDomainConfigurationProvider<IDataStoreImplementationConfiguration>, IServiceConfigurationProvider
 {
     private readonly ILogger<ClientsDataStoreConfigurationProvider> _logger;
     private readonly DataStoreApiClient _apiClient;
