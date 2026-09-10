@@ -49,7 +49,6 @@ public sealed class HttpHealthMonitorClientType
 
         Registration((builder, loggerFactory) =>
         {
-            HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
 
             ServiceLogger.FactoryRegistrationDeferred(
                 loggerFactory?.CreateLogger<HttpHealthMonitorClientType>()
@@ -58,7 +57,8 @@ public sealed class HttpHealthMonitorClientType
                 Name,
                 nameof(HttpHealthMonitorFactory));
 
-            builder.Services.TryAddSingleton<HttpHealthMonitorFactory>();
+            HealthMonitorProvider.Register<IHttpHealthMonitorFactory, HttpHealthMonitorFactory>(
+                builder, Name, ServiceLifetime.Singleton);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

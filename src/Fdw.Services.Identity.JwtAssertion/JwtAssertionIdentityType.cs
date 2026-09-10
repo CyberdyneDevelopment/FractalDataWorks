@@ -39,8 +39,9 @@ public sealed class JwtAssertionIdentityType
             var log = loggerFactory?.CreateLogger<JwtAssertionIdentityType>()
                 ?? NullLogger<JwtAssertionIdentityType>.Instance;
 
-            IdentityServiceProvider
-                .Register(Name, sp => new JwtAssertionIdentityFactory(
+            IdentityServiceProvider.Register<IJwtAssertionIdentityFactory>(
+                builder, Name, ServiceLifetime.Transient,
+                sp => new JwtAssertionIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name)));
 

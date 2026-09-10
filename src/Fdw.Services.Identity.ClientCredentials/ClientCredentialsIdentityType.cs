@@ -41,8 +41,9 @@ public sealed class ClientCredentialsIdentityType
             var log = loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
                 ?? NullLogger<ClientCredentialsIdentityType>.Instance;
 
-            IdentityServiceProvider
-                .Register(Name, sp => new ClientCredentialsIdentityFactory(
+            IdentityServiceProvider.Register<IClientCredentialsIdentityFactory>(
+                builder, Name, ServiceLifetime.Transient,
+                sp => new ClientCredentialsIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
                     sp.GetRequiredService<ISecretManagerProvider>()));

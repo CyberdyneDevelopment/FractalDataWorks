@@ -27,7 +27,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// than while this domain's own resolver lambda is still running.
 /// </remarks>
 internal sealed class ClientCredentialsIdentityFactory
-    : IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>
+    : IClientCredentialsIdentityFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ClientCredentialsIdentityFactory> _logger;

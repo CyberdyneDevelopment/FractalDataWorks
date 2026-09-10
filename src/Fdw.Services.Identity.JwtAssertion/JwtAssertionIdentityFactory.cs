@@ -21,7 +21,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 /// <c>ClientCredentialsIdentityFactory</c>.
 /// </remarks>
 internal sealed class JwtAssertionIdentityFactory
-    : IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>
+    : IJwtAssertionIdentityFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<JwtAssertionIdentityFactory> _logger;
