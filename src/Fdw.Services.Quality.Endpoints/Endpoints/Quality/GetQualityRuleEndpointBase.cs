@@ -11,11 +11,11 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that retrieves a single quality rule by its identifier.</summary>
 public abstract class GetQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest, QualityRuleDto>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="GetQualityRuleEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected GetQualityRuleEndpointBase(QualityConfigurationProvider provider)
+    protected GetQualityRuleEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -38,7 +38,7 @@ public abstract class GetQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest
     /// <summary>Retrieves a quality rule by its identifier, returning 404 if not found.</summary>
     public override async Task HandleAsync(QualityRuleIdRequest req, CancellationToken ct)
     {
-        var result = await _provider.GetQualityRule(req.Id, ct).ConfigureAwait(false);
+        var result = await _provider.Get(req.Id, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

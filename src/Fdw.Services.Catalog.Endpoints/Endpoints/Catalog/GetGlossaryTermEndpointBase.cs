@@ -11,11 +11,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that retrieves a single glossary term by its identifier.</summary>
 public abstract class GetGlossaryTermEndpointBase : Endpoint<GlossaryTermIdRequest, GlossaryTermResponse>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IGlossaryTermConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="GetGlossaryTermEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected GetGlossaryTermEndpointBase(QualityConfigurationProvider provider)
+    protected GetGlossaryTermEndpointBase(IGlossaryTermConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -38,7 +38,7 @@ public abstract class GetGlossaryTermEndpointBase : Endpoint<GlossaryTermIdReque
     /// <summary>Retrieves a glossary term by its identifier, returning 404 if not found.</summary>
     public override async Task HandleAsync(GlossaryTermIdRequest req, CancellationToken ct)
     {
-        var result = await _provider.GetGlossaryTerm(req.Id, ct).ConfigureAwait(false);
+        var result = await _provider.Get(req.Id, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

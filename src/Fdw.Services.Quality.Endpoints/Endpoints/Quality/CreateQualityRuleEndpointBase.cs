@@ -12,11 +12,11 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that creates a new quality rule.</summary>
 public abstract class CreateQualityRuleEndpointBase : Endpoint<CreateQualityRuleRequest, QualityRuleDto>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="CreateQualityRuleEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected CreateQualityRuleEndpointBase(QualityConfigurationProvider provider)
+    protected CreateQualityRuleEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -63,12 +63,12 @@ public abstract class CreateQualityRuleEndpointBase : Endpoint<CreateQualityRule
             return;
         }
 
-        var config = QualityConfigurationProvider.MapQualityRuleFromRequest(
+        var config = QualityRuleRequestMapper.FromRequest(
             req.DataSetName, req.FieldName, req.RuleType, req.Severity,
             req.IsEnabled, req.Description, req.MinValue, req.MaxValue,
             req.Pattern, req.Expression);
 
-        var result = await _provider.SaveQualityRule(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

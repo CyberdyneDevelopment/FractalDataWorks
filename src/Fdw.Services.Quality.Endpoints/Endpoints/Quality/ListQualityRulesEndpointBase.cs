@@ -13,11 +13,11 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that lists quality rules, optionally filtered by DataSet name.</summary>
 public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryRequest, List<QualityRuleDto>>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="ListQualityRulesEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ListQualityRulesEndpointBase(QualityConfigurationProvider provider)
+    protected ListQualityRulesEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -47,7 +47,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
     /// <summary>Retrieves all quality rules, optionally filtering by DataSet name when provided.</summary>
     public override async Task HandleAsync(DataSetQueryRequest req, CancellationToken ct)
     {
-        var result = await _provider.GetAllQualityRules(ct).ConfigureAwait(false);
+        var result = await _provider.Get(ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

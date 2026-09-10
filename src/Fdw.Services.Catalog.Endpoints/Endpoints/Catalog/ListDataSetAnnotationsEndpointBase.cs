@@ -14,14 +14,14 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that lists annotations for a DataSet.</summary>
 public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnotationRequest, List<DataSetAnnotationPayload>>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
     private readonly DataSetConfigurationProvider? _dataSetProvider;
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetAnnotationsEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
     /// <param name="dataSetProvider">Optional. Used to confirm the named DataSet exists.</param>
     protected ListDataSetAnnotationsEndpointBase(
-        QualityConfigurationProvider provider,
+        IDataSetAnnotationConfigurationProvider provider,
         DataSetConfigurationProvider? dataSetProvider = null)
     {
         _provider = provider;
@@ -63,7 +63,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
             }
         }
 
-        var result = await _provider.GetAllAnnotations(ct).ConfigureAwait(false);
+        var result = await _provider.Get(ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

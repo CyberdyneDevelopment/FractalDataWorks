@@ -17,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<CreateRoleSettingRequest, RoleSettingSummaryDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IRoleSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateRoleSettingEndpointBase(ILogger<CreateRoleSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected CreateRoleSettingEndpointBase(ILogger<CreateRoleSettingEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -37,7 +37,7 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
     /// <inheritdoc />
     protected override async Task<IGenericResult<bool>> CheckExists(CreateRoleSettingRequest request, CancellationToken ct)
     {
-        var roleSettingsResult = await _provider.GetRoleSettings(ct).ConfigureAwait(false);
+        var roleSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
         var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingImplementationConfiguration>)[];
         var existing = roleSettings
             .FirstOrDefault(s => s.TenantId == request.TenantId
@@ -59,7 +59,7 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
             IsActive = true
         };
 
-        var saveResult = await _provider.SaveRoleSetting(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "RoleSetting", "RoleSetting", config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<RoleSettingSummaryDto>();

@@ -10,11 +10,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that creates a new DataSet annotation.</summary>
 public abstract class CreateDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationPayload, DataSetAnnotationPayload>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="CreateDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected CreateDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected CreateDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -37,10 +37,10 @@ public abstract class CreateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
     /// <summary>Creates a new DataSet annotation and returns the created resource.</summary>
     public override async Task HandleAsync(DataSetAnnotationPayload req, CancellationToken ct)
     {
-        var config = QualityConfigurationProvider.MapAnnotationFromDto(
+        var config = DataSetAnnotationRequestMapper.FromPayload(
             req.DataSetName, req.Owner, req.Steward, req.Classification, req.Tags);
 
-        var result = await _provider.SaveAnnotation(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "DataSetAnnotation", "DataSetAnnotation", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

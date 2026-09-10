@@ -13,11 +13,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that retrieves a DataSet annotation by DataSet name.</summary>
 public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationRequest, DataSetAnnotationPayload>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="GetDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected GetDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected GetDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -40,7 +40,7 @@ public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotat
     /// <summary>Retrieves the annotation for the specified DataSet, returning 404 if not found.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        var result = await _provider.GetAnnotation(req.DataSetName, ct).ConfigureAwait(false);
+        var result = await _provider.Get(req.DataSetName, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

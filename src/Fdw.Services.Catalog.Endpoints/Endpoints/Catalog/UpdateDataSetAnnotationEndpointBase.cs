@@ -13,11 +13,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that updates an existing DataSet annotation.</summary>
 public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationPayload, DataSetAnnotationPayload>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected UpdateDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected UpdateDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -40,7 +40,7 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
     /// <summary>Updates the DataSet annotation matching the request and returns the updated DTO.</summary>
     public override async Task HandleAsync(DataSetAnnotationPayload req, CancellationToken ct)
     {
-        var getResult = await _provider.GetAnnotation(req.DataSetName, ct).ConfigureAwait(false);
+        var getResult = await _provider.Get(req.DataSetName, ct).ConfigureAwait(false);
 
         if (!getResult.IsSuccess)
         {
@@ -50,13 +50,13 @@ public abstract class UpdateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
             return;
         }
 
-        var config = QualityConfigurationProvider.MapAnnotationFromDto(
+        var config = DataSetAnnotationRequestMapper.FromPayload(
             req.DataSetName, req.Owner, req.Steward, req.Classification, req.Tags);
 
         if (getResult.Value is not null)
             config.Id = getResult.Value.Id;
 
-        var result = await _provider.SaveAnnotation(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "DataSetAnnotation", "DataSetAnnotation", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

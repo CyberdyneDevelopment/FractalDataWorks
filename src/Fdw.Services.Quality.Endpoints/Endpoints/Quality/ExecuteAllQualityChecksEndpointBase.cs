@@ -22,7 +22,7 @@ namespace Fdw.Services.Quality.Endpoints;
 public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQueryRequest, List<QualityCheckResultResponse>>
 {
     /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
-        private readonly QualityConfigurationProvider _provider;
+        private readonly IQualityRuleConfigurationProvider _provider;
     private readonly IDataGatewayProvider _dataGateways;
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
@@ -30,7 +30,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
     private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
-    protected ExecuteAllQualityChecksEndpointBase(ILogger logger, QualityConfigurationProvider provider, IDataGatewayProvider dataGateways)
+    protected ExecuteAllQualityChecksEndpointBase(ILogger logger, IQualityRuleConfigurationProvider provider, IDataGatewayProvider dataGateways)
     {
         Logger = logger;
         _provider = provider;
@@ -68,7 +68,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
             return;
         }
 
-        var rulesResult = await _provider.GetAllQualityRules(ct).ConfigureAwait(false);
+        var rulesResult = await _provider.Get(ct).ConfigureAwait(false);
 
         if (!rulesResult.IsSuccess)
         {

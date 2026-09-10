@@ -10,11 +10,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that deletes an existing glossary term from the catalog.</summary>
 public abstract class DeleteGlossaryTermEndpointBase : Endpoint<GlossaryTermIdRequest>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IGlossaryTermConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="DeleteGlossaryTermEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected DeleteGlossaryTermEndpointBase(QualityConfigurationProvider provider)
+    protected DeleteGlossaryTermEndpointBase(IGlossaryTermConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -37,7 +37,7 @@ public abstract class DeleteGlossaryTermEndpointBase : Endpoint<GlossaryTermIdRe
     /// <summary>Deletes the glossary term identified by the request ID and returns 204 No Content on success.</summary>
     public override async Task HandleAsync(GlossaryTermIdRequest req, CancellationToken ct)
     {
-        var result = await _provider.DeleteGlossaryTerm(req.Id, ct).ConfigureAwait(false);
+        var result = await _provider.Delete(req.Id, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

@@ -10,11 +10,11 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that deletes an existing quality rule.</summary>
 public abstract class DeleteQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="DeleteQualityRuleEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected DeleteQualityRuleEndpointBase(QualityConfigurationProvider provider)
+    protected DeleteQualityRuleEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -37,7 +37,7 @@ public abstract class DeleteQualityRuleEndpointBase : Endpoint<QualityRuleIdRequ
     /// <summary>Deletes the quality rule identified by the request ID and returns 204 No Content on success.</summary>
     public override async Task HandleAsync(QualityRuleIdRequest req, CancellationToken ct)
     {
-        var result = await _provider.DeleteQualityRule(req.Id, ct).ConfigureAwait(false);
+        var result = await _provider.Delete(req.Id, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

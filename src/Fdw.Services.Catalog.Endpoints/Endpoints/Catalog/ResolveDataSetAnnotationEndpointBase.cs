@@ -13,11 +13,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that resolves (marks as reviewed/approved) a DataSet annotation.</summary>
 public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationIdRequest, DataSetAnnotationPayload>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="ResolveDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ResolveDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected ResolveDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -43,7 +43,7 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
     /// </summary>
     public override async Task HandleAsync(DataSetAnnotationIdRequest req, CancellationToken ct)
     {
-        var getResult = await _provider.GetAnnotation(req.AnnotationId, ct).ConfigureAwait(false);
+        var getResult = await _provider.Get(req.AnnotationId, ct).ConfigureAwait(false);
 
         if (!getResult.IsSuccess)
         {

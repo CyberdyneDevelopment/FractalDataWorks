@@ -10,11 +10,11 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that updates an existing quality rule.</summary>
 public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRuleRequest, QualityRuleDto>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateQualityRuleEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected UpdateQualityRuleEndpointBase(QualityConfigurationProvider provider)
+    protected UpdateQualityRuleEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -37,7 +37,7 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
     /// <summary>Loads the rule, applies the provided changes, and persists, returning 404 if not found.</summary>
     public override async Task HandleAsync(UpdateQualityRuleRequest req, CancellationToken ct)
     {
-        var existing = await _provider.GetQualityRule(req.Id, ct).ConfigureAwait(false);
+        var existing = await _provider.Get(req.Id, ct).ConfigureAwait(false);
         if (!existing.IsSuccess)
         {
             HttpContext.Response.StatusCode = 500;
@@ -58,7 +58,7 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         if (req.Expression is not null) config.Expression = req.Expression;
         config.IsEnabled = req.IsEnabled;
 
-        var result = await _provider.SaveQualityRule(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             HttpContext.Response.StatusCode = 500;

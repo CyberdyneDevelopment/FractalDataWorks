@@ -17,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<CreateTenantSettingRequest, TenantSettingSummaryDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly ITenantSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateTenantSettingEndpointBase(ILogger<CreateTenantSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected CreateTenantSettingEndpointBase(ILogger<CreateTenantSettingEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -37,7 +37,7 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
     /// <inheritdoc />
     protected override async Task<IGenericResult<bool>> CheckExists(CreateTenantSettingRequest request, CancellationToken ct)
     {
-        var tenantSettingsResult = await _provider.GetTenantSettings(ct).ConfigureAwait(false);
+        var tenantSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
         var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingImplementationConfiguration>)[];
         var existing = tenantSettings
             .FirstOrDefault(s => s.TenantId == request.TenantId
@@ -57,7 +57,7 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
             IsActive = true
         };
 
-        var saveResult = await _provider.SaveTenantSetting(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "TenantSetting", "TenantSetting", config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<TenantSettingSummaryDto>();

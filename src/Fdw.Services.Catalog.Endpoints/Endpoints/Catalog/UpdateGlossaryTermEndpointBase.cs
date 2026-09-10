@@ -9,11 +9,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that updates an existing glossary term in the catalog.</summary>
 public abstract class UpdateGlossaryTermEndpointBase : Endpoint<GlossaryTermResponse, GlossaryTermResponse>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IGlossaryTermConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateGlossaryTermEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected UpdateGlossaryTermEndpointBase(QualityConfigurationProvider provider)
+    protected UpdateGlossaryTermEndpointBase(IGlossaryTermConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -38,7 +38,7 @@ public abstract class UpdateGlossaryTermEndpointBase : Endpoint<GlossaryTermResp
     {
         var config = GlossaryTermMapper.MapFromDto(req);
 
-        var result = await _provider.SaveGlossaryTerm(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "GlossaryTerm", "GlossaryTerm", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
