@@ -86,7 +86,6 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
             var dataStore = new DataStoreImplementationConfiguration
             {
                 Name = serviceName,
-                Implementation = "Rest",
             };
 
             var totalEntitySets = 0;

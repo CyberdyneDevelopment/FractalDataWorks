@@ -1,3 +1,4 @@
+using Fdw.Services.Quality.Configuration;
 using Fdw.Services.Abstractions;
 
 namespace Fdw.Services.Quality;

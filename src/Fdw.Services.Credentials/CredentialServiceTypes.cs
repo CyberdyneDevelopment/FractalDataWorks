@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Linq;
 using Fdw.Results;
-using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -79,11 +78,6 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IConfigurationGatewayProvider>()));
             builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(
                 sp => (CredentialServiceConfigurationProvider)sp.GetRequiredService<ICredentialServiceConfigurationProvider>());
-
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ICredentialServiceImplementationConfiguration>>(
-                sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ICredentialServiceImplementationConfiguration>>(
-                sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
 
             var registered = collectOptions(builder, loggerFactory);
             if (registered.IsFailure)

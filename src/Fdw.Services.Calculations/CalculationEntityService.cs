@@ -26,6 +26,12 @@ namespace Fdw.Services.Calculations;
 public sealed class CalculationEntityService : ICalculationEntityService
 #pragma warning restore MA0051
 {
+    /// <summary>
+    /// The domain these calculations are configured members of — the value the domain row carries
+    /// and the provider was constructed against.
+    /// </summary>
+    private const string CalculationEntityDomain = "CalculationEntity";
+
     private readonly CalculationConfigurationProvider _provider;
     private readonly ICalculationInputResolver _inputResolver;
     private readonly ILogger<CalculationEntityService> _logger;
@@ -180,12 +186,25 @@ public sealed class CalculationEntityService : ICalculationEntityService
             if (!build.IsSuccess)
                 return build.ToNewResult<ICalculationEntity>();
 
-            var saveResult = await _provider.Save(build.Value!, cancellationToken).ConfigureAwait(false);
+            var saveResult = await _provider
+                .Save(build.Value!, CalculationEntityDomain, calculationEntityType, name, cancellationToken)
+                .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<ICalculationEntity>();
 
-            CalculationEntityLog.CreateCalculationSucceeded(_logger, name, saveResult.Value!.Id);
-            return GenericResult<ICalculationEntity>.Success(MapToEntity(saveResult.Value));
+            // Save writes the domain row and the implementation together and hands back neither: the
+            // domain row's id is minted inside it. Read the member back by the name it was written
+            // under to return what was actually persisted.
+            var saved = await _provider.Get(name, cancellationToken).ConfigureAwait(false);
+            if (!saved.IsSuccess)
+                return saved.ToNewResult<ICalculationEntity>();
+
+            if (saved.Value is null)
+                return GenericResult<ICalculationEntity>.Failure(
+                    CalculationEntityLog.CalculationNotFound(_logger, name));
+
+            CalculationEntityLog.CreateCalculationSucceeded(_logger, name, saved.Value.Id);
+            return GenericResult<ICalculationEntity>.Success(MapToEntity(saved.Value));
         }
         catch (Exception ex)
         {
@@ -214,12 +233,23 @@ public sealed class CalculationEntityService : ICalculationEntityService
             if (!build.IsSuccess)
                 return build.ToNewResult<ICalculationEntity>();
 
-            var saveResult = await _provider.Save(build.Value!, cancellationToken).ConfigureAwait(false);
+            var saveResult = await _provider
+                .Save(build.Value!, CalculationEntityDomain, calculationEntityType, name, cancellationToken)
+                .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<ICalculationEntity>();
 
+            // Save hands back nothing; the member is read back under the name it was written under.
+            var saved = await _provider.Get(name, cancellationToken).ConfigureAwait(false);
+            if (!saved.IsSuccess)
+                return saved.ToNewResult<ICalculationEntity>();
+
+            if (saved.Value is null)
+                return GenericResult<ICalculationEntity>.Failure(
+                    CalculationEntityLog.CalculationNotFound(_logger, name));
+
             CalculationEntityLog.UpdateCalculationSucceeded(_logger, id);
-            return GenericResult<ICalculationEntity>.Success(MapToEntity(saveResult.Value!));
+            return GenericResult<ICalculationEntity>.Success(MapToEntity(saved.Value));
         }
         catch (Exception ex)
         {

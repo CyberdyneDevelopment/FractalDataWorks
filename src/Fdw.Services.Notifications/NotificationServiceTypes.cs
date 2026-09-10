@@ -39,7 +39,7 @@ namespace Fdw.Services.Notifications;
     typeof(INotificationType),
     typeof(NotificationServiceTypes),
     ServiceInterface = typeof(IPlatformNotification),
-    ConfigurationInterface = typeof(NotificationConfiguration),
+    ConfigurationInterface = typeof(INotificationConfiguration),
     ProviderType = typeof(NotificationServiceProvider),
     ProviderInterface = typeof(INotificationServiceProvider),
     ServiceCategory = "Notification")]

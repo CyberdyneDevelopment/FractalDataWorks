@@ -1,4 +1,3 @@
-using Fdw.Commands.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -14,7 +13,6 @@ namespace Fdw.Services.Authorization;
 /// <summary>Supplies the Role configuration.</summary>
 public sealed class RoleConfigurationProvider
     : ImplementationConfigurationProviderBase<IRoleImplementationConfiguration>,
-      IAuthorizationProvider,
       IRoleConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="RoleConfigurationProvider"/> class.</summary>

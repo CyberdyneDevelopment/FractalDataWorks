@@ -13,7 +13,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Commands;
 
@@ -79,10 +78,6 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IConfigurationGatewayProvider>()));
             builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IIdentityServiceImplementationConfiguration>>(
-                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IIdentityServiceImplementationConfiguration>>(
-                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
             builder.Services.AddSingleton<IIdentityTokenCache>(sp =>
                 new IdentityTokenCache(
@@ -122,7 +117,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(IdentityServiceTypes),
                             provider.GetType().Name,
-                            typeof(IImplementationConfigurationProvider<IIdentityServiceImplementationConfiguration>).ToString());
+                            typeof(IIdentityServiceConfigurationProvider).ToString());
                     }
                 }
                 catch (Exception ex)

@@ -44,16 +44,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     /// <inheritdoc />
     public IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration)
     {
-
-        if (configuration is IConnectionImplementationConfiguration composedHeader
-            && composedHeader.Configuration is RoslynWorkspaceConnectionConfiguration)
-        {
-            return GenericResult<IGenericConnection>.Failure(
-                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
-                    _logger, composedHeader.Name,
-                    "RoslynWorkspaceConnection requires async creation (workspace loading is async). Use Create(config, secretManager, ct)."));
-        }
-
         if (configuration is not RoslynWorkspaceConnectionConfiguration config)
             return GenericResult<IGenericConnection>.Failure(
                 RoslynWorkspaceConnectionLog.FactoryValidationFailed(
@@ -73,12 +63,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         ISecretManager? secretManager,
         CancellationToken cancellationToken = default)
     {
-        if (configuration is IConnectionImplementationConfiguration header
-            && header.Configuration is RoslynWorkspaceConnectionConfiguration typedBody)
-        {
-            return await Create(typedBody, header.Name, cancellationToken).ConfigureAwait(false);
-        }
-
         if (configuration is not RoslynWorkspaceConnectionConfiguration config)
             return GenericResult<IGenericConnection>.Failure(
                 RoslynWorkspaceConnectionLog.FactoryValidationFailed(
@@ -86,7 +70,7 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
                     configuration?.GetType().Name ?? "null",
                     $"Expected RoslynWorkspaceConnectionConfiguration but got {configuration?.GetType().Name ?? "null"}"));
 
-        return await Create(config, config.ConnectionId.ToString(), cancellationToken).ConfigureAwait(false);
+        return await Create(config, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -106,9 +90,16 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
 
     private async Task<IGenericResult<IGenericConnection>> Create(
         RoslynWorkspaceConnectionConfiguration configuration,
-        string connectionName,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(configuration.Name))
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger, configuration.ConnectionId.ToString(),
+                    "Name is required but was empty or whitespace; the domain provider stamps it from the domain row"));
+
+        var connectionName = configuration.Name;
+
         if (string.IsNullOrWhiteSpace(configuration.SolutionPath))
             return GenericResult<IGenericConnection>.Failure(
                 RoslynWorkspaceConnectionLog.FactoryValidationFailed(
