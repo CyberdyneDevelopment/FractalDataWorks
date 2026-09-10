@@ -21,9 +21,6 @@ public class SystemRoleMappingConfigurationProvider
           SystemRoleMappingConfiguration,
           SystemRoleMappingConfigurationCommand>
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Initializes a new instance of the <see cref="SystemRoleMappingConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
