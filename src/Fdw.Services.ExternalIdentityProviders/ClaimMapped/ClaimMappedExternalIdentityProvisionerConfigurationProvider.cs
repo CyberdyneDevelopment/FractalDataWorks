@@ -7,7 +7,8 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
 /// <summary>Supplies the ClaimMappedExternalIdentityProvisioner configuration.</summary>
 public sealed class ClaimMappedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration>
+    : ImplementationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>,
+      IClaimMappedExternalIdentityProvisionerConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="ClaimMappedExternalIdentityProvisionerConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

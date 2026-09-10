@@ -55,7 +55,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             ModeName = "Snapshot"
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(config, CancellationToken.None);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNullOrEmpty();
@@ -77,7 +77,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             ModeName = "Snapshot"
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(config, CancellationToken.None);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNullOrEmpty();
@@ -99,7 +99,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             ModeName = ""
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(config, CancellationToken.None);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNullOrEmpty();
@@ -121,7 +121,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             ModeName = "NotAMode"
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(config, CancellationToken.None);
 
         result.IsSuccess.ShouldBeFalse();
         result.CurrentMessage.ShouldNotBeNullOrEmpty();
@@ -139,7 +139,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidSnapshotConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(ValidSnapshotConfig(), CancellationToken.None);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeAssignableTo<IRoslynWorkspaceConnection>();
@@ -172,7 +172,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidSnapshotConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(ValidSnapshotConfig(), CancellationToken.None);
         result.IsSuccess.ShouldBeTrue();
 
         var conn = (IRoslynWorkspaceConnection)result.Value!;
@@ -209,7 +209,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidSnapshotConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(ValidSnapshotConfig(), CancellationToken.None);
         result.IsSuccess.ShouldBeTrue();
 
         var conn = (IRoslynWorkspaceConnection)result.Value!;
@@ -239,7 +239,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidLiveConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = await factory.Create(ValidLiveConfig(), CancellationToken.None);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeAssignableTo<IRoslynWorkspaceConnection>();

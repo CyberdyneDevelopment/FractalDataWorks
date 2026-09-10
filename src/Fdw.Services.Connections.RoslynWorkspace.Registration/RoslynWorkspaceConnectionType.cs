@@ -49,7 +49,7 @@ public sealed class RoslynWorkspaceConnectionType
             var services = host.Services;
             services.GetRequiredService<ConnectionConfigurationProvider>()
                 .Register(
-                    Name, services.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
+                    Name, services.GetRequiredService<IRoslynWorkspaceConnectionConfigurationProvider>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -65,15 +65,8 @@ public sealed class RoslynWorkspaceConnectionType
         {
             builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
             ConnectionProvider.Register<IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionFactory>(builder, Name, ServiceLifetime.Singleton);
-            builder.Services.TryAddSingleton<RoslynWorkspaceConnectionConfigurationProvider>(sp =>
-                new RoslynWorkspaceConnectionConfigurationProvider(
-                    sp.GetService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>()
-                        ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore,
-                    PathName));
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IConnectionImplementationConfiguration>>(
-                sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
+            builder.Services.TryAddSingleton<RoslynWorkspaceConnectionConfigurationProvider>();
+            builder.Services.TryAddSingleton<IRoslynWorkspaceConnectionConfigurationProvider>(sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

@@ -8,7 +8,8 @@ namespace Fdw.Services.Data;
 
 /// <summary>Supplies the MainDataGateway configuration.</summary>
 public sealed class MainDataGatewayConfigurationProvider
-    : ImplementationProviderBase<MainDataGatewayConfiguration>
+    : ImplementationProviderBase<MainDataGatewayConfiguration, IDataGatewayImplementationConfiguration>,
+      IMainDataGatewayConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="MainDataGatewayConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

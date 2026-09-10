@@ -24,18 +24,6 @@ public interface IConnectionFactory
     /// </returns>
     IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration);
 
-    /// <summary>
-    /// Creates a connection asynchronously using an already-resolved <paramref name="secretManager"/>.
-    /// Used by <c>ConfigurationGateway</c> during config-DB bootstrap, where the caller holds a specific
-    /// secret manager (env-var backed) and the FDW secret-manager provider is not yet available.
-    /// </summary>
-    /// <param name="configuration">The connection configuration. Must be castable to the factory's concrete configuration type.</param>
-    /// <param name="secretManager">The secret manager to use for any secret/password resolution.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task<IGenericResult<IGenericConnection>> Create(
-        IGenericConfiguration configuration,
-        ISecretManager? secretManager,
-        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates a connection asynchronously, resolving its secret manager BY NAME from the connection's

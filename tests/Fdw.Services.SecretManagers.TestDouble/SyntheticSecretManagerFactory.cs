@@ -13,7 +13,7 @@ namespace Fdw.Services.SecretManagers.TestDouble;
 /// </summary>
 /// <remarks>
 /// Why the header unwrap: <c>PlatformServiceProviderBase</c> hands the composed
-/// <see cref="SecretManagerConfiguration"/> HEADER (with its typed body attached) to the factory, so
+/// the implementation configuration to the factory, so
 /// the factory takes the name from the header and the settings from the body — the same shape every
 /// shipped backend factory uses.
 /// </remarks>
@@ -38,12 +38,6 @@ public sealed class SyntheticSecretManagerFactory : ISyntheticSecretManagerFacto
     /// <inheritdoc />
     public IGenericResult<ISecretManager> Create(IGenericConfiguration configuration)
     {
-        if (configuration is SecretManagerConfiguration header
-            && header.Configuration is SyntheticSecretManagerConfiguration body)
-        {
-            body.Name = header.Name;
-            return Create(body);
-        }
 
         if (configuration is SyntheticSecretManagerConfiguration direct)
             return Create(direct);

@@ -48,16 +48,14 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
         Initialization((host, loggerFactory) =>
         {
             host.Services.GetRequiredService<IDataGatewayConfigurationProvider>()
-                .Register(Name, host.Services.GetRequiredService<MainDataGatewayConfigurationProvider>());
+                .Register(Name, host.Services.GetRequiredService<IMainDataGatewayConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
 
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<MainDataGatewayConfigurationProvider>(sp =>
-                new MainDataGatewayConfigurationProvider(
-                    sp.GetService<ILogger<MainDataGatewayConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+            builder.Services.TryAddSingleton<MainDataGatewayConfigurationProvider>();
+            builder.Services.TryAddSingleton<IMainDataGatewayConfigurationProvider>(sp => sp.GetRequiredService<MainDataGatewayConfigurationProvider>());
 
 
             // Why the domain provider and not the implementation one: the domain record says which
@@ -77,7 +75,7 @@ public sealed class MainDataGatewayImplementation : DataGatewayTypeBase<IGeneric
             // provider before it can dispatch to it -- Initialization does the same call against the
             // real host later, for the real request-serving container. This one only lives as long
             // as `built`.
-            domainProvider.Register(Name, built.GetRequiredService<MainDataGatewayConfigurationProvider>());
+            domainProvider.Register(Name, built.GetRequiredService<IMainDataGatewayConfigurationProvider>());
 
             // The elevation is opened and closed around this read. Note this one is in the REGISTER
             // phase, before Build() -- a host that brackets only its post-Build Initialize calls never

@@ -9,7 +9,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>Supplies the DataGateway configuration.</summary>
 public sealed class DataGatewayDomainConfigurationProvider
-    : DomainConfigurationProviderBase<IDataGatewayDomainImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IDataGatewayImplementationConfiguration>,
       IDataGatewayConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="DataGatewayDomainConfigurationProvider"/> class.</summary>

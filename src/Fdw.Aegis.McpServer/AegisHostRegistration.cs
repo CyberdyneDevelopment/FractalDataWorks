@@ -35,7 +35,6 @@ public static class AegisHostRegistration
         Converters =
         {
             new ConnectionConfigurationJsonConverter(),
-            new SecretManagerConfigurationJsonConverter(),
             new AegisCommandConfigurationJsonConverter(),
         },
     };
@@ -139,8 +138,6 @@ public static class AegisHostRegistration
 
         builder.Services.AddSingleton(Options.Create(new AegisCommandsOptions { Commands = [.. schema.Commands] }));
 
-        builder.Services.AddSingleton<ISecretManagerConfigurationProvider>(
-            new DeclaredSecretManagerConfigurationProvider([.. schema.SecretManagers]));
 
         builder.Services.AddScoped<IApprovalPolicyEvaluator, PreApprovedPolicyEvaluator>();
         builder.Services.AddScoped<IAegisInjectionTarget, HttpHeaderInjectionTarget>();

@@ -8,7 +8,8 @@ namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>Supplies the JwtAssertionIdentity configuration.</summary>
 public sealed class JwtAssertionConfigurationProvider
-    : ImplementationProviderBase<JwtAssertionConfiguration>
+    : ImplementationProviderBase<JwtAssertionConfiguration, IIdentityServiceImplementationConfiguration>,
+      IJwtAssertionConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="JwtAssertionConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

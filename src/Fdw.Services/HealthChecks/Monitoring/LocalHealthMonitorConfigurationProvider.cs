@@ -7,7 +7,8 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 
 /// <summary>Supplies the LocalHealthMonitor configuration.</summary>
 public sealed class LocalHealthMonitorConfigurationProvider
-    : ImplementationProviderBase<LocalHealthMonitorConfiguration>
+    : ImplementationProviderBase<LocalHealthMonitorConfiguration, IHealthMonitorImplementationConfiguration>,
+      ILocalHealthMonitorConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

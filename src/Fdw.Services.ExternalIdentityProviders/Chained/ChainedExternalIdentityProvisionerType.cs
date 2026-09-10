@@ -45,7 +45,7 @@ public sealed class ChainedExternalIdentityProvisionerType
 
             var factory = services.GetRequiredService<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>();
             var domainProvider = services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>();
-            var typedProvider = services.GetRequiredService<ChainedExternalIdentityProvisionerConfigurationProvider>();
+            var typedProvider = services.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>();
 
             domainProvider.Register("Chained", typedProvider);
 
@@ -64,12 +64,8 @@ public sealed class ChainedExternalIdentityProvisionerType
         Registration((builder, loggerFactory) =>
         {
 
-            builder.Services.TryAddSingleton<ChainedExternalIdentityProvisionerConfigurationProvider>(sp =>
-                new ChainedExternalIdentityProvisionerConfigurationProvider(
-                    sp.GetService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore,
-                    PathName));
+            builder.Services.TryAddSingleton<ChainedExternalIdentityProvisionerConfigurationProvider>();
+            builder.Services.TryAddSingleton<IChainedExternalIdentityProvisionerConfigurationProvider>(sp => sp.GetRequiredService<ChainedExternalIdentityProvisionerConfigurationProvider>());
 
             ExternalIdentityProvisionerServiceProvider.Register<IChainedExternalIdentityProvisionerFactory, ChainedExternalIdentityProvisionerFactory>(
                 builder, Name, ServiceLifetime.Scoped);

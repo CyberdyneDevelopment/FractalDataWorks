@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Fdw.Aegis.Configuration;
 using Fdw.Services.Connections;
-using Fdw.Services.SecretManagers;
 
 namespace Fdw.Services.Data.Configuration;
 
@@ -25,11 +24,6 @@ public sealed class ConfigurationSchema
 #pragma warning disable MA0016 // Prefer collection abstraction — required for IOptions binding
     public IList<IConnectionImplementationConfiguration> Connections { get; set; } = new List<IConnectionImplementationConfiguration>();
 
-    /// <summary>
-    /// Gets or sets the secret managers available to the entry-point app.
-    /// Corresponds to the <c>ConfigurationSchema:SecretManagers</c> configuration section.
-    /// </summary>
-    public IList<SecretManagerConfiguration> SecretManagers { get; set; } = new List<SecretManagerConfiguration>();
 
     /// <summary>
     /// Gets or sets the data stores (with their full Paths → Containers → Fields + Keys hierarchy).
@@ -57,7 +51,7 @@ public sealed class ConfigurationSchema
     /// </summary>
     /// <remarks>
     /// Which Multitenancy option a host runs is per-host topology — declared once here, alongside
-    /// <see cref="Connections"/>/<see cref="SecretManagers"/>/<see cref="DataStores"/>, not a shared
+    /// <see cref="Connections"/>/<see cref="DataStores"/>, not a shared
     /// ConfigurationDb row. <c>Fdw.Services.Multitenancy.MultitenancyTypes.Configure{TBuilder}</c> reads
     /// this value to resolve and drive exactly one option (NO FALLBACKS: null/whitespace or an
     /// unrecognized value is a startup failure, not a silent default).

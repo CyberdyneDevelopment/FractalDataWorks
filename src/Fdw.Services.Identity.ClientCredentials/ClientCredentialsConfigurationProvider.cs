@@ -8,7 +8,8 @@ namespace Fdw.Services.Identity.ClientCredentials;
 
 /// <summary>Supplies the ClientCredentialsIdentity configuration.</summary>
 public sealed class ClientCredentialsConfigurationProvider
-    : ImplementationProviderBase<ClientCredentialsConfiguration>
+    : ImplementationProviderBase<ClientCredentialsConfiguration, IIdentityServiceImplementationConfiguration>,
+      IClientCredentialsConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="ClientCredentialsConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

@@ -12,7 +12,7 @@ namespace Fdw.Services.Connections.PostgreSql;
 
 /// <summary>
 /// Configuration for PostgreSQL connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>.
+/// Standalone typed body POCO — no longer inherits from <c>IConnectionImplementationConfiguration</c>.
 /// Persisted to <c>conn.PostgreSqlConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
 /// </summary>
 /// <remarks>
@@ -23,7 +23,7 @@ namespace Fdw.Services.Connections.PostgreSql;
 /// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.PostgreSqlConnectionAuthentication).
 /// </para>
 /// <para>
-/// The endpoint creates a <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration"/>
+/// The endpoint creates a <c>IConnectionImplementationConfiguration</c>
 /// first (writing conn.Connection), then creates this record with <see cref="ConnectionId"/> pointing to
 /// the parent's <see cref="Fdw.Configuration.IGenericConfiguration.Id"/>.
 /// </para>

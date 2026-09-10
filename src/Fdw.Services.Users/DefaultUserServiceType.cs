@@ -41,37 +41,21 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<UsersServiceConfigurationProvider>(sp =>
-                new UsersServiceConfigurationProvider(
-                    sp.GetService<ILogger<UsersServiceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, "usr"));
+            builder.Services.TryAddSingleton<UsersServiceConfigurationProvider>();
 
-            builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
-                new UserConfigurationProvider(
-                    sp.GetService<ILogger<UserConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, "usr"));
+            builder.Services.TryAddSingleton<UserConfigurationProvider>();
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IUserImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
             builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IUserImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<UserTenantConfigurationProvider>(sp =>
-                new UserTenantConfigurationProvider(
-                    sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, "tenant"));
+            builder.Services.TryAddSingleton<UserTenantConfigurationProvider>();
             builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IUserTenantImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
             builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IUserTenantImplementationConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>
-                new UserPreferenceConfigurationProvider(
-                    sp.GetService<ILogger<UserPreferenceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, "usr"));
+            builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>();
 
             builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);

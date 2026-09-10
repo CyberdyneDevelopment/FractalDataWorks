@@ -22,7 +22,7 @@ namespace Fdw.Services.Data;
 public sealed class DataStoreTypesBuilderSelector : IDataStoreBuilderSelector
 {
     /// <inheritdoc/>
-    public IGenericResult<IDataStoreBuilder> Select(DataStoreImplementationConfiguration configuration, ILogger? logger = null)
+    public IGenericResult<IDataStoreBuilder> Select(IDataStoreImplementationConfiguration configuration, ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 

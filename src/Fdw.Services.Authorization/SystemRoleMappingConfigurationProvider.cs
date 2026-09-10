@@ -1,3 +1,4 @@
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Configuration;
@@ -8,7 +9,7 @@ namespace Fdw.Services.Authorization;
 
 /// <summary>Supplies the SystemRoleMapping implementation's own configuration.</summary>
 public sealed class SystemRoleMappingConfigurationProvider
-    : ImplementationProviderBase<SystemRoleMappingConfiguration>,
+    : ImplementationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration>,
       ISystemRoleMappingConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="SystemRoleMappingConfigurationProvider"/> class.</summary>

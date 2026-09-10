@@ -77,74 +77,29 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             builder.Services.AddAuthorization();
 
-            const string pathNameAuthz = "authz";
 
             // Role provider. Registered here beside the other two because the three are read
             // together - a role means nothing without the permissions it grants - and leaving this
             // one out is what made every consumer of it unresolvable while the other two looked
             // fine. RoleConfigurationProvider rather than the bare base, because DefaultPrincipalResolver
             // takes the concrete type and both should be the same instance.
-            builder.Services.TryAddSingleton<RoleConfigurationProvider>(sp =>
-                new RoleConfigurationProvider(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<RoleConfigurationProvider>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IRoleImplementationConfiguration>>(
-                sp => sp.GetRequiredService<RoleConfigurationProvider>());
-            builder.Services.TryAddSingleton<RoleConfigurationProvider>(
-                sp => sp.GetRequiredService<RoleConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IRoleImplementationConfiguration>>(
-                sp => sp.GetRequiredService<RoleConfigurationProvider>());
+            builder.Services.TryAddSingleton<RoleConfigurationProvider>();
+            builder.Services.TryAddSingleton<IRoleConfigurationProvider>(sp => sp.GetRequiredService<RoleConfigurationProvider>());
 
-            // RoleConfigurationProvider is also the domain's IAuthorizationProvider, and endpoints
-            // ask for it under that name. Same instance rather than a second provider over the same
-            // rows.
-            builder.Services.TryAddSingleton<IAuthorizationProvider>(
-                sp => sp.GetRequiredService<RoleConfigurationProvider>());
 
             // UserRole provider. Consumed by EffectivePermissionResolver here, by
             // DefaultPrincipalResolver in the Authentication package, and by GetMeEndpoint - which
             // is where its absence actually surfaced, as FastEndpoints activating an endpoint at
             // MapFastEndpoints rather than as a phase failure, because the resolver takes it
             // through a factory that is not called until something asks.
-            builder.Services.TryAddSingleton<UserRoleConfigurationProvider>(sp =>
-                new UserRoleConfigurationProvider(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<UserRoleConfigurationProvider>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IUserRoleImplementationConfiguration>>(
-                sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+            builder.Services.TryAddSingleton<UserRoleConfigurationProvider>();
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IPermissionImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IPermissionImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IPermissionImplementationConfiguration>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
-            builder.Services.TryAddSingleton<PermissionConfigurationProvider>(sp =>
-                new PermissionConfigurationProvider(
-                    sp.GetService<ILogger<PermissionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
-            builder.Services.TryAddSingleton<PermissionConfigurationProvider>(
-                sp => sp.GetRequiredService<PermissionConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IPermissionImplementationConfiguration>>(sp =>
-                sp.GetRequiredService<PermissionConfigurationProvider>());
+            builder.Services.TryAddSingleton<PermissionConfigurationProvider>();
+            builder.Services.TryAddSingleton<IPermissionConfigurationProvider>(sp => sp.GetRequiredService<PermissionConfigurationProvider>());
 
             // RolePermission junction provider.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
-            builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>(sp =>
-                new RolePermissionConfigurationProvider(
-                    sp.GetService<ILogger<RolePermissionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
-            builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>(
-                sp => sp.GetRequiredService<RolePermissionConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IRolePermissionImplementationConfiguration>>(sp =>
-                sp.GetRequiredService<RolePermissionConfigurationProvider>());
+            builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>();
+            builder.Services.TryAddSingleton<IRolePermissionConfigurationProvider>(sp => sp.GetRequiredService<RolePermissionConfigurationProvider>());
 
             // Hands over the gateway provider, not a gateway. Resolving one here meant .Value! on a
             // result that can fail — a null-forgive that turns "no gateway for this connection" into
@@ -159,11 +114,8 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
                     sp.GetService<ILogger<DefaultOrgAccessProvider>>()));
 
-            builder.Services.TryAddSingleton<SystemRoleMappingConfigurationProvider>(sp =>
-                new SystemRoleMappingConfigurationProvider(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<SystemRoleMappingConfigurationProvider>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz));
+            builder.Services.TryAddSingleton<SystemRoleMappingConfigurationProvider>();
+            builder.Services.TryAddSingleton<ISystemRoleMappingConfigurationProvider>(sp => sp.GetRequiredService<SystemRoleMappingConfigurationProvider>());
 
             // Why the domain provider and not the implementation one: the domain row names which
             // mapping this host runs, and routing to it is the domain provider's job. Reading the
@@ -171,11 +123,9 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<IRoleMappingConfigurationProvider>(sp =>
             {
                 var domain = new RoleMappingConfigurationProvider(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<RoleMappingConfigurationProvider>()
-                        ?? NullLogger<RoleMappingConfigurationProvider>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore, pathNameAuthz);
-                domain.Register("System", sp.GetRequiredService<SystemRoleMappingConfigurationProvider>());
+                    sp.GetRequiredService<ILogger<RoleMappingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>());
+                domain.Register("System", sp.GetRequiredService<ISystemRoleMappingConfigurationProvider>());
                 return domain;
             });
 
@@ -224,7 +174,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
         // The domain provider returns the implementation its row named. Anything other than the
         // System mapping here means the row names an implementation this host does not run, which is
         // a configuration fault rather than something to coerce.
-        if (result.Value.ImplementationConfiguration is not SystemRoleMappingConfiguration system)
+        if (result.Value is not SystemRoleMappingConfiguration system)
         {
             throw new InvalidOperationException(
                 $"The RoleMapping row named implementation '{result.Value.Name}', "

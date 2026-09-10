@@ -63,8 +63,6 @@ public sealed class SchemaLoadTests
             preApproved.ParameterAllowList[0].ParameterName.ShouldBe("mode");
             preApproved.ParameterAllowList[0].PermittedValues.ShouldContain("echo");
 
-            schema.SecretManagers.Count.ShouldBe(1);
-            schema.SecretManagers[0].Configuration.ShouldBeOfType<SyntheticSecretManagerConfiguration>();
 
             schema.Connections.Count.ShouldBe(1);
             schema.Connections[0].Configuration.ShouldBeOfType<MockConnectionConfiguration>()

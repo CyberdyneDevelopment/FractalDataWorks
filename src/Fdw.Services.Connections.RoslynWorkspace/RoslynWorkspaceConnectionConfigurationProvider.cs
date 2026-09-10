@@ -1,3 +1,4 @@
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -6,7 +7,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 
 /// <summary>Supplies the RoslynWorkspaceConnection configuration.</summary>
 public sealed class RoslynWorkspaceConnectionConfigurationProvider
-    : ImplementationProviderBase<RoslynWorkspaceConnectionConfiguration>,
+    : ImplementationProviderBase<RoslynWorkspaceConnectionConfiguration, IConnectionImplementationConfiguration>,
       IRoslynWorkspaceConnectionConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="RoslynWorkspaceConnectionConfigurationProvider"/> class.</summary>

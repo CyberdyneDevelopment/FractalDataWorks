@@ -20,6 +20,10 @@ namespace Fdw.Services.Configuration;
 /// Supplies and persists one implementation's own configuration.
 /// </summary>
 /// <typeparam name="TConfiguration">The implementation this provider reads and writes.</typeparam>
+/// <typeparam name="TContract">
+/// The domain's implementation contract. A domain registers its implementations by this, so it is
+/// what lets one domain hold every provider it has.
+/// </typeparam>
 /// <remarks>
 /// An implementation deals with exactly one kind of configuration; that is what makes it an
 /// implementation rather than a domain. Its rows are always reached through the domain that owns
@@ -30,12 +34,13 @@ namespace Fdw.Services.Configuration;
 /// A derived provider supplies a name, a data store, a schema and a table, and nothing else.
 /// </para>
 /// </remarks>
-public abstract class ImplementationProviderBase<TConfiguration>
+public abstract class ImplementationProviderBase<TConfiguration, TContract>
     : IImplementationConfigurationProvider,
-      IImplementationConfigurationProvider<TConfiguration>
-    where TConfiguration : class, IImplementationConfiguration, new()
+      IImplementationConfigurationProvider<TContract>
+    where TConfiguration : class, TContract, new()
+    where TContract : IImplementationConfiguration
 {
-    private readonly ILogger<ImplementationProviderBase<TConfiguration>> _logger;
+    private readonly ILogger<ImplementationProviderBase<TConfiguration, TContract>> _logger;
     private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ImplementationConfigurationCommand<TConfiguration> _commands;
 
@@ -52,13 +57,13 @@ public abstract class ImplementationProviderBase<TConfiguration>
     /// <param name="pathName">The schema the rows live in.</param>
     /// <param name="tableName">The implementation table.</param>
     protected ImplementationProviderBase(
-        ILogger<ImplementationProviderBase<TConfiguration>>? logger,
+        ILogger<ImplementationProviderBase<TConfiguration, TContract>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName,
         string tableName)
     {
-        _logger = logger ?? NullLogger<ImplementationProviderBase<TConfiguration>>.Instance;
+        _logger = logger ?? NullLogger<ImplementationProviderBase<TConfiguration, TContract>>.Instance;
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
@@ -248,6 +253,73 @@ public abstract class ImplementationProviderBase<TConfiguration>
         }
 
         return null;
+    }
+
+    // ── the domain's contract ───────────────────────────────────────────────
+    // What a domain registers this under. Explicit where the contract shares a signature with the
+    // typed surface but not its return type; the reads hand back the same instance, and the one write
+    // narrows the contract to the configuration this provider writes, or says why it cannot.
+
+    async Task<IGenericResult<TContract>> IImplementationConfigurationProvider<TContract>.Get(
+        Guid domainId, CancellationToken cancellationToken)
+    {
+        var found = await Get(domainId, cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<TContract>.Success(found.Value!)
+            : found.ToNewResult<TContract>();
+    }
+
+    async Task<IGenericResult<TContract>> IImplementationConfigurationProvider<TContract>.Get(
+        Guid domainId, DateTimeOffset asOf, CancellationToken cancellationToken)
+    {
+        var found = await Get(domainId, asOf, cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<TContract>.Success(found.Value!)
+            : found.ToNewResult<TContract>();
+    }
+
+    async Task<IGenericResult<IReadOnlyList<TContract>>> IImplementationConfigurationProvider<TContract>.Get(
+        IEnumerable<Guid> domainIds, CancellationToken cancellationToken)
+    {
+        var found = await Get(domainIds, cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<IReadOnlyList<TContract>>.Success(found.Value!)
+            : found.ToNewResult<IReadOnlyList<TContract>>();
+    }
+
+    async Task<IGenericResult<IReadOnlyList<TContract>>> IImplementationConfigurationProvider<TContract>.Get(
+        CancellationToken cancellationToken)
+    {
+        var found = await Get(cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<IReadOnlyList<TContract>>.Success(found.Value!)
+            : found.ToNewResult<IReadOnlyList<TContract>>();
+    }
+
+    async Task<IGenericResult<IReadOnlyList<TContract>>> IImplementationConfigurationProvider<TContract>.Find(
+        Func<TContract, bool> predicate, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        var found = await Find(c => predicate(c), cancellationToken).ConfigureAwait(false);
+        return found.IsSuccess
+            ? GenericResult<IReadOnlyList<TContract>>.Success(found.Value!)
+            : found.ToNewResult<IReadOnlyList<TContract>>();
+    }
+
+    async Task<IGenericResult<TContract>> IImplementationConfigurationProvider<TContract>.Save(
+        TContract record, CancellationToken cancellationToken)
+    {
+        if (record is not TConfiguration typed)
+        {
+            return GenericResult<TContract>.Failure(
+                DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
+                    _logger, typeof(TConfiguration).Name, record?.GetType().Name ?? "(null)"));
+        }
+
+        var saved = await Save(typed, cancellationToken).ConfigureAwait(false);
+        return saved.IsSuccess
+            ? GenericResult<TContract>.Success(saved.Value!)
+            : saved.ToNewResult<TContract>();
     }
 
     // ── the erased surface ──────────────────────────────────────────────────

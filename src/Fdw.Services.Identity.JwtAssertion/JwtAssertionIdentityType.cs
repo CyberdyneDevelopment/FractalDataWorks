@@ -49,11 +49,8 @@ public sealed class JwtAssertionIdentityType
 
             // The typed body provider, so the header provider can compose the aggregate.
 
-            builder.Services.TryAddSingleton(sp => new JwtAssertionConfigurationProvider(
-
-                sp.GetService<ILogger<JwtAssertionConfigurationProvider>>()!,
-
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+            builder.Services.TryAddSingleton<JwtAssertionConfigurationProvider>();
+            builder.Services.TryAddSingleton<IJwtAssertionConfigurationProvider>(sp => sp.GetRequiredService<JwtAssertionConfigurationProvider>());
 
 
             IdentityLog.MechanismRegistered(log, Name);
@@ -66,7 +63,7 @@ public sealed class JwtAssertionIdentityType
             // it. Without this hand-over the header loads and Configuration stays null.
             var services = host.Services;
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()
-                .Register(Name, services.GetRequiredService<JwtAssertionConfigurationProvider>());
+                .Register(Name, services.GetRequiredService<IJwtAssertionConfigurationProvider>());
 
             return GenericResult<IHost>.Success(host);
         });

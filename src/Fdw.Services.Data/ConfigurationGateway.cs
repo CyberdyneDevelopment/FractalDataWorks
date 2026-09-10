@@ -50,7 +50,6 @@ public sealed class ConfigurationGateway : IConfigurationGateway
 
     private readonly ILogger<ConfigurationGateway> _logger;
     private readonly IConnectionFactory _connectionFactory;
-    private readonly ISecretManager? _secretManager;
     private readonly ConfigurationSchema _schema;
 
     private readonly Lazy<Task<IGenericResult<IDataConnection>>> _connectionLazy;
@@ -84,28 +83,11 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// Optional accessor for the calling principal, used to partition cached results by the
     /// visibility scope their session reads under.
     /// </param>
-    public ConfigurationGateway(
-        string connectionName,
-        IConnectionFactory connectionFactory,
-        ConfigurationSchema schema,
-        ILogger<ConfigurationGateway>? logger = null,
-        DataGatewayResultCache? cache = null,
-        MainDataGatewayConfiguration? options = null,
-        IAuthenticationContextAccessor? authenticationContextAccessor = null)
-        : this(connectionName, connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
-    {
-    }
-
     /// <summary>
-    /// Initializes a new instance of <see cref="ConfigurationGateway"/> with an optional secret manager.
+    /// Initializes a new instance of <see cref="ConfigurationGateway"/>.
     /// </summary>
     /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
     /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
-    /// <param name="secretManager">
-    /// Optional secret manager. When non-null and the ConfigurationDb connection references a secret,
-    /// the secret is resolved at construction time and attached to the connection configuration
-    /// before the factory creates the connection.
-    /// </param>
     /// <param name="schema">
     /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
     /// </param>
@@ -121,7 +103,6 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     public ConfigurationGateway(
         string connectionName,
         IConnectionFactory connectionFactory,
-        ISecretManager? secretManager,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
@@ -132,7 +113,6 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             ? throw new ArgumentNullException(nameof(connectionName))
             : connectionName;
         _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
-        _secretManager = secretManager;
         _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         _logger = logger ?? NullLogger<ConfigurationGateway>.Instance;
         _cache = cache;
@@ -524,7 +504,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         }
 
         var factoryResult = await _connectionFactory
-            .Create(configDbEntry.Configuration, _secretManager, cancellationToken)
+            .Create(configDbEntry.Configuration, cancellationToken)
             .ConfigureAwait(false);
         if (!factoryResult.IsSuccess || factoryResult.Value is null)
         {

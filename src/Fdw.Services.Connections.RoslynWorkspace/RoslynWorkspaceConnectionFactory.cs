@@ -54,13 +54,12 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
         return GenericResult<IGenericConnection>.Failure(
             RoslynWorkspaceConnectionLog.FactoryValidationFailed(
                 _logger, config.ConnectionId.ToString(),
-                "RoslynWorkspaceConnection requires async creation (workspace loading is async). Use Create(config, secretManager, ct)."));
+                "RoslynWorkspaceConnection requires async creation (workspace loading is async). Use the async overload."));
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<IGenericConnection>> Create(
         IGenericConfiguration configuration,
-        ISecretManager? secretManager,
         CancellationToken cancellationToken = default)
     {
         if (configuration is not RoslynWorkspaceConnectionConfiguration config)
@@ -72,12 +71,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
 
         return await Create(config, cancellationToken).ConfigureAwait(false);
     }
-
-    /// <inheritdoc />
-    public Task<IGenericResult<IGenericConnection>> Create(
-        IGenericConfiguration configuration,
-        CancellationToken cancellationToken = default)
-        => Create(configuration, secretManager: null, cancellationToken);
 
     /// <inheritdoc />
     public IGenericResult<IGenericConnection> Create(RoslynWorkspaceConnectionConfiguration configuration)

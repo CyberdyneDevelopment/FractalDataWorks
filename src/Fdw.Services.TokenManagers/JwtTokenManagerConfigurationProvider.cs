@@ -7,7 +7,8 @@ namespace Fdw.Services.TokenManagers;
 
 /// <summary>Supplies the JwtTokenManager configuration.</summary>
 public sealed class JwtTokenManagerConfigurationProvider
-    : ImplementationProviderBase<JwtTokenManagerConfiguration>
+    : ImplementationProviderBase<JwtTokenManagerConfiguration, ITokenManagerImplementationConfiguration>,
+      IJwtTokenManagerConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="JwtTokenManagerConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

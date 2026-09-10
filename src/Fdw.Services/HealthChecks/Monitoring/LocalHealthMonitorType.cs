@@ -52,10 +52,8 @@ public sealed class LocalHealthMonitorType
                 Name,
                 nameof(LocalHealthMonitorFactory));
 
-            builder.Services.TryAddSingleton<LocalHealthMonitorConfigurationProvider>(sp =>
-                new LocalHealthMonitorConfigurationProvider(
-                    sp.GetService<ILogger<LocalHealthMonitorConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
+            builder.Services.TryAddSingleton<LocalHealthMonitorConfigurationProvider>();
+            builder.Services.TryAddSingleton<ILocalHealthMonitorConfigurationProvider>(sp => sp.GetRequiredService<LocalHealthMonitorConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
@@ -63,7 +61,7 @@ public sealed class LocalHealthMonitorType
         {
             var services = host.Services;
             services.GetRequiredService<HealthMonitorConfigurationProvider>()
-                .Register(Name, services.GetRequiredService<LocalHealthMonitorConfigurationProvider>());
+                .Register(Name, services.GetRequiredService<ILocalHealthMonitorConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
 

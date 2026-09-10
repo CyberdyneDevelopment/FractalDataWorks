@@ -71,10 +71,8 @@ public static class TokenManagerTypes
         builder.Services.TryAddSingleton<IImplementationConfigurationProvider<ITokenManagerImplementationConfiguration>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
 
-        builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
-            new JwtTokenManagerConfigurationProvider(
-                sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>()));
+        builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>();
+        builder.Services.TryAddSingleton<IJwtTokenManagerConfigurationProvider>(sp => sp.GetRequiredService<JwtTokenManagerConfigurationProvider>());
 
         builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
             new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));

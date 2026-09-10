@@ -7,7 +7,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 
 /// <summary>Supplies the ChainedExternalIdentityProvisioner configuration.</summary>
 public sealed class ChainedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationProviderBase<ChainedExternalIdentityProvisionerConfiguration>
+    : ImplementationProviderBase<ChainedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>,
+      IChainedExternalIdentityProvisionerConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="ChainedExternalIdentityProvisionerConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>
