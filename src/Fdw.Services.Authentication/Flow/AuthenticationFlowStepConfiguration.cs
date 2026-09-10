@@ -11,8 +11,12 @@ namespace Fdw.Services.Authentication.Flow;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AuthenticationFlowStep")]
-public partial class AuthenticationFlowStepConfiguration : IGenericConfiguration
+public partial class AuthenticationFlowStepConfiguration : IGenericConfiguration, IAuthenticationFlowStepImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <inheritdoc />
     public Guid Id { get; set; }
 

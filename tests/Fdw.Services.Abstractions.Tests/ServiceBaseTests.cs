@@ -23,6 +23,8 @@ public class ServiceBaseTests
     [ExcludeFromCodeCoverage]
     private class TestConfiguration : IImplementationConfiguration
     {
+        public string Domain { get; set; } = string.Empty;
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "TestConfig";
     }

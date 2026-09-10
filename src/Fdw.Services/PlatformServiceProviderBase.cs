@@ -242,5 +242,4 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 ResultDetails.Create("ExpectedType", typeof(TConfiguration).Name,
                                      "ActualType", configuration?.GetType().Name ?? "(null)")));
 
-    /// <inheritdoc />
 }

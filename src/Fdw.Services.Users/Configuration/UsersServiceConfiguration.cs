@@ -18,8 +18,12 @@ namespace Fdw.Services.Users.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "User", ServiceType = "UsersService")]
-public sealed partial class UsersServiceConfiguration : IGenericConfiguration
+public sealed partial class UsersServiceConfiguration : IGenericConfiguration, IUsersServiceImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the identifier assigned by the store.</summary>
     public Guid Id { get; set; }
 

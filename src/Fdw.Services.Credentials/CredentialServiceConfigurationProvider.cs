@@ -24,9 +24,6 @@ public class CredentialServiceConfigurationProvider
     : ImplementationConfigurationProviderBase<CredentialServiceConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>,
       ICredentialServiceConfigurationProvider
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialServiceConfigurationProvider"/> class.

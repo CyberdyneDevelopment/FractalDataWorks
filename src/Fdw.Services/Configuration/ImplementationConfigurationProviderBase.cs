@@ -21,10 +21,11 @@ namespace Fdw.Services.Configuration;
 
 /// <summary>
 /// Single-source configuration provider over the configured <see cref="IConfigurationGateway"/>
-/// (ConfigurationDb). Commands come from the <c>ConfigurationCommands</c> TypeCollection keyed on
+/// (ConfigurationDb). Commands come from the <c>ConfigurationCommands</c> TypeCollection.
 /// </summary>
-/// <typeparam name="TDomainConfiguration">The configuration POCO type.</typeparam>
-/// <typeparam name="TDomainConfiguration">The domain's implementation contract -- the marker only this domain's implementations carry, and what a read hands back.</typeparam>
+/// <typeparam name="TDomainConfiguration">The record this provider reads and writes.</typeparam>
+/// <typeparam name="TImplementationConfiguration">The domain's implementation contract -- the marker only this domain's implementations carry, and what a read hands back.</typeparam>
+/// <typeparam name="TCommand">The configuration command for this provider's rows.</typeparam>
 public abstract class ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>
     : IServiceConfigurationProvider, IDomainConfigurationProvider<TImplementationConfiguration>
     where TDomainConfiguration : class, IGenericConfiguration
@@ -65,7 +66,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <param name="gatewayProvider">Supplies the gateway onto <paramref name="dataStoreName"/>.</param>
     /// <param name="dataStoreName">The configuration connection this domain's rows live on.</param>
     /// <param name="pathName">Schema/path name (e.g. "conn", "sec").</param>
-    public ImplementationConfigurationProviderBase(
+    protected ImplementationConfigurationProviderBase(
         ILogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
@@ -295,20 +296,6 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         return await ComposeChildren(header, asOf, ct).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Reads the header row by name WITHOUT composing the typed body. Use for management flows
-    /// (delete, exists-check) that need only the header and must not fail when the header's
-    /// discriminator has no registered typed provider.
-    /// </summary>
-    /// <param name="name">The configuration's name.</param>
-    /// <param name="ct">The cancellation token.</param>
-    /// <returns>The header row, or a failure.</returns>
-    /// <remarks>
-    /// Why an overload pair rather than one method with an optional asOf: CA1068 requires the
-    /// CancellationToken to be the last parameter, so threading asOf into this signature would have
-    /// had to push ct along — silently breaking every positional caller and every domain provider
-    /// that subclasses this. The current-version read keeps its exact shape.
-    /// </remarks>
     /// <summary>
     /// Reads a row by name, optionally as of a past instant.
     /// </summary>
@@ -814,7 +801,7 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// didn't, returning bare header rows with every typed-list child (e.g. CorsConfiguration.Origins)
     /// left at its empty default. A caller with no name/id to filter by -- a provider whose
     /// implementation has a parent and so cannot use <see cref="Get(string,CancellationToken)"/> (see
-    /// <see cref="GetDomainByName(string,CancellationToken)"/>'s HasParent check) -- had no way to get
+    /// <see cref="GetByName(string,DateTimeOffset?,CancellationToken)"/>'s HasParent check) -- had no way to get
     /// a fully composed row at all except this one, so the gap was silent: no exception, no log, just
     /// an empty collection that
     /// looked like "no rows configured" instead of "rows never loaded".
@@ -836,6 +823,9 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         return GenericResult<IReadOnlyList<IDomainConfiguration>>.Success(widened);
     }
 
+    /// <summary>Lists this provider's rows, each with its children composed.</summary>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>Every row, or a failure.</returns>
     public virtual async Task<IGenericResult<IReadOnlyList<TDomainConfiguration>>> Get(CancellationToken ct = default)
     {
         var cmd = Commands().List(DataStoreName, PathName);

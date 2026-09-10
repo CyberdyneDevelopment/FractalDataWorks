@@ -35,9 +35,6 @@ public class OrchestrationNodeConfigurationProvider
     : ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, IOrchestrationNodeImplementationConfiguration, OrchestrationNodeConfigurationCommand>,
       IOrchestrationNodeConfigurationProvider
 {
-    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
-    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
-    public string Domain { get; set; } = string.Empty;
 
     private readonly ILogger _logger;
 

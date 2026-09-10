@@ -15,6 +15,10 @@ namespace Fdw.Services.Resiliency;
 /// </remarks>
 public class ResiliencyConfiguration : IResiliencyConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();
 

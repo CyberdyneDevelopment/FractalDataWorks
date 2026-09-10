@@ -22,8 +22,12 @@ namespace Fdw.Services.Authorization.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "UserRole")]
-public partial class UserRoleConfiguration : IGenericConfiguration
+public partial class UserRoleConfiguration : IGenericConfiguration, IUserRoleImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the unique identifier for this user-role assignment.
     /// </summary>

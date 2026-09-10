@@ -14,7 +14,7 @@ namespace Fdw.Aegis.Abstractions;
 /// <see cref="AegisCommandId"/> foreign key property. The parent carries an
 /// <c>IApprovalPolicyConfiguration? Configuration</c> property populated on the read path.
 /// </remarks>
-public interface IApprovalPolicyConfiguration : IGenericConfiguration
+public interface IApprovalPolicyConfiguration : IGenericConfiguration, IImplementationConfiguration
 {
     /// <summary>Gets or sets the logical FK to the parent <c>AegisCommandConfiguration.Id</c>.</summary>
     Guid AegisCommandId { get; set; }

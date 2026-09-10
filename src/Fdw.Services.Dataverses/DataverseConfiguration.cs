@@ -23,8 +23,12 @@ namespace Fdw.Services.Dataverses;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Dataverse")]
-public partial class DataverseConfiguration : IGenericConfiguration
+public partial class DataverseConfiguration : IGenericConfiguration, IDataverseImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the durable logical identity, minted by the caller before insert.</summary>
     public Guid Id { get; set; }
 

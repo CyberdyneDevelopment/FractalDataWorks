@@ -19,7 +19,7 @@ namespace Fdw.Services.Authorization.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "RoleMapping", ServiceType = "System")]
-public sealed partial class SystemRoleMappingConfiguration : IRoleMappingImplementationConfiguration
+public sealed partial class SystemRoleMappingConfiguration : IRoleMappingImplementationConfiguration, ISystemRoleMappingImplementationConfiguration
 {
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>

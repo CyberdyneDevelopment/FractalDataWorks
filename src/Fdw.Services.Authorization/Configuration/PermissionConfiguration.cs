@@ -29,8 +29,11 @@ namespace Fdw.Services.Authorization.Configuration;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Permission")]
-public partial class PermissionConfiguration : ConfigurationBase<PermissionConfiguration>
+public partial class PermissionConfiguration : ConfigurationBase<PermissionConfiguration>, IPermissionImplementationConfiguration
 {
+    /// <summary>Gets or sets the name, set by the domain provider from the domain row.</summary>
+    public string Name { get; set; } = string.Empty;
+
 
     /// <inheritdoc />
     public override string ServiceType => "Permission";
