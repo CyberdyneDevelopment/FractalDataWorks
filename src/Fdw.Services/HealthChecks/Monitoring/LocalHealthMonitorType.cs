@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Fdw.Services.Abstractions.Health;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
@@ -37,7 +38,12 @@ public sealed class LocalHealthMonitorType
     {
         Registration((builder, loggerFactory) =>
         {
-            HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<LocalHealthMonitorFactory>());
+            HealthMonitorProvider.Register<ILocalHealthMonitorFactory>(
+                builder, Name, ServiceLifetime.Singleton,
+                sp => new LocalHealthMonitorFactory(
+                    sp.GetRequiredService<IEnumerable<IHealthCheckable>>(),
+                    sp,
+                    sp.GetService<ILoggerFactory>()));
 
             ServiceLogger.FactoryRegistrationDeferred(
                 loggerFactory?.CreateLogger<LocalHealthMonitorType>()
@@ -46,7 +52,6 @@ public sealed class LocalHealthMonitorType
                 Name,
                 nameof(LocalHealthMonitorFactory));
 
-            builder.Services.TryAddSingleton<LocalHealthMonitorFactory>();
             builder.Services.TryAddSingleton<LocalHealthMonitorConfigurationProvider>(sp =>
                 new LocalHealthMonitorConfigurationProvider(
                     sp.GetService<ILogger<LocalHealthMonitorConfigurationProvider>>()!,
