@@ -12,7 +12,8 @@ namespace Fdw.Services.Calculations;
 
 /// <summary>Supplies the CalculationEntity configuration.</summary>
 public sealed class CalculationConfigurationProvider
-    : ImplementationConfigurationProviderBase<ICalculationEntityImplementationConfiguration>
+    : DomainConfigurationProviderBase<ICalculationEntityImplementationConfiguration>,
+      ICalculationConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="CalculationConfigurationProvider"/> class.</summary>
     /// <param name="logger">Logger for this provider instance.</param>

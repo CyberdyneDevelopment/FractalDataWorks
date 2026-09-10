@@ -1,3 +1,5 @@
+using Fdw.Services.Calculations.Configuration;
+using System.Collections.Generic;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -18,8 +20,35 @@ namespace Fdw.Services.Calculations;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Calculation", ServiceType = "Formula")]
-public sealed partial class FormulaCalculationConfiguration : ICalculationTypedConfiguration
+public sealed partial class FormulaCalculationConfiguration : ICalculationTypedConfiguration, ICalculationEntityImplementationConfiguration
 {
+    /// <inheritdoc/>
+    public int CalculationEntityRowId { get; set; }
+
+    /// <inheritdoc/>
+    public string CalculationSource { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public string? OutputDataSetName { get; set; }
+
+    /// <inheritdoc/>
+    public string? ResultFieldName { get; set; }
+
+    /// <inheritdoc/>
+    public string ResultDataTypeName { get; set; } = "Decimal";
+
+    /// <inheritdoc/>
+    public bool IsEnabled { get; set; } = true;
+
+    /// <inheritdoc/>
+    public IList<CalculationEntityInputRecord> Inputs { get; set; } = new List<CalculationEntityInputRecord>();
+
+    /// <inheritdoc/>
+    public IList<CalculationStepConfiguration> Steps { get; set; } = new List<CalculationStepConfiguration>();
+
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
     public string Domain { get; set; } = string.Empty;

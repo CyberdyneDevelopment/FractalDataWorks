@@ -361,32 +361,29 @@ public sealed class CalculationEntityService : ICalculationEntityService
             });
         }
 
-        ICalculationTypedConfiguration? typedBody = null;
-        if (typedConfiguration is not null)
-        {
-            if (typedConfiguration is not ICalculationTypedConfiguration tc)
-                return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
-                    CalculationEntityLog.CalculationValidationFailed(
-                        _logger, name,
-                        $"Typed configuration '{typedConfiguration.GetType().Name}' does not implement ICalculationTypedConfiguration"));
-            tc.Id = Guid.Empty;
-            typedBody = tc;
-        }
+        if (typedConfiguration is null)
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
+                CalculationEntityLog.CalculationValidationFailed(
+                    _logger, name,
+                    $"Calculation entity type '{calculationEntityType}' requires its typed configuration; the implementation is the record that is written"));
 
-        return GenericResult<ICalculationEntityImplementationConfiguration>.Success(new ICalculationEntityImplementationConfiguration
-        {
-            Id = id,
-            Name = name,
-            Description = description,
-            Implementation = calculationEntityType,
-            CalculationSource = CalculationSourceTypes.Configuration.Name,
-            OutputDataSetName = output.OutputDataSetName,
-            ResultFieldName = output.ResultFieldName,
-            ResultDataTypeName = output.ResultDataTypeName,
-            IsEnabled = isEnabled,
-            Inputs = inputRecords,
-            Configuration = typedBody
-        });
+        if (typedConfiguration is not ICalculationEntityImplementationConfiguration typed)
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
+                CalculationEntityLog.CalculationValidationFailed(
+                    _logger, name,
+                    $"Typed configuration '{typedConfiguration.GetType().Name}' does not implement ICalculationTypedConfiguration"));
+
+        typed.Id = id;
+        typed.Name = name;
+        typed.Description = description;
+        typed.CalculationSource = CalculationSourceTypes.Configuration.Name;
+        typed.OutputDataSetName = output.OutputDataSetName;
+        typed.ResultFieldName = output.ResultFieldName;
+        typed.ResultDataTypeName = output.ResultDataTypeName;
+        typed.IsEnabled = isEnabled;
+        typed.Inputs = inputRecords;
+
+        return GenericResult<ICalculationEntityImplementationConfiguration>.Success(typed);
     }
 
     private static CalculationEntity MapToEntity(ICalculationEntityImplementationConfiguration config)
@@ -398,18 +395,23 @@ public sealed class CalculationEntityService : ICalculationEntityService
             ResultDataTypeName = config.ResultDataTypeName
         };
 
+        // Why the collection and not the record's own name: the kind is what the domain row named,
+        // and the type collection is what maps a configuration type back to that name.
+        var kind = CalculationEntityTypes.All()
+            .FirstOrDefault(t => t.ConfigurationType == config.GetType());
+
         return new CalculationEntity
         {
             Id = config.Id,
             Name = config.Name,
             Description = config.Description,
-            CalculationEntityType = config.Implementation ?? string.Empty,
+            CalculationEntityType = kind?.Name ?? string.Empty,
             CalculationSource = config.CalculationSource,
             Inputs = config.Inputs.Select(MapInputRecordToModel).ToList(),
             Steps = config.Steps.Cast<IGenericConfiguration>().ToList(),
             Output = output,
             IsEnabled = config.IsEnabled,
-            TypedConfiguration = config.Configuration
+            TypedConfiguration = config
         };
     }
 

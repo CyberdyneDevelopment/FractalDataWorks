@@ -17,4 +17,7 @@ public interface ICalculationTypedConfiguration : IImplementationConfiguration
 {
     /// <summary>Gets or sets the parent CalculationEntity's logical Id (FK to calc.CalculationEntity.Id).</summary>
     Guid CalculationEntityId { get; set; }
+
+    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
+    int CalculationEntityRowId { get; set; }
 }
