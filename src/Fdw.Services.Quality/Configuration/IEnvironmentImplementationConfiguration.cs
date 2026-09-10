@@ -9,6 +9,9 @@ namespace Fdw.Services.Quality.Configuration;
 /// <summary>The contract every Environment implementation carries.</summary>
 public interface IEnvironmentImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid EnvironmentId { get; set; }
+
     /// <summary>Gets or sets the Environment PromotionOrder.</summary>
     int PromotionOrder { get; set; }
 

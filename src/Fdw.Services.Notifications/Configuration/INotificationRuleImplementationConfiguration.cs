@@ -9,6 +9,9 @@ namespace Fdw.Services.Notifications.Configuration;
 /// <summary>The contract every NotificationRule implementation carries.</summary>
 public interface INotificationRuleImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid NotificationRuleId { get; set; }
+
     /// <summary>Gets or sets the NotificationRule Description.</summary>
     string? Description { get; set; }
 

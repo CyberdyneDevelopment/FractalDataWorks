@@ -9,6 +9,9 @@ namespace Fdw.Services.Quality.Configuration;
 /// <summary>The contract every DataSetAnnotation implementation carries.</summary>
 public interface IDataSetAnnotationImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid DataSetAnnotationId { get; set; }
+
     /// <summary>Gets or sets the DataSetAnnotation DataSetName.</summary>
     string DataSetName { get; set; }
 

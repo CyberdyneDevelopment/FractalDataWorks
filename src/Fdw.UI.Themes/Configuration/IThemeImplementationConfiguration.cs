@@ -8,6 +8,9 @@ namespace Fdw.UI.Themes.Configuration;
 /// <summary>The contract every Theme implementation carries.</summary>
 public interface IThemeImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid ThemeId { get; set; }
+
     /// <summary>Gets or sets the Theme TenantId.</summary>
     Guid? TenantId { get; set; }
 

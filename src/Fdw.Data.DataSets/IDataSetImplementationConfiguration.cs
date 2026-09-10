@@ -1,3 +1,4 @@
+using System;
 using Fdw.Configuration;
 
 namespace Fdw.Data.DataSets.Abstractions;
@@ -11,4 +12,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </remarks>
 public interface IDataSetImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid DataSetId { get; set; }
+
 }

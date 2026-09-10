@@ -7,6 +7,9 @@ namespace Fdw.Services.Dataverses;
 /// <summary>The contract every Note implementation carries.</summary>
 public interface INoteImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid NoteId { get; set; }
+
     /// <summary>Gets or sets the Note SubjectType.</summary>
     string SubjectType { get; set; }
 

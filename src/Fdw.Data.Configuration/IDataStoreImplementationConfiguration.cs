@@ -15,6 +15,9 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public interface IDataStoreImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid DataStoreId { get; set; }
+
     /// <summary>Gets or sets the connection this store is reached through.</summary>
     Guid ConnectionId { get; set; }
 

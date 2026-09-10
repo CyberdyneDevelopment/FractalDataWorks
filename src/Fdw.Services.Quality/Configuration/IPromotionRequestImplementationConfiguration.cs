@@ -9,6 +9,9 @@ namespace Fdw.Services.Quality.Configuration;
 /// <summary>The contract every PromotionRequest implementation carries.</summary>
 public interface IPromotionRequestImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid PromotionRequestId { get; set; }
+
     /// <summary>Gets or sets the PromotionRequest SourceEnvironment.</summary>
     string SourceEnvironment { get; set; }
 

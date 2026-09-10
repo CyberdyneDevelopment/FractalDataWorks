@@ -9,6 +9,9 @@ namespace Fdw.Operations.Configuration;
 /// <summary>The contract every EscalationPolicy implementation carries.</summary>
 public interface IEscalationPolicyImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid EscalationPolicyId { get; set; }
+
     /// <summary>Gets or sets the EscalationPolicy Description.</summary>
     string? Description { get; set; }
 

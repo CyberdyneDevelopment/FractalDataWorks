@@ -8,6 +8,9 @@ namespace Fdw.Services.Users.Models;
 /// <summary>The contract every UserPreferences implementation carries.</summary>
 public interface IUserPreferencesImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid UserPreferencesId { get; set; }
+
     /// <summary>Gets or sets the UserPreferences UserId.</summary>
     Guid UserId { get; set; }
 

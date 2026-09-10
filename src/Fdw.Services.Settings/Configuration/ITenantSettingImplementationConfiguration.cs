@@ -8,6 +8,9 @@ namespace Fdw.Services.Settings.Configuration;
 /// <summary>The contract every TenantSetting implementation carries.</summary>
 public interface ITenantSettingImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid TenantSettingId { get; set; }
+
     /// <summary>Gets or sets the TenantSetting TenantId.</summary>
     Guid TenantId { get; set; }
 

@@ -9,6 +9,9 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// <summary>The contract every ExternalIdentityProvisionerBinding implementation carries.</summary>
 public interface IExternalIdentityProvisionerBindingImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid ExternalIdentityProvisionerBindingId { get; set; }
+
     /// <summary>Gets or sets the ExternalIdentityProvisionerBinding TenantId.</summary>
     Guid? TenantId { get; set; }
 

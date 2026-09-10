@@ -8,6 +8,9 @@ namespace Fdw.Services.Settings.Configuration;
 /// <summary>The contract every RoleSetting implementation carries.</summary>
 public interface IRoleSettingImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid RoleSettingId { get; set; }
+
     /// <summary>Gets or sets the RoleSetting TenantId.</summary>
     Guid TenantId { get; set; }
 

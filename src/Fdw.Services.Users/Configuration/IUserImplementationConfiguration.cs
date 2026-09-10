@@ -10,6 +10,9 @@ namespace Fdw.Services.Users.Configuration;
 /// <summary>The contract every Users implementation carries.</summary>
 public interface IUserImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid UsersId { get; set; }
+
     /// <summary>Gets or sets the Users Email.</summary>
     string? Email { get; set; }
 

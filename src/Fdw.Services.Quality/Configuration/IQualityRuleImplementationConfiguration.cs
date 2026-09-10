@@ -9,6 +9,9 @@ namespace Fdw.Services.Quality.Configuration;
 /// <summary>The contract every QualityRule implementation carries.</summary>
 public interface IQualityRuleImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid QualityRuleId { get; set; }
+
     /// <summary>Gets or sets the QualityRule DataSetName.</summary>
     string DataSetName { get; set; }
 

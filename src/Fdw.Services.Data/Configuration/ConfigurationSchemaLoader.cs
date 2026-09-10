@@ -38,7 +38,6 @@ public static partial class ConfigurationSchemaLoader
         Converters =
         {
             new ConnectionConfigurationJsonConverter(),
-            new AegisCommandConfigurationJsonConverter(),
         },
     };
 

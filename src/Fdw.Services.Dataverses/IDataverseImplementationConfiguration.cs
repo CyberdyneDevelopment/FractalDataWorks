@@ -9,6 +9,9 @@ namespace Fdw.Services.Dataverses;
 /// <summary>The contract every Dataverse implementation carries.</summary>
 public interface IDataverseImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid DataverseId { get; set; }
+
     /// <summary>Gets or sets the Dataverse DisplayName.</summary>
     string? DisplayName { get; set; }
 

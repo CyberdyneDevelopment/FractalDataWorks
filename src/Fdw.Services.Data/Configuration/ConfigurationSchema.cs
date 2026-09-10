@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Fdw.Aegis.Configuration;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 
@@ -32,17 +31,6 @@ public sealed class ConfigurationSchema
     /// </summary>
     public IList<DataStoreImplementationConfiguration> DataStores { get; set; } = new List<DataStoreImplementationConfiguration>();
 
-    /// <summary>
-    /// Gets or sets the Aegis Gateway commands declared for this entry-point app.
-    /// Corresponds to the <c>ConfigurationSchema:Commands</c> configuration section.
-    /// </summary>
-    /// <remarks>
-    /// Why here rather than in the net10 <c>Fdw.Aegis</c> package (G2): <c>AegisCommandConfiguration</c>
-    /// lives in <c>Fdw.Aegis.Configuration</c>, a package this project can reference without a cycle —
-    /// mirrors how <see cref="IConnectionImplementationConfiguration"/> sits in <c>Fdw.Services.Connections</c> rather
-    /// than a hypothetical package that itself depends on <c>Fdw.Services.Data</c>.
-    /// </remarks>
-    public IList<AegisCommandConfiguration> Commands { get; set; } = new List<AegisCommandConfiguration>();
 #pragma warning restore MA0016
 
     /// <summary>

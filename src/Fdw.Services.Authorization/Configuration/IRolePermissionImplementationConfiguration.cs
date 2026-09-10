@@ -8,6 +8,9 @@ namespace Fdw.Services.Authorization.Configuration;
 /// <summary>The contract every RolePermission implementation carries.</summary>
 public interface IRolePermissionImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid RolePermissionId { get; set; }
+
     /// <summary>Gets or sets the RolePermission RoleId.</summary>
     Guid RoleId { get; set; }
 

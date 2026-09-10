@@ -8,6 +8,9 @@ namespace Fdw.Services.Users.Configuration;
 /// <summary>The contract every UserTenants implementation carries.</summary>
 public interface IUserTenantImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid UserTenantsId { get; set; }
+
     /// <summary>Gets or sets the UserTenants UserId.</summary>
     Guid UserId { get; set; }
 

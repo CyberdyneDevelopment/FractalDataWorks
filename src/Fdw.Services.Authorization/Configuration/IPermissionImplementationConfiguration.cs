@@ -9,6 +9,9 @@ namespace Fdw.Services.Authorization.Configuration;
 /// <summary>The contract every Permission implementation carries.</summary>
 public interface IPermissionImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid PermissionId { get; set; }
+
     /// <summary>Gets or sets the Permission PermissionDomain.</summary>
     string PermissionDomain { get; set; }
 

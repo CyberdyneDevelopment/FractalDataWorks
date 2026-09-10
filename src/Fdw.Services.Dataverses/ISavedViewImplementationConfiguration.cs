@@ -8,6 +8,9 @@ namespace Fdw.Services.Dataverses;
 /// <summary>The contract every SavedView implementation carries.</summary>
 public interface ISavedViewImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid SavedViewId { get; set; }
+
     /// <summary>Gets or sets the SavedView DisplayName.</summary>
     string? DisplayName { get; set; }
 

@@ -9,6 +9,9 @@ namespace Fdw.Services.Etl.Projects.Abstractions.Configuration;
 /// <summary>The contract every OrchestrationNode implementation carries.</summary>
 public interface IOrchestrationNodeImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid OrchestrationNodeId { get; set; }
+
     /// <summary>Gets or sets the OrchestrationNode NodeTypeId.</summary>
     int NodeTypeId { get; set; }
 

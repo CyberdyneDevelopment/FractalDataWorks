@@ -8,6 +8,9 @@ namespace Fdw.Services.Users.Configuration;
 /// <summary>The contract every UsersService implementation carries.</summary>
 public interface IUsersServiceImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid UsersServiceId { get; set; }
+
     /// <summary>Gets or sets the UsersService CredentialServiceName.</summary>
     string? CredentialServiceName { get; set; }
 

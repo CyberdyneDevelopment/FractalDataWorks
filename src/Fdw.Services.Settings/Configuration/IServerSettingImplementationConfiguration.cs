@@ -1,3 +1,4 @@
+using System;
 using Fdw.Configuration;
 
 namespace Fdw.Services.Settings.Configuration;
@@ -5,6 +6,9 @@ namespace Fdw.Services.Settings.Configuration;
 /// <summary>The contract every ServerSetting implementation carries.</summary>
 public interface IServerSettingImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid ServerSettingId { get; set; }
+
     /// <summary>Gets or sets the value the setting holds, as text.</summary>
     string SettingValue { get; set; }
 

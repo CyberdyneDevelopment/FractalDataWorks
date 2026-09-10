@@ -8,6 +8,9 @@ namespace Fdw.Services.Authorization.Configuration;
 /// <summary>The contract every UserRole implementation carries.</summary>
 public interface IUserRoleImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid UserRoleId { get; set; }
+
     /// <summary>Gets or sets the UserRole UserId.</summary>
     string UserId { get; set; }
 

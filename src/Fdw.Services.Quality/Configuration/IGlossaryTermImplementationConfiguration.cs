@@ -9,6 +9,9 @@ namespace Fdw.Services.Quality.Configuration;
 /// <summary>The contract every GlossaryTerm implementation carries.</summary>
 public interface IGlossaryTermImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain record\'s durable id.</summary>
+    Guid GlossaryTermId { get; set; }
+
     /// <summary>Gets or sets the GlossaryTerm Definition.</summary>
     string Definition { get; set; }
 

@@ -35,7 +35,6 @@ public static class AegisHostRegistration
         Converters =
         {
             new ConnectionConfigurationJsonConverter(),
-            new AegisCommandConfigurationJsonConverter(),
         },
     };
 
