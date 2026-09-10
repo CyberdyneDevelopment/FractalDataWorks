@@ -18,7 +18,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 /// via the container FK key discovered from the IDataStore tree.
 /// </remarks>
 public class RoslynWorkspaceConnectionConfigurationProvider
-    : ImplementationConfigurationProviderBase<RoslynWorkspaceConnectionConfiguration, IConnectionImplementationConfiguration, RoslynWorkspaceConnectionConfigurationCommand>
+    : ImplementationConfigurationProviderBase<RoslynWorkspaceConnectionConfiguration, IConnectionImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="RoslynWorkspaceConnectionConfigurationProvider"/> class.</summary>
@@ -29,7 +29,7 @@ public class RoslynWorkspaceConnectionConfigurationProvider
         string pathName = "conn")
         : base(logger ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "RoslynWorkspaceConnection")
     {
     }
 }

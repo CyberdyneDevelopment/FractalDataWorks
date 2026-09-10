@@ -25,7 +25,7 @@ namespace Fdw.Services.Calculations;
 /// registered with it via <c>Register</c> in <see cref="DefaultCalculationServiceType"/>.
 /// </summary>
 public class CalculationConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ICalculationEntityImplementationConfiguration, CalculationEntityConfigurationCommand>
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ICalculationEntityImplementationConfiguration>
 {
 
     /// <summary>
@@ -40,7 +40,7 @@ public class CalculationConfigurationProvider
         string pathName = "calc")
         : base(logger ?? NullLogger<CalculationConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "CalculationEntity")
     {
     }
 

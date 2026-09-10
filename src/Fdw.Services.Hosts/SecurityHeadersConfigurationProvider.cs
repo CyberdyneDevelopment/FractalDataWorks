@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies SecurityHeaders configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class SecurityHeadersConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ISecurityHeadersImplementationConfiguration, SecurityHeadersConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ISecurityHeadersImplementationConfiguration>,
       ISecurityHeadersConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class SecurityHeadersConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<SecurityHeadersConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "SecurityHeaders")
     {
     }
 }

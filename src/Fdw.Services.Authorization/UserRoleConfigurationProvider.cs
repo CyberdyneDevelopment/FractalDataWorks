@@ -23,7 +23,7 @@ namespace Fdw.Services.Authorization;
 /// Domain configuration provider for user-role assignments.
 /// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with a by-user convenience method.
 /// </summary>
-public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, IUserRoleImplementationConfiguration, UserRoleConfigurationCommand>
+public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, IUserRoleImplementationConfiguration>
 {
 
     private readonly ILogger _logger;
@@ -37,7 +37,7 @@ public class UserRoleConfigurationProvider : ImplementationConfigurationProvider
         string pathName = "authz")
         : base(logger ?? NullLogger<UserRoleConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "UserRole")
     {
         _logger = logger ?? NullLogger<UserRoleConfigurationProvider>.Instance;
     }

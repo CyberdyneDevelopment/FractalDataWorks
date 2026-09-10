@@ -19,7 +19,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// mechanism is identical either way; only the connection differs.
 /// </remarks>
 public sealed class HealthMonitorConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IHealthMonitorImplementationConfiguration, HealthMonitorConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IHealthMonitorImplementationConfiguration>,
       IHealthMonitorConfigurationProvider
 {
 
@@ -38,7 +38,8 @@ public sealed class HealthMonitorConfigurationProvider
         : base(logger ?? NullLogger<HealthMonitorConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName,
+               "HealthMonitor")
     {
     }
 }

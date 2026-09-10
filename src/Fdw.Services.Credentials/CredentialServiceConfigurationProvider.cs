@@ -21,7 +21,7 @@ namespace Fdw.Services.Credentials;
 /// inherited <c>Register</c>.
 /// </summary>
 public class CredentialServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ICredentialServiceImplementationConfiguration>,
       ICredentialServiceConfigurationProvider
 {
 
@@ -35,7 +35,8 @@ public class CredentialServiceConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<CredentialServiceConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "CredentialService")
     {
     }
 }

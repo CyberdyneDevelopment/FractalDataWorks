@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies ForwardedHeaders configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class ForwardedHeadersConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IForwardedHeadersImplementationConfiguration, ForwardedHeadersConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IForwardedHeadersImplementationConfiguration>,
       IForwardedHeadersConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class ForwardedHeadersConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<ForwardedHeadersConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "ForwardedHeaders")
     {
     }
 }

@@ -24,7 +24,7 @@ namespace Fdw.Services.Notifications;
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
 public class NotificationConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration>,
       INotificationConfigurationProvider
 {
 
@@ -37,7 +37,8 @@ public class NotificationConfigurationProvider
         string pathName = "notify")
         : base(logger ?? NullLogger<NotificationConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Notification")
     {
     }
 }

@@ -450,14 +450,14 @@ public sealed class EffectivePermissionResolverTests
         return mock;
     }
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>> MockCatalogProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>> MockCatalogProvider<TConfig, TCommand>(
         IEnumerable<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))

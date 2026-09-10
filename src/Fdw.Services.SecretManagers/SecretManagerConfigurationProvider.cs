@@ -31,7 +31,7 @@ namespace Fdw.Services.SecretManagers;
 /// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
 public class SecretManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ISecretManagerImplementationConfiguration, SecretManagerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ISecretManagerImplementationConfiguration>,
       ISecretManagerConfigurationProvider
 {
 
@@ -50,7 +50,8 @@ public class SecretManagerConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "SecretManager")
     {
         _logger = logger ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
     }

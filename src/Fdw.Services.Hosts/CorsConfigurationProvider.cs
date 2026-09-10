@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies CORS configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class CorsConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ICorsImplementationConfiguration, CorsConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ICorsImplementationConfiguration>,
       ICorsConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class CorsConfigurationProvider
         string pathName = "crs")
         : base(logger ?? NullLogger<CorsConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Cors")
     {
     }
 }

@@ -16,7 +16,7 @@ namespace Fdw.Services.Authorization;
 /// anything narrower cannot be registered.
 /// </remarks>
 public class SystemRoleMappingConfigurationProvider
-    : ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>
+    : ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="SystemRoleMappingConfigurationProvider"/> class.</summary>
@@ -25,14 +25,14 @@ public class SystemRoleMappingConfigurationProvider
     /// <param name="dataStoreName">The store the domain's rows live in.</param>
     /// <param name="pathName">The path the rows live under.</param>
     public SystemRoleMappingConfigurationProvider(
-        ILogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>>? logger,
+        ILogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
-        : base(logger ?? NullLogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration, SystemRoleMappingConfigurationCommand>>.Instance,
+        : base(logger ?? NullLogger<ImplementationConfigurationProviderBase<SystemRoleMappingConfiguration, IRoleMappingImplementationConfiguration>>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "SystemRoleMapping")
     {
     }
 }

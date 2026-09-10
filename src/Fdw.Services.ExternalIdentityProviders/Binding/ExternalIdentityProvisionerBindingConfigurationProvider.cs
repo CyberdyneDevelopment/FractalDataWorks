@@ -24,7 +24,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 /// pair.
 /// </summary>
 public class ExternalIdentityProvisionerBindingConfigurationProvider
-    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration>
 {
 
     private readonly ILogger _logger;
@@ -38,7 +38,7 @@ public class ExternalIdentityProvisionerBindingConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "ExternalIdentityProvisionerBinding")
     {
         _logger = logger ?? NullLogger<ExternalIdentityProvisionerBindingConfigurationProvider>.Instance;
     }

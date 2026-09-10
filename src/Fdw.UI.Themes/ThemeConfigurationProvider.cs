@@ -18,7 +18,7 @@ namespace Fdw.UI.Themes;
 /// Configuration provider for themes. Thin wrapper over
 /// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with theme-specific logging.
 /// </summary>
-public class ThemeConfigurationProvider : ImplementationConfigurationProviderBase<ThemeManagedConfiguration, IThemeManagedImplementationConfiguration, ThemeConfigurationCommand>
+public class ThemeConfigurationProvider : ImplementationConfigurationProviderBase<ThemeManagedConfiguration, IThemeManagedImplementationConfiguration>
 {
 
     private readonly ILogger _logger;
@@ -31,7 +31,7 @@ public class ThemeConfigurationProvider : ImplementationConfigurationProviderBas
         string pathName = "settings")
         : base(logger ?? NullLogger<ThemeConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "Theme")
     {
         _logger = logger ?? NullLogger<ThemeConfigurationProvider>.Instance;
     }

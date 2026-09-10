@@ -38,8 +38,8 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     /// </summary>
     private sealed record CachedFlow(AuthenticationFlow? Flow, string? InvalidReason);
 
-    private readonly ImplementationConfigurationProviderBase<AuthenticationFlowConfiguration, IAuthenticationFlowImplementationConfiguration, AuthenticationFlowConfigurationCommand> _flows;
-    private readonly ImplementationConfigurationProviderBase<AuthenticationFlowStepConfiguration, IAuthenticationFlowStepImplementationConfiguration, AuthenticationFlowStepConfigurationCommand> _steps;
+    private readonly ImplementationConfigurationProviderBase<AuthenticationFlowConfiguration, IAuthenticationFlowImplementationConfiguration> _flows;
+    private readonly ImplementationConfigurationProviderBase<AuthenticationFlowStepConfiguration, IAuthenticationFlowStepImplementationConfiguration> _steps;
     private readonly ConcurrentDictionary<string, CachedFlow> _cache = new(StringComparer.Ordinal);
     private readonly ILogger<AuthenticationFlowProvider> _logger;
 
@@ -48,8 +48,8 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     /// <param name="steps">Reads their step rows.</param>
     /// <param name="logger">The logger.</param>
     public AuthenticationFlowProvider(
-        ImplementationConfigurationProviderBase<AuthenticationFlowConfiguration, IAuthenticationFlowImplementationConfiguration, AuthenticationFlowConfigurationCommand> flows,
-        ImplementationConfigurationProviderBase<AuthenticationFlowStepConfiguration, IAuthenticationFlowStepImplementationConfiguration, AuthenticationFlowStepConfigurationCommand> steps,
+        ImplementationConfigurationProviderBase<AuthenticationFlowConfiguration, IAuthenticationFlowImplementationConfiguration> flows,
+        ImplementationConfigurationProviderBase<AuthenticationFlowStepConfiguration, IAuthenticationFlowStepImplementationConfiguration> steps,
         ILogger<AuthenticationFlowProvider>? logger = null)
     {
         _flows = flows ?? throw new ArgumentNullException(nameof(flows));

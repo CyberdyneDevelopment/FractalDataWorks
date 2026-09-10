@@ -24,7 +24,7 @@ namespace Fdw.Services.Authorization;
 /// Domain configuration provider for roles. Thin wrapper over
 /// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/> with permission-aggregation helpers.
 /// </summary>
-public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, IRoleImplementationConfiguration, RoleConfigurationCommand>, IAuthorizationProvider, IRoleConfigurationProvider
+public class RoleConfigurationProvider : ImplementationConfigurationProviderBase<RoleConfiguration, IRoleImplementationConfiguration>, IAuthorizationProvider, IRoleConfigurationProvider
 {
 
     private readonly ILogger _logger;
@@ -38,7 +38,7 @@ public class RoleConfigurationProvider : ImplementationConfigurationProviderBase
         string pathName = "authz")
         : base(logger ?? NullLogger<RoleConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "Role")
     {
         _logger = logger ?? NullLogger<RoleConfigurationProvider>.Instance;
     }

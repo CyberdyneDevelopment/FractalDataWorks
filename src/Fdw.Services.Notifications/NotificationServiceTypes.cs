@@ -89,14 +89,14 @@ public partial class NotificationServiceTypes
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
                 sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<NotificationConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationRuleImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration, NotificationRuleConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration, NotificationRuleConfigurationCommand>>()!,
+                new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, INotificationRuleImplementationConfiguration>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     "PlatformConfiguration", "notify"));
 

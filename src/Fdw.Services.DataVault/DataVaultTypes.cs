@@ -76,7 +76,7 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(
                 sp => (DataVaultConfigurationProvider)sp.GetRequiredService<IDataVaultConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IDataVaultImplementationConfiguration, DataVaultConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IDataVaultImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataVaultImplementationConfiguration>>(

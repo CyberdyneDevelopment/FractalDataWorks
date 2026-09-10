@@ -230,14 +230,14 @@ public sealed class OrgAwareAuthorizationTests
             orgAccessMock.Object);
     }
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>> MockProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>> MockProvider<TConfig, TCommand>(
         List<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "cfg");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))

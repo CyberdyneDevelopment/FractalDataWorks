@@ -13,7 +13,7 @@ namespace Fdw.Services.Authorization;
 /// Supplies role-mapping configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class RoleMappingConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IRoleMappingImplementationConfiguration, RoleMappingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IRoleMappingImplementationConfiguration>,
       IRoleMappingConfigurationProvider
 {
 
@@ -29,7 +29,8 @@ public class RoleMappingConfigurationProvider
         string pathName = "authz")
         : base(logger ?? NullLogger<RoleMappingConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "RoleMapping")
     {
     }
 }

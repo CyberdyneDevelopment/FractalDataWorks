@@ -22,14 +22,14 @@ namespace Fdw.Services.Authentication.Steps;
 /// </remarks>
 public sealed class UserAccountEligibility : IIssuanceEligibility
 {
-    private readonly ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration, UserConfigurationCommand> _users;
+    private readonly ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration> _users;
     private readonly ILogger<UserAccountEligibility> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserAccountEligibility"/> class.</summary>
     /// <param name="users">Reads user records.</param>
     /// <param name="logger">The logger.</param>
     public UserAccountEligibility(
-        ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration, UserConfigurationCommand> users,
+        ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration> users,
         ILogger<UserAccountEligibility>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));

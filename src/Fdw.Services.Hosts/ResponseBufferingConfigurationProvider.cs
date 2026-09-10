@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies ResponseBuffering configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class ResponseBufferingConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IResponseBufferingImplementationConfiguration, ResponseBufferingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IResponseBufferingImplementationConfiguration>,
       IResponseBufferingConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class ResponseBufferingConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<ResponseBufferingConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "ResponseBuffering")
     {
     }
 }

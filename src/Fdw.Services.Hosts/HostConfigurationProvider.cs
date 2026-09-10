@@ -18,7 +18,7 @@ namespace Fdw.Services.Hosts;
 /// datastore differs.
 /// </remarks>
 public class HostConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IHostImplementationConfiguration, HostConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IHostImplementationConfiguration>,
       IHostConfigurationProvider
 {
 
@@ -34,7 +34,8 @@ public class HostConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<HostConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Host")
     {
     }
 }

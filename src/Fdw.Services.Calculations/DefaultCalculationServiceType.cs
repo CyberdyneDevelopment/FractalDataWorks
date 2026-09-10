@@ -47,11 +47,11 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             header.Register(
                 "Formula",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, ICalculationTypedConfiguration, FormulaCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, ICalculationTypedConfiguration>>());
 
             header.Register(
                 "Windowed",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, ICalculationTypedConfiguration, WindowedCalculationConfigurationCommand>>());
+                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, ICalculationTypedConfiguration>>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -90,9 +90,9 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         where TConfig : class, ICalculationTypedConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration, TCommand>>(sp =>
-            new ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration, TCommand>(
-                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration, TConfigCommand>>>(),
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration>>(sp =>
+            new ImplementationConfigurationProviderBase<TConfig, ICalculationTypedConfiguration>(
+                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, IImplementationConfiguration>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "PlatformConfiguration",
                 "calc"));

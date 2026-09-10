@@ -11,7 +11,7 @@ namespace Fdw.Services.Authorization;
 /// Reads the permissions this platform defines.
 /// </summary>
 public class RolePermissionConfigurationProvider
-    : ImplementationConfigurationProviderBase<RolePermissionConfiguration, IRolePermissionImplementationConfiguration, RolePermissionConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<RolePermissionConfiguration, IRolePermissionImplementationConfiguration>,
       IRolePermissionConfigurationProvider
 {
 
@@ -23,7 +23,7 @@ public class RolePermissionConfigurationProvider
         string pathName = "authz")
         : base(logger ?? NullLogger<RolePermissionConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "RolePermission")
     {
     }
 }

@@ -32,7 +32,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public sealed class LocalKeyAuthenticationConfigurationProvider
-    : ImplementationConfigurationProviderBase<LocalKeyAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration, LocalKeyAuthenticationConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<LocalKeyAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration>,
       ILocalKeyAuthenticationConfigurationProvider
 {
 
@@ -51,7 +51,7 @@ public sealed class LocalKeyAuthenticationConfigurationProvider
         : base(logger ?? NullLogger<LocalKeyAuthenticationConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "LocalKeyAuthenticationService")
     {
         _log = logger ?? NullLogger<LocalKeyAuthenticationConfigurationProvider>.Instance;
     }

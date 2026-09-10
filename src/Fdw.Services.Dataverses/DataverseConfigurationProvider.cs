@@ -27,7 +27,7 @@ namespace Fdw.Services.Dataverses;
 /// does not have.
 /// </remarks>
 public class DataverseConfigurationProvider
-    : ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration, DataverseConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration>,
       IDataverseConfigurationProvider
 {
 
@@ -44,7 +44,7 @@ public class DataverseConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration, DataverseConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration>>(
             sp => sp.GetRequiredService<DataverseConfigurationProvider>());
 
         services.TryAddSingleton<IDataverseConfigurationProvider>(
@@ -74,7 +74,7 @@ public class DataverseConfigurationProvider
         : base(logger ?? NullLogger<DataverseConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "Dataverse")
     {
         _logger = logger ?? NullLogger<DataverseConfigurationProvider>.Instance;
     }

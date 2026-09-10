@@ -15,7 +15,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// <c>ComposeChildren</c> cascade.
 /// </remarks>
 public class ClaimMappedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ClaimMappedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>
 {
 
     /// <summary>
@@ -29,7 +29,7 @@ public class ClaimMappedExternalIdentityProvisionerConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "ClaimMappedExternalIdentityProvisioner")
     {
     }
 }

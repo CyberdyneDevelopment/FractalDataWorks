@@ -31,18 +31,18 @@ namespace Fdw.Data.DataStores.SqlServer;
 public sealed class MsSqlSchemaImportPersister : ISchemaImportPersister
 {
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> _dataPathProvider;
-    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> _containerProvider;
-    private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
+    private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration> _dataPathProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration> _containerProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration> _fieldProvider;
     private readonly ConnectionConfigurationProvider _connectionProvider;
     private readonly ILogger<MsSqlSchemaImportPersister> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="MsSqlSchemaImportPersister"/> class.</summary>
     public MsSqlSchemaImportPersister(
         DataStoreConfigurationProvider dataStoreProvider,
-        ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> dataPathProvider,
-        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> containerProvider,
-        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> fieldProvider,
+        ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration> dataPathProvider,
+        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration> containerProvider,
+        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration> fieldProvider,
         ConnectionConfigurationProvider connectionProvider,
         ILogger<MsSqlSchemaImportPersister> logger)
     {

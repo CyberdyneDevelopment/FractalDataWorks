@@ -11,7 +11,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// Supplies the local health monitor's own configuration.
 /// </summary>
 public sealed class LocalHealthMonitorConfigurationProvider
-    : ImplementationConfigurationProviderBase<LocalHealthMonitorConfiguration, IHealthMonitorImplementationConfiguration, LocalHealthMonitorConfigurationCommand>
+    : ImplementationConfigurationProviderBase<LocalHealthMonitorConfiguration, IHealthMonitorImplementationConfiguration>
 {
 
     /// <summary>
@@ -29,7 +29,7 @@ public sealed class LocalHealthMonitorConfigurationProvider
         : base(logger ?? NullLogger<LocalHealthMonitorConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "LocalHealthMonitor")
     {
     }
 }

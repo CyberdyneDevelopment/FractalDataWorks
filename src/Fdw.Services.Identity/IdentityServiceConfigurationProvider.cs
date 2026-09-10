@@ -17,7 +17,7 @@ namespace Fdw.Services.Identity;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class IdentityServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IIdentityServiceImplementationConfiguration>,
       IIdentityServiceConfigurationProvider
 {
 
@@ -34,7 +34,8 @@ public class IdentityServiceConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<IdentityServiceConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Identity")
     {
     }
 }

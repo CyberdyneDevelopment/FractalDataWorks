@@ -25,16 +25,16 @@ namespace Fdw.Services.Settings;
 /// </summary>
 public class SettingsConfigurationProvider
 {
-    private readonly ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration, ServerSettingConfigurationCommand> _serverProvider;
-    private readonly ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration, TenantSettingConfigurationCommand> _tenantProvider;
-    private readonly ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration, RoleSettingConfigurationCommand> _roleProvider;
+    private readonly ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration> _serverProvider;
+    private readonly ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration> _tenantProvider;
+    private readonly ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration> _roleProvider;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="SettingsConfigurationProvider"/> class.</summary>
     public SettingsConfigurationProvider(
-        ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration, ServerSettingConfigurationCommand> serverProvider,
-        ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration, TenantSettingConfigurationCommand> tenantProvider,
-        ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration, RoleSettingConfigurationCommand> roleProvider,
+        ImplementationConfigurationProviderBase<ServerSettingConfiguration, IServerSettingImplementationConfiguration> serverProvider,
+        ImplementationConfigurationProviderBase<TenantSettingConfiguration, ITenantSettingImplementationConfiguration> tenantProvider,
+        ImplementationConfigurationProviderBase<RoleSettingConfiguration, IRoleSettingImplementationConfiguration> roleProvider,
         ILogger<SettingsConfigurationProvider>? logger)
     {
         _serverProvider = serverProvider ?? throw new ArgumentNullException(nameof(serverProvider));

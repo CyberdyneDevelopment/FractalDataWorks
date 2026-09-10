@@ -10,7 +10,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>Reads and writes the <c>sec.JwtAssertionIdentity</c> typed body.</summary>
 public class JwtAssertionConfigurationProvider
-    : ImplementationConfigurationProviderBase<JwtAssertionConfiguration, IIdentityServiceImplementationConfiguration, JwtAssertionConfigurationCommand>
+    : ImplementationConfigurationProviderBase<JwtAssertionConfiguration, IIdentityServiceImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the class.</summary>
@@ -25,7 +25,7 @@ public class JwtAssertionConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<JwtAssertionConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "JwtAssertionIdentity")
     {
     }
 }

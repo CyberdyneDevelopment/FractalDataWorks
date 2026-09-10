@@ -18,7 +18,7 @@ namespace Fdw.Services.Logging;
 /// datastore differs.
 /// </remarks>
 public class LoggingConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ILoggingImplementationConfiguration, LoggingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ILoggingImplementationConfiguration>,
       ILoggingConfigurationProvider
 {
 
@@ -34,7 +34,8 @@ public class LoggingConfigurationProvider
         string pathName = "log")
         : base(logger ?? NullLogger<LoggingConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Logging")
     {
     }
 }

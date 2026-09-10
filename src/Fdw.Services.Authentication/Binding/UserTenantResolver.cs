@@ -18,14 +18,14 @@ namespace Fdw.Services.Authentication.Binding;
 /// </summary>
 public sealed class UserTenantResolver : ITenantResolver
 {
-    private readonly ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration, UserConfigurationCommand> _users;
+    private readonly ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration> _users;
     private readonly ILogger<UserTenantResolver> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserTenantResolver"/> class.</summary>
     /// <param name="users">Reads user records.</param>
     /// <param name="logger">The logger.</param>
     public UserTenantResolver(
-        ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration, UserConfigurationCommand> users,
+        ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration> users,
         ILogger<UserTenantResolver>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));

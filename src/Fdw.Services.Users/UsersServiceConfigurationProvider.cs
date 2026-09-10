@@ -16,7 +16,7 @@ namespace Fdw.Services.Users;
 /// configuration file that every consumer has to be handed through IOptions.
 /// </remarks>
 public class UsersServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<UsersServiceConfiguration, IUsersServiceImplementationConfiguration, UsersServiceConfigurationCommand>
+    : ImplementationConfigurationProviderBase<UsersServiceConfiguration, IUsersServiceImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="UsersServiceConfigurationProvider"/> class.</summary>
@@ -32,7 +32,7 @@ public class UsersServiceConfigurationProvider
         : base(logger ?? NullLogger<UsersServiceConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "UsersService")
     {
     }
 }

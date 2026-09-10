@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies AuthChallenge configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class AuthChallengeConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthChallengeImplementationConfiguration, AuthChallengeConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthChallengeImplementationConfiguration>,
       IAuthChallengeConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class AuthChallengeConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<AuthChallengeConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "AuthChallenge")
     {
     }
 }

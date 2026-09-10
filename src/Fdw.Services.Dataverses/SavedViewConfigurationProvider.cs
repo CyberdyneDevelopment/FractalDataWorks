@@ -17,7 +17,7 @@ namespace Fdw.Services.Dataverses;
 /// resource, not by owning it here.
 /// </remarks>
 public class SavedViewConfigurationProvider
-    : ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration, SavedViewConfigurationCommand>
+    : ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration>
 {
 
     /// <summary>
@@ -33,7 +33,7 @@ public class SavedViewConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration, SavedViewConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration>>(
             sp => sp.GetRequiredService<SavedViewConfigurationProvider>());
     }
 
@@ -52,7 +52,7 @@ public class SavedViewConfigurationProvider
         : base(logger ?? NullLogger<SavedViewConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "SavedView")
     {
     }
 }

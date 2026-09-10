@@ -26,14 +26,12 @@ namespace Fdw.Services.Configuration;
 /// </summary>
 /// <typeparam name="TDomainConfiguration">The record this provider reads and writes.</typeparam>
 /// <typeparam name="TImplementationConfiguration">The domain's implementation contract -- the marker only this domain's implementations carry, and what a read hands back.</typeparam>
-/// <typeparam name="TCommand">The configuration command for this provider's rows.</typeparam>
-public abstract class ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>
+public abstract class ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration>
     : IServiceConfigurationProvider,
       IDomainConfigurationProvider<TImplementationConfiguration>,
       IImplementationConfigurationProvider<TImplementationConfiguration>
     where TDomainConfiguration : class, IDomainConfiguration
     where TImplementationConfiguration : IImplementationConfiguration
-    where TCommand : ConfigurationCommandBase<TDomainConfiguration>
 {
     private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger _logger;
@@ -70,12 +68,14 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
     /// <param name="dataStoreName">The configuration connection this domain's rows live on.</param>
     /// <param name="pathName">Schema/path name (e.g. "conn", "sec").</param>
     protected ImplementationConfigurationProviderBase(
-        ILogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>>? logger,
+        ILogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName)
+        string pathName,
+        string tableName)
     {
-        _logger = logger ?? NullLogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>>.Instance;
+        _commands = new DomainConfigurationCommand(tableName);
+        _logger = logger ?? NullLogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration>>.Instance;
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
@@ -116,11 +116,12 @@ public abstract class ImplementationConfigurationProviderBase<TDomainConfigurati
         return await WriteRow(typed, ct).ConfigureAwait(false);
     }
 
-    private static readonly Lazy<TCommand> _commands = new(static () =>
-        ConfigurationCommands.All().OfType<TCommand>().Single());
+    // Constructed, not resolved. A TypeOption is a singleton and could carry one table name, but
+    // every domain reads a differently named table of identical shape.
+    private readonly DomainConfigurationCommand _commands;
 
-    /// <summary>Returns the TCommand TypeOption instance for this domain.</summary>
-    protected TCommand Commands() => _commands.Value;
+    /// <summary>Returns the command over this provider's table.</summary>
+    protected DomainConfigurationCommand Commands() => _commands;
 
     private DataStoreTarget Target => new(DataStoreName, PathName, Commands().TableName);
 

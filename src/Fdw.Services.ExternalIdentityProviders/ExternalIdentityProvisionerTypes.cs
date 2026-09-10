@@ -84,7 +84,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         ExternalIdentityProvisionerTypes.ConfigurationConnection));
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, IExternalIdentityProvisionerBindingImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IExternalIdentityProvisionerBindingImplementationConfiguration>>(sp =>
@@ -97,7 +97,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(
                 sp => (ExternalIdentityProvisionerConfigurationProvider)sp.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());

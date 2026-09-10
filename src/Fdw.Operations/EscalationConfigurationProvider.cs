@@ -20,7 +20,7 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Operations;
 
 /// <summary>Configuration provider for escalation policy configurations.</summary>
-public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, IEscalationPolicyImplementationConfiguration, EscalationPolicyConfigurationCommand>
+public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, IEscalationPolicyImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
@@ -31,7 +31,7 @@ public class EscalationConfigurationProvider : ImplementationConfigurationProvid
         string pathName = "workflow")
         : base(logger ?? NullLogger<EscalationConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "EscalationPolicy")
     {
     }
 

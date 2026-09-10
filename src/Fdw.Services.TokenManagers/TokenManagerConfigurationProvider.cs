@@ -17,7 +17,7 @@ namespace Fdw.Services.TokenManagers;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class TokenManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ITokenManagerImplementationConfiguration, TokenManagerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ITokenManagerImplementationConfiguration>,
       ITokenManagerConfigurationProvider
 {
 
@@ -30,7 +30,8 @@ public class TokenManagerConfigurationProvider
         string pathName = "auth")
         : base(logger ?? NullLogger<TokenManagerConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "TokenManager")
     {
     }
 }

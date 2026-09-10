@@ -22,7 +22,7 @@ namespace Fdw.Services.Messaging;
 /// closed generic that two domains could satisfy.
 /// </remarks>
 public sealed class MessagingConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IMessagingImplementationConfiguration>,
       IMessagingConfigurationProvider
 {
 
@@ -41,7 +41,8 @@ public sealed class MessagingConfigurationProvider
         : base(logger ?? NullLogger<MessagingConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName,
+               "Messaging")
         => _log = logger ?? NullLogger<MessagingConfigurationProvider>.Instance;
 
     // The bases hold their loggers privately, so GetHeader keeps its own reference rather than

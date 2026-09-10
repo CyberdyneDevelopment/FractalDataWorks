@@ -23,7 +23,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <c>IConfigurationGateway</c>, no <c>IConfiguration</c> binding section.
 /// </remarks>
 public class ChainedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<ChainedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ChainedExternalIdentityProvisionerConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ChainedExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration>
 {
 
     /// <summary>
@@ -37,7 +37,7 @@ public class ChainedExternalIdentityProvisionerConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<ChainedExternalIdentityProvisionerConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "ChainedExternalIdentityProvisioner")
     {
     }
 }

@@ -30,7 +30,7 @@ namespace Fdw.Services.Etl;
 /// domain's implementation contract so the Pipeline provider can register it.
 /// </remarks>
 public class EtlPipelineConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IEtlPipelineImplementationConfiguration, EtlPipelineConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IEtlPipelineImplementationConfiguration>,
       IImplementationConfigurationProvider<IPipelineImplementationConfiguration>
 {
 
@@ -43,7 +43,8 @@ public class EtlPipelineConfigurationProvider
         string pathName = "pipe")
         : base(logger ?? NullLogger<EtlPipelineConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "EtlPipeline")
     {
     }
 

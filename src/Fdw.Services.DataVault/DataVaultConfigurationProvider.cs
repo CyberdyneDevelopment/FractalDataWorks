@@ -21,7 +21,7 @@ namespace Fdw.Services.DataVault;
 /// inherited <c>Register</c>.
 /// </summary>
 public class DataVaultConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IDataVaultImplementationConfiguration, DataVaultConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IDataVaultImplementationConfiguration>,
       IDataVaultConfigurationProvider
 {
 
@@ -36,7 +36,8 @@ public class DataVaultConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<DataVaultConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "DataVault")
     {
     }
 }

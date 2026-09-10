@@ -18,7 +18,7 @@ namespace Fdw.Services.Telemetry;
 /// datastore differs.
 /// </remarks>
 public class TelemetryConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ITelemetryImplementationConfiguration, TelemetryConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ITelemetryImplementationConfiguration>,
       ITelemetryConfigurationProvider
 {
 
@@ -34,7 +34,8 @@ public class TelemetryConfigurationProvider
         string pathName = "otel")
         : base(logger ?? NullLogger<TelemetryConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Telemetry")
     {
     }
 }

@@ -18,7 +18,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// did not load", several layers from the missing registration.
 /// </remarks>
 public class ClientCredentialsConfigurationProvider
-    : ImplementationConfigurationProviderBase<ClientCredentialsConfiguration, IIdentityServiceImplementationConfiguration, ClientCredentialsConfigurationCommand>
+    : ImplementationConfigurationProviderBase<ClientCredentialsConfiguration, IIdentityServiceImplementationConfiguration>
 {
 
     /// <summary>Initializes a new instance of the class.</summary>
@@ -33,7 +33,7 @@ public class ClientCredentialsConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<ClientCredentialsConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "ClientCredentialsIdentity")
     {
     }
 }

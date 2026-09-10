@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies EmptyBody configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class EmptyBodyConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IEmptyBodyImplementationConfiguration, EmptyBodyConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IEmptyBodyImplementationConfiguration>,
       IEmptyBodyConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class EmptyBodyConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<EmptyBodyConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "EmptyBody")
     {
     }
 }

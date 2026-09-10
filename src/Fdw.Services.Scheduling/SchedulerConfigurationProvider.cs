@@ -19,7 +19,7 @@ namespace Fdw.Services.Scheduling;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class SchedulerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, ISchedulerImplementationConfiguration, SchedulerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, ISchedulerImplementationConfiguration>,
       ISchedulerConfigurationProvider
 {
 
@@ -32,7 +32,8 @@ public class SchedulerConfigurationProvider
         string pathName = "sched")
         : base(logger ?? NullLogger<SchedulerConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "Scheduler")
     {
     }
 }

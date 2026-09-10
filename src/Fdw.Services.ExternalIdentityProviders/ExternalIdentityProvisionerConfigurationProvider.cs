@@ -19,7 +19,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// section.
 /// </summary>
 public class ExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ExternalIdentityProvisionerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IExternalIdentityProvisionerImplementationConfiguration>,
       IExternalIdentityProvisionerConfigurationProvider
 {
 
@@ -32,7 +32,8 @@ public class ExternalIdentityProvisionerConfigurationProvider
         string pathName = "sec")
         : base(logger ?? NullLogger<ExternalIdentityProvisionerConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "ExternalIdentityProvisioner")
     {
     }
 }

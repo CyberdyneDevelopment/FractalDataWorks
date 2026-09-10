@@ -26,7 +26,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public class AuthenticationServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthenticationServiceImplementationConfiguration, AuthenticationServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IAuthenticationServiceImplementationConfiguration>,
       IAuthenticationServiceConfigurationProvider
 {
 
@@ -43,7 +43,7 @@ public class AuthenticationServiceConfigurationProvider
         : base(logger ?? NullLogger<AuthenticationServiceConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "AuthenticationService")
     {
     }
 

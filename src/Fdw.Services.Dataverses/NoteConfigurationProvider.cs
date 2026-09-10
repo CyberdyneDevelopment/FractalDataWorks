@@ -10,7 +10,7 @@ namespace Fdw.Services.Dataverses;
 
 /// <summary>Reads and writes the notes raised against a dataverse.</summary>
 public class NoteConfigurationProvider
-    : ImplementationConfigurationProviderBase<NoteConfiguration, INoteImplementationConfiguration, NoteConfigurationCommand>
+    : ImplementationConfigurationProviderBase<NoteConfiguration, INoteImplementationConfiguration>
 {
 
     /// <summary>Registers this provider and the base it is resolved through.</summary>
@@ -24,7 +24,7 @@ public class NoteConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<NoteConfiguration, INoteImplementationConfiguration, NoteConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<NoteConfiguration, INoteImplementationConfiguration>>(
             sp => sp.GetRequiredService<NoteConfigurationProvider>());
     }
 
@@ -36,7 +36,7 @@ public class NoteConfigurationProvider
         string pathName = "dataverse")
         : base(logger ?? NullLogger<NoteConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "Note")
     {
     }
 }

@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies ApiReference configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class ApiReferenceConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IApiReferenceImplementationConfiguration, ApiReferenceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IApiReferenceImplementationConfiguration>,
       IApiReferenceConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class ApiReferenceConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<ApiReferenceConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "ApiReference")
     {
     }
 }

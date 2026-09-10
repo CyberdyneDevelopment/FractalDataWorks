@@ -26,7 +26,7 @@ namespace Fdw.Services.Users;
 /// usage — usr.UserPreferences is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
 /// </remarks>
 public class UserPreferenceConfigurationProvider
-    : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, IUserPreferencesImplementationConfiguration, UserPreferenceConfigurationCommand>
+    : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, IUserPreferencesImplementationConfiguration>
 {
 
     private readonly ILogger _logger;
@@ -39,7 +39,7 @@ public class UserPreferenceConfigurationProvider
         string pathName = "usr")
         : base(logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName, "UserPreferences")
     {
         _logger = logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance;
     }

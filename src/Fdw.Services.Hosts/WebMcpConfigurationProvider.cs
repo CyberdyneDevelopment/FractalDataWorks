@@ -12,7 +12,7 @@ namespace Fdw.Services.Hosts;
 /// Supplies WebMcp configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class WebMcpConfigurationProvider
-    : ImplementationConfigurationProviderBase<DomainConfiguration, IWebMcpImplementationConfiguration, WebMcpConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DomainConfiguration, IWebMcpImplementationConfiguration>,
       IWebMcpConfigurationProvider
 {
 
@@ -28,7 +28,8 @@ public class WebMcpConfigurationProvider
         string pathName = "hst")
         : base(logger ?? NullLogger<WebMcpConfigurationProvider>.Instance,
                gatewayProvider,
-               dataStoreName, pathName)
+               dataStoreName, pathName,
+               "WebMcp")
     {
     }
 }

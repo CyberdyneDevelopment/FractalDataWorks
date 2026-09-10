@@ -32,7 +32,7 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public sealed class JwtBearerAuthenticationConfigurationProvider
-    : ImplementationConfigurationProviderBase<JwtBearerAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration, JwtBearerAuthenticationConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<JwtBearerAuthenticationConfiguration, IAuthenticationServiceImplementationConfiguration>,
       IJwtBearerAuthenticationConfigurationProvider
 {
 
@@ -51,7 +51,7 @@ public sealed class JwtBearerAuthenticationConfigurationProvider
         : base(logger ?? NullLogger<JwtBearerAuthenticationConfigurationProvider>.Instance,
                gatewayProvider,
                dataStoreName,
-               pathName)
+               pathName, "JwtBearerAuthenticationService")
     {
         _log = logger ?? NullLogger<JwtBearerAuthenticationConfigurationProvider>.Instance;
     }
