@@ -66,30 +66,14 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// Initializes a new instance of <see cref="ConfigurationGateway"/> without a secret manager.
-    /// Use when the ConfigurationDb connection uses integrated auth or does not need secret resolution.
-    /// </summary>
-    /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
-    /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
-    /// <param name="schema">
-    /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
-    /// Registered as a singleton via
-    /// <see cref="ConfigurationGatewayTypes"/>, one per connection declared in the schema.
-    /// </param>
-    /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
-    /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>
-    /// <param name="options">Optional gateway options (EnableCache knob). When null caching is disabled.</param>
-    /// <param name="authenticationContextAccessor">
-    /// Optional accessor for the calling principal, used to partition cached results by the
-    /// visibility scope their session reads under.
-    /// </param>
-    /// <summary>
     /// Initializes a new instance of <see cref="ConfigurationGateway"/>.
     /// </summary>
     /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
     /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
     /// <param name="schema">
     /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
+    /// Registered as a singleton via <see cref="ConfigurationGatewayTypes"/>, one per connection
+    /// declared in the schema.
     /// </param>
     /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
     /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>

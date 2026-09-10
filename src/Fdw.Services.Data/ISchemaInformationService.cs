@@ -21,7 +21,7 @@ namespace Fdw.Services.Data;
 /// </para>
 /// <para>
 /// Whether discovery is attempted at all is read from the connection's
-/// <see cref="Fdw.Services.Connections.IConnectionImplementationConfiguration.DiscoveryEnabled"/>.
+/// <see cref="Fdw.Services.Connections.Abstractions.IConnectionImplementationConfiguration.DiscoveryEnabled"/>.
 /// Discovery *scope* (which db/schema/table is visible) is expressed by DataStore/DataPath/DataContainer
 /// records and gated by RBAC — Connection carries no schema include/exclude lists.
 /// </para>
