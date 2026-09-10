@@ -115,7 +115,9 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
 
 
             // Factory - DI handles all constructor dependencies
-            builder.Services.AddScoped<IStreamingPipelineFactory>(sp => new StreamingPipelineFactory(
+            EtlPipelineProvider.Register<IStreamingPipelineFactory>(
+                builder, Name, ServiceLifetime.Scoped,
+                sp => new StreamingPipelineFactory(
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGatewayProvider>(),

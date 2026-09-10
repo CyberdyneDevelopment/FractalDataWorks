@@ -114,7 +114,9 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
 
 
             // Factory - DI handles all constructor dependencies
-            builder.Services.AddScoped<IBatchCopyPipelineFactory>(sp => new BatchCopyPipelineFactory(
+            EtlPipelineProvider.Register<IBatchCopyPipelineFactory>(
+                builder, Name, ServiceLifetime.Scoped,
+                sp => new BatchCopyPipelineFactory(
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGatewayProvider>(),
