@@ -25,6 +25,12 @@ public interface IDataSetImplementationConfiguration : IImplementationConfigurat
     /// <summary>Gets or sets the data set's Sources.</summary>
     IList<DataSetSourceConfiguration> Sources { get; set; }
 
+    /// <summary>Gets or sets the data set's Aggregates.</summary>
+    IList<DataSetAggregateConfiguration> Aggregates { get; set; }
+
+    /// <summary>Gets or sets how a federated data set combines its sources.</summary>
+    string? FederationStrategy { get; set; }
+
     /// <summary>Gets or sets the domain record\'s durable id.</summary>
     Guid DataSetId { get; set; }
 

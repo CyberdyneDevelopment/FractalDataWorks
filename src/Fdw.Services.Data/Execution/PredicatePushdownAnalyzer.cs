@@ -65,7 +65,7 @@ public sealed class PredicatePushdownAnalyzer
     /// </remarks>
     public IGenericResult<Dictionary<string, IFilterExpression>> DecomposeBySource(
         IFilterExpression? filter,
-        DataSetImplementationConfiguration dataset,
+        IDataSetImplementationConfiguration dataset,
         IReadOnlyList<DataSetSourceConfiguration> sources,
         IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource)
     {
@@ -104,7 +104,7 @@ public sealed class PredicatePushdownAnalyzer
     /// </summary>
     private IGenericResult<Dictionary<string, IFilterExpression>>? ValidateDecomposeInputs(
         IFilterExpression? filter,
-        DataSetImplementationConfiguration dataset,
+        IDataSetImplementationConfiguration dataset,
         IReadOnlyList<DataSetSourceConfiguration> sources)
     {
         if (filter == null || filter.Root == null)
@@ -153,7 +153,7 @@ public sealed class PredicatePushdownAnalyzer
         Dictionary<string, List<IFilterCondition>> sourceConditions,
         Dictionary<string, DataSetSourceConfiguration> sourcesByName,
         IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource,
-        DataSetImplementationConfiguration dataset)
+        IDataSetImplementationConfiguration dataset)
     {
         var sourceFilters = new Dictionary<string, IFilterExpression>(
             StringComparer.OrdinalIgnoreCase);
@@ -229,7 +229,7 @@ public sealed class PredicatePushdownAnalyzer
     private void ExtractConditions(
         IFilterNode node,
         Dictionary<string, List<IFilterCondition>> sourceConditions,
-        DataSetImplementationConfiguration dataset,
+        IDataSetImplementationConfiguration dataset,
         IReadOnlyList<DataSetSourceConfiguration> sources,
         IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource)
     {
