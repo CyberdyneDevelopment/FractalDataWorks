@@ -1,35 +1,21 @@
-using System;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
-/// <summary>
-/// Supplies the local health monitor's own configuration.
-/// </summary>
+/// <summary>Supplies the LocalHealthMonitor implementation configuration.</summary>
 public sealed class LocalHealthMonitorConfigurationProvider
-    : ImplementationConfigurationProviderBase<IHealthMonitorImplementationConfiguration>
+    : ImplementationProviderBase<LocalHealthMonitorConfiguration>
 {
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationProvider"/> class.
-    /// </summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
-    /// <param name="dataStoreName">The connection the rows live in.</param>
-    /// <param name="pathName">The schema the rows live in.</param>
+    /// <summary>Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public LocalHealthMonitorConfigurationProvider(
         ILogger<LocalHealthMonitorConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "hlth")
-        : base(logger ?? NullLogger<LocalHealthMonitorConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName, "LocalHealthMonitor")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "hlth", "LocalHealthMonitor")
     {
     }
 }

@@ -4,32 +4,21 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.Hosts.Commands;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>
-/// Supplies EmptyBody configuration, composing the domain record with the implementation's own.
-/// </summary>
-public class EmptyBodyConfigurationProvider
-    : ImplementationConfigurationProviderBase<IEmptyBodyImplementationConfiguration>,
+/// <summary>Supplies the EmptyBody domain configuration.</summary>
+public sealed class EmptyBodyConfigurationProvider
+    : DomainConfigurationProviderBase<IEmptyBodyImplementationConfiguration>,
       IEmptyBodyConfigurationProvider
 {
-
     /// <summary>Initializes a new instance of the <see cref="EmptyBodyConfigurationProvider"/> class.</summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Yields the gateway for the named datastore.</param>
-    /// <param name="dataStoreName">The datastore this reads through.</param>
-    /// <param name="pathName">The schema the EmptyBody tables live in.</param>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public EmptyBodyConfigurationProvider(
         ILogger<EmptyBodyConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "hst")
-        : base(logger ?? NullLogger<EmptyBodyConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName,
-               "EmptyBody")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "hst", "EmptyBody")
     {
     }
 }

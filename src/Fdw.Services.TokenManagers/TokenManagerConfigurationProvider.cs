@@ -1,37 +1,27 @@
 using Fdw.Configuration;
-using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
-using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.TokenManagers.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.TokenManagers;
 
-/// <summary>
-/// Configuration provider for TokenManagerConfiguration rows in auth.TokenManager.
-/// Reads through IConfigurationGateway — no IConfiguration binding section.
-/// </summary>
-public class TokenManagerConfigurationProvider
-    : ImplementationConfigurationProviderBase<ITokenManagerImplementationConfiguration>,
+/// <summary>Supplies the TokenManager domain configuration.</summary>
+public sealed class TokenManagerConfigurationProvider
+    : DomainConfigurationProviderBase<ITokenManagerImplementationConfiguration>,
       ITokenManagerConfigurationProvider
 {
-
-
     /// <summary>Initializes a new instance of the <see cref="TokenManagerConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public TokenManagerConfigurationProvider(
         ILogger<TokenManagerConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "auth")
-        : base(logger ?? NullLogger<TokenManagerConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName,
-               "TokenManager")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "auth", "TokenManager")
     {
     }
 }

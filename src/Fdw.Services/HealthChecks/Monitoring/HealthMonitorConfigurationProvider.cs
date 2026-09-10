@@ -1,45 +1,24 @@
 using Fdw.Configuration;
-using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
-/// <summary>
-/// The health-monitor domain's configuration provider.
-/// </summary>
-/// <remarks>
-/// Which monitor a host runs is per-host rather than shared, so this domain reads from the
-/// <c>ServerConfiguration</c> connection — the store for boot-time and near-static server values —
-/// while domains whose rows are shared across hosts read from <c>PlatformConfiguration</c>. The
-/// mechanism is identical either way; only the connection differs.
-/// </remarks>
+/// <summary>Supplies the HealthMonitor domain configuration.</summary>
 public sealed class HealthMonitorConfigurationProvider
-    : ImplementationConfigurationProviderBase<IHealthMonitorImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IHealthMonitorImplementationConfiguration>,
       IHealthMonitorConfigurationProvider
 {
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="HealthMonitorConfigurationProvider"/> class.
-    /// </summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
-    /// <param name="dataStoreName">The connection the domain's rows live in.</param>
-    /// <param name="pathName">The schema the domain's rows live in.</param>
+    /// <summary>Initializes a new instance of the <see cref="HealthMonitorConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public HealthMonitorConfigurationProvider(
         ILogger<HealthMonitorConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "hlth")
-        : base(logger ?? NullLogger<HealthMonitorConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName,
-               "HealthMonitor")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "hlth", "HealthMonitor")
     {
     }
 }

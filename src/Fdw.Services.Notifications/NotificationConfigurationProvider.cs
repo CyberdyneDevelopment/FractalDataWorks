@@ -1,6 +1,4 @@
 using Fdw.Configuration;
-using System;
-using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -13,32 +11,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Notifications;
 
-/// <summary>
-/// Configuration provider for notifications. Thin wrapper over
-/// <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>. Also registers the
-/// NotificationRule sub-provider (separate config category, same domain).
-/// </summary>
-public class NotificationConfigurationProvider
-    : ImplementationConfigurationProviderBase<INotificationImplementationConfiguration>,
+/// <summary>Supplies the Notification domain configuration.</summary>
+public sealed class NotificationConfigurationProvider
+    : DomainConfigurationProviderBase<INotificationImplementationConfiguration>,
       INotificationConfigurationProvider
 {
-
-
     /// <summary>Initializes a new instance of the <see cref="NotificationConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public NotificationConfigurationProvider(
         ILogger<NotificationConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "notify")
-        : base(logger ?? NullLogger<NotificationConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName,
-               "Notification")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "notify", "Notification")
     {
     }
 }

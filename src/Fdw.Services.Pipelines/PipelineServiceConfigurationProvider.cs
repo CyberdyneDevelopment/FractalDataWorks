@@ -1,40 +1,27 @@
 using Fdw.Configuration;
-using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
-using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Pipelines;
 
-/// <summary>
-/// The general pipeline header provider over <c>pipe.Pipeline</c>. The full aggregate — the
-/// ETL-kind typed body (pipe.EtlPipeline), its engine typed body (pipe.BatchCopyPipeline /
-/// pipe.StreamingPipeline), and the kind body's Transforms — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TDomainConfiguration,TImplementationConfiguration,TCommand}"/>. The "Etl"
-/// kind typed provider is attached to this header from the Services.Etl side (the ETL domain the general header
-/// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
-/// </summary>
-public class PipelineServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<IPipelineImplementationConfiguration>,
+/// <summary>Supplies the Pipeline domain configuration.</summary>
+public sealed class PipelineServiceConfigurationProvider
+    : DomainConfigurationProviderBase<IPipelineImplementationConfiguration>,
       IPipelineConfigurationProvider
 {
-
-
     /// <summary>Initializes a new instance of the <see cref="PipelineServiceConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public PipelineServiceConfigurationProvider(
-        ILogger<PipelineServiceConfigurationProvider>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "pipe")
-        : base(logger ?? NullLogger<PipelineServiceConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName, "Pipeline")
+        ILogger<PipelineServiceConfigurationProvider> logger,
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "pipe", "Pipeline")
     {
     }
 }

@@ -2,34 +2,20 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
-/// <summary>
-/// Typed-body configuration provider for <c>sec.ClaimMappedExternalIdentityProvisioner</c> rows.
-/// </summary>
-/// <remarks>
-/// Mirrors <c>Chained.ChainedExternalIdentityProvisionerConfigurationProvider</c> exactly. Its
-/// ordered <c>Rules</c> child collection is composed automatically by the base class's
-/// <c>ComposeChildren</c> cascade.
-/// </remarks>
-public class ClaimMappedExternalIdentityProvisionerConfigurationProvider
-    : ImplementationConfigurationProviderBase<IExternalIdentityProvisionerImplementationConfiguration>
+/// <summary>Supplies the ClaimMappedExternalIdentityProvisioner implementation configuration.</summary>
+public sealed class ClaimMappedExternalIdentityProvisionerConfigurationProvider
+    : ImplementationProviderBase<ClaimMappedExternalIdentityProvisionerConfiguration>
 {
-
-    /// <summary>
-    /// Initializes a new instance of the
-    /// <see cref="ClaimMappedExternalIdentityProvisionerConfigurationProvider"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="ClaimMappedExternalIdentityProvisionerConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public ClaimMappedExternalIdentityProvisionerConfigurationProvider(
-        ILogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider>? logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "sec")
-        : base(logger ?? NullLogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName, "ClaimMappedExternalIdentityProvisioner")
+        ILogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider> logger,
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "sec", "ClaimMappedExternalIdentityProvisioner")
     {
     }
 }
