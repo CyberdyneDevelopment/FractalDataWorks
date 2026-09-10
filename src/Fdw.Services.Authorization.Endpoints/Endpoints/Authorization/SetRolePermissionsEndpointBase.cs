@@ -25,7 +25,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 {
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
         private readonly ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration> _rolePermissionProvider;
-    private readonly RoleConfigurationProvider _roleProvider;
+    private readonly IAuthorizationProvider _authorizationProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
@@ -37,13 +37,13 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
     protected SetRolePermissionsEndpointBase(ILogger logger, ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration> rolePermissionProvider,
-        RoleConfigurationProvider roleProvider,
+        IAuthorizationProvider authorizationProvider,
         ISystemRoleConfiguration systemRoleConfiguration,
         ITenantContext? tenantContext = null)
     {
         EndpointLogger = logger;
         _rolePermissionProvider = rolePermissionProvider;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
         _systemRoleConfiguration = systemRoleConfiguration;
         _tenantContext = tenantContext;
     }
@@ -52,7 +52,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:write".
@@ -90,7 +90,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
             return;
         }
 
-        var role = await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
+        var role = await _authorizationProvider.GetRole(req.Name, ct).ConfigureAwait(false);
         if (role is null)
         {
             HttpContext.Response.StatusCode = 404;
@@ -99,10 +99,10 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
             return;
         }
 
-        var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
+        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
         var resolved = ResolvePermissions(req, allPermissions);
 
-        var existingMappings = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
+        var existingMappings = await _authorizationProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
 
         var setResult = await SetPermissionsAtomically(req, role, resolved, existingMappings, ct).ConfigureAwait(false);
         if (!setResult.IsSuccess)
@@ -229,7 +229,9 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
             var mapping = new RolePermissionImplementationConfiguration
             {
                 Id = Guid.NewGuid(),
-                Name = $"{role.Id}:{perm.Id}",
+                // The seed writes this name as {roleName}:{permissionName} (r.Name + ':' + p.Name);
+                // minting it from ids instead produces a row the seed's own idempotence check misses.
+                Name = $"{role.Name}:{perm.Name}",
                 RoleId = role.Id,
                 PermissionId = perm.Id,
                 AssignedAt = DateTimeOffset.UtcNow

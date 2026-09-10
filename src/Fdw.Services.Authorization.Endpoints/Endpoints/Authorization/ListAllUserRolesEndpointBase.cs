@@ -29,8 +29,8 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </remarks>
 public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllUserRolesResponse>
 {
-    private readonly RoleConfigurationProvider _roleProvider;
-    private readonly UserRoleConfigurationProvider _userRoleProvider;
+    private readonly IAuthorizationProvider _authorizationProvider;
+    private readonly IUserRoleConfigurationProvider _userRoleProvider;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
@@ -41,11 +41,11 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
     /// <param name="userRoleProvider">Reads the assignments.</param>
     protected ListAllUserRolesEndpointBase(
         ILogger logger,
-        RoleConfigurationProvider roleProvider,
-        UserRoleConfigurationProvider userRoleProvider)
+        IAuthorizationProvider authorizationProvider,
+        IUserRoleConfigurationProvider userRoleProvider)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
+        _authorizationProvider = authorizationProvider ?? throw new ArgumentNullException(nameof(authorizationProvider));
         _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
     }
 
@@ -82,7 +82,7 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
             return;
         }
 
-        var roles = await _roleProvider.GetAllRoles(ct).ConfigureAwait(false);
+        var roles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
 
         var items = assignments.Value
             .Where(a => a.IsCurrent && !a.IsDeleted)

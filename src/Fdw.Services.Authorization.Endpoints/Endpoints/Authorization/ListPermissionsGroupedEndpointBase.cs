@@ -15,7 +15,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutRequest<List<PermissionGroupResponse>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsGroupedEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -23,17 +23,17 @@ public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutReques
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsGroupedEndpointBase"/> class.</summary>
-    protected ListPermissionsGroupedEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
+    protected ListPermissionsGroupedEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
     }
 
 
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -59,7 +59,7 @@ public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutReques
         
         AuthorizationEndpointLog.ListingPermissions(EndpointLogger);
 
-        var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
+        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
 
         var grouped = allPermissions
             .GroupBy(p => p.Domain, StringComparer.Ordinal)

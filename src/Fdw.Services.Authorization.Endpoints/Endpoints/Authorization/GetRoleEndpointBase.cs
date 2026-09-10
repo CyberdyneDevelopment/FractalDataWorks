@@ -15,7 +15,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="GetRoleEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -23,17 +23,17 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="GetRoleEndpointBase"/> class.</summary>
-    protected GetRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
+    protected GetRoleEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
     }
 
 
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -58,8 +58,8 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     {
         
         RoleImplementationConfiguration? role = Guid.TryParse(req.Name, out var id)
-            ? await _roleProvider.GetRole(id, ct).ConfigureAwait(false)
-            : await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
+            ? await _authorizationProvider.GetRole(id, ct).ConfigureAwait(false)
+            : await _authorizationProvider.GetRole(req.Name, ct).ConfigureAwait(false);
 
         if (role is null)
         {
@@ -79,8 +79,8 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     /// </summary>
     protected virtual async Task<RoleDetailResponse> MapToDetail(RoleImplementationConfiguration role, CancellationToken ct)
     {
-        var rolePermissions = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
-        var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
+        var rolePermissions = await _authorizationProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
+        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
 
         var permissions = allPermissions
             .Where(p => rolePermissions.Any(rp => rp.PermissionId == p.Id))

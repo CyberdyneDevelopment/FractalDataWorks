@@ -21,10 +21,10 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, UserRolesResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
     private readonly UserRoleConfigurationProvider _userRoleProvider;
 
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -32,12 +32,12 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
-    protected RevokeUserRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider,
+    protected RevokeUserRoleEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider,
         UserRoleConfigurationProvider userRoleProvider,
-        UserConfigurationProvider userProvider)
+        IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
         _userRoleProvider = userRoleProvider;
         _userProvider = userProvider;
     }
@@ -46,7 +46,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the user-role configuration provider.
@@ -75,7 +75,10 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     public override async Task HandleAsync(RevokeRoleRequest req, CancellationToken ct)
     {
         
-        var userResult = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
+        // The route takes an id OR a name; the domain provider answers each by its own overload.
+        var userResult = Guid.TryParse(req.IdOrName, out var parsedUserId)
+            ? await _userProvider.Get(parsedUserId, ct).ConfigureAwait(false)
+            : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
         if (!userResult.IsSuccess || userResult.Value is null)
         {
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
@@ -88,14 +91,17 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
 
         try
         {
-            var role = await _roleProvider.GetRole(req.RoleName, ct).ConfigureAwait(false);
+            var role = await _authorizationProvider.GetRole(req.RoleName, ct).ConfigureAwait(false);
             if (role is null)
             {
                 await Send.NotFoundAsync(ct).ConfigureAwait(false);
                 return;
             }
 
-            var userRolesResult = await _userRoleProvider.GetByUser(userIdString, ct).ConfigureAwait(false);
+            var userRolesResult = await _userRoleProvider
+                .Find<UserRoleImplementationConfiguration>(
+                    ur => string.Equals(ur.UserId, userIdString, StringComparison.OrdinalIgnoreCase), ct)
+                .ConfigureAwait(false);
             if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
             {
                 await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);

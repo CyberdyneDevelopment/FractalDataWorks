@@ -18,10 +18,10 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, UserRolesResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="GetUserRolesEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
-    private readonly UserRoleConfigurationProvider _userRoleProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
+    private readonly IUserRoleConfigurationProvider _userRoleProvider;
 
-    private readonly UserConfigurationProvider _userProvider;
+    private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -29,12 +29,12 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="GetUserRolesEndpointBase"/> class.</summary>
-    protected GetUserRolesEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider,
-        UserRoleConfigurationProvider userRoleProvider,
-        UserConfigurationProvider userProvider)
+    protected GetUserRolesEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider,
+        IUserRoleConfigurationProvider userRoleProvider,
+        IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
         _userRoleProvider = userRoleProvider;
         _userProvider = userProvider;
     }
@@ -43,12 +43,12 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the user-role configuration provider.
     /// </summary>
-    protected UserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
+    protected IUserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:read".
@@ -74,7 +74,10 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
         
         try
         {
-            var userResult = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
+            // The route takes an id OR a name; the domain provider answers each by its own overload.
+            var userResult = Guid.TryParse(req.IdOrName, out var parsedUserId)
+                ? await _userProvider.Get(parsedUserId, ct).ConfigureAwait(false)
+                : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
             if (!userResult.IsSuccess || userResult.Value is null)
             {
                 await Send.NotFoundAsync(ct).ConfigureAwait(false);
@@ -83,9 +86,12 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
 
             var userId = userResult.Value.Id;
             var userIdString = userId.ToString();
-            var allRoles = await _roleProvider.GetAllRoles(ct).ConfigureAwait(false);
+            var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
 
-            var userRolesResult = await _userRoleProvider.GetByUser(userIdString, ct).ConfigureAwait(false);
+            var userRolesResult = await _userRoleProvider
+                .Find<UserRoleImplementationConfiguration>(
+                    ur => string.Equals(ur.UserId, userIdString, StringComparison.OrdinalIgnoreCase), ct)
+                .ConfigureAwait(false);
             if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
             {
                 await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);

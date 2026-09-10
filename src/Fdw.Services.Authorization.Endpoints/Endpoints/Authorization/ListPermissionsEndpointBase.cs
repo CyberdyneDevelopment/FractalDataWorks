@@ -16,7 +16,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IAuthorizationProvider _authorizationProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -26,10 +26,10 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-    protected ListPermissionsEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider, ITenantContext? tenantContext = null)
+    protected ListPermissionsEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider, ITenantContext? tenantContext = null)
     {
         EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _authorizationProvider = authorizationProvider;
         _tenantContext = tenantContext;
     }
 
@@ -37,7 +37,7 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -63,7 +63,7 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
         
         AuthorizationEndpointLog.ListingPermissions(EndpointLogger);
 
-        var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
+        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
 
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
