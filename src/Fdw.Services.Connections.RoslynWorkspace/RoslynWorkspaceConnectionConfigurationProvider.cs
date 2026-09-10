@@ -1,35 +1,21 @@
-using System;
-using System.Collections.Generic;
 using Fdw.Services.Configuration;
-using Fdw.Services.Connections.Abstractions;
-using Fdw.Services.Connections.RoslynWorkspace.Commands;
-using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Connections.RoslynWorkspace;
 
-/// <summary>Typed configuration provider for RoslynWorkspace connections.</summary>
-/// <remarks>
-/// Queries conn.RoslynWorkspaceConnection via the configurationGateway. Get(Guid id) accepts the parent
-/// Connection's logical Id and routes to <c>WHERE [ConnectionId]=@p0 AND IsCurrent=1</c>
-/// via the container FK key discovered from the IDataStore tree.
-/// </remarks>
-public class RoslynWorkspaceConnectionConfigurationProvider
-    : ImplementationConfigurationProviderBase<IConnectionImplementationConfiguration>
+/// <summary>Supplies the Roslyn workspace connection's own configuration.</summary>
+public sealed class RoslynWorkspaceConnectionConfigurationProvider
+    : ImplementationProviderBase<RoslynWorkspaceConnectionConfiguration>,
+      IRoslynWorkspaceConnectionConfigurationProvider
 {
-
     /// <summary>Initializes a new instance of the <see cref="RoslynWorkspaceConnectionConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public RoslynWorkspaceConnectionConfigurationProvider(
         ILogger<RoslynWorkspaceConnectionConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "conn")
-        : base(logger ?? NullLogger<RoslynWorkspaceConnectionConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName, "RoslynWorkspaceConnection")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "conn", "RoslynWorkspaceConnection")
     {
     }
 }

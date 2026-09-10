@@ -1,45 +1,22 @@
-using Fdw.Configuration;
-using System;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
-using Fdw.Services.Connections.Commands;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Connections;
 
-/// <summary>
-/// The connection domain's configuration provider.
-/// </summary>
-/// <remarks>
-/// It reads <c>conn.Connection</c> to find a configured connection by name or id, takes the
-/// <c>Implementation</c> that row names, and hands the request to the implementation provider
-/// registered under it — <c>MsSql</c> to <c>conn.MsSqlConnection</c>, <c>Sqlite</c> to
-/// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
-/// </remarks>
-public class ConnectionConfigurationProvider
-    : ImplementationConfigurationProviderBase<IConnectionImplementationConfiguration>,
+/// <summary>Supplies the configured connections.</summary>
+public sealed class ConnectionConfigurationProvider
+    : DomainConfigurationProviderBase<IConnectionImplementationConfiguration>,
       IConnectionConfigurationProvider
 {
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.
-    /// </summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
-    /// <param name="dataStoreName">The connection the domain's rows live in.</param>
-    /// <param name="pathName">The schema the domain's rows live in.</param>
+    /// <summary>Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
     public ConnectionConfigurationProvider(
         ILogger<ConnectionConfigurationProvider> logger,
-        IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName,
-        string pathName = "conn")
-        : base(logger ?? NullLogger<ConnectionConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName,
-               "Connection")
+        IConfigurationGatewayProvider gatewayProvider)
+        : base(logger, gatewayProvider, "PlatformConfiguration", "conn", "Connection")
     {
     }
 }
