@@ -17,12 +17,13 @@ namespace Fdw.Services.Hosts;
 /// datastore differs.
 /// </remarks>
 public class HostConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          HostConfiguration,
-          IHostImplementationConfiguration,
-          HostConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<HostConfiguration, IHostImplementationConfiguration, HostConfigurationCommand>,
       IHostConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="HostConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
     /// <param name="gatewayProvider">Yields the gateway for the named datastore.</param>
@@ -38,16 +39,4 @@ public class HostConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override HostConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

@@ -67,7 +67,7 @@ public static class TokenManagerTypes
                 ConfigurationConnection));
         builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
             sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
-        builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, Commands.TokenManagerConfigurationCommand>>(
+        builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, ITokenManagerImplementationConfiguration, TokenManagerConfigurationCommand>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
         builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
             sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());

@@ -49,8 +49,8 @@ public class DefaultConfigurationProviderGetByIdTests
             fkColumn: "SecretManagerId");
 
 
-        var provider = new ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>(
-            NullLogger<ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>>.Instance,
+        var provider = new ImplementationConfigurationProviderBase<TestChildConfig, ITestChildConfigImplementationConfiguration, TestChildConfigCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestChildConfig, ITestChildConfigImplementationConfiguration, TestChildConfigCommand>>.Instance,
             GatewayProviderFor(fakeGateway),
             "PlatformConfiguration",
             "sec");

@@ -53,7 +53,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                     sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         OperationsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, IEscalationPolicyImplementationConfiguration, EscalationPolicyConfigurationCommand>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
                 sp => sp.GetRequiredService<EscalationConfigurationProvider>());

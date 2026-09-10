@@ -22,6 +22,10 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner", ServiceType = "ClaimMapped")]
 public sealed partial class ClaimMappedExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the unique identifier for this typed-body row
     /// (<c>sec.ClaimMappedExternalIdentityProvisioner.Id</c>).

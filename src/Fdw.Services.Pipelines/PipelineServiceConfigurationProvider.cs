@@ -20,12 +20,13 @@ namespace Fdw.Services.Pipelines;
 /// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
 /// </summary>
 public class PipelineServiceConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          PipelineConfiguration,
-          IPipelineImplementationConfiguration,
-          PipelineConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<PipelineConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>,
       IPipelineConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="PipelineServiceConfigurationProvider"/> class.</summary>
     public PipelineServiceConfigurationProvider(
@@ -38,16 +39,4 @@ public class PipelineServiceConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override PipelineConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

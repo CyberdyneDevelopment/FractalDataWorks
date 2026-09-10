@@ -18,12 +18,13 @@ namespace Fdw.Services.Connections;
 /// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
 /// </remarks>
 public class ConnectionConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          ConnectionConfiguration,
-          IConnectionImplementationConfiguration,
-          ConnectionConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<ConnectionConfiguration, IConnectionImplementationConfiguration, ConnectionConfigurationCommand>,
       IConnectionConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.
     /// </summary>
@@ -42,16 +43,4 @@ public class ConnectionConfigurationProvider
                pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override ConnectionConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

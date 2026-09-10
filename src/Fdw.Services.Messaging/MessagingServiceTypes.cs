@@ -57,7 +57,7 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<MessagingConfigurationProvider>(
                 sp => (MessagingConfigurationProvider)sp.GetRequiredService<IMessagingConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<MessagingConfiguration, MessagingConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<MessagingConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>>(
                 sp => sp.GetRequiredService<MessagingConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<MessagingConfiguration>>(
                 sp => sp.GetRequiredService<MessagingConfigurationProvider>());

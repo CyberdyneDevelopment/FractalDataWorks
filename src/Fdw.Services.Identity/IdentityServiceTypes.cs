@@ -79,7 +79,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     ConfigurationConnection));
             builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(
                 sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());

@@ -153,7 +153,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                         EtlPipelineTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EtlPipelineConfiguration, IEtlPipelineImplementationConfiguration, EtlPipelineConfigurationCommand>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());

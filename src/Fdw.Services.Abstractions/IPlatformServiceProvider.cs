@@ -60,12 +60,6 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
     where TService : IGenericService
     where TConfiguration : IImplementationConfiguration
 {
-    /// <summary>
-    /// Gets a service instance built from the supplied strongly-typed configuration.
-    /// No name/id lookup is performed — the configuration's
-    /// <see cref="IDomainConfiguration.Implementation"/> selects the factory directly.
-    /// </summary>
-    Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a factory for a service option type.

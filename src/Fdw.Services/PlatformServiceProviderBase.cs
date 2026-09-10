@@ -32,11 +32,13 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
     private readonly ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
-    private readonly Dictionary<string, IServiceFactory<TService>> _factories = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> _factories
+        = new(StringComparer.OrdinalIgnoreCase);
+    private readonly IServiceProvider? _services;
     private IDomainConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
 
-    /// <summary>Gets the registered service factories keyed by service option type.</summary>
-    protected IDictionary<string, IServiceFactory<TService>> Factories => _factories;
+    /// <summary>Gets the registered factory resolvers keyed by implementation.</summary>
+    protected IDictionary<string, Func<IServiceProvider, IServiceFactory<TService>>> Factories => _factories;
 
     /// <summary>Gets the domain's parent configuration provider.</summary>
     protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
@@ -77,13 +79,16 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
         var providerType = GetType().Name;
 
+        _services = services;
+
+        // The resolver is copied, not invoked. Calling it here would resolve every factory once and
+        // hand the same object back forever -- which quietly turns a transient registration into a
+        // singleton. Invoking it at the point of use is what makes the registered lifetime mean what
+        // it says.
         foreach (var registration in _registered)
         {
-            var factory = registration.Value(services);
-            _factories[registration.Key] = factory;
+            _factories[registration.Key] = registration.Value;
             ServiceLogger.ProviderFactoryRegistered(_logger, registration.Key);
-            ServiceLogger.FactoryResolvedIntoProvider(
-                _logger, providerType, factory?.GetType().Name ?? "<null>", registration.Key);
         }
 
         ServiceLogger.ProviderFactoryRegistryDrained(
@@ -106,8 +111,7 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
     /// <inheritdoc />
     public IGenericResult Register(string implementation, IServiceFactory<TService> factory)
     {
-        _factories[implementation] = factory;
-        _registered[implementation] = _ => factory;
+        _factories[implementation] = _ => factory;
         ServiceLogger.ProviderFactoryRegistered(_logger, implementation);
         return GenericResult.Success();
     }
@@ -133,15 +137,17 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
 
     /// <inheritdoc />
     public virtual async Task<IGenericResult<TService>> Get(string name, CancellationToken cancellationToken = default)
-        => await Resolve(name, ct => _domainConfigurationProvider!.Get(name, ct), cancellationToken).ConfigureAwait(false);
+        => await Build(name, ct => _domainConfigurationProvider!.Get(name, ct), cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public virtual async Task<IGenericResult<TService>> Get(Guid id, CancellationToken cancellationToken = default)
-        => await Resolve(id.ToString(), ct => _domainConfigurationProvider!.Get(id, ct), cancellationToken).ConfigureAwait(false);
+        => await Build(id.ToString(), ct => _domainConfigurationProvider!.Get(id, ct), cancellationToken).ConfigureAwait(false);
 
-    private async Task<IGenericResult<TService>> Resolve(
+    // One read. The configuration comes back carrying the domain it belongs to, so the factory is
+    // chosen from the thing already in hand rather than by reading the domain row a second time.
+    private async Task<IGenericResult<TService>> Build(
         string identifier,
-        Func<CancellationToken, Task<IGenericResult<IDomainConfiguration>>> get,
+        Func<CancellationToken, Task<IGenericResult<TConfiguration>>> get,
         CancellationToken cancellationToken)
     {
         ServiceLogger.GettingServiceByName(_logger, identifier);
@@ -163,54 +169,29 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                 ResultDetails.Create("Identifier", identifier));
         }
 
-        return await CreateFrom(configuration.Value, identifier, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<IGenericResult<TService>> CreateFrom(
-        IDomainConfiguration configuration, string identifier, CancellationToken cancellationToken)
-    {
-        // Read once, off the row that owns the field. The implementation table has no
-        // Implementation column -- the discriminator is what selected that table -- so reading it
-        // back off the implementation asked an object a question it cannot answer, and every
-        // implementation-shaped container answered the same way: empty.
-        var implementation = configuration.Implementation;
-        if (string.IsNullOrEmpty(implementation))
+        if (!_factories.TryGetValue(configuration.Value.Domain, out var resolve) || _services is null)
         {
-            ServiceLogger.ImplementationMissing(_logger, identifier);
-            return GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("ImplementationMissing"),
-                ResultDetails.Create("Identifier", identifier));
-        }
-
-        if (!_factories.TryGetValue(implementation, out var factory))
-        {
-            ServiceLogger.NoFactoryRegistered(_logger, implementation);
+            ServiceLogger.NoFactoryRegistered(_logger, configuration.Value.Domain);
             ServiceLogger.FactoryLookupMiss(
-                _logger, GetType().Name, implementation, identifier,
+                _logger, GetType().Name, configuration.Value.Domain, identifier,
                 _factories.Count == 0 ? "<empty>" : string.Join(", ", _factories.Keys));
             return GenericResult<TService>.Failure(
                 ServicesResultCodes.ByName("NoFactoryRegistered"),
-                ResultDetails.Create("Implementation", implementation, "Identifier", identifier));
+                ResultDetails.Create("Implementation", configuration.Value.Domain, "Identifier", identifier));
         }
 
-        ServiceLogger.FactoryLookupSucceeded(_logger, implementation);
+        // Invoked here, not cached: a factory registered transient hands back a new instance, a
+        // singleton the same one -- whichever the application asked for.
+        var factory = resolve(_services);
+        ServiceLogger.FactoryLookupSucceeded(_logger, configuration.Value.Domain);
 
-        // The factory builds from the implementation. The domain row has done its one job by naming
-        // which factory to use.
-        if (configuration.ImplementationConfiguration is not { } implementationConfiguration)
-            return GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("ConfigurationNotFound"),
-                ResultDetails.Create("Identifier", identifier,
-                                     "Implementation", implementation));
-
-        var created = factory is IAsyncServiceFactory<TService> asyncFactory
-            ? await asyncFactory.Create(implementationConfiguration, cancellationToken).ConfigureAwait(false)
-            : Create(factory, implementationConfiguration);
-
-        return created ?? GenericResult<TService>.Failure(
-            ServicesResultCodes.ByName("InvalidFactoryType"),
-            ResultDetails.Create("Implementation", implementation,
-                                 "FactoryType", factory.GetType().Name));
+        return (factory is IAsyncServiceFactory<TService> asyncFactory
+            ? await asyncFactory.Create(configuration.Value, cancellationToken).ConfigureAwait(false)
+            : Create(factory, configuration.Value))
+            ?? GenericResult<TService>.Failure(
+                ServicesResultCodes.ByName("InvalidFactoryType"),
+                ResultDetails.Create("Implementation", configuration.Value.Domain,
+                                     "FactoryType", factory.GetType().Name));
     }
 
     // ── Typed views ─────────────────────────────────────────────────────────
@@ -262,10 +243,4 @@ public abstract class PlatformServiceProviderBase<TService, TConfiguration, TFac
                                      "ActualType", configuration?.GetType().Name ?? "(null)")));
 
     /// <inheritdoc />
-    public virtual Task<IGenericResult<TService>> Get(IDomainConfiguration configuration, CancellationToken cancellationToken = default)
-        => configuration is null
-            ? Task.FromResult(GenericResult<TService>.Failure(
-                ServicesResultCodes.ByName("ConfigurationRequired"),
-                ResultDetails.Create("ServiceType", typeof(TService).Name)))
-            : CreateFrom(configuration, configuration.Name, cancellationToken);
 }

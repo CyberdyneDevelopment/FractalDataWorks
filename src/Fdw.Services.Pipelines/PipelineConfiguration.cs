@@ -27,7 +27,7 @@ public partial class PipelineConfiguration : IPipelineConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "Pipeline";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the service option type — the pipeline KIND discriminator (e.g., "Etl").
@@ -83,6 +83,10 @@ public partial class PipelineConfiguration : IPipelineConfiguration
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IPipelineImplementationConfiguration?)value;
+    }
 
 }

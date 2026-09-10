@@ -105,7 +105,7 @@ public sealed class RecursiveCascadeSaveTests
         provider.Register(
             "SomeOtherKind",
             new ImplementationConfigurationProvider<ITestBodyConfiguration, TestBodyConfiguration, TestBodyCommand>(
-                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, TestBodyCommand>>.Instance,
+                NullLogger<ImplementationConfigurationProviderBase<TestBodyConfiguration, ITestBodyImplementationConfiguration, TestBodyConfigurationCommand>>.Instance,
                 GatewayProviderFor(gateway),
                 "PlatformConfiguration",
                 "pipe"));
@@ -122,7 +122,7 @@ public sealed class RecursiveCascadeSaveTests
         : ServiceConfigurationProviderBase<TestRootConfiguration, ITestBodyConfiguration, TestRootCommand>
     {
         public TestRootDomainProvider(IConfigurationGatewayProvider gatewayProvider)
-            : base(NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
+            : base(NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration, TestRootConfigurationCommand>>.Instance,
                    gatewayProvider, "PlatformConfiguration", "pipe")
         {
         }
@@ -131,11 +131,11 @@ public sealed class RecursiveCascadeSaveTests
             => new() { Name = name, Implementation = implementation, Configuration = implementationConfiguration };
     }
 
-    private static ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand> MakeProvider(RecordingGateway gateway)
+    private static ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration, TestRootConfigurationCommand> MakeProvider(RecordingGateway gateway)
     {
 
-        return new ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>(
-            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, TestRootCommand>>.Instance,
+        return new ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration, TestRootConfigurationCommand>(
+            NullLogger<ImplementationConfigurationProviderBase<TestRootConfiguration, ITestRootImplementationConfiguration, TestRootConfigurationCommand>>.Instance,
             GatewayProviderFor(gateway),
             "PlatformConfiguration",
             "pipe");
@@ -162,7 +162,7 @@ public sealed class RecursiveCascadeSaveTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string Domain => "TestRoot";
+        public string Domain { get; set; } = string.Empty;
         public string? Implementation { get; set; } = "Default";
         IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
 

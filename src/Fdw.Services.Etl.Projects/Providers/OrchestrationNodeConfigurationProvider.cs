@@ -32,9 +32,13 @@ namespace Fdw.Services.Etl.Projects.Providers;
 /// Delete) are inherited from the base unchanged — no per-domain override.
 /// </remarks>
 public class OrchestrationNodeConfigurationProvider
-    : ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, IOrchestrationNodeImplementationConfiguration, OrchestrationNodeConfigurationCommand>,
       IOrchestrationNodeConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     private readonly ILogger _logger;
 
     /// <summary>
@@ -48,7 +52,7 @@ public class OrchestrationNodeConfigurationProvider
                 sp.GetService<ILogger<OrchestrationNodeConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     EtlPipelineTypes.ConfigurationConnection));
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, OrchestrationNodeConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<OrchestrationNodeConfiguration, IOrchestrationNodeImplementationConfiguration, OrchestrationNodeConfigurationCommand>>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());
         services.TryAddSingleton<IOrchestrationNodeConfigurationProvider>(
             sp => sp.GetRequiredService<OrchestrationNodeConfigurationProvider>());

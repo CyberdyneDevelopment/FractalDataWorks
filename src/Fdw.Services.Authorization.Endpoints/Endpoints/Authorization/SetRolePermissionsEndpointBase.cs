@@ -24,7 +24,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissionsRequest, List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
-        private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
+        private readonly ImplementationConfigurationProviderBase<RolePermissionConfiguration, IRolePermissionImplementationConfiguration, RolePermissionConfigurationCommand> _rolePermissionProvider;
     private readonly RoleConfigurationProvider _roleProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
@@ -36,7 +36,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
-    protected SetRolePermissionsEndpointBase(ILogger logger, ImplementationConfigurationProviderBase<RolePermissionConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
+    protected SetRolePermissionsEndpointBase(ILogger logger, ImplementationConfigurationProviderBase<RolePermissionConfiguration, IRolePermissionImplementationConfiguration, RolePermissionConfigurationCommand> rolePermissionProvider,
         RoleConfigurationProvider roleProvider,
         ISystemRoleConfiguration systemRoleConfiguration,
         ITenantContext? tenantContext = null)

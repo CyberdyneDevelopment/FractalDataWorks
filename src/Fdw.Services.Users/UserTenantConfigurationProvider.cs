@@ -27,8 +27,12 @@ namespace Fdw.Services.Users;
 /// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
 /// usage — tenant.UserTenants is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
 /// </remarks>
-public class UserTenantConfigurationProvider : ImplementationConfigurationProviderBase<UserTenantConfiguration, UserTenantConfigurationCommand>
+public class UserTenantConfigurationProvider : ImplementationConfigurationProviderBase<UserTenantConfiguration, IUserTenantImplementationConfiguration, UserTenantConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserTenantConfigurationProvider"/> class.</summary>

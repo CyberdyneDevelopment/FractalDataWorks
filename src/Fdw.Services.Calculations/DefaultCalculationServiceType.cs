@@ -92,7 +92,7 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
     {
         services.TryAddSingleton<ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>>(sp =>
             new ImplementationConfigurationProvider<ICalculationTypedConfiguration, TConfig, TCommand>(
-                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>>(),
+                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 "PlatformConfiguration",
                 "calc"));

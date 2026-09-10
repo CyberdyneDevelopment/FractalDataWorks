@@ -136,14 +136,14 @@ public sealed class RolePermissionResolverTests
                 rolePermissions ?? RolePermissions).Object,
             NullLogger<RolePermissionResolver>.Instance);
 
-    private static Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>> MockProvider<TConfig, TCommand>(
+    private static Mock<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>> MockProvider<TConfig, TCommand>(
         IEnumerable<TConfig> items)
         where TConfig : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : ConfigurationCommandBase<TConfig>
     {
-        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, TCommand>>(
+        var mock = new Mock<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<TConfig, ITConfigImplementationConfiguration, TConfigCommand>>.Instance,
             new ConfigurationGatewayProvider(),
             "TestStore", "authz");
         mock.Setup(p => p.Get(It.IsAny<CancellationToken>()))

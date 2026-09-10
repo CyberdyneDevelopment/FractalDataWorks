@@ -30,12 +30,13 @@ namespace Fdw.Services.Etl;
 /// domain's implementation contract so the Pipeline provider can register it.
 /// </remarks>
 public class EtlPipelineConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          EtlPipelineConfiguration,
-          IEtlPipelineTypedConfiguration,
-          EtlPipelineConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<EtlPipelineConfiguration, IEtlPipelineImplementationConfiguration, EtlPipelineConfigurationCommand>,
       IImplementationConfigurationProvider<IPipelineImplementationConfiguration>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="EtlPipelineConfigurationProvider"/> class.</summary>
     public EtlPipelineConfigurationProvider(
@@ -48,16 +49,6 @@ public class EtlPipelineConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override EtlPipelineConfiguration Compose<T>(
-        string implementation, string name, T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 
     async Task<IGenericResult<IPipelineImplementationConfiguration>>
         IImplementationConfigurationProvider<IPipelineImplementationConfiguration>.Get(

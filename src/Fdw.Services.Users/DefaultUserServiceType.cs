@@ -52,7 +52,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                     sp.GetService<ILogger<UserConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "usr"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration, UserConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserConfiguration>>(
                 sp => sp.GetRequiredService<UserConfigurationProvider>());
@@ -62,7 +62,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
                     sp.GetService<ILogger<UserTenantConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStore, "tenant"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserTenantConfiguration, UserTenantConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<UserTenantConfiguration, IUserTenantImplementationConfiguration, UserTenantConfigurationCommand>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<UserTenantConfiguration>>(
                 sp => sp.GetRequiredService<UserTenantConfigurationProvider>());

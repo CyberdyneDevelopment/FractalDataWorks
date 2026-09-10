@@ -31,11 +31,11 @@ public class QualityConfigurationProvider
     /// binding from IConfiguration is a Phase-1a concern and lives in the consuming
     /// <c>[Implementation].Configure</c>, not here.
     /// </summary>
-    private readonly ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand> _qualityRuleProvider;
-    private readonly ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand> _annotationProvider;
-    private readonly ImplementationConfigurationProviderBase<EnvironmentConfiguration, EnvironmentConfigurationCommand> _environmentProvider;
-    private readonly ImplementationConfigurationProviderBase<PromotionRequestConfiguration, PromotionRequestConfigurationCommand> _promotionRequestProvider;
-    private readonly ImplementationConfigurationProviderBase<GlossaryTermConfiguration, GlossaryTermConfigurationCommand> _glossaryTermProvider;
+    private readonly ImplementationConfigurationProviderBase<QualityRuleConfiguration, IQualityRuleImplementationConfiguration, QualityRuleConfigurationCommand> _qualityRuleProvider;
+    private readonly ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, IDataSetAnnotationImplementationConfiguration, DataSetAnnotationConfigurationCommand> _annotationProvider;
+    private readonly ImplementationConfigurationProviderBase<EnvironmentConfiguration, IEnvironmentImplementationConfiguration, EnvironmentConfigurationCommand> _environmentProvider;
+    private readonly ImplementationConfigurationProviderBase<PromotionRequestConfiguration, IPromotionRequestImplementationConfiguration, PromotionRequestConfigurationCommand> _promotionRequestProvider;
+    private readonly ImplementationConfigurationProviderBase<GlossaryTermConfiguration, IGlossaryTermImplementationConfiguration, GlossaryTermConfigurationCommand> _glossaryTermProvider;
 
     /// <summary>Initializes a new instance of the <see cref="QualityConfigurationProvider"/> class.</summary>
     #pragma warning disable MA0051
@@ -47,15 +47,15 @@ public class QualityConfigurationProvider
     {
         _ = logger;
 
-        _qualityRuleProvider = new ImplementationConfigurationProviderBase<QualityRuleConfiguration, QualityRuleConfigurationCommand>(
+        _qualityRuleProvider = new ImplementationConfigurationProviderBase<QualityRuleConfiguration, IQualityRuleImplementationConfiguration, QualityRuleConfigurationCommand>(
             logger: null, gatewayProvider, dataStoreName, "quality");
-        _annotationProvider = new ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, DataSetAnnotationConfigurationCommand>(
+        _annotationProvider = new ImplementationConfigurationProviderBase<DataSetAnnotationConfiguration, IDataSetAnnotationImplementationConfiguration, DataSetAnnotationConfigurationCommand>(
             logger: null, gatewayProvider, dataStoreName, "catalog");
-        _environmentProvider = new ImplementationConfigurationProviderBase<EnvironmentConfiguration, EnvironmentConfigurationCommand>(
+        _environmentProvider = new ImplementationConfigurationProviderBase<EnvironmentConfiguration, IEnvironmentImplementationConfiguration, EnvironmentConfigurationCommand>(
             logger: null, gatewayProvider, dataStoreName, "quality");
-        _promotionRequestProvider = new ImplementationConfigurationProviderBase<PromotionRequestConfiguration, PromotionRequestConfigurationCommand>(
+        _promotionRequestProvider = new ImplementationConfigurationProviderBase<PromotionRequestConfiguration, IPromotionRequestImplementationConfiguration, PromotionRequestConfigurationCommand>(
             logger: null, gatewayProvider, dataStoreName, "quality");
-        _glossaryTermProvider = new ImplementationConfigurationProviderBase<GlossaryTermConfiguration, GlossaryTermConfigurationCommand>(
+        _glossaryTermProvider = new ImplementationConfigurationProviderBase<GlossaryTermConfiguration, IGlossaryTermImplementationConfiguration, GlossaryTermConfigurationCommand>(
             logger: null, gatewayProvider, dataStoreName, "catalog");
     }
 

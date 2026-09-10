@@ -9,8 +9,12 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// The local health monitor's own configuration.
 /// </summary>
 [GenerateMapper]
-public sealed partial class LocalHealthMonitorConfiguration : IHealthMonitorImplementationConfiguration
+public sealed partial class LocalHealthMonitorConfiguration : ILocalHealthMonitorConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <inheritdoc/>
     public Guid Id { get; set; }
 

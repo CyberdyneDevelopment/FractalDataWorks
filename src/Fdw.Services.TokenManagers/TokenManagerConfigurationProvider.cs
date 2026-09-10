@@ -16,12 +16,13 @@ namespace Fdw.Services.TokenManagers;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class TokenManagerConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          TokenManagerConfiguration,
-          ITokenManagerImplementationConfiguration,
-          TokenManagerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<TokenManagerConfiguration, ITokenManagerImplementationConfiguration, TokenManagerConfigurationCommand>,
       ITokenManagerConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="TokenManagerConfigurationProvider"/> class.</summary>
     public TokenManagerConfigurationProvider(
@@ -34,16 +35,4 @@ public class TokenManagerConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override TokenManagerConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

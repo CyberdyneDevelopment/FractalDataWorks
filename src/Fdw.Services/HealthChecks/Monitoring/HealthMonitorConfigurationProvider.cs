@@ -18,12 +18,13 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// mechanism is identical either way; only the connection differs.
 /// </remarks>
 public sealed class HealthMonitorConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          HealthMonitorConfiguration,
-          IHealthMonitorImplementationConfiguration,
-          HealthMonitorConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<HealthMonitorConfiguration, IHealthMonitorImplementationConfiguration, HealthMonitorConfigurationCommand>,
       IHealthMonitorConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthMonitorConfigurationProvider"/> class.
     /// </summary>
@@ -42,16 +43,4 @@ public sealed class HealthMonitorConfigurationProvider
                pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override HealthMonitorConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

@@ -28,7 +28,7 @@ public partial class RoleMappingConfiguration : IRoleMappingConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "RoleMapping";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the option name selecting which role-mapping implementation is configured.</summary>
     public string? Implementation { get; set; }
@@ -45,6 +45,10 @@ public partial class RoleMappingConfiguration : IRoleMappingConfiguration
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IRoleMappingImplementationConfiguration?)value;
+    }
 
 }

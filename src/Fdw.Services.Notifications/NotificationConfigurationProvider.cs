@@ -23,12 +23,13 @@ namespace Fdw.Services.Notifications;
 /// NotificationRule sub-provider (separate config category, same domain).
 /// </summary>
 public class NotificationConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          NotificationConfiguration,
-          INotificationImplementationConfiguration,
-          NotificationConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<NotificationConfiguration, INotificationImplementationConfiguration, NotificationConfigurationCommand>,
       INotificationConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="NotificationConfigurationProvider"/> class.</summary>
     public NotificationConfigurationProvider(
@@ -41,16 +42,4 @@ public class NotificationConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override NotificationConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

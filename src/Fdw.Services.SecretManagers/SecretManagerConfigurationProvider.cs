@@ -31,12 +31,13 @@ namespace Fdw.Services.SecretManagers;
 /// creation on Save), and registers typed providers via the inherited <c>Register</c>.
 /// </summary>
 public class SecretManagerConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          SecretManagerConfiguration,
-          ISecretManagerImplementationConfiguration,
-          SecretManagerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<SecretManagerConfiguration, ISecretManagerImplementationConfiguration, SecretManagerConfigurationCommand>,
       ISecretManagerConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
 
 
@@ -63,17 +64,5 @@ public class SecretManagerConfigurationProvider
     /// plugin-removed types).
     /// </summary>
     public Task<IGenericResult<SecretManagerConfiguration>> GetHeader(string name, CancellationToken ct = default)
-        => GetDomainByName(name, ct);
-
-    /// <inheritdoc />
-    protected override SecretManagerConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
+        => GetByName(name, ct);
 }

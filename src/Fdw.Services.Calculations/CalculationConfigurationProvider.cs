@@ -25,11 +25,12 @@ namespace Fdw.Services.Calculations;
 /// registered with it via <c>Register</c> in <see cref="DefaultCalculationServiceType"/>.
 /// </summary>
 public class CalculationConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          CalculationEntityConfiguration,
-          ICalculationTypedConfiguration,
-          CalculationEntityConfigurationCommand>
+    : ImplementationConfigurationProviderBase<CalculationEntityConfiguration, ICalculationEntityImplementationConfiguration, CalculationEntityConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Registers the CalculationConfigurationProvider with DI, targeting this domain's own default
     /// location. To override, call <c>SetConfiguration</c> on the resolved singleton.
@@ -70,16 +71,4 @@ public class CalculationConfigurationProvider
 
         return base.Save(record, ct);
     }
-
-    /// <inheritdoc />
-    protected override CalculationEntityConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

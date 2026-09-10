@@ -36,7 +36,7 @@ public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentit
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "ExternalIdentityProvisioner";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the implementation this record names.</summary>
     [ValuesFrom(typeof(ExternalIdentityProvisionerTypes))]
@@ -88,6 +88,10 @@ public partial class ExternalIdentityProvisionerConfiguration : IExternalIdentit
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IExternalIdentityProvisionerImplementationConfiguration?)value;
+    }
 
 }

@@ -23,7 +23,7 @@ namespace Fdw.Services.Configuration;
 /// lets one domain hold every implementation provider it has in a single dictionary.
 /// </remarks>
 public class ImplementationConfigurationProvider<TContract, TConfig, TCommand>
-    : ImplementationConfigurationProviderBase<TConfig, TCommand>,
+    : ImplementationConfigurationProviderBase<TConfig, TContract, TCommand>,
       IImplementationConfigurationProvider<TContract>
     where TContract : IImplementationConfiguration
     where TConfig : class, TContract
@@ -39,7 +39,7 @@ public class ImplementationConfigurationProvider<TContract, TConfig, TCommand>
     /// <param name="dataStoreName">The connection the rows live in.</param>
     /// <param name="pathName">The schema the rows live in.</param>
     public ImplementationConfigurationProvider(
-        ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>? logger,
+        ILogger<ImplementationConfigurationProviderBase<TConfig, TContract, TCommand>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
@@ -50,7 +50,7 @@ public class ImplementationConfigurationProvider<TContract, TConfig, TCommand>
     /// <inheritdoc />
     async Task<IGenericResult<TContract>> IImplementationConfigurationProvider<TContract>.Get(
         Guid domainId, CancellationToken cancellationToken)
-        => Widen(await Get(domainId, cancellationToken).ConfigureAwait(false));
+        => await Get(domainId, cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     async Task<IGenericResult<IReadOnlyList<TContract>>> IImplementationConfigurationProvider<TContract>.Get(

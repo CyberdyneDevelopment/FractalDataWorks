@@ -28,6 +28,10 @@ namespace Fdw.Services.TokenManagers;
 [ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "Jwt")]
 public sealed partial class JwtTokenManagerConfiguration : ITokenManagerImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Gets or sets this typed-body row's identifier (<c>auth.JwtTokenManager.Id</c>).</summary>
     public Guid Id { get; set; }
 

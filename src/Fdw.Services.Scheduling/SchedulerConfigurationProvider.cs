@@ -18,12 +18,13 @@ namespace Fdw.Services.Scheduling;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class SchedulerConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          SchedulerConfiguration,
-          ISchedulerImplementationConfiguration,
-          SchedulerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<SchedulerConfiguration, ISchedulerImplementationConfiguration, SchedulerConfigurationCommand>,
       ISchedulerConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationProvider"/> class.</summary>
     public SchedulerConfigurationProvider(
@@ -36,16 +37,4 @@ public class SchedulerConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override SchedulerConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

@@ -29,8 +29,12 @@ namespace Fdw.Services.Users;
 /// usage — usr.Users is ConfigurationDb data, and the schema-built ConfigurationDb store has no ConnectionId,
 /// so routing through IDataGateway produces "DataStore 'ConfigurationDb' has no ConnectionId".
 /// </remarks>
-public class UserConfigurationProvider : ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>
+public class UserConfigurationProvider : ImplementationConfigurationProviderBase<UserConfiguration, IUserImplementationConfiguration, UserConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserConfigurationProvider"/> class.</summary>

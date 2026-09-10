@@ -9,12 +9,13 @@ namespace Fdw.Services.Data;
 
 /// <summary>Reads the data gateway domain's records and routes to the implementation that owns each.</summary>
 public class DataGatewayDomainConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          DataGatewayDomainConfiguration,
-          IDataGatewayImplementationConfiguration,
-          DataGatewayDomainConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DataGatewayDomainConfiguration, IDataGatewayDomainImplementationConfiguration, DataGatewayDomainConfigurationCommand>,
       IDataGatewayConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="DataGatewayDomainConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the configuration connection.</param>
@@ -33,14 +34,4 @@ public class DataGatewayDomainConfigurationProvider
     }
 
     /// <inheritdoc/>
-    protected override DataGatewayDomainConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

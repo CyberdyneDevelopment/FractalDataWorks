@@ -37,6 +37,10 @@ namespace Fdw.Services.Identity.JwtAssertion;
 [ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "JwtAssertion")]
 public partial class JwtAssertionConfiguration : IIdentityServiceImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="JwtAssertionConfiguration"/> class.
     /// </summary>

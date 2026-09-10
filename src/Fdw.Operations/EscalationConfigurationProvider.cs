@@ -20,8 +20,12 @@ using Microsoft.Extensions.Options;
 namespace Fdw.Operations;
 
 /// <summary>Configuration provider for escalation policy configurations.</summary>
-public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>
+public class EscalationConfigurationProvider : ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, IEscalationPolicyImplementationConfiguration, EscalationPolicyConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="EscalationConfigurationProvider"/> class.</summary>
     public EscalationConfigurationProvider(
         ILogger<EscalationConfigurationProvider> logger,

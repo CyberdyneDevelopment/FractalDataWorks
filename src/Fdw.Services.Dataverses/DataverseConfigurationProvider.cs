@@ -27,9 +27,13 @@ namespace Fdw.Services.Dataverses;
 /// does not have.
 /// </remarks>
 public class DataverseConfigurationProvider
-    : ImplementationConfigurationProviderBase<DataverseConfiguration, DataverseConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration, DataverseConfigurationCommand>,
       IDataverseConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Registers the provider and the interfaces callers resolve it through.
     /// </summary>
@@ -43,7 +47,7 @@ public class DataverseConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataverseConfiguration, DataverseConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<DataverseConfiguration, IDataverseImplementationConfiguration, DataverseConfigurationCommand>>(
             sp => sp.GetRequiredService<DataverseConfigurationProvider>());
 
         services.TryAddSingleton<IDataverseConfigurationProvider>(

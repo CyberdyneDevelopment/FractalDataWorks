@@ -80,7 +80,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(
                 sp => (CredentialServiceConfigurationProvider)sp.GetRequiredService<ICredentialServiceConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, ICredentialServiceImplementationConfiguration, CredentialServiceConfigurationCommand>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<CredentialServiceConfiguration>>(
                 sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());

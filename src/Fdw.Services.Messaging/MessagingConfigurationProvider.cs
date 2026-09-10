@@ -21,12 +21,13 @@ namespace Fdw.Services.Messaging;
 /// closed generic that two domains could satisfy.
 /// </remarks>
 public sealed class MessagingConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          MessagingConfiguration,
-          IMessagingImplementationConfiguration,
-          MessagingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<MessagingConfiguration, IMessagingImplementationConfiguration, MessagingConfigurationCommand>,
       IMessagingConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingConfigurationProvider"/> class.
     /// </summary>
@@ -53,7 +54,7 @@ public sealed class MessagingConfigurationProvider
     public async Task<IGenericResult<IMessagingConfiguration>> GetHeader(
         string name, CancellationToken cancellationToken = default)
     {
-        var header = await GetDomainByName(name, cancellationToken).ConfigureAwait(false);
+        var header = await GetByName(name, cancellationToken).ConfigureAwait(false);
         if (!header.IsSuccess)
             return header.ToNewResult<IMessagingConfiguration>();
 
@@ -64,16 +65,4 @@ public sealed class MessagingConfigurationProvider
             : GenericResult<IMessagingConfiguration>.Failure(
                 MessagingLog.LocationNotConfigured(_log, $"no Messaging row named '{name}' exists"));
     }
-
-    /// <inheritdoc />
-    protected override MessagingConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

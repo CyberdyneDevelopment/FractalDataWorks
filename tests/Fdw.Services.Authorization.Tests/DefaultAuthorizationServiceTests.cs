@@ -378,13 +378,13 @@ public sealed class DefaultAuthorizationServiceTests
         return mock.Object;
     }
 
-    private static ImplementationConfigurationProviderBase<T, TCommand> CreateProviderMock<T, TCommand>()
+    private static ImplementationConfigurationProviderBase<T, ITImplementationConfiguration, TCommand> CreateProviderMock<T, TCommand>()
         where T : class, Fdw.Configuration.IGenericConfiguration
         where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<T>
     {
-        return new Mock<ImplementationConfigurationProviderBase<T, TCommand>>(
+        return new Mock<ImplementationConfigurationProviderBase<T, ITImplementationConfiguration, TCommand>>(
             MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<T, TCommand>>.Instance,
+            NullLogger<ImplementationConfigurationProviderBase<T, ITImplementationConfiguration, TCommand>>.Instance,
             GatewayProviderFor(Mock.Of<IConfigurationGateway>(
                 g => g.DataStores == (System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>())),
             "TestStore",

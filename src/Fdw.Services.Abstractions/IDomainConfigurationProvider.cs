@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
@@ -9,7 +10,7 @@ namespace Fdw.Services.Abstractions;
 /// <summary>
 /// Resolves a domain's configured members and routes each to the implementation provider that owns it.
 /// </summary>
-/// <typeparam name="TConfiguration">The domain's implementation configuration contract.</typeparam>
+/// <typeparam name="TImplementationConfiguration">The domain's implementation configuration contract.</typeparam>
 /// <remarks>
 /// It queries its <c>IConfigurationGateway</c> for the domain's configurations, finds the member
 /// by name or id, reads the <c>Implementation</c> that member names, and passes the member's
@@ -28,52 +29,81 @@ namespace Fdw.Services.Abstractions;
 /// row's <c>RowId</c> and cannot span connections.
 /// </para>
 /// </remarks>
-public interface IDomainConfigurationProvider<TConfiguration>
-    where TConfiguration : IImplementationConfiguration
+public interface IDomainConfigurationProvider<TImplementationConfiguration>
+    where TImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets a configured member's domain record, with its implementation composed onto it.</summary>
+    /// <summary>Gets a configured member's implementation configuration, resolved through its domain record.</summary>
     /// <param name="name">The member's name.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The domain record, or a structured failure.</returns>
-    Task<IGenericResult<IDomainConfiguration>> Get(string name, CancellationToken cancellationToken = default);
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The implementation configuration, or a structured failure.</returns>
+    Task<IGenericResult<TImplementationConfiguration>> Get(string name, CancellationToken ct = default);
 
-    /// <summary>Gets a configured member's domain record by durable id, with its implementation composed onto it.</summary>
+    /// <summary>Gets a configured member's implementation configuration by the domain record's durable id.</summary>
     /// <param name="id">The member's durable id.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The domain record, or a structured failure.</returns>
-    Task<IGenericResult<IDomainConfiguration>> Get(Guid id, CancellationToken cancellationToken = default);
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The implementation configuration, or a structured failure.</returns>
+    Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, CancellationToken ct = default);
 
-    /// <summary>Writes a configured member — its domain row and its implementation row.</summary>
+    /// <summary>Lists the domain's records.</summary>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>Every domain record, or a structured failure.</returns>
+    /// <remarks>
+    /// The domain records themselves, not their implementations: a list is what a caller browses to
+    /// find the member it wants, and each record names its own implementation.
+    /// </remarks>
+    Task<IGenericResult<IReadOnlyList<IDomainConfiguration>>> Get(CancellationToken ct = default);
+
+    /// <summary>Updates an existing member's implementation configuration.</summary>
     /// <typeparam name="T">The implementation configuration being written.</typeparam>
-    /// <param name="implementation">Which implementation this member is.</param>
-    /// <param name="name">The member's name.</param>
-    /// <param name="implementationConfiguration">The implementation's own configuration.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <param name="implementationConfiguration">The configuration to write.</param>
+    /// <param name="domainId">The domain record this implementation hangs from.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>Success, or a structured failure.</returns>
+    /// <remarks>
+    /// The domain row already exists, so it states the name and the implementation -- there is
+    /// nothing for the caller to restate and nothing to create.
+    /// </remarks>
     Task<IGenericResult> Save<T>(
-        string implementation,
-        string name,
         T implementationConfiguration,
-        CancellationToken cancellationToken = default)
-        where T : TConfiguration;
+        Guid domainId,
+        CancellationToken ct = default)
+        where T : TImplementationConfiguration;
+
+    /// <summary>Writes a new configured member: its domain record, then its implementation.</summary>
+    /// <typeparam name="T">The implementation configuration being written.</typeparam>
+    /// <param name="implementationConfiguration">The configuration to write.</param>
+    /// <param name="implementationName">Which implementation this is -- it selects the provider that writes it.</param>
+    /// <param name="name">The member's name, which the new domain row carries.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>Success, or a structured failure.</returns>
+    /// <remarks>
+    /// There is no domain record yet, so this creates one and writes the implementation against the
+    /// id it was assigned.
+    /// </remarks>
+    Task<IGenericResult> Save<T>(
+        T implementationConfiguration,
+        string implementationName,
+        string name,
+        CancellationToken ct = default)
+        where T : TImplementationConfiguration;
+
 
     /// <summary>Deletes a configured member by durable id.</summary>
     /// <param name="id">The member's durable id.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>Success, or a structured failure.</returns>
-    Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default);
+    Task<IGenericResult> Delete(Guid id, CancellationToken ct = default);
 
     /// <summary>Deletes a configured member by name.</summary>
     /// <param name="name">The member's name.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>Success, or a structured failure.</returns>
-    Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default);
+    Task<IGenericResult> Delete(string name, CancellationToken ct = default);
 
     /// <summary>Registers the implementation configuration provider for one Implementation.</summary>
     /// <typeparam name="T">The implementation provider being registered.</typeparam>
     /// <param name="name">The Implementation this provider owns.</param>
     /// <param name="implementationConfigurationProvider">The provider.</param>
     /// <returns>Success, or a structured failure.</returns>
-    IGenericResult Register<T>(string name, T implementationConfigurationProvider)
-        where T : IImplementationConfigurationProvider<TConfiguration>;
+    IGenericResult Register<T>(string name, T implementationConfigurationProvider);
 }

@@ -122,7 +122,7 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 sp.GetService<IDataStoreProvider>()));
 
             builder.Services.AddSingleton(sp => new ImplementationConfigurationProvider<IEtlPipelineTypedConfiguration, BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, IBatchCopyPipelineImplementationConfiguration, BatchCopyPipelineConfigurationCommand>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
                 DataStore,
                 PathName));

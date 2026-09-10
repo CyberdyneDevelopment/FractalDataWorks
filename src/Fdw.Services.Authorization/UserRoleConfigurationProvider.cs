@@ -23,8 +23,12 @@ namespace Fdw.Services.Authorization;
 /// Domain configuration provider for user-role assignments.
 /// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with a by-user convenience method.
 /// </summary>
-public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, UserRoleConfigurationCommand>
+public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, IUserRoleImplementationConfiguration, UserRoleConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     private readonly ILogger _logger;
 
 

@@ -25,7 +25,7 @@ public partial class CredentialStoreConfiguration : IDomainConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "CredentialStore";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the implementation this record names.</summary>
     public string? Implementation { get; set; }
@@ -34,5 +34,9 @@ public partial class CredentialStoreConfiguration : IDomainConfiguration
     public ICredentialStoreImplementationConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (ICredentialStoreImplementationConfiguration?)value;
+    }
 }

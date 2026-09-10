@@ -36,9 +36,13 @@ namespace Fdw.Services.Data;
 /// in memory by the per-transport <c>DataStoreBuilderBase</c> from the nested store configuration
 /// (the same builder mechanism ConfigurationGateway and ConfigurationGatewayDataStoreProvider.Load feed).
 /// </remarks>
-public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>
+public class DataStoreConfigurationProvider : ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>
 {
-    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> _containerProvider;
 
     private readonly ILogger<DataStoreConfigurationProvider> _logger;
 
@@ -46,7 +50,7 @@ public class DataStoreConfigurationProvider : ImplementationConfigurationProvide
     public DataStoreConfigurationProvider(
         ILogger<DataStoreConfigurationProvider>? logger,
         IConfigurationGatewayProvider gatewayProvider,
-        ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> containerProvider,
+        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> containerProvider,
         string dataStoreName,
         string pathName = "data")
         : base(logger ?? NullLogger<DataStoreConfigurationProvider>.Instance,

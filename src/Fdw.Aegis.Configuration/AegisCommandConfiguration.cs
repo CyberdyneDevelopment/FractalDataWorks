@@ -50,7 +50,7 @@ public partial class AegisCommandConfiguration : IDomainConfiguration
     public string ConnectionName { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "AegisCommand";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the approval-policy implementation this record names (e.g., "PreApproved", "AdHoc").
@@ -72,5 +72,9 @@ public partial class AegisCommandConfiguration : IDomainConfiguration
     public IApprovalPolicyConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IApprovalPolicyConfiguration?)value;
+    }
 }

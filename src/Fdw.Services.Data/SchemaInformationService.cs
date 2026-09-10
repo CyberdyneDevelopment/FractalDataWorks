@@ -38,9 +38,9 @@ public sealed class SchemaInformationService : ISchemaInformationService
     private readonly IConnectionProvider _connectionProvider;
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> _dataPathProvider;
-    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> _containerProvider;
-    private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
+    private readonly ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> _dataPathProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> _containerProvider;
+    private readonly ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> _fieldProvider;
     private readonly IOptionsMonitor<List<DataPathConfiguration>> _dataPathOptions;
     private readonly IOptionsMonitor<List<DataContainerConfiguration>> _containerOptions;
     private readonly IOptionsMonitor<List<DataContainerFieldConfiguration>> _fieldOptions;
@@ -53,9 +53,9 @@ public sealed class SchemaInformationService : ISchemaInformationService
         IConnectionProvider connectionProvider,
         ConnectionConfigurationProvider configProvider,
         DataStoreConfigurationProvider dataStoreProvider,
-        ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> dataPathProvider,
-        ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> containerProvider,
-        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> fieldProvider,
+        ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> dataPathProvider,
+        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> containerProvider,
+        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> fieldProvider,
         IOptionsMonitor<List<DataPathConfiguration>> dataPathOptions,
         IOptionsMonitor<List<DataContainerConfiguration>> containerOptions,
         IOptionsMonitor<List<DataContainerFieldConfiguration>> fieldOptions,
@@ -269,7 +269,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         string dataStoreName,
         string connectionType,
         Guid connectionId,
-        ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand> writer,
+        ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> writer,
         CancellationToken ct)
     {
         var allDataStoresResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
@@ -354,7 +354,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         Guid dataStoreId,
         string pathKey,
         Dictionary<string, DataPathConfiguration> existingPaths,
-        ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> writer,
+        ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> writer,
         CancellationToken ct)
     {
         if (existingPaths.TryGetValue(pathKey, out var existingPath))
@@ -383,8 +383,8 @@ public sealed class SchemaInformationService : ISchemaInformationService
     private async Task<IGenericResult> PersistContainersForPath(
         System.Linq.IGrouping<string, IStorageContainer> pathGroup,
         Guid savedPathId,
-        ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> containerWriter,
-        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> fieldWriter,
+        ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> containerWriter,
+        ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> fieldWriter,
         CancellationToken ct)
     {
         var existingContainers = _containerOptions.CurrentValue
@@ -474,7 +474,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
     private async Task UpdateLastDiscoveredAt(
         DataStoreConfiguration dataStoreConfig,
         string dataStoreName,
-        ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand> writer,
+        ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> writer,
         CancellationToken ct)
     {
         var now = DateTimeOffset.UtcNow;
@@ -506,16 +506,16 @@ public sealed class SchemaInformationService : ISchemaInformationService
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     private sealed class ConfigurationWriters
     {
-        public ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand> DataStore { get; }
-        public ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> Path { get; }
-        public ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> Container { get; }
-        public ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> Field { get; }
+        public ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> DataStore { get; }
+        public ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> Path { get; }
+        public ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> Container { get; }
+        public ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> Field { get; }
 
         public ConfigurationWriters(
-            ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand> dataStore,
-            ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand> path,
-            ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand> container,
-            ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand> field)
+            ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand> dataStore,
+            ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand> path,
+            ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand> container,
+            ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand> field)
         {
             DataStore = dataStore;
             Path = path;

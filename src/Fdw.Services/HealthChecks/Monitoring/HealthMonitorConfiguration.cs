@@ -14,7 +14,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <para>
 /// <see cref="Implementation"/> selects the registered option ("Local" or "HttpClient") — the
 /// domain provider dispatches to that option's factory. Which ROW a host uses is that host's
-/// <c>HealthMonitor:Name</c> selector knob (see <c>HealthMonitorSelectionOptions</c>) — rows are
+/// Rows are
 /// shared in ConfigurationDb; the selection is per host.
 /// </para>
 /// <para>
@@ -36,7 +36,7 @@ public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfigura
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "HealthMonitor";
+    public string Domain { get; set; } = string.Empty;
 
     /// <inheritdoc/>
     public string? Implementation { get; set; }
@@ -53,6 +53,10 @@ public sealed partial class HealthMonitorConfiguration : IHealthMonitorConfigura
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IHealthMonitorImplementationConfiguration?)value;
+    }
 
 }

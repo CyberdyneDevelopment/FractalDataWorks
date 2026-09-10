@@ -12,12 +12,13 @@ namespace Fdw.Services.Authorization;
 /// Supplies role-mapping configuration, composing the domain record with the implementation's own.
 /// </summary>
 public class RoleMappingConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          RoleMappingConfiguration,
-          IRoleMappingImplementationConfiguration,
-          RoleMappingConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<RoleMappingConfiguration, IRoleMappingImplementationConfiguration, RoleMappingConfigurationCommand>,
       IRoleMappingConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="RoleMappingConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
     /// <param name="gatewayProvider">Yields the gateway for the named datastore.</param>
@@ -33,16 +34,4 @@ public class RoleMappingConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override RoleMappingConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

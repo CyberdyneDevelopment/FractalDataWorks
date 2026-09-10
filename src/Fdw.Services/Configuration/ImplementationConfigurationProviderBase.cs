@@ -22,14 +22,14 @@ namespace Fdw.Services.Configuration;
 /// <summary>
 /// Single-source configuration provider over the configured <see cref="IConfigurationGateway"/>
 /// (ConfigurationDb). Commands come from the <c>ConfigurationCommands</c> TypeCollection keyed on
-/// <typeparamref name="TCommand"/>.
 /// </summary>
-/// <typeparam name="TConfig">The configuration POCO type.</typeparam>
-/// <typeparam name="TCommand">The configuration command TypeOption for this domain.</typeparam>
-public class ImplementationConfigurationProviderBase<TConfig, TCommand>
-    : IServiceConfigurationProvider<TConfig>, IServiceConfigurationProvider
-    where TConfig : class, IGenericConfiguration
-    where TCommand : ConfigurationCommandBase<TConfig>
+/// <typeparam name="TDomainConfiguration">The configuration POCO type.</typeparam>
+/// <typeparam name="TDomainConfiguration">The domain's implementation contract -- the marker only this domain's implementations carry, and what a read hands back.</typeparam>
+public abstract class ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>
+    : IServiceConfigurationProvider, IDomainConfigurationProvider<TImplementationConfiguration>
+    where TDomainConfiguration : class, IGenericConfiguration
+    where TImplementationConfiguration : IImplementationConfiguration
+    where TCommand : ConfigurationCommandBase<TDomainConfiguration>
 {
     private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly ILogger _logger;
@@ -66,12 +66,12 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <param name="dataStoreName">The configuration connection this domain's rows live on.</param>
     /// <param name="pathName">Schema/path name (e.g. "conn", "sec").</param>
     public ImplementationConfigurationProviderBase(
-        ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>? logger,
+        ILogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>>? logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
         string pathName)
     {
-        _logger = logger ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance;
+        _logger = logger ?? NullLogger<ImplementationConfigurationProviderBase<TDomainConfiguration, TImplementationConfiguration, TCommand>>.Instance;
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         DataStoreName = dataStoreName ?? throw new ArgumentNullException(nameof(dataStoreName));
         PathName = pathName ?? throw new ArgumentNullException(nameof(pathName));
@@ -102,11 +102,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
     async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
     {
-        if (record is not TConfig typed)
+        if (record is not TDomainConfiguration typed)
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.UntypedSaveTypeMismatch(
-                    _logger, typeof(TConfig).Name, record?.GetType().Name ?? "null"));
+                    _logger, typeof(TDomainConfiguration).Name, record?.GetType().Name ?? "null"));
         }
 
         return await Save(typed, ct).ConfigureAwait(false);
@@ -120,12 +120,102 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
 
     private DataStoreTarget Target => new(DataStoreName, PathName, Commands().TableName);
 
-    /// <inheritdoc/>
-    public virtual async Task<IGenericResult<TConfig>> Get(string name, CancellationToken ct = default)
+    // The registry of implementation providers, keyed by the value a domain row carries in its
+    // Implementation column. A provider that is not a domain never registers one, so it stays empty
+    // and the dispatch below simply does not run -- no flag, no branch on what kind of provider this is.
+    private readonly ConcurrentDictionary<string, IImplementationConfigurationProvider<TImplementationConfiguration>> _implementations
+        = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Registers the provider that supplies one implementation's own configuration.</summary>
+    /// <typeparam name="T">The implementation provider being registered.</typeparam>
+    /// <param name="name">The value a domain row carries to name this implementation.</param>
+    /// <param name="implementationConfigurationProvider">The provider to dispatch to.</param>
+    /// <returns>Success, or a failure naming why the provider could not be registered.</returns>
+    public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
     {
-        var headerResult = await GetDomainByName(name, null, ct).ConfigureAwait(false);
-        if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
-        return await ComposeAggregate(headerResult.Value, null, ct).ConfigureAwait(false);
+        if (implementationConfigurationProvider is null)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.ProviderNotErasable(_logger, name, "(null)"));
+        }
+
+        if (implementationConfigurationProvider is not IImplementationConfigurationProvider<TImplementationConfiguration> typed)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.ProviderNotErasable(
+                    _logger, name, implementationConfigurationProvider.GetType().FullName ?? "(null)"));
+        }
+
+        _implementations[name] = typed;
+        DefaultConfigurationProviderLog.TypedProviderRegistered(_logger, typeof(TDomainConfiguration).Name, name);
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<IGenericResult<TImplementationConfiguration>> Get(string name, CancellationToken ct = default)
+    {
+        var domain = await GetByName(name, null, ct).ConfigureAwait(false);
+        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+
+        return await Dispatch(domain.Value, ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult> Save<T>(
+        T implementationConfiguration, Guid domainId, CancellationToken ct = default)
+        where T : TImplementationConfiguration
+    {
+        var domain = await GetHeaderById(domainId, null, ct).ConfigureAwait(false);
+        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+        if (domain.Value is not IDomainConfiguration { Implementation: { Length: > 0 } implementationName } existing)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.NoImplementationForTypedBody(
+                    _logger, typeof(TImplementationConfiguration).Name, domainId.ToString()));
+        }
+
+        return await Write(implementationConfiguration, implementationName, existing.Name, domainId, ct)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult> Save<T>(
+        T implementationConfiguration, string implementationName, string name, CancellationToken ct = default)
+        where T : TImplementationConfiguration
+    {
+        // No domain row yet: create the one this implementation will hang from, then write it.
+        var record = Activator.CreateInstance<TDomainConfiguration>();
+        if (record is not IDomainConfiguration created)
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
+        }
+
+        created.Name = name;
+        created.Implementation = implementationName;
+
+        var domain = await Save(record, ct).ConfigureAwait(false);
+        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+
+        return await Write(implementationConfiguration, implementationName, name, created.Id, ct)
+            .ConfigureAwait(false);
+    }
+
+    // The one write both overloads reach: pick the provider the implementation names, stamp the
+    // domain's name and id onto the record, and hand it over.
+    private async Task<IGenericResult> Write<T>(
+        T implementationConfiguration, string implementationName, string name, Guid domainId, CancellationToken ct)
+        where T : TImplementationConfiguration
+    {
+        if (!_implementations.TryGetValue(implementationName, out var provider))
+        {
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
+        }
+
+        implementationConfiguration.Name = name;
+        implementationConfiguration.Id = domainId;
+        return await provider.Save(implementationConfiguration, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -142,9 +232,9 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// silently handing back the current row — a restatement that quietly used today's definition
     /// is precisely the failure this path exists to prevent.
     /// </remarks>
-    public virtual async Task<IGenericResult<TConfig>> GetAsOf(string name, DateTimeOffset asOf, CancellationToken ct = default)
+    public virtual async Task<IGenericResult<TDomainConfiguration>> GetAsOf(string name, DateTimeOffset asOf, CancellationToken ct = default)
     {
-        var headerResult = await GetDomainByName(name, asOf, ct).ConfigureAwait(false);
+        var headerResult = await GetByName(name, asOf, ct).ConfigureAwait(false);
         if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
         return await ComposeAggregate(headerResult.Value, asOf, ct).ConfigureAwait(false);
     }
@@ -156,7 +246,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <param name="header">The already-loaded header row to compose.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The composed aggregate, or the first failing step's result.</returns>
-    protected Task<IGenericResult<TConfig>> ComposeAggregate(TConfig header, CancellationToken ct = default)
+    protected Task<IGenericResult<TDomainConfiguration>> ComposeAggregate(TDomainConfiguration header, CancellationToken ct = default)
         => ComposeAggregate(header, null, ct);
 
     /// <summary>
@@ -169,12 +259,40 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// </param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The composed aggregate, or the first failing step's result.</returns>
-    protected virtual Task<IGenericResult<TConfig>> ComposeAggregate(TConfig header, DateTimeOffset? asOf, CancellationToken ct)
+    protected async Task<IGenericResult<TDomainConfiguration>> ComposeAggregate(TDomainConfiguration header, DateTimeOffset? asOf, CancellationToken ct)
     {
-        // An implementation composes its own subtree and nothing else. Which implementation a
-        // domain row names, and attaching it, is the domain provider's job --
-        // ServiceConfigurationProviderBase overrides this to do that first.
-        return ComposeChildren(header, asOf, ct);
+        // A domain row names an implementation and something is registered under that name: read it,
+        // give it the domain's name, and attach it. A row that names nothing, or a provider with an
+        // empty registry, falls straight through to the subtree -- the registry answers the question,
+        // so there is nothing to ask about what kind of provider this is.
+        if (header is IDomainConfiguration domain
+            && domain.Implementation is { Length: > 0 } implementation
+            && _implementations.TryGetValue(implementation, out var implementationProvider))
+        {
+            DefaultConfigurationProviderLog.LoadingTypedBody(
+                _logger, typeof(TDomainConfiguration).Name, domain.Name, implementation);
+
+            var loaded = await implementationProvider.Get(domain.Id, ct).ConfigureAwait(false);
+            if (!loaded.IsSuccess)
+            {
+                return GenericResult<TDomainConfiguration>.Failure(
+                    DefaultConfigurationProviderLog.TypedBodyLoadFailed(
+                        _logger, new InvalidOperationException(loaded.CurrentMessage),
+                        typeof(TDomainConfiguration).Name, domain.Name, implementation));
+            }
+
+            if (loaded.Value is IImplementationConfiguration named)
+            {
+                // One name for a configured member, held on the domain row. This is the only place
+                // both records are in hand, so this is where it is carried across.
+                named.Name = domain.Name;
+                domain.ImplementationConfiguration = named;
+                DefaultConfigurationProviderLog.TypedBodyLoaded(
+                    _logger, typeof(TDomainConfiguration).Name, domain.Name, implementation);
+            }
+        }
+
+        return await ComposeChildren(header, asOf, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -191,32 +309,23 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// had to push ct along — silently breaking every positional caller and every domain provider
     /// that subclasses this. The current-version read keeps its exact shape.
     /// </remarks>
-    protected Task<IGenericResult<TConfig>> GetDomainByName(string name, CancellationToken ct = default)
-        => GetDomainByName(name, null, ct);
-
     /// <summary>
-    /// Reads the header row by name, optionally as of a past instant.
+    /// Reads a row by name, optionally as of a past instant.
     /// </summary>
     /// <param name="name">The configuration's name.</param>
     /// <param name="asOf">The instant to read as of, or null for the current version.</param>
     /// <param name="ct">The cancellation token.</param>
-    /// <returns>The header row, or a failure.</returns>
-    protected async Task<IGenericResult<TConfig>> GetDomainByName(string name, DateTimeOffset? asOf, CancellationToken ct = default)
+    /// <returns>The row, or a failure.</returns>
+    protected async Task<IGenericResult<TDomainConfiguration>> GetByName(string name, DateTimeOffset? asOf, CancellationToken ct = default)
     {
-        var parentJoin = ResolveParentJoin();
-        if (parentJoin.IsFailure) return parentJoin.ToNewResult<TConfig>();
-        if (parentJoin.Value!.HasParent)
-            return GenericResult<TConfig>.Failure(
-                DefaultConfigurationProviderLog.ImplementationNotResolvableByName(
-                    _logger, typeof(TConfig).Name, Commands().TableName, name));
-
-        var cmd = Commands().Get(DataStoreName, PathName, name, asOf);
         var gateway = Gateway();
-        if (gateway.IsFailure) return gateway.ToNewResult<TConfig>();
+        if (gateway.IsFailure) return gateway.ToNewResult<TDomainConfiguration>();
 
-        var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
-        if (!result.IsSuccess) return result.ToNewResult<TConfig>();
-        return GenericResult<TConfig>.Success(result.Value?.FirstOrDefault()!);
+        var result = await gateway.Value!
+            .Execute<IEnumerable<TDomainConfiguration>>(Commands().Get(DataStoreName, PathName, name, asOf), Target, ct)
+            .ConfigureAwait(false);
+        if (!result.IsSuccess) return result.ToNewResult<TDomainConfiguration>();
+        return GenericResult<TDomainConfiguration>.Success(result.Value?.FirstOrDefault()!);
     }
 
     /// <summary>
@@ -226,21 +335,59 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <param name="asOf">The instant to read the configuration as of.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The aggregate in force at that instant, or a failure.</returns>
-    public virtual async Task<IGenericResult<TConfig>> GetAsOf(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+    public virtual async Task<IGenericResult<TDomainConfiguration>> GetAsOf(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
     {
-        if (id == Guid.Empty) return GenericResult<TConfig>.Success(default!);
+        if (id == Guid.Empty) return GenericResult<TDomainConfiguration>.Success(default!);
         var headerResult = await GetHeaderById(id, asOf, ct).ConfigureAwait(false);
         if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
         return await ComposeAggregate(headerResult.Value, asOf, ct).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
-    public virtual async Task<IGenericResult<TConfig>> Get(Guid id, CancellationToken ct = default)
+    public virtual async Task<IGenericResult<TImplementationConfiguration>> Get(Guid id, CancellationToken ct = default)
     {
-        if (id == Guid.Empty) return GenericResult<TConfig>.Success(default!);
-        var headerResult = await GetHeaderById(id, null, ct).ConfigureAwait(false);
-        if (!headerResult.IsSuccess || headerResult.Value is null) return headerResult;
-        return await ComposeAggregate(headerResult.Value, null, ct).ConfigureAwait(false);
+        var domain = await GetHeaderById(id, null, ct).ConfigureAwait(false);
+        if (!domain.IsSuccess) return domain.ToNewResult<TImplementationConfiguration>();
+
+        return await Dispatch(domain.Value, ct).ConfigureAwait(false);
+    }
+
+    // The domain row names an implementation; that name selects the provider, and the domain's own
+    // Id is what the provider joins on. What it returns is the answer -- there is nothing to attach
+    // it to and take back off again.
+    private async Task<IGenericResult<TImplementationConfiguration>> Dispatch(TDomainConfiguration? row, CancellationToken ct)
+    {
+        if (row is not IDomainConfiguration domain)
+        {
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationForTypedBody(
+                    _logger, typeof(TDomainConfiguration).Name, string.Empty));
+        }
+
+        if (domain.Implementation is not { Length: > 0 } implementation)
+        {
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationForTypedBody(
+                    _logger, typeof(TDomainConfiguration).Name, domain.Name));
+        }
+
+        if (!_implementations.TryGetValue(implementation, out var provider))
+        {
+            return GenericResult<TImplementationConfiguration>.Failure(
+                DefaultConfigurationProviderLog.NoImplementationProvider(_logger, domain.Name, implementation));
+        }
+
+        var loaded = await provider.Get(domain.Id, ct).ConfigureAwait(false);
+        if (!loaded.IsSuccess) return loaded;
+
+        // The name and the domain are the domain row's, read across here so a caller holding the
+        // implementation never has to go back for the row that named it.
+        if (loaded.Value is not null)
+        {
+            loaded.Value.Name = domain.Name;
+            loaded.Value.Domain = domain.Domain;
+        }
+        return loaded;
     }
 
     /// <summary>
@@ -251,7 +398,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <param name="id">The configuration's durable logical Id.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The header row, or a failure.</returns>
-    protected Task<IGenericResult<TConfig>> GetHeaderById(Guid id, CancellationToken ct = default)
+    protected Task<IGenericResult<TDomainConfiguration>> GetHeaderById(Guid id, CancellationToken ct = default)
         => GetHeaderById(id, null, ct);
 
     /// <summary>
@@ -261,27 +408,27 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <param name="asOf">The instant to read as of, or null for the current version.</param>
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The header row, or a failure.</returns>
-    protected async Task<IGenericResult<TConfig>> GetHeaderById(Guid id, DateTimeOffset? asOf, CancellationToken ct = default)
+    protected async Task<IGenericResult<TDomainConfiguration>> GetHeaderById(Guid id, DateTimeOffset? asOf, CancellationToken ct = default)
     {
-        if (id == Guid.Empty) return GenericResult<TConfig>.Success(default!);
+        if (id == Guid.Empty) return GenericResult<TDomainConfiguration>.Success(default!);
 
         var parentJoin = ResolveParentJoin();
-        if (parentJoin.IsFailure) return parentJoin.ToNewResult<TConfig>();
+        if (parentJoin.IsFailure) return parentJoin.ToNewResult<TDomainConfiguration>();
 
+        // An implementation is reached through its domain: the id is the DOMAIN row's, and the join
+        // resolves it to this row on the parent's RowId.
         var join = parentJoin.Value!;
-        var cmd = join.HasParent
-            ? Commands().GetByParentJoin(
-                DataStoreName, PathName,
-                join.ChildForeignKeyColumn, join.ParentTable,
-                join.ParentJoinColumn, join.ParentKeyColumn, id, asOf)
-            : Commands().Get(DataStoreName, PathName, id, asOf);
+        var cmd = Commands().GetByParentJoin(
+            DataStoreName, PathName,
+            join.ChildForeignKeyColumn, join.ParentTable,
+            join.ParentJoinColumn, join.ParentKeyColumn, id, asOf);
 
         var gateway = Gateway();
-        if (gateway.IsFailure) return gateway.ToNewResult<TConfig>();
+        if (gateway.IsFailure) return gateway.ToNewResult<TDomainConfiguration>();
 
-        var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
-        if (!result.IsSuccess) return result.ToNewResult<TConfig>();
-        return GenericResult<TConfig>.Success(result.Value?.FirstOrDefault()!);
+        var result = await gateway.Value!.Execute<IEnumerable<TDomainConfiguration>>(cmd, Target, ct).ConfigureAwait(false);
+        if (!result.IsSuccess) return result.ToNewResult<TDomainConfiguration>();
+        return GenericResult<TDomainConfiguration>.Success(result.Value?.FirstOrDefault()!);
     }
 
     // lookup. Each descriptor carries the physical {Owner}RowId FK column; children are queried via the
@@ -289,14 +436,14 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     // alone (DataStore→Paths→Containers→Fields, Connection→typed body→auth/limits, DataSet→Fields,
     // Escalation→levels). This is what lets a RUNTIME store — e.g. AuthDb, which lives in ConfigurationDb's
     // data.* rows and is deliberately absent from configurationSchema.json — compose its full tree.
-    private async Task<IGenericResult<TConfig>> ComposeChildren(TConfig header, DateTimeOffset? asOf, CancellationToken ct)
+    private async Task<IGenericResult<TDomainConfiguration>> ComposeChildren(TDomainConfiguration header, DateTimeOffset? asOf, CancellationToken ct)
     {
-        var mapper = PocoMapperCollection.ByName(typeof(TConfig).Name);
+        var mapper = PocoMapperCollection.ByName(typeof(TDomainConfiguration).Name);
         if (mapper == PocoMapperCollection.NotFound)
-            return GenericResult<TConfig>.Success(header);
+            return GenericResult<TDomainConfiguration>.Success(header);
 
         await LoadChildrenInto(header, mapper, Commands().TableName, asOf, ct).ConfigureAwait(false);
-        return GenericResult<TConfig>.Success(header);
+        return GenericResult<TDomainConfiguration>.Success(header);
     }
 
     private async Task LoadChildrenInto(object ownerRow, IPocoMapper ownerMapper, string ownerContainerName, DateTimeOffset? asOf, CancellationToken ct)
@@ -312,7 +459,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         var keys = ResolveOwnerKeyColumns(ownerContainerName);
         if (keys is null)
         {
-            DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TConfig).Name, ownerContainerName);
+            DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TDomainConfiguration).Name, ownerContainerName);
             return;
         }
 
@@ -605,7 +752,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         var parentKeyColumn = FindKeyFieldName(parentKeys, "Logical");    // parent durable Id — the filter
         if (parentJoinColumn is null || parentKeyColumn is null)
             return GenericResult<ParentJoinInfo>.Failure(
-                DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TConfig).Name, parent.Name));
+                DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TDomainConfiguration).Name, parent.Name));
 
         return GenericResult<ParentJoinInfo>.Success(new ParentJoinInfo(
             HasParent: true,
@@ -672,14 +819,31 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// an empty collection that
     /// looked like "no rows configured" instead of "rows never loaded".
     /// </remarks>
-    public virtual async Task<IGenericResult<IReadOnlyList<TConfig>>> Get(CancellationToken ct = default)
+    // The domain contract lists IDomainConfiguration; this provider lists its own record type. Same
+    // rows, widened once here rather than by every provider that has one.
+    async Task<IGenericResult<IReadOnlyList<IDomainConfiguration>>> IDomainConfigurationProvider<TImplementationConfiguration>.Get(
+        CancellationToken ct)
+    {
+        var rows = await Get(ct).ConfigureAwait(false);
+        if (!rows.IsSuccess) return rows.ToNewResult<IReadOnlyList<IDomainConfiguration>>();
+
+        var widened = new List<IDomainConfiguration>();
+        foreach (var row in rows.Value ?? [])
+        {
+            if (row is IDomainConfiguration domain) widened.Add(domain);
+        }
+
+        return GenericResult<IReadOnlyList<IDomainConfiguration>>.Success(widened);
+    }
+
+    public virtual async Task<IGenericResult<IReadOnlyList<TDomainConfiguration>>> Get(CancellationToken ct = default)
     {
         var cmd = Commands().List(DataStoreName, PathName);
         var gateway = Gateway();
-        if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<TConfig>>();
+        if (gateway.IsFailure) return gateway.ToNewResult<IReadOnlyList<TDomainConfiguration>>();
 
-        var result = await gateway.Value!.Execute<IEnumerable<TConfig>>(cmd, Target, ct).ConfigureAwait(false);
-        if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<TConfig>>();
+        var result = await gateway.Value!.Execute<IEnumerable<TDomainConfiguration>>(cmd, Target, ct).ConfigureAwait(false);
+        if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<TDomainConfiguration>>();
 
         var rows = result.Value?.ToList() ?? [];
         for (var i = 0; i < rows.Count; i++)
@@ -688,11 +852,11 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
             // child-cascade read PER ROW, turning every list endpoint into N+1 queries. Callers that
             // need a composed aggregate ask for the one they want by name or id, both of which compose.
             var composed = await ComposeChildren(rows[i], null, ct).ConfigureAwait(false);
-            if (!composed.IsSuccess) return composed.ToNewResult<IReadOnlyList<TConfig>>();
+            if (!composed.IsSuccess) return composed.ToNewResult<IReadOnlyList<TDomainConfiguration>>();
             rows[i] = composed.Value!;
         }
 
-        return GenericResult<IReadOnlyList<TConfig>>.Success(rows);
+        return GenericResult<IReadOnlyList<TDomainConfiguration>>.Success(rows);
     }
 
     /// <summary>Persists a configuration record and its whole child tree.</summary>
@@ -716,8 +880,19 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <see cref="DeleteChild{TChild}"/> and expose a named domain method over it.
     /// </para>
     /// </remarks>
-    public virtual async Task<IGenericResult<TConfig>> Save(TConfig record, CancellationToken ct = default)
+    public virtual async Task<IGenericResult<TDomainConfiguration>> Save(TDomainConfiguration record, CancellationToken ct = default)
     {
+        // A domain row that names a registered implementation and carries none is the bodiless record
+        // that cannot be composed on read -- and, when read at startup, takes the host down at boot.
+        // Refusing it here keeps that state out of the store instead of discovering it later.
+        if (record is IDomainConfiguration { ImplementationConfiguration: null } incomplete
+            && incomplete.Implementation is { Length: > 0 } named
+            && _implementations.ContainsKey(named))
+        {
+            return GenericResult<TDomainConfiguration>.Failure(
+                DefaultConfigurationProviderLog.IncompleteAggregate(_logger, incomplete.Name, named));
+        }
+
         ArgumentNullException.ThrowIfNull(record);
 
         if (record.Id == Guid.Empty)
@@ -726,22 +901,22 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         }
 
         var gatewayForSave = Gateway();
-        if (gatewayForSave.IsFailure) return gatewayForSave.ToNewResult<TConfig>();
+        if (gatewayForSave.IsFailure) return gatewayForSave.ToNewResult<TDomainConfiguration>();
 
-        var result = await gatewayForSave.Value!.Execute<TConfig>(
+        var result = await gatewayForSave.Value!.Execute<TDomainConfiguration>(
             Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
         var cascade = await CascadeOwnerChildren(record, ct).ConfigureAwait(false);
-        if (!cascade.IsSuccess) return cascade.ToNewResult<TConfig>();
+        if (!cascade.IsSuccess) return cascade.ToNewResult<TDomainConfiguration>();
 
-        return GenericResult<TConfig>.Success(record);
+        return GenericResult<TDomainConfiguration>.Success(record);
     }
 
     /// <summary>Writes ONE child row, without touching the rest of the aggregate.</summary>
     /// <typeparam name="TChild">The child configuration type.</typeparam>
     /// <param name="child">The child row to write.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="ct">The cancellation token.</param>
     /// <remarks>
     /// The counterpart to <see cref="Save"/>'s unconditional cascade: this writes the row it is
     /// given and nothing else, so changing one member's role leaves every other row's audit columns
@@ -753,12 +928,12 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// </remarks>
     protected async Task<IGenericResult> SaveChild<TChild>(
         TChild child,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
         where TChild : IGenericConfiguration
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        var result = await SaveOneChild(child, cancellationToken).ConfigureAwait(false);
+        var result = await SaveOneChild(child, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
         // The cached aggregate still holds the row as it was; without this a re-read serves it.
@@ -769,14 +944,14 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <summary>Deletes ONE child row, without touching the rest of the aggregate.</summary>
     /// <typeparam name="TChild">The child configuration type.</typeparam>
     /// <param name="id">The child's logical identifier.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="ct">The cancellation token.</param>
     /// <remarks>
     /// The delete counterpart to <see cref="SaveChild{TChild}"/>. Resolves the child's own command
     /// and container, so the delete lands on the child's table rather than the owner's.
     /// </remarks>
     protected async Task<IGenericResult> DeleteChild<TChild>(
         Guid id,
-        CancellationToken cancellationToken = default)
+        CancellationToken ct = default)
         where TChild : IGenericConfiguration
     {
         if (id == Guid.Empty)
@@ -791,7 +966,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoChildCommandForType(
-                    _logger, typeof(TConfig).Name, typeof(TChild).Name));
+                    _logger, typeof(TDomainConfiguration).Name, typeof(TChild).Name));
         }
 
         var gateway = Gateway();
@@ -800,7 +975,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         var result = await gateway.Value!.Execute(
             command.Delete(DataStoreName, PathName, id),
             new DataStoreTarget(DataStoreName, PathName, command.ContainerName),
-            cancellationToken).ConfigureAwait(false);
+            ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
         InvalidateCache();
@@ -935,7 +1110,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         {
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoChildCommandForType(
-                    _logger, typeof(TConfig).Name, childType.Name));
+                    _logger, typeof(TDomainConfiguration).Name, childType.Name));
         }
 
         if (childCfg.Id == Guid.Empty)
@@ -1069,7 +1244,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (command is null)
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoChildCommandForType(
-                    _logger, typeof(TConfig).Name, childType.Name));
+                    _logger, typeof(TDomainConfiguration).Name, childType.Name));
 
         var gateway = Gateway();
         if (gateway.IsFailure) return gateway;
@@ -1108,19 +1283,19 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     {
         if (id == Guid.Empty)
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TConfig).Name, id.ToString()));
+                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TDomainConfiguration).Name, id.ToString()));
 
         var header = await GetHeaderById(id, null, ct).ConfigureAwait(false);
         if (!header.IsSuccess) return header;
         if (header.Value is null)
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TConfig).Name, id.ToString()));
+                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TDomainConfiguration).Name, id.ToString()));
 
         var existing = await ComposeChildren(header.Value, null, ct).ConfigureAwait(false);
         if (!existing.IsSuccess) return existing;
         if (existing.Value is null)
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TConfig).Name, id.ToString()));
+                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TDomainConfiguration).Name, id.ToString()));
 
         var cascade = await RetireOwnerChildren(existing.Value, ct).ConfigureAwait(false);
         if (!cascade.IsSuccess) return cascade;
@@ -1129,7 +1304,7 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         var gatewayForDelete = Gateway();
         if (gatewayForDelete.IsFailure) return gatewayForDelete;
 
-        var result = await gatewayForDelete.Value!.Execute<TConfig>(cmd, Target, ct).ConfigureAwait(false);
+        var result = await gatewayForDelete.Value!.Execute<TDomainConfiguration>(cmd, Target, ct).ConfigureAwait(false);
         if (!result.IsSuccess) return result;
 
         return GenericResult.Success();
@@ -1140,12 +1315,12 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     {
         if (string.IsNullOrEmpty(name))
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TConfig).Name, name));
+                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TDomainConfiguration).Name, name));
         var getResult = await Get(name, ct).ConfigureAwait(false);
         if (!getResult.IsSuccess) return getResult;
         if (getResult.Value is null)
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TConfig).Name, name));
+                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TDomainConfiguration).Name, name));
         return await Delete(getResult.Value.Id, ct).ConfigureAwait(false);
     }
 
@@ -1175,8 +1350,8 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// Does NOT cascade child saves and does NOT invalidate the cache — the caller is
     /// responsible for cache invalidation after a successful commit.
     /// </remarks>
-    public virtual async Task<IGenericResult<TConfig>> SaveInTransaction(
-        TConfig record,
+    public virtual async Task<IGenericResult<TDomainConfiguration>> SaveInTransaction(
+        TDomainConfiguration record,
         IDataGatewayTransaction transaction,
         CancellationToken ct = default)
     {
@@ -1185,9 +1360,9 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
         if (record.Id == Guid.Empty)
             record.Id = Guid.CreateVersion7();
 
-        var result = await transaction.Execute<TConfig>(
+        var result = await transaction.Execute<TDomainConfiguration>(
             Commands().Create(DataStoreName, PathName, record), Target, ct).ConfigureAwait(false);
-        return result.IsSuccess ? GenericResult<TConfig>.Success(record) : result;
+        return result.IsSuccess ? GenericResult<TDomainConfiguration>.Success(record) : result;
     }
 
     /// <summary>
@@ -1201,9 +1376,9 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     {
         if (id == Guid.Empty)
             return GenericResult.Failure(
-                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TConfig).Name, id.ToString()));
+                DefaultConfigurationProviderLog.ConfigurationNotFound(_logger, typeof(TDomainConfiguration).Name, id.ToString()));
 
-        var result = await transaction.Execute<TConfig>(
+        var result = await transaction.Execute<TDomainConfiguration>(
             Commands().Delete(DataStoreName, PathName, id), Target, ct).ConfigureAwait(false);
         return result.IsSuccess ? GenericResult.Success() : result;
     }
@@ -1228,19 +1403,19 @@ public class ImplementationConfigurationProviderBase<TConfig, TCommand>
     /// <summary>Runs <paramref name="call"/> against this provider's configuration gateway.</summary>
     /// <typeparam name="T">The result type the call materialises.</typeparam>
     /// <param name="call">The command and the container it targets.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
     /// <returns>The gateway's result, or the failure naming the connection no gateway serves.</returns>
     /// <remarks>
     /// Every provider reaches its store the same way, so resolving the gateway and failing when none
     /// serves the connection belongs here once rather than at each call site.
     /// </remarks>
     protected async Task<IGenericResult<T>> Execute<T>(
-        DataGatewayCall call, CancellationToken cancellationToken = default)
+        DataGatewayCall call, CancellationToken ct = default)
     {
         var gateway = Gateway();
         return gateway.IsFailure
             ? gateway.ToNewResult<T>()
-            : await gateway.Value!.Execute<T>(call, cancellationToken).ConfigureAwait(false);
+            : await gateway.Value!.Execute<T>(call, ct).ConfigureAwait(false);
     }
 
 

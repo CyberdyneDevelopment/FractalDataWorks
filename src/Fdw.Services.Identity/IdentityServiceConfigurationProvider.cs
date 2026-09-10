@@ -16,12 +16,13 @@ namespace Fdw.Services.Identity;
 /// Reads through IConfigurationGateway — no IConfiguration binding section.
 /// </summary>
 public class IdentityServiceConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          IdentityServiceConfiguration,
-          IIdentityServiceImplementationConfiguration,
-          IdentityServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IIdentityServiceImplementationConfiguration, IdentityServiceConfigurationCommand>,
       IIdentityServiceConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="IdentityServiceConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for this provider.</param>
@@ -38,16 +39,4 @@ public class IdentityServiceConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override IdentityServiceConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

@@ -72,33 +72,33 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 new DataStoreConfigurationProvider(
                     sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(),
+                    sp.GetRequiredService<ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand>>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, DataStoreConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataStoreConfiguration, IDataStoreImplementationConfiguration, DataStoreConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataStoreConfiguration>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
 
             // Why: Child types (DataPath/DataContainer/DataContainerField) need their own providers so
             // SchemaInformationService and MsSqlSchemaImportPersister can Save discovered schema.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, DataPathConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<DataPathConfiguration, IDataPathImplementationConfiguration, DataPathConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, DataContainerConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerConfiguration, IDataContainerImplementationConfiguration, DataContainerConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, DataContainerFieldConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerFieldConfiguration, IDataContainerFieldImplementationConfiguration, DataContainerFieldConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
 
@@ -108,17 +108,17 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
             // connections collection owns transports, not the data schema. The cascade resolves a child by
             // finding the ConfigurationCommands option that claims its type, so without these a container
             // that declared a key saved as NoChildCommandForType and data.DataContainerKey stayed empty.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, IDataContainerKeyImplementationConfiguration, DataContainerKeyConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, IDataContainerKeyImplementationConfiguration, DataContainerKeyConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, IDataContainerKeyImplementationConfiguration, DataContainerKeyConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyConfiguration, IDataContainerKeyImplementationConfiguration, DataContainerKeyConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, IDataContainerKeyFieldImplementationConfiguration, DataContainerKeyFieldConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, IDataContainerKeyFieldImplementationConfiguration, DataContainerKeyFieldConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, IDataContainerKeyFieldImplementationConfiguration, DataContainerKeyFieldConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<DataContainerKeyFieldConfiguration, IDataContainerKeyFieldImplementationConfiguration, DataContainerKeyFieldConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
 
@@ -126,17 +126,17 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
             // data.DataPath using a physical FK (DataPathRowId → DataPath.RowId). Registering their
             // providers here makes them available for cascade load in FileSystemDataStoreConfigProvider
             // without the FileSystem package taking a dependency on IConfigurationGateway directly.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, DataPathPolicyConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, IDataPathPolicyImplementationConfiguration, DataPathPolicyConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, IDataPathPolicyImplementationConfiguration, DataPathPolicyConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, IDataPathPolicyImplementationConfiguration, DataPathPolicyConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<DataPathPolicyConfiguration, IDataPathPolicyImplementationConfiguration, DataPathPolicyConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>(sp =>
-                new ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, FileTypeHandlerOverrideConfigurationCommand>>.Instance,
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, IFileTypeHandlerOverrideImplementationConfiguration, FileTypeHandlerOverrideConfigurationCommand>>(sp =>
+                new ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, IFileTypeHandlerOverrideImplementationConfiguration, FileTypeHandlerOverrideConfigurationCommand>(
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, IFileTypeHandlerOverrideImplementationConfiguration, FileTypeHandlerOverrideConfigurationCommand>>()
+                        ?? NullLogger<ImplementationConfigurationProviderBase<FileTypeHandlerOverrideConfiguration, IFileTypeHandlerOverrideImplementationConfiguration, FileTypeHandlerOverrideConfigurationCommand>>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
             // Why named here rather than defaulted on the constructor: a defaulted connection is one a
@@ -148,7 +148,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<DataSetConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     DataStoreTypes.ConfigurationConnection, "data"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, DataSetConfigurationCommand>>(
+            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataSetConfiguration, IDataSetImplementationConfiguration, DataSetConfigurationCommand>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
             builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataSetConfiguration>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());

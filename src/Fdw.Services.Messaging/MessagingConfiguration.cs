@@ -34,7 +34,7 @@ public sealed partial class MessagingConfiguration : IMessagingConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "Messaging";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the implementation this record names.</summary>
     [ValuesFrom(typeof(MessagingServiceTypes))]
@@ -58,6 +58,10 @@ public sealed partial class MessagingConfiguration : IMessagingConfiguration
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IMessagingImplementationConfiguration?)value;
+    }
 
 }

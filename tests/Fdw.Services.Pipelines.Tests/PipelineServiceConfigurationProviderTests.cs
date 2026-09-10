@@ -45,7 +45,7 @@ public sealed class PipelineServiceConfigurationProviderTests
         using var provider = builder.Services.BuildServiceProvider();
         var byInterface = provider.GetRequiredService<IPipelineConfigurationProvider>();
         var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
-        var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>();
+        var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<PipelineConfiguration, IPipelineImplementationConfiguration, PipelineConfigurationCommand>>();
         var asServiceConfiguration = provider.GetRequiredService<IServiceConfigurationProvider<PipelineConfiguration>>();
 
         concrete.ShouldBeSameAs(byInterface);

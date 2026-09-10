@@ -26,8 +26,12 @@ namespace Fdw.Services.Users;
 /// usage — usr.UserPreferences is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
 /// </remarks>
 public class UserPreferenceConfigurationProvider
-    : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, UserPreferenceConfigurationCommand>
+    : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, IUserPreferencesImplementationConfiguration, UserPreferencesConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserPreferenceConfigurationProvider"/> class.</summary>

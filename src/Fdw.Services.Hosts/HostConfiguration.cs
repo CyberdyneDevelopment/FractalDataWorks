@@ -23,7 +23,7 @@ public partial class HostConfiguration : IHostConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "Host";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the option name selecting which hosting implementation is configured.</summary>
     public string? Implementation { get; set; }
@@ -60,6 +60,10 @@ public partial class HostConfiguration : IHostConfiguration
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IHostImplementationConfiguration?)value;
+    }
 
 }

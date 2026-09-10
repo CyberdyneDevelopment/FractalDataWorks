@@ -67,7 +67,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
     /// <c>ServerConfiguration</c> — see <see cref="SelectionConnection"/>. The two are separate
     /// because they answer different questions, and reading the selection from this store found
     /// nothing: the container is not declared there, so every /health/system call returned 500 with
-    /// "HealthMonitorSelection is not configured".
     /// </remarks>
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
 
@@ -93,15 +92,8 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     ConfigurationConnection));
-            builder.Services.TryAddSingleton<HealthMonitorSelectionConfigurationProvider>(sp =>
-                new HealthMonitorSelectionConfigurationProvider(
-                    sp.GetService<ILogger<HealthMonitorSelectionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    SelectionConnection));
 
             builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(
-                sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
                 sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 
             var collected = collectOptions(builder, loggerFactory);
@@ -140,7 +132,7 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(HealthMonitorTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<HealthMonitorConfiguration>).ToString());
+                            typeof(IHealthMonitorConfigurationProvider).ToString());
                     }
                 }
                 catch (Exception ex)

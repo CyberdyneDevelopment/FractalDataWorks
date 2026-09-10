@@ -17,8 +17,12 @@ namespace Fdw.Services.Dataverses;
 /// resource, not by owning it here.
 /// </remarks>
 public class SavedViewConfigurationProvider
-    : ImplementationConfigurationProviderBase<SavedViewConfiguration, SavedViewConfigurationCommand>
+    : ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration, SavedViewConfigurationCommand>
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>
     /// Registers the provider and the interfaces callers resolve it through.
     /// </summary>
@@ -32,7 +36,7 @@ public class SavedViewConfigurationProvider
                 DataStoreTypes.ConfigurationConnection,
                 "dataverse"));
 
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<SavedViewConfiguration, SavedViewConfigurationCommand>>(
+        services.TryAddSingleton<ImplementationConfigurationProviderBase<SavedViewConfiguration, ISavedViewImplementationConfiguration, SavedViewConfigurationCommand>>(
             sp => sp.GetRequiredService<SavedViewConfigurationProvider>());
     }
 

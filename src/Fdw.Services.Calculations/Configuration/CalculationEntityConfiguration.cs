@@ -36,7 +36,7 @@ public partial class CalculationEntityConfiguration : IDomainConfiguration
     public string? Description { get; set; }
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "Calculation";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the implementation this record names (e.g. "Formula", "Windowed").</summary>
     public string? Implementation { get; set; }
@@ -68,7 +68,11 @@ public partial class CalculationEntityConfiguration : IDomainConfiguration
     public ICalculationTypedConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (ICalculationTypedConfiguration?)value;
+    }
 
     /// <summary>
     /// Gets or sets the input declarations. Composed from calc.CalculationEntityInput on read; cascade-saved on insert.

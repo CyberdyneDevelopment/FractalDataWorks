@@ -18,12 +18,13 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// section.
 /// </summary>
 public class ExternalIdentityProvisionerConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          ExternalIdentityProvisionerConfiguration,
-          IExternalIdentityProvisionerImplementationConfiguration,
-          ExternalIdentityProvisionerConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, IExternalIdentityProvisionerImplementationConfiguration, ExternalIdentityProvisionerConfigurationCommand>,
       IExternalIdentityProvisionerConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityProvisionerConfigurationProvider"/> class.</summary>
     public ExternalIdentityProvisionerConfigurationProvider(
@@ -36,16 +37,4 @@ public class ExternalIdentityProvisionerConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override ExternalIdentityProvisionerConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

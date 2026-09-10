@@ -21,12 +21,13 @@ namespace Fdw.Services.DataVault;
 /// inherited <c>Register</c>.
 /// </summary>
 public class DataVaultConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          DataVaultConfiguration,
-          IDataVaultImplementationConfiguration,
-          DataVaultConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<DataVaultConfiguration, IDataVaultImplementationConfiguration, DataVaultConfigurationCommand>,
       IDataVaultConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataVaultConfigurationProvider"/> class.
@@ -41,16 +42,4 @@ public class DataVaultConfigurationProvider
                dataStoreName, pathName)
     {
     }
-
-    /// <inheritdoc />
-    protected override DataVaultConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }

@@ -6,6 +6,6 @@ namespace Fdw.Services.Identity.Abstractions;
 /// Resolves configured identity services and routes each to the implementation provider that owns it.
 /// </summary>
 public interface IIdentityServiceConfigurationProvider
-    : IDomainConfigurationProvider<IIdentityServiceImplementationConfiguration>
+    : IDomainConfigurationProvider<IdentityServiceConfiguration>
 {
 }

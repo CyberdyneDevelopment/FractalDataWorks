@@ -35,7 +35,7 @@ public partial class EtlPipelineConfiguration : IPipelineImplementationConfigura
     public Guid PipelineId { get; set; }
 
     /// <summary>Gets the domain this record is, for the engines it names.</summary>
-    public string Domain => "EtlPipeline";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the engine this record names (e.g. "BatchCopy", "Streaming").</summary>
     public string? Implementation { get; set; }
@@ -60,5 +60,9 @@ public partial class EtlPipelineConfiguration : IPipelineImplementationConfigura
     public IEtlPipelineTypedConfiguration? Configuration { get; set; }
 
     /// <inheritdoc />
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IEtlPipelineTypedConfiguration?)value;
+    }
 }

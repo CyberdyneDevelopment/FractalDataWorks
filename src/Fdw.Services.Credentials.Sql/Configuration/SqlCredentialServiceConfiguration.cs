@@ -26,6 +26,10 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 [ManagedConfiguration(ServiceCategory = "CredentialService", ServiceType = "Sql")]
 public partial class SqlCredentialServiceConfiguration : ICredentialServiceImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     // ========================================
     // IGenericConfiguration — typed body identity
     // ========================================

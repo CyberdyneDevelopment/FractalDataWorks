@@ -28,7 +28,7 @@ public partial class DataGatewayDomainConfiguration : IDataGatewayConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets the domain this record belongs to.</summary>
-    public string Domain => "DataGateway";
+    public string Domain { get; set; } = string.Empty;
 
     /// <summary>Gets or sets which implementation this record names.</summary>
     public string? Implementation { get; set; }
@@ -45,6 +45,10 @@ public partial class DataGatewayDomainConfiguration : IDataGatewayConfiguration
     /// implementation without naming this domain's implementation contract; netstandard2.0 rules out
     /// a default interface implementation, so each domain record states it.
     /// </remarks>
-    IGenericConfiguration? IDomainConfiguration.ImplementationConfiguration => Configuration;
+    IImplementationConfiguration? IDomainConfiguration.ImplementationConfiguration
+    {
+        get => Configuration;
+        set => Configuration = (IDataGatewayImplementationConfiguration?)value;
+    }
 
 }

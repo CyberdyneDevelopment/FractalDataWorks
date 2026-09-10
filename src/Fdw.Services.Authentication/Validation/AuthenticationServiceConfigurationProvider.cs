@@ -25,12 +25,13 @@ namespace Fdw.Services.Authentication.Validation;
 /// </para>
 /// </remarks>
 public class AuthenticationServiceConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          AuthenticationServiceConfiguration,
-          IAuthenticationServiceImplementationConfiguration,
-          AuthenticationServiceConfigurationCommand>,
+    : ImplementationConfigurationProviderBase<AuthenticationServiceConfiguration, IAuthenticationServiceImplementationConfiguration, AuthenticationServiceConfigurationCommand>,
       IAuthenticationServiceConfigurationProvider
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="AuthenticationServiceConfigurationProvider"/> class.</summary>
     /// <param name="logger">The logger for provider operations.</param>
     /// <param name="gatewayProvider">Supplies the gateway onto the store these rows live on.</param>
@@ -69,16 +70,4 @@ public class AuthenticationServiceConfigurationProvider
             ? GenericResult<IReadOnlyList<IAuthenticationServiceConfiguration>>.Success(rows.Value)
             : rows.ToNewResult<IReadOnlyList<IAuthenticationServiceConfiguration>>();
     }
-
-    /// <inheritdoc />
-    protected override AuthenticationServiceConfiguration Compose<T>(
-        string implementation,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            Implementation = implementation,
-            Configuration = implementationConfiguration,
-        };
 }
