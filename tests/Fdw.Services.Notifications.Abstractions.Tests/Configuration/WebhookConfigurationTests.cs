@@ -19,7 +19,7 @@ public class WebhookConfigurationTests
         config.Id.ShouldNotBe(Guid.Empty);
         config.Name.ShouldBe("Webhook");
         config.ServiceType.ShouldBe("Notification");
-        config.ServiceOptionType.ShouldBe("Webhook");
+        config.Implementation.ShouldBe("Webhook");
         config.NotificationType.ShouldBe("Webhook");
         config.IsEnabled.ShouldBeTrue();
         config.DefaultWebhookUrl.ShouldBeNull();
@@ -56,7 +56,7 @@ public class WebhookConfigurationTests
         config.Id.ShouldBe(id);
         config.Name.ShouldBe("CustomWebhook");
         config.NotificationType.ShouldBe("CustomType");
-        config.ServiceOptionType.ShouldBe("CustomType");
+        config.Implementation.ShouldBe("CustomType");
         config.IsEnabled.ShouldBeFalse();
         config.DefaultWebhookUrl.ShouldBe("https://webhook.url");
         config.TimeoutSeconds.ShouldBe(60);
@@ -78,8 +78,8 @@ public class WebhookConfigurationTests
         };
 
         // Act & Assert
-        config.ServiceOptionType.ShouldBe(config.NotificationType);
-        config.ServiceOptionType.ShouldBe("CustomWebhookType");
+        config.Implementation.ShouldBe(config.NotificationType);
+        config.Implementation.ShouldBe("CustomWebhookType");
     }
 
     [Fact]

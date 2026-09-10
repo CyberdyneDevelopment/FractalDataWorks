@@ -66,7 +66,7 @@ public sealed class ConfiguredDataStoreProvider : IDataStoreProvider
 
         var buildResult = await BuildStore(cfgResult.Value, cancellationToken).ConfigureAwait(false);
         if (buildResult.IsSuccess)
-            ConfiguredDataStoreProviderLog.StoreBuilt(_logger, name, cfgResult.Value.ServiceOptionType ?? "(none)");
+            ConfiguredDataStoreProviderLog.StoreBuilt(_logger, name, cfgResult.Value.Implementation ?? "(none)");
         return buildResult;
     }
 

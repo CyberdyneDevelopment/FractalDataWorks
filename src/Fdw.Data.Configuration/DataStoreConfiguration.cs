@@ -55,28 +55,11 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the DataStore type discriminator (e.g., "MsSql", "Rest", "OData").
-    /// There is no TypeId column. The save translator intersects the mapper's property names with
-    /// the container's declared fields, so this name is dropped from the write and the
-    /// <see cref="ServiceOptionType"/> alias over the same value -- which does name a column on
-    /// <c>data.DataStore</c> -- is what persists.
+    /// Gets or sets the implementation this data store names (e.g., "MsSql", "Rest", "OData").
     /// </summary>
     [ValuesFrom(typeof(DataStoreTypes))]
-    public string? TypeId { get; set; }
+    public string? Implementation { get; set; }
 
-    /// <summary>
-    /// Gets or sets the service option type.
-    /// </summary>
-    /// <remarks>
-    /// Why: IGenericConfiguration.ServiceOptionType is the interface contract. DataStore rows carry
-    /// the discriminator in the TypeId column (Wave A DDL rename). This property bridges the two —
-    /// getting/setting TypeId so existing consumers that reference ServiceOptionType continue to work.
-    /// </remarks>
-    public string? ServiceOptionType
-    {
-        get => TypeId;
-        set => TypeId = value;
-    }
 
     /// <summary>
     /// Gets or sets the connection ID this data store is accessed through.
@@ -85,9 +68,9 @@ public partial class DataStoreConfiguration : IGenericConfiguration
     public Guid ConnectionId { get; set; }
 
     /// <summary>
-    /// Gets the store type name. Alias for <see cref="TypeId"/>.
+    /// Gets the store type name. Alias for <see cref="Implementation"/>.
     /// </summary>
-    public string? StoreType => TypeId;
+    public string? StoreType => Implementation;
 
     /// <summary>
     /// Gets or sets the optional description of this data store.

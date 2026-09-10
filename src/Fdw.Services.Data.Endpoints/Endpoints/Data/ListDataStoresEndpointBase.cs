@@ -59,8 +59,8 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
     {
         return configurations
             .Where(config => !string.IsNullOrWhiteSpace(config.Name)
-                && !string.IsNullOrWhiteSpace(config.ServiceOptionType)
-                && !string.Equals(config.ServiceOptionType, "DataStore", StringComparison.OrdinalIgnoreCase))
+                && !string.IsNullOrWhiteSpace(config.Implementation)
+                && !string.Equals(config.Implementation, "DataStore", StringComparison.OrdinalIgnoreCase))
             .GroupBy(config => config.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .Select(config => MapToSummary(config, connectionNameMap))
@@ -76,7 +76,7 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
         return new DataStoreSummaryResponse
         {
             Name = config.Name,
-            StoreType = config.ServiceOptionType,
+            StoreType = config.Implementation,
             ConnectionId = config.ConnectionId,
             ConnectionName = connectionName ?? string.Empty,
             Description = config.Description,

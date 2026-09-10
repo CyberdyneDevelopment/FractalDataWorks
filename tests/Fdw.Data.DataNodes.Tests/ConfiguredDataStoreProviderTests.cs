@@ -183,7 +183,7 @@ public sealed class ConfiguredDataStoreProviderTests
     public async Task GetByNameReturnsSuccessWithBuiltStoreWhenPipelineSucceeds()
     {
         // Arrange
-        var cfg = new DataStoreConfiguration { Name = "Store1", ServiceOptionType = "File" };
+        var cfg = new DataStoreConfiguration { Name = "Store1", Implementation = "File" };
         var builtStore = new Mock<IDataStore>().Object;
         var builder = new Mock<IDataStoreBuilder>();
         builder

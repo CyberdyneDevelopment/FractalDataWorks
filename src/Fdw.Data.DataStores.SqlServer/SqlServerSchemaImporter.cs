@@ -89,7 +89,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                 var dataStore = new DataStoreConfiguration
                 {
                     Name = databaseName,
-                    TypeId = "MsSql",
+                    Implementation = "MsSql",
                 };
 
                 var totalObjects = 0;

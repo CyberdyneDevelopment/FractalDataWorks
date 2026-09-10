@@ -197,13 +197,13 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
         foreach (var ds in dataStores.Where(d => !string.IsNullOrWhiteSpace(d.Name)))
         {
-            if (string.IsNullOrEmpty(ds.ServiceOptionType))
+            if (string.IsNullOrEmpty(ds.Implementation))
             {
                 DataStoreTypesLog.DataStoreMissingServiceOptionType(logger, ds.Name);
                 continue;
             }
 
-            DataStoreTypesLog.DataStoreLoaded(logger, ds.Id, ds.Name, ds.ServiceOptionType);
+            DataStoreTypesLog.DataStoreLoaded(logger, ds.Id, ds.Name, ds.Implementation);
         }
 
         foreach (var path in dataPaths.Where(p => !string.IsNullOrWhiteSpace(p.Name)))

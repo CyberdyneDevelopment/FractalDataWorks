@@ -26,13 +26,13 @@ public sealed class DataStoreTypesBuilderSelector : IDataStoreBuilderSelector
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var option = DataStoreTypes.ByName(configuration.ServiceOptionType);
+        var option = DataStoreTypes.ByName(configuration.Implementation);
         if (option == DataStoreTypes.NotFound)
         {
             return GenericResult<IDataStoreBuilder>.Failure(
                 DataStoreProviderLog.NoDataStoreTypeFoundAtStartup(
                     logger ?? NullLogger.Instance,
-                    configuration.ServiceOptionType ?? "(null)",
+                    configuration.Implementation ?? "(null)",
                     configuration.Name));
         }
 

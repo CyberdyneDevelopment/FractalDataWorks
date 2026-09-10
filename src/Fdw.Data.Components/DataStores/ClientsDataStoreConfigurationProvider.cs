@@ -116,7 +116,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IServiceConfiguratio
             Name = dto.Name,
             DisplayName = dto.DisplayName,
             Description = dto.Description,
-            ServiceOptionType = dto.StoreType,
+            Implementation = dto.StoreType,
             IsActive = dto.IsActive,
             WriteMode = dto.WriteMode,
             LastDiscoveredAt = dto.LastDiscoveredAt,

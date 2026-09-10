@@ -581,15 +581,15 @@ public sealed class ConfigurationGateway : IConfigurationGateway
 
     private static IDataStore? BuildStore(DataStoreConfiguration storeCfg, ILogger logger)
     {
-        var storeType = string.IsNullOrEmpty(storeCfg.TypeId)
+        var storeType = string.IsNullOrEmpty(storeCfg.Implementation)
             ? null
             : DataStoreTypes.All().FirstOrDefault(t =>
-                string.Equals(t.Name, storeCfg.TypeId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(t.Name, storeCfg.Implementation, StringComparison.OrdinalIgnoreCase));
 
         if (storeType is null)
         {
             ConfigurationGatewayLog.ExecuteFailed(logger, storeCfg.Name,
-                $"DataStore transport '{storeCfg.TypeId}' is not a registered DataStoreType");
+                $"DataStore transport '{storeCfg.Implementation}' is not a registered DataStoreType");
             return null;
         }
 

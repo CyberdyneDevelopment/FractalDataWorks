@@ -69,7 +69,7 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
         {
             Id = config.Id,
             Name = config.Name,
-            StoreType = config.ServiceOptionType ?? "Unknown",
+            StoreType = config.Implementation ?? "Unknown",
             ConnectionId = config.ConnectionId,
             ConnectionName = ResolveConnectionName(config.ConnectionId),
             Description = config.Description,

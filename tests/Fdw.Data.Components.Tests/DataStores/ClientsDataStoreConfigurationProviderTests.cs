@@ -104,7 +104,7 @@ public sealed class ClientsDataStoreConfigurationProviderTests
         configuration.Id.ShouldBe(detail.Id);
         configuration.Name.ShouldBe("Store1");
         configuration.DisplayName.ShouldBe("Store One");
-        configuration.ServiceOptionType.ShouldBe("MsSql");
+        configuration.Implementation.ShouldBe("MsSql");
         configuration.Paths.Count.ShouldBe(1);
 
         var mappedPath = configuration.Paths[0];

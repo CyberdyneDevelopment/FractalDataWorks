@@ -71,9 +71,8 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// Gets or sets the path type. Alias for <see cref="TypeId"/>.
     /// </summary>
     /// <remarks>
-    /// Why: there is no TypeId column on data.DataPath. The save translator intersects the mapper's
-    /// property names with the container's declared fields, so TypeId is dropped from the write and
-    /// this alias over the same value -- which does name the column -- is what persists.
+    /// Why: PathType is the column on data.DataPath; TypeId is the name the rest of the tree uses
+    /// for a kind, and this alias carries the same value under both.
     /// </remarks>
     public string? PathType
     {

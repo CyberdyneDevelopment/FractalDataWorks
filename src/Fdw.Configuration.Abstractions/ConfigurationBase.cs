@@ -56,7 +56,7 @@ public abstract class ConfigurationBase<T> : IGenericConfiguration<T>
     /// Gets the service option type (implementation variant) for this configuration.
     /// </summary>
     /// <example>"MsSql", "Jwt", "Email"</example>
-    public virtual string? ServiceOptionType { get; set; }
+    public virtual string? Implementation { get; set; }
 
     /// <summary>
     /// Gets the timestamp when this configuration instance was created.

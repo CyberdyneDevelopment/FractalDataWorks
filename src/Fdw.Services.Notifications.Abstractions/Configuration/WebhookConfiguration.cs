@@ -32,7 +32,7 @@ public sealed class WebhookConfiguration
     /// Gets the service option type (implementation variant) this configuration is for.
     /// Alias for <see cref="NotificationType"/>.
     /// </summary>
-    public string? ServiceOptionType => NotificationType;
+    public string? Implementation => NotificationType;
 
     /// <summary>
     /// Gets or sets the notification type — always "Webhook" for this configuration.

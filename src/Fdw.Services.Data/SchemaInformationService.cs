@@ -286,7 +286,7 @@ public sealed class SchemaInformationService : ISchemaInformationService
         {
             Name = dataStoreName,
             ConnectionId = connectionId,
-            ServiceOptionType = connectionType
+            Implementation = connectionType
         };
         var savedResult = await writer.Save(dataStoreConfig, ct).ConfigureAwait(false);
         if (!savedResult.IsSuccess || savedResult.Value == null)

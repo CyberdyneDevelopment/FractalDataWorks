@@ -23,7 +23,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>
 /// Domain-specific configuration provider for DataStore configurations.
-/// The polymorphic typed-body read (dispatch on <see cref="DataStoreConfiguration.TypeId"/> to
+/// The polymorphic typed-body read (dispatch on <see cref="DataStoreConfiguration.Implementation"/> to
 /// load the typed body row, e.g. <c>data.MsSqlDataStore</c>, and attach it to
 /// <see cref="DataStoreConfiguration.Configuration"/>) is composed uniformly by
 /// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the

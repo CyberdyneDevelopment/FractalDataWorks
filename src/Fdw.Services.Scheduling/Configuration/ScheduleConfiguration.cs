@@ -31,12 +31,12 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     /// <param name="serviceOptionType">The schedule kind (e.g., "Interval", "Cron").</param>
     public ScheduleConfiguration(string? serviceOptionType)
     {
-        ServiceOptionType = serviceOptionType;
+        Implementation = serviceOptionType;
     }
 
     /// <summary>Gets or sets the schedule kind this record is.</summary>
     [ValuesFrom(typeof(TriggerTypes))]
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <inheritdoc />
     public Guid Id { get; set; } = Guid.CreateVersion7();
@@ -45,7 +45,7 @@ public partial class ScheduleConfiguration : IScheduleDefinition
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public virtual string ScheduleType => ServiceOptionType ?? "Unknown";
+    public virtual string ScheduleType => Implementation ?? "Unknown";
 
     /// <inheritdoc />
     public string PipelineName { get; set; } = string.Empty;
