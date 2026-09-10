@@ -24,7 +24,7 @@ public sealed partial class DataverseRelationshipConfiguration : IGenericConfigu
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the owning dataverse.</summary>
-    public Guid DataverseId { get; set; }
+    public Guid DataverseImplementationId { get; set; }
 
     /// <summary>Gets or sets the data set on the left of the relationship.</summary>
     public Guid LeftDataSetId { get; set; }

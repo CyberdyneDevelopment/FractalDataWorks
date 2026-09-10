@@ -32,7 +32,7 @@ public sealed class GenericDataStoreBuilderTests
                 {
                     Id = pathId,
                     Name = "TestPath",
-                    DataStoreId = storeId,
+                    DataStoreImplementationId = storeId,
                     Containers =
                     [
                         new DataContainerConfiguration

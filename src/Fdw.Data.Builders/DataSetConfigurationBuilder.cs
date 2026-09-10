@@ -294,7 +294,7 @@ public sealed class DataSetConfigurationBuilder
     /// <param name="source">The source configuration to add.</param>
     /// <returns>This builder instance for method chaining.</returns>
     /// <remarks>
-    /// The source's <see cref="DataSetSourceConfiguration.DataSetId"/> will be
+    /// The source's <see cref="DataSetSourceConfiguration.DataSetImplementationId"/> will be
     /// set to the DataSet's ID when <see cref="Build"/> is called.
     /// </remarks>
     public DataSetConfigurationBuilder AddSource(DataSetSourceConfiguration source)
@@ -378,7 +378,7 @@ public sealed class DataSetConfigurationBuilder
         // Update source configurations with the DataSet ID
         foreach (var source in _sources)
         {
-            source.DataSetId = _dataSetId;
+            source.DataSetImplementationId = _dataSetId;
         }
 
         var config = new DataSetImplementationConfiguration

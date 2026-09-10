@@ -17,34 +17,27 @@ using Fdw.Services.Data.Commands;
 using Fdw.Services.Data.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Data;
 
 /// <summary>
 /// Provides on-demand schema discovery for named connections.
 /// Caches results via <see cref="DataStoreConfigurationProvider"/>; persists newly discovered
-/// metadata as DataStore/DataPath/DataContainer/DataContainerField rows.
+/// metadata as the DataStore's paths, containers and fields.
 /// </summary>
 /// <remarks>
 /// GetSchema is the cache-first path: if a DataStore already exists for this connection,
 /// its persisted metadata is returned immediately. Otherwise discovery runs and results
 /// are persisted before returning.
 /// RefreshSchema always re-discovers, enabling the UI "Re-discover" action.
-/// Discovery scope (included schemas, excluded schemas) is read directly from the
-/// the DataStore/DataPath/DataContainer hierarchy (db/schema/table) and RBAC.
+/// The paths, containers and fields are the store's own children, so what discovery finds is merged
+/// into the store and the store is saved once, through the DataStore domain.
 /// </remarks>
 public sealed class SchemaInformationService : ISchemaInformationService
 {
     private readonly IConnectionProvider _connectionProvider;
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> _dataPathProvider;
-    private readonly ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> _containerProvider;
-    private readonly ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> _fieldProvider;
-    private readonly IOptionsMonitor<List<DataPathConfiguration>> _dataPathOptions;
-    private readonly IOptionsMonitor<List<DataContainerConfiguration>> _containerOptions;
-    private readonly IOptionsMonitor<List<DataContainerFieldConfiguration>> _fieldOptions;
     private readonly ILogger<SchemaInformationService> _logger;
 
     /// <summary>
@@ -54,23 +47,11 @@ public sealed class SchemaInformationService : ISchemaInformationService
         IConnectionProvider connectionProvider,
         ConnectionConfigurationProvider configProvider,
         DataStoreConfigurationProvider dataStoreProvider,
-        ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> dataPathProvider,
-        ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> containerProvider,
-        ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> fieldProvider,
-        IOptionsMonitor<List<DataPathConfiguration>> dataPathOptions,
-        IOptionsMonitor<List<DataContainerConfiguration>> containerOptions,
-        IOptionsMonitor<List<DataContainerFieldConfiguration>> fieldOptions,
         ILogger<SchemaInformationService>? logger = null)
     {
         _connectionProvider = connectionProvider;
         _configProvider = configProvider;
         _dataStoreProvider = dataStoreProvider;
-        _dataPathProvider = dataPathProvider;
-        _containerProvider = containerProvider;
-        _fieldProvider = fieldProvider;
-        _dataPathOptions = dataPathOptions;
-        _containerOptions = containerOptions;
-        _fieldOptions = fieldOptions;
         _logger = logger ?? NullLogger<SchemaInformationService>.Instance;
     }
 
@@ -202,15 +183,13 @@ public sealed class SchemaInformationService : ISchemaInformationService
             return GenericResult<SchemaInformation>.Failure(msg);
         }
 
-        var containers = discoverResult.Value;
-
         var persistResult = await PersistConfiguration(
-            config.Name, connectionType, config.Id, containers, cancellationToken).ConfigureAwait(false);
+            config.Name, connectionType, config.Id, discoverResult.Value, cancellationToken).ConfigureAwait(false);
 
-        if (!persistResult.IsSuccess)
+        if (!persistResult.IsSuccess || persistResult.Value is null)
             return persistResult.ToNewResult<SchemaInformation>();
 
-        var reloadedConfigResult = await _dataStoreProvider.Get(config.Name, cancellationToken).ConfigureAwait(false);
+        var reloadedConfigResult = await _dataStoreProvider.Get(persistResult.Value, cancellationToken).ConfigureAwait(false);
         var reloadedConfig = reloadedConfigResult.IsSuccess ? reloadedConfigResult.Value : null;
         if (reloadedConfig == null)
         {
@@ -227,301 +206,125 @@ public sealed class SchemaInformationService : ISchemaInformationService
         => DataStoreDiscoveryOptions.Default;
 
     /// <summary>
-    /// Persists the discovered schema hierarchy (DataStore → DataPath → DataContainer → DataContainerField).
-    /// Uses upsert logic: existing rows are updated, new rows are inserted.
+    /// Merges the discovered schema (DataStore → DataPath → DataContainer → DataContainerField) into the
+    /// connection's store -- a new one when the connection has none -- and saves the store once.
     /// </summary>
-    private async Task<IGenericResult> PersistConfiguration(
+    /// <returns>The name the store is saved under.</returns>
+    private async Task<IGenericResult<string>> PersistConfiguration(
         string dataStoreName,
         string connectionType,
         Guid connectionId,
         IReadOnlyList<IStorageContainer> containers,
         CancellationToken ct)
     {
-        SchemaDiscoveryLog.ResolvingConfigurationWriters(_logger);
-        var writersResult = ResolveWriters();
-        if (!writersResult.IsSuccess || writersResult.Value == null)
-            return writersResult;
-
-        var writers = writersResult.Value;
         var pathGroups = containers.GroupBy(c => c.Path.PathValue, StringComparer.Ordinal).ToList();
-
         SchemaDiscoveryLog.PersistStarted(_logger, dataStoreName, containers.Count, pathGroups.Count);
-
         SchemaDiscoveryLog.PersistingDataStore(_logger, dataStoreName, connectionId);
-        var dataStoreResult = await ResolveOrCreateDataStore(
-            dataStoreName, connectionType, connectionId, writers.DataStore, ct).ConfigureAwait(false);
-        if (!dataStoreResult.IsSuccess || dataStoreResult.Value == null)
-            return dataStoreResult;
 
-        var dataStoreConfig = dataStoreResult.Value;
-        var savedDataStoreId = dataStoreConfig.Id;
+        var storeResult = await ResolveOrCreateDataStore(
+            dataStoreName, connectionType, connectionId, ct).ConfigureAwait(false);
+        if (!storeResult.IsSuccess || storeResult.Value is null)
+            return storeResult.ToNewResult<string>();
 
-        var persistResult = await PersistPathGroups(
-            dataStoreName, savedDataStoreId, pathGroups, writers, ct).ConfigureAwait(false);
-        if (!persistResult.IsSuccess)
-            return persistResult;
+        var store = storeResult.Value;
+        var pathsWritten = 0;
+        foreach (var pathGroup in pathGroups)
+        {
+            SchemaDiscoveryLog.PersistingDataPath(_logger, pathGroup.Key, store.Name);
+            var path = store.Paths.FirstOrDefault(
+                p => string.Equals(p.PathValue, pathGroup.Key, StringComparison.OrdinalIgnoreCase));
+            if (path is null)
+            {
+                path = new DataPathConfiguration { Name = pathGroup.Key, PathValue = pathGroup.Key };
+                store.Paths.Add(path);
+                pathsWritten++;
+            }
 
-        SchemaDiscoveryLog.UpdatingLastDiscoveredAt(_logger, dataStoreName);
-        await UpdateLastDiscoveredAt(dataStoreConfig, dataStoreName, writers.DataStore, ct).ConfigureAwait(false);
-        return GenericResult.Success();
+            foreach (var container in pathGroup)
+                MergeContainer(path, pathGroup.Key, container);
+        }
+
+        SchemaDiscoveryLog.UpdatingLastDiscoveredAt(_logger, store.Name);
+        var now = DateTimeOffset.UtcNow;
+        store.LastDiscoveredAt = now;
+
+        var saved = await _dataStoreProvider.Save(
+            store, store.Domain, store.Implementation, store.Name, ct).ConfigureAwait(false);
+        if (!saved.IsSuccess)
+        {
+            var upstreamError = saved.CurrentMessage;
+            if (upstreamError is not null)
+                SchemaDiscoveryLog.PersistFailed(_logger, store.Name, upstreamError);
+            else
+                SchemaDiscoveryLog.DataStoreSaveFailed(_logger, store.Name);
+            return saved.ToNewResult<string>();
+        }
+
+        SchemaDiscoveryLog.LastDiscoveredAtUpdated(_logger, store.Name, now);
+        SchemaDiscoveryLog.PersistCompleted(
+            _logger, store.Name, pathsWritten, containers.Count, containers.Sum(c => c.Schema.Fields.Count));
+        return GenericResult<string>.Success(store.Name);
     }
 
     private async Task<IGenericResult<IDataStoreImplementationConfiguration>> ResolveOrCreateDataStore(
         string dataStoreName,
         string connectionType,
         Guid connectionId,
-        ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration> writer,
         CancellationToken ct)
     {
-        var allDataStoresResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        var allDataStores = allDataStoresResult.IsSuccess ? allDataStoresResult.Value! : (IReadOnlyList<IDataStoreImplementationConfiguration>)[];
-        var existingDataStore = allDataStores.FirstOrDefault(ds => ds.ConnectionId == connectionId);
+        var allDataStores = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
+        if (!allDataStores.IsSuccess)
+            return allDataStores.ToNewResult<IDataStoreImplementationConfiguration>();
 
+        var existingDataStore = allDataStores.Value!.FirstOrDefault(ds => ds.ConnectionId == connectionId);
         if (existingDataStore != null)
         {
-            SchemaDiscoveryLog.ExistingDataStoreFound(_logger, dataStoreName, existingDataStore.Id);
+            SchemaDiscoveryLog.ExistingDataStoreFound(_logger, existingDataStore.Name, existingDataStore.Id);
             return GenericResult<IDataStoreImplementationConfiguration>.Success(existingDataStore);
         }
 
-        var dataStoreConfig = new DataStoreImplementationConfiguration
+        // Why these: the first save writes the domain row from them. The store is named for its
+        // connection and is the kind the connection is.
+        return GenericResult<IDataStoreImplementationConfiguration>.Success(new DataStoreImplementationConfiguration
         {
             Name = dataStoreName,
+            Domain = "DataStore",
+            Implementation = connectionType,
             ConnectionId = connectionId,
-            Implementation = connectionType
-        };
-        var savedResult = await writer.Save(dataStoreConfig, ct).ConfigureAwait(false);
-        if (!savedResult.IsSuccess || savedResult.Value == null)
-        {
-            var upstreamError = savedResult.CurrentMessage;
-            if (upstreamError is not null)
-                SchemaDiscoveryLog.PersistFailed(_logger, dataStoreName, upstreamError);
-            else
-                SchemaDiscoveryLog.DataStoreSaveFailed(_logger, dataStoreName);
-            return savedResult.ToNewResult<DataStoreImplementationConfiguration>();
-        }
-
-        return GenericResult<IDataStoreImplementationConfiguration>.Success(savedResult.Value);
+        });
     }
 
-    private async Task<IGenericResult> PersistPathGroups(
-        string dataStoreName,
-        Guid savedDataStoreId,
-        List<System.Linq.IGrouping<string, IStorageContainer>> pathGroups,
-        ConfigurationWriters writers,
-        CancellationToken ct)
+    private void MergeContainer(DataPathConfiguration path, string pathName, IStorageContainer discovered)
     {
-        var existingPaths = _dataPathOptions.CurrentValue
-            .Where(p => p.DataStoreId == savedDataStoreId)
-            .ToDictionary(p => p.PathValue, StringComparer.OrdinalIgnoreCase);
-
-        var pathsWritten = 0;
-        var containersWritten = 0;
-        var fieldsWritten = 0;
-
-        foreach (var pathGroup in pathGroups)
+        SchemaDiscoveryLog.PersistingContainer(_logger, discovered.Name, pathName);
+        var container = path.Containers.FirstOrDefault(
+            c => string.Equals(c.Name, discovered.Name, StringComparison.OrdinalIgnoreCase));
+        if (container is null)
         {
-            SchemaDiscoveryLog.PersistingDataPath(_logger, pathGroup.Key, dataStoreName);
-            var pathIdResult = await ResolveOrCreatePath(
-                dataStoreName, savedDataStoreId, pathGroup.Key, existingPaths, writers.Path, ct).ConfigureAwait(false);
-            if (!pathIdResult.IsSuccess)
-                return pathIdResult;
+            container = new DataContainerConfiguration { Id = Guid.CreateVersion7(), Name = discovered.Name };
+            path.Containers.Add(container);
+        }
 
-            var savedPathId = pathIdResult.Value;
-            if (!existingPaths.ContainsKey(pathGroup.Key))
-                pathsWritten++;
+        container.TypeId = discovered.ContainerType.Name;
 
-            var persistResult = await PersistContainersForPath(
-                pathGroup, savedPathId, writers.Container, writers.Field, ct).ConfigureAwait(false);
-            if (!persistResult.IsSuccess)
+        SchemaDiscoveryLog.PersistingFields(_logger, discovered.Schema.Fields.Count, discovered.Name);
+        foreach (var field in discovered.Schema.Fields)
+        {
+            var existingField = container.Fields.FirstOrDefault(
+                f => string.Equals(f.Name, field.Name, StringComparison.OrdinalIgnoreCase));
+            if (existingField is not null)
             {
-                var upstreamError = persistResult.CurrentMessage;
-                if (upstreamError is not null)
-                    SchemaDiscoveryLog.PersistFailed(_logger, dataStoreName, upstreamError);
-                else
-                    SchemaDiscoveryLog.ContainerPersistFailed(_logger, dataStoreName);
-                return persistResult;
+                existingField.DataType = field.FieldType.TypeName;
+                continue;
             }
 
-            containersWritten += pathGroup.Count();
-            fieldsWritten += pathGroup.Sum(c => c.Schema.Fields.Count);
-        }
-
-        SchemaDiscoveryLog.PersistCompleted(_logger, dataStoreName, pathsWritten, containersWritten, fieldsWritten);
-        return GenericResult.Success();
-    }
-
-    private async Task<IGenericResult<Guid>> ResolveOrCreatePath(
-        string dataStoreName,
-        Guid dataStoreId,
-        string pathKey,
-        Dictionary<string, DataPathConfiguration> existingPaths,
-        ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> writer,
-        CancellationToken ct)
-    {
-        if (existingPaths.TryGetValue(pathKey, out var existingPath))
-            return GenericResult<Guid>.Success(existingPath.Id);
-
-        var pathConfig = new DataPathConfiguration
-        {
-            Name = pathKey,
-            DataStoreId = dataStoreId,
-            PathValue = pathKey
-        };
-        var savedPathResult = await writer.Save(pathConfig, ct).ConfigureAwait(false);
-        if (!savedPathResult.IsSuccess || savedPathResult.Value == null)
-        {
-            var upstreamError = savedPathResult.CurrentMessage;
-            if (upstreamError is not null)
-                SchemaDiscoveryLog.PersistFailed(_logger, dataStoreName, upstreamError);
-            else
-                SchemaDiscoveryLog.DataPathSaveFailed(_logger, pathKey, dataStoreName);
-            return savedPathResult.ToNewResult<Guid>();
-        }
-
-        return GenericResult<Guid>.Success(savedPathResult.Value.Id);
-    }
-
-    private async Task<IGenericResult> PersistContainersForPath(
-        System.Linq.IGrouping<string, IStorageContainer> pathGroup,
-        Guid savedPathId,
-        ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> containerWriter,
-        ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> fieldWriter,
-        CancellationToken ct)
-    {
-        var existingContainers = _containerOptions.CurrentValue
-            .Where(c => c.DataPathId == savedPathId)
-            .ToDictionary(c => c.Name, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var container in pathGroup)
-        {
-            Guid savedContainerId;
-            IReadOnlyList<DataContainerFieldConfiguration> currentFields;
-            SchemaDiscoveryLog.PersistingContainer(_logger, container.Name, pathGroup.Key);
-
-            if (existingContainers.TryGetValue(container.Name, out var existingContainerRef))
+            container.Fields.Add(new DataContainerFieldConfiguration
             {
-                var composedResult = await containerWriter.Get(existingContainerRef.Id, ct).ConfigureAwait(false);
-                if (!composedResult.IsSuccess || composedResult.Value == null)
-                    return composedResult;
-
-                var existingContainer = composedResult.Value;
-
-                if (!string.Equals(existingContainer.TypeId, container.ContainerType.Name, StringComparison.Ordinal))
-                {
-                    existingContainer.TypeId = container.ContainerType.Name;
-                    var containerUpdateResult = await containerWriter.Save(existingContainer, ct).ConfigureAwait(false);
-                    if (!containerUpdateResult.IsSuccess)
-                        return containerUpdateResult;
-                }
-                savedContainerId = existingContainer.Id;
-                currentFields = existingContainer.Fields;
-            }
-            else
-            {
-                var containerConfig = new DataContainerConfiguration
-                {
-                    Name = container.Name,
-                    DataPathId = savedPathId,
-                    TypeId = container.ContainerType.Name
-                };
-                var savedContainerResult = await containerWriter.Save(containerConfig, ct).ConfigureAwait(false);
-                if (!savedContainerResult.IsSuccess || savedContainerResult.Value == null)
-                    return savedContainerResult;
-
-                savedContainerId = savedContainerResult.Value.Id;
-                currentFields = [];
-            }
-
-            SchemaDiscoveryLog.PersistingFields(_logger, container.Schema.Fields.Count, container.Name);
-
-            var existingFields = currentFields
-                .ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
-
-            var ordinal = 0;
-            foreach (var field in container.Schema.Fields)
-            {
-                if (existingFields.TryGetValue(field.Name, out var existingField))
-                {
-                    var dataType = field.FieldType.TypeName;
-                    if (!string.Equals(existingField.DataType, dataType, StringComparison.Ordinal))
-                    {
-                        existingField.DataType = dataType;
-                        var fieldUpdateResult = await fieldWriter.Save(existingField, ct).ConfigureAwait(false);
-                        if (!fieldUpdateResult.IsSuccess)
-                            return fieldUpdateResult;
-                    }
-                }
-                else
-                {
-                    var fieldConfig = new DataContainerFieldConfiguration
-                    {
-                        Name = field.Name,
-                        DataContainerId = savedContainerId,
-                        DataType = field.FieldType.TypeName,
-                        VisibilityId = field.Visibility.Name
-                    };
-                    var savedFieldResult = await fieldWriter.Save(fieldConfig, ct).ConfigureAwait(false);
-                    if (!savedFieldResult.IsSuccess)
-                        return savedFieldResult;
-                }
-
-                ordinal++;
-            }
-        }
-
-        return GenericResult.Success();
-    }
-
-    private async Task UpdateLastDiscoveredAt(
-        DataStoreImplementationConfiguration dataStoreConfig,
-        string dataStoreName,
-        ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration> writer,
-        CancellationToken ct)
-    {
-        var now = DateTimeOffset.UtcNow;
-        dataStoreConfig.LastDiscoveredAt = now;
-        var updateResult = await writer.Save(dataStoreConfig, ct).ConfigureAwait(false);
-        if (updateResult.IsSuccess)
-        {
-            SchemaDiscoveryLog.LastDiscoveredAtUpdated(_logger, dataStoreName, now);
-        }
-        else
-        {
-            var upstreamError = updateResult.CurrentMessage;
-            if (upstreamError is not null)
-                SchemaDiscoveryLog.PersistFailed(_logger, dataStoreName, upstreamError);
-            else
-                SchemaDiscoveryLog.LastDiscoveredAtUpdateFailed(_logger, dataStoreName);
-        }
-    }
-
-    private IGenericResult<ConfigurationWriters> ResolveWriters()
-    {
-        return GenericResult<ConfigurationWriters>.Success(new ConfigurationWriters(
-            _dataStoreProvider,
-            _dataPathProvider,
-            _containerProvider,
-            _fieldProvider));
-    }
-
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-    private sealed class ConfigurationWriters
-    {
-        public ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration> DataStore { get; }
-        public ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> Path { get; }
-        public ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> Container { get; }
-        public ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> Field { get; }
-
-        public ConfigurationWriters(
-            ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration> dataStore,
-            ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration> path,
-            ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration> container,
-            ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration> field)
-        {
-            DataStore = dataStore;
-            Path = path;
-            Container = container;
-            Field = field;
+                Id = Guid.CreateVersion7(),
+                Name = field.Name,
+                DataType = field.FieldType.TypeName,
+                VisibilityId = field.Visibility.Name,
+            });
         }
     }
 }

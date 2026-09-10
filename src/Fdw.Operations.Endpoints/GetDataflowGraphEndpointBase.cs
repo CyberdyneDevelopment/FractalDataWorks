@@ -195,13 +195,13 @@ public abstract class GetDataflowGraphEndpointBase : EndpointWithoutRequest<Data
                 }
             });
 
-            var dataSetNode = dataSets.FirstOrDefault(d => d.Id == source.DataSetId);
+            var dataSetNode = dataSets.FirstOrDefault(d => d.Id == source.DataSetImplementationId);
             if (dataSetNode != null)
             {
                 edges.Add(new DataflowEdgeDto
                 {
-                    Id = $"edge_ds_{source.DataSetId}_src_{source.Id}",
-                    Source = $"dataset_{source.DataSetId}",
+                    Id = $"edge_ds_{source.DataSetImplementationId}_src_{source.Id}",
+                    Source = $"dataset_{source.DataSetImplementationId}",
                     Target = sourceNodeId,
                     RelationType = "uses_source",
                     Label = $"Priority: {source.Priority}",

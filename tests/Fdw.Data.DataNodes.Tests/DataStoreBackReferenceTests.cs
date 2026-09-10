@@ -39,7 +39,7 @@ public sealed class DataStoreBackReferenceTests
                 {
                     Id = connPathId,
                     Name = "conn",
-                    DataStoreId = storeId,
+                    DataStoreImplementationId = storeId,
                     Containers =
                     [
                         new DataContainerConfiguration
@@ -55,7 +55,7 @@ public sealed class DataStoreBackReferenceTests
                 {
                     Id = dataPathId,
                     Name = "data",
-                    DataStoreId = storeId,
+                    DataStoreImplementationId = storeId,
                     Containers =
                     [
                         new DataContainerConfiguration

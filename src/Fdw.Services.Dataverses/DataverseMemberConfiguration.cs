@@ -25,7 +25,7 @@ public sealed partial class DataverseMemberConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the owning dataverse.</summary>
-    public Guid DataverseId { get; set; }
+    public Guid DataverseImplementationId { get; set; }
 
     /// <summary>Gets or sets what kind of thing holds this membership: User or Role.</summary>
     /// <remarks>

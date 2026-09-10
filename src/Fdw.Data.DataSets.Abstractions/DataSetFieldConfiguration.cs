@@ -79,7 +79,7 @@ public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
     /// <summary>
     /// Gets or sets the parent DataSet identifier (FK to data.DataSet.Id).
     /// </summary>
-    public Guid DataSetId { get; set; }
+    public Guid DataSetImplementationId { get; set; }
 
     /// <summary>
     /// Gets or sets the ordinal position of this field within the DataSet.
@@ -197,7 +197,7 @@ public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
             IsIndexed = IsIndexed,
             MaxLength = MaxLength,
             DefaultValue = DefaultValue,
-            DataSetId = DataSetId,
+            DataSetImplementationId = DataSetImplementationId,
             Ordinal = Ordinal,
             IsCurrent = IsCurrent,
             IsDeleted = IsDeleted,

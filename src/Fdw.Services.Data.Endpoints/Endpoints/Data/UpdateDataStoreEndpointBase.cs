@@ -118,7 +118,7 @@ public abstract class UpdateDataStoreEndpointBase<TConfig> : CrudUpdateEndpointB
                 Name = p.Name,
                 PathValue = p.PhysicalPath,
                 Description = p.Description,
-                DataStoreId = target.Id,
+                DataStoreImplementationId = target.Id,
                 Containers = byName.TryGetValue(p.Name, out var kept) ? kept.Containers : [],
             })
             .ToList();

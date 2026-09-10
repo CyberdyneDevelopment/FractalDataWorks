@@ -110,7 +110,7 @@ public sealed class ClientsDataStoreConfigurationProviderTests
         var mappedPath = configuration.Paths[0];
         mappedPath.Name.ShouldBe("dbo");
         mappedPath.PathValue.ShouldBe("dbo");
-        mappedPath.DataStoreId.ShouldBe(configuration.Id);
+        mappedPath.DataStoreImplementationId.ShouldBe(configuration.Id);
         mappedPath.Containers.Count.ShouldBe(1);
 
         var mappedContainer = mappedPath.Containers[0];

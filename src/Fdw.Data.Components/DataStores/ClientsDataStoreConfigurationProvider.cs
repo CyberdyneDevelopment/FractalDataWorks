@@ -163,7 +163,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
             Description = dto.Description,
             SourceDescription = dto.SourceDescription,
             PathType = dto.PathType,
-            DataStoreId = dataStoreId,
+            DataStoreImplementationId = dataStoreId,
         };
 
         configuration.Containers = dto.Containers.Select(containerDto => MapContainer(containerDto, configuration.Id)).ToList();

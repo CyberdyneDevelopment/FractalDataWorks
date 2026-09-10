@@ -21,7 +21,7 @@ public sealed partial class DataverseMembershipRequestConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the dataverse being joined.</summary>
-    public Guid DataverseId { get; set; }
+    public Guid DataverseImplementationId { get; set; }
 
     /// <summary>Gets or sets who asked. Always a person, even when asking for a role to be added.</summary>
     public Guid RequestedByUserId { get; set; }

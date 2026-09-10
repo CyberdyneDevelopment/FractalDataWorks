@@ -28,7 +28,7 @@ public partial class DataSetKeyFieldConfiguration : IGenericConfiguration
     /// without a join through DataSetField. Matches the pattern on data.DataSetField and
     /// data.DataSetSource which both carry DataSetId directly.
     /// </remarks>
-    public Guid DataSetId { get; set; }
+    public Guid DataSetImplementationId { get; set; }
 
 
 

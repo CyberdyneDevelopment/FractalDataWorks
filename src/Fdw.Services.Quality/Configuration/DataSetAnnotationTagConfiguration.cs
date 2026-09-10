@@ -24,7 +24,7 @@ public sealed partial class DataSetAnnotationTagConfiguration : IGenericConfigur
     /// Gets or sets the logical FK to the owning DataSetAnnotation (catalog.DataSetAnnotation.Id). The
     /// configuration save translator resolves the physical DataSetAnnotationRowId from this via subquery.
     /// </summary>
-    public Guid DataSetAnnotationId { get; set; }
+    public Guid DataSetAnnotationImplementationId { get; set; }
 
     /// <summary>
     /// Gets or sets the name for display/binding.

@@ -103,7 +103,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                 Name = p.Name,
                 PathValue = p.PhysicalPath,
                 Description = p.Description,
-                DataStoreId = target.Id,
+                DataStoreImplementationId = target.Id,
             })
             .ToList();
     }

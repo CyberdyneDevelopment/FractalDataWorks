@@ -16,9 +16,9 @@ public sealed class DataPathConfigurationValidator : FdwConfigurationValidator<D
         RuleFor(x => x.Name)
             .IsValidName(200);
 
-        RuleFor(x => x.DataStoreId)
+        RuleFor(x => x.DataStoreImplementationId)
             .NotEqual(System.Guid.Empty)
-            .WithMessage("DataStoreId is required");
+            .WithMessage("DataStoreImplementationId is required");
 
         RuleFor(x => x.PathValue)
             .NotEmpty()

@@ -526,7 +526,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = builder.Build();
         result.IsSuccess.ShouldBeTrue();
 
-        builder.SourceConfigurations.ShouldAllBe(s => s.DataSetId == id);
+        builder.SourceConfigurations.ShouldAllBe(s => s.DataSetImplementationId == id);
     }
 
     [Fact]

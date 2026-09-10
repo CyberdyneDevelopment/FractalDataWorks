@@ -65,93 +65,49 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
 
             // Why here: the collection owns what there is one of per domain. A provider that
             // registers itself is a second place to look and a second thing to keep in step.
-            // Why literal: the child-type providers below are plain ImplementationConfigurationProviderBase<,>
-            // instances (not domain-specific subclasses), so there is no per-domain constructor default
-            // to fall back on — this is the domain's own default location.
-
-            builder.Services.TryAddSingleton<DataStoreConfigurationProvider>(sp =>
-                new DataStoreConfigurationProvider(
-                    sp.GetService<ILogger<DataStoreConfigurationProvider>>(),
+            // Why every option: DataStore and DataSet each have one implementation table, so one
+            // implementation provider serves every kind, and the kinds are whichever options
+            // attached -- including ones declared outside FDW.
+            builder.Services.TryAddSingleton<DataStoreImplementationConfigurationProvider>(sp =>
+                new DataStoreImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<DataStoreImplementationConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    sp.GetRequiredService<ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration>>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataStoreImplementationConfiguration>>(
-                sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
+                    DataStoreTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>>(
+                sp => sp.GetRequiredService<DataStoreImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<DataStoreConfigurationProvider>(sp =>
+            {
+                var domain = new DataStoreConfigurationProvider(
+                    sp.GetRequiredService<ILogger<DataStoreConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection);
+                var implementation = sp.GetRequiredService<IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>>();
+                foreach (var kind in DataStoreTypes.All())
+                    domain.Register(kind.Name, implementation);
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataStoreImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataStoreConfigurationProvider>());
 
-            // Why: Child types (DataPath/DataContainer/DataContainerField) need their own providers so
-            // SchemaInformationService and MsSqlSchemaImportPersister can Save discovered schema.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IDataPathImplementationConfiguration>>.Instance,
+            builder.Services.TryAddSingleton<DataSetImplementationConfigurationProvider>(sp =>
+                new DataSetImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<DataSetImplementationConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IDataContainerImplementationConfiguration>>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IDataContainerFieldImplementationConfiguration>>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-
-
-            // Why keys are registered with DataPath, DataContainer and DataContainerField rather than with
-            // connections: a container's keys are the same kind of child of the same node, and the
-            // connections collection owns transports, not the data schema. The cascade resolves a child by
-            // finding the ConfigurationCommands option that claims its type, so without these a container
-            // that declared a key saved as NoChildCommandForType and data.DataContainerKey stayed empty.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataContainerKeyImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IDataContainerKeyImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IDataContainerKeyImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IDataContainerKeyImplementationConfiguration>>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataContainerKeyFieldImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IDataContainerKeyFieldImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IDataContainerKeyFieldImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IDataContainerKeyFieldImplementationConfiguration>>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-
-            // Why (FDW-403 slice 2): DataPathPolicy and FileTypeHandlerOverride are child tables of
-            // data.DataPath using a physical FK (DataPathRowId → DataPath.RowId). Registering their
-            // providers here makes them available for cascade load in FileSystemDataStoreConfigProvider
-            // without the FileSystem package taking a dependency on IConfigurationGateway directly.
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataPathPolicyImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IDataPathPolicyImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IDataPathPolicyImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IDataPathPolicyImplementationConfiguration>>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IFileTypeHandlerOverrideImplementationConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<IFileTypeHandlerOverrideImplementationConfiguration>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<IFileTypeHandlerOverrideImplementationConfiguration>>()
-                        ?? NullLogger<ImplementationConfigurationProviderBase<IFileTypeHandlerOverrideImplementationConfiguration>>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-            // Why named here rather than defaulted on the constructor: a defaulted connection is one a
-            // caller inherits without saying so, and this provider is registered directly rather than by
-            // a collection that would otherwise name it.
-
-            builder.Services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
-                new DataSetConfigurationProvider(
-                    sp.GetService<ILogger<DataSetConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStoreTypes.ConfigurationConnection, "data"));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IDataSetImplementationConfiguration>>(
-                sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+                    DataStoreTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IDataSetImplementationConfiguration>>(
+                sp => sp.GetRequiredService<DataSetImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<DataSetConfigurationProvider>(sp =>
+            {
+                var domain = new DataSetConfigurationProvider(
+                    sp.GetRequiredService<ILogger<DataSetConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection);
+                var implementation = sp.GetRequiredService<IImplementationConfigurationProvider<IDataSetImplementationConfiguration>>();
+                foreach (var kind in DataSetTypes.All())
+                    domain.Register(kind.Name, implementation);
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>(
                 sp => sp.GetRequiredService<DataSetConfigurationProvider>());
 
             // Lineage reads containers that span domains and, in the transform schema, have no

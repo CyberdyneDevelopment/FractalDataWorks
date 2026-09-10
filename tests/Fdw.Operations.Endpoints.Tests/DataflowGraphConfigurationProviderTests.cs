@@ -131,7 +131,7 @@ public class DataflowGraphConfigurationProviderTests
         gateway.Setup(g => g.Execute<IEnumerable<DataSetSourceConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<DataSetSourceConfiguration>>.Success([
-                new DataSetSourceConfiguration { Id = Guid.NewGuid(), DataSetId = Guid.NewGuid(), SourceName = "Src1", Priority = 1 }
+                new DataSetSourceConfiguration { Id = Guid.NewGuid(), DataSetImplementationId = Guid.NewGuid(), SourceName = "Src1", Priority = 1 }
             ]));
 
         var result = await MakeProvider(gateway).LoadSources(TestContext.Current.CancellationToken);

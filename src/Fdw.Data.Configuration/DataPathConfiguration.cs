@@ -49,7 +49,7 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// <summary>
     /// Gets or sets the DataStore ID this path belongs to.
     /// </summary>
-    public Guid DataStoreId { get; set; }
+    public Guid DataStoreImplementationId { get; set; }
 
     /// <summary>
     /// Gets or sets the full path string (e.g., "dbo.Customers", "/api/v1/orders").

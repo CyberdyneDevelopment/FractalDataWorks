@@ -59,7 +59,7 @@ public sealed partial class EscalationLevelConfiguration : IGenericConfiguration
     /// Gets or sets the identifier of the escalation policy this level belongs to.
     /// Foreign key to ops.EscalationPolicy(Id).
     /// </summary>
-    public Guid EscalationPolicyId { get; set; }
+    public Guid EscalationPolicyImplementationId { get; set; }
 
     /// <summary>
     /// Gets or sets the escalation tier number (1, 2, 3, etc.).

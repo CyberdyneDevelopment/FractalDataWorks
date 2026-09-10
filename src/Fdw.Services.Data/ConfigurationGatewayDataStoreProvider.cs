@@ -208,7 +208,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
         foreach (var path in dataPaths.Where(p => !string.IsNullOrWhiteSpace(p.Name)))
         {
-            DataStoreTypesLog.DataPathLoaded(logger, path.Id, path.Name, path.DataStoreId);
+            DataStoreTypesLog.DataPathLoaded(logger, path.Id, path.Name, path.DataStoreImplementationId);
         }
 
         foreach (var container in dataContainers.Where(c => !string.IsNullOrWhiteSpace(c.Name)))

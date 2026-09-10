@@ -40,7 +40,7 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     // ============================================================================
 
     /// <summary>Gets or sets the parent DataSet identifier (FK to data.DataSet.Id).</summary>
-    public Guid DataSetId { get; set; }
+    public Guid DataSetImplementationId { get; set; }
 
     // ============================================================================
     // Source binding

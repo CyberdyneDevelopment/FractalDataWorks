@@ -54,7 +54,7 @@ public sealed partial class DataSetAggregateConfiguration : IGenericConfiguratio
     /// without a join through DataSet — mirrors the pattern on data.DataSetKeyField and
     /// data.DataSetSource which both carry DataSetId directly.
     /// </remarks>
-    public Guid DataSetId { get; set; }
+    public Guid DataSetImplementationId { get; set; }
 
     // ============================================================================
     // Aggregate definition

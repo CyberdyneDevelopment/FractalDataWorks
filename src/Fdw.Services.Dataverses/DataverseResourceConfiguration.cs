@@ -30,7 +30,7 @@ public sealed partial class DataverseResourceConfiguration : IGenericConfigurati
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the owning dataverse.</summary>
-    public Guid DataverseId { get; set; }
+    public Guid DataverseImplementationId { get; set; }
 
     /// <summary>Gets or sets the kind of resource attached.</summary>
     public string ResourceType { get; set; } = string.Empty;

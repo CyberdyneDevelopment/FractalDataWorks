@@ -47,7 +47,7 @@ public partial class NotificationRecipientConfiguration
     /// Generated automatically by ParentTableName - excluded from DDL to prevent duplicate.
     /// </summary>
     [NotMapped]
-    public Guid NotificationRuleId { get; set; }
+    public Guid NotificationRuleImplementationId { get; set; }
 
     /// <summary>
     /// Gets or sets the recipient value (email, channel, URL, etc.).
