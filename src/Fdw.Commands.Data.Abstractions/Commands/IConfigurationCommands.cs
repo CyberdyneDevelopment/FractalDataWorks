@@ -16,7 +16,7 @@ public interface IConfigurationCommands : ITypeOption
 {
     /// <summary>
     /// Gets the physical table name this command targets.
-    /// Used by ImplementationConfigurationProviderBase to look up DataStore container metadata
+    /// Used by the configuration providers to look up DataStore container metadata
     /// for FK-based parent ID resolution.
     /// </summary>
     string ContainerName { get; }

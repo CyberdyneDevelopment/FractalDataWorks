@@ -36,7 +36,7 @@ namespace Fdw.Services.Etl;
 /// This ServiceTypeCollection manages ETL pipeline ENGINE types (BatchCopy, Streaming).
 /// Engine types are services with behavior - they register factories and the two-level configuration
 /// typed-body chain (Pipeline → Etl → engine). Each engine type registers its own engine configuration
-/// body (e.g., BatchCopyPipelineConfiguration : IEtlPipelineTypedConfiguration) plus the ETL-kind header
+/// body (e.g., BatchCopyPipelineConfiguration : IEtlPipelineImplementationConfiguration) plus the ETL-kind header
 /// provider (EtlPipelineConfiguration, the "Etl" kind of PipelineConfiguration).
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -152,9 +152,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                 new EtlPipelineConfigurationProvider(
                     sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), EtlPipelineTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IEtlPipelineImplementationConfiguration>>(
-                sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IEtlPipelineImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IEtlPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
 
             var declaredOptions = Options;

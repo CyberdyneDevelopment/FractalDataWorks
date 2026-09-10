@@ -1,6 +1,4 @@
-using Fdw.Services.Etl;
 using Fdw.Services.Etl.Pipelines;
-using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
@@ -9,9 +7,9 @@ using Xunit;
 namespace Fdw.Operations.Endpoints.Tests.Lineage;
 
 /// <summary>
-/// Unit tests for <see cref="PipelineLineageProjection"/> — the dot-walk from a composed
-/// <see cref="PipelineConfiguration"/> aggregate (header → EtlPipeline kind body → engine typed body)
-/// to the flat <see cref="PipelineLineageRecord"/> the lineage graph builder consumes.
+/// Unit tests for <see cref="PipelineLineageProjection"/> — the read from a configured pipeline, as
+/// the Pipeline domain hands it back, to the flat <see cref="PipelineLineageRecord"/> the lineage
+/// graph builder consumes.
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "Etl")]
@@ -35,32 +33,26 @@ public class PipelineLineageProjectionTests
             times);
 
     [Fact]
-    public void FromComposedBatchCopyAggregateExtractsLinkage()
+    public void FromBatchCopyImplementationExtractsLinkage()
     {
-        var aggregate = new PipelineConfiguration
+        var configuration = new BatchCopyPipelineConfiguration
         {
             Id = System.Guid.NewGuid(),
             Name = "UsgsDailyLoad",
-            Implementation = "Etl",
-            Configuration = new EtlPipelineConfiguration
-            {
-                Implementation = "BatchCopy",
-                Configuration = new BatchCopyPipelineConfiguration
-                {
-                    IsEnabled = true,
-                    SourceDataSet = "UsgsDailyRaw",
-                    DestinationDataSet = "UsgsDailySink",
-                    SourceConnectionName = "UsgsHttp",
-                    DestinationConnectionName = "NflDb"
-                }
-            }
+            Domain = "Pipeline",
+            Implementation = "BatchCopy",
+            IsEnabled = true,
+            SourceDataSet = "UsgsDailyRaw",
+            DestinationDataSet = "UsgsDailySink",
+            SourceConnectionName = "UsgsHttp",
+            DestinationConnectionName = "NflDb"
         };
 
-        var record = PipelineLineageProjection.From(aggregate, _logger.Object);
+        var record = PipelineLineageProjection.From(configuration, _logger.Object);
 
-        record.Id.ShouldBe(aggregate.Id);
+        record.Id.ShouldBe(configuration.Id);
         record.Name.ShouldBe("UsgsDailyLoad");
-        record.Implementation.ShouldBe("Etl");
+        record.Implementation.ShouldBe("BatchCopy");
         record.SourceDataSet.ShouldBe("UsgsDailyRaw");
         record.DestinationDataSet.ShouldBe("UsgsDailySink");
         record.SourceConnectionName.ShouldBe("UsgsHttp");
@@ -71,28 +63,22 @@ public class PipelineLineageProjectionTests
     }
 
     [Fact]
-    public void FromComposedStreamingAggregateExtractsLinkage()
+    public void FromStreamingImplementationExtractsLinkage()
     {
-        var aggregate = new PipelineConfiguration
+        var configuration = new StreamingPipelineConfiguration
         {
             Id = System.Guid.NewGuid(),
             Name = "StreamingIngest",
-            Implementation = "Etl",
-            Configuration = new EtlPipelineConfiguration
-            {
-                Implementation = "Streaming",
-                Configuration = new StreamingPipelineConfiguration
-                {
-                    IsEnabled = true,
-                    SourceDataSet = "StreamSourceDs",
-                    DestinationDataSet = "StreamSinkDs",
-                    SourceConnectionName = "StreamSourceConn",
-                    DestinationConnectionName = "StreamSinkConn"
-                }
-            }
+            Domain = "Pipeline",
+            Implementation = "Streaming",
+            IsEnabled = true,
+            SourceDataSet = "StreamSourceDs",
+            DestinationDataSet = "StreamSinkDs",
+            SourceConnectionName = "StreamSourceConn",
+            DestinationConnectionName = "StreamSinkConn"
         };
 
-        var record = PipelineLineageProjection.From(aggregate, _logger.Object);
+        var record = PipelineLineageProjection.From(configuration, _logger.Object);
 
         record.SourceDataSet.ShouldBe("StreamSourceDs");
         record.DestinationDataSet.ShouldBe("StreamSinkDs");
@@ -102,48 +88,26 @@ public class PipelineLineageProjectionTests
     }
 
     [Fact]
-    public void FromHeaderWithNoEngineBodyReturnsNodeOnlyRecordAndLogs()
+    public void FromAnImplementationCarryingNoEtlLinkageReturnsNodeOnlyRecordAndLogs()
     {
-        var aggregate = new PipelineConfiguration
+        var configuration = new NonEtlPipelineConfiguration
         {
             Id = System.Guid.NewGuid(),
-            Name = "OrphanPipeline",
-            Implementation = "Etl",
-            Configuration = new EtlPipelineConfiguration
-            {
-                Implementation = "BatchCopy",
-                Configuration = null
-            }
+            Name = "NonEtlPipeline",
+            Domain = "Pipeline",
+            Implementation = "SomeOtherKind"
         };
 
-        var record = PipelineLineageProjection.From(aggregate, _logger.Object);
+        var record = PipelineLineageProjection.From(configuration, _logger.Object);
 
-        record.Name.ShouldBe("OrphanPipeline");
-        record.Id.ShouldBe(aggregate.Id);
+        record.Name.ShouldBe("NonEtlPipeline");
+        record.Id.ShouldBe(configuration.Id);
+        record.Implementation.ShouldBe("SomeOtherKind");
         record.SourceDataSet.ShouldBeNull();
         record.DestinationDataSet.ShouldBeNull();
         record.SourceConnectionName.ShouldBeNull();
         record.DestinationConnectionName.ShouldBeNull();
         record.IsEnabled.ShouldBeFalse();
-        VerifyLogged(LogLevel.Debug, 31002, Times.Once());
-    }
-
-    [Fact]
-    public void FromHeaderWithNonEtlKindReturnsNodeOnly()
-    {
-        var aggregate = new PipelineConfiguration
-        {
-            Id = System.Guid.NewGuid(),
-            Name = "NonEtlPipeline",
-            Implementation = "SomeOtherKind",
-            Configuration = null
-        };
-
-        var record = PipelineLineageProjection.From(aggregate, _logger.Object);
-
-        record.Name.ShouldBe("NonEtlPipeline");
-        record.SourceDataSet.ShouldBeNull();
-        record.DestinationDataSet.ShouldBeNull();
         VerifyLogged(LogLevel.Debug, 31002, Times.Once());
     }
 }

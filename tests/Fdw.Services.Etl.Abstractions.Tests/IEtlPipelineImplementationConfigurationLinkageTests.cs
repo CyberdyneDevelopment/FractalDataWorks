@@ -1,14 +1,15 @@
+using Fdw.Services.Etl;
 using Fdw.Services.Etl.Pipelines;
 
 namespace Fdw.Services.Etl.Abstractions.Tests;
 
 /// <summary>
-/// Locks the promoted <see cref="IEtlPipelineTypedConfiguration"/> linkage-bearing contract: both
-/// engine typed bodies must be assignable to the shared interface and round-trip its linkage members,
-/// so the lineage graph can dot-walk any engine polymorphically (no <c>is BatchCopy...</c> branch).
+/// Locks the <see cref="IEtlPipelineImplementationConfiguration"/> linkage-bearing contract: both
+/// engines must be assignable to the domain's contract and round-trip its linkage members, so the
+/// lineage graph reads any engine polymorphically (no <c>is BatchCopy...</c> branch).
 /// </summary>
 [ExcludeFromCodeCoverage]
-public class IEtlPipelineTypedConfigurationLinkageTests
+public class IEtlPipelineImplementationConfigurationLinkageTests
 {
     [Fact]
     [Trait("Priority", "P1")]
@@ -17,7 +18,7 @@ public class IEtlPipelineTypedConfigurationLinkageTests
     {
         var engine = new BatchCopyPipelineConfiguration();
 
-        engine.ShouldBeAssignableTo<IEtlPipelineTypedConfiguration>();
+        engine.ShouldBeAssignableTo<IEtlPipelineImplementationConfiguration>();
     }
 
     [Fact]
@@ -27,7 +28,7 @@ public class IEtlPipelineTypedConfigurationLinkageTests
     {
         var engine = new StreamingPipelineConfiguration();
 
-        engine.ShouldBeAssignableTo<IEtlPipelineTypedConfiguration>();
+        engine.ShouldBeAssignableTo<IEtlPipelineImplementationConfiguration>();
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public class IEtlPipelineTypedConfigurationLinkageTests
         };
 
 #pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
-        IEtlPipelineTypedConfiguration engine = concrete;
+        IEtlPipelineImplementationConfiguration engine = concrete;
 #pragma warning restore CA1859
 
         engine.IsEnabled.ShouldBeTrue();
@@ -76,7 +77,7 @@ public class IEtlPipelineTypedConfigurationLinkageTests
         };
 
 #pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
-        IEtlPipelineTypedConfiguration engine = concrete;
+        IEtlPipelineImplementationConfiguration engine = concrete;
 #pragma warning restore CA1859
 
         engine.IsEnabled.ShouldBeFalse();

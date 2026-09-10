@@ -1,53 +1,51 @@
-using System;
+﻿using System;
 using Fdw.Services.Etl;
-using Fdw.Services.Etl.Abstractions;
-using Fdw.Services.Pipelines;
+using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Logging;
 
 namespace Fdw.Operations.Endpoints;
 
 /// <summary>
-/// Projects a composed <see cref="PipelineConfiguration"/> aggregate (header → <see cref="EtlPipelineConfiguration"/>
-/// KIND body → <see cref="IEtlPipelineTypedConfiguration"/> ENGINE body) onto the flat
-/// <see cref="PipelineLineageRecord"/> the lineage graph builder consumes.
+/// Projects a configured pipeline onto the flat <see cref="PipelineLineageRecord"/> the lineage graph
+/// builder consumes.
 /// </summary>
 /// <remarks>
 /// Why: the previous mechanism read <c>pipe.Pipeline</c> as a flat single-table row, which structurally
-/// cannot see linkage columns (SourceDataSet/DestinationDataSet/SourceConnectionName/
-/// DestinationConnectionName/IsEnabled) that live two levels down on the engine body. This projection
-/// dot-walks the SAME composed aggregate <see cref="PipelineServiceConfigurationProvider"/> already
-/// builds via <c>Get(id)</c> — no re-implementation of the 3-table join, and no <c>is BatchCopy...</c>
-/// branch: the engine is read polymorphically through <see cref="IEtlPipelineTypedConfiguration"/>.
+/// cannot see the linkage columns (SourceDataSet/DestinationDataSet/SourceConnectionName/
+/// DestinationConnectionName/IsEnabled) that live on the engine's own row. A read through the Pipeline
+/// domain already dispatches to whichever implementation the row names, so this projection reads the
+/// linkage off that implementation — polymorphically through
+/// <see cref="IEtlPipelineImplementationConfiguration"/>, with no <c>is BatchCopy...</c> branch and no
+/// re-implementation of the join.
 /// </remarks>
 internal static class PipelineLineageProjection
 {
     /// <summary>
-    /// Projects one composed pipeline aggregate to a <see cref="PipelineLineageRecord"/>. A pipeline
-    /// whose kind body or engine body is genuinely absent renders NODE-ONLY — Name/Id/Implementation
-    /// set, linkage left null — with a Warning naming the gap. NO FALLBACKS: linkage is never fabricated.
+    /// Projects one configured pipeline to a <see cref="PipelineLineageRecord"/>. A pipeline whose
+    /// implementation carries no ETL linkage renders NODE-ONLY — Name/Id/Implementation set, linkage
+    /// left null — with a Warning naming the gap. NO FALLBACKS: linkage is never fabricated.
     /// </summary>
-    /// <param name="aggregate">The fully composed pipeline aggregate (header + kind body + engine body).</param>
+    /// <param name="configuration">The configured pipeline, as the Pipeline domain hands it back.</param>
     /// <param name="logger">Logger for verbose composition/linkage tracing.</param>
-    public static PipelineLineageRecord From(PipelineConfiguration aggregate, ILogger logger)
+    public static PipelineLineageRecord From(IPipelineImplementationConfiguration configuration, ILogger logger)
     {
-        ArgumentNullException.ThrowIfNull(aggregate);
+        ArgumentNullException.ThrowIfNull(configuration);
 
         var record = new PipelineLineageRecord
         {
-            Id = aggregate.Id,
-            Name = aggregate.Name,
-            Implementation = aggregate.Implementation ?? string.Empty
+            Id = configuration.Id,
+            Name = configuration.Name,
+            Implementation = configuration.Implementation
         };
 
-        if (aggregate.Configuration is not EtlPipelineConfiguration kindBody ||
-            kindBody.Configuration is not IEtlPipelineTypedConfiguration engine)
+        if (configuration is not IEtlPipelineImplementationConfiguration engine)
         {
-            ApiEndpointLog.PipelineNodeOnlyNoBody(logger, aggregate.Name);
+            ApiEndpointLog.PipelineNodeOnlyNoBody(logger, configuration.Name);
             return record;
         }
 
-        ApiEndpointLog.PipelineAggregateComposed(logger, aggregate.Name, kindBody.Implementation ?? string.Empty);
+        ApiEndpointLog.PipelineAggregateComposed(logger, configuration.Name, configuration.Implementation);
 
         record.SourceDataSet = engine.SourceDataSet;
         record.DestinationDataSet = engine.DestinationDataSet;
@@ -56,7 +54,7 @@ internal static class PipelineLineageProjection
         record.DestinationConnectionName = engine.DestinationConnectionName;
 
         ApiEndpointLog.PipelineLinkageExtracted(
-            logger, aggregate.Name, engine.SourceDataSet, engine.DestinationDataSet,
+            logger, configuration.Name, engine.SourceDataSet, engine.DestinationDataSet,
             engine.SourceConnectionName, engine.DestinationConnectionName);
 
         return record;

@@ -79,9 +79,7 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
                 sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IPipelineImplementationConfiguration>>(
-                sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IPipelineImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
 
             // Published under the closed generic as well as the domain interface: a consumer asking

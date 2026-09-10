@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -91,7 +92,7 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 Name,
                 nameof(IStreamingPipelineFactory));
 
-            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<IEtlPipelineTypedConfiguration>>();
+            var configProvider = services.GetRequiredService<StreamingPipelineConfigurationProvider>();
 
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
             etlKindProvider.Register(Name, configProvider);
@@ -123,11 +124,10 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 sp.GetService<IDataGatewayProvider>(),
                 sp.GetService<IConnectionProvider>()));
 
-            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<IEtlPipelineTypedConfiguration>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<IStreamingPipelineImplementationConfiguration>>(),
+            builder.Services.TryAddSingleton(sp => new StreamingPipelineConfigurationProvider(
+                sp.GetRequiredService<ILogger<StreamingPipelineConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                DataStore,
-                PathName));
+                EtlPipelineTypes.ConfigurationConnection));
 
             EtlPipelineTypes.RegisterPipelineExecutionQueue(builder.Services);
             EtlPipelineTypes.RegisterAdditionalServices(builder.Services);

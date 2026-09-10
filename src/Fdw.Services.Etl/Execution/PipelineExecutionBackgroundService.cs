@@ -21,6 +21,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Fdw.Services.Pipelines.Abstractions;
+
 namespace Fdw.Services.Etl.Execution;
 
 /// <summary>
@@ -138,7 +140,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         PipelineExecutionRequest request,
         CancellationToken ct)
     {
-        var configProvider = services.GetRequiredService<IImplementationConfigurationProvider<IPipelineImplementationConfiguration>>();
+        var configProvider = services.GetRequiredService<IPipelineConfigurationProvider>();
         var configResult = await configProvider.Get(request.PipelineName, ct).ConfigureAwait(false);
         return configResult.IsSuccess && configResult.Value is not null ? configResult.Value.OrgId : null;
     }

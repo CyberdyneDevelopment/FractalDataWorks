@@ -5,22 +5,19 @@ using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Operations.Endpoints;
 using Fdw.Results;
-using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Etl;
 using Fdw.Services.Etl.Pipelines;
-using Fdw.Services.Pipelines;
+using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Services.Data;
 
 namespace Fdw.Operations.Endpoints.Tests.Lineage;
 
 /// <summary>
-/// Unit tests for <see cref="PipelineLineageLoader"/> — the list-headers-then-per-header-<c>Get(id)</c>-
-/// compose (N+1) mechanism required because <see cref="PipelineServiceConfigurationProvider"/>'s list
-/// overload returns headers only (does not call <c>ComposeTypedBody</c>/<c>ComposeChildren</c>).
+/// Unit tests for <see cref="PipelineLineageLoader"/> — one read through
+/// <see cref="IPipelineConfigurationProvider"/>, whose list overload dispatches each row to the
+/// implementation it names, projected onto the flat lineage records.
 /// </summary>
 [Trait("Priority", "P1")]
 [Trait("Category", "Etl")]
@@ -43,104 +40,80 @@ public class PipelineLineageLoaderTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             times);
 
-    private static Mock<PipelineServiceConfigurationProvider> CreateProviderMock()
+    private static BatchCopyPipelineConfiguration Configured(string name, string sourceDataSet, string destinationDataSet) => new()
     {
-        return new Mock<PipelineServiceConfigurationProvider>(
-            (ILogger<PipelineServiceConfigurationProvider>?)null!,
-            new ConfigurationGatewayProvider(),
-            "PlatformConfiguration",
-            "pipe");
-    }
-
-    private static PipelineConfiguration Header(string name) =>
-        new() { Id = Guid.NewGuid(), Name = name, Implementation = "Etl" };
-
-    private static PipelineConfiguration Composed(PipelineConfiguration header, string sourceDataSet, string destinationDataSet) => new()
-    {
-        Id = header.Id,
-        Name = header.Name,
-        Implementation = header.Implementation,
-        Configuration = new EtlPipelineConfiguration
-        {
-            Implementation = "BatchCopy",
-            Configuration = new BatchCopyPipelineConfiguration
-            {
-                IsEnabled = true,
-                SourceDataSet = sourceDataSet,
-                DestinationDataSet = destinationDataSet
-            }
-        }
+        Id = Guid.NewGuid(),
+        Name = name,
+        Domain = "Pipeline",
+        Implementation = "BatchCopy",
+        IsEnabled = true,
+        SourceDataSet = sourceDataSet,
+        DestinationDataSet = destinationDataSet
     };
 
-    [Fact]
-    public async Task LoadComposesEachHeaderAndProjectsLinkage()
+    private static Mock<IPipelineConfigurationProvider> ProviderReturning(
+        IGenericResult<IReadOnlyList<IPipelineImplementationConfiguration>> result)
     {
-        var h1 = Header("P1");
-        var h2 = Header("P2");
-        var providerMock = CreateProviderMock();
-        providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Success([h1, h2]));
-        providerMock.Setup(p => p.Get(h1.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineConfiguration>.Success(Composed(h1, "DS1", "DS2")));
-        providerMock.Setup(p => p.Get(h2.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineConfiguration>.Success(Composed(h2, "DS3", "DS4")));
+        var provider = new Mock<IPipelineConfigurationProvider>();
+        provider.Setup(p => p.Get(It.IsAny<CancellationToken>())).ReturnsAsync(result);
+        return provider;
+    }
+
+    [Fact]
+    public async Task LoadProjectsLinkageFromEveryConfiguredPipeline()
+    {
+        var provider = ProviderReturning(
+            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success(
+                [Configured("P1", "DS1", "DS2"), Configured("P2", "DS3", "DS4")]));
 
         var records = await PipelineLineageLoader.Load(
-            providerMock.Object, _logger.Object, TestContext.Current.CancellationToken);
+            provider.Object, _logger.Object, TestContext.Current.CancellationToken);
 
         records.Count.ShouldBe(2);
         records.ShouldContain(r => r.Name == "P1" && r.SourceDataSet == "DS1" && r.DestinationDataSet == "DS2");
         records.ShouldContain(r => r.Name == "P2" && r.SourceDataSet == "DS3" && r.DestinationDataSet == "DS4");
-        providerMock.Verify(p => p.Get(h1.Id, It.IsAny<CancellationToken>()), Times.Once);
-        providerMock.Verify(p => p.Get(h2.Id, It.IsAny<CancellationToken>()), Times.Once);
         VerifyLogged(LogLevel.Debug, 11014, Times.Once());
-        VerifyLogged(LogLevel.Trace, 11015, Times.Exactly(2));
         VerifyLogged(LogLevel.Debug, 11019, Times.Once());
     }
 
     [Fact]
-    public async Task ComposeFailureRendersNodeOnlyAndDoesNotThrow()
+    public async Task AnImplementationCarryingNoEtlLinkageRendersNodeOnly()
     {
-        var header = Header("Broken");
-        var providerMock = CreateProviderMock();
-        providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Success([header]));
-        providerMock.Setup(p => p.Get(header.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<PipelineConfiguration>.Failure(new GenericMessage("compose failed")));
+        var provider = ProviderReturning(
+            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success(
+                [new NonEtlPipelineConfiguration { Id = Guid.NewGuid(), Name = "Broken", Implementation = "SomeOtherKind" }]));
 
         var records = await PipelineLineageLoader.Load(
-            providerMock.Object, _logger.Object, TestContext.Current.CancellationToken);
+            provider.Object, _logger.Object, TestContext.Current.CancellationToken);
 
         records.Count.ShouldBe(1);
         records[0].Name.ShouldBe("Broken");
         records[0].SourceDataSet.ShouldBeNull();
+        VerifyLogged(LogLevel.Debug, 31002, Times.Once());
+    }
+
+    [Fact]
+    public async Task NoConfiguredPipelinesReturnsEmptyListWithoutThrow()
+    {
+        var provider = ProviderReturning(
+            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([]));
+
+        var records = await PipelineLineageLoader.Load(
+            provider.Object, _logger.Object, TestContext.Current.CancellationToken);
+
+        records.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AFailedReadReturnsEmptyRecordsAndLogsWithoutThrow()
+    {
+        var provider = ProviderReturning(
+            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Failure(new GenericMessage("list failed")));
+
+        var records = await PipelineLineageLoader.Load(
+            provider.Object, _logger.Object, TestContext.Current.CancellationToken);
+
+        records.ShouldBeEmpty();
         VerifyLogged(LogLevel.Error, 31003, Times.Once());
-    }
-
-    [Fact]
-    public async Task NoHeadersReturnsEmptyListWithoutThrow()
-    {
-        var providerMock = CreateProviderMock();
-        providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Success([]));
-
-        var records = await PipelineLineageLoader.Load(
-            providerMock.Object, _logger.Object, TestContext.Current.CancellationToken);
-
-        records.ShouldBeEmpty();
-        providerMock.Verify(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task FailedHeaderListReturnsEmptyRecordsWithoutThrow()
-    {
-        var providerMock = CreateProviderMock();
-        providerMock.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<PipelineConfiguration>>.Failure(new GenericMessage("list failed")));
-
-        var records = await PipelineLineageLoader.Load(
-            providerMock.Object, _logger.Object, TestContext.Current.CancellationToken);
-
-        records.ShouldBeEmpty();
     }
 }

@@ -7,7 +7,7 @@ using Fdw.Services.Data.Abstractions;
 namespace Fdw.Services.Configuration.Logging;
 
 /// <summary>
-/// MessageLogging for ImplementationConfigurationProviderBase operations.
+/// MessageLogging for the configuration providers' operations.
 /// EventId range: 9360-9388 (plus 9350)
 /// </summary>
 [MessageLoggingTypeCode("SERVICES")]

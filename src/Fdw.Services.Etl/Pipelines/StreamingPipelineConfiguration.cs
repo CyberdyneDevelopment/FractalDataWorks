@@ -4,25 +4,22 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
-using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Transforms;
 
 namespace Fdw.Services.Etl.Pipelines;
 
 /// <summary>
-/// Configuration for streaming pipelines — the "Streaming" ENGINE typed body of
-/// <c>EtlPipelineConfiguration</c>. Persisted in <c>pipe.StreamingPipeline</c> as a type-specific child
-/// of <c>pipe.EtlPipeline</c>.
+/// The "Streaming" implementation of the EtlPipeline domain. Persisted in <c>pipe.StreamingPipeline</c>,
+/// hanging from its <c>pipe.EtlPipeline</c> domain row by <see cref="EtlPipelineId"/>.
 /// </summary>
 /// <remarks>
-/// Why: a standalone typed body implementing <see cref="IEtlPipelineTypedConfiguration"/> (NOT a C#
-/// subclass of EtlPipelineConfiguration) — C# header inheritance reintroduced the phantom-column mapper
-/// bug. Properties use <c>{ get; set; }</c> to satisfy IOptions binding.
+/// Why it is not a C# subclass of anything: header inheritance reintroduced the phantom-column
+/// mapper bug. Properties use <c>{ get; set; }</c> to satisfy IOptions binding.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Streaming")]
-public sealed partial class StreamingPipelineConfiguration : IEtlPipelineTypedConfiguration
+public sealed partial class StreamingPipelineConfiguration : IEtlPipelineImplementationConfiguration
 {
 
     /// <inheritdoc/>
@@ -32,7 +29,16 @@ public sealed partial class StreamingPipelineConfiguration : IEtlPipelineTypedCo
     public Guid EtlPipelineId { get; set; }
 
     /// <inheritdoc/>
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
     public string Name { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the transforms to apply at runtime. NOT a column on pipe.StreamingPipeline — the
