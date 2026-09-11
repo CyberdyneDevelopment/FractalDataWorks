@@ -32,7 +32,7 @@ public sealed class HttpHealthMonitorFactory : IHttpHealthMonitorFactory
     }
 
     /// <inheritdoc/>
-    public IGenericResult<IHealthMonitorService> Create(HealthMonitorConfiguration configuration)
+    public IGenericResult<IHealthMonitorService> Create(IHealthMonitorImplementationConfiguration configuration)
     {
         if (configuration is null)
             throw new ArgumentNullException(nameof(configuration));

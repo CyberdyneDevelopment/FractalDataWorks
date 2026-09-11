@@ -1,4 +1,4 @@
-using Fdw.Services.Configuration;
+using Fdw.Configuration;
 using Fdw.Services.Pipelines;
 using Fdw.Services.Pipelines.Commands;
 using Shouldly;

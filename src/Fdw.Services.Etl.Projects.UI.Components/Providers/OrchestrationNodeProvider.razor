@@ -40,8 +40,8 @@
 
     // ── State ──────────────────────────────────────────────────────────────────
 
-    private IReadOnlyList<OrchestrationNodeConfiguration> _rootNodes = [];
-    private OrchestrationNodeConfiguration? _currentNode;
+    private IReadOnlyList<IOrchestrationNodeImplementationConfiguration> _rootNodes = [];
+    private IOrchestrationNodeImplementationConfiguration? _currentNode;
     private bool _isLoading;
     private IGenericResult? _lastResult;
     private string _searchString = string.Empty;
@@ -106,7 +106,7 @@
         }
     }
 
-    private async Task<OrchestrationNodeConfiguration?> GetNode(Guid nodeId, int? depth, CancellationToken cancellationToken = default)
+    private async Task<IOrchestrationNodeImplementationConfiguration?> GetNode(Guid nodeId, int? depth, CancellationToken cancellationToken = default)
     {
         _isLoading = true;
         _lastResult = null;
@@ -144,7 +144,7 @@
         }
     }
 
-    private async Task<OrchestrationNodeConfiguration?> CreateNode(OrchestrationNodeConfiguration request, CancellationToken cancellationToken = default)
+    private async Task<IOrchestrationNodeImplementationConfiguration?> CreateNode(IOrchestrationNodeImplementationConfiguration request, CancellationToken cancellationToken = default)
     {
         _isLoading = true;
         _lastResult = null;
@@ -180,7 +180,7 @@
         }
     }
 
-    private async Task<OrchestrationNodeConfiguration?> UpdateNode(Guid nodeId, OrchestrationNodeConfiguration request, CancellationToken cancellationToken = default)
+    private async Task<IOrchestrationNodeImplementationConfiguration?> UpdateNode(Guid nodeId, IOrchestrationNodeImplementationConfiguration request, CancellationToken cancellationToken = default)
     {
         _isLoading = true;
         _lastResult = null;
@@ -252,7 +252,7 @@
         }
     }
 
-    private IEnumerable<OrchestrationNodeConfiguration> GetFilteredRootNodes()
+    private IEnumerable<IOrchestrationNodeImplementationConfiguration> GetFilteredRootNodes()
     {
         return string.IsNullOrWhiteSpace(_searchString)
             ? _rootNodes
@@ -260,7 +260,7 @@
                                     (n.Description?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false));
     }
 
-    private void SelectNode(OrchestrationNodeConfiguration? node)
+    private void SelectNode(IOrchestrationNodeImplementationConfiguration? node)
     {
         _currentNode = node;
         RebuildContext();

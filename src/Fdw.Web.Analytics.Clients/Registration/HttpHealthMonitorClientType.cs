@@ -28,7 +28,7 @@ namespace Fdw.Web.Analytics.Clients;
 [ExcludeFromCodeCoverage]
 [Implementation(typeof(HealthMonitorTypes), "HttpClient")]
 public sealed class HttpHealthMonitorClientType
-    : HealthMonitorTypeBase<IHealthMonitorService, IHttpHealthMonitorFactory, HealthMonitorConfiguration>
+    : HealthMonitorTypeBase<IHealthMonitorService, IHttpHealthMonitorFactory, IHealthMonitorImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpHealthMonitorClientType"/> class.

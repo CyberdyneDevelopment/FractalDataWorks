@@ -52,7 +52,6 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
             Id = notification.Id,
             Name = notification.Name,
             Implementation = notification.Implementation,
-            Description = notification.Description
         };
 
         return GenericResult<NotificationDetailDto?>.Success(detail);

@@ -96,9 +96,8 @@ public abstract class CreateIdentityEndpointBase<TConfig, TRequest>
     /// <returns>The typed body to persist beneath the header.</returns>
     protected abstract TConfig CreateTypedBody(TRequest request, Guid identityId);
 
-    /// <summary>Maps the saved aggregate to the response.</summary>
-    /// <param name="identity">The header that was written.</param>
-    /// <param name="typedBody">The body that was written beneath it.</param>
+    /// <summary>Maps the saved implementation to the response.</summary>
+    /// <param name="typedBody">The implementation row that was written.</param>
     /// <returns>The detail returned to the caller.</returns>
     protected abstract IdentityDetailResponse MapToDetail(TConfig typedBody);
 }

@@ -12,6 +12,6 @@ namespace Fdw.Web.Analytics.Clients;
 /// which is what gives every option a distinct auto-generated Id. Options sharing the domain
 /// factory interface in the closure collide and the second one never registers.
 /// </remarks>
-public interface IHttpHealthMonitorFactory : IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>
+public interface IHttpHealthMonitorFactory : IHealthMonitorFactory<IHealthMonitorService, IHealthMonitorImplementationConfiguration>
 {
 }

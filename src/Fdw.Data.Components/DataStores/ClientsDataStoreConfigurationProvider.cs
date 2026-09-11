@@ -45,7 +45,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<DataStoreImplementationConfiguration>> Get(string name, CancellationToken ct = default)
+    public async Task<IGenericResult<IDataStoreImplementationConfiguration>> Get(string name, CancellationToken ct = default)
     {
         DataStoreProviderLog.TraceGetByNameEntry(_logger, name);
 
@@ -62,7 +62,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<DataStoreImplementationConfiguration>> Get(Guid id, CancellationToken ct = default)
+    public async Task<IGenericResult<IDataStoreImplementationConfiguration>> Get(Guid id, CancellationToken ct = default)
     {
         DataStoreProviderLog.TraceGetByIdEntry(_logger, id);
 
@@ -78,7 +78,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
     }
 
     /// <inheritdoc/>
-    public async Task<IGenericResult<IReadOnlyList<DataStoreImplementationConfiguration>>> Get(CancellationToken ct = default)
+    public async Task<IGenericResult<IReadOnlyList<IDataStoreImplementationConfiguration>>> Get(CancellationToken ct = default)
     {
         DataStoreProviderLog.TraceGetAllEntry(_logger);
 
@@ -92,7 +92,7 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<DataStoreImplementationConfiguration>> Save(DataStoreImplementationConfiguration record, CancellationToken ct = default)
+    public Task<IGenericResult<IDataStoreImplementationConfiguration>> Save(IDataStoreImplementationConfiguration record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         return Task.FromResult(GenericResult<DataStoreImplementationConfiguration>.Failure(
