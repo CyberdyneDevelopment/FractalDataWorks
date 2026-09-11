@@ -12,7 +12,7 @@ public static class ThemeConfigurationMapper
     /// Converts a database-backed <see cref="ThemeImplementationConfiguration"/> to a
     /// <see cref="ThemeConfiguration"/> DTO for API transport.
     /// </summary>
-    public static ThemeConfiguration ToDto(this ThemeImplementationConfiguration managed)
+    public static ThemeConfiguration ToDto(this IThemeImplementationConfiguration managed)
     {
         return new ThemeConfiguration
         {
@@ -52,7 +52,7 @@ public static class ThemeConfigurationMapper
     /// Converts a <see cref="ThemeConfiguration"/> DTO to a
     /// <see cref="ThemeImplementationConfiguration"/> for database persistence.
     /// </summary>
-    public static ThemeImplementationConfiguration ToManaged(this ThemeConfiguration dto)
+    public static IThemeImplementationConfiguration ToManaged(this ThemeConfiguration dto)
     {
         return new ThemeImplementationConfiguration
         {
@@ -90,7 +90,7 @@ public static class ThemeConfigurationMapper
     /// <summary>
     /// Converts a <see cref="ThemeImplementationConfiguration"/> to a <see cref="ThemeSummaryPayload"/>.
     /// </summary>
-    public static ThemeSummaryPayload ToSummary(this ThemeImplementationConfiguration managed)
+    public static ThemeSummaryPayload ToSummary(this IThemeImplementationConfiguration managed)
     {
         return new ThemeSummaryPayload
         {

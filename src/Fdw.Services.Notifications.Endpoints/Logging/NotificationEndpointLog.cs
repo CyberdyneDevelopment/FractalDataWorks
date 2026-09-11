@@ -85,4 +85,12 @@ public static partial class NotificationEndpointLog
     [MessageLogging(EventId = 11011, Level = LogLevel.Warning,
         Message = "No notification preferences found for user '{userId}', returning defaults")]
     public static partial IGenericMessage UserPreferencesNotFound(ILogger logger, string userId);
+
+    /// <summary>Warning: a create named an implementation the Notification domain does not have.</summary>
+    [MessageLogging(EventId = 91090, Level = LogLevel.Warning,
+        Message = "Cannot create notification '{notificationName}': '{implementationName}' is not a Notification implementation")]
+    public static partial IGenericMessage UnknownNotificationImplementation(
+        ILogger logger,
+        string notificationName,
+        string implementationName);
 }

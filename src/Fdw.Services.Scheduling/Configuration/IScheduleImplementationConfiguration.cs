@@ -15,9 +15,9 @@ namespace Fdw.Services.Scheduling.Abstractions.Configuration;
 /// a schedule answers without knowing the kind.
 /// </para>
 /// <para>
-/// Why every trigger kind's fields sit on one contract: <c>sched.Schedule</c> is still one table
-/// carrying all of them. When the domain row sheds its payload, the per-kind fields go with it and
-/// this contract keeps only what every kind shares.
+/// Why every trigger kind's fields sit on one contract: they share one
+/// <c>sched.ScheduleImplementation</c> row rather than each kind having a table of its own, and the
+/// domain row's <c>Implementation</c> selects which of them apply.
 /// </para>
 /// </remarks>
 public interface IScheduleImplementationConfiguration : IImplementationConfiguration, IScheduleDefinition
