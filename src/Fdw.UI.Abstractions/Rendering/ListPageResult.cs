@@ -28,14 +28,14 @@ public sealed class ListPageResult
         bool success,
         bool shouldExit,
         PageAction? action,
-        object? selectedRowId,
+        object? selectedId,
         int? selectedRowIndex,
         string? error)
     {
         Success = success;
         ShouldExit = shouldExit;
         Action = action;
-        SelectedRowId = selectedRowId;
+        SelectedId = selectedId;
         SelectedRowIndex = selectedRowIndex;
         Error = error;
     }
@@ -49,8 +49,8 @@ public sealed class ListPageResult
     /// <summary>Gets the action the user chose, if any.</summary>
     public PageAction? Action { get; }
 
-    /// <summary>Gets the identifier of the row the action applies to, if a row was selected.</summary>
-    public object? SelectedRowId { get; }
+    /// <summary>Gets the durable Id of the row the action applies to, if a row was selected.</summary>
+    public object? SelectedId { get; }
 
     /// <summary>Gets the index of the row the action applies to, if a row was selected.</summary>
     public int? SelectedRowIndex { get; }
@@ -60,25 +60,25 @@ public sealed class ListPageResult
 
     /// <summary>The page changed in place (search, or an invalid choice) — re-render and stay.</summary>
     public static ListPageResult Continue() =>
-        new(success: true, shouldExit: false, action: null, selectedRowId: null, selectedRowIndex: null, error: null);
+        new(success: true, shouldExit: false, action: null, selectedId: null, selectedRowIndex: null, error: null);
 
     /// <summary>An action that does not leave the page was chosen (e.g. pagination) — re-render and stay.</summary>
     public static ListPageResult Continue(PageAction action) =>
-        new(success: true, shouldExit: false, action: action, selectedRowId: null, selectedRowIndex: null, error: null);
+        new(success: true, shouldExit: false, action: action, selectedId: null, selectedRowIndex: null, error: null);
 
     /// <summary>The user chose an action — leave the page and let the caller handle it.</summary>
-    public static ListPageResult Selected(PageAction action, object? selectedRowId = null, int? selectedRowIndex = null) =>
-        new(success: true, shouldExit: true, action: action, selectedRowId: selectedRowId, selectedRowIndex: selectedRowIndex, error: null);
+    public static ListPageResult Selected(PageAction action, object? selectedId = null, int? selectedRowIndex = null) =>
+        new(success: true, shouldExit: true, action: action, selectedId: selectedId, selectedRowIndex: selectedRowIndex, error: null);
 
     /// <summary>The user went back without choosing an action.</summary>
     public static ListPageResult Exit() =>
-        new(success: true, shouldExit: true, action: null, selectedRowId: null, selectedRowIndex: null, error: null);
+        new(success: true, shouldExit: true, action: null, selectedId: null, selectedRowIndex: null, error: null);
 
     /// <summary>Rendering was cancelled.</summary>
     public static ListPageResult Cancel() =>
-        new(success: true, shouldExit: true, action: null, selectedRowId: null, selectedRowIndex: null, error: null);
+        new(success: true, shouldExit: true, action: null, selectedId: null, selectedRowIndex: null, error: null);
 
     /// <summary>Rendering failed — fail loud, never a silently empty page.</summary>
     public static ListPageResult Failure(string error) =>
-        new(success: false, shouldExit: true, action: null, selectedRowId: null, selectedRowIndex: null, error: error);
+        new(success: false, shouldExit: true, action: null, selectedId: null, selectedRowIndex: null, error: error);
 }
