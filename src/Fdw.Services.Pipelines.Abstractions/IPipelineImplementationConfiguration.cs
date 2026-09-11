@@ -3,18 +3,15 @@ using Fdw.Configuration;
 namespace Fdw.Services.Pipelines.Abstractions;
 
 /// <summary>
-/// Marker interface for a pipeline KIND typed body (e.g. <c>EtlPipelineConfiguration</c>).
-/// The general <c>PipelineConfiguration</c> header carries an
-/// <c>IPipelineImplementationConfiguration? Configuration</c> property whose runtime type is the kind body
-/// selected by the header's <c>Implementation</c> discriminator (e.g. "Etl").
+/// The contract every Pipeline implementation carries.
 /// </summary>
 /// <remarks>
-/// Why: a bare <see cref="IGenericConfiguration"/>-typed <c>Configuration</c> property does NOT trigger
-/// the generated mapper's <c>GetTypedBody</c>/<c>SetTypedBody</c> — the polymorphic typed-body
-/// composition only fires when the property is declared as a marker interface that derives from
-/// <see cref="IGenericConfiguration"/>. This marker is that trigger for the pipeline header.
-/// The kind body is persisted in its own table (<c>pipe.EtlPipeline</c>) and linked to the parent
-/// <c>pipe.Pipeline</c> row via a <c>PipelineId</c>/<c>PipelineRowId</c> foreign key.
+/// The marker is what keeps the domain closed: only a configuration carrying it can be registered
+/// against this domain or handed back by a read of it. A <c>pipe.Pipeline</c> domain row names the
+/// implementation it is, and that implementation's own row lives in its own table --
+/// <c>pipe.EtlPipeline</c> for "Etl" -- linked by a <c>PipelineId</c>/<c>PipelineRowId</c> foreign
+/// key. A read through the domain is already dispatched, so a caller is handed the implementation
+/// rather than something to unwrap.
 /// </remarks>
 public interface IPipelineImplementationConfiguration : IImplementationConfiguration
 {
