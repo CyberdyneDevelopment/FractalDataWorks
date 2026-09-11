@@ -47,5 +47,5 @@ public interface IEffectivePolicyResolver
     /// <param name="node">The orchestration node configuration.</param>
     /// <param name="parentEffective">The already-resolved effective policy of the parent node (or server defaults at root).</param>
     /// <returns>The fully resolved policy snapshot with no null values.</returns>
-    ExecutionPolicySnapshot ResolveForNode(OrchestrationNodeImplementationConfiguration node, ExecutionPolicySnapshot parentEffective);
+    ExecutionPolicySnapshot ResolveForNode(IOrchestrationNodeImplementationConfiguration node, ExecutionPolicySnapshot parentEffective);
 }

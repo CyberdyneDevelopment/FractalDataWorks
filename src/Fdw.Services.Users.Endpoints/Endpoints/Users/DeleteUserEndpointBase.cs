@@ -57,8 +57,8 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     public override async Task HandleAsync(UserScopedRequest req, CancellationToken ct)
     {
         
-        var lookup = Guid.TryParse(req.IdOrName, out var userId)
-            ? await _userProvider.Get(userId, ct).ConfigureAwait(false)
+        var lookup = Guid.TryParse(req.IdOrName, out var requestedId)
+            ? await _userProvider.Get(requestedId, ct).ConfigureAwait(false)
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {

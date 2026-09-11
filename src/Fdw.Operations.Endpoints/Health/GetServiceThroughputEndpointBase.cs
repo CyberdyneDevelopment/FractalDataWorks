@@ -24,7 +24,7 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
     /// Initializes a new instance of the <see cref="GetServiceThroughputEndpointBase"/> class.
     /// </summary>
     /// <param name="monitors">The health monitor domain provider.</param>
-    /// <param name="selection">The host's configured health monitor selector.</param>
+    /// <param name="monitorConfigurations">The health monitor configuration provider.</param>
     /// <param name="logger">The logger instance.</param>
     protected GetServiceThroughputEndpointBase(
         IHealthMonitorProvider monitors,

@@ -20,7 +20,7 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 /// <typeparam name="TConfig">The concrete data store configuration type.</typeparam>
 public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointBase<CreateDataStoreRequest, DataStoreDetailResponse>
-    where TConfig : DataStoreImplementationConfiguration
+    where TConfig : IDataStoreImplementationConfiguration
 {
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
     private readonly ConnectionConfigurationProvider _connectionProvider;

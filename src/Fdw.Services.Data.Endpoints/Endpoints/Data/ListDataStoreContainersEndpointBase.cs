@@ -30,14 +30,12 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
     protected override async Task<IGenericResult<List<DataStoreContainerWithPathDto>>> LoadItems(CancellationToken ct)
     {
         var configsResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        if (!configsResult.IsSuccess)
+        if (!configsResult.IsSuccess || configsResult.Value is null)
         {
             return configsResult.ToNewResult<List<DataStoreContainerWithPathDto>>();
         }
 
-        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreImplementationConfiguration>)[];
-
-        var containers = configs
+        var containers = configsResult.Value
             .Where(config => !string.IsNullOrWhiteSpace(config.Name))
             .SelectMany(config => (config.Paths ?? [])
                 .SelectMany(path => (path.Containers ?? [])
@@ -49,7 +47,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
 
     /// <summary>Maps a container with its parent path and data store information.</summary>
     protected virtual DataStoreContainerWithPathDto MapContainerWithPath(
-        DataStoreImplementationConfiguration dataStore,
+        IDataStoreImplementationConfiguration dataStore,
         DataPathConfiguration path,
         DataContainerConfiguration container)
     {

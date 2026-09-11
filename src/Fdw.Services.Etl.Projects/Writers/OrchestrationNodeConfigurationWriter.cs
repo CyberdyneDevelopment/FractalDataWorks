@@ -62,7 +62,7 @@ public sealed class OrchestrationNodeConfigurationWriter
                 return saveResult.ToNewResult<OrchestrationNodeImplementationConfiguration>();
 
             OrchestrationNodeConfigurationLog.NodeSaved(_logger, config.Name, config.Id);
-            return GenericResult<OrchestrationNodeImplementationConfiguration>.Success(saveResult.Value!);
+            return GenericResult<OrchestrationNodeImplementationConfiguration>.Success(config);
         }
         catch (Exception ex)
         {

@@ -34,12 +34,12 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
     protected override async Task<IGenericResult<DataStoreContainerDetailDto?>> FindByIdentifier(ContainerIdRequest request, CancellationToken ct)
     {
         var allResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
+        if (!allResult.IsSuccess || allResult.Value is null)
         {
             return GenericResult<DataStoreContainerDetailDto?>.Success(null);
         }
 
-        var allConfigs = allResult.Value ?? (IReadOnlyList<DataStoreImplementationConfiguration>)[];
+        var allConfigs = allResult.Value;
 
         DataContainerConfiguration? container = null;
 

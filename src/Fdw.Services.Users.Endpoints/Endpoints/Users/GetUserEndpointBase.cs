@@ -83,5 +83,5 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     /// <summary>
     /// Maps a user entity to a response DTO. Override for custom mapping.
     /// </summary>
-    protected abstract UserResponse MapToResponse(IUser user);
+    protected abstract UserResponse MapToResponse(IUserImplementationConfiguration user);
 }

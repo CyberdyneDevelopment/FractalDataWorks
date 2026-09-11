@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl;
@@ -44,4 +46,7 @@ public interface IEtlPipelineImplementationConfiguration : IPipelineImplementati
 
     /// <summary>Gets the logical Id of the sink DataSet, if resolved.</summary>
     Guid? SinkDataSetId { get; }
+
+    /// <summary>Gets the transforms the pipeline applies, or <see langword="null"/> when it applies none.</summary>
+    IList<PipelineTransformConfiguration>? Transforms { get; }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
@@ -55,7 +56,7 @@ public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<Connect
         {
             Id = config.Id,
             Name = config.Name,
-            ConnectionType = config.ConnectionType ?? config.Implementation ?? "Unknown",
+            ConnectionType = config.Implementation,
         };
     }
 }

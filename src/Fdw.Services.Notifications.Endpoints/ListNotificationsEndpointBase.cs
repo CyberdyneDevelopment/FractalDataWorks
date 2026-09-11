@@ -39,7 +39,7 @@ public abstract class ListNotificationsEndpointBase : CrudListEndpointBase<Notif
         NotificationEndpointLog.ListingNotifications(Logger);
 
         var allResult = await _provider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
+        if (!allResult.IsSuccess || allResult.Value is null)
         {
             return allResult.ToNewResult<List<NotificationSummaryDto>>();
         }

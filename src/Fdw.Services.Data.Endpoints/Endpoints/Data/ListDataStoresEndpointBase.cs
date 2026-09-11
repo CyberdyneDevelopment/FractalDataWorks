@@ -40,21 +40,20 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
     protected override async Task<IGenericResult<List<DataStoreSummaryResponse>>> LoadItems(CancellationToken ct)
     {
         var configsResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        if (!configsResult.IsSuccess)
+        if (!configsResult.IsSuccess || configsResult.Value is null)
         {
             return configsResult.ToNewResult<List<DataStoreSummaryResponse>>();
         }
 
         var connectionNameMap = await BuildConnectionNameMap(ct).ConfigureAwait(false);
 
-        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreImplementationConfiguration>)[];
-        var items = MapConfigurations(configs, connectionNameMap).ToList();
+        var items = MapConfigurations(configsResult.Value, connectionNameMap).ToList();
         return GenericResult<List<DataStoreSummaryResponse>>.Success(items);
     }
 
     /// <summary>Filters and deduplicates configurations, then maps them to summary DTOs.</summary>
     protected virtual IReadOnlyList<DataStoreSummaryResponse> MapConfigurations(
-        IReadOnlyList<DataStoreImplementationConfiguration> configurations,
+        IReadOnlyList<IDataStoreImplementationConfiguration> configurations,
         IReadOnlyDictionary<Guid, string> connectionNameMap)
     {
         return configurations
@@ -69,7 +68,7 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
 
     /// <summary>Maps a single data store configuration to a summary DTO.</summary>
     protected virtual DataStoreSummaryResponse MapToSummary(
-        DataStoreImplementationConfiguration config,
+        IDataStoreImplementationConfiguration config,
         IReadOnlyDictionary<Guid, string> connectionNameMap)
     {
         connectionNameMap.TryGetValue(config.ConnectionId, out var connectionName);

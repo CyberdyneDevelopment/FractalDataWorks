@@ -184,7 +184,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         }
 
         var results = allResult.Value
-            .Where(c => MatchesQuery(c.Name, query) || MatchesQuery(c.ConnectionType, query))
+            .Where(c => MatchesQuery(c.Name, query) || MatchesQuery(c.Implementation, query))
             .Take(limit)
             .Select(c => new SearchResultPayload
             {

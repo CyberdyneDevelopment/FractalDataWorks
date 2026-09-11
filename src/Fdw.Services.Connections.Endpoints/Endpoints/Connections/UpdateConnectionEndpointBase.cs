@@ -48,11 +48,10 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
             return GenericResult<ConnectionDetailDto?>.Success(null);
         }
 
-        if (connectionResult.Value.Configuration is not TConfig body)
+        if (connectionResult.Value is not TConfig existing)
             return GenericResult<ConnectionDetailDto?>.Success(null);
 
-        return GenericResult<ConnectionDetailDto?>.Success(
-            MapExistingToDetail(connectionResult.Value, body));
+        return GenericResult<ConnectionDetailDto?>.Success(MapExistingToDetail(existing));
     }
 
     /// <summary>Merges the update request with the existing configuration and persists via the configurationGateway.</summary>
@@ -65,13 +64,13 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
                 ConnectionEndpointLog.ConnectionNotFound(Logger, request.Name));
         }
 
-        if (connectionResult.Value.Configuration is not TConfig existingBody)
+        if (connectionResult.Value is not TConfig existingConnection)
         {
             return GenericResult<ConnectionDetailDto>.Failure(
                 ConnectionEndpointLog.ConnectionNotFound(Logger, request.Name));
         }
 
-        var (updatedConnection, updatedBody) = MergeUpdate(request, connectionResult.Value, existingBody);
+        var updatedConnection = MergeUpdate(request, existingConnection);
 
         updatedConnection.HealthCheckEnabled = request.HealthCheckEnabled ?? updatedConnection.HealthCheckEnabled;
         updatedConnection.HealthCheckOnStartup = request.HealthCheckOnStartup ?? updatedConnection.HealthCheckOnStartup;
@@ -83,34 +82,28 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
                 ConnectionEndpointLog.HealthCheckEnabledWithoutTrigger(Logger, request.Name));
         }
 
-        // One save for the whole aggregate. The provider versions the header, then dispatches the merged
-        // body to its typed provider so both halves land on the SAME new version — which is exactly what
-        // saving them through two providers could not guarantee.
-        updatedConnection.Configuration = updatedBody;
-
-        var connectionSave = await _connectionProvider.Save(updatedConnection, "Connection", updatedConnection.Implementation, updatedConnection.Name, ct).ConfigureAwait(false);
+        // One save, one record: the provider versions the implementation row and writes everything under
+        // it. The name identifies the member, so the existing domain row is the one this hangs from.
+        var connectionSave = await _connectionProvider.Save(updatedConnection, "Connection", updatedConnection.Implementation, request.Name, ct).ConfigureAwait(false);
         if (connectionSave.IsFailure) return connectionSave.ToNewResult<ConnectionDetailDto>();
 
-        return GenericResult<ConnectionDetailDto>.Success(MapUpdatedToDetail(updatedConnection, updatedBody));
+        return GenericResult<ConnectionDetailDto>.Success(MapUpdatedToDetail(updatedConnection));
     }
 
     /// <summary>
-    /// Maps the existing parent connection and typed body to a detail DTO for the find phase.
+    /// Maps the existing connection configuration to a detail DTO for the find phase.
     /// Override to include type-specific fields in the response.
     /// </summary>
-    protected abstract ConnectionDetailDto MapExistingToDetail(IConnectionImplementationConfiguration connection, TConfig body);
+    protected abstract ConnectionDetailDto MapExistingToDetail(TConfig connection);
 
     /// <summary>
-    /// Merges the update request into the existing parent connection and typed body.
-    /// Returns a tuple of the updated records. Override to handle type-specific field merges.
+    /// Merges the update request into the existing connection configuration and returns the updated record.
+    /// Override to handle type-specific field merges.
     /// </summary>
-    protected abstract (IConnectionImplementationConfiguration connection, TConfig body) MergeUpdate(
-        UpdateConnectionRequest request,
-        IConnectionImplementationConfiguration existingConnection,
-        TConfig existingBody);
+    protected abstract TConfig MergeUpdate(UpdateConnectionRequest request, TConfig existingConnection);
 
     /// <summary>
-    /// Maps the saved updated records to a detail DTO. Override to include type-specific fields.
+    /// Maps the saved record to a detail DTO. Override to include type-specific fields.
     /// </summary>
-    protected abstract ConnectionDetailDto MapUpdatedToDetail(IConnectionImplementationConfiguration connection, TConfig body);
+    protected abstract ConnectionDetailDto MapUpdatedToDetail(TConfig connection);
 }

@@ -155,7 +155,7 @@
     {
         if (string.IsNullOrWhiteSpace(_name)) return;
 
-        var config = new OrchestrationNodeConfiguration
+        var config = new OrchestrationNodeImplementationConfiguration
         {
             Id = _id ?? Guid.NewGuid(),
             Name = _name,
@@ -170,7 +170,7 @@
             AllowResume = _allowResume
         };
 
-        OrchestrationNodeConfiguration? result;
+        OrchestrationNodeImplementationConfiguration? result;
         if (_id.HasValue)
         {
             result = await ctx.OnUpdateNode(_id.Value, config);

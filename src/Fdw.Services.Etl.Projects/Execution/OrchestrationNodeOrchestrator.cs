@@ -28,7 +28,7 @@ namespace Fdw.Services.Etl.Projects.Execution;
 /// </summary>
 /// <remarks>
 /// Flow:
-/// 1. Resolve root OrchestrationNodeImplementationConfiguration via IOrchestrationNodeConfigurationProvider.Get(id, depth).
+/// 1. Resolve the root node via IOrchestrationNodeConfigurationProvider.Get(id) -- the provider composes the whole aggregate, so there is no depth to ask for.
 /// 2. Transition root ExecutionItem → Running; broadcast.
 /// 3. ExecuteNode(root): if CanHostPipelines → execute pipelines; else → foreach(child) ExecuteNode(child).
 /// 4. Failure policy: ShouldHaltOnChildFailure reads StepFailurePolicy/StageFailurePolicy depending on level.
@@ -74,7 +74,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// <inheritdoc/>
     public async Task Execute(OrchestrationNodeExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        var configResult = await _nodeProvider.Get(request.RootNodeId, depth: int.MaxValue, cancellationToken)
+        var configResult = await _nodeProvider.Get(request.RootNodeId, cancellationToken)
             .ConfigureAwait(false);
 
         if (!configResult.IsSuccess || configResult.Value is null)
@@ -126,7 +126,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Stage-level nodes additionally wrap their children in IResiliencyExecutor.
     /// </summary>
     private async Task<bool> ExecuteNode(
-        OrchestrationNodeImplementationConfiguration node,
+        IOrchestrationNodeImplementationConfiguration node,
         ExecutionPolicySnapshot effectivePolicy,
         Guid parentExecutionItemId,
         CancellationToken cancellationToken)
@@ -214,7 +214,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Extracted from ExecuteNode to satisfy FDW006 (60-line method limit).
     /// </summary>
     private async Task<bool> ExecuteChildNode(
-        OrchestrationNodeImplementationConfiguration child,
+        IOrchestrationNodeImplementationConfiguration child,
         ExecutionPolicySnapshot childPolicy,
         Guid parentExecutionItemId,
         Guid childItemId,
@@ -251,7 +251,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// bounded by MaxParallelPipelines in the effective policy.
     /// </summary>
     private async Task<bool> ExecuteLeafNode(
-        OrchestrationNodeImplementationConfiguration node,
+        IOrchestrationNodeImplementationConfiguration node,
         ExecutionPolicySnapshot effectivePolicy,
         Guid parentExecutionItemId,
         CancellationToken cancellationToken)
@@ -345,7 +345,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// </summary>
     private static bool ShouldHaltOnChildFailure(
         ExecutionPolicySnapshot parentPolicy,
-        OrchestrationNodeImplementationConfiguration failedChild)
+        IOrchestrationNodeImplementationConfiguration failedChild)
     {
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         if (nodeType.Name.Equals("Step", StringComparison.Ordinal) ||
@@ -360,7 +360,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// <summary>Returns the name of the halting policy for logging purposes.</summary>
     private static string GetHaltPolicy(
         ExecutionPolicySnapshot parentPolicy,
-        OrchestrationNodeImplementationConfiguration failedChild)
+        IOrchestrationNodeImplementationConfiguration failedChild)
     {
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         return (nodeType.Name.Equals("Step", StringComparison.Ordinal) || nodeType.CanHostPipelines)
@@ -407,7 +407,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Builds a topological order over the pipeline IDs in a leaf node, respecting prerequisite edges.
     /// Uses Kahn's algorithm. The node validator guarantees a DAG (no cycles).
     /// </summary>
-    private static List<Guid> BuildTopologicalOrder(OrchestrationNodeImplementationConfiguration node)
+    private static List<Guid> BuildTopologicalOrder(IOrchestrationNodeImplementationConfiguration node)
     {
         var dependents = new Dictionary<Guid, List<Guid>>();
         var inDegree = new Dictionary<Guid, int>();

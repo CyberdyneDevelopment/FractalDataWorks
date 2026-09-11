@@ -80,7 +80,7 @@ internal static class DataSetQueryHelper
         }
     };
 
-    internal static DataSetDetailResponse MapToDetail(DataSetImplementationConfiguration config) => new()
+    internal static DataSetDetailResponse MapToDetail(IDataSetImplementationConfiguration config) => new()
     {
         Id = config.Id,
         Name = config.Name,
@@ -151,7 +151,7 @@ internal static class DataSetQueryHelper
         ModifiedOnBehalfOf = config.ModifyOnBehalfOf
     };
 
-    internal static DataSetSummaryResponse MapToSummary(DataSetImplementationConfiguration config, int sourceCount) => new()
+    internal static DataSetSummaryResponse MapToSummary(IDataSetImplementationConfiguration config, int sourceCount) => new()
     {
         Id = config.Id,
         Name = config.Name,

@@ -110,6 +110,9 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImpleme
     /// </summary>
     public Guid? SourceDataSetId { get; set; }
 
+    /// <summary>Gets or sets the Id of the org that owns the pipeline.</summary>
+    public Guid? OrgId { get; set; }
+
 
     /// <summary>
     /// Gets or sets the logical Id of the sink DataSet.

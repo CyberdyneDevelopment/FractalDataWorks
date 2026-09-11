@@ -103,7 +103,6 @@ public sealed class ClientsDataStoreConfigurationProviderTests
         var configuration = result.Value;
         configuration.Id.ShouldBe(detail.Id);
         configuration.Name.ShouldBe("Store1");
-        configuration.DisplayName.ShouldBe("Store One");
         configuration.Implementation.ShouldBe("MsSql");
         configuration.Paths.Count.ShouldBe(1);
 
@@ -282,7 +281,9 @@ public sealed class ClientsDataStoreConfigurationProviderTests
     {
         var sut = CreateSut();
 
-        var result = await sut.Save(new DataStoreImplementationConfiguration { Name = "Store1" }, TestContext.Current.CancellationToken);
+        var result = await sut.Save(
+            new DataStoreImplementationConfiguration { Name = "Store1" },
+            "DataStore", "MsSql", "Store1", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }

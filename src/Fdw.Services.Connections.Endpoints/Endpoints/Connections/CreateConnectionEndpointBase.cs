@@ -15,17 +15,15 @@ namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for creating a new connection configuration.
-/// Composes the whole aggregate — the <see cref="IConnectionImplementationConfiguration"/> header plus its typed body —
-/// and saves it through the connection provider in ONE call.
+/// Builds the implementation configuration and saves it through the connection provider in ONE call.
 /// </summary>
-/// <typeparam name="TConfig">The concrete typed body configuration type this endpoint builds.</typeparam>
+/// <typeparam name="TConfig">The connection implementation configuration this endpoint builds.</typeparam>
 /// <remarks>
-/// Why one save: the header provider owns the dispatch. It reads <c>Implementation</c>, resolves the
-/// registered typed provider for it, and hands that provider the body to write along with the body's own
-/// subtree. The endpoint therefore never holds a typed provider — the connection type stays invisible to
-/// the machinery, which is the point of the composed-header pattern. The previous two-save shape let the
-/// header and the body disagree: a request with ServiceType "Http" wrote an MsSql body under an Http header,
-/// because only the endpoint's own generic argument decided what got written.
+/// There is no second record to compose. The domain row is four columns the provider writes itself from
+/// Save's domain/implementation/name arguments, so the implementation configuration this endpoint builds is
+/// the whole of what an endpoint has to supply. The provider reads <c>Implementation</c>, resolves the
+/// provider registered for it, and that provider writes the row and everything under it — so the endpoint
+/// never holds an implementation provider, and the connection type stays invisible to the machinery.
 /// </remarks>
 public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
     where TConfig : class, IConnectionImplementationConfiguration
@@ -54,12 +52,10 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
         return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value != null);
     }
 
-    /// <summary>Creates both the parent connection and typed body, then persists each to its own provider.</summary>
+    /// <summary>Builds the connection's implementation configuration and saves it through the provider.</summary>
     protected override async Task<IGenericResult<ConnectionDetailDto>> Create(CreateConnectionRequest request, CancellationToken ct)
     {
-        var connectionId = Guid.CreateVersion7();
-
-        var connection = CreateConnectionRecord(request, connectionId);
+        var connection = CreateConnectionConfiguration(request, Guid.CreateVersion7());
 
         if (connection.HealthCheckEnabled && !connection.HealthCheckOnStartup && connection.HealthCheckIntervalSeconds is null)
         {
@@ -67,18 +63,16 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
                 ConnectionEndpointLog.HealthCheckEnabledWithoutTrigger(Logger, request.Name));
         }
 
-        var typedBody = CreateTypedBody(request, connectionId);
-        connection.Configuration = typedBody;
-
-        // One save for the whole aggregate: the provider writes the header, then dispatches on
-        // Implementation so the registered typed provider writes the body and everything under it.
-        var connectionSave = await _connectionProvider.Save(connection, "Connection", connection.Implementation, connection.Name, ct).ConfigureAwait(false);
+        // Name, Domain and Implementation are not set on the record: Save stamps them from its own
+        // arguments, and the implementation row does not persist them -- they belong to the domain row,
+        // whose Id Save stamps back onto this instance.
+        var connectionSave = await _connectionProvider.Save(connection, "Connection", request.ServiceType, request.Name, ct).ConfigureAwait(false);
         if (connectionSave.IsFailure)
         {
             return connectionSave.ToNewResult<ConnectionDetailDto>();
         }
 
-        var detail = MapToDetail(connection, typedBody, connectionId);
+        var detail = MapToDetail(connection, connection.Id);
 
         // Fire schema discovery if ISchemaInformationService is registered (optional dependency).
         var schemaService = _schemaInformationService;
@@ -106,37 +100,21 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
     }
 
     /// <summary>
-    /// Builds the parent <see cref="IConnectionImplementationConfiguration"/> from the create request.
-    /// The default implementation sets Name, Implementation from <see cref="CreateConnectionRequest.ServiceType"/>,
-    /// and Id from <paramref name="connectionId"/>.
-    /// Override to customize header fields (Description, Environment, etc.).
+    /// Builds this connection's implementation configuration from the create request, including the
+    /// health-check fields the contract carries.
     /// </summary>
-    protected virtual IConnectionImplementationConfiguration CreateConnectionRecord(CreateConnectionRequest request, Guid connectionId)
-    {
-        return new IConnectionImplementationConfiguration
-        {
-            Id = connectionId,
-            Name = request.Name,
-            Implementation = request.ServiceType,
-            HealthCheckEnabled = request.HealthCheckEnabled,
-            HealthCheckOnStartup = request.HealthCheckOnStartup,
-            HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds,
-        };
-    }
+    /// <remarks>
+    /// Do not set Name, Domain or Implementation: Save stamps all three from its own arguments and the
+    /// implementation row does not persist them. <paramref name="connectionId"/> seeds <c>Id</c> so the
+    /// record has one before the write; Save replaces it with the domain row's Id.
+    /// </remarks>
+    protected abstract TConfig CreateConnectionConfiguration(CreateConnectionRequest request, Guid connectionId);
 
     /// <summary>
-    /// Builds the typed body configuration from the create request.
-    /// The typed body's own <c>Id</c> should be left as <see cref="Guid.Empty"/> — the provider
-    /// mints it via <see cref="Guid.CreateVersion7()"/> before INSERT. The typed body's
-    /// <c>ConnectionId</c> must be set to <paramref name="connectionId"/>.
-    /// </summary>
-    protected abstract TConfig CreateTypedBody(CreateConnectionRequest request, Guid connectionId);
-
-    /// <summary>
-    /// Maps the saved parent connection and typed body to a detail DTO.
+    /// Maps the saved connection configuration to a detail DTO.
     /// Override to add type-specific fields to the response.
     /// </summary>
-    protected abstract ConnectionDetailDto MapToDetail(IConnectionImplementationConfiguration connection, TConfig typedBody, Guid connectionId);
+    protected abstract ConnectionDetailDto MapToDetail(TConfig connection, Guid connectionId);
 
     /// <summary>Sends a 201 Created response with the connection detail.</summary>
     protected override Task SendCreatedResponse(ConnectionDetailDto detail, CancellationToken ct)

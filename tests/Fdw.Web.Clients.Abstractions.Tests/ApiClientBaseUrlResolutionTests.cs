@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Net.Http;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -36,39 +37,53 @@ public sealed class ApiClientBaseUrlResolutionTests
     /// <summary>Answers for one connection name and nothing else.</summary>
     private sealed class StubConnections(string? connectionName, string? baseUrl) : IConnectionConfigurationProvider
     {
-        // Answers with the domain record carrying the implementation, which is what the provider
-        // returns now -- the caller reads BaseUrl off the implementation.
-        public Task<IGenericResult<IDomainConfiguration>> Get(
-            string name, CancellationToken cancellationToken = default)
+        // A read through the domain is already dispatched, so what comes back IS the implementation --
+        // the caller reads BaseUrl straight off it, with no domain record to unwrap.
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+            string name, CancellationToken ct = default)
             => Task.FromResult(
                 string.Equals(name, connectionName, StringComparison.Ordinal) && baseUrl is not null
-                    ? GenericResult<IDomainConfiguration>.Success(
-                        new IConnectionImplementationConfiguration
+                    ? GenericResult<IConnectionImplementationConfiguration>.Success(
+                        new HttpConnectionConfiguration
                         {
                             Name = name,
+                            Domain = "Connection",
                             Implementation = "Http",
-                            Configuration = new HttpConnectionConfiguration { BaseUrl = baseUrl },
+                            BaseUrl = baseUrl,
                         })
-                    : GenericResult<IDomainConfiguration>.Success(default!));
+                    : GenericResult<IConnectionImplementationConfiguration>.Success(default!));
 
-        public Task<IGenericResult<IDomainConfiguration>> Get(
-            Guid id, CancellationToken cancellationToken = default)
-            => Get(string.Empty, cancellationToken);
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+            Guid id, CancellationToken ct = default)
+            => Get(string.Empty, ct);
+
+        public Task<IGenericResult<IConnectionImplementationConfiguration>> Get(
+            Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+            => Get(string.Empty, ct);
+
+        public Task<IGenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>> Get(
+            CancellationToken ct = default)
+            => Task.FromResult(
+                GenericResult<IReadOnlyList<IConnectionImplementationConfiguration>>.Success([]));
+
+        public Task<IGenericResult<IReadOnlyList<T>>> Find<T>(
+            Func<T, bool> predicate, CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
+            => Task.FromResult(GenericResult<IReadOnlyList<T>>.Success([]));
 
         public Task<IGenericResult> Save<T>(
-            string implementation, string name, T implementationConfiguration,
-            CancellationToken cancellationToken = default)
+            T implementationConfiguration, string domain, string implementationName, string name,
+            CancellationToken ct = default)
             where T : IConnectionImplementationConfiguration
             => Task.FromResult(GenericResult.Success());
 
-        public Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default)
+        public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
             => Task.FromResult(GenericResult.Success());
 
-        public Task<IGenericResult> Delete(string name, CancellationToken cancellationToken = default)
+        public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => Task.FromResult(GenericResult.Success());
 
         public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
-            where T : IImplementationConfigurationProvider<IConnectionImplementationConfiguration>
             => GenericResult.Success();
     }
 

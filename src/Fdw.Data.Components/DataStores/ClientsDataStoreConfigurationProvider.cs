@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Data.Components.DataStores;
 
 /// <summary>
-/// The UI-side <see cref="IServiceConfigurationProvider{TConfig}"/> for <see cref="DataStoreImplementationConfiguration"/>
+/// The UI-side <see cref="IDomainConfigurationProvider{TImplementationConfiguration}"/> for <see cref="DataStoreImplementationConfiguration"/>
 /// — feeds <c>ConfiguredDataStoreProvider</c> (<c>Fdw.Data.DataNodes</c>) from <see cref="DataStoreApiClient"/>
 /// instead of a gateway. Mirrors the shallow/full split the server-side
 /// <c>DataStoreConfigurationProvider</c>/<c>ConfiguredDataStoreProvider</c> pair already uses:
@@ -25,7 +25,7 @@ namespace Fdw.Data.Components.DataStores;
 /// — the same two-tier shape <c>ConfiguredDataStoreProvider.Get(CancellationToken)</c> already composes by
 /// calling back into <c>Get(name)</c> per shallow header.
 /// </summary>
-public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfigurationProvider<IDataStoreImplementationConfiguration>, IServiceConfigurationProvider
+public sealed class ClientsDataStoreConfigurationProvider : IDomainConfigurationProvider<IDataStoreImplementationConfiguration>, IServiceConfigurationProvider
 {
     private readonly ILogger<ClientsDataStoreConfigurationProvider> _logger;
     private readonly DataStoreApiClient _apiClient;
@@ -78,6 +78,26 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
     }
 
     /// <inheritdoc/>
+    public Task<IGenericResult<IDataStoreImplementationConfiguration>> Get(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+        => Task.FromResult(GenericResult<IDataStoreImplementationConfiguration>.Failure(
+            DataStoreProviderLog.AsOfReadNotSupported(_logger, id, asOf)));
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<IReadOnlyList<T>>> Find<T>(
+        Func<T, bool> predicate,
+        CancellationToken ct = default)
+        where T : IDataStoreImplementationConfiguration
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        var allResult = await Get(ct).ConfigureAwait(false);
+        if (!allResult.IsSuccess || allResult.Value is null)
+            return allResult.ToNewResult<IReadOnlyList<T>>();
+
+        return GenericResult<IReadOnlyList<T>>.Success([.. allResult.Value.OfType<T>().Where(predicate)]);
+    }
+
+    /// <inheritdoc/>
     public async Task<IGenericResult<IReadOnlyList<IDataStoreImplementationConfiguration>>> Get(CancellationToken ct = default)
     {
         DataStoreProviderLog.TraceGetAllEntry(_logger);
@@ -92,12 +112,18 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<IDataStoreImplementationConfiguration>> Save(IDataStoreImplementationConfiguration record, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(record);
-        return Task.FromResult(GenericResult<DataStoreImplementationConfiguration>.Failure(
-            DataStoreProviderLog.SaveNotSupported(_logger, record.Name)));
-    }
+    public Task<IGenericResult> Save<T>(
+        T implementationConfiguration,
+        string domain,
+        string implementationName,
+        string name,
+        CancellationToken ct = default)
+        where T : IDataStoreImplementationConfiguration
+        => Task.FromResult(GenericResult.Failure(DataStoreProviderLog.SaveNotSupported(_logger, name)));
+
+    /// <inheritdoc/>
+    public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
+        => GenericResult.Failure(DataStoreProviderLog.RegisterNotSupported(_logger, name));
 
     /// <inheritdoc/>
     public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
@@ -114,7 +140,6 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
         {
             Id = dto.Id,
             Name = dto.Name,
-            DisplayName = dto.DisplayName,
             Description = dto.Description,
             Implementation = dto.StoreType,
             IsActive = dto.IsActive,
@@ -215,16 +240,11 @@ public sealed class ClientsDataStoreConfigurationProvider : IImplementationConfi
             : result.ToNewResult<IGenericConfiguration>();
     }
 
-    async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
-    {
-        if (record is not DataStoreImplementationConfiguration typed)
-        {
-            return GenericResult.Failure(
+    Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
+        => record is DataStoreImplementationConfiguration typed
+            ? Task.FromResult(GenericResult.Failure(DataStoreProviderLog.SaveNotSupported(_logger, typed.Name)))
+            : Task.FromResult(GenericResult.Failure(
                 DataStoreProviderLog.UntypedSaveTypeMismatch(
-                    _logger, nameof(DataStoreImplementationConfiguration), record?.GetType().Name ?? "null"));
-        }
-
-        return await Save(typed, ct).ConfigureAwait(false);
-    }
+                    _logger, nameof(DataStoreImplementationConfiguration), record?.GetType().Name ?? "null")));
 
 }

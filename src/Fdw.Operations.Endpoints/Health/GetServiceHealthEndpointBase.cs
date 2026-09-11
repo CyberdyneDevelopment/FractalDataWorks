@@ -24,7 +24,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
     /// Initializes a new instance of the <see cref="GetServiceHealthEndpointBase"/> class.
     /// </summary>
     /// <param name="monitors">The health monitor domain provider.</param>
-    /// <param name="selection">The host's configured health monitor selector.</param>
+    /// <param name="monitorConfigurations">The health monitor configuration provider.</param>
     /// <param name="logger">The logger instance.</param>
     protected GetServiceHealthEndpointBase(
         IHealthMonitorProvider monitors,

@@ -181,6 +181,29 @@ public static partial class DataStoreProviderLog
         ILogger logger,
         string dataStoreName);
 
+    /// <summary>Warning: an as-of read was asked of the .Clients-fetched configuration provider.</summary>
+    /// <remarks>
+    /// Fails rather than reading current: the API surface exposes no as-of endpoint, so answering with
+    /// today's row would silently give a different question's answer.
+    /// </remarks>
+    [MessageLogging(EventId = 91067, Level = LogLevel.Warning,
+        Message = "ClientsDataStoreConfigurationProvider: an as-of read of '{dataStoreId}' at {asOf} is not supported — DataStoreApiClient exposes no as-of endpoint")]
+    public static partial IGenericMessage AsOfReadNotSupported(
+        ILogger logger,
+        Guid dataStoreId,
+        DateTimeOffset asOf);
+
+    /// <summary>Warning: Register was called on the .Clients-fetched configuration provider.</summary>
+    /// <remarks>
+    /// It dispatches nowhere: the API has already resolved the implementation by the time a payload
+    /// comes back, so there is no per-implementation provider to register against.
+    /// </remarks>
+    [MessageLogging(EventId = 91068, Level = LogLevel.Warning,
+        Message = "ClientsDataStoreConfigurationProvider: Register('{implementationName}') is not supported — the API resolves the implementation server-side")]
+    public static partial IGenericMessage RegisterNotSupported(
+        ILogger logger,
+        string implementationName);
+
     /// <summary>
     /// Logs when a record handed to the type-erased Save is not this provider's configuration type.
     /// </summary>

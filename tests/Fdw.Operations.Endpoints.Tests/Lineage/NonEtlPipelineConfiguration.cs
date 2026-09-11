@@ -20,4 +20,7 @@ internal sealed class NonEtlPipelineConfiguration : IPipelineImplementationConfi
 
     /// <inheritdoc/>
     public string Implementation { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    public Guid? OrgId { get; set; }
 }

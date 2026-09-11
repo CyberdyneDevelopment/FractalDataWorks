@@ -74,8 +74,8 @@ public abstract class ResetPasswordEndpointBase : Endpoint<ResetPasswordRequest>
     {
         try
         {
-            var userResult = Guid.TryParse(req.IdOrName, out var userId)
-            ? await _userProvider.Get(userId, ct).ConfigureAwait(false)
+            var userResult = Guid.TryParse(req.IdOrName, out var requestedId)
+            ? await _userProvider.Get(requestedId, ct).ConfigureAwait(false)
             : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
             if (!userResult.IsSuccess || userResult.Value is null)
             {

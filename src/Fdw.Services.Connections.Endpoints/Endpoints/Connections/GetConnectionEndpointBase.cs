@@ -9,13 +9,11 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
-/// Base endpoint for retrieving a specific connection configuration by name. Type-agnostic: it reads
-/// the parent header (which <see cref="ConnectionConfigurationProvider"/> populates with the
-/// polymorphic typed body in <see cref="IConnectionImplementationConfiguration.Configuration"/>) and hands that body
-/// to <see cref="MapToDetail"/>. The concrete endpoint maps the typed body to the DTO by dispatching
-/// on <see cref="IConnectionImplementationConfiguration.Implementation"/> — so one GET-by-name endpoint renders
-/// every connection type (MsSql, Http, PostgreSql, FileSystem, RoslynWorkspace) rather than being
-/// locked to a single typed provider.
+/// Base endpoint for retrieving a specific connection configuration by name. Type-agnostic: a read
+/// through <see cref="ConnectionConfigurationProvider"/> is already dispatched, so what comes back is the
+/// implementation itself, and it hands that to <see cref="MapToDetail"/>. The concrete endpoint maps it to
+/// the DTO by dispatching on <c>Implementation</c> — so one GET-by-name endpoint renders every connection
+/// type (MsSql, Http, PostgreSql, FileSystem, RoslynWorkspace) rather than being locked to one provider.
 /// </summary>
 public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<ConnectionNameRequest, ConnectionDetailDto>
 {
@@ -34,8 +32,8 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
     protected override string GetResourceIdentifier(ConnectionNameRequest request) => request.Name;
 
     /// <summary>
-    /// Finds a connection by name (or Guid id) and maps it — together with its polymorphic typed
-    /// body (<see cref="IConnectionImplementationConfiguration.Configuration"/>) — to a detail DTO.
+    /// Finds a connection by name (or Guid id) and maps it to a detail DTO. A read through the domain is
+    /// already dispatched, so what comes back is the implementation itself.
     /// </summary>
     protected override async Task<IGenericResult<ConnectionDetailDto?>> FindByIdentifier(ConnectionNameRequest request, CancellationToken ct)
     {
@@ -45,16 +43,15 @@ public abstract class GetConnectionEndpointBase : CrudGetEndpointBase<Connection
             : await _configProvider.Get(request.Name, ct).ConfigureAwait(false);
         if (!domainResult.IsSuccess) return domainResult.ToNewResult<ConnectionDetailDto?>();
 
-        var parent = domainResult.Value;
-        if (parent is null) return GenericResult<ConnectionDetailDto?>.Success(null);
+        var connection = domainResult.Value;
+        if (connection is null) return GenericResult<ConnectionDetailDto?>.Success(null);
 
-        return GenericResult<ConnectionDetailDto?>.Success(MapToDetail(parent, parent.Configuration));
+        return GenericResult<ConnectionDetailDto?>.Success(MapToDetail(connection));
     }
 
     /// <summary>
-    /// Maps the parent connection and its polymorphic typed body to a detail DTO. Implementations
-    /// dispatch the type-specific projection on <see cref="IConnectionImplementationConfiguration.Implementation"/>.
-    /// The body may be null if the typed row does not exist yet (header-only render).
+    /// Maps the connection's implementation configuration to a detail DTO. Implementations dispatch the
+    /// type-specific projection on <c>Implementation</c>.
     /// </summary>
-    protected abstract ConnectionDetailDto MapToDetail(IConnectionImplementationConfiguration connection, IConnectionImplementationConfiguration? body);
+    protected abstract ConnectionDetailDto MapToDetail(IConnectionImplementationConfiguration connection);
 }

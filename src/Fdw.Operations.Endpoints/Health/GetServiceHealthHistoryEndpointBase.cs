@@ -25,7 +25,7 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
     /// Initializes a new instance of the <see cref="GetServiceHealthHistoryEndpointBase"/> class.
     /// </summary>
     /// <param name="monitors">The health monitor domain provider.</param>
-    /// <param name="selection">The host's configured health monitor selector.</param>
+    /// <param name="monitorConfigurations">The health monitor configuration provider.</param>
     /// <param name="logger">The logger instance.</param>
     protected GetServiceHealthHistoryEndpointBase(
         IHealthMonitorProvider monitors,
