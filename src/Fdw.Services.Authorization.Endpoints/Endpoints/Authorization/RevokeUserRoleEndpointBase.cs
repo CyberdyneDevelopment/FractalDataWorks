@@ -22,7 +22,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
 {
     /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
         private readonly IAuthorizationProvider _authorizationProvider;
-    private readonly UserRoleConfigurationProvider _userRoleProvider;
+    private readonly IUserRoleConfigurationProvider _userRoleProvider;
 
     private readonly IUserConfigurationProvider _userProvider;
 
@@ -33,7 +33,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
 
     /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
     protected RevokeUserRoleEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider,
-        UserRoleConfigurationProvider userRoleProvider,
+        IUserRoleConfigurationProvider userRoleProvider,
         IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
@@ -51,7 +51,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     /// <summary>
     /// Gets the user-role configuration provider.
     /// </summary>
-    protected UserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
+    protected IUserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
@@ -116,9 +116,17 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
                 return;
             }
 
-            var revokeResult = await RevokeRoleAtomically(existing, userId, userIdString, ct).ConfigureAwait(false);
+            // Not atomic. Delete is two writes -- the implementation row then the domain row -- and
+            // nothing rolls the first back if the second fails. Deferred deliberately: this endpoint
+            // inherits atomicity the moment the provider's Delete gets it, with no change here.
+            var revokeResult = await _userRoleProvider.Delete(existing.Id, ct).ConfigureAwait(false);
             if (!revokeResult.IsSuccess)
+            {
+                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
+                    revokeResult.CurrentMessage ?? "Role delete failed");
+                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
                 return;
+            }
 
             AuthorizationEndpointLog.UserRoleRevoked(EndpointLogger, req.RoleName, userIdString);
             await Send.NoContentAsync(ct).ConfigureAwait(false);
@@ -127,59 +135,6 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
         {
             AuthorizationEndpointLog.OperationFailed(EndpointLogger, ex, "revoke role", userIdString);
             await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-        }
-    }
-
-    private async Task<IGenericResult> RevokeRoleAtomically(
-        UserRoleImplementationConfiguration existing, Guid userId, string userIdString, CancellationToken ct)
-    {
-        var txnResult = await _userRoleProvider.BeginTransaction(ct).ConfigureAwait(false);
-        if (!txnResult.IsSuccess || txnResult.Value == null)
-        {
-            var reason = txnResult.CurrentMessage ?? "Transaction could not be opened";
-            var msg = AuthorizationEndpointLog.TransactionOpenFailed(EndpointLogger, userIdString, reason);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-            return GenericResult.Failure(msg);
-        }
-
-        var txn = txnResult.Value;
-        try
-        {
-            var deleteResult = await _userRoleProvider.DeleteInTransaction(existing.Id, txn, ct).ConfigureAwait(false);
-            if (!deleteResult.IsSuccess)
-            {
-                var rollbackResult = await txn.Rollback(ct).ConfigureAwait(false);
-                if (!rollbackResult.IsSuccess)
-                    AuthorizationEndpointLog.RollbackFailed(EndpointLogger, userIdString, rollbackResult.CurrentMessage);
-                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
-                    deleteResult.CurrentMessage ?? "Role delete failed");
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-                return deleteResult;
-            }
-
-            var commitResult = await txn.Commit(ct).ConfigureAwait(false);
-            if (!commitResult.IsSuccess)
-            {
-                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
-                    commitResult.CurrentMessage ?? "Commit failed");
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-                return commitResult;
-            }
-
-
-            // The write used DeleteInTransaction/SaveInTransaction, which defer to this
-            // transaction and so CANNOT invalidate before commit -- the provider says as much on
-            // InvalidateCache. Without this call the row is correct in storage and the running
-            // host keeps serving the cached list until it restarts, which for a revoke means the
-            // permission stays live after an administrator was told it was gone. Worse than the
-            // read filter it sits behind (FDW-732), because the database looks right to anyone
-            // who checks. See FDW-736.
-            _userRoleProvider.InvalidateCache();
-            return GenericResult.Success();
-        }
-        finally
-        {
-            await txn.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

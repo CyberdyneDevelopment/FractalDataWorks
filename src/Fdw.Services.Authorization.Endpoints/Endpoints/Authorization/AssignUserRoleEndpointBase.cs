@@ -18,9 +18,15 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, UserRolesResponse>
 {
+    // The domain and implementation a user-role row is written under. These are values the seed
+    // already writes (authz.UserRole Domain/Implementation = 'UserRole'), not names this endpoint
+    // chooses: a save under any other pair produces a row nothing composes on the next read.
+    private const string UserRoleDomain = "UserRole";
+    private const string UserRoleImplementation = "UserRole";
+
     /// <summary>Initializes a new instance of the <see cref="AssignUserRoleEndpointBase"/> class.</summary>
         private readonly IAuthorizationProvider _authorizationProvider;
-    private readonly UserRoleConfigurationProvider _userRoleProvider;
+    private readonly IUserRoleConfigurationProvider _userRoleProvider;
     private readonly IUserConfigurationProvider _userProvider;
 
     /// <summary>
@@ -30,7 +36,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
 
     /// <summary>Initializes a new instance of the <see cref="AssignUserRoleEndpointBase"/> class.</summary>
     protected AssignUserRoleEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider,
-        UserRoleConfigurationProvider userRoleProvider,
+        IUserRoleConfigurationProvider userRoleProvider,
         IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
@@ -53,7 +59,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
     /// <summary>
     /// Gets the user-role configuration provider.
     /// </summary>
-    protected UserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
+    protected IUserRoleConfigurationProvider UserRoleProvider => _userRoleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
@@ -112,9 +118,18 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
                 AssignedAt = DateTimeOffset.UtcNow
             };
 
-            var assignResult = await AssignRoleAtomically(userId, config, userIdString, ct).ConfigureAwait(false);
+            // Not atomic. A save is two writes -- the domain row then the implementation row -- and
+            // nothing rolls the first back if the second fails. Deferred deliberately: this endpoint
+            // inherits atomicity the moment the provider's Save gets it, with no change here.
+            var assignResult = await _userRoleProvider
+                .Save(config, UserRoleDomain, UserRoleImplementation, config.Name, ct).ConfigureAwait(false);
             if (!assignResult.IsSuccess)
+            {
+                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
+                    assignResult.CurrentMessage ?? "Role save failed");
+                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 400, ct).ConfigureAwait(false);
                 return;
+            }
 
             var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
             var userRolesResult = await _userRoleProvider
@@ -144,59 +159,6 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         {
             AuthorizationEndpointLog.OperationFailed(EndpointLogger, ex, "assign role", userIdString);
             await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-        }
-    }
-
-    private async Task<Fdw.Results.IGenericResult> AssignRoleAtomically(
-        Guid userId, UserRoleImplementationConfiguration config, string userIdString, CancellationToken ct)
-    {
-        var txnResult = await _userRoleProvider.BeginTransaction(ct).ConfigureAwait(false);
-        if (!txnResult.IsSuccess || txnResult.Value == null)
-        {
-            var reason = txnResult.CurrentMessage ?? "Transaction could not be opened";
-            var msg = AuthorizationEndpointLog.TransactionOpenFailed(EndpointLogger, userIdString, reason);
-            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-            return Fdw.Results.GenericResult.Failure(msg);
-        }
-
-        var txn = txnResult.Value;
-        try
-        {
-            var saveResult = await _userRoleProvider.SaveInTransaction(config, txn, ct).ConfigureAwait(false);
-            if (!saveResult.IsSuccess)
-            {
-                var rollbackResult = await txn.Rollback(ct).ConfigureAwait(false);
-                if (!rollbackResult.IsSuccess)
-                    AuthorizationEndpointLog.RollbackFailed(EndpointLogger, userIdString, rollbackResult.CurrentMessage);
-                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
-                    saveResult.CurrentMessage ?? "Role save failed");
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 400, ct).ConfigureAwait(false);
-                return saveResult;
-            }
-
-            var commitResult = await txn.Commit(ct).ConfigureAwait(false);
-            if (!commitResult.IsSuccess)
-            {
-                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
-                    commitResult.CurrentMessage ?? "Commit failed");
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-                return commitResult;
-            }
-
-
-            // The write used DeleteInTransaction/SaveInTransaction, which defer to this
-            // transaction and so CANNOT invalidate before commit -- the provider says as much on
-            // InvalidateCache. Without this call the row is correct in storage and the running
-            // host keeps serving the cached list until it restarts, which for a revoke means the
-            // permission stays live after an administrator was told it was gone. Worse than the
-            // read filter it sits behind (FDW-732), because the database looks right to anyone
-            // who checks. See FDW-736.
-            _userRoleProvider.InvalidateCache();
-            return Fdw.Results.GenericResult.Success();
-        }
-        finally
-        {
-            await txn.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

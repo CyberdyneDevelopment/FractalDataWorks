@@ -23,8 +23,14 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissionsRequest, List<PermissionSummaryDto>>
 {
+    // The domain and implementation a role-permission row is written under. These are values the
+    // seed already writes (authz.RolePermission Domain/Implementation = 'RolePermission'), not names
+    // this endpoint chooses: a save under any other pair produces a row nothing composes on a read.
+    private const string RolePermissionDomain = "RolePermission";
+    private const string RolePermissionImplementation = "RolePermission";
+
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
-        private readonly ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration> _rolePermissionProvider;
+        private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
     private readonly IAuthorizationProvider _authorizationProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
@@ -36,7 +42,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
-    protected SetRolePermissionsEndpointBase(ILogger logger, ImplementationConfigurationProviderBase<IRolePermissionImplementationConfiguration> rolePermissionProvider,
+    protected SetRolePermissionsEndpointBase(ILogger logger, IRolePermissionConfigurationProvider rolePermissionProvider,
         IAuthorizationProvider authorizationProvider,
         ISystemRoleConfiguration systemRoleConfiguration,
         ITenantContext? tenantContext = null)
@@ -104,7 +110,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
         var existingMappings = await _authorizationProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
 
-        var setResult = await SetPermissionsAtomically(req, role, resolved, existingMappings, ct).ConfigureAwait(false);
+        var setResult = await SetPermissions(req, role, resolved, existingMappings, ct).ConfigureAwait(false);
         if (!setResult.IsSuccess)
             return;
 
@@ -145,68 +151,28 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         return resolved;
     }
 
-    private async Task<IGenericResult> SetPermissionsAtomically(
+    /// <summary>
+    /// Replaces the role's permission set: the existing mappings go, then the resolved ones are written.
+    /// </summary>
+    /// <remarks>
+    /// NOT atomic. Every delete and every save is its own write, so a failure part-way through leaves
+    /// the role holding some of the old set and none or some of the new, and the response says which
+    /// step failed rather than pretending nothing happened. This is deliberate and temporary: a
+    /// transaction scope on the provider is the open piece of work, and when Save and Delete become
+    /// transactional this method inherits it without changing.
+    /// </remarks>
+    private async Task<IGenericResult> SetPermissions(
         SetRolePermissionsRequest req,
         RoleImplementationConfiguration role,
         List<PermissionSummaryDto> resolved,
         IReadOnlyList<RolePermissionImplementationConfiguration> existingMappings,
         CancellationToken ct)
     {
-        var txnResult = await _rolePermissionProvider.BeginTransaction(ct).ConfigureAwait(false);
-        if (!txnResult.IsSuccess || txnResult.Value == null)
-        {
-            var reason = txnResult.CurrentMessage ?? "Transaction could not be opened";
-            var msg = AuthorizationEndpointLog.TransactionOpenFailed(EndpointLogger, req.Name, reason);
-            await Send.ResponseAsync(new List<PermissionSummaryDto>(), 500, ct).ConfigureAwait(false);
-            return GenericResult.Failure(msg);
-        }
-
-        var txn = txnResult.Value;
-        try
-        {
-            var deleteResult = await DeleteExistingMappings(req, existingMappings, txn, ct).ConfigureAwait(false);
-            if (!deleteResult.IsSuccess)
-                return deleteResult;
-
-            var saveResult = await SaveNewMappings(req, role, resolved, txn, ct).ConfigureAwait(false);
-            if (!saveResult.IsSuccess)
-                return saveResult;
-
-            AuthorizationEndpointLog.RolePermissionsUpdated(EndpointLogger, req.Name, resolved.Count);
-
-            var commitResult = await txn.Commit(ct).ConfigureAwait(false);
-            if (!commitResult.IsSuccess)
-            {
-                AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, req.Name,
-                    commitResult.CurrentMessage ?? "Commit failed");
-                await Send.ResponseAsync(new List<PermissionSummaryDto>(), 500, ct).ConfigureAwait(false);
-                return commitResult;
-            }
-
-            _rolePermissionProvider.InvalidateCache();
-
-            return GenericResult.Success();
-        }
-        finally
-        {
-            await txn.DisposeAsync().ConfigureAwait(false);
-        }
-    }
-
-    private async Task<IGenericResult> DeleteExistingMappings(
-        SetRolePermissionsRequest req,
-        IReadOnlyList<RolePermissionImplementationConfiguration> existingMappings,
-        IDataGatewayTransaction txn,
-        CancellationToken ct)
-    {
         foreach (var existing in existingMappings)
         {
-            var deleteResult = await _rolePermissionProvider.DeleteInTransaction(existing.Id, txn, ct).ConfigureAwait(false);
+            var deleteResult = await _rolePermissionProvider.Delete(existing.Id, ct).ConfigureAwait(false);
             if (!deleteResult.IsSuccess)
             {
-                var rollbackResult = await txn.Rollback(ct).ConfigureAwait(false);
-                if (!rollbackResult.IsSuccess)
-                    AuthorizationEndpointLog.RollbackFailed(EndpointLogger, req.Name, rollbackResult.CurrentMessage);
                 AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, req.Name,
                     deleteResult.CurrentMessage ?? "Permission delete failed");
                 OnPermissionUpdateFailed(req.Name);
@@ -214,16 +180,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
                 return deleteResult;
             }
         }
-        return GenericResult.Success();
-    }
 
-    private async Task<IGenericResult> SaveNewMappings(
-        SetRolePermissionsRequest req,
-        RoleImplementationConfiguration role,
-        List<PermissionSummaryDto> resolved,
-        IDataGatewayTransaction txn,
-        CancellationToken ct)
-    {
         foreach (var perm in resolved)
         {
             var mapping = new RolePermissionImplementationConfiguration
@@ -237,12 +194,11 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
                 AssignedAt = DateTimeOffset.UtcNow
             };
 
-            var saveResult = await _rolePermissionProvider.SaveInTransaction(mapping, txn, ct).ConfigureAwait(false);
+            var saveResult = await _rolePermissionProvider
+                .Save(mapping, RolePermissionDomain, RolePermissionImplementation, mapping.Name, ct)
+                .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
             {
-                var rollbackResult = await txn.Rollback(ct).ConfigureAwait(false);
-                if (!rollbackResult.IsSuccess)
-                    AuthorizationEndpointLog.RollbackFailed(EndpointLogger, req.Name, rollbackResult.CurrentMessage);
                 AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, req.Name,
                     saveResult.CurrentMessage ?? "Permission save failed");
                 OnPermissionUpdateFailed(req.Name);
@@ -250,12 +206,11 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
                 return saveResult;
             }
         }
+
+        AuthorizationEndpointLog.RolePermissionsUpdated(EndpointLogger, req.Name, resolved.Count);
         return GenericResult.Success();
     }
 
-    /// <summary>
-    /// Called when a permission update fails. Override for custom logging.
-    /// </summary>
     protected virtual void OnPermissionUpdateFailed(string roleName)
     {
     }
