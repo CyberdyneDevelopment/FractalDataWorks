@@ -42,6 +42,9 @@ public partial class HostTypes : ServiceTypeCollectionBase<
     /// </summary>
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
 
+    /// <summary>The Implementation a Host domain row names: Host has exactly one.</summary>
+    private const string HostImplementationName = "Host";
+
     /// <summary>Orders this collection's options by where their middleware belongs.</summary>
     /// <remarks>
     /// The default body cycles options in registration order, which for a request pipeline is
@@ -68,10 +71,22 @@ public partial class HostTypes : ServiceTypeCollectionBase<
                 }
             }
 
-            builder.Services.TryAddSingleton<HostConfigurationProvider>(sp =>
-                new HostConfigurationProvider(
-                    sp.GetService<ILogger<HostConfigurationProvider>>() ?? NullLogger<HostConfigurationProvider>.Instance,
+            builder.Services.TryAddSingleton<HostImplementationConfigurationProvider>(sp =>
+                new HostImplementationConfigurationProvider(
+                    sp.GetService<ILogger<HostImplementationConfigurationProvider>>() ?? NullLogger<HostImplementationConfigurationProvider>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), HostTypes.ConfigurationConnection));
+
+            builder.Services.TryAddSingleton<HostConfigurationProvider>(sp =>
+            {
+                var domain = new HostConfigurationProvider(
+                    sp.GetService<ILogger<HostConfigurationProvider>>() ?? NullLogger<HostConfigurationProvider>.Instance,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), HostTypes.ConfigurationConnection);
+
+                // Host is a single-implementation domain, so one registration under its own name.
+                // Without it the domain read finds its row and then has nothing to hand it to.
+                domain.Register(HostImplementationName, sp.GetRequiredService<HostImplementationConfigurationProvider>());
+                return domain;
+            });
             builder.Services.TryAddSingleton<IHostConfigurationProvider>(
                 sp => sp.GetRequiredService<HostConfigurationProvider>());
 

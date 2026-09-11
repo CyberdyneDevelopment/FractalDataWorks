@@ -9,6 +9,7 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Scheduling.Abstractions.OptionTypes;
 using Fdw.Services.Scheduling.Commands;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,7 +99,29 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp => new ScheduleConfigurationProvider(sp.GetRequiredService<ILogger<ScheduleConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection));
+            builder.Services.TryAddSingleton<ScheduleImplementationConfigurationProvider>(sp =>
+                new ScheduleImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ScheduleImplementationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection));
+
+            builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
+            {
+                var domain = new ScheduleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ScheduleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection);
+
+                // Why every trigger kind registers the SAME provider: the kinds share one
+                // sched.ScheduleImplementation row and the domain row's Implementation names which
+                // kind it is, so dispatch lands on the one provider whatever the kind. Without these
+                // the domain read finds its row and then has nothing to hand it to.
+                var implementation = sp.GetRequiredService<ScheduleImplementationConfigurationProvider>();
+                foreach (var kind in TriggerTypes.All())
+                {
+                    domain.Register(kind.Name, implementation);
+                }
+
+                return domain;
+            });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IScheduleImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
