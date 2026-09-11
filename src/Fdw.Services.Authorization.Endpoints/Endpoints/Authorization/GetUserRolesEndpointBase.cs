@@ -85,12 +85,14 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
             }
 
             var userId = userResult.Value.Id;
-            var userIdString = userId.ToString();
             var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
 
             var userRolesResult = await _userRoleProvider
                 .Find<UserRoleImplementationConfiguration>(
-                    ur => string.Equals(ur.UserId, userIdString, StringComparison.OrdinalIgnoreCase), ct)
+                    // authz.UserRoleImplementation.UserId is a Guid stored as VARCHAR, so comparing
+                    // the TEXT makes the match depend on how each side happened to spell it. Both
+                    // sides are parsed and compared as the Guids they are (FDW-532).
+                    ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId, ct)
                 .ConfigureAwait(false);
             if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
             {

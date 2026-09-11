@@ -63,8 +63,12 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
         var (allRoles, allPermissions, allRolePermissions) = catalogResult.Value;
 
+        // A Guid stored as VARCHAR: compared as text the match depends on how each side spelled
+        // it, so both are compared as the Guids they are (FDW-532). An unparseable subject matches
+        // nothing, which is what it should do.
+        _ = Guid.TryParse(userId, out var subjectId);
         var userRoleAssignmentsResult = await _userRoleProvider.Find<UserRoleImplementationConfiguration>(
-                assignment => string.Equals(assignment.UserId, userId, StringComparison.Ordinal), cancellationToken).ConfigureAwait(false);
+                assignment => Guid.TryParse(assignment.UserId, out var assigned) && assigned == subjectId, cancellationToken).ConfigureAwait(false);
         if (!userRoleAssignmentsResult.IsSuccess || userRoleAssignmentsResult.Value is null)
             return GenericResult<IReadOnlyCollection<string>>.Failure(
                 AuthorizationLog.UserRoleAssignmentLoadFailed(_logger, userId));

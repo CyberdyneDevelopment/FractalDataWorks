@@ -235,7 +235,11 @@ public sealed class DefaultPrincipalResolver : IPrincipalResolver
     {
         var assignmentsResult = await _userRoleProvider
             .Find<UserRoleImplementationConfiguration>(
-                assignment => string.Equals(assignment.UserId, userId.ToString(), StringComparison.Ordinal), ct)
+                // authz.UserRoleImplementation.UserId is a Guid stored as VARCHAR, so comparing the
+                // TEXT makes the match depend on how each side happened to spell it -- an uppercase
+                // row against a lowercase subject matched nobody, so the caller got zero roles and a
+                // 403 (FDW-532). Both sides are compared as the Guids they are.
+                assignment => Guid.TryParse(assignment.UserId, out var assigned) && assigned == userId, ct)
             .ConfigureAwait(false);
         if (!assignmentsResult.IsSuccess || assignmentsResult.Value is null)
             return Array.Empty<string>();
