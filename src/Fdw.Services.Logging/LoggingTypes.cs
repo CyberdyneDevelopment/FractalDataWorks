@@ -56,9 +56,15 @@ public partial class LoggingTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
+            // Why NullLogger and not a resolved ILogger: this provider is what the logging system
+            // reads its own configuration from, so it sits INSIDE logger construction. Resolving
+            // ILogger<T> here asks the container for a logger in order to build the logger --
+            // AddSerilog's callback resolves this provider, whose ctor would resolve ILoggerFactory,
+            // which runs that callback again. DI turns that recursion into cross-thread waits via
+            // StackGuard, so it parks silently instead of throwing: the host never finishes starting.
             builder.Services.TryAddSingleton<ILoggingConfigurationProvider>(sp =>
                 new LoggingConfigurationProvider(
-                    sp.GetService<ILogger<LoggingConfigurationProvider>>()!,
+                    NullLogger<LoggingConfigurationProvider>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), LoggingTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<LoggingConfigurationProvider>(
                 sp => (LoggingConfigurationProvider)sp.GetRequiredService<ILoggingConfigurationProvider>());
