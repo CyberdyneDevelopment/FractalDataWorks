@@ -46,8 +46,14 @@ public interface IOidcAuthorityImplementationConfiguration : IImplementationConf
     string ValidAlgorithms { get; set; }
 
     /// <summary>Gets or sets the OidcAuthority AssertableMethods.</summary>
-    string? AssertableMethods { get; set; }
+    string AssertableMethods { get; set; }
 
     /// <summary>Gets or sets the OidcAuthority ClockSkewSeconds.</summary>
     int ClockSkewSeconds { get; set; }
+
+    /// <summary>Gets or sets whether this is the current active version of the record.</summary>
+    bool IsCurrent { get; set; }
+
+    /// <summary>Gets or sets whether this record has been soft-deleted.</summary>
+    bool IsDeleted { get; set; }
 }

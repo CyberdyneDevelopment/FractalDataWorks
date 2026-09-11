@@ -25,8 +25,14 @@ public interface IForeignAuthorityImplementationConfiguration : IImplementationC
     string ValidAlgorithms { get; set; }
 
     /// <summary>Gets or sets the ForeignAuthority AssertableMethods.</summary>
-    string? AssertableMethods { get; set; }
+    string AssertableMethods { get; set; }
 
     /// <summary>Gets or sets the ForeignAuthority ClockSkewSeconds.</summary>
     int ClockSkewSeconds { get; set; }
+
+    /// <summary>Gets or sets whether this is the current active version of the record.</summary>
+    bool IsCurrent { get; set; }
+
+    /// <summary>Gets or sets whether this record has been soft-deleted.</summary>
+    bool IsDeleted { get; set; }
 }

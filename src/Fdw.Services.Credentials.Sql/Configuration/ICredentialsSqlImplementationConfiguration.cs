@@ -1,3 +1,4 @@
+using System;
 using Fdw.Configuration;
 
 namespace Fdw.Services.Credentials.Sql.Configuration;
@@ -11,4 +12,10 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 /// </remarks>
 public interface ICredentialsSqlImplementationConfiguration : IImplementationConfiguration
 {
+
+    /// <summary>Gets or sets the name of the credential service whose store this configures.</summary>
+    string? CredentialServiceName { get; set; }
+
+    /// <summary>Gets or sets the domain record's durable id.</summary>
+    Guid CredentialStoreId { get; set; }
 }
