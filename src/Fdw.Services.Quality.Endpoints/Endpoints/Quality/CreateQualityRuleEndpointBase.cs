@@ -78,7 +78,7 @@ public abstract class CreateQualityRuleEndpointBase : Endpoint<CreateQualityRule
             return;
         }
 
-        var savedConfig = result.Value!;
+        var savedConfig = config;
 
         await Send.CreatedAtAsync<GetQualityRuleEndpointBase>(
             new { Id = savedConfig.Id },

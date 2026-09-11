@@ -12,7 +12,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </summary>
 /// <typeparam name="TConfig">The concrete schedule configuration type.</typeparam>
 public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleScheduleRequest, ScheduleDetailDto>
-    where TConfig : ScheduleConfiguration
+    where TConfig : class, IScheduleImplementationConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="ToggleScheduleEndpointBase{TConfig}"/> class.</summary>
         private readonly ScheduleConfigurationProvider _provider;

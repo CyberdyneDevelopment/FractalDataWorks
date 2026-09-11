@@ -20,7 +20,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetAnnotationsEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    /// <param name="dataSetProvider">Optional. Used to confirm the named DataSet exists.</param>
+    /// <param name="dataSets">Used to confirm the named DataSet exists.</param>
     protected ListDataSetAnnotationsEndpointBase(
         IDataSetAnnotationConfigurationProvider provider,
         IDataSetConfigurationProvider dataSets)
@@ -88,7 +88,7 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
     }
 
     /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationImplementationConfiguration config)
+    protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
         return new DataSetAnnotationPayload
         {

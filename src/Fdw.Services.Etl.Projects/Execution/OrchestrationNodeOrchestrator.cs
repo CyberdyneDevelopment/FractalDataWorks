@@ -214,7 +214,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Extracted from ExecuteNode to satisfy FDW006 (60-line method limit).
     /// </summary>
     private async Task<bool> ExecuteChildNode(
-        IOrchestrationNodeImplementationConfiguration child,
+        OrchestrationNodeImplementationConfiguration child,
         ExecutionPolicySnapshot childPolicy,
         Guid parentExecutionItemId,
         Guid childItemId,
@@ -345,7 +345,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// </summary>
     private static bool ShouldHaltOnChildFailure(
         ExecutionPolicySnapshot parentPolicy,
-        IOrchestrationNodeImplementationConfiguration failedChild)
+        OrchestrationNodeImplementationConfiguration failedChild)
     {
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         if (nodeType.Name.Equals("Step", StringComparison.Ordinal) ||
@@ -360,7 +360,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// <summary>Returns the name of the halting policy for logging purposes.</summary>
     private static string GetHaltPolicy(
         ExecutionPolicySnapshot parentPolicy,
-        IOrchestrationNodeImplementationConfiguration failedChild)
+        OrchestrationNodeImplementationConfiguration failedChild)
     {
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         return (nodeType.Name.Equals("Step", StringComparison.Ordinal) || nodeType.CanHostPipelines)

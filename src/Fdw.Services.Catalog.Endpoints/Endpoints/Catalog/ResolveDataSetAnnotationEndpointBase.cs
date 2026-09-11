@@ -76,7 +76,7 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
     }
 
     /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationImplementationConfiguration config)
+    protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
         return new DataSetAnnotationPayload
         {

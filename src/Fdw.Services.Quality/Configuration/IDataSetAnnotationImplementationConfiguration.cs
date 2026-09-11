@@ -38,4 +38,7 @@ public interface IDataSetAnnotationImplementationConfiguration : IImplementation
 
     /// <summary>Gets or sets the DataSetAnnotation FieldBusinessNames.</summary>
     IList<DataSetAnnotationFieldBusinessNameConfiguration> FieldBusinessNames { get; set; }
+
+    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
+    int DataSetAnnotationRowId { get; set; }
 }

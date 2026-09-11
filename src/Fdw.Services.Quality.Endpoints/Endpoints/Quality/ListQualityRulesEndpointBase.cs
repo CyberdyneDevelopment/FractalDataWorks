@@ -49,7 +49,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
     {
         var result = await _provider.Get(ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess)
+        if (!result.IsSuccess || result.Value is null)
         {
             HttpContext.Response.StatusCode = 500;
             await HttpContext.Response.WriteAsJsonAsync(
@@ -57,7 +57,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
             return;
         }
 
-        IEnumerable<QualityRuleImplementationConfiguration> rules = result.Value ?? [];
+        IEnumerable<IQualityRuleImplementationConfiguration> rules = result.Value;
 
         if (!string.IsNullOrWhiteSpace(req.DataSetName))
         {
@@ -69,7 +69,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
     }
 
     /// <summary>Maps a QualityRuleImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual QualityRuleDto MapToDto(QualityRuleImplementationConfiguration config)
+    protected virtual QualityRuleDto MapToDto(IQualityRuleImplementationConfiguration config)
     {
         return new QualityRuleDto
         {

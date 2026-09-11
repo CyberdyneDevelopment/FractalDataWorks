@@ -37,7 +37,7 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
 
     /// <summary>Initializes a new instance of the <see cref="ListAllUserRolesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="roleProvider">Resolves role ids to names.</param>
+    /// <param name="authorizationProvider">Resolves role ids to names.</param>
     /// <param name="userRoleProvider">Reads the assignments.</param>
     protected ListAllUserRolesEndpointBase(
         ILogger logger,

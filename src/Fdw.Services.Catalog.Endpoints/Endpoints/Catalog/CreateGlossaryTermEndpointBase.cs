@@ -48,7 +48,7 @@ public abstract class CreateGlossaryTermEndpointBase : Endpoint<GlossaryTermResp
             return;
         }
 
-        req.Id = result.Value?.Id ?? req.Id;
+        req.Id = config.Id;
 
         await Send.CreatedAtAsync<GetGlossaryTermEndpointBase>(new { Id = req.Id }, req, cancellation: ct).ConfigureAwait(false);
     }

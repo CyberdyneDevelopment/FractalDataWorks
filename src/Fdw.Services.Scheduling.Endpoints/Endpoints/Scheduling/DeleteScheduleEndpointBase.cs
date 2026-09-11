@@ -13,7 +13,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </summary>
 /// <typeparam name="TConfig">The concrete schedule configuration type.</typeparam>
 public abstract class DeleteScheduleEndpointBase<TConfig> : CrudDeleteEndpointBase<ScheduleNameRequest>
-    where TConfig : ScheduleConfiguration
+    where TConfig : class, IScheduleImplementationConfiguration
 {
     private readonly ScheduleConfigurationProvider _provider;
 

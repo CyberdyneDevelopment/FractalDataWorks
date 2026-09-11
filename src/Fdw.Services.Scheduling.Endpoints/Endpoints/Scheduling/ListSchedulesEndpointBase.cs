@@ -13,7 +13,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for listing all configured schedules with pagination and filtering.
-/// Uses the base <see cref="ScheduleConfiguration"/> type, which covers all schedule types.
+/// Uses the base <see cref="IScheduleImplementationConfiguration"/> type, which covers all schedule types.
 /// </summary>
 public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSchedulesRequest, ScheduleSummaryDto>
 {
@@ -32,12 +32,12 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     protected override async Task<IGenericResult<List<ScheduleSummaryDto>>> LoadItems(ListSchedulesRequest request, CancellationToken ct)
     {
         var allResult = await _provider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
+        if (!allResult.IsSuccess || allResult.Value is null)
         {
             return allResult.ToNewResult<List<ScheduleSummaryDto>>();
         }
 
-        var allSchedules = (allResult.Value ?? (IReadOnlyList<ScheduleConfiguration>)[])
+        var allSchedules = allResult.Value
             .Where(config => !string.IsNullOrWhiteSpace(config.Name))
             .ToList();
 
@@ -52,7 +52,7 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     }
 
     /// <summary>Applies filters from the request to the schedule list.</summary>
-    protected virtual IReadOnlyList<ScheduleConfiguration> ApplyFilters(IReadOnlyList<ScheduleConfiguration> schedules, ListSchedulesRequest request)
+    protected virtual IReadOnlyList<IScheduleImplementationConfiguration> ApplyFilters(IReadOnlyList<IScheduleImplementationConfiguration> schedules, ListSchedulesRequest request)
     {
         var filtered = schedules.AsEnumerable();
 
@@ -75,7 +75,7 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     }
 
     /// <summary>Applies sorting from the request to the schedule list.</summary>
-    protected virtual IEnumerable<ScheduleConfiguration> ApplySort(IReadOnlyList<ScheduleConfiguration> schedules, ListSchedulesRequest request)
+    protected virtual IEnumerable<IScheduleImplementationConfiguration> ApplySort(IReadOnlyList<IScheduleImplementationConfiguration> schedules, ListSchedulesRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.SortBy))
         {
@@ -100,7 +100,7 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     }
 
     /// <summary>Maps a single schedule configuration to a summary DTO.</summary>
-    protected virtual ScheduleSummaryDto MapToSummary(ScheduleConfiguration config)
+    protected virtual ScheduleSummaryDto MapToSummary(IScheduleImplementationConfiguration config)
     {
         return new ScheduleSummaryDto
         {

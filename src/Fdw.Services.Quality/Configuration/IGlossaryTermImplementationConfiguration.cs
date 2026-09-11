@@ -32,4 +32,7 @@ public interface IGlossaryTermImplementationConfiguration : IImplementationConfi
 
     /// <summary>Gets or sets the GlossaryTerm LinkedDataSets.</summary>
     IList<GlossaryTermLinkedDataSetConfiguration> LinkedDataSets { get; set; }
+
+    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
+    int GlossaryTermRowId { get; set; }
 }

@@ -195,7 +195,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
                 Url = $"/connections/{c.Name}",
                 Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
-                    ["ConnectionType"] = c.ConnectionType ?? "Unknown"
+                    ["ConnectionType"] = c.Implementation
                 }
             })
             .ToList();

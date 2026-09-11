@@ -58,7 +58,7 @@ public abstract class GetQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest
     }
 
     /// <summary>Maps a QualityRuleImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual QualityRuleDto MapToDto(QualityRuleImplementationConfiguration config)
+    protected virtual QualityRuleDto MapToDto(IQualityRuleImplementationConfiguration config)
     {
         return new QualityRuleDto
         {

@@ -58,7 +58,7 @@ public abstract class GetGlossaryTermEndpointBase : Endpoint<GlossaryTermIdReque
     }
 
     /// <summary>Maps a GlossaryTermImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual GlossaryTermResponse MapToDto(GlossaryTermImplementationConfiguration config)
+    protected virtual GlossaryTermResponse MapToDto(IGlossaryTermImplementationConfiguration config)
     {
         return new GlossaryTermResponse
         {

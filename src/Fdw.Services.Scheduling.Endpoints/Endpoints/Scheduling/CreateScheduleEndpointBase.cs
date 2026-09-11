@@ -14,7 +14,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </summary>
 /// <typeparam name="TConfig">The concrete schedule configuration type.</typeparam>
 public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBase<CreateScheduleRequest, ScheduleDetailDto>
-    where TConfig : ScheduleConfiguration
+    where TConfig : class, IScheduleImplementationConfiguration
 {
     private readonly ScheduleConfigurationProvider _provider;
 
