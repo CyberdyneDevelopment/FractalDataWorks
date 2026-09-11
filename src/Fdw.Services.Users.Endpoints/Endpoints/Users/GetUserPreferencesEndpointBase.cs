@@ -68,7 +68,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
 
         try
         {
-            var result = await _preferenceProvider.GetPreferences(userId, ct).ConfigureAwait(false);
+            var result = await _preferenceProvider.Get(userId, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {

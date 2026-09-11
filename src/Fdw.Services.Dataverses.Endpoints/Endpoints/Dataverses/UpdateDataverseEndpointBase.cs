@@ -97,7 +97,7 @@ public abstract class UpdateDataverseEndpointBase : CrudUpdateEndpointBase<Updat
         config.JoinPolicy = request.JoinPolicy ?? config.JoinPolicy;
         config.StandInSeed = request.StandInSeed ?? config.StandInSeed;
 
-        var saved = await _provider.Save(config, ct).ConfigureAwait(false);
+        var saved = await _provider.Save(config, "Dataverse", config.Implementation, config.Name, ct).ConfigureAwait(false);
         return saved.IsFailure
             ? saved.ToNewResult<DataverseDetailResponse>()
             : GenericResult<DataverseDetailResponse>.Success(DataverseResponseMapper.ToDetail(config));

@@ -63,7 +63,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
 
         config.Implementation = connection.Implementation;
 
-        var saveResult = await _dataStoreProvider.Save(config, ct).ConfigureAwait(false);
+        var saveResult = await _dataStoreProvider.Save(config, "DataStore", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<DataStoreDetailResponse>();

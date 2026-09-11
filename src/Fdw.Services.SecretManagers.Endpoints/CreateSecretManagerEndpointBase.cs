@@ -132,7 +132,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 Configuration = bodyResult.Body
             };
 
-            var saveResult = await _configProvider.Save(config, ct).ConfigureAwait(false);
+            var saveResult = await _configProvider.Save(config, "SecretManager", config.Implementation, config.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
                 SecretManagerEndpointLog.SaveFailed(_logger, saveResult.CurrentMessage ?? "Unknown error");

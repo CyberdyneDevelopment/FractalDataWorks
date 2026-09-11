@@ -35,6 +35,10 @@ public static partial class DataStoreEndpointLog
     [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "Path '{pathName}' not found in DataStore '{dataStoreName}'")]
     public static partial IGenericMessage PathNotFoundInDataStore(ILogger logger, string pathName, string dataStoreName);
 
+    /// <summary>Logs when the path already holds a container of that name, so the add is refused.</summary>
+    [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "Container '{containerName}' already exists in path '{pathName}' of DataStore '{dataStoreName}'")]
+    public static partial IGenericMessage ContainerAlreadyExists(ILogger logger, string containerName, string pathName, string dataStoreName);
+
     /// <summary>Logs when a container is successfully added to a data store path.</summary>
     [MessageLogging(EventId = 11014, Level = LogLevel.Information, Message = "Added container '{containerName}' to path '{pathName}' in DataStore '{dataStoreName}'")]
     public static partial IGenericMessage ContainerAdded(ILogger logger, string containerName, string pathName, string dataStoreName);

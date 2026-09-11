@@ -59,7 +59,7 @@ public abstract class ListUsersEndpointBase : EndpointWithoutRequest<PaginatedRe
     public override async Task HandleAsync(CancellationToken ct)
     {
         
-        var result = await _userProvider.GetAllUsers(ct).ConfigureAwait(false);
+        var result = await _userProvider.Get(ct).ConfigureAwait(false);
 
         // Why this refuses instead of answering: "the user store could not be read" and "this
         // deployment has no users" are opposite facts, and a 200 carrying an empty page says the
@@ -81,5 +81,5 @@ public abstract class ListUsersEndpointBase : EndpointWithoutRequest<PaginatedRe
     /// <summary>
     /// Maps a user entity to a response DTO. Override for custom mapping.
     /// </summary>
-    protected abstract UserResponse MapToResponse(IUser user);
+    protected abstract UserResponse MapToResponse(IUserImplementationConfiguration user);
 }

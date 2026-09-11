@@ -57,7 +57,7 @@ public sealed class OrchestrationNodeConfigurationWriter
 
         try
         {
-            var saveResult = await _provider.Save(config, cancellationToken).ConfigureAwait(false);
+            var saveResult = await _provider.Save(config, "OrchestrationNode", config.Implementation, config.Name, cancellationToken).ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<OrchestrationNodeImplementationConfiguration>();
 

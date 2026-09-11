@@ -64,7 +64,7 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
 
         var updated = UpdateEnabledStatus((TConfig)existingResult.Value, req.IsEnabled);
 
-        var saveResult = await _provider.Save(updated, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(updated, "Schedule", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;

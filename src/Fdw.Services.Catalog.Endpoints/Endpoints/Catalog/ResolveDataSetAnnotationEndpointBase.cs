@@ -59,7 +59,10 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
             return;
         }
 
-        var saveResult = await _provider.SaveAnnotation(getResult.Value, ct).ConfigureAwait(false);
+        var annotation = getResult.Value;
+        var saveResult = await _provider
+            .Save(annotation, annotation.Domain, annotation.Implementation, annotation.Name, ct)
+            .ConfigureAwait(false);
 
         if (!saveResult.IsSuccess)
         {

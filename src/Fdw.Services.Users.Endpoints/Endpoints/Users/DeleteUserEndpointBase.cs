@@ -57,7 +57,9 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
     public override async Task HandleAsync(UserScopedRequest req, CancellationToken ct)
     {
         
-        var lookup = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
+        var lookup = Guid.TryParse(req.IdOrName, out var userId)
+            ? await _userProvider.Get(userId, ct).ConfigureAwait(false)
+            : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
         if (!lookup.IsSuccess || lookup.Value is null)
         {
             HttpContext.Response.StatusCode = 404;
@@ -74,7 +76,7 @@ public abstract class DeleteUserEndpointBase : Endpoint<UserScopedRequest>
 
         OnDeletingUser(userId);
 
-        var result = await _userProvider.DeleteUser(userId, ct).ConfigureAwait(false);
+        var result = await _userProvider.Delete(userId, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

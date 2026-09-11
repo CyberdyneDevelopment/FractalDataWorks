@@ -54,7 +54,7 @@ public abstract class DeleteSecretManagerEndpointBase : Endpoint<DeleteSecretMan
         {
             SecretManagerEndpointLog.DeletingSecretManager(_logger, req.Name);
 
-            var existingResult = await _configProvider.GetHeader(req.Name, ct).ConfigureAwait(false);
+            var existingResult = await _configProvider.Get(req.Name, ct).ConfigureAwait(false);
             var existing = existingResult.IsSuccess ? existingResult.Value : null;
 
             if (existing == null)

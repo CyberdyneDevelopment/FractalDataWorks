@@ -105,7 +105,7 @@ public abstract class CreateDataverseEndpointBase : CrudCreateEndpointBase<Creat
             StandInSeed = request.StandInSeed,
         };
 
-        var saved = await _provider.Save(config, ct).ConfigureAwait(false);
+        var saved = await _provider.Save(config, "Dataverse", config.Implementation, config.Name, ct).ConfigureAwait(false);
 
         // Map what we persisted, not the result's value: Save succeeded on this object, so it is
         // the authoritative shape and needs no null dance.

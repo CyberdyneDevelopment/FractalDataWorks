@@ -57,7 +57,7 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
 
         var updatedConfig = MergeUpdate(request, (TConfig)originalResult.Value);
 
-        var saveResult = await _provider.Save(updatedConfig, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(updatedConfig, "Schedule", updatedConfig.Implementation, updatedConfig.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<ScheduleDetailDto>();

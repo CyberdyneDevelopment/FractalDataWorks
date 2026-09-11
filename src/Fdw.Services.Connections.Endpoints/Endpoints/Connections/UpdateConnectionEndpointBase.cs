@@ -88,7 +88,7 @@ public abstract class UpdateConnectionEndpointBase<TConfig> : CrudUpdateEndpoint
         // saving them through two providers could not guarantee.
         updatedConnection.Configuration = updatedBody;
 
-        var connectionSave = await _connectionProvider.Save(updatedConnection, ct).ConfigureAwait(false);
+        var connectionSave = await _connectionProvider.Save(updatedConnection, "Connection", updatedConnection.Implementation, updatedConnection.Name, ct).ConfigureAwait(false);
         if (connectionSave.IsFailure) return connectionSave.ToNewResult<ConnectionDetailDto>();
 
         return GenericResult<ConnectionDetailDto>.Success(MapUpdatedToDetail(updatedConnection, updatedBody));

@@ -131,7 +131,9 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
                 return GenericResult<Guid>.Failure(
                     ExternalIdentityProvisionerLog.RuleReferencesUnknownRole(_logger, rule.Name, roleName));
 
-            var grantName = $"{userId.Value}:{role.Value.Id}";
+            // {userId}:{roleName} is what the seed writes into authz.UserRole.[Name]; keyed on the
+            // role's Id instead, a row written here is invisible to the seed's own idempotence check.
+            var grantName = $"{userId.Value}:{role.Value.Name}";
             var grant = await _userRoles.Save(
                 new Fdw.Services.Authorization.Configuration.UserRoleImplementationConfiguration
                 {

@@ -65,7 +65,30 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             }).ToList(),
         };
 
-        var addResult = await _dataStoreProvider.AddContainer(request.Name, request.PathName, container, ct).ConfigureAwait(false);
+        // A container hangs from a path, which hangs from the store, so the write is a save of the
+        // store carrying it. The store-exists and path-exists invariants the old AddContainer
+        // enforced are stated here, where the rows they are about are in hand.
+        var storeResult = await _dataStoreProvider.Get(request.Name, ct).ConfigureAwait(false);
+        if (!storeResult.IsSuccess || storeResult.Value is null)
+            return GenericResult<DataStoreContainerResponse>.Failure(
+                DataStoreEndpointLog.DataStoreNotFound(Logger, request.Name));
+
+        var store = storeResult.Value;
+        var path = store.Paths.FirstOrDefault(
+            p => string.Equals(p.Name, request.PathName, StringComparison.OrdinalIgnoreCase));
+        if (path is null)
+            return GenericResult<DataStoreContainerResponse>.Failure(
+                DataStoreEndpointLog.PathNotFoundInDataStore(Logger, request.PathName, request.Name));
+
+        if (path.Containers.Any(c => string.Equals(c.Name, container.Name, StringComparison.OrdinalIgnoreCase)))
+            return GenericResult<DataStoreContainerResponse>.Failure(
+                DataStoreEndpointLog.ContainerAlreadyExists(Logger, container.Name, request.PathName, request.Name));
+
+        path.Containers.Add(container);
+
+        var addResult = await _dataStoreProvider
+            .Save(store, store.Domain, store.Implementation, store.Name, ct)
+            .ConfigureAwait(false);
         if (addResult.IsFailure)
             return addResult.ToNewResult<DataStoreContainerResponse>();
 

@@ -62,7 +62,7 @@ public abstract class CreatePipelineEndpointBase<TConfig> : CrudCreateEndpointBa
         var pipelineId = Guid.CreateVersion7();
         var config = CreateConfiguration(request, pipelineId);
 
-        var saveResult = await _provider.Save(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "Pipeline", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<PipelineDetailResponse>();

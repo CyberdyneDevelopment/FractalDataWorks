@@ -14,6 +14,7 @@ using Fdw.Services.Users.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Users.Clients.Models;
+using Fdw.Services.Users.Configuration;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -112,7 +113,7 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
 
         OnUserCreated(req.Username, result.Value);
 
-        var loadResult = await _userProvider.GetUser(result.Value, ct).ConfigureAwait(false);
+        var loadResult = await _userProvider.Get(result.Value, ct).ConfigureAwait(false);
         if (!loadResult.IsSuccess || loadResult.Value is null)
         {
             HttpContext.Response.StatusCode = 500;
@@ -138,13 +139,13 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// assignment that failed still appeared in the 201. The response now carries only what was
     /// re-read, and roles are answered by the route that owns them.
     /// </remarks>
-    protected virtual UserResponse MapToResponse(IUser user)
+    protected virtual UserResponse MapToResponse(IUserImplementationConfiguration user)
         => new()
         {
             Id = user.Id,
-            Name = user.Username,
-            Username = user.Username,
-            DisplayName = user.Username,
+            Name = user.Name,
+            Username = user.Name,
+            DisplayName = user.Name,
             Email = user.Email,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
@@ -155,6 +156,15 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
     /// <summary>
     /// Performs the user creation. Override to customize creation logic.
     /// </summary>
+    // The domain and implementation a user row is written under -- values the seed already writes
+    // (usr.Users Domain/Implementation = 'Users'), not names this endpoint chooses.
+    private const string UserDomain = "Users";
+    private const string UserImplementation = "Users";
+    private const string UserTenantDomain = "UserTenants";
+    private const string UserTenantImplementation = "UserTenants";
+    private const string UserRoleDomain = "UserRole";
+    private const string UserRoleImplementation = "UserRole";
+
     protected virtual async Task<IGenericResult<Guid>> Create(TRequest request, CancellationToken ct)
     {
         var tenantClaim = HttpContext.User.FindFirst(ClaimDefinitions.tenantId.Name)?.Value;
@@ -163,13 +173,38 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             return GenericResult<Guid>.Failure(UserResultCodes.ByName("MissingTenantClaim"));
         }
 
-        var createResult = await _userProvider.CreateUser(request.Username, request.Email, tenantId, ct).ConfigureAwait(false);
+        // Name, Domain and Implementation are not set here: Save stamps them from its arguments,
+        // and the implementation row does not persist them -- they belong to the domain row.
+        var user = new UserImplementationConfiguration
+        {
+            Id = Guid.CreateVersion7(),
+            Email = request.Email,
+            TenantId = tenantId,
+            IsActive = true,
+        };
+
+        var createResult = await _userProvider
+            .Save(user, UserDomain, UserImplementation, request.Username, ct)
+            .ConfigureAwait(false);
         if (!createResult.IsSuccess)
-            return createResult;
+            return createResult.ToNewResult<Guid>();
 
-        var userId = createResult.Value;
+        var userId = user.Id;
 
-        var grantResult = await _tenantProvider.GrantTenantAccess(userId, tenantId, isDefault: true, ct).ConfigureAwait(false);
+        var tenantLink = new UserTenantImplementationConfiguration
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = userId,
+            TenantId = tenantId,
+            IsDefault = true,
+        };
+
+        // NAME MISMATCH, deliberately visible: the seed writes {username}:{tenantSlug}, and this
+        // endpoint holds the tenant's id rather than its slug. Reconciling the two needs a tenant
+        // read this endpoint does not have, so a row granted here and one seeded are not the same row.
+        var grantResult = await _tenantProvider
+            .Save(tenantLink, UserTenantDomain, UserTenantImplementation, $"{request.Username}:{tenantId}", ct)
+            .ConfigureAwait(false);
         if (!grantResult.IsSuccess)
             return grantResult.ToNewResult<Guid>();
 
@@ -184,25 +219,30 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
                 return assignResult.ToNewResult<Guid>();
         }
 
-        return createResult;
+        return GenericResult<Guid>.Success(userId);
     }
 
     private async Task<IGenericResult> AssignRole(Guid userId, string roleName, CancellationToken ct)
     {
-        var role = await _roleProvider.GetRole(roleName, ct).ConfigureAwait(false);
-        if (role is null)
+        var roleResult = await _roleProvider.Get(roleName, ct).ConfigureAwait(false);
+        if (!roleResult.IsSuccess || roleResult.Value is null)
             return GenericResult.Failure(UserEndpointLog.RoleNotFoundDuringCreate(EndpointLogger, roleName));
+
+        var role = roleResult.Value;
 
         var config = new UserRoleImplementationConfiguration
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             UserId = userId.ToString(),
             RoleId = role.Id,
-            Name = $"{userId}:{role.Id}",
             AssignedAt = DateTimeOffset.UtcNow
         };
 
-        return await _userRoleProvider.Save(config, ct).ConfigureAwait(false);
+        // {userId}:{roleName} is what the seed writes into authz.UserRole.[Name]. Keyed on the role's
+        // Id instead, a row written here is invisible to the seed's own idempotence check.
+        return await _userRoleProvider
+            .Save(config, UserRoleDomain, UserRoleImplementation, $"{userId}:{role.Name}", ct)
+            .ConfigureAwait(false);
     }
 
     /// <summary>

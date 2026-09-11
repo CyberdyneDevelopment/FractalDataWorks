@@ -59,7 +59,9 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     public override async Task HandleAsync(UserScopedRequest req, CancellationToken ct)
     {
         
-        var result = await _userProvider.ResolveUser(req.IdOrName, ct).ConfigureAwait(false);
+        var result = Guid.TryParse(req.IdOrName, out var userId)
+            ? await _userProvider.Get(userId, ct).ConfigureAwait(false)
+            : await _userProvider.Get(req.IdOrName, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess || result.Value is null)
         {

@@ -110,7 +110,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
         ApplyRequestedChildren(existing, request);
 
-        var saveResult = await _dataSetProvider.Save(existing, ct).ConfigureAwait(false);
+        var saveResult = await _dataSetProvider.Save(existing, "DataSet", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             DataSetEndpointLog.DataSetUpdateFailed(Logger, request.Name, "Save failed");

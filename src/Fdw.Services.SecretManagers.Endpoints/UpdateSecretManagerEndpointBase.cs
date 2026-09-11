@@ -67,7 +67,7 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
             existing.Description = req.Description ?? existing.Description;
             existing.Environment = req.Environment;
 
-            var saveResult = await _configProvider.Save(existing, ct).ConfigureAwait(false);
+            var saveResult = await _configProvider.Save(existing, "SecretManager", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
                 SecretManagerEndpointLog.UpdateFailed(_logger, saveResult.CurrentMessage ?? "Unknown error");

@@ -155,10 +155,10 @@ public abstract class CreateDataverseNoteEndpointBase : CrudCreateEndpointBase<C
             CreateDate = now,
         };
 
-        var saved = await _notes.Save(config, ct).ConfigureAwait(false);
+        var saved = await _notes.Save(config, "Note", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<DataverseNoteResponse>();
 
-        var author = await _users.ResolveUser(authorUserId.ToString(), ct).ConfigureAwait(false);
+        var author = await _users.Get(authorUserId, ct).ConfigureAwait(false);
 
         return GenericResult<DataverseNoteResponse>.Success(new DataverseNoteResponse
         {

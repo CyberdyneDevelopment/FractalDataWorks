@@ -109,7 +109,7 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             })
             .ToList();
 
-        var saveResult = await _dataSetProvider.Save(dsResult.Value, ct).ConfigureAwait(false);
+        var saveResult = await _dataSetProvider.Save(dsResult.Value, "DataSet", dsResult.Value.Implementation, dsResult.Value.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             await SendSaveFailure(saveResult, ct).ConfigureAwait(false);

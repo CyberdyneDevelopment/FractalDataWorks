@@ -99,7 +99,7 @@ public abstract class ListDataverseNotesEndpointBase : CrudGetEndpointBase<Datav
         var names = new Dictionary<Guid, string?>();
         foreach (var authorId in notes.Select(n => n.AuthorUserId).Distinct())
         {
-            var user = await _users.ResolveUser(authorId.ToString(), ct).ConfigureAwait(false);
+            var user = await _users.Get(authorId, ct).ConfigureAwait(false);
 
             // Null, never empty. The client draws initials from this, so an empty string gives an
             // empty avatar that reads as a rendering bug rather than as a departed colleague.

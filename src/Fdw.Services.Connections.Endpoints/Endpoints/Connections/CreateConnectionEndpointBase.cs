@@ -72,7 +72,7 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
 
         // One save for the whole aggregate: the provider writes the header, then dispatches on
         // Implementation so the registered typed provider writes the body and everything under it.
-        var connectionSave = await _connectionProvider.Save(connection, ct).ConfigureAwait(false);
+        var connectionSave = await _connectionProvider.Save(connection, "Connection", connection.Implementation, connection.Name, ct).ConfigureAwait(false);
         if (connectionSave.IsFailure)
         {
             return connectionSave.ToNewResult<ConnectionDetailDto>();

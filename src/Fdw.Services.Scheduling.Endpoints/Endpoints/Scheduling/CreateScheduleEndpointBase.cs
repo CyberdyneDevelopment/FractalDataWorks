@@ -43,7 +43,7 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
         var scheduleId = Guid.CreateVersion7();
         var config = CreateConfiguration(request, scheduleId);
 
-        var saveResult = await _provider.Save(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "Schedule", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<ScheduleDetailDto>();

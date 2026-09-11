@@ -79,7 +79,7 @@ public abstract class UpdatePipelineEndpointBase<TConfig> : CrudUpdateEndpointBa
 
         var updated = ApplyUpdates(request, (TConfig)originalResult.Value);
 
-        var saveResult = await _provider.Save(updated, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(updated, "Pipeline", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<PipelineDetailResponse>();

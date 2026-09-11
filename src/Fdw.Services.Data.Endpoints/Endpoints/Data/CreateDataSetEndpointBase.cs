@@ -108,7 +108,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
             Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates)
         };
 
-        var saveResult = await _dataSetProvider.Save(config, ct).ConfigureAwait(false);
+        var saveResult = await _dataSetProvider.Save(config, "DataSet", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             DataSetEndpointLog.DataSetCreateFailed(Logger, request.Name, "Save failed");
