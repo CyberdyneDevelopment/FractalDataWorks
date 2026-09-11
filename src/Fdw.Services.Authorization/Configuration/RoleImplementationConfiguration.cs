@@ -41,8 +41,6 @@ public partial class RoleImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid RoleId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int RoleRowId { get; set; }
 
     /// <inheritdoc />
     public Guid Id { get; set; } = Guid.CreateVersion7();

@@ -37,8 +37,6 @@ public sealed partial class ExternalIdentityProvisionerBindingImplementationConf
     /// <summary>The domain record's durable id.</summary>
     public Guid ExternalIdentityProvisionerBindingId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int ExternalIdentityProvisionerBindingRowId { get; set; }
 
 
     /// <summary>

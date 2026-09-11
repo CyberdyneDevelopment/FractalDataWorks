@@ -144,8 +144,6 @@ public sealed partial class DataSetFieldConfiguration : IGenericConfiguration
     /// </remarks>
     public Guid? BoundContainerFieldId { get; set; }
 
-    /// <summary>Gets or sets the physical key of the bound container field.</summary>
-    public int? BoundContainerFieldRowId { get; set; }
 
     /// <summary>Gets or sets how the binding was established — Direct, Cast, ValueMap or Adopted.</summary>
     /// <remarks>

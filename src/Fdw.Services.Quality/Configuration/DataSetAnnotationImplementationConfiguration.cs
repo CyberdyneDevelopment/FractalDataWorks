@@ -20,8 +20,6 @@ public sealed partial class DataSetAnnotationImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid DataSetAnnotationId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int DataSetAnnotationRowId { get; set; }
 
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>

@@ -28,8 +28,6 @@ public sealed partial class MessagingImplementationConfiguration : IMessagingImp
     /// <summary>Gets or sets the domain record's durable id.</summary>
     public Guid MessagingId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    public int MessagingRowId { get; set; }
 
     /// <inheritdoc/>
     public string? DataStoreName { get; set; }

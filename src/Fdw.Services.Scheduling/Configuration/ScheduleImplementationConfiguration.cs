@@ -26,8 +26,6 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
     /// <summary>Gets or sets the domain record's durable id.</summary>
     public Guid ScheduleId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    public int ScheduleRowId { get; set; }
 
     /// <summary>Gets or sets the name this configuration is resolved by.</summary>
     // Why it maps with no column of its own: the name is the domain's, and there is one name for a

@@ -35,8 +35,6 @@ public partial class RolePermissionImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid RolePermissionId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int RolePermissionRowId { get; set; }
 
     /// <summary>
     /// Gets or sets the unique identifier for this role-permission assignment.

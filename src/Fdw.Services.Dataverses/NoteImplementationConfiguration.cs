@@ -40,8 +40,6 @@ public sealed partial class NoteImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid NoteId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int NoteRowId { get; set; }
 
     /// <summary>Gets or sets the durable logical identity.</summary>
     public Guid Id { get; set; }

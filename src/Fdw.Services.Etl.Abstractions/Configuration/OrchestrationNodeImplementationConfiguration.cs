@@ -44,8 +44,6 @@ public sealed partial class OrchestrationNodeImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid OrchestrationNodeId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int OrchestrationNodeRowId { get; set; }
 
     /// <summary>Gets or sets the unique identifier for this node.</summary>
     public Guid Id { get; set; } = Guid.NewGuid();

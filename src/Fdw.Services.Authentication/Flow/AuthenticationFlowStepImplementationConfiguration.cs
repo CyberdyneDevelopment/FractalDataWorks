@@ -27,8 +27,6 @@ public sealed partial class AuthenticationFlowStepImplementationConfiguration : 
     /// <inheritdoc/>
     public Guid AuthenticationFlowId { get; set; }
 
-    /// <inheritdoc/>
-    public int AuthenticationFlowRowId { get; set; }
 
     /// <inheritdoc/>
     public int StepOrder { get; set; }

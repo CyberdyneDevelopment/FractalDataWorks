@@ -37,8 +37,6 @@ public sealed partial class DataStoreImplementationConfiguration : IDataStoreImp
     /// <summary>Gets or sets the domain record's durable id.</summary>
     public Guid DataStoreId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    public int DataStoreRowId { get; set; }
 
     /// <inheritdoc/>
     public Guid ConnectionId { get; set; }

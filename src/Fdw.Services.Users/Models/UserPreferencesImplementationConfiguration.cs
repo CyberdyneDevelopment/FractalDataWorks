@@ -26,8 +26,6 @@ public sealed partial class UserPreferencesImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid UserPreferencesId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int UserPreferencesRowId { get; set; }
 
     /// <inheritdoc />
     public Guid Id { get; set; }

@@ -37,8 +37,6 @@ public partial class SavedViewImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid SavedViewId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int SavedViewRowId { get; set; }
 
     /// <summary>Gets or sets the durable logical identity.</summary>
     public Guid Id { get; set; }

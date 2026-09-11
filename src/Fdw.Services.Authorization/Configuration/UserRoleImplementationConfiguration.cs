@@ -36,8 +36,6 @@ public partial class UserRoleImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid UserRoleId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int UserRoleRowId { get; set; }
 
     /// <summary>
     /// Gets or sets the unique identifier for this user-role assignment.

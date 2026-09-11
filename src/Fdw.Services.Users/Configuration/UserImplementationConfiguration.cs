@@ -25,8 +25,6 @@ public partial class UserImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid UsersId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int UsersRowId { get; set; }
 
     /// <inheritdoc/>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>

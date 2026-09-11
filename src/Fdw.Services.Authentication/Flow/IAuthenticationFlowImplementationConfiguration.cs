@@ -9,8 +9,6 @@ public interface IAuthenticationFlowImplementationConfiguration : IImplementatio
     /// <summary>Gets or sets the domain record's durable id.</summary>
     Guid AuthenticationFlowId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    int AuthenticationFlowRowId { get; set; }
 
     /// <summary>Gets or sets the human-readable description.</summary>
     string? Description { get; set; }

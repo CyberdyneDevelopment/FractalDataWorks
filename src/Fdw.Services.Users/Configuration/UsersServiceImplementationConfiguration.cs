@@ -32,8 +32,6 @@ public sealed partial class UsersServiceImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid UsersServiceId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int UsersServiceRowId { get; set; }
 
     /// <summary>Gets or sets the identifier assigned by the store.</summary>
     public Guid Id { get; set; }

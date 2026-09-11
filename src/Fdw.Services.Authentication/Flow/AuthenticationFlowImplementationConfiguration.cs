@@ -27,8 +27,6 @@ public sealed partial class AuthenticationFlowImplementationConfiguration : IAut
     /// <inheritdoc/>
     public Guid AuthenticationFlowId { get; set; }
 
-    /// <inheritdoc/>
-    public int AuthenticationFlowRowId { get; set; }
 
     /// <inheritdoc/>
     public string? Description { get; set; }

@@ -50,8 +50,6 @@ public partial class PermissionImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid PermissionId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int PermissionRowId { get; set; }
 
 
 

@@ -9,8 +9,6 @@ public interface IOidcAuthorityImplementationConfiguration : IImplementationConf
     /// <summary>Gets or sets the domain record's durable id.</summary>
     Guid OidcAuthorityId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    int OidcAuthorityRowId { get; set; }
 
     /// <summary>Gets or sets the OidcAuthority Issuer.</summary>
     string Issuer { get; set; }

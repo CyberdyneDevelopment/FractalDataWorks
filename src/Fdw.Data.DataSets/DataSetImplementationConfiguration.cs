@@ -36,8 +36,6 @@ public sealed partial class DataSetImplementationConfiguration : IDataSetImpleme
     /// <summary>Gets or sets the data set id.</summary>
     public Guid DataSetId { get; set; }
 
-    /// <summary>Gets or sets the data set row id.</summary>
-    public int DataSetRowId { get; set; }
 
     /// <summary>Gets or sets the display name.</summary>
     public string? DisplayName { get; set; }

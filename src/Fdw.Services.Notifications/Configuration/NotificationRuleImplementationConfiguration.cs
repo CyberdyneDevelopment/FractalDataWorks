@@ -49,8 +49,6 @@ public partial class NotificationRuleImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid NotificationRuleId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int NotificationRuleRowId { get; set; }
 
 
 

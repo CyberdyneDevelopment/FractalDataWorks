@@ -35,8 +35,6 @@ public sealed partial class TenantSettingImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid TenantSettingId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int TenantSettingRowId { get; set; }
 
     /// <summary>
     /// Gets or sets the unique identifier for this tenant setting.

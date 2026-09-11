@@ -36,8 +36,6 @@ public interface IDataStoreImplementationConfiguration : IImplementationConfigur
     /// <summary>Gets or sets the paths (schemas) within this store, cascaded on read.</summary>
     List<DataPathConfiguration> Paths { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    int DataStoreRowId { get; set; }
 
     /// <summary>Gets or sets whether this is the current active version of the record.</summary>
     bool IsCurrent { get; set; }

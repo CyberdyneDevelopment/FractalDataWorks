@@ -51,6 +51,4 @@ public interface IQualityRuleImplementationConfiguration : IImplementationConfig
     /// <summary>Gets or sets the QualityRule ReferenceValues.</summary>
     IList<QualityRuleReferenceValueConfiguration> ReferenceValues { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    int QualityRuleRowId { get; set; }
 }

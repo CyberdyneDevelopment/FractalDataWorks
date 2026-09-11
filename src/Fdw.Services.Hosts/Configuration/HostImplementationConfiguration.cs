@@ -45,8 +45,6 @@ public sealed partial class HostImplementationConfiguration : IHostImplementatio
     /// <summary>Gets or sets the domain record's durable id.</summary>
     public Guid HostId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    public int HostRowId { get; set; }
 
     /// <summary>Gets or sets whether this host is enabled.</summary>
     public bool Enabled { get; set; }

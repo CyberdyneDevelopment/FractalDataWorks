@@ -9,8 +9,6 @@ public interface IAuthenticationFlowStepImplementationConfiguration : IImplement
     /// <summary>Gets or sets the flow this step belongs to.</summary>
     Guid AuthenticationFlowId { get; set; }
 
-    /// <summary>Gets or sets the flow's row id -- the foreign key the constraint is on.</summary>
-    int AuthenticationFlowRowId { get; set; }
 
     /// <summary>Gets or sets the position of this step within its flow.</summary>
     int StepOrder { get; set; }

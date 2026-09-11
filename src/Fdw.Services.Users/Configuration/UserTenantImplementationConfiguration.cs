@@ -26,8 +26,6 @@ public partial class UserTenantImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid UserTenantsId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int UserTenantsRowId { get; set; }
 
     /// <inheritdoc />
     public Guid Id { get; set; }

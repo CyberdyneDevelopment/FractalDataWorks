@@ -20,8 +20,6 @@ public sealed partial class GlossaryTermImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid GlossaryTermId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int GlossaryTermRowId { get; set; }
 
     /// <summary>Gets or sets the domain this implementation belongs to.</summary>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>

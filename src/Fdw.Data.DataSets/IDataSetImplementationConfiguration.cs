@@ -37,8 +37,6 @@ public interface IDataSetImplementationConfiguration : IImplementationConfigurat
     /// <summary>Gets or sets the domain record\'s durable id.</summary>
     Guid DataSetId { get; set; }
 
-    /// <summary>Gets or sets the data set row id.</summary>
-    int DataSetRowId { get; set; }
 
     /// <summary>Gets or sets the display name.</summary>
     string? DisplayName { get; set; }

@@ -27,8 +27,6 @@ public partial class ThemeImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid ThemeId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int ThemeRowId { get; set; }
 
 
     /// <summary>

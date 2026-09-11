@@ -33,8 +33,6 @@ public sealed partial class ServerSettingImplementationConfiguration : IServerSe
     /// <summary>Gets or sets the domain record's durable id.</summary>
     public Guid ServerSettingId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    public int ServerSettingRowId { get; set; }
 
     /// <inheritdoc/>
     public string SettingValue { get; set; } = string.Empty;

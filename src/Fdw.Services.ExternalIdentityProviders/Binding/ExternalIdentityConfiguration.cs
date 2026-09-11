@@ -30,8 +30,6 @@ public partial class ExternalIdentityConfiguration : IExternalIdentityImplementa
     /// <inheritdoc/>
     public Guid ExternalIdentityId { get; set; }
 
-    /// <inheritdoc/>
-    public int ExternalIdentityRowId { get; set; }
 
     /// <inheritdoc/>
     /// <remarks>Set by the provider from the domain row; never persisted.</remarks>

@@ -37,8 +37,6 @@ public partial class DataverseImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid DataverseId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int DataverseRowId { get; set; }
 
     /// <summary>Gets or sets the durable logical identity, minted by the caller before insert.</summary>
     public Guid Id { get; set; }

@@ -22,8 +22,6 @@ namespace Fdw.Services.Calculations;
 [ManagedConfiguration( ServiceCategory = "Calculation", ServiceType = "Formula")]
 public sealed partial class FormulaCalculationConfiguration : ICalculationTypedConfiguration, ICalculationEntityImplementationConfiguration
 {
-    /// <inheritdoc/>
-    public int CalculationEntityRowId { get; set; }
 
     /// <inheritdoc/>
     public string CalculationSource { get; set; } = string.Empty;

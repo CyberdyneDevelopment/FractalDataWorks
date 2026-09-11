@@ -57,8 +57,6 @@ public sealed partial class EscalationPolicyImplementationConfiguration
     /// <summary>The domain record's durable id.</summary>
     public Guid EscalationPolicyId { get; set; }
 
-    /// <summary>The domain record's row id -- the foreign key the constraint is on.</summary>
-    public int EscalationPolicyRowId { get; set; }
 
 
 

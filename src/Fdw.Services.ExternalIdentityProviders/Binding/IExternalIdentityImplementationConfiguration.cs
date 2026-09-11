@@ -9,8 +9,6 @@ public interface IExternalIdentityImplementationConfiguration : IImplementationC
     /// <summary>Gets or sets the domain record's durable id.</summary>
     Guid ExternalIdentityId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    int ExternalIdentityRowId { get; set; }
 
     /// <summary>Gets or sets the issuer this identity came from.</summary>
     string Provider { get; set; }

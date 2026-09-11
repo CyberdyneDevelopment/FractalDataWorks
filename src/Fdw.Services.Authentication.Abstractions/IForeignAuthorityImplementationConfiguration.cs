@@ -9,8 +9,6 @@ public interface IForeignAuthorityImplementationConfiguration : IImplementationC
     /// <summary>Gets or sets the domain record's durable id.</summary>
     Guid ForeignAuthorityId { get; set; }
 
-    /// <summary>Gets or sets the domain record's row id -- the foreign key the constraint is on.</summary>
-    int ForeignAuthorityRowId { get; set; }
 
     /// <summary>Gets or sets the ForeignAuthority Issuer.</summary>
     string Issuer { get; set; }
