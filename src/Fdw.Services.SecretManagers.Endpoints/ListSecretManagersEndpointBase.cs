@@ -61,8 +61,7 @@ public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<Pa
             .Select(c => new SecretManagerSummaryResponse
             {
                 Name = c.Name,
-                SecretManagerType = c.SecretManagerType,
-                Description = c.Description
+                SecretManagerType = c.Implementation,
             })
             .ToList();
 

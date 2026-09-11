@@ -75,7 +75,7 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
 
             builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
                 new PipelineServiceConfigurationProvider(
-                    sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
+                    sp.GetRequiredService<ILogger<PipelineServiceConfigurationProvider>>(),
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
                 sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());

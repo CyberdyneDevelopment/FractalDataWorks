@@ -97,11 +97,11 @@ public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<U
         return GenericResult<TenantSettingSummaryDto>.Success(dto);
     }
 
-    private async Task<TenantSettingImplementationConfiguration?> FindTenantSetting(
+    private async Task<ITenantSettingImplementationConfiguration?> FindTenantSetting(
         Guid tenantId, string settingName, CancellationToken ct)
     {
         var tenantSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
-        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingImplementationConfiguration>)[];
+        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<ITenantSettingImplementationConfiguration>)[];
         return tenantSettings
             .FirstOrDefault(s => s.TenantId == tenantId
                                  && string.Equals(s.SettingName, settingName, StringComparison.OrdinalIgnoreCase));

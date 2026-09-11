@@ -64,9 +64,9 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
                 return;
             }
 
-            existing.Description = req.Description ?? existing.Description;
-            existing.Environment = req.Environment;
-
+            // SecretManagerType IS the implementation the domain row names. Description and
+            // Environment are columns on the sec.SecretManager domain row, which a domain read does
+            // not carry, so they are the app's to fill -- second-wave-split payload, not invented here.
             var saveResult = await _configProvider.Save(existing, "SecretManager", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
@@ -82,8 +82,7 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
             {
                 Id = existing.Id,
                 Name = existing.Name,
-                SecretManagerType = existing.SecretManagerType,
-                Description = existing.Description,
+                SecretManagerType = existing.Implementation,
                 Implementation = existing.Implementation
             };
 

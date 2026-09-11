@@ -101,8 +101,8 @@ public static class ApiEndpointRegistration
 #pragma warning restore VSTHRD002
 
         // A connection of another kind under this name declares something else, not an endpoint.
-        // BaseUrl lives on the implementation, which the domain record carries.
-        return result.IsSuccess && result.Value?.ImplementationConfiguration is HttpConnectionConfigurationBase http
+        // A read through the domain is already dispatched, so what comes back IS the implementation.
+        return result.IsSuccess && result.Value is HttpConnectionConfigurationBase http
                 && !string.IsNullOrWhiteSpace(http.BaseUrl)
             ? http.BaseUrl
             : null;

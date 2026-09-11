@@ -91,7 +91,7 @@ public abstract class ListDataverseNotesEndpointBase : CrudGetEndpointBase<Datav
     /// <param name="notes">The notes to project.</param>
     /// <param name="ct">Cancellation token.</param>
     protected async Task<List<DataverseNoteResponse>> ToResponses(
-        IReadOnlyList<NoteImplementationConfiguration> notes, CancellationToken ct)
+        IReadOnlyList<INoteImplementationConfiguration> notes, CancellationToken ct)
     {
         // Resolved once per distinct author rather than once per note: a busy dataverse is mostly
         // one person's notes, and the same lookup repeated per row is the shape that turns a list
@@ -103,8 +103,8 @@ public abstract class ListDataverseNotesEndpointBase : CrudGetEndpointBase<Datav
 
             // Null, never empty. The client draws initials from this, so an empty string gives an
             // empty avatar that reads as a rendering bug rather than as a departed colleague.
-            names[authorId] = user.IsSuccess && user.Value is { Username.Length: > 0 } found
-                ? found.Username
+            names[authorId] = user.IsSuccess && user.Value is { Name.Length: > 0 } found
+                ? found.Name
                 : null;
         }
 

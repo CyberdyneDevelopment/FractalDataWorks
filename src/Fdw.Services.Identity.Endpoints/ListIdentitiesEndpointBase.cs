@@ -7,6 +7,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Identity.Abstractions;
 
 namespace Fdw.Services.Identity.Endpoints;
 

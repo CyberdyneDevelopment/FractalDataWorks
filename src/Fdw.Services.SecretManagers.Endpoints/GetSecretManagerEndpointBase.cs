@@ -62,12 +62,14 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
             return;
         }
 
+        // SecretManagerType IS the implementation the domain row names. Description and
+        // Environment are columns on the sec.SecretManager domain row, which a domain read does
+        // not carry, so they are the app's to fill -- second-wave-split payload, not invented here.
         var detail = new SecretManagerDetailResponse
         {
             Id = config.Id,
             Name = config.Name,
-            SecretManagerType = config.SecretManagerType,
-            Description = config.Description,
+            SecretManagerType = config.Implementation,
             Implementation = config.Implementation
         };
 

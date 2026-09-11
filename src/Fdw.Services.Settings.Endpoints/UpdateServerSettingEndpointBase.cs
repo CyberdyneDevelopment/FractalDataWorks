@@ -50,7 +50,7 @@ public abstract class UpdateServerSettingEndpointBase : CrudUpdateEndpointBase<U
                 return GenericResult<ServerSettingDetailDto?>.Success(new ServerSettingDetailDto
                 {
                     Id = Guid.Empty,
-                    Name = request.SettingName,
+                    SettingName = request.SettingName,
                     SettingValue = string.Empty,
                     DataType = definition.DataType,
                     Description = definition.Description,

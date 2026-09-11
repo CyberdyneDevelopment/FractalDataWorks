@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Notifications.Abstractions;
 
 namespace Fdw.Services.Notifications.Endpoints;
 

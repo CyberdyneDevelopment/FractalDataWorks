@@ -122,17 +122,13 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 return;
             }
 
-            var config = new SecretManagerConfiguration
-            {
-                Id = domainConfigurationId,
-                Name = req.Name,
-                Implementation = req.SecretManagerType,
-                Description = req.Description,
-                Environment = req.Environment,
-                Configuration = bodyResult.Body
-            };
+            // BuildTypedBody already produced the implementation this row is, so it is what gets
+            // saved. Description and Environment are sec.SecretManager domain-row columns a domain
+            // read does not carry; they are not set through the implementation.
+            var config = bodyResult.Body!;
+            config.Id = domainConfigurationId;
 
-            var saveResult = await _configProvider.Save(config, "SecretManager", config.Implementation, config.Name, ct).ConfigureAwait(false);
+            var saveResult = await _configProvider.Save(config, "SecretManager", req.SecretManagerType, req.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
                 SecretManagerEndpointLog.SaveFailed(_logger, saveResult.CurrentMessage ?? "Unknown error");
@@ -146,10 +142,10 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
             var detail = new SecretManagerDetailResponse
             {
                 Id = config.Id,
-                Name = config.Name,
-                SecretManagerType = config.SecretManagerType,
-                Description = config.Description,
-                Implementation = config.Implementation
+                Name = req.Name,
+                SecretManagerType = req.SecretManagerType,
+                Description = req.Description,
+                Implementation = req.SecretManagerType
             };
 
             await Send.ResponseAsync(detail, 201, ct).ConfigureAwait(false);

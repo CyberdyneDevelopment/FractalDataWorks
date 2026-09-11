@@ -166,7 +166,7 @@ public abstract class CreateDataverseNoteEndpointBase : CrudCreateEndpointBase<C
             Body = config.Body,
             At = config.CreateDate,
             AuthorUserId = config.AuthorUserId,
-            AuthorName = author.IsSuccess && author.Value is { Username.Length: > 0 } found ? found.Username : null,
+            AuthorName = author.IsSuccess && author.Value is { Name.Length: > 0 } found ? found.Name : null,
             SubjectKind = config.SubjectType,
             SubjectKey = config.SubjectId,
             // Resolved here too so the row the client appends matches the one a refresh

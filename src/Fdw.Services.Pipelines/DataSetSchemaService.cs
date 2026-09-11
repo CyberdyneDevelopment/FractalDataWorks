@@ -55,7 +55,7 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
                     loaded.CurrentMessage ?? "Provider returned failure"));
         }
 
-        var result = GenericResult<IReadOnlyList<DataSetFieldDefinition>>.Success(
+        IReadOnlyList<DataSetFieldDefinition> fields =
             [.. loaded.Value.Fields.Select(f => new DataSetFieldDefinition
             {
                 DataSetId = dataSetId,
@@ -64,10 +64,10 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
                 IsNullable = f.IsNullable,
                 Ordinal = f.Ordinal,
                 Description = f.Description,
-            })]);
+            })];
 
-        DataSetSchemaLog.GetSchemaSucceeded(_logger, dataSetId, result.Value!.Count);
-        return result;
+        DataSetSchemaLog.GetSchemaSucceeded(_logger, dataSetId, fields.Count);
+        return GenericResult<IReadOnlyList<DataSetFieldDefinition>>.Success(fields);
     }
 
     /// <inheritdoc />

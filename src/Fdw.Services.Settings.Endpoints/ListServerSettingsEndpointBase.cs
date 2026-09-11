@@ -45,7 +45,7 @@ public abstract class ListServerSettingsEndpointBase : CrudListEndpointBase<Serv
             return allResult.ToNewResult<List<ServerSettingSummaryDto>>();
         }
 
-        var items = allResult.Value
+        var items = allResult.Value!
             .Select(s => new ServerSettingSummaryDto
             {
                 Id = s.Id,
