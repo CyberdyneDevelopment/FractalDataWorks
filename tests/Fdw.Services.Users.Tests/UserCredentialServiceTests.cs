@@ -5,16 +5,16 @@ using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Credentials.Abstractions;
 using Fdw.Services.Credentials.Abstractions.Outcomes;
-using Fdw.Services.Data.Abstractions;
-using Fdw.Services.Users.Abstractions;
 using Fdw.Services.Users.Configuration;
 using Fdw.Services.Users.Services;
+using Fdw.Services.Users.Tests.TestSupport;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Services.Data;
+using UserStore = Fdw.Services.Users.Tests.TestSupport.ConfigurationStore<
+    Fdw.Services.Users.UserConfigurationProvider,
+    Fdw.Services.Users.Configuration.IUserImplementationConfiguration>;
 
 namespace Fdw.Services.Users.Tests;
 
@@ -25,9 +25,10 @@ namespace Fdw.Services.Users.Tests;
 /// </summary>
 /// <remarks>
 /// <see cref="ICredentialServiceProvider"/> and <see cref="ICredentialService"/> are mocked (the
-/// vault boundary). <see cref="UserConfigurationProvider"/> is mocked via its virtual
-/// <c>GetUser</c>/<c>Save</c> members (the comment on those members states this is the intended
-/// test-isolation seam — no real <see cref="IConfigurationGateway"/> needed). The real
+/// vault boundary). <see cref="UserConfigurationProvider"/> and
+/// <see cref="UsersServiceConfigurationProvider"/> are NOT: both are sealed with non-virtual reads,
+/// so nothing can stand in for one. They run for real over a faked configuration store, and a test
+/// states what that store holds. The real
 /// <c>PasswordHashAlgorithms</c> and <c>CredentialOutcomes</c> TypeCollections run for real (this
 /// test project references <c>Fdw.Services.Credentials.Sql</c> so the concrete Match / NoMatch /
 /// Expired / TooManyAttempts / MustChange options are registered), so outcome names are asserted
@@ -37,41 +38,42 @@ public class UserCredentialServiceTests
 {
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    // The users domain's own configuration row, read by name off the domain's own store.
+    private const string ConfigurationName = "UsersService";
+
     private static readonly string ValidSalt = Convert.ToBase64String(new byte[16]);
 
-    private static Mock<UserConfigurationProvider> MakeUserProviderMock()
-        => new(
-            NullLogger<UserConfigurationProvider>.Instance,
-            GatewayProviderOn("PlatformConfiguration"),
-            "PlatformConfiguration",
-            "usr");
+    private static UserStore MakeUserStore() => ConfigurationStore.Users();
 
-    private static ConfigurationGatewayProvider GatewayProviderOn(string connectionName)
+    // A by-id read is Get(id): the domain row is found and dispatched to its implementation, and a
+    // miss is a SUCCESS carrying a null value rather than a failure. The store states the miss by
+    // holding no row for THIS user rather than by being told what to return — and it still holds
+    // another user, because "no such user" in an otherwise-empty store is not the case the
+    // anti-enumeration decoy defends against.
+    private static void SetupGetUser(UserStore store, Guid userId, UserImplementationConfiguration? cfg)
     {
-        var gateways = new ConfigurationGatewayProvider();
-        gateways.Register(Mock.Of<IConfigurationGateway>(g => g.ConnectionName == connectionName));
-        return gateways;
+        if (cfg is null)
+        {
+            // A different user entirely — a different name as well as a different id, so nothing can
+            // resolve it in this user's place.
+            var stranger = MakeUserConfig(Guid.NewGuid());
+            stranger.Username = "stranger";
+            store.Holds(stranger);
+            return;
+        }
+
+        // The row the provider resolves by id IS this record, so the two ids are the same fact.
+        cfg.Id = userId;
+        store.Holds(cfg);
     }
 
-    private static void SetupGetUser(Mock<UserConfigurationProvider> providerMock, Guid userId, UserImplementationConfiguration? cfg)
-        => providerMock
-            .Setup(p => p.GetUser(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<UserImplementationConfiguration?>.Success(cfg));
+    // The store itself cannot be read — every user in it is unreachable, not just this one.
+    private static void SetupUserStoreUnreadable(UserStore store, IGenericMessage message)
+        => store.CannotBeRead(message);
 
-    private static void SetupGetUserFails(Mock<UserConfigurationProvider> providerMock, Guid userId, IGenericMessage message)
-        => providerMock
-            .Setup(p => p.GetUser(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<UserImplementationConfiguration?>.Failure(message));
-
-    private static void SetupSaveSucceeds(Mock<UserConfigurationProvider> providerMock)
-        => providerMock
-            .Setup(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((UserImplementationConfiguration cfg, CancellationToken _) => GenericResult<UserImplementationConfiguration>.Success(cfg));
-
-    private static void SetupSaveFails(Mock<UserConfigurationProvider> providerMock, IGenericMessage message)
-        => providerMock
-            .Setup(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<UserImplementationConfiguration>.Failure(message));
+    // Save lands on the implementation row: the domain provider resolves the row from the name it is
+    // given and hands the record to the implementation provider registered for it.
+    private static void SetupSaveFails(UserStore store, IGenericMessage message) => store.SaveFails(message);
 
     private static UserImplementationConfiguration MakeUserConfig(
         Guid id,
@@ -127,18 +129,14 @@ public class UserCredentialServiceTests
             configuration.PasswordHashAlgorithm = "Pbkdf2";
         }
 
-        var provider = new Mock<UsersServiceConfigurationProvider>(
-            MockBehavior.Loose,
-            null!,
-            Mock.Of<IConfigurationGatewayProvider>(),
-            "PlatformConfiguration",
-            "usr");
-        provider.Setup(x => x.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<UsersServiceImplementationConfiguration>.Success(configuration));
+        // The policy is the users domain's own configuration row, read by name like any other. The
+        // record carries no id of its own, and a row is identified by the id of the record it names.
+        configuration.Name = ConfigurationName;
+        configuration.Id = Guid.CreateVersion7();
 
         return new(
             credentialServiceProvider,
-            provider.Object,
+            ConfigurationStore.UsersService(configuration).Provider,
             userProvider,
             NullLogger<UserCredentialService>.Instance);
     }
@@ -152,7 +150,7 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var providerMock = new Mock<ICredentialServiceProvider>();
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider);
 
         var result = await service.Verify(userId, "ApiKey", "irrelevant", TestContext.Current.CancellationToken);
 
@@ -168,8 +166,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -177,7 +175,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
 
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "password", "secret", TestContext.Current.CancellationToken);
 
@@ -194,7 +192,7 @@ public class UserCredentialServiceTests
         var userId = Guid.NewGuid();
         var providerMock = new Mock<ICredentialServiceProvider>();
         var policy = new UsersServiceImplementationConfiguration { MaxFailedLoginAttempts = 5, LockoutDurationMinutes = 0 };
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object, policy);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider, policy);
 
         var result = await service.Verify(userId, "Password", "secret", TestContext.Current.CancellationToken);
 
@@ -212,7 +210,7 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var providerMock = new Mock<ICredentialServiceProvider>();
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object, credentialServiceName: null);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider, credentialServiceName: null);
 
         var result = await service.Verify(userId, "Password", "secret", TestContext.Current.CancellationToken);
 
@@ -231,7 +229,7 @@ public class UserCredentialServiceTests
         providerMock
             .Setup(p => p.Get(It.IsAny<CredentialServiceRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialService>.Failure(new GenericMessage("vault unreachable")));
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider);
 
         var result = await service.Verify(userId, "Password", "secret", TestContext.Current.CancellationToken);
 
@@ -249,7 +247,7 @@ public class UserCredentialServiceTests
         providerMock
             .Setup(p => p.Get(It.IsAny<CredentialServiceRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialService>.Success(null!));
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider);
 
         var result = await service.Verify(userId, "Password", "secret", TestContext.Current.CancellationToken);
 
@@ -265,12 +263,12 @@ public class UserCredentialServiceTests
     public async Task VerifyWhenUserSecurityLookupProviderFailsReturnsFailureWithoutRunningDecoy()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUserFails(userProviderMock, userId, new GenericMessage("security lookup blew up"));
+        var userStore = MakeUserStore();
+        SetupUserStoreUnreadable(userStore, new GenericMessage("security lookup blew up"));
 
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -288,12 +286,12 @@ public class UserCredentialServiceTests
     public async Task VerifyWithUnknownUserRunsDecoyKdfAndReturnsNoMatch()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, null);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, null);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -312,12 +310,12 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, salt: string.Empty);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -335,12 +333,12 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, algorithmName: "   ");
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -355,13 +353,13 @@ public class UserCredentialServiceTests
     public async Task VerifyDecoyWithUnregisteredPolicyAlgorithmStillReturnsNoMatchWithoutThrowing()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, null);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, null);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { PasswordHashAlgorithm = "NotARealAlgorithm" };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -379,12 +377,12 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, algorithmName: "RotNotAlgorithm");
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -403,8 +401,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var vaultMessage = new GenericMessage("vault compare exploded");
         var credentialServiceMock = new Mock<ICredentialService>();
@@ -412,7 +410,7 @@ public class UserCredentialServiceTests
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Failure(vaultMessage));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -427,15 +425,15 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(null!));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "whatever", TestContext.Current.CancellationToken);
 
@@ -452,15 +450,15 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 3, lockoutEnd: DateTimeOffset.UtcNow.AddMinutes(10));
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -468,7 +466,9 @@ public class UserCredentialServiceTests
         result.Value.ShouldNotBeNull();
         result.Value.Name.ShouldBe("TooManyAttempts");
         result.Value.GrantsAccess.ShouldBeFalse();
-        userProviderMock.Verify(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -478,16 +478,15 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 2, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveSucceeds(userProviderMock);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -496,7 +495,9 @@ public class UserCredentialServiceTests
         result.Value.Name.ShouldBe("Match");
         userCfg.FailedLoginCount.ShouldBe(0);
         userCfg.LockoutEnd.ShouldBeNull();
-        userProviderMock.Verify(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -506,22 +507,24 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 0, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.Name.ShouldBe("Match");
-        userProviderMock.Verify(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Never);
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ── Verify — expiry / must-change composition ───────────────────────────────
@@ -533,8 +536,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, lastPasswordChangedAt: DateTimeOffset.UtcNow.AddDays(-100));
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -542,7 +545,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { PasswordMaxAgeDays = 90 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -559,8 +562,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, lastPasswordChangedAt: DateTimeOffset.UtcNow.AddDays(-10));
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -568,7 +571,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { PasswordMaxAgeDays = 90 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -587,8 +590,8 @@ public class UserCredentialServiceTests
             userId,
             lastPasswordChangedAt: DateTimeOffset.UtcNow.AddDays(-100),
             mustChangePasswordOnLogin: true);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -596,7 +599,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { PasswordMaxAgeDays = 90 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -612,15 +615,15 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, mustChangePasswordOnLogin: true);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -639,9 +642,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 0, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveSucceeds(userProviderMock);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -649,7 +651,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: false)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { MaxFailedLoginAttempts = 5, LockoutDurationMinutes = 15 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "wrong-password", TestContext.Current.CancellationToken);
 
@@ -668,9 +670,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 4, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveSucceeds(userProviderMock);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -678,7 +679,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: false)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { MaxFailedLoginAttempts = 5, LockoutDurationMinutes = 15 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var before = DateTimeOffset.UtcNow;
         var result = await service.Verify(userId, "Password", "wrong-password", TestContext.Current.CancellationToken);
@@ -700,9 +701,8 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 999, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveSucceeds(userProviderMock);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -710,7 +710,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: false)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { MaxFailedLoginAttempts = 0, LockoutDurationMinutes = 0 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "wrong-password", TestContext.Current.CancellationToken);
 
@@ -728,9 +728,9 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 0, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveFails(userProviderMock, new GenericMessage("write conflict"));
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
+        SetupSaveFails(userStore, new GenericMessage("write conflict"));
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
@@ -738,7 +738,7 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: false)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { MaxFailedLoginAttempts = 5, LockoutDurationMinutes = 15 };
-        var service = MakeService(providerMock.Object, userProviderMock.Object, policy);
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
 
         var result = await service.Verify(userId, "Password", "wrong-password", TestContext.Current.CancellationToken);
 
@@ -754,16 +754,16 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var userCfg = MakeUserConfig(userId, failedLoginCount: 3, lockoutEnd: null);
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveFails(userProviderMock, new GenericMessage("write conflict"));
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, userCfg);
+        SetupSaveFails(userStore, new GenericMessage("write conflict"));
 
         var credentialServiceMock = new Mock<ICredentialService>();
         credentialServiceMock
             .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: true)));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Verify(userId, "Password", "correct-password", TestContext.Current.CancellationToken);
 
@@ -781,7 +781,7 @@ public class UserCredentialServiceTests
     {
         var userId = Guid.NewGuid();
         var providerMock = new Mock<ICredentialServiceProvider>();
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider);
 
         var result = await service.Store(userId, "ApiKey", "newpassword", TestContext.Current.CancellationToken);
 
@@ -800,7 +800,7 @@ public class UserCredentialServiceTests
         providerMock
             .Setup(p => p.Get(It.IsAny<CredentialServiceRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ICredentialService>.Failure(new GenericMessage("vault unreachable")));
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -817,7 +817,7 @@ public class UserCredentialServiceTests
         var credentialServiceMock = new Mock<ICredentialService>();
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
         var policy = new UsersServiceImplementationConfiguration { PasswordHashAlgorithm = "NotARealAlgorithm" };
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object, policy);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider, policy);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -839,7 +839,7 @@ public class UserCredentialServiceTests
             .Setup(s => s.Create(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult.Failure(vaultMessage));
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
-        var service = MakeService(providerMock.Object, MakeUserProviderMock().Object);
+        var service = MakeService(providerMock.Object, MakeUserStore().Provider);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -859,11 +859,11 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult.Success());
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
 
-        var userProviderMock = MakeUserProviderMock();
+        var userStore = MakeUserStore();
         var lookupMessage = new GenericMessage("lookup blew up");
-        SetupGetUserFails(userProviderMock, userId, lookupMessage);
+        SetupUserStoreUnreadable(userStore, lookupMessage);
 
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -883,10 +883,10 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult.Success());
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
 
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, null);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, null);
 
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -906,13 +906,13 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult.Success());
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
 
-        var userProviderMock = MakeUserProviderMock();
+        var userStore = MakeUserStore();
         var userCfg = MakeUserConfig(userId, algorithmName: null, salt: null, mustChangePasswordOnLogin: true);
-        SetupGetUser(userProviderMock, userId, userCfg);
+        SetupGetUser(userStore, userId, userCfg);
         var saveMessage = new GenericMessage("save conflict");
-        SetupSaveFails(userProviderMock, saveMessage);
+        SetupSaveFails(userStore, saveMessage);
 
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -932,12 +932,11 @@ public class UserCredentialServiceTests
             .ReturnsAsync(GenericResult.Success());
         var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
 
-        var userProviderMock = MakeUserProviderMock();
+        var userStore = MakeUserStore();
         var userCfg = MakeUserConfig(userId, algorithmName: null, salt: null, mustChangePasswordOnLogin: true);
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveSucceeds(userProviderMock);
+        SetupGetUser(userStore, userId, userCfg);
 
-        var service = MakeService(providerMock.Object, userProviderMock.Object);
+        var service = MakeService(providerMock.Object, userStore.Provider);
 
         var result = await service.Store(userId, "Password", "newpassword", TestContext.Current.CancellationToken);
 
@@ -946,7 +945,9 @@ public class UserCredentialServiceTests
         userCfg.Salt.ShouldNotBeNullOrEmpty();
         userCfg.MustChangePasswordOnLogin.ShouldBeFalse();
         userCfg.LastPasswordChangedAt.ShouldNotBeNull();
-        userProviderMock.Verify(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ── ForcePasswordChange ──────────────────────────────────────────────────
@@ -957,10 +958,10 @@ public class UserCredentialServiceTests
     public async Task ForcePasswordChangeWhenUserLookupFailsWithMessagesReturnsThatFailure()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
+        var userStore = MakeUserStore();
         var lookupMessage = new GenericMessage("lookup blew up");
-        SetupGetUserFails(userProviderMock, userId, lookupMessage);
-        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userProviderMock.Object);
+        SetupUserStoreUnreadable(userStore, lookupMessage);
+        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userStore.Provider);
 
         var result = await service.ForcePasswordChange(userId, TestContext.Current.CancellationToken);
 
@@ -974,9 +975,9 @@ public class UserCredentialServiceTests
     public async Task ForcePasswordChangeWhenUserLookupReturnsNullWithoutMessagesReturnsFailure()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
-        SetupGetUser(userProviderMock, userId, null);
-        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userProviderMock.Object);
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, null);
+        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userStore.Provider);
 
         var result = await service.ForcePasswordChange(userId, TestContext.Current.CancellationToken);
 
@@ -990,12 +991,12 @@ public class UserCredentialServiceTests
     public async Task ForcePasswordChangeWhenSaveFailsReturnsThatFailureUnchanged()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
+        var userStore = MakeUserStore();
         var userCfg = MakeUserConfig(userId);
-        SetupGetUser(userProviderMock, userId, userCfg);
+        SetupGetUser(userStore, userId, userCfg);
         var saveMessage = new GenericMessage("save conflict");
-        SetupSaveFails(userProviderMock, saveMessage);
-        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userProviderMock.Object);
+        SetupSaveFails(userStore, saveMessage);
+        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userStore.Provider);
 
         var result = await service.ForcePasswordChange(userId, TestContext.Current.CancellationToken);
 
@@ -1009,16 +1010,17 @@ public class UserCredentialServiceTests
     public async Task ForcePasswordChangeOnSuccessSetsMustChangeFlag()
     {
         var userId = Guid.NewGuid();
-        var userProviderMock = MakeUserProviderMock();
+        var userStore = MakeUserStore();
         var userCfg = MakeUserConfig(userId, mustChangePasswordOnLogin: false);
-        SetupGetUser(userProviderMock, userId, userCfg);
-        SetupSaveSucceeds(userProviderMock);
-        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userProviderMock.Object);
+        SetupGetUser(userStore, userId, userCfg);
+        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userStore.Provider);
 
         var result = await service.ForcePasswordChange(userId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         userCfg.MustChangePasswordOnLogin.ShouldBeTrue();
-        userProviderMock.Verify(p => p.Save(It.IsAny<UserImplementationConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

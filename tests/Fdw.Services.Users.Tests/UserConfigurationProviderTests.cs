@@ -1,75 +1,39 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data;
-using Fdw.Commands.Data.Abstractions;
-using Fdw.Data;
-using Fdw.Data.Abstractions;
 using Fdw.Results;
-using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Fdw.Services.Users.Tests.TestSupport;
 using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Services.Data;
 
 namespace Fdw.Services.Users.Tests;
 
 /// <summary>
 /// Unit tests for <see cref="UserConfigurationProvider"/>.
-///
-/// Only <see cref="IConfigurationGateway"/> is faked. The real provider code runs
-/// under test, including the Username column filter (not Name).
 /// </summary>
+/// <remarks>
+/// The provider is REAL; only the configuration store beneath it is faked. The specialized verbs
+/// this suite was written against — <c>GetUser</c>, <c>ResolveUser</c>, <c>GetAllUsers</c> and
+/// <c>CreateUser</c> — no longer exist; a user is read by id or by name through <c>Get</c>, listed
+/// through <c>Get()</c>, and written through <c>Save</c>.
+/// <para>
+/// A read hands back <see cref="IUserImplementationConfiguration"/>, which carries <c>Name</c> and
+/// not the concrete record's <c>Username</c> alias — the user's name IS the domain row's name, which
+/// is the whole point of the split.
+/// </para>
+/// <para>
+/// The fake store honours the identity filter the read command carries, so a miss is stated as a
+/// store that holds OTHER users — not as an empty store, which would pass whether or not the
+/// provider filtered at all.
+/// </para>
+/// </remarks>
 public class UserConfigurationProviderTests
 {
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private static List<IFilterCondition> CollectConditions(IFilterNode? node)
-    {
-        var results = new List<IFilterCondition>();
-        if (node is null)
-            return results;
-
-        if (node is IFilterCondition leaf)
-        {
-            results.Add(leaf);
-            return results;
-        }
-
-        if (node is FilterGroup group)
-        {
-            foreach (var child in group.Nodes)
-                results.AddRange(CollectConditions(child));
-        }
-
-        return results;
-    }
-
-    private static UserConfigurationProvider MakeProvider(
-        Mock<IConfigurationGateway>? gateway = null,
-        params UserImplementationConfiguration[] storedRows)
-    {
-
-        var gw = gateway ?? new Mock<IConfigurationGateway>();
-
-        if (gateway is null)
-        {
-            gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                    It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(storedRows));
-        }
-
-        return new UserConfigurationProvider(
-            NullLogger<UserConfigurationProvider>.Instance,
-            GatewayProviderFor(gw.Object),
-            "PlatformConfiguration");
-    }
+    private const string UsersDomain = "Users";
 
     private static UserImplementationConfiguration User(
         string username = "alice",
@@ -85,293 +49,193 @@ public class UserConfigurationProviderTests
             CreatedAt = DateTimeOffset.UtcNow,
         };
 
-    // ── GetUser(Guid) ─────────────────────────────────────────────────────────
+    // ── Reading one user ──────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task GetUserByIdReturnsSuccessWhenUserFound()
+    public async Task GetByIdComposesTheDomainRowWithItsImplementationRow()
     {
-        var stored = User();
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
+        var alice = User("alice", "alice@example.com");
+        var store = ConfigurationStore.Users(alice, User("bob", "bob@example.com"));
 
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetUser(stored.Id, TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get(alice.Id, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.Id.ShouldBe(stored.Id);
-        result.Value.Username.ShouldBe(stored.Username);
+        // The name, domain and implementation are stamped onto the record from the domain row —
+        // they are the output of a read, never persisted on the implementation row.
+        result.Value.Name.ShouldBe("alice");
+        result.Value.Email.ShouldBe("alice@example.com");
+        result.Value.Implementation.ShouldBe("Users");
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task GetUserByIdReturnsNullValueWhenNotFound()
+    public async Task GetByIdReportsAMissAsSuccessCarryingNull()
     {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
+        // Users exist — just not this one. An empty store would pass even if the id were ignored.
+        var store = ConfigurationStore.Users(User("alice"), User("bob"));
 
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserImplementationConfiguration>()));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetUser(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeNull();
     }
 
-    // ── GetUser(string) — Username column, NOT Name ───────────────────────────
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task GetUserByUsernameQueriesUsernameColumn()
+    public async Task GetByNameReturnsTheUserUnderThatName()
     {
-        var stored = User("bob");
-        IDataCommand? capturedCommand = null;
+        // Why by name at all: the user's name IS the domain row's name, so a username lookup is the
+        // ordinary domain read — there is no separate username column above the store any more.
+        var store = ConfigurationStore.Users(User("alice"), User("bob", "bob@example.com"));
 
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommand = cmd)
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetUser("bob", TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get("bob", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.Username.ShouldBe("bob");
-
-        capturedCommand.ShouldNotBeNull();
-        var queryCmd = capturedCommand.ShouldBeOfType<QueryCommand<UserImplementationConfiguration>>();
-        queryCmd.Filter.ShouldNotBeNull();
-
-        // Walk the filter conditions and assert at least one targets "Username".
-        var conditions = CollectConditions(queryCmd.Filter.Root);
-        conditions.ShouldContain(
-            c => string.Equals(c.PropertyName, "Username", StringComparison.Ordinal),
-            "GetUser(string) must filter on [Username], not [Name]");
+        result.Value.Name.ShouldBe("bob");
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Users")]
-    public async Task GetUserByUsernameReturnsNullValueWhenNoMatch()
+    public async Task GetByNameReportsAMissAsSuccessCarryingNull()
     {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserImplementationConfiguration>()));
+        // Why this shape matters: a miss is NOT a failure. A caller that must 404 checks for a null
+        // value; one that treated the absence as an error would report a broken store instead of an
+        // unknown user.
+        var store = ConfigurationStore.Users(User("alice"), User("bob"));
 
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetUser("nobody", TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get("nobody", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeNull();
     }
 
-    // ── ResolveUser(string) — the shared id-or-name route resolver ────────────
+    // ── Reading every user ────────────────────────────────────────────────────
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task ResolveUserWithGuidQueriesByIdNotUsername()
+    public async Task GetReturnsAllStoredRows()
     {
-        var stored = User("bob");
-        IDataCommand? capturedCommand = null;
+        var store = ConfigurationStore.Users(User("alice"), User("bob"), User("carol"));
 
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommand = cmd)
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
-
-        var result = await MakeProvider(gw).ResolveUser(stored.Id.ToString(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.Id.ShouldBe(stored.Id);
-
-        capturedCommand.ShouldNotBeNull();
-        CollectConditions((capturedCommand as QueryCommand<UserImplementationConfiguration>)?.Filter?.Root)
-            .ShouldNotContain(
-                c => string.Equals(c.PropertyName, "Username", StringComparison.Ordinal),
-                "a Guid must resolve by id — filtering on [Username] is the revocation bug");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task ResolveUserWithUsernameQueriesUsernameColumn()
-    {
-        var stored = User("bob");
-        IDataCommand? capturedCommand = null;
-
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommand = cmd)
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { stored }));
-
-        var result = await MakeProvider(gw).ResolveUser("bob", TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.Username.ShouldBe("bob");
-
-        capturedCommand.ShouldNotBeNull();
-        CollectConditions((capturedCommand as QueryCommand<UserImplementationConfiguration>)?.Filter?.Root)
-            .ShouldContain(
-                c => string.Equals(c.PropertyName, "Username", StringComparison.Ordinal),
-                "a non-Guid segment must resolve by [Username]");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task ResolveUserFailsLoudWhenNoUserMatches()
-    {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserImplementationConfiguration>()));
-
-        var result = await MakeProvider(gw).ResolveUser("nobody", TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-    }
-
-    // ── GetAllUsers ───────────────────────────────────────────────────────────
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task GetAllUsersReturnsAllStoredRows()
-    {
-        var users = new[] { User("alice"), User("bob"), User("carol") };
-
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(users));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetAllUsers(TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.Count.ShouldBe(3);
-        result.Value.Select(u => u.Username).ShouldBe(new[] { "alice", "bob", "carol" }, ignoreOrder: true);
+        result.Value.Select(user => user.Name).ShouldBe(new[] { "alice", "bob", "carol" }, ignoreOrder: true);
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Users")]
-    public async Task GetAllUsersReturnsEmptyListWhenNoUsers()
+    public async Task GetReturnsEmptyListWhenNoUsers()
     {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserImplementationConfiguration>()));
+        var store = ConfigurationStore.Users();
 
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetAllUsers(TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.ShouldBeEmpty();
     }
 
-    // ── CreateUser ────────────────────────────────────────────────────────────
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task CreateUserReturnsNewGuidOnSuccess()
+    public async Task GetFailsLoudWhenTheStoreCannotBeRead()
     {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
+        // Why: "there are no users" and "the user store could not be read" are opposite facts, and an
+        // empty list reported for the second is a silent outage.
+        var store = ConfigurationStore.UnreadableUsers("user store unavailable");
 
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserImplementationConfiguration>()));
-
-        gw.Setup(g => g.Execute<UserImplementationConfiguration>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync((IDataCommand _, DataStoreTarget _, CancellationToken _) =>
-              GenericResult<UserImplementationConfiguration>.Success(new UserImplementationConfiguration()));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.CreateUser(
-            "newuser", "new@example.com", Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBe(Guid.Empty);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task CreateUserFailsWhenUserAlreadyExists()
-    {
-        var existing = User("duplicate");
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-
-        gw.Setup(g => g.Execute<IEnumerable<UserImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserImplementationConfiguration>>.Success(new[] { existing }));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.CreateUser(
-            "duplicate", "dup@example.com", Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await store.Provider.Get(TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
-        gw.Verify(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
-        => new AnyConnectionGateways(gateway);
+    // ── Writing a user ────────────────────────────────────────────────────────
 
-    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SaveWritesTheUserToItsImplementationRow()
     {
-        private readonly IConfigurationGateway _gateway;
+        var store = ConfigurationStore.Users();
+        var user = User("newuser", "new@example.com");
 
-        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+        var result = await store.Provider.Save(
+            user,
+            UsersDomain,
+            store.ImplementationName,
+            user.Name,
+            TestContext.Current.CancellationToken);
 
-        public IGenericResult<IConfigurationGateway> Get(string connectionName)
-            => GenericResult<IConfigurationGateway>.Success(_gateway);
-
-        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+        result.IsSuccess.ShouldBeTrue();
+        store.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SaveStampsTheDomainKeyOntoTheRecordItWrites()
+    {
+        // Why the four arguments: name finds the domain row, domain and implementation mint one when
+        // it is absent, and the resulting domain Id is what gets stamped onto the implementation.
+        // The record cannot supply that key — it IS the thing being keyed.
+        var store = ConfigurationStore.Users();
+        var user = User("newuser");
+        IUserImplementationConfiguration? written = null;
+        store.Implementations
+            .Setup(p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()))
+            .Callback((IUserImplementationConfiguration record, CancellationToken _) => written = record)
+            .ReturnsAsync((IUserImplementationConfiguration record, CancellationToken _) =>
+                GenericResult<IUserImplementationConfiguration>.Success(record));
+
+        var result = await store.Provider.Save(
+            user,
+            UsersDomain,
+            store.ImplementationName,
+            "newuser",
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        written.ShouldNotBeNull();
+        written.Name.ShouldBe("newuser");
+        written.Domain.ShouldBe(UsersDomain);
+        written.Implementation.ShouldBe("Users");
+        written.Id.ShouldNotBe(Guid.Empty);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SaveFailsLoudWhenNothingIsRegisteredForTheImplementationItNames()
+    {
+        // Why: a domain row naming an implementation nothing is registered for is the record that
+        // fails to compose on the next read, so the write must refuse rather than half-land.
+        var store = ConfigurationStore.Users();
+        var user = User("newuser");
+
+        var result = await store.Provider.Save(
+            user,
+            UsersDomain,
+            "NoSuchImplementation",
+            user.Name,
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        store.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

@@ -1,50 +1,30 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data.Abstractions;
-using Fdw.Results;
-using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Fdw.Services.Users.Tests.TestSupport;
 using Moq;
 using Shouldly;
 using Xunit;
-using Fdw.Services.Data;
 
 namespace Fdw.Services.Users.Tests;
 
 /// <summary>
-/// Unit tests for <see cref="UserTenantConfigurationProvider"/>.
-///
-/// Only <see cref="IConfigurationGateway"/> is faked. The real provider runs under test.
+/// Unit tests for reading and writing user-to-tenant memberships through
+/// <see cref="UserTenantConfigurationProvider"/>.
 /// </summary>
+/// <remarks>
+/// The provider is REAL; only the configuration store beneath it is faked. The specialized verbs
+/// this suite was written against — <c>GetUserTenants</c>, <c>GetDefaultTenant</c> and
+/// <c>GrantTenantAccess</c> — no longer exist: a caller states its own predicate through
+/// <c>Find</c> and writes through <c>Save</c>. These tests pin the predicates and the save a caller
+/// must now write, which is where that behaviour lives.
+/// </remarks>
 public class UserTenantConfigurationProviderTests
 {
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private static UserTenantConfigurationProvider MakeProvider(
-        Mock<IConfigurationGateway>? gateway = null,
-        params UserTenantImplementationConfiguration[] storedRows)
-    {
-
-        var gw = gateway ?? new Mock<IConfigurationGateway>();
-
-        if (gateway is null)
-        {
-            gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
-                    It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(storedRows));
-        }
-
-        return new UserTenantConfigurationProvider(
-            NullLogger<UserTenantConfigurationProvider>.Instance,
-            GatewayProviderFor(gw.Object),
-            "PlatformConfiguration");
-    }
+    private const string UserTenantDomain = "UserTenants";
 
     private static UserTenantImplementationConfiguration Membership(
         Guid userId,
@@ -61,163 +41,154 @@ public class UserTenantConfigurationProviderTests
             IsDeleted = false,
         };
 
-    // ── GetUserTenants ────────────────────────────────────────────────────────
+    /// <summary>Every membership this user holds.</summary>
+    private static Func<IUserTenantImplementationConfiguration, bool> ForUser(Guid userId)
+        => membership => membership.UserId == userId;
+
+    /// <summary>The one membership this user holds by default.</summary>
+    private static Func<IUserTenantImplementationConfiguration, bool> DefaultForUser(Guid userId)
+        => membership => membership.UserId == userId && membership.IsDefault;
+
+    // ── Reading a user's tenants ──────────────────────────────────────────────
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task GetUserTenantsReturnsTenantsForUser()
+    public async Task FindByUserReturnsTenantsForUser()
     {
         var userId = Guid.NewGuid();
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
+        var other = Guid.NewGuid();
 
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(new[]
-          {
-              Membership(userId, tenantA),
-              Membership(userId, tenantB),
-          }));
+        var store = ConfigurationStore.UserTenants(
+            Membership(userId, tenantA),
+            Membership(userId, tenantB),
+            Membership(other, Guid.NewGuid()));
 
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetUserTenants(userId, TestContext.Current.CancellationToken);
+        var result = await store.Provider.Find(ForUser(userId), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.Count.ShouldBe(2);
-        result.Value.ShouldContain(tenantA);
-        result.Value.ShouldContain(tenantB);
+        var tenants = result.Value.Select(m => m.TenantId).ToList();
+        tenants.ShouldContain(tenantA);
+        tenants.ShouldContain(tenantB);
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Users")]
-    public async Task GetUserTenantsReturnsEmptyWhenNoMemberships()
+    public async Task FindByUserReturnsEmptyWhenNoMemberships()
     {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserTenantImplementationConfiguration>()));
+        var store = ConfigurationStore.UserTenants();
 
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetUserTenants(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await store.Provider.Find(ForUser(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value.ShouldBeEmpty();
     }
 
-    // ── GetDefaultTenant ──────────────────────────────────────────────────────
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Users")]
-    public async Task GetDefaultTenantReturnsDefaultTenantId()
+    public async Task FindByUserFailsLoudWhenTheStoreCannotBeRead()
     {
-        var userId = Guid.NewGuid();
-        var defaultTenantId = Guid.NewGuid();
+        // Why this matters: "this user belongs to no tenant" and "the store could not be read" are
+        // opposite facts, and an empty list reported for the second denies access on bad evidence.
+        var store = ConfigurationStore.UnreadableUserTenants("tenant store unavailable");
 
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(new[]
-          {
-              Membership(userId, defaultTenantId, isDefault: true),
-          }));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetDefaultTenant(userId, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value.ShouldBe(defaultTenantId);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task GetDefaultTenantReturnsNullValueWhenNoDefaultRow()
-    {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<IEnumerable<UserTenantImplementationConfiguration>>(
-                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<IEnumerable<UserTenantImplementationConfiguration>>.Success(
-              Enumerable.Empty<UserTenantImplementationConfiguration>()));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GetDefaultTenant(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeNull();
-    }
-
-    // ── GrantTenantAccess ─────────────────────────────────────────────────────
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task GrantTenantAccessSavesNewRow()
-    {
-        var userId = Guid.NewGuid();
-        var tenantId = Guid.NewGuid();
-
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-
-        gw.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<int>.Success(1));
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GrantTenantAccess(
-            userId, tenantId, isDefault: true, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        gw.Verify(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Users")]
-    public async Task GrantTenantAccessReturnsFailureWhenGatewayFails()
-    {
-        var gw = new Mock<IConfigurationGateway>();
-        gw.Setup(g => g.DataStores).Returns((System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>());
-        gw.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-          .ReturnsAsync(GenericResult<int>.Failure());
-
-        var provider = MakeProvider(gw);
-
-        var result = await provider.GrantTenantAccess(
-            Guid.NewGuid(), Guid.NewGuid(), isDefault: false, TestContext.Current.CancellationToken);
+        var result = await store.Provider.Find(ForUser(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
 
-    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
-        => new AnyConnectionGateways(gateway);
+    // ── Reading the default tenant ────────────────────────────────────────────
 
-    private sealed class AnyConnectionGateways : IConfigurationGatewayProvider
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task FindDefaultReturnsTheDefaultMembership()
     {
-        private readonly IConfigurationGateway _gateway;
+        var userId = Guid.NewGuid();
+        var defaultTenantId = Guid.NewGuid();
 
-        public AnyConnectionGateways(IConfigurationGateway gateway) => _gateway = gateway;
+        var store = ConfigurationStore.UserTenants(
+            Membership(userId, Guid.NewGuid()),
+            Membership(userId, defaultTenantId, isDefault: true));
 
-        public IGenericResult<IConfigurationGateway> Get(string connectionName)
-            => GenericResult<IConfigurationGateway>.Success(_gateway);
+        var result = await store.Provider.Find(DefaultForUser(userId), TestContext.Current.CancellationToken);
 
-        public IGenericResult Register(IConfigurationGateway gateway) => GenericResult.Success();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.Count.ShouldBe(1);
+        result.Value[0].TenantId.ShouldBe(defaultTenantId);
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task FindDefaultReturnsEmptyWhenNoDefaultRow()
+    {
+        var userId = Guid.NewGuid();
+
+        // A membership exists, but none of them is the default one.
+        var store = ConfigurationStore.UserTenants(Membership(userId, Guid.NewGuid()));
+
+        var result = await store.Provider.Find(DefaultForUser(userId), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.ShouldBeEmpty();
+    }
+
+    // ── Granting access ───────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SaveWritesTheMembershipToItsImplementationRow()
+    {
+        var userId = Guid.NewGuid();
+        var tenantId = Guid.NewGuid();
+        var store = ConfigurationStore.UserTenants();
+        var membership = Membership(userId, tenantId, isDefault: true);
+
+        var result = await store.Provider.Save(
+            membership,
+            UserTenantDomain,
+            store.ImplementationName,
+            membership.Name,
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        store.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserTenantImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SaveFailsLoudWhenNothingIsRegisteredForTheImplementationItNames()
+    {
+        // Why: a domain row naming an implementation nothing is registered for is the record that
+        // fails to compose on the next read, so the write must refuse rather than half-land.
+        var userId = Guid.NewGuid();
+        var store = ConfigurationStore.UserTenants();
+        var membership = Membership(userId, Guid.NewGuid());
+
+        var result = await store.Provider.Save(
+            membership,
+            UserTenantDomain,
+            "NoSuchImplementation",
+            membership.Name,
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        store.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserTenantImplementationConfiguration>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

@@ -8,12 +8,10 @@ using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authorization;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
-using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
-using Fdw.Services.Data;
 
 namespace Fdw.Services.Authentication.Tests;
 
@@ -25,10 +23,14 @@ namespace Fdw.Services.Authentication.Tests;
 /// resolution path (<c>ResolveOrg</c> when <c>orgId</c> is supplied), role-name loading/merging, and
 /// the role-provider failure/skip paths inside <c>LoadRoleNames</c>.
 /// </summary>
+/// <remarks>
+/// The three configuration providers are REAL, over a faked store (see
+/// <see cref="ConfigurationCatalog"/>). They are sealed and their reads are not virtual, so they
+/// cannot be mocked -- and the resolver takes the providers themselves, not interfaces. A test
+/// therefore states what the STORE holds rather than what a call returns.
+/// </remarks>
 public sealed class DefaultPrincipalResolverTests
 {
-    private static ConfigurationGatewayProvider NullGateway() => new();
-
     private static void SetupNonGlobalTenant(Fixture f, Guid tenantId)
     {
         var tenant = new Mock<ITenant>(MockBehavior.Strict);
@@ -38,43 +40,59 @@ public sealed class DefaultPrincipalResolverTests
             .ReturnsAsync(GenericResult<ITenant>.Success(tenant.Object));
     }
 
-    private static Mock<UserTenantConfigurationProvider> CreateTenantProviderMock() => new(
-        MockBehavior.Strict,
-        NullLogger<UserTenantConfigurationProvider>.Instance,
-        NullGateway(),
-        "PlatformConfiguration",
-        "tenant");
+    /// <summary>The one default membership the resolver requires to resolve a tenant implicitly.</summary>
+    private static void GiveUserDefaultTenant(Fixture f, Guid userId, Guid tenantId)
+        => f.UserTenantRows.Add(new UserTenantImplementationConfiguration
+        {
+            Id = Guid.NewGuid(),
+            Name = $"{userId}:{tenantId}",
+            UserId = userId,
+            TenantId = tenantId,
+            IsDefault = true,
+        });
 
-    private static Mock<UserRoleConfigurationProvider> CreateUserRoleProviderMock() => new(
-        MockBehavior.Strict,
-        NullLogger<UserRoleConfigurationProvider>.Instance,
-        NullGateway(),
-        "PlatformConfiguration",
-        "authz");
-
-    private static Mock<RoleConfigurationProvider> CreateRoleProviderMock() => new(
-        MockBehavior.Strict,
-        NullLogger<RoleConfigurationProvider>.Instance,
-        NullGateway(),
-        "PlatformConfiguration",
-        "authz");
+    /// <summary>A role assignment for this user. UserId must be set or the by-user read cannot match it.</summary>
+    private static UserRoleImplementationConfiguration AssignmentFor(Guid userId, Guid roleId)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            Name = $"{userId}:{roleId}",
+            UserId = userId.ToString(),
+            RoleId = roleId,
+        };
 
     private sealed class Fixture
     {
-        public Mock<UserTenantConfigurationProvider> TenantProvider { get; } = CreateTenantProviderMock();
+        public List<IUserTenantImplementationConfiguration> UserTenantRows { get; } = [];
+
+        public List<IUserRoleImplementationConfiguration> UserRoleRows { get; } = [];
+
+        public List<IRoleImplementationConfiguration> RoleRows { get; } = [];
+
+        /// <summary>When set, the user-role store fails to read rather than returning rows.</summary>
+        public string? UserRoleStoreFailure { get; set; }
+
         public Mock<IOrganizationProvider> OrgProvider { get; } = new(MockBehavior.Strict);
+
         public Mock<ITenantProvider> TenantRecordProvider { get; } = new(MockBehavior.Strict);
+
         public Mock<IEffectivePermissionResolver> PermResolver { get; } = new(MockBehavior.Strict);
-        public Mock<UserRoleConfigurationProvider> UserRoleProvider { get; } = CreateUserRoleProviderMock();
-        public Mock<RoleConfigurationProvider> RoleProvider { get; } = CreateRoleProviderMock();
+
+        public UserTenantConfigurationProvider TenantProvider => ConfigurationCatalog.UserTenants(UserTenantRows);
+
+        public UserRoleConfigurationProvider UserRoleProvider => UserRoleStoreFailure is { } reason
+            ? ConfigurationCatalog.UnreadableUserRoles(reason)
+            : ConfigurationCatalog.UserRoles(UserRoleRows);
+
+        public RoleConfigurationProvider RoleProvider => ConfigurationCatalog.Roles(RoleRows);
 
         public DefaultPrincipalResolver CreateSut() => new(
-            TenantProvider.Object,
+            TenantProvider,
             OrgProvider.Object,
             TenantRecordProvider.Object,
             PermResolver.Object,
-            UserRoleProvider.Object,
-            RoleProvider.Object,
+            UserRoleProvider,
+            RoleProvider,
             NullLogger<DefaultPrincipalResolver>.Instance);
     }
 
@@ -87,7 +105,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.Throw<ArgumentNullException>(() => new DefaultPrincipalResolver(
-            null!, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider.Object, f.RoleProvider.Object,
+            null!, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider, f.RoleProvider,
             NullLogger<DefaultPrincipalResolver>.Instance));
     }
 
@@ -98,7 +116,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.Throw<ArgumentNullException>(() => new DefaultPrincipalResolver(
-            f.TenantProvider.Object, null!, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider.Object, f.RoleProvider.Object,
+            f.TenantProvider, null!, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider, f.RoleProvider,
             NullLogger<DefaultPrincipalResolver>.Instance));
     }
 
@@ -109,7 +127,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.Throw<ArgumentNullException>(() => new DefaultPrincipalResolver(
-            f.TenantProvider.Object, f.OrgProvider.Object, null!, f.PermResolver.Object, f.UserRoleProvider.Object, f.RoleProvider.Object,
+            f.TenantProvider, f.OrgProvider.Object, null!, f.PermResolver.Object, f.UserRoleProvider, f.RoleProvider,
             NullLogger<DefaultPrincipalResolver>.Instance));
     }
 
@@ -120,7 +138,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.Throw<ArgumentNullException>(() => new DefaultPrincipalResolver(
-            f.TenantProvider.Object, f.OrgProvider.Object, f.TenantRecordProvider.Object, null!, f.UserRoleProvider.Object, f.RoleProvider.Object,
+            f.TenantProvider, f.OrgProvider.Object, f.TenantRecordProvider.Object, null!, f.UserRoleProvider, f.RoleProvider,
             NullLogger<DefaultPrincipalResolver>.Instance));
     }
 
@@ -131,7 +149,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.Throw<ArgumentNullException>(() => new DefaultPrincipalResolver(
-            f.TenantProvider.Object, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, null!, f.RoleProvider.Object,
+            f.TenantProvider, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, null!, f.RoleProvider,
             NullLogger<DefaultPrincipalResolver>.Instance));
     }
 
@@ -142,7 +160,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.Throw<ArgumentNullException>(() => new DefaultPrincipalResolver(
-            f.TenantProvider.Object, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider.Object, null!,
+            f.TenantProvider, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider, null!,
             NullLogger<DefaultPrincipalResolver>.Instance));
     }
 
@@ -153,7 +171,7 @@ public sealed class DefaultPrincipalResolverTests
     {
         var f = new Fixture();
         Should.NotThrow(() => new DefaultPrincipalResolver(
-            f.TenantProvider.Object, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider.Object, f.RoleProvider.Object,
+            f.TenantProvider, f.OrgProvider.Object, f.TenantRecordProvider.Object, f.PermResolver.Object, f.UserRoleProvider, f.RoleProvider,
             logger: null));
     }
 
@@ -172,9 +190,7 @@ public sealed class DefaultPrincipalResolverTests
         var tenantId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.Get(orgId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(
@@ -183,12 +199,6 @@ public sealed class DefaultPrincipalResolverTests
         f.PermResolver
             .Setup(p => p.Resolve(userId.ToString(), tenantId, orgId, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
-        f.UserRoleProvider
-            .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(Array.Empty<UserRoleImplementationConfiguration>()));
-        f.RoleProvider
-            .Setup(p => p.GetAllRoles(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<RoleImplementationConfiguration>());
 
         var sut = f.CreateSut();
 
@@ -213,9 +223,7 @@ public sealed class DefaultPrincipalResolverTests
         var tenantId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.Get(orgId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(null!));
@@ -240,9 +248,7 @@ public sealed class DefaultPrincipalResolverTests
         var tenantId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.Get(orgId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("org gateway error")));
@@ -268,9 +274,7 @@ public sealed class DefaultPrincipalResolverTests
         var otherTenantId = Guid.NewGuid();
         var orgId = Guid.NewGuid();
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.Get(orgId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(
@@ -297,9 +301,7 @@ public sealed class DefaultPrincipalResolverTests
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.GetDefault(tenantId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("no default org")));
@@ -307,9 +309,11 @@ public sealed class DefaultPrincipalResolverTests
         f.PermResolver
             .Setup(p => p.Resolve(userId.ToString(), tenantId, null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
-        f.UserRoleProvider
-            .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Failure(new GenericMessage("assignments query failed")));
+        f.UserRoleStoreFailure = "assignments query failed";
+
+        // A role that WOULD resolve if the assignments had been readable, so an empty roles claim
+        // is evidence the failure short-circuited rather than evidence the catalogue was empty.
+        f.RoleRows.Add(new RoleImplementationConfiguration { Id = Guid.NewGuid(), Name = "Editor" });
 
         var sut = f.CreateSut();
 
@@ -317,7 +321,6 @@ public sealed class DefaultPrincipalResolverTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.FindAll(ClaimDefinitions.roles.Name).ShouldBeEmpty();
-        f.RoleProvider.Verify(p => p.GetAllRoles(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -335,9 +338,7 @@ public sealed class DefaultPrincipalResolverTests
         var unassignedRoleId = Guid.NewGuid(); // present in allRoles but never assigned — must not leak into roles.
         var danglingAssignmentRoleId = Guid.NewGuid(); // assigned but absent from allRoles — FirstOrDefault miss.
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.GetDefault(tenantId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("no default org")));
@@ -345,22 +346,14 @@ public sealed class DefaultPrincipalResolverTests
         f.PermResolver
             .Setup(p => p.Resolve(userId.ToString(), tenantId, null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
-        f.UserRoleProvider
-            .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(new[]
-            {
-                new UserRoleImplementationConfiguration { RoleId = matchedRoleId },
-                new UserRoleImplementationConfiguration { RoleId = blankNameRoleId },
-                new UserRoleImplementationConfiguration { RoleId = danglingAssignmentRoleId },
-            }));
-        f.RoleProvider
-            .Setup(p => p.GetAllRoles(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[]
-            {
-                new RoleImplementationConfiguration { Id = matchedRoleId, Name = "Editor" },
-                new RoleImplementationConfiguration { Id = blankNameRoleId, Name = string.Empty },
-                new RoleImplementationConfiguration { Id = unassignedRoleId, Name = "NeverAssigned" },
-            });
+
+        f.UserRoleRows.Add(AssignmentFor(userId, matchedRoleId));
+        f.UserRoleRows.Add(AssignmentFor(userId, blankNameRoleId));
+        f.UserRoleRows.Add(AssignmentFor(userId, danglingAssignmentRoleId));
+
+        f.RoleRows.Add(new RoleImplementationConfiguration { Id = matchedRoleId, Name = "Editor" });
+        f.RoleRows.Add(new RoleImplementationConfiguration { Id = blankNameRoleId, Name = string.Empty });
+        f.RoleRows.Add(new RoleImplementationConfiguration { Id = unassignedRoleId, Name = "NeverAssigned" });
 
         var sut = f.CreateSut();
 
@@ -383,9 +376,7 @@ public sealed class DefaultPrincipalResolverTests
         var tenantId = Guid.NewGuid();
         var editorRoleId = Guid.NewGuid();
 
-        f.TenantProvider
-            .Setup(s => s.GetDefaultTenant(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<Guid?>.Success(tenantId));
+        GiveUserDefaultTenant(f, userId, tenantId);
         f.OrgProvider
             .Setup(o => o.GetDefault(tenantId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("no default org")));
@@ -393,15 +384,9 @@ public sealed class DefaultPrincipalResolverTests
         f.PermResolver
             .Setup(p => p.Resolve(userId.ToString(), tenantId, null, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyCollection<string>>.Success(new[] { "data.read" }));
-        f.UserRoleProvider
-            .Setup(p => p.GetByUser(userId.ToString(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(new[]
-            {
-                new UserRoleImplementationConfiguration { RoleId = editorRoleId },
-            }));
-        f.RoleProvider
-            .Setup(p => p.GetAllRoles(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { new RoleImplementationConfiguration { Id = editorRoleId, Name = "editor" } });
+
+        f.UserRoleRows.Add(AssignmentFor(userId, editorRoleId));
+        f.RoleRows.Add(new RoleImplementationConfiguration { Id = editorRoleId, Name = "editor" });
 
         var sut = f.CreateSut();
 
