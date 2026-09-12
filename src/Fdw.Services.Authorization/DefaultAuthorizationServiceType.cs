@@ -80,6 +80,14 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             builder.Services.TryAddSingleton<RoleImplementationConfigurationProvider>(sp => new RoleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RoleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IRoleImplementationConfigurationProvider>(sp => sp.GetRequiredService<RoleImplementationConfigurationProvider>());
+            // Why also the generic form: DefaultAuthorizationService asks for
+            // IImplementationConfigurationProvider<T>, and DI registers exactly the service type it is
+            // given -- a named interface that EXTENDS the generic one does not satisfy a request for the
+            // generic one. Registering only the named form left the service unresolvable, which surfaced
+            // three domains later as "Unable to resolve service for type ... while attempting to activate
+            // DefaultAuthorizationService".
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IRoleImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IRoleImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<RoleConfigurationProvider>(sp =>
             {
                 var domain = new RoleConfigurationProvider(
@@ -107,6 +115,8 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             builder.Services.TryAddSingleton<PermissionImplementationConfigurationProvider>(sp => new PermissionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<PermissionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IPermissionImplementationConfigurationProvider>(sp => sp.GetRequiredService<PermissionImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IPermissionImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IPermissionImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<PermissionConfigurationProvider>(sp =>
             {
                 var domain = new PermissionConfigurationProvider(
@@ -120,6 +130,8 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             builder.Services.TryAddSingleton<RolePermissionImplementationConfigurationProvider>(sp => new RolePermissionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RolePermissionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IRolePermissionImplementationConfigurationProvider>(sp => sp.GetRequiredService<RolePermissionImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IImplementationConfigurationProvider<IRolePermissionImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IRolePermissionImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<RolePermissionConfigurationProvider>(sp =>
             {
                 var domain = new RolePermissionConfigurationProvider(
