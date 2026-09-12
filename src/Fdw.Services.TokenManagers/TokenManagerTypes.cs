@@ -31,6 +31,12 @@ public static class TokenManagerTypes
     public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
 
     /// <summary>
+    /// The implementation name the Jwt token manager is registered under -- the value a token-manager
+    /// domain row carries in <c>Implementation</c>.
+    /// </summary>
+    private const string JwtImplementation = "Jwt";
+
+    /// <summary>
     /// No-op — this domain has no pre-Build IOptions binding to perform; <see cref="Register"/> does the
     /// collection's only real work. Declared only so the <c>[PlatformServiceProvider]</c> three-phase
     /// shape requirement is satisfied.
@@ -86,14 +92,29 @@ public static class TokenManagerTypes
     }
 
     /// <summary>
-    /// No-op — this domain has no post-Build eager-resolve step; every service is registered directly in
-    /// <see cref="Register"/>. Declared only so the <c>[PlatformServiceProvider]</c> three-phase shape
-    /// requirement is satisfied.
+    /// Hands the Jwt implementation configuration provider to the token-manager domain, so a domain row
+    /// naming <c>Implementation = "Jwt"</c> can be composed.
     /// </summary>
+    /// <remarks>
+    /// This was a no-op, and <see cref="Register"/> put both providers in the container without ever
+    /// connecting them -- so <see cref="JwtIssuanceResolver"/> read the <c>ApiTokenIssuer</c> row, found no
+    /// implementation registered under "Jwt", and every login failed at issuance with "cannot compose
+    /// 'ApiTokenIssuer'". It has to happen here rather than in <see cref="Register"/>: the registry lives
+    /// on the provider instance, and there is no instance until the container is built.
+    /// </remarks>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Unused.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
-        => GenericResult<IHost>.Success(host);
+    {
+        if (defer)
+            return GenericResult<IHost>.Success(host);
+
+        var registered = host.Services.GetRequiredService<TokenManagerConfigurationProvider>()
+            .Register(JwtImplementation, host.Services.GetRequiredService<IJwtTokenManagerConfigurationProvider>());
+        return registered.IsSuccess
+            ? GenericResult<IHost>.Success(host)
+            : registered.ToNewResult<IHost>();
+    }
 }
