@@ -66,7 +66,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                 var lf = sp.GetRequiredService<ILoggerFactory>();
                 var gatewayProvider = sp.GetRequiredService<IDataGatewayProvider>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
-                var ruleProvider = sp.GetService<IImplementationConfigurationProvider<INotificationRuleImplementationConfiguration>>();
+                var ruleProvider = sp.GetService<INotificationRuleConfigurationProvider>();
                 return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
 

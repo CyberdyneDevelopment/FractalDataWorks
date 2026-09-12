@@ -16,10 +16,10 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class ListNotificationsEndpointBase : CrudListEndpointBase<NotificationSummaryDto>
 {
-    private readonly IImplementationConfigurationProvider<INotificationImplementationConfiguration> _provider;
+    private readonly INotificationConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListNotificationsEndpointBase(ILogger<ListNotificationsEndpointBase> logger, IImplementationConfigurationProvider<INotificationImplementationConfiguration> provider) : base(logger)
+    protected ListNotificationsEndpointBase(ILogger<ListNotificationsEndpointBase> logger, INotificationConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }

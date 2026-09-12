@@ -122,7 +122,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
 
                 return domain;
             });
-            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IScheduleImplementationConfiguration>>(
+            builder.Services.TryAddSingleton<IScheduleConfigurationProvider>(
                 sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
