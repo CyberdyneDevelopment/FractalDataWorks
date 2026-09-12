@@ -111,6 +111,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var loaded = await provider.Get(row.Id, ct).ConfigureAwait(false);
         if (loaded is { IsSuccess: true, Value: not null })
         {
+            // Id with the other three: Save stamps the domain row's Id onto the implementation, and
+            // every foreign key that names a member -- UserRole.UserId, RolePermission.RoleId -- holds
+            // that domain Id. Leaving the implementation row's own Id here made a read disagree with
+            // the write and with every reference to the member, so a user resolved for login was
+            // verified, tenanted and made a principal under an Id nothing else knew.
+            loaded.Value.Id = row.Id;
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
             loaded.Value.Implementation = implementation;
@@ -138,6 +144,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var loaded = await provider.Get(row.Id, ct).ConfigureAwait(false);
         if (loaded is { IsSuccess: true, Value: not null })
         {
+            // Id with the other three: Save stamps the domain row's Id onto the implementation, and
+            // every foreign key that names a member -- UserRole.UserId, RolePermission.RoleId -- holds
+            // that domain Id. Leaving the implementation row's own Id here made a read disagree with
+            // the write and with every reference to the member, so a user resolved for login was
+            // verified, tenanted and made a principal under an Id nothing else knew.
+            loaded.Value.Id = row.Id;
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
             loaded.Value.Implementation = implementation;
@@ -166,6 +178,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         var loaded = await provider.Get(row.Id, asOf, ct).ConfigureAwait(false);
         if (loaded is { IsSuccess: true, Value: not null })
         {
+            // Id with the other three: Save stamps the domain row's Id onto the implementation, and
+            // every foreign key that names a member -- UserRole.UserId, RolePermission.RoleId -- holds
+            // that domain Id. Leaving the implementation row's own Id here made a read disagree with
+            // the write and with every reference to the member, so a user resolved for login was
+            // verified, tenanted and made a principal under an Id nothing else knew.
+            loaded.Value.Id = row.Id;
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
             loaded.Value.Implementation = implementation;
@@ -195,6 +213,12 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             if (!loaded.IsSuccess) return loaded.ToNewResult<IReadOnlyList<TImplementationConfiguration>>();
             if (loaded.Value is null) continue;
 
+            // Id with the other three: Save stamps the domain row's Id onto the implementation, and
+            // every foreign key that names a member -- UserRole.UserId, RolePermission.RoleId -- holds
+            // that domain Id. Leaving the implementation row's own Id here made a read disagree with
+            // the write and with every reference to the member, so a user resolved for login was
+            // verified, tenanted and made a principal under an Id nothing else knew.
+            loaded.Value.Id = row.Id;
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
             loaded.Value.Implementation = implementation;

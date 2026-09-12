@@ -74,7 +74,12 @@ internal static class ConfigurationCatalog
         var byRow = new Dictionary<Guid, TContract>();
         foreach (var item in items)
         {
-            var rowId = Guid.NewGuid();
+            // The domain row carries the member's own Id, as it does in the store: that Id is the
+            // member's identity, the one every junction row (RolePermission.RoleId, UserRole.RoleId)
+            // references and the one a read stamps back onto the implementation. A fresh Guid here
+            // only ever worked while reads left the implementation's own Id in place; it made every
+            // fixture's joins depend on a read that disagreed with the write.
+            var rowId = item.Id;
             byRow[rowId] = item;
             rows.Add(new DomainConfiguration
             {

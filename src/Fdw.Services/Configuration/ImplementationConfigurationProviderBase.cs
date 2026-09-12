@@ -472,9 +472,11 @@ public abstract class ImplementationConfigurationProviderBase<TImplementationCon
             : await provider.Get(row.Id, ct).ConfigureAwait(false);
         if (!loaded.IsSuccess) return loaded;
 
-        // One name for a configured member, held on the domain row and carried across here.
+        // One identity for a configured member, held on the domain row and carried across here: the
+        // domain Id Save stamped onto the implementation, and the Name the domain row carries.
         if (loaded.Value is not null)
         {
+            loaded.Value.Id = row.Id;
             loaded.Value.Name = row.Name;
             loaded.Value.Domain = row.Domain;
         }
