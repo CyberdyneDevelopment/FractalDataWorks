@@ -52,11 +52,9 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private readonly ILogger<ConfigurationGateway> _logger;
     // The same implementation provider every other caller reaches this connection type through.
     // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
-    // Why Lazy: resolving this provider pulls its factory, which wants a logger, and the logging
-    // domain reads its own configuration back through this gateway -- a cycle that parks the host
-    // silently rather than throwing. Deferring to first use puts the resolution after the container
-    // is built, which is the same reason Lazy<IDataGateway> exists a layer down.
-    private readonly Lazy<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> _connectionProvider;
+    // The same implementation provider every other caller reaches this connection type through.
+    // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
+    private readonly IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> _connectionProvider;
     private readonly ConfigurationSchema _schema;
 
     private readonly Lazy<Task<IGenericResult<IDataConnection>>> _connectionLazy;
@@ -93,7 +91,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// </param>
     public ConfigurationGateway(
         string connectionName,
-        Lazy<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> connectionProvider,
+        IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
@@ -486,7 +484,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
         }
 
-        var factoryResult = await _connectionProvider.Value
+        var factoryResult = await _connectionProvider
             .Create(configDbEntry, cancellationToken)
             .ConfigureAwait(false);
         if (!factoryResult.IsSuccess || factoryResult.Value is null)

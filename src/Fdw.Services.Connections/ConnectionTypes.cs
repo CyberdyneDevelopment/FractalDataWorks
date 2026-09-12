@@ -40,7 +40,7 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration, IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>),
+    typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration>),
     typeof(IConnectionType),
     typeof(ConnectionTypes),
     ServiceInterface = typeof(IGenericConnection),
@@ -48,7 +48,7 @@ namespace Fdw.Services.Connections;
     ProviderInterface = typeof(IConnectionProvider),
     ServiceCategory = "Connection")]
 public partial class ConnectionTypes : ServiceTypeCollectionBase<
-    ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration, IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>,
+    ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration>,
     IConnectionType<IGenericConnection, IConnectionImplementationConfiguration, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>>>
 {
     /// <inheritdoc/>

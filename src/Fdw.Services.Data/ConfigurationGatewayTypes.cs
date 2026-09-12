@@ -130,23 +130,23 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionDeclaresNoKind(log, connectionName));
 
-        if (ConnectionTypes.ByName(declared.Implementation) is not IConnectionType connectionType)
+        if (ConnectionTypes.ByName(declared.Implementation) is not IServiceType connectionType)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(
                     log, connectionName, declared.Implementation));
 
-        // The implementation provider, not the factory: resolving whatever this connection needs
-        // fetched is its job, here as everywhere else. Resolved LAZILY, because the provider's own
-        // dependencies reach the logging domain, which reads its configuration back through this
-        // gateway -- eager resolution here is a cycle that parks the host with no exception and no
-        // log line. At first use the container is built and the cycle cannot form.
-        var connectionProvider =
-            new Lazy<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>(
-                () => services.GetService(connectionType.ProviderType)
-                    as IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>
-                    ?? throw new InvalidOperationException(
-                        FormattableString.Invariant(
-                            $"Connection '{connectionName}' names implementation provider '{connectionType.ProviderType.Name}', which is not registered.")));
+        // Resolve the FACTORY, not the connection's own implementation provider. Everything this
+        // gateway touches has to exist before any configuration has been read, and an
+        // implementation provider pulled from the container brings its whole graph -- a
+        // secret-manager provider, a logger -- which reaches the logging domain, which reads its
+        // configuration back through here. That cycle parks the host silently. The connections a
+        // gateway opens declare no secret, so there is nothing for a richer provider to do.
+        if (services.GetService(connectionType.FactoryType) is not IConnectionFactory factory)
+            return GenericResult<IConfigurationGateway>.Failure(
+                ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
+                    log, connectionName, connectionType.FactoryType.Name));
+
+        var connectionProvider = new ConfigurationConnectionProvider(factory);
 
 
         return GenericResult<IConfigurationGateway>.Success(

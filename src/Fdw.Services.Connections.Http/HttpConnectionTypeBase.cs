@@ -14,17 +14,15 @@ namespace Fdw.Services.Connections.Http.Abstractions;
 /// <typeparam name="TService">The connection service interface type.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type for the connection service.</typeparam>
 /// <typeparam name="TFactory">The factory type for creating connection service instances.</typeparam>
-/// <typeparam name="TProvider">The implementation provider for this connection.</typeparam>
 [ExcludeFromCodeCoverage]
-public abstract class HttpConnectionTypeBase<TService, TConfiguration, TFactory, TProvider> :
-    ConnectionTypeBase<TService, TFactory, TConfiguration, TProvider>
+public abstract class HttpConnectionTypeBase<TService, TConfiguration, TFactory> :
+    ConnectionTypeBase<TService, TFactory, TConfiguration>
     where TService : IGenericConnection
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IConnectionFactory<TService, TConfiguration>
-    where TProvider : IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpConnectionTypeBase{TService,TConfiguration,TFactory,TProvider}"/> class.
+    /// Initializes a new instance of the <see cref="HttpConnectionTypeBase{TService,TConfiguration,TFactory}"/> class.
     /// </summary>
     /// <param name="name">The name of the HTTP connection type.</param>
     /// <param name="sectionName">The configuration section name for appsettings.json.</param>
