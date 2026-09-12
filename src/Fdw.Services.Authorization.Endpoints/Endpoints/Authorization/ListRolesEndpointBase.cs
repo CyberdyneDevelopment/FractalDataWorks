@@ -16,7 +16,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedResponse<RoleSummaryResponse>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -24,10 +24,10 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
-    protected ListRolesEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider)
+    protected ListRolesEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _roleProvider = roleProvider;
     }
 
 
@@ -52,8 +52,16 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
     /// <inheritdoc />
     public override async Task HandleAsync(CancellationToken ct)
     {
-        
-        var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
+
+        var allRolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
+        if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(
+                EndpointLogger, "roles", allRolesResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        var allRoles = allRolesResult.Value;
         var roles = allRoles
             .Select(MapToSummary)
             .OrderBy(r => r.SortOrder)
@@ -65,9 +73,9 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
     }
 
     /// <summary>
-    /// Maps a RoleImplementationConfiguration to a summary DTO. Override for custom mapping.
+    /// Maps a role implementation configuration to a summary DTO. Override for custom mapping.
     /// </summary>
-    protected virtual RoleSummaryResponse MapToSummary(RoleImplementationConfiguration role)
+    protected virtual RoleSummaryResponse MapToSummary(IRoleImplementationConfiguration role)
     {
         return new RoleSummaryResponse
         {

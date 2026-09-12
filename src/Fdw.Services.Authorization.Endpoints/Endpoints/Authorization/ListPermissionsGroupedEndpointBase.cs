@@ -15,7 +15,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutRequest<List<PermissionGroupResponse>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsGroupedEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IPermissionConfigurationProvider _permissionProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -23,17 +23,12 @@ public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutReques
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsGroupedEndpointBase"/> class.</summary>
-    protected ListPermissionsGroupedEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider)
+    protected ListPermissionsGroupedEndpointBase(ILogger logger, IPermissionConfigurationProvider permissionProvider)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _permissionProvider = permissionProvider;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -59,7 +54,15 @@ public abstract class ListPermissionsGroupedEndpointBase : EndpointWithoutReques
         
         AuthorizationEndpointLog.ListingPermissions(EndpointLogger);
 
-        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
+        var allPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
+        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(
+                EndpointLogger, "permissions", allPermissionsResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        var allPermissions = allPermissionsResult.Value;
 
         var grouped = allPermissions
             .GroupBy(p => p.Domain, StringComparer.Ordinal)

@@ -16,7 +16,9 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
+    private readonly IPermissionConfigurationProvider _permissionProvider;
+    private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -26,18 +28,20 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="GetRolePermissionsEndpointBase"/> class.</summary>
-    protected GetRolePermissionsEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider, ITenantContext? tenantContext = null)
+    protected GetRolePermissionsEndpointBase(
+        ILogger logger,
+        IRoleConfigurationProvider roleProvider,
+        IPermissionConfigurationProvider permissionProvider,
+        IRolePermissionConfigurationProvider rolePermissionProvider,
+        ITenantContext? tenantContext = null)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _roleProvider = roleProvider;
+        _permissionProvider = permissionProvider;
+        _rolePermissionProvider = rolePermissionProvider;
         _tenantContext = tenantContext;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -63,17 +67,43 @@ public abstract class GetRolePermissionsEndpointBase : Endpoint<GetRoleRequest, 
         
         AuthorizationEndpointLog.GettingRolePermissions(EndpointLogger, req.Name);
 
-        var role = Guid.TryParse(req.Name, out var roleId)
-            ? await _authorizationProvider.GetRole(roleId, ct).ConfigureAwait(false)
-            : await _authorizationProvider.GetRole(req.Name, ct).ConfigureAwait(false);
-        if (role is null)
+        var roleResult = Guid.TryParse(req.Name, out var roleId)
+            ? await _roleProvider.Get(roleId, ct).ConfigureAwait(false)
+            : await _roleProvider.Get(req.Name, ct).ConfigureAwait(false);
+        if (!roleResult.IsSuccess)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                roleResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        if (roleResult.Value is null)
         {
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
             return;
         }
+        var role = roleResult.Value;
 
-        var rolePermissions = await _authorizationProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
-        var permissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
+        var rolePermissionsResult = await _rolePermissionProvider
+            .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
+        if (!rolePermissionsResult.IsSuccess || rolePermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                rolePermissionsResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        var rolePermissions = rolePermissionsResult.Value;
+
+        var permissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
+        if (!permissionsResult.IsSuccess || permissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                permissionsResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        var permissions = permissionsResult.Value;
 
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";

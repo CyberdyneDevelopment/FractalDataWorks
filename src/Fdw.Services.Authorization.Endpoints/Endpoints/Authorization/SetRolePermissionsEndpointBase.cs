@@ -31,7 +31,8 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
         private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
-    private readonly IAuthorizationProvider _authorizationProvider;
+    private readonly IRoleConfigurationProvider _roleProvider;
+    private readonly IPermissionConfigurationProvider _permissionProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
 
     /// <summary>
@@ -43,22 +44,19 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     /// <summary>Initializes a new instance of the <see cref="SetRolePermissionsEndpointBase"/> class.</summary>
     protected SetRolePermissionsEndpointBase(ILogger logger, IRolePermissionConfigurationProvider rolePermissionProvider,
-        IAuthorizationProvider authorizationProvider,
+        IRoleConfigurationProvider roleProvider,
+        IPermissionConfigurationProvider permissionProvider,
         ISystemRoleConfiguration systemRoleConfiguration,
         ITenantContext? tenantContext = null)
     {
         EndpointLogger = logger;
         _rolePermissionProvider = rolePermissionProvider;
-        _authorizationProvider = authorizationProvider;
+        _roleProvider = roleProvider;
+        _permissionProvider = permissionProvider;
         _systemRoleConfiguration = systemRoleConfiguration;
         _tenantContext = tenantContext;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:write".
@@ -96,21 +94,44 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
             return;
         }
 
-        var role = await _authorizationProvider.GetRole(req.Name, ct).ConfigureAwait(false);
-        if (role is null)
+        var roleResult = await _roleProvider.Get(req.Name, ct).ConfigureAwait(false);
+        if (!roleResult.IsSuccess)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                roleResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        if (roleResult.Value is null)
         {
             HttpContext.Response.StatusCode = 404;
             HttpContext.Response.ContentType = "application/json";
             await HttpContext.Response.WriteAsJsonAsync(new { errorCode = "NotFound", messages = new[] { $"roles '{req.Name}' was not found." } }, ct).ConfigureAwait(false);
             return;
         }
+        var role = roleResult.Value;
 
-        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
-        var resolved = ResolvePermissions(req, allPermissions);
+        var allPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
+        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                allPermissionsResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        var resolved = ResolvePermissions(req, allPermissionsResult.Value);
 
-        var existingMappings = await _authorizationProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
+        var existingMappingsResult = await _rolePermissionProvider
+            .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
+        if (!existingMappingsResult.IsSuccess || existingMappingsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                existingMappingsResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
 
-        var setResult = await SetPermissions(req, role, resolved, existingMappings, ct).ConfigureAwait(false);
+        var setResult = await SetPermissions(req, role, resolved, existingMappingsResult.Value, ct).ConfigureAwait(false);
         if (!setResult.IsSuccess)
             return;
 
@@ -119,7 +140,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
     private List<PermissionSummaryDto> ResolvePermissions(
         SetRolePermissionsRequest req,
-        IReadOnlyList<PermissionImplementationConfiguration> allPermissions)
+        IReadOnlyList<IPermissionImplementationConfiguration> allPermissions)
     {
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var tenantPrefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
@@ -163,9 +184,9 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
     /// </remarks>
     private async Task<IGenericResult> SetPermissions(
         SetRolePermissionsRequest req,
-        RoleImplementationConfiguration role,
+        IRoleImplementationConfiguration role,
         List<PermissionSummaryDto> resolved,
-        IReadOnlyList<RolePermissionImplementationConfiguration> existingMappings,
+        IReadOnlyList<IRolePermissionImplementationConfiguration> existingMappings,
         CancellationToken ct)
     {
         foreach (var existing in existingMappings)
@@ -174,7 +195,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
             if (!deleteResult.IsSuccess)
             {
                 AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, req.Name,
-                    deleteResult.CurrentMessage ?? "Permission delete failed");
+                    deleteResult.CurrentMessage);
                 OnPermissionUpdateFailed(req.Name);
                 await Send.ResponseAsync(new List<PermissionSummaryDto>(), 400, ct).ConfigureAwait(false);
                 return deleteResult;
@@ -200,7 +221,7 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
             if (!saveResult.IsSuccess)
             {
                 AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, req.Name,
-                    saveResult.CurrentMessage ?? "Permission save failed");
+                    saveResult.CurrentMessage);
                 OnPermissionUpdateFailed(req.Name);
                 await Send.ResponseAsync(new List<PermissionSummaryDto>(), 400, ct).ConfigureAwait(false);
                 return saveResult;

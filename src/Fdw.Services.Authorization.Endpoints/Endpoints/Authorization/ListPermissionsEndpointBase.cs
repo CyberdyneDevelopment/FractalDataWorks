@@ -16,7 +16,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<PermissionSummaryDto>>
 {
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IPermissionConfigurationProvider _permissionProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -26,18 +26,13 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-    protected ListPermissionsEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider, ITenantContext? tenantContext = null)
+    protected ListPermissionsEndpointBase(ILogger logger, IPermissionConfigurationProvider permissionProvider, ITenantContext? tenantContext = null)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _permissionProvider = permissionProvider;
         _tenantContext = tenantContext;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -63,7 +58,15 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
         
         AuthorizationEndpointLog.ListingPermissions(EndpointLogger);
 
-        var allPermissions = await _authorizationProvider.GetPermissions(ct).ConfigureAwait(false);
+        var allPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
+        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(
+                EndpointLogger, "permissions", allPermissionsResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+        var allPermissions = allPermissionsResult.Value;
 
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
         var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
@@ -79,12 +82,12 @@ public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<
     }
 
     /// <summary>
-    /// Maps a <see cref="PermissionImplementationConfiguration"/> to a summary DTO. Override for custom mapping.
+    /// Maps a <see cref="IPermissionImplementationConfiguration"/> to a summary DTO. Override for custom mapping.
     /// </summary>
     /// <param name="permission">The permission row.</param>
     /// <param name="orgPrefix">The current tenant's OrgPrefix already followed by ':' (e.g. "acme:"),
     /// or null if no prefix should be applied.</param>
-    protected virtual PermissionSummaryDto MapToSummary(PermissionImplementationConfiguration permission, string? orgPrefix)
+    protected virtual PermissionSummaryDto MapToSummary(IPermissionImplementationConfiguration permission, string? orgPrefix)
     {
         return new PermissionSummaryDto
         {

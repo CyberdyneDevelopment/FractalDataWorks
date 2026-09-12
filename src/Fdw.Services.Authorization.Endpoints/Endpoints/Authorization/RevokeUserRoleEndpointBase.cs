@@ -21,7 +21,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, UserRolesResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IUserRoleConfigurationProvider _userRoleProvider;
 
     private readonly IUserConfigurationProvider _userProvider;
@@ -32,21 +32,16 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="RevokeUserRoleEndpointBase"/> class.</summary>
-    protected RevokeUserRoleEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider,
+    protected RevokeUserRoleEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider,
         IUserRoleConfigurationProvider userRoleProvider,
         IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _roleProvider = roleProvider;
         _userRoleProvider = userRoleProvider;
         _userProvider = userProvider;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the user-role configuration provider.
@@ -91,12 +86,20 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
 
         try
         {
-            var role = await _authorizationProvider.GetRole(req.RoleName, ct).ConfigureAwait(false);
-            if (role is null)
+            var roleResult = await _roleProvider.Get(req.RoleName, ct).ConfigureAwait(false);
+            if (!roleResult.IsSuccess)
+            {
+                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.RoleName,
+                    roleResult.CurrentMessage);
+                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+                return;
+            }
+            if (roleResult.Value is null)
             {
                 await Send.NotFoundAsync(ct).ConfigureAwait(false);
                 return;
             }
+            var role = roleResult.Value;
 
             var userRolesResult = await _userRoleProvider
                 .Find<UserRoleImplementationConfiguration>(
@@ -126,7 +129,7 @@ public abstract class RevokeUserRoleEndpointBase : Endpoint<RevokeRoleRequest, U
             if (!revokeResult.IsSuccess)
             {
                 AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
-                    revokeResult.CurrentMessage ?? "Role delete failed");
+                    revokeResult.CurrentMessage);
                 await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
                 return;
             }

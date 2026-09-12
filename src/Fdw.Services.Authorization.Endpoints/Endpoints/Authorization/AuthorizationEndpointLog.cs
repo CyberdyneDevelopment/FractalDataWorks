@@ -92,7 +92,7 @@ public static partial class AuthorizationEndpointLog
     /// </summary>
     [MessageLogging(EventId = 71000, Level = LogLevel.Error,
         Message = "Atomic role change rolled back for '{context}': {reason}")]
-    public static partial IGenericMessage AtomicRoleChangeFailed(ILogger logger, string context, string reason);
+    public static partial IGenericMessage AtomicRoleChangeFailed(ILogger logger, string context, string? reason);
 
     /// <summary>
     /// Logs when a transaction scope cannot be opened for a role change operation.
@@ -122,4 +122,12 @@ public static partial class AuthorizationEndpointLog
     [MessageLogging(EventId = 11009, Level = LogLevel.Information,
         Message = "Listed role assignments for {userCount} user(s) across {roleCount} role(s)")]
     public static partial IGenericMessage UserRoleAssignmentsListed(ILogger logger, int userCount, int roleCount);
+
+    /// <summary>
+    /// Logs when a Role/Permission/RolePermission domain provider read fails structurally (as
+    /// opposed to answering that the row is genuinely absent).
+    /// </summary>
+    [MessageLogging(EventId = 71004, Level = LogLevel.Error,
+        Message = "Authorization domain read failed for '{context}': {reason}")]
+    public static partial IGenericMessage AuthorizationReadFailed(ILogger logger, string context, string? reason);
 }

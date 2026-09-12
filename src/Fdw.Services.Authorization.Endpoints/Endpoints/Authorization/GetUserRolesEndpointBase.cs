@@ -18,7 +18,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, UserRolesResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="GetUserRolesEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IUserRoleConfigurationProvider _userRoleProvider;
 
     private readonly IUserConfigurationProvider _userProvider;
@@ -29,21 +29,16 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="GetUserRolesEndpointBase"/> class.</summary>
-    protected GetUserRolesEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider,
+    protected GetUserRolesEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider,
         IUserRoleConfigurationProvider userRoleProvider,
         IUserConfigurationProvider userProvider)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _roleProvider = roleProvider;
         _userRoleProvider = userRoleProvider;
         _userProvider = userProvider;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected IAuthorizationProvider AuthorizationProvider => _authorizationProvider;
 
     /// <summary>
     /// Gets the user-role configuration provider.
@@ -85,7 +80,15 @@ public abstract class GetUserRolesEndpointBase : Endpoint<GetUserRolesRequest, U
             }
 
             var userId = userResult.Value.Id;
-            var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
+            var allRolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
+            if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
+            {
+                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.IdOrName,
+                    allRolesResult.CurrentMessage);
+                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+                return;
+            }
+            var allRoles = allRolesResult.Value;
 
             var userRolesResult = await _userRoleProvider
                 .Find<UserRoleImplementationConfiguration>(

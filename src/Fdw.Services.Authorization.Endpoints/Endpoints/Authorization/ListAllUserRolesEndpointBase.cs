@@ -29,7 +29,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </remarks>
 public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllUserRolesResponse>
 {
-    private readonly IAuthorizationProvider _authorizationProvider;
+    private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IUserRoleConfigurationProvider _userRoleProvider;
 
     /// <summary>Gets the logger instance.</summary>
@@ -37,15 +37,15 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
 
     /// <summary>Initializes a new instance of the <see cref="ListAllUserRolesEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="authorizationProvider">Resolves role ids to names.</param>
+    /// <param name="roleProvider">Resolves role ids to names.</param>
     /// <param name="userRoleProvider">Reads the assignments.</param>
     protected ListAllUserRolesEndpointBase(
         ILogger logger,
-        IAuthorizationProvider authorizationProvider,
+        IRoleConfigurationProvider roleProvider,
         IUserRoleConfigurationProvider userRoleProvider)
     {
         EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider ?? throw new ArgumentNullException(nameof(authorizationProvider));
+        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
         _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
     }
 
@@ -82,7 +82,16 @@ public abstract class ListAllUserRolesEndpointBase : EndpointWithoutRequest<AllU
             return;
         }
 
-        var roles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
+        var rolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
+        if (!rolesResult.IsSuccess || rolesResult.Value is null)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(
+                EndpointLogger, "user-roles", rolesResult.CurrentMessage);
+            await Send.ResponseAsync(
+                new AllUserRolesResponse(), StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
+            return;
+        }
+        var roles = rolesResult.Value;
 
         var items = assignments.Value
             .Where(a => a.IsCurrent && !a.IsDeleted)
