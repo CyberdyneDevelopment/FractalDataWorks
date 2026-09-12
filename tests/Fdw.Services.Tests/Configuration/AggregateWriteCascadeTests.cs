@@ -191,7 +191,7 @@ public sealed class AggregateWriteCascadeTests
     /// domain container, and the domain's own physical (RowId) and logical (Id) keys — the join that
     /// resolves a domain id to this implementation's row.
     /// </summary>
-    private static IReadOnlyList<IDataStore> SchemaTree()
+    private static List<IDataStore> SchemaTree()
     {
         var domain = Container("TestRootDomain", KeyOn(KeyTypes.Physical, "RowId"), KeyOn(KeyTypes.Logical, "Id"));
 

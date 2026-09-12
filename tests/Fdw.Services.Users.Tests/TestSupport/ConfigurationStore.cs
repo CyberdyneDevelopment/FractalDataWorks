@@ -175,7 +175,7 @@ internal sealed class ConfigurationStore<TProvider, TContract>
     /// on <c>IsCurrent</c>/<c>IsDeleted</c> would drop every row. Honouring identity is what lets a
     /// test say "the store holds users, but not THIS one" rather than only "the store is empty".
     /// </remarks>
-    private IEnumerable<DomainConfiguration> Matching(IDataCommand command)
+    private List<DomainConfiguration> Matching(IDataCommand command)
     {
         if (command is not IQueryCommand { Filter.Root: { } root }) return _rows.ToList();
 
