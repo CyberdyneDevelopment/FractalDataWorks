@@ -141,7 +141,12 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
         // secret-manager provider, a logger -- which reaches the logging domain, which reads its
         // configuration back through here. That cycle parks the host silently. The connections a
         // gateway opens declare no secret, so there is nothing for a richer provider to do.
-        if (services.GetService(connectionType.FactoryType) is not IConnectionFactory factory)
+        // Constructed, not resolved, and constructed through a view that hands back null loggers.
+        // Resolving this factory from the container asks for an ILogger, which re-enters Serilog's
+        // AddSerilog callback, which reads the logging domain's configuration -- through this
+        // gateway. That cycle does not throw; it parks the host silently.
+        if (ActivatorUtilities.CreateInstance(
+                new LoggerlessServiceProvider(services), connectionType.FactoryType) is not IConnectionFactory factory)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
                     log, connectionName, connectionType.FactoryType.Name));
