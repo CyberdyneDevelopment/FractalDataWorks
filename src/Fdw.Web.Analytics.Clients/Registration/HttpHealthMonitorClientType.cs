@@ -57,8 +57,10 @@ public sealed class HttpHealthMonitorClientType
                 Name,
                 nameof(HttpHealthMonitorFactory));
 
-            HealthMonitorProvider.Register<IHttpHealthMonitorFactory, HttpHealthMonitorFactory>(
-                builder, Name, ServiceLifetime.Singleton);
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IHttpHealthMonitorFactory), typeof(HttpHealthMonitorFactory), ServiceLifetime.Singleton));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IHttpHealthMonitorProvider), typeof(HttpHealthMonitorProvider), ServiceLifetime.Singleton));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

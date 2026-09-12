@@ -92,7 +92,6 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
             builder.Services.AddScoped<IPipelineServiceProvider>(sp =>
             {
                 var provider = new PipelineServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<PipelineServiceProvider>()
                     ?? NullLogger<PipelineServiceProvider>.Instance);
 

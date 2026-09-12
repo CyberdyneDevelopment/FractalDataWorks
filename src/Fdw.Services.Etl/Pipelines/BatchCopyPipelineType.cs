@@ -70,10 +70,10 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             var log = loggerFactory?.CreateLogger<BatchCopyPipelineType>() ?? NullLogger<BatchCopyPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
-            var factory = services.GetRequiredService<IBatchCopyPipelineFactory>();
+            var implementationProvider = services.GetRequiredService<IBatchCopyPipelineProvider>();
 
             // Register factory instance with provider
-            var factoryResult = provider.Register(Name, factory);
+            var factoryResult = provider.Register(Name, implementationProvider);
             if (!factoryResult.IsSuccess)
             {
                 ServiceTypeLog.OptionFactoryRegistrationFailed(
@@ -115,14 +115,19 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
 
 
             // Factory - DI handles all constructor dependencies
-            EtlPipelineProvider.Register<IBatchCopyPipelineFactory>(
-                builder, Name, ServiceLifetime.Scoped,
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IBatchCopyPipelineFactory),
                 sp => new BatchCopyPipelineFactory(
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGatewayProvider>(),
                 sp.GetService<IConnectionProvider>(),
-                sp.GetService<IDataStoreProvider>()));
+                sp.GetService<IDataStoreProvider>()),
+                ServiceLifetime.Scoped));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IBatchCopyPipelineProvider),
+                sp => new BatchCopyPipelineProvider(sp.GetRequiredService<IBatchCopyPipelineFactory>()),
+                ServiceLifetime.Scoped));
 
             builder.Services.TryAddSingleton(sp => new BatchCopyPipelineConfigurationProvider(
                 sp.GetRequiredService<ILogger<BatchCopyPipelineConfigurationProvider>>(),

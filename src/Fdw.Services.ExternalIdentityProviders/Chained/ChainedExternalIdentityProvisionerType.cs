@@ -43,18 +43,18 @@ public sealed class ChainedExternalIdentityProvisionerType
             var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
             var logger = loggerFactory.CreateLogger<ChainedExternalIdentityProvisionerType>();
 
-            var factory = services.GetRequiredService<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>();
+            var implementationProvider = services.GetRequiredService<IChainedExternalIdentityProvisionerProvider>();
             var domainProvider = services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>();
             var typedProvider = services.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>();
 
             domainProvider.Register("Chained", typedProvider);
 
 
-            var factoryResult = provider.Register("Chained", factory);
+            var factoryResult = provider.Register("Chained", implementationProvider);
             if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
 
             ServiceTypeLog.OptionFactoryRegistered(
-                logger, nameof(ChainedExternalIdentityProvisionerType), Name, factory.GetType().Name);
+                logger, nameof(ChainedExternalIdentityProvisionerType), Name, implementationProvider.GetType().Name);
 
             ExternalIdentityProvisionerLog.ProviderRegistered(logger, "Chained");
 
@@ -67,8 +67,10 @@ public sealed class ChainedExternalIdentityProvisionerType
             builder.Services.TryAddSingleton<ChainedExternalIdentityProvisionerConfigurationProvider>(sp => new ChainedExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IChainedExternalIdentityProvisionerConfigurationProvider>(sp => sp.GetRequiredService<ChainedExternalIdentityProvisionerConfigurationProvider>());
 
-            ExternalIdentityProvisionerServiceProvider.Register<IChainedExternalIdentityProvisionerFactory, ChainedExternalIdentityProvisionerFactory>(
-                builder, Name, ServiceLifetime.Scoped);
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IChainedExternalIdentityProvisionerFactory), typeof(ChainedExternalIdentityProvisionerFactory), ServiceLifetime.Scoped));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IChainedExternalIdentityProvisionerProvider), typeof(ChainedExternalIdentityProvisionerProvider), ServiceLifetime.Scoped));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

@@ -83,7 +83,6 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<IDataVaultProvider>(sp =>
             {
                 var provider = new DataVaultProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultProvider>()
                     ?? NullLogger<DataVaultProvider>.Instance);
 

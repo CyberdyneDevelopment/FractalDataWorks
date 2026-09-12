@@ -100,7 +100,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             builder.Services.AddScoped<IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
             {
                 var provider = new ExternalIdentityProvisionerServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProvisionerServiceProvider>()
                     ?? NullLogger<ExternalIdentityProvisionerServiceProvider>.Instance);
 

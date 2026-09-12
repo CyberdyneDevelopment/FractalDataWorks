@@ -1,4 +1,5 @@
 ﻿using System;
+using Fdw.Services.Abstractions;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,7 +50,9 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private const string ConnectionTypePostgreSql = "PostgreSql";
 
     private readonly ILogger<ConfigurationGateway> _logger;
-    private readonly IConnectionFactory _connectionFactory;
+    // The same implementation provider every other caller reaches this connection type through.
+    // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
+    private readonly IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> _connectionProvider;
     private readonly ConfigurationSchema _schema;
 
     private readonly Lazy<Task<IGenericResult<IDataConnection>>> _connectionLazy;
@@ -69,7 +72,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// Initializes a new instance of <see cref="ConfigurationGateway"/>.
     /// </summary>
     /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
-    /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
+    /// <param name="connectionProvider">The Connection implementation provider that opens ConfigurationDb.</param>
     /// <param name="schema">
     /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
     /// Registered as a singleton via <see cref="ConfigurationGatewayTypes"/>, one per connection
@@ -86,7 +89,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// </param>
     public ConfigurationGateway(
         string connectionName,
-        IConnectionFactory connectionFactory,
+        IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
@@ -96,7 +99,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
             ? throw new ArgumentNullException(nameof(connectionName))
             : connectionName;
-        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         _logger = logger ?? NullLogger<ConfigurationGateway>.Instance;
         _cache = cache;
@@ -479,7 +482,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
         }
 
-        var factoryResult = await _connectionFactory
+        var factoryResult = await _connectionProvider
             .Create(configDbEntry, cancellationToken)
             .ConfigureAwait(false);
         if (!factoryResult.IsSuccess || factoryResult.Value is null)

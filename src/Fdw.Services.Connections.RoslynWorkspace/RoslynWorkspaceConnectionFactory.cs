@@ -73,6 +73,25 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A Roslyn workspace connection carries no secret. What it does need resolved is an OPEN
+    /// workspace, and that is not a string, so it cannot travel through the resolved-secret
+    /// overload -- see the note on <see cref="Create(IGenericConfiguration, string)"/>.
+    /// </remarks>
+    public IGenericResult<SecretRequirement> RequiredSecret(IGenericConfiguration configuration)
+        => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The resolved value is unused: this implementation needs no secret. Opening the workspace is
+    /// what it needs resolved, and the provider still does that through the asynchronous path below,
+    /// which is deliberately NOT part of the factory contract. Carrying a non-string resolved
+    /// dependency through this overload is the open question here.
+    /// </remarks>
+    public IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration, string? resolvedSecret)
+        => Create(configuration);
+
+    /// <inheritdoc />
     public IGenericResult<IGenericConnection> Create(RoslynWorkspaceConnectionConfiguration configuration)
     {
         return GenericResult<IGenericConnection>.Failure(

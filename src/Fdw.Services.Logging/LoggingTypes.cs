@@ -78,7 +78,6 @@ public partial class LoggingTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<ILoggingServiceProvider>(sp =>
             {
                 var provider = new LoggingServiceProvider(
-                    sp,
                     sp.GetService<ILogger<LoggingServiceProvider>>()
                     ?? NullLogger<LoggingServiceProvider>.Instance);
 

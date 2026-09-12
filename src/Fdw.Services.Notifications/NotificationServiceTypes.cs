@@ -110,7 +110,6 @@ public partial class NotificationServiceTypes
             builder.Services.AddScoped<INotificationServiceProvider>(sp =>
             {
                 var provider = new NotificationServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceProvider>()
                     ?? NullLogger<NotificationServiceProvider>.Instance);
 

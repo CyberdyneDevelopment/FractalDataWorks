@@ -92,7 +92,6 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<ICredentialServiceProvider>(sp =>
             {
                 var provider = new CredentialServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<CredentialServiceProvider>()
                     ?? NullLogger<CredentialServiceProvider>.Instance);
 

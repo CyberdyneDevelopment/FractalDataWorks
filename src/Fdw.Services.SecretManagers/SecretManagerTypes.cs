@@ -116,7 +116,6 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             builder.Services.AddSingleton<ISecretManagerProvider>(sp =>
             {
                 var provider = new SecretManagerProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<SecretManagerProvider>()
                     ?? NullLogger<SecretManagerProvider>.Instance);
 

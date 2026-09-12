@@ -94,7 +94,6 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<IIdentityServiceProvider>(sp =>
             {
                 var provider = new IdentityServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceProvider>()
                     ?? NullLogger<IdentityServiceProvider>.Instance);
 

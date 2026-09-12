@@ -72,7 +72,6 @@ public partial class TelemetryTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<ITelemetryServiceProvider>(sp =>
             {
                 var provider = new TelemetryServiceProvider(
-                    sp,
                     sp.GetService<ILogger<TelemetryServiceProvider>>()
                     ?? NullLogger<TelemetryServiceProvider>.Instance);
 

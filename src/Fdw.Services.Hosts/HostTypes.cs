@@ -95,7 +95,6 @@ public partial class HostTypes : ServiceTypeCollectionBase<
             // them (see TelemetryTypes/LoggingTypes for the same gap).
             builder.Services.TryAddSingleton<IHostServiceProvider>(sp =>
                 new HostServiceProvider(
-                    sp,
                     sp.GetService<ILogger<HostServiceProvider>>() ?? NullLogger<HostServiceProvider>.Instance));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);

@@ -151,28 +151,15 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
 
-            foreach (var option in declaredOptions)
-            {
-                if (option is not IServiceType serviceType)
-                    return GenericResult<IHostApplicationBuilder>.Failure(
-                        ServiceTypeLog.FactoryRegistrationFailed(
-                            log,
-                            option.Name,
-                            FormattableString.Invariant($"'{option.GetType().Name}' does not implement IServiceType, so it cannot name a factory type")));
-
-                var factoryType = serviceType.FactoryType;
-                ConnectionProvider.Register(
-                    option.Name,
-                    sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService(factoryType));
-
-                ServiceTypeLog.FactoryRegistered(log, nameof(ConnectionTypes), option.Name, factoryType.Name);
-            }
+            // No factory registration here any more. Each option registers its own implementation
+            // provider with this domain in its Initialization body, once a container exists to
+            // resolve both out of -- the same place it already registers its implementation
+            // CONFIGURATION provider. A domain no longer reaches into its options to wire them.
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ConnectionTypes), providerService);
 
             builder.Services.AddSingleton<IConnectionProvider>(sp =>
             {
                 var provider = new ConnectionProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionProvider>()
                     ?? NullLogger<ConnectionProvider>.Instance);
 

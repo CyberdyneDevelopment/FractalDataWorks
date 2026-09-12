@@ -45,12 +45,17 @@ public sealed class ClientCredentialsIdentityType
             var log = loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
                 ?? NullLogger<ClientCredentialsIdentityType>.Instance;
 
-            IdentityServiceProvider.Register<IClientCredentialsIdentityFactory>(
-                builder, Name, ServiceLifetime.Transient,
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IClientCredentialsIdentityFactory),
                 sp => new ClientCredentialsIdentityFactory(
                     sp.GetService<ILoggerFactory>(),
                     sp.GetRequiredService<IHttpClientFactory>().CreateClient(IdentityHttpClient.Name),
-                    sp.GetRequiredService<ISecretManagerProvider>()));
+                    sp.GetRequiredService<ISecretManagerProvider>()),
+                ServiceLifetime.Transient));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IClientCredentialsIdentityProvider),
+                sp => new ClientCredentialsIdentityProvider(sp.GetRequiredService<IClientCredentialsIdentityFactory>()),
+                ServiceLifetime.Transient));
 
             // The typed body provider, so the header provider can compose the aggregate. Registration
             // only makes it resolvable; Initialization is where it is handed over, because the header

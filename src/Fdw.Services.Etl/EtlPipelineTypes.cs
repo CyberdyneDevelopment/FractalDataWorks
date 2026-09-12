@@ -164,7 +164,6 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
             {
                 var provider = new EtlPipelineProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EtlPipelineProvider>()
                     ?? NullLogger<EtlPipelineProvider>.Instance);
 

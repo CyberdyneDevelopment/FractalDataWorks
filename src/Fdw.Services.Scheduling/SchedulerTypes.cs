@@ -128,7 +128,6 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
             {
                 var provider = new SchedulerServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<SchedulerServiceProvider>()
                     ?? NullLogger<SchedulerServiceProvider>.Instance);
 

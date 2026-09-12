@@ -64,7 +64,10 @@ public sealed class RoslynWorkspaceConnectionType
         Registration((builder, loggerFactory) =>
         {
             builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
-            ConnectionProvider.Register<IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionFactory>(builder, Name, ServiceLifetime.Singleton);
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IRoslynWorkspaceConnectionFactory), typeof(RoslynWorkspaceConnectionFactory), ServiceLifetime.Singleton));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IRoslynWorkspaceConnectionProvider), typeof(RoslynWorkspaceConnectionProvider), ServiceLifetime.Singleton));
             builder.Services.TryAddSingleton<RoslynWorkspaceConnectionConfigurationProvider>(sp => new RoslynWorkspaceConnectionConfigurationProvider(sp.GetRequiredService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IRoslynWorkspaceConnectionConfigurationProvider>(sp => sp.GetRequiredService<RoslynWorkspaceConnectionConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);

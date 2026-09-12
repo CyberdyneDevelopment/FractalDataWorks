@@ -71,10 +71,10 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
-            var factory = services.GetRequiredService<IStreamingPipelineFactory>();
+            var implementationProvider = services.GetRequiredService<IStreamingPipelineProvider>();
 
             // Register factory instance with provider
-            var factoryResult = provider.Register(Name, factory);
+            var factoryResult = provider.Register(Name, implementationProvider);
             if (!factoryResult.IsSuccess)
             {
                 ServiceTypeLog.OptionFactoryRegistrationFailed(
@@ -116,13 +116,18 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
 
 
             // Factory - DI handles all constructor dependencies
-            EtlPipelineProvider.Register<IStreamingPipelineFactory>(
-                builder, Name, ServiceLifetime.Scoped,
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IStreamingPipelineFactory),
                 sp => new StreamingPipelineFactory(
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGatewayProvider>(),
-                sp.GetService<IConnectionProvider>()));
+                sp.GetService<IConnectionProvider>()),
+                ServiceLifetime.Scoped));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IStreamingPipelineProvider),
+                sp => new StreamingPipelineProvider(sp.GetRequiredService<IStreamingPipelineFactory>()),
+                ServiceLifetime.Scoped));
 
             builder.Services.TryAddSingleton(sp => new StreamingPipelineConfigurationProvider(
                 sp.GetRequiredService<ILogger<StreamingPipelineConfigurationProvider>>(),
