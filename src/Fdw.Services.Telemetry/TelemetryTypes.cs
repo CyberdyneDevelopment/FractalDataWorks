@@ -52,16 +52,20 @@ public partial class TelemetryTypes : ServiceTypeCollectionBase<
         {
             var log = loggerFactory?.CreateLogger<TelemetryTypes>() ?? NullLogger<TelemetryTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
+            // The domain's own provider goes in BEFORE its options are collected, because an
+            // option's Register exists to hand this provider an implementation and cannot do that
+            // against a provider the container does not have yet. Collecting first left every
+            // option registering against nothing.
             builder.Services.TryAddSingleton<ITelemetryConfigurationProvider>(sp =>
                 new TelemetryConfigurationProvider(
                     sp.GetService<ILogger<TelemetryConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), TelemetryTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<TelemetryConfigurationProvider>(
                 sp => (TelemetryConfigurationProvider)sp.GetRequiredService<ITelemetryConfigurationProvider>());
+
+            var registered = collectOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

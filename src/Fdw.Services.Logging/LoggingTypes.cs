@@ -52,10 +52,10 @@ public partial class LoggingTypes : ServiceTypeCollectionBase<
         {
             var log = loggerFactory?.CreateLogger<LoggingTypes>() ?? NullLogger<LoggingTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
+            // The domain's own provider goes in BEFORE its options are collected, because an
+            // option's Register exists to hand this provider an implementation and cannot do that
+            // against a provider the container does not have yet. Collecting first left every
+            // option registering against nothing.
             // Why NullLogger and not a resolved ILogger: this provider is what the logging system
             // reads its own configuration from, so it sits INSIDE logger construction. Resolving
             // ILogger<T> here asks the container for a logger in order to build the logger --
@@ -68,6 +68,10 @@ public partial class LoggingTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), LoggingTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<LoggingConfigurationProvider>(
                 sp => (LoggingConfigurationProvider)sp.GetRequiredService<ILoggingConfigurationProvider>());
+
+            var registered = collectOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
 
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));

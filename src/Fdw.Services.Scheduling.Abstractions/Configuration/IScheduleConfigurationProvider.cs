@@ -11,11 +11,6 @@ namespace Fdw.Services.Scheduling.Abstractions.Configuration;
 /// a consumer asking for the closed generic states a shape, this states which rows it reads. Schedule
 /// was the one domain without its named interface, which is why its list endpoint reached for an
 /// implementation provider instead and found nothing registered under it.
-/// <para>
-/// It sits beside <see cref="IScheduleImplementationConfiguration"/> in this project rather than in
-/// Scheduling.Abstractions, because that contract lives here despite its namespace and Abstractions
-/// cannot reference back into this assembly.
-/// </para>
 /// </remarks>
 public interface IScheduleConfigurationProvider
     : IDomainConfigurationProvider<IScheduleImplementationConfiguration>

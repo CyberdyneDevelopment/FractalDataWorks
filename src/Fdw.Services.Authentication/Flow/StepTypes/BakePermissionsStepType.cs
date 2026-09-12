@@ -37,7 +37,7 @@ public sealed class BakePermissionsStepType
     // Captured when the host is built: an option is created by its module initializer, which needs
     // a parameterless constructor, so what it needs arrives where a live container exists.
     private IEffectivePermissionResolver? _permissions;
-    private ITenantProvider? _tenantProvider;
+    private IServiceProvider? _services;
     private ILogger _logger = NullLogger<BakePermissionsStepType>.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="BakePermissionsStepType"/> class.</summary>
@@ -50,7 +50,13 @@ public sealed class BakePermissionsStepType
         Initialization((host, loggerFactory) =>
         {
             _permissions = host.Services.GetRequiredService<IEffectivePermissionResolver>();
-            _tenantProvider = host.Services.GetRequiredService<ITenantProvider>();
+
+            // Why the provider and not ITenantProvider itself: resolving it here made this step's
+            // startup depend on the Multitenancy domain having finished its own Initialize, and
+            // Initialize order across domains is attach order, not dependency order -- this step is
+            // entry 4 of 36, so it ran first and found an empty registry. Holding the provider defers
+            // the lookup to Execute, by which point every domain has registered.
+            _services = host.Services;
             _logger = loggerFactory?.CreateLogger<BakePermissionsStepType>()
                 ?? NullLogger<BakePermissionsStepType>.Instance;
 
@@ -82,7 +88,7 @@ public sealed class BakePermissionsStepType
         var isGlobalTenant = false;
         if (principal.TenantId != Guid.Empty)
         {
-            var tenantResult = await _tenantProvider!
+            var tenantResult = await _services!.GetRequiredService<ITenantProvider>()
                 .GetTenant(principal.TenantId, cancellationToken)
                 .ConfigureAwait(false);
             isGlobalTenant = tenantResult.IsSuccess && tenantResult.Value is { IsGlobal: true };
