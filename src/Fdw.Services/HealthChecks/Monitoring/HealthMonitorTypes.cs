@@ -109,7 +109,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
             builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
             {
                 var provider = new HealthMonitorProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<HealthMonitorProvider>()
                     ?? NullLogger<HealthMonitorProvider>.Instance);
 

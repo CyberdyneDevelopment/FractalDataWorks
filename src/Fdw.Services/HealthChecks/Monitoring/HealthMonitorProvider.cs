@@ -21,12 +21,10 @@ public sealed class HealthMonitorProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthMonitorProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance (NullLogger fallback per FDW convention).</param>
     public HealthMonitorProvider(
-        IServiceProvider services,
         ILogger<HealthMonitorProvider>? logger = null)
-        : base(services, logger is null
+        : base(logger is null
             ? NullLogger<DomainServiceProviderBase<IHealthMonitorService, IHealthMonitorImplementationConfiguration, IServiceFactory<IHealthMonitorService>, IHealthMonitorConfigurationProvider>>.Instance
             : logger)
     {

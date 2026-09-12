@@ -18,10 +18,9 @@ public sealed class HostServiceProvider
       IHostServiceProvider
 {
     /// <summary>Initializes a new instance of the <see cref="HostServiceProvider"/> class.</summary>
-    /// <param name="services">The container this provider resolves its factories from.</param>
     /// <param name="logger">The logger for this provider.</param>
-    public HostServiceProvider(IServiceProvider services, ILogger<HostServiceProvider> logger)
-        : base(services, logger ?? NullLogger<HostServiceProvider>.Instance)
+    public HostServiceProvider(ILogger<HostServiceProvider> logger)
+        : base(logger ?? NullLogger<HostServiceProvider>.Instance)
     {
     }
 }

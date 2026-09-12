@@ -28,10 +28,9 @@ public sealed class PipelineServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="PipelineServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance.</param>
-    public PipelineServiceProvider(IServiceProvider services, ILogger<PipelineServiceProvider> logger)
-        : base(services, logger)
+    public PipelineServiceProvider(ILogger<PipelineServiceProvider> logger)
+        : base(logger)
     {
     }
 }

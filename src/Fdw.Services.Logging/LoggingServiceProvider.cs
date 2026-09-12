@@ -18,10 +18,9 @@ public sealed class LoggingServiceProvider
       ILoggingServiceProvider
 {
     /// <summary>Initializes a new instance of the <see cref="LoggingServiceProvider"/> class.</summary>
-    /// <param name="services">The container this provider resolves its factories from.</param>
     /// <param name="logger">The logger for this provider.</param>
-    public LoggingServiceProvider(IServiceProvider services, ILogger<LoggingServiceProvider> logger)
-        : base(services, logger ?? NullLogger<LoggingServiceProvider>.Instance)
+    public LoggingServiceProvider(ILogger<LoggingServiceProvider> logger)
+        : base(logger ?? NullLogger<LoggingServiceProvider>.Instance)
     {
     }
 }

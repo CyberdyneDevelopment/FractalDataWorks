@@ -35,9 +35,8 @@ public sealed class CredentialServiceProvider
     /// Initializes a new instance of the <see cref="CredentialServiceProvider"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
-    /// <param name="services">The container this provider resolves factories from.</param>
-    public CredentialServiceProvider(IServiceProvider services, ILogger<CredentialServiceProvider> logger)
-        : base(services, logger ?? NullLogger<CredentialServiceProvider>.Instance)
+    public CredentialServiceProvider(ILogger<CredentialServiceProvider> logger)
+        : base(logger ?? NullLogger<CredentialServiceProvider>.Instance)
     {
         _logger = logger ?? NullLogger<CredentialServiceProvider>.Instance;
     }

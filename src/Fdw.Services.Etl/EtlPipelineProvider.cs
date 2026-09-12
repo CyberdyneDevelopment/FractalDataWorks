@@ -21,12 +21,10 @@ public sealed class EtlPipelineProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="EtlPipelineProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance.</param>
     public EtlPipelineProvider(
-        IServiceProvider services,
         ILogger<EtlPipelineProvider> logger)
-        : base(services, logger ?? NullLogger<EtlPipelineProvider>.Instance)
+        : base(logger ?? NullLogger<EtlPipelineProvider>.Instance)
     {
     }
 }

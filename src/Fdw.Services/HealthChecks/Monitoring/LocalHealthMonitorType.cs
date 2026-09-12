@@ -38,12 +38,15 @@ public sealed class LocalHealthMonitorType
     {
         Registration((builder, loggerFactory) =>
         {
-            HealthMonitorProvider.Register<ILocalHealthMonitorFactory>(
-                builder, Name, ServiceLifetime.Singleton,
+            // DI registration only. Handing the implementation provider to the domain provider is
+            // Initialization's job, once a container exists to resolve both out of.
+            builder.Services.TryAddSingleton<ILocalHealthMonitorFactory>(
                 sp => new LocalHealthMonitorFactory(
                     sp.GetRequiredService<IEnumerable<IHealthCheckable>>(),
                     sp,
                     sp.GetService<ILoggerFactory>()));
+            builder.Services.TryAddSingleton<ILocalHealthMonitorProvider>(
+                sp => new LocalHealthMonitorProvider(sp.GetRequiredService<ILocalHealthMonitorFactory>()));
 
             ServiceLogger.FactoryRegistrationDeferred(
                 loggerFactory?.CreateLogger<LocalHealthMonitorType>()
@@ -62,6 +65,8 @@ public sealed class LocalHealthMonitorType
             var services = host.Services;
             services.GetRequiredService<HealthMonitorConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<ILocalHealthMonitorConfigurationProvider>());
+            services.GetRequiredService<IHealthMonitorProvider>()
+                .Register(Name, services.GetRequiredService<ILocalHealthMonitorProvider>());
             return GenericResult<IHost>.Success(host);
         });
 

@@ -32,10 +32,9 @@ public sealed class NotificationServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves its factories from.</param>
     /// <param name="logger">The logger for this provider.</param>
-    public NotificationServiceProvider(IServiceProvider services, ILogger<NotificationServiceProvider> logger)
-        : base(services, logger ?? NullLogger<NotificationServiceProvider>.Instance)
+    public NotificationServiceProvider(ILogger<NotificationServiceProvider> logger)
+        : base(logger ?? NullLogger<NotificationServiceProvider>.Instance)
     {
     }
 }

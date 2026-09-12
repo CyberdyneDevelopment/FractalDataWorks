@@ -42,12 +42,10 @@ public sealed class ConnectionProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance.</param>
     public ConnectionProvider(
-        IServiceProvider services,
         ILogger<ConnectionProvider> logger)
-        : base(services, logger ?? NullLogger<ConnectionProvider>.Instance)
+        : base(logger ?? NullLogger<ConnectionProvider>.Instance)
     {
         _logger = logger ?? NullLogger<ConnectionProvider>.Instance;
     }

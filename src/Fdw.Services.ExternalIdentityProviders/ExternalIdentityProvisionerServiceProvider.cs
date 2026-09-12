@@ -30,16 +30,14 @@ public class ExternalIdentityProvisionerServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="ExternalIdentityProvisionerServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">Logger instance.</param>
     public ExternalIdentityProvisionerServiceProvider(
-        IServiceProvider services,
         ILogger<DomainServiceProviderBase<
             IExternalIdentityProvisioner,
             IExternalIdentityProvisionerImplementationConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
             IExternalIdentityProvisionerConfigurationProvider>> logger)
-        : base(services, logger ?? NullLogger<DomainServiceProviderBase<
+        : base(logger ?? NullLogger<DomainServiceProviderBase<
             IExternalIdentityProvisioner,
             IExternalIdentityProvisionerImplementationConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,

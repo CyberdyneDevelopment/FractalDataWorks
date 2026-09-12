@@ -38,9 +38,8 @@ public sealed class DataVaultProvider
     /// Initializes a new instance of the <see cref="DataVaultProvider"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
-    /// <param name="services">The container this provider resolves factories from.</param>
-    public DataVaultProvider(IServiceProvider services, ILogger<DataVaultProvider> logger)
-        : base(services, logger ?? NullLogger<DataVaultProvider>.Instance)
+    public DataVaultProvider(ILogger<DataVaultProvider> logger)
+        : base(logger ?? NullLogger<DataVaultProvider>.Instance)
     {
         _logger = logger ?? NullLogger<DataVaultProvider>.Instance;
     }

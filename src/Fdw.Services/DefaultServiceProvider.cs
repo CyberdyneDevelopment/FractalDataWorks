@@ -30,12 +30,10 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     /// Initializes a new instance of the
     /// <see cref="DefaultServiceProvider{TService, TConfiguration, TFactory, TConfigurationProvider}"/> class.
     /// </summary>
-    /// <param name="services">The scope's container, used to resolve the registered factories.</param>
     /// <param name="logger">The logger for this provider.</param>
     public DefaultServiceProvider(
-        IServiceProvider services,
         ILogger<DomainServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> logger)
-        : base(services, logger)
+        : base(logger)
     {
     }
 }
