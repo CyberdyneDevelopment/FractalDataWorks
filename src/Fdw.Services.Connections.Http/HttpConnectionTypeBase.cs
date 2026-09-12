@@ -24,7 +24,7 @@ public abstract class HttpConnectionTypeBase<TService, TConfiguration, TFactory,
     where TProvider : IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpConnectionTypeBase{TService,TConfiguration,TFactory}"/> class.
+    /// Initializes a new instance of the <see cref="HttpConnectionTypeBase{TService,TConfiguration,TFactory,TProvider}"/> class.
     /// </summary>
     /// <param name="name">The name of the HTTP connection type.</param>
     /// <param name="sectionName">The configuration section name for appsettings.json.</param>

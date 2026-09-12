@@ -36,43 +36,36 @@ public class ConnectionProviderTests
         _configurations = [];
         _configProvider = new TestConnectionConfigurationProvider(_configurations);
 
-        _provider = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), _mockLogger.Object);
+        _provider = new ConnectionProvider(_mockLogger.Object);
         _provider.Register(_configProvider);
     }
 
     /// <summary>
-    /// Builds a factory mock of the shape the provider actually requires: an
-    /// <see cref="IConnectionFactory"/> (which owns secret resolution itself) that also satisfies the
-    /// <see cref="IServiceFactory{T}"/> registration signature.
+    /// Builds an implementation-provider mock of the shape the domain provider now dispatches to.
+    /// The provider is what resolves a secret; the factory below it is synchronous and is not part
+    /// of this test's shape at all.
     /// </summary>
-    private static Mock<IConnectionFactory> FactoryReturning(IGenericConnection connection)
+    private static Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> ProviderReturning(
+        IGenericConnection connection)
     {
-        var factory = new Mock<IConnectionFactory>();
-        factory.As<IServiceFactory<IGenericConnection>>();
-        factory.As<IAsyncServiceFactory<IGenericConnection>>()
-            .Setup(x => x.Create(It.IsAny<IGenericConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IGenericConnection>.Success(connection));
-        factory
+        var provider = new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>();
+        provider
             .Setup(x => x.Create(
-                It.IsAny<IGenericConfiguration>(),
+                It.IsAny<IConnectionImplementationConfiguration>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IGenericConnection>.Success(connection));
-        return factory;
+        return provider;
     }
 
-    private static Mock<IConnectionFactory> FactoryFailing()
+    private static Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>> ProviderFailing()
     {
-        var factory = new Mock<IConnectionFactory>();
-        factory.As<IServiceFactory<IGenericConnection>>();
-        factory.As<IAsyncServiceFactory<IGenericConnection>>()
-            .Setup(x => x.Create(It.IsAny<IGenericConfiguration>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IGenericConnection>.Failure());
-        factory
+        var provider = new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>();
+        provider
             .Setup(x => x.Create(
-                It.IsAny<IGenericConfiguration>(),
+                It.IsAny<IConnectionImplementationConfiguration>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IGenericConnection>.Failure());
-        return factory;
+        return provider;
     }
 
     /// <summary>
@@ -154,7 +147,7 @@ public class ConnectionProviderTests
     public void ConstructorWithValidParametersCreatesInstance()
     {
         // Arrange & Act
-        var provider = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<ConnectionProvider>.Instance);
+        var provider = new ConnectionProvider(NullLogger<ConnectionProvider>.Instance);
 
         // Assert
         provider.ShouldNotBeNull();
@@ -224,10 +217,10 @@ public class ConnectionProviderTests
             Name = "TestConnection",
             Implementation = "MsSql"
         });
-        var mockFactory = FactoryReturning(new Mock<IGenericConnection>().Object);
+        var mockProvider = ProviderReturning(new Mock<IGenericConnection>().Object);
 
         // Act
-        var registerResult = _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        var registerResult = _provider.Register("MsSql", mockProvider.Object);
         var result = await _provider.Get("TestConnection");
 
         // Assert
@@ -242,10 +235,10 @@ public class ConnectionProviderTests
     {
         // The underlying dictionary uses StringComparer.OrdinalIgnoreCase
         // which throws ArgumentNullException for null keys
-        var mockFactory = new Mock<IServiceFactory<IGenericConnection>>();
+        var mockProvider = new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => _provider.Register(null!, mockFactory.Object));
+        Should.Throw<ArgumentNullException>(() => _provider.Register(null!, mockProvider.Object));
     }
 
     [Fact]
@@ -255,10 +248,10 @@ public class ConnectionProviderTests
     {
         // Note: Current implementation allows empty string keys
         // This test documents current behavior
-        var mockFactory = new Mock<IServiceFactory<IGenericConnection>>();
+        var mockProvider = new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>();
 
         // Act - Register with empty name
-        Should.NotThrow(() => _provider.Register("", mockFactory.Object));
+        Should.NotThrow(() => _provider.Register("", mockProvider.Object));
     }
 
     [Fact]
@@ -268,7 +261,7 @@ public class ConnectionProviderTests
     {
         // Note: Current implementation allows null values
         // This test documents current behavior
-        Should.NotThrow(() => _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)null!));
+        Should.NotThrow(() => _provider.Register("MsSql", null!));
     }
 
     [Fact]
@@ -288,9 +281,9 @@ public class ConnectionProviderTests
         _configurations.Add(config);
 
         var mockConnection = new Mock<IGenericConnection>();
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         var result = await _provider.Get("TestConnection");
@@ -317,9 +310,9 @@ public class ConnectionProviderTests
         _configurations.Add(config);
 
         var mockConnection = new Mock<IGenericConnection>();
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         var result = await _provider.Get(connectionId);
@@ -348,9 +341,9 @@ public class ConnectionProviderTests
         var mockConnection = new Mock<IDataConnection>();
         mockConnection.As<IGenericConnection>();
 
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         var result = await ((IDataConnectionProvider)_provider).Get<IDataConnection>("TestConnection", TestContext.Current.CancellationToken);
@@ -378,9 +371,9 @@ public class ConnectionProviderTests
         // Return a connection that does NOT implement IDataConnection
         var mockConnection = new Mock<IGenericConnection>();
 
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act - Request IDataConnection but get IGenericConnection
         var result = await ((IDataConnectionProvider)_provider).Get<IDataConnection>("TestConnection", TestContext.Current.CancellationToken);
@@ -405,9 +398,9 @@ public class ConnectionProviderTests
         _configurations.Add(config);
 
         var mockConnection = new Mock<IGenericConnection>();
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act - Use explicit IConnectionProvider interface
 #pragma warning disable CA1859 // deliberately uses the explicit interface
@@ -437,9 +430,9 @@ public class ConnectionProviderTests
         var mockConnection = new Mock<IDataConnection>();
         mockConnection.As<IGenericConnection>();
 
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act - Use explicit IDataConnectionProvider interface
         IDataConnectionProvider dataProvider = _provider;
@@ -468,9 +461,9 @@ public class ConnectionProviderTests
         var mockConnection = new Mock<IDataConnection>();
         mockConnection.As<IGenericConnection>();
 
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         IDataConnectionProvider dataProvider = _provider;
@@ -499,9 +492,9 @@ public class ConnectionProviderTests
         var mockConnection = new Mock<IDataConnection>();
         mockConnection.As<IGenericConnection>();
 
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         IDataConnectionProvider dataProvider = _provider;
@@ -531,9 +524,9 @@ public class ConnectionProviderTests
         var mockConnection = new Mock<IDataConnection>();
         mockConnection.As<IGenericConnection>();
 
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act - IDataConnectionProvider.Get(Guid) returns IDataConnection (non-generic)
         IDataConnectionProvider dataProvider = _provider;
@@ -584,9 +577,9 @@ public class ConnectionProviderTests
 
         // Return a connection that does NOT implement IDataConnection
         var mockConnection = new Mock<IGenericConnection>();
-        var mockFactory = FactoryReturning(mockConnection.Object);
+        var mockProvider = ProviderReturning(mockConnection.Object);
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act - IDataConnectionProvider.Get(Guid) casts to IDataConnection; incompatible type → failure
         var result = await ((IDataConnectionProvider)_provider).Get(connectionId);
@@ -610,14 +603,14 @@ public class ConnectionProviderTests
         _configurations.Add(config);
 
         var mockConnection1 = new Mock<IGenericConnection>();
-        var mockFactory1 = FactoryReturning(mockConnection1.Object);
+        var mockProvider1 = ProviderReturning(mockConnection1.Object);
 
         var mockConnection2 = new Mock<IGenericConnection>();
-        var mockFactory2 = FactoryReturning(mockConnection2.Object);
+        var mockProvider2 = ProviderReturning(mockConnection2.Object);
 
         // Act
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory1.Object);
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory2.Object);
+        _provider.Register("MsSql", mockProvider1.Object);
+        _provider.Register("MsSql", mockProvider2.Object);
 
         var result = await _provider.Get("TestConnection");
 
@@ -640,9 +633,9 @@ public class ConnectionProviderTests
         };
         _configurations.Add(config);
 
-        var mockFactory = FactoryFailing();
+        var mockProvider = ProviderFailing();
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         var result = await _provider.Get("TestConnection");
@@ -666,9 +659,9 @@ public class ConnectionProviderTests
         };
         _configurations.Add(config);
 
-        var mockFactory = FactoryFailing();
+        var mockProvider = ProviderFailing();
 
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         var result = await _provider.Get(connectionId);
@@ -692,8 +685,8 @@ public class ConnectionProviderTests
 
         var msSqlConnection = new Mock<IGenericConnection>();
         var postgresConnection = new Mock<IGenericConnection>();
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)FactoryReturning(msSqlConnection.Object).Object);
-        _provider.Register("PostgreSql", (IServiceFactory<IGenericConnection>)FactoryReturning(postgresConnection.Object).Object);
+        _provider.Register("MsSql", ProviderReturning(msSqlConnection.Object).Object);
+        _provider.Register("PostgreSql", ProviderReturning(postgresConnection.Object).Object);
 
         // Act
         var result = await _provider.Get("PgConn");
@@ -709,7 +702,7 @@ public class ConnectionProviderTests
     public async Task GetWithNamelessConfigurationReturnsFailure()
     {
         // Arrange - the cache is name-keyed, so a nameless configuration cannot be resolved
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)FactoryReturning(new Mock<IGenericConnection>().Object).Object);
+        _provider.Register("MsSql", ProviderReturning(new Mock<IGenericConnection>().Object).Object);
 
         // Act
         var result = await _provider.Get(new StubConnectionConfiguration
@@ -730,7 +723,7 @@ public class ConnectionProviderTests
     public async Task GetByNameWithNoParentProviderReturnsFailure()
     {
         // Arrange - a provider whose phase-3 wiring never ran has no configuration source
-        var unwired = new ConnectionProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<ConnectionProvider>.Instance);
+        var unwired = new ConnectionProvider(NullLogger<ConnectionProvider>.Instance);
 
         // Act
         var result = await unwired.Get("TestConnection");
@@ -764,7 +757,7 @@ public class ConnectionProviderTests
             Name = "NotAConnectionFactory",
             Implementation = "MsSql",
         });
-        _provider.Register("MsSql", new Mock<IServiceFactory<IGenericConnection>>().Object);
+        _provider.Register("MsSql", new Mock<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>().Object);
 
         // Act
         var noOptionType = await _provider.Get("NoOptionType");
@@ -794,8 +787,8 @@ public class ConnectionProviderTests
             Implementation = "MsSql"
         };
         _configurations.Add(config);
-        var mockFactory = FactoryReturning(new Mock<IGenericConnection>().Object);
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        var mockProvider = ProviderReturning(new Mock<IGenericConnection>().Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act - the name path and the already-resolved-configuration path. The configuration path
         // takes the IMPLEMENTATION configuration, which is what the domain provider hands back.
@@ -807,7 +800,7 @@ public class ConnectionProviderTests
         // replaces an assertion that the two paths SHARED one cached connection.
         byName.IsSuccess.ShouldBeTrue();
         byConfiguration.IsSuccess.ShouldBeTrue();
-        mockFactory.As<IAsyncServiceFactory<IGenericConnection>>().Verify(
+        mockProvider.As<IAsyncServiceFactory<IGenericConnection>>().Verify(
             x => x.Create(
                 It.IsAny<IGenericConfiguration>(),
                 It.IsAny<CancellationToken>()),
@@ -828,8 +821,8 @@ public class ConnectionProviderTests
         });
         var stale = new Mock<IGenericConnection>();
         stale.SetupGet(x => x.IsStale).Returns(true);
-        var mockFactory = FactoryReturning(stale.Object);
-        _provider.Register("MsSql", (IServiceFactory<IGenericConnection>)mockFactory.Object);
+        var mockProvider = ProviderReturning(stale.Object);
+        _provider.Register("MsSql", mockProvider.Object);
 
         // Act
         var result = await _provider.Get("TestConnection");
@@ -838,7 +831,7 @@ public class ConnectionProviderTests
         // once, found stale, and fails loud.
         result.IsSuccess.ShouldBeFalse();
         result.Messages.ShouldNotBeEmpty();
-        mockFactory.As<IAsyncServiceFactory<IGenericConnection>>().Verify(
+        mockProvider.As<IAsyncServiceFactory<IGenericConnection>>().Verify(
             x => x.Create(
                 It.IsAny<IGenericConfiguration>(),
                 It.IsAny<CancellationToken>()),

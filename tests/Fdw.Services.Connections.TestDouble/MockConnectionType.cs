@@ -28,7 +28,7 @@ namespace Fdw.Services.Connections.TestDouble;
 [ExcludeFromCodeCoverage]
 [Implementation(typeof(ConnectionTypes), OptionName)]
 public sealed class MockConnectionType
-    : ConnectionTypeBase<IGenericConnection, IMockConnectionFactory, MockConnectionConfiguration>
+    : ConnectionTypeBase<IGenericConnection, IMockConnectionFactory, MockConnectionConfiguration, IMockConnectionProvider>
 {
     /// <summary>The discriminator this option registers under.</summary>
     public const string OptionName = "MockConnection";

@@ -1,3 +1,4 @@
+using Fdw.Services.Connections.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -85,10 +86,6 @@ public abstract class MsSqlAuthenticationConfiguration
         return masked;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether this authentication type needs a secret resolved before a
-    /// connection can be built.
-    /// </summary>
     /// <summary>
     /// Reads one authentication property, failing loud when it is absent or empty.
     /// </summary>

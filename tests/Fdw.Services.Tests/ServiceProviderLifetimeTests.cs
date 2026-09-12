@@ -80,6 +80,23 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Test factory that creates TestService instances.
     /// </summary>
+    /// <summary>
+    /// Wraps the counting factory so the domain provider has an implementation provider to dispatch
+    /// to. The factory it holds is still what the lifetime assertions read.
+    /// </summary>
+    public class TestServiceImplementationProvider
+        : ImplementationServiceProviderBase<ITestService, TestServiceConfiguration>
+    {
+        public TestServiceImplementationProvider(TestServiceFactory factory) => Factory = factory;
+
+        public TestServiceFactory Factory { get; }
+
+        public override Task<IGenericResult<ITestService>> Create(
+            TestServiceConfiguration configuration,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Factory.Create(configuration));
+    }
+
     public class TestServiceFactory : IServiceFactory<ITestService>
     {
         public int CreateCallCount { get; private set; }
@@ -125,8 +142,8 @@ public class ServiceProviderLifetimeTests
         IServiceFactory<ITestService>,
         IDomainConfigurationProvider<TestServiceConfiguration>>
     {
-        public TestServiceProvider(IServiceProvider services, ILogger<TestServiceProvider> logger)
-            : base(services, logger)
+        public TestServiceProvider(ILogger<TestServiceProvider> logger)
+            : base(logger)
         {
         }
     }
@@ -313,7 +330,7 @@ public class ServiceProviderLifetimeTests
             var factory = new TestServiceFactory();
             provider.Register(configProvider);
             provider.Register(configProvider);
-            provider.Register("TypeA", factory);
+            provider.Register("TypeA", new TestServiceImplementationProvider(factory));
         }
 
         // Act - Get service in different scope
@@ -342,13 +359,13 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service2", Implementation = "TypeA", Value = "V2" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", factory);
+        provider.Register("TypeA", new TestServiceImplementationProvider(factory));
 
         // Act - Get multiple services
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -374,13 +391,13 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service1", Implementation = "TypeA", Value = "Initial" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", factory);
+        provider.Register("TypeA", new TestServiceImplementationProvider(factory));
 
         // Act - Get service twice
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -402,12 +419,12 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service1", Implementation = "TypeA", Value = "Initial" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get("NonExistentService", TestContext.Current.CancellationToken);
@@ -427,12 +444,12 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Service1 exists
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -463,12 +480,12 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service2", Implementation = "TypeA", Value = "Value2" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Both services exist
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -506,12 +523,12 @@ public class ServiceProviderLifetimeTests
             new() { Name = "ServiceB1", Implementation = "TypeB", Value = "ValueB1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProviderA = new TestServiceConfigurationProvider(typeAConfigs);
         var configProviderB = new TestServiceConfigurationProvider(typeBConfigs);
-        provider.Register("TypeA", new TestServiceFactory());
-        provider.Register("TypeB", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
+        provider.Register("TypeB", new TestServiceImplementationProvider(new TestServiceFactory()));
         provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         // All services exist
@@ -555,7 +572,7 @@ public class ServiceProviderLifetimeTests
             new() { Name = "ServiceB", Implementation = "TypeB", Value = "ValueB" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var factoryA = new TestServiceFactory();
         var factoryB = new TestServiceFactory();
@@ -563,8 +580,8 @@ public class ServiceProviderLifetimeTests
         // Act
         var configProviderA = new TestServiceConfigurationProvider(configsA);
         var configProviderB = new TestServiceConfigurationProvider(configsB);
-        provider.Register("TypeA", factoryA);
-        provider.Register("TypeB", factoryB);
+        provider.Register("TypeA", new TestServiceImplementationProvider(factoryA));
+        provider.Register("TypeB", new TestServiceImplementationProvider(factoryB));
         provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         var resultA = await provider.Get("ServiceA", TestContext.Current.CancellationToken);
@@ -588,7 +605,7 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory1 = new TestServiceFactory();
@@ -597,8 +614,8 @@ public class ServiceProviderLifetimeTests
         // Act
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", factory1);
-        provider.Register("TypeA", factory2); // Overwrite
+        provider.Register("TypeA", new TestServiceImplementationProvider(factory1));
+        provider.Register("TypeA", new TestServiceImplementationProvider(factory2)); // Overwrite
 
         var result = await provider.Get("Service1", TestContext.Current.CancellationToken);
 
@@ -626,7 +643,7 @@ public class ServiceProviderLifetimeTests
             new() { Name = "ApiConnection", Implementation = "Rest", Value = "https://api.example.com" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var msSqlFactory = new TestServiceFactory();
         var restFactory = new TestServiceFactory();
@@ -634,9 +651,9 @@ public class ServiceProviderLifetimeTests
         var msSqlConfigProvider = new TestServiceConfigurationProvider(msSqlConfigs);
         var restConfigProvider = new TestServiceConfigurationProvider(restConfigs);
         provider.Register(msSqlConfigProvider);
-        provider.Register("MsSql", msSqlFactory);
+        provider.Register("MsSql", new TestServiceImplementationProvider(msSqlFactory));
         provider.Register(restConfigProvider);
-        provider.Register("Rest", restFactory);
+        provider.Register("Rest", new TestServiceImplementationProvider(restFactory));
         provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
         // Act
@@ -665,12 +682,12 @@ public class ServiceProviderLifetimeTests
             new() { Id = serviceId, Name = "Service1", Implementation = "TypeA", Value = "TestValue" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get(serviceId, TestContext.Current.CancellationToken);
@@ -694,12 +711,12 @@ public class ServiceProviderLifetimeTests
         };
 
         var configs = new List<TestServiceConfiguration> { customConfig };
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act - Look up by name since Get(configuration) was removed
         var result = await provider.Get("CustomService", TestContext.Current.CancellationToken);
@@ -720,11 +737,11 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get((string)null!, TestContext.Current.CancellationToken);
@@ -743,11 +760,11 @@ public class ServiceProviderLifetimeTests
             new() { Name = "Service1", Implementation = string.Empty, Value = "Value" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -775,12 +792,12 @@ public class ServiceProviderLifetimeTests
             })
             .ToList();
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act - Get services concurrently using Parallel.For
         var results = new IGenericResult<ITestService>[configs.Count];
@@ -827,8 +844,8 @@ public class ServiceProviderLifetimeTests
         var factory = rootProvider.GetRequiredService<TestServiceFactory>();
         var configProviderA = new TestServiceConfigurationProvider(typeAConfigs);
         var configProviderB = new TestServiceConfigurationProvider(typeBConfigs);
-        testProvider.Register("TypeA", factory);
-        testProvider.Register("TypeB", factory);
+        testProvider.Register("TypeA", new TestServiceImplementationProvider(factory));
+        testProvider.Register("TypeB", new TestServiceImplementationProvider(factory));
         testProvider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         // Act
@@ -860,7 +877,7 @@ public class ServiceProviderLifetimeTests
             new() { Name = "ShippingApi", Implementation = "Rest", Value = "https://shipping.api" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var msSqlFactory = new TestServiceFactory();
         var restFactory = new TestServiceFactory();
@@ -868,9 +885,9 @@ public class ServiceProviderLifetimeTests
         var msSqlConfigProvider = new TestServiceConfigurationProvider(msSqlConfigs);
         var restConfigProvider = new TestServiceConfigurationProvider(restConfigs);
         provider.Register(msSqlConfigProvider);
-        provider.Register("MsSql", msSqlFactory);
+        provider.Register("MsSql", new TestServiceImplementationProvider(msSqlFactory));
         provider.Register(restConfigProvider);
-        provider.Register("Rest", restFactory);
+        provider.Register("Rest", new TestServiceImplementationProvider(restFactory));
         provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
         // Act

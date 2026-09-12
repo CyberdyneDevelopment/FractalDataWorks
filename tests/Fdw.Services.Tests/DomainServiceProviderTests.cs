@@ -22,14 +22,14 @@ public class DefaultServiceProviderTests
 {
     private readonly TestServiceProvider _provider;
     private readonly Mock<IDomainConfigurationProvider<TestConfiguration>> _mockConfigProvider;
-    private readonly Mock<IServiceFactory<IGenericService>> _mockFactory;
+    private readonly Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>> _mockFactory;
 
     public DefaultServiceProviderTests()
     {
         var logger = NullLogger<DomainServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
-        _provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), logger);
+        _provider = new TestServiceProvider(logger);
         _mockConfigProvider = new Mock<IDomainConfigurationProvider<TestConfiguration>>();
-        _mockFactory = new Mock<IServiceFactory<IGenericService>>();
+        _mockFactory = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
 
         _provider.Register(_mockConfigProvider.Object);
     }
@@ -82,8 +82,8 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(mockService.Object));
+        _mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
@@ -104,8 +104,8 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed")));
+        _mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed")));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
@@ -128,8 +128,8 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(mockService.Object));
+        _mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
@@ -165,8 +165,8 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed")));
+        _mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed")));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
@@ -190,9 +190,9 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
 
         // We need a factory that returns IGenericService which is also TestService
-        var mockFactory = new Mock<IServiceFactory<IGenericService>>();
-        mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(testService));
+        var mockFactory = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
+        mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(testService));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
@@ -215,8 +215,8 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(mockService.Object));
+        _mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
@@ -241,9 +241,9 @@ public class DefaultServiceProviderTests
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
 
-        var mockFactory = new Mock<IServiceFactory<IGenericService>>();
-        mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(testService));
+        var mockFactory = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
+        mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(testService));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
@@ -267,8 +267,8 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get("MyService", It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        _mockFactory.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(mockService.Object));
+        _mockFactory.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
@@ -283,8 +283,8 @@ public class DefaultServiceProviderTests
     [Trait("Category", "CoreFramework")]
     public async Task RegisterOverwritesExistingFactory()
     {
-        var mockFactory1 = new Mock<IServiceFactory<IGenericService>>();
-        var mockFactory2 = new Mock<IServiceFactory<IGenericService>>();
+        var mockFactory1 = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
+        var mockFactory2 = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
 
         _provider.Register("TestType", mockFactory1.Object);
         _provider.Register("TestType", mockFactory2.Object);
@@ -296,13 +296,13 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
         _mockConfigProvider.Setup(cp => cp.Get(config.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(config));
-        mockFactory2.Setup(f => f.Create(It.IsAny<IGenericConfiguration>()))
-            .Returns(GenericResult<IGenericService>.Success(mockService.Object));
+        mockFactory2.Setup(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
 
         var result = await _provider.Get("MyService", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        mockFactory2.Verify(f => f.Create(It.IsAny<IGenericConfiguration>()), Times.Once);
+        mockFactory2.Verify(f => f.Create(It.IsAny<TestConfiguration>(), It.IsAny<CancellationToken>()), Times.Once);
     }}
