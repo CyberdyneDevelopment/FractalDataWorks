@@ -58,40 +58,6 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IGenericConnection>> Create(
-        IGenericConfiguration configuration,
-        CancellationToken cancellationToken = default)
-    {
-        if (configuration is not RoslynWorkspaceConnectionConfiguration config)
-            return GenericResult<IGenericConnection>.Failure(
-                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
-                    _logger,
-                    configuration?.GetType().Name ?? "null",
-                    $"Expected RoslynWorkspaceConnectionConfiguration but got {configuration?.GetType().Name ?? "null"}"));
-
-        return await Create(config, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// A Roslyn workspace connection carries no secret. What it does need resolved is an OPEN
-    /// workspace, and that is not a string, so it cannot travel through the resolved-secret
-    /// overload -- see the note on <see cref="Create(IGenericConfiguration, string)"/>.
-    /// </remarks>
-    public IGenericResult<SecretRequirement> RequiredSecret(IGenericConfiguration configuration)
-        => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// The resolved value is unused: this implementation needs no secret. Opening the workspace is
-    /// what it needs resolved, and the provider still does that through the asynchronous path below,
-    /// which is deliberately NOT part of the factory contract. Carrying a non-string resolved
-    /// dependency through this overload is the open question here.
-    /// </remarks>
-    public IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration, string? resolvedSecret)
-        => Create(configuration);
-
-    /// <inheritdoc />
     public IGenericResult<IGenericConnection> Create(RoslynWorkspaceConnectionConfiguration configuration)
     {
         return GenericResult<IGenericConnection>.Failure(
@@ -100,9 +66,24 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
                 "RoslynWorkspaceConnection requires async creation. Use the async overload."));
     }
 
-    private async Task<IGenericResult<IGenericConnection>> Create(
+    /// <summary>
+    /// Creates the connection from an already-opened workspace.
+    /// </summary>
+    /// <param name="configuration">The connection configuration.</param>
+    /// <param name="workspace">
+    /// The opened workspace, which Live mode requires and Snapshot mode ignores — Snapshot opens
+    /// lazily through its own client.
+    /// </param>
+    /// <returns>The connection, or a structured failure.</returns>
+    /// <remarks>
+    /// Why this takes the workspace rather than opening one: opening is resolution, it is the only
+    /// thing here that had to await, and resolution is the implementation provider's job. This is
+    /// declared on <see cref="IRoslynWorkspaceConnectionFactory"/> rather than the domain-wide
+    /// contract, because a workspace is meaningful to this implementation and to nothing else.
+    /// </remarks>
+    public IGenericResult<IGenericConnection> Create(
         RoslynWorkspaceConnectionConfiguration configuration,
-        CancellationToken cancellationToken)
+        IRoslynWorkspace? workspace)
     {
         if (string.IsNullOrWhiteSpace(configuration.Name))
             return GenericResult<IGenericConnection>.Failure(
@@ -142,27 +123,15 @@ public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectio
 
         if (mode.Name.Equals("Live", System.StringComparison.Ordinal))
         {
-            RoslynWorkspaceConnectionLog.LoadingSolution(_logger, connectionName, configuration.SolutionPath);
-            try
-            {
-                var workspace = await _workspaceFactory.CreateFromSolution(
-                    configuration.SolutionPath,
-                    excludePatterns,
-                    cancellationToken).ConfigureAwait(false);
-
-                return GenericResult<IGenericConnection>.Success(
-                    new RoslynWorkspaceConnection(configuration, workspace, mode, connectionName, _connectionLogger));
-            }
-            catch (System.OperationCanceledException)
-            {
-                throw;
-            }
-            catch (System.Exception ex)
-            {
+            // Live mode cannot be built without one: the provider opens it before calling here.
+            if (workspace is null)
                 return GenericResult<IGenericConnection>.Failure(
-                    RoslynWorkspaceConnectionLog.WorkspaceLoadFailed(
-                        _logger, ex, connectionName, configuration.SolutionPath, ex.Message));
-            }
+                    RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                        _logger, connectionName,
+                        "Live mode requires an opened workspace, and none was supplied"));
+
+            return GenericResult<IGenericConnection>.Success(
+                new RoslynWorkspaceConnection(configuration, workspace, mode, connectionName, _connectionLogger));
         }
 
         // Snapshot mode: return a connection with a lazy-loading client; no workspace yet.

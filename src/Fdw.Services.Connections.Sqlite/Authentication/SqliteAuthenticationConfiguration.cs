@@ -1,3 +1,4 @@
+using Fdw.Services.Connections.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,14 +57,19 @@ public abstract class SqliteAuthenticationConfiguration
     public abstract IGenericResult Validate(IReadOnlyDictionary<string, string?> values);
 
     /// <summary>
-    /// Resolves the optional encryption-key password from the auth KVP. Returns a null value for
-    /// methods that need no secret (None). Secret-using methods (EncryptionKey) parse their own
-    /// <c>SecretManagerName</c>/<c>SecretKeyName</c> keys, resolve the named manager via the supplied
-    /// FDW secret-manager provider, and read the secret. The connection provider hands the provider in;
-    /// the auth method never touches the raw container.
+    /// Reports the secret this authentication method needs fetched before a connection can be built.
     /// </summary>
-    public abstract Task<IGenericResult<string?>> ResolvePassword(
-        IReadOnlyDictionary<string, string?> values,
-        IDomainServiceProvider<ISecretManager> secretManagerProvider,
-        CancellationToken cancellationToken = default);
+    /// <param name="values">The connection's authentication properties.</param>
+    /// <returns>
+    /// The manager and key to read, or <see cref="SecretRequirement.None"/> for a method that needs
+    /// none (None). A secret-using method (EncryptionKey) names its own
+    /// <c>SecretManagerName</c>/<c>SecretKeyName</c>, because those are its properties.
+    /// </returns>
+    /// <remarks>
+    /// The method decides what it needs; the implementation provider fetches it and hands the value
+    /// back. The auth method never resolves a manager or reads a store itself, which is what lets
+    /// the factory below it stay synchronous.
+    /// </remarks>
+    public abstract IGenericResult<SecretRequirement> RequiredSecret(
+        IReadOnlyDictionary<string, string?> values);
 }

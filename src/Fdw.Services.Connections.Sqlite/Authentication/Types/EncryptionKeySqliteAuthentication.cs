@@ -1,3 +1,4 @@
+using Fdw.Services.Connections.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,30 +50,30 @@ public sealed class EncryptionKeySqliteAuthentication : SqliteAuthenticationConf
     }
 
     /// <inheritdoc/>
-    public override async Task<IGenericResult<string?>> ResolvePassword(
-        IReadOnlyDictionary<string, string?> values,
-        IDomainServiceProvider<ISecretManager> secretManagerProvider,
-        CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// SecretManagerName and SecretKeyName are this method's own properties, so naming the store
+    /// and the key belongs here. Naming the manager rather than accepting one is what makes a
+    /// silent credential substitution impossible.
+    /// </remarks>
+    public override IGenericResult<SecretRequirement> RequiredSecret(
+        IReadOnlyDictionary<string, string?> values)
     {
         var validation = Validate(values);
         if (!validation.IsSuccess)
-            return validation.ToNewResult<string?>();
+            return validation.ToNewResult<SecretRequirement>();
 
         values.TryGetValue("SecretManagerName", out var secretManagerName);
         values.TryGetValue("SecretKeyName", out var secretKeyName);
 
-        var managerResult = await secretManagerProvider.Get(secretManagerName!, cancellationToken).ConfigureAwait(false);
-        if (!managerResult.IsSuccess || managerResult.Value is null)
-            return GenericResult<string?>.Failure(
+        // Validate has already established both are present for this method; a missing one here is
+        // a defect in Validate, not something to paper over with a default.
+        return string.IsNullOrEmpty(secretManagerName) || string.IsNullOrEmpty(secretKeyName)
+            ? GenericResult<SecretRequirement>.Failure(
                 SqliteDataResultCodes.ByName("AuthenticationValidationFailed"),
-                ResultDetails.Create("ValidationErrors", $"Secret manager '{secretManagerName}' could not be resolved."));
-
-        var secretResult = await managerResult.Value
-            .Execute(GetSecretManagerCommand.Latest(null, secretKeyName!), cancellationToken)
-            .ConfigureAwait(false);
-        if (!secretResult.IsSuccess || secretResult.Value is null)
-            return secretResult.ToNewResult<string?>();
-
-        return GenericResult<string?>.Success(secretResult.Value.GetStringValue());
+                ResultDetails.Create(
+                    "ValidationErrors",
+                    "EncryptionKey authentication requires both SecretManagerName and SecretKeyName."))
+            : GenericResult<SecretRequirement>.Success(
+                new SecretRequirement(secretManagerName!, secretKeyName!));
     }
 }

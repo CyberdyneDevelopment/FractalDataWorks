@@ -28,5 +28,5 @@ public sealed class MockConnectionProvider
     public override Task<IGenericResult<IGenericConnection>> Create(
         IConnectionImplementationConfiguration configuration,
         CancellationToken cancellationToken = default)
-        => Task.FromResult(_factory.Create(configuration, resolvedSecret: null));
+        => Task.FromResult(_factory.Create(configuration));
 }

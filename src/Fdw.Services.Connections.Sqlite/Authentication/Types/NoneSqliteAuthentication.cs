@@ -1,3 +1,4 @@
+using Fdw.Services.Connections.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,9 +31,8 @@ public sealed class NoneSqliteAuthentication : SqliteAuthenticationConfiguration
         => GenericResult.Success();
 
     /// <inheritdoc/>
-    public override Task<IGenericResult<string?>> ResolvePassword(
-        IReadOnlyDictionary<string, string?> values,
-        IDomainServiceProvider<ISecretManager> secretManagerProvider,
-        CancellationToken cancellationToken = default)
-        => Task.FromResult(GenericResult<string?>.Success(null));
+    /// <inheritdoc/>
+    public override IGenericResult<SecretRequirement> RequiredSecret(
+        IReadOnlyDictionary<string, string?> values)
+        => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 }
