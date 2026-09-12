@@ -16,11 +16,11 @@ namespace Fdw.Services;
 /// <typeparam name="TConfigurationProvider">The provider that supplies the typed configuration.</typeparam>
 /// <remarks>
 /// Nothing new should name this. A domain gets its own named provider deriving from
-/// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
+/// <see cref="DomainServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
 /// directly; when the last collection stops naming this type, delete the file.
 /// </remarks>
 public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
-    : PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : DomainServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>
     where TService : IGenericService
     where TConfiguration : class, IImplementationConfiguration
     where TFactory : IServiceFactory<TService>
@@ -34,7 +34,7 @@ public class DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigu
     /// <param name="logger">The logger for this provider.</param>
     public DefaultServiceProvider(
         IServiceProvider services,
-        ILogger<PlatformServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> logger)
+        ILogger<DomainServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> logger)
         : base(services, logger)
     {
     }

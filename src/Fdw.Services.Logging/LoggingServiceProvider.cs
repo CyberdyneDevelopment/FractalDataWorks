@@ -10,7 +10,7 @@ namespace Fdw.Services.Logging;
 /// The logging domain's service provider.
 /// </summary>
 public sealed class LoggingServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         ILoggingService,
         ILoggingImplementationConfiguration,
         ILoggingFactory<ILoggingService, ILoggingImplementationConfiguration>,

@@ -14,7 +14,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// factory registered for the row's <c>Implementation</c> ("Local", "HttpClient", …).
 /// </summary>
 public sealed class HealthMonitorProvider
-    : PlatformServiceProviderBase<IHealthMonitorService, IHealthMonitorImplementationConfiguration, IServiceFactory<IHealthMonitorService>, IHealthMonitorConfigurationProvider>,
+    : DomainServiceProviderBase<IHealthMonitorService, IHealthMonitorImplementationConfiguration, IServiceFactory<IHealthMonitorService>, IHealthMonitorConfigurationProvider>,
       IHealthMonitorProvider
 {
 
@@ -27,7 +27,7 @@ public sealed class HealthMonitorProvider
         IServiceProvider services,
         ILogger<HealthMonitorProvider>? logger = null)
         : base(services, logger is null
-            ? NullLogger<PlatformServiceProviderBase<IHealthMonitorService, IHealthMonitorImplementationConfiguration, IServiceFactory<IHealthMonitorService>, IHealthMonitorConfigurationProvider>>.Instance
+            ? NullLogger<DomainServiceProviderBase<IHealthMonitorService, IHealthMonitorImplementationConfiguration, IServiceFactory<IHealthMonitorService>, IHealthMonitorConfigurationProvider>>.Instance
             : logger)
     {
     }

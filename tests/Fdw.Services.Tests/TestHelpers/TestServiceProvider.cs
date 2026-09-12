@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Tests.TestHelpers;
 
 /// <summary>
-/// A concrete provider for exercising <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>.
+/// A concrete provider for exercising <see cref="DomainServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>.
 /// </summary>
 public sealed class TestServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IGenericService,
           TestConfiguration,
           IServiceFactory<IGenericService>,
@@ -21,7 +21,7 @@ public sealed class TestServiceProvider
     /// <param name="logger">The logger for this provider.</param>
     public TestServiceProvider(
         IServiceProvider services,
-        ILogger<PlatformServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>> logger)
+        ILogger<DomainServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>> logger)
         : base(services, logger)
     {
     }

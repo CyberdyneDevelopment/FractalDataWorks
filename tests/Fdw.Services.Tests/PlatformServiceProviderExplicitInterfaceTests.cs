@@ -18,7 +18,7 @@ using Xunit;
 namespace Fdw.Services.Tests;
 
 /// <summary>
-/// Tests for PlatformServiceProviderBase explicit IPlatformServiceProvider interface implementations
+/// Tests for DomainServiceProviderBase explicit IDomainServiceProvider interface implementations
 /// that are not covered by the typed generic Get&lt;T&gt; tests.
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
@@ -30,7 +30,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
 
     public DefaultServiceProviderExplicitInterfaceTests()
     {
-        var logger = NullLogger<PlatformServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
+        var logger = NullLogger<DomainServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
         _provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), logger);
         _mockConfigProvider = new Mock<IDomainConfigurationProvider<TestConfiguration>>();
         _mockFactory = new Mock<IServiceFactory<IGenericService>>();
@@ -43,8 +43,8 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task ExplicitGetByNameWithCompatibleCastReturnsSuccess()
     {
-        // Access via the non-generic IPlatformServiceProvider interface
-        IPlatformServiceProvider explicitProvider = _provider;
+        // Access via the non-generic IDomainServiceProvider interface
+        IDomainServiceProvider explicitProvider = _provider;
 
         var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var testService = new TestService(NullLogger<TestService>.Instance, config);
@@ -72,7 +72,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task ExplicitGetByNameWithIncompatibleCastReturnsFailure()
     {
-        IPlatformServiceProvider explicitProvider = _provider;
+        IDomainServiceProvider explicitProvider = _provider;
 
         var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();
@@ -97,7 +97,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task ExplicitGetByNameWhenNotFoundReturnsFailure()
     {
-        IPlatformServiceProvider explicitProvider = _provider;
+        IDomainServiceProvider explicitProvider = _provider;
 
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
@@ -115,7 +115,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task ExplicitGetByIdWithCompatibleCastReturnsSuccess()
     {
-        IPlatformServiceProvider explicitProvider = _provider;
+        IDomainServiceProvider explicitProvider = _provider;
         var id = Guid.NewGuid();
 
         var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
@@ -144,7 +144,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task ExplicitGetByIdWithIncompatibleCastReturnsFailure()
     {
-        IPlatformServiceProvider explicitProvider = _provider;
+        IDomainServiceProvider explicitProvider = _provider;
         var id = Guid.NewGuid();
 
         var config = new TestConfiguration { Id = id, Name = "MyService", Implementation = "TestType" };
@@ -170,7 +170,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
     [Trait("Category", "CoreFramework")]
     public async Task ExplicitGetByIdWhenNotFoundReturnsFailure()
     {
-        IPlatformServiceProvider explicitProvider = _provider;
+        IDomainServiceProvider explicitProvider = _provider;
 
         _mockConfigProvider.Setup(cp => cp.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
@@ -261,7 +261,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
 
-        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("Missing", TestContext.Current.CancellationToken);
+        var result = await ((IDomainServiceProvider)_provider).Get<TestService>("Missing", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -275,7 +275,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<TestConfiguration>.Success(default(TestConfiguration)!));
         _provider.Register(_mockConfigProvider.Object);
 
-        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await ((IDomainServiceProvider)_provider).Get<TestService>(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }

@@ -51,7 +51,7 @@ public sealed class EncryptionKeySqliteAuthentication : SqliteAuthenticationConf
     /// <inheritdoc/>
     public override async Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
-        IPlatformServiceProvider<ISecretManager> secretManagerProvider,
+        IDomainServiceProvider<ISecretManager> secretManagerProvider,
         CancellationToken cancellationToken = default)
     {
         var validation = Validate(values);

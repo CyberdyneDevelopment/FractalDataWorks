@@ -65,7 +65,7 @@ public class ServiceTypeBaseNullHandlingTests
     }
 
     [ExcludeFromCodeCoverage]
-    private class TestProvider : IPlatformServiceProvider
+    private class TestProvider : IDomainServiceProvider
     {
         public Task<IGenericResult<T>> Get<T>(string name, CancellationToken cancellationToken = default) where T : IGenericService
             => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("Not implemented")));

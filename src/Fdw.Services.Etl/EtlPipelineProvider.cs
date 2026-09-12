@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl;
 /// Resolves ETL pipelines by configuration name or id.
 /// </summary>
 public sealed class EtlPipelineProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IEtlPipeline,
           IPipelineImplementationConfiguration,
           IEtlPipelineFactory<IEtlPipeline, IPipelineImplementationConfiguration>,

@@ -82,7 +82,7 @@ public static class AegisHostRegistration
     /// <summary>
     /// Phase 1a (before Build): binds the one ServiceTypeCollection this ConfigurationDb-free host
     /// drives — <see cref="SecretManagerTypes"/>, which registers the
-    /// <c>IPlatformServiceProvider&lt;ISecretManager, SecretManagerConfiguration&gt;</c> the
+    /// <c>IDomainServiceProvider&lt;ISecretManager, SecretManagerConfiguration&gt;</c> the
     /// <see cref="AegisInjector"/> resolves secret managers through.
     /// </summary>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null)

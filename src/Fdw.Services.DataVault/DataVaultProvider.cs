@@ -14,7 +14,7 @@ namespace Fdw.Services.DataVault;
 /// <summary>
 /// Default implementation of <see cref="IDataVaultProvider"/>, adding the typed
 /// <see cref="Get(DataVaultRequest, CancellationToken)"/> entry point over
-/// <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>.
+/// <see cref="DomainServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>.
 /// </summary>
 /// <remarks>
 /// Holds no implementation dependencies — it loads configuration and dispatches by
@@ -25,7 +25,7 @@ namespace Fdw.Services.DataVault;
 /// when present, which is how the registered vault factory resolves its own connection and pepper.
 /// </remarks>
 public sealed class DataVaultProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IDataVault,
           IDataVaultImplementationConfiguration,
           IDataVaultFactory<IDataVault, IDataVaultImplementationConfiguration>,

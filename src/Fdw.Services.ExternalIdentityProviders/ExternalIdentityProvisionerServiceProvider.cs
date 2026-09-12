@@ -20,7 +20,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// create time — which is what recursed without bound when it did (FDW-615).
 /// </remarks>
 public class ExternalIdentityProvisionerServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         IExternalIdentityProvisioner,
         IExternalIdentityProvisionerImplementationConfiguration,
         IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
@@ -34,12 +34,12 @@ public class ExternalIdentityProvisionerServiceProvider
     /// <param name="logger">Logger instance.</param>
     public ExternalIdentityProvisionerServiceProvider(
         IServiceProvider services,
-        ILogger<PlatformServiceProviderBase<
+        ILogger<DomainServiceProviderBase<
             IExternalIdentityProvisioner,
             IExternalIdentityProvisionerImplementationConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
             IExternalIdentityProvisionerConfigurationProvider>> logger)
-        : base(services, logger ?? NullLogger<PlatformServiceProviderBase<
+        : base(services, logger ?? NullLogger<DomainServiceProviderBase<
             IExternalIdentityProvisioner,
             IExternalIdentityProvisionerImplementationConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,

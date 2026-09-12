@@ -18,7 +18,7 @@ namespace Fdw.Services.Pipelines;
 /// registry and silently builds nothing.
 /// </remarks>
 public sealed class PipelineServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IGenericService,
           IPipelineImplementationConfiguration,
           IServiceFactory<IGenericService>,

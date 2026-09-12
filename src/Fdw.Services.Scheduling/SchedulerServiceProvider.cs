@@ -11,7 +11,7 @@ namespace Fdw.Services.Scheduling;
 /// </summary>
 /// <remarks>
 /// Inherits the whole resolution path from
-/// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
+/// <see cref="DomainServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
 /// and overrides nothing — schedulers resolve exactly the way the platform does. A domain that needs
 /// different behaviour overrides the virtual member here rather than reaching into the base.
 /// <para>
@@ -21,7 +21,7 @@ namespace Fdw.Services.Scheduling;
 /// </para>
 /// </remarks>
 public sealed class SchedulerServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         IFrameworkSchedulingService,
         ISchedulerImplementationConfiguration,
         ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>,

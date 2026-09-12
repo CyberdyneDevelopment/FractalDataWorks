@@ -18,7 +18,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <summary>
 /// Composite <see cref="IExternalIdentityProvisioner"/> that walks its ordered
 /// <see cref="ChainedExternalIdentityProvisionerConfiguration.Steps"/> children, resolving each named
-/// sibling provisioner through the injected <c>IPlatformServiceProvider</c> — NEVER a switch on provisioner
+/// sibling provisioner through the injected <c>IDomainServiceProvider</c> — NEVER a switch on provisioner
 /// type — and delegating <c>Provision</c> to it in turn. The chain does not appear on any
 /// storage-format switch above the connection layer: adding a new leaf provisioner is purely a new
 /// <c>sec.ChainedProvisionerStep</c> row, never a code change here.
@@ -47,13 +47,13 @@ internal sealed class ChainedExternalIdentityProvisioner : IExternalIdentityProv
 {
     private const int CanonicalNotFoundId = 30000;
     private readonly ChainedExternalIdentityProvisionerConfiguration _typed;
-    private readonly IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> _provisionerProvider;
+    private readonly IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> _provisionerProvider;
     private readonly ILogger<ChainedExternalIdentityProvisioner> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ChainedExternalIdentityProvisioner"/> class.</summary>
     public ChainedExternalIdentityProvisioner(
         ChainedExternalIdentityProvisionerConfiguration typed,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider,
+        IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider,
         ILogger<ChainedExternalIdentityProvisioner>? logger)
     {
         _typed = typed ?? throw new ArgumentNullException(nameof(typed));

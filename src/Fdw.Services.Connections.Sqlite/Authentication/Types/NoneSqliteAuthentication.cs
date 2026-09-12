@@ -32,7 +32,7 @@ public sealed class NoneSqliteAuthentication : SqliteAuthenticationConfiguration
     /// <inheritdoc/>
     public override Task<IGenericResult<string?>> ResolvePassword(
         IReadOnlyDictionary<string, string?> values,
-        IPlatformServiceProvider<ISecretManager> secretManagerProvider,
+        IDomainServiceProvider<ISecretManager> secretManagerProvider,
         CancellationToken cancellationToken = default)
         => Task.FromResult(GenericResult<string?>.Success(null));
 }

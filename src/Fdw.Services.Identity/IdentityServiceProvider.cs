@@ -10,7 +10,7 @@ namespace Fdw.Services.Identity;
 /// Resolves identity services by configuration name or id.
 /// </summary>
 public sealed class IdentityServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IIdentityService,
           IIdentityServiceImplementationConfiguration,
           IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>,

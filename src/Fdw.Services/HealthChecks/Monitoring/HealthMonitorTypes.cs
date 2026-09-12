@@ -25,7 +25,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <para>
 /// The health monitor is a full service domain: options ("Local" in this assembly, "HttpClient" in
 /// <c>Fdw.Web.Analytics.Clients</c>) register factories with the domain provider, and consumers depend
-/// on the provider (<see cref="IPlatformServiceProvider{TService,TConfiguration}"/> of
+/// on the provider (<see cref="IDomainServiceProvider{TService,TConfiguration}"/> of
 /// <see cref="IHealthMonitorService"/>/<see cref="DomainConfiguration"/>) — never on a direct
 /// <see cref="IHealthMonitorService"/> registration. Which implementation a host runs is that host's
 /// <c>HealthMonitors</c> appsettings row (<c>Implementation</c>), resolved at first use — not a

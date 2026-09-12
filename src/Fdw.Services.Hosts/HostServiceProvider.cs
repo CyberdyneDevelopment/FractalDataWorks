@@ -10,7 +10,7 @@ namespace Fdw.Services.Hosts;
 /// The hosting domain's service provider.
 /// </summary>
 public sealed class HostServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         IHostService,
         IHostImplementationConfiguration,
         IHostFactory<IHostService, IHostImplementationConfiguration>,

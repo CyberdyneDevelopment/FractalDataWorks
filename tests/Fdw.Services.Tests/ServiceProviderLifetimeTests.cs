@@ -18,7 +18,7 @@ using Fdw.Services.Results;
 namespace Fdw.Services.Tests;
 
 /// <summary>
-/// Comprehensive tests for PlatformServiceProviderBase demonstrating service lifetime behaviors.
+/// Comprehensive tests for DomainServiceProviderBase demonstrating service lifetime behaviors.
 /// These tests verify that singleton providers, scoped configurations, and factory registrations
 /// behave correctly across DI scopes.
 /// </summary>
@@ -117,9 +117,9 @@ public class ServiceProviderLifetimeTests
     }
 
     /// <summary>
-    /// Concrete test provider for testing PlatformServiceProviderBase behavior.
+    /// Concrete test provider for testing DomainServiceProviderBase behavior.
     /// </summary>
-    public class TestServiceProvider : PlatformServiceProviderBase<
+    public class TestServiceProvider : DomainServiceProviderBase<
         ITestService,
         TestServiceConfiguration,
         IServiceFactory<ITestService>,

@@ -111,28 +111,23 @@ public abstract class MsSqlAuthenticationConfiguration
     /// <inheritdoc />
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
-    /// <inheritdoc />
-    /// <summary>Builds the authentication fragment, resolving any secret this type needs.</summary>
+    /// <summary>Reports the secret this authentication type needs fetched before it can build.</summary>
     /// <param name="values">The connection's authentication properties.</param>
-    /// <param name="supplied">
-    /// A manager handed in directly, by a caller that cannot resolve one by name — the connection
-    /// that reaches the configuration store is in that position, since the provider that would
-    /// resolve it reads its own configuration out of the store being opened.
-    /// </param>
-    /// <param name="provider">Resolves a manager by the name this type's own properties declare.</param>
-    /// <param name="cancellationToken">A token to cancel the resolution.</param>
+    /// <returns>
+    /// The manager and key to read, or <see cref="SecretRequirement.None"/> when this type needs no
+    /// secret — which is the default, since most authentication types carry no password.
+    /// </returns>
     /// <remarks>
-    /// Whether a secret is needed, which manager holds it, and how to fetch it are all decided here,
+    /// Whether a secret is needed, which manager holds it and under which key are all decided here,
     /// because this type owns the property set those answers come from — SecretManagerName and
-    /// SecretKeyName are its keys, not the factory's. The default needs none: a type that declares no
-    /// secret-bearing properties ignores both arguments.
+    /// SecretKeyName are its keys, not the factory's. What changed is only that this type no longer
+    /// goes and FETCHES it: the provider does that and hands the value back to
+    /// <see cref="BuildAuthFragment(IReadOnlyDictionary{string, string}, string)"/>, which is where
+    /// this type builds the secret portion of the connection string. Deciding stays here; awaiting
+    /// moved out, so a factory never has to be asynchronous.
     /// </remarks>
-    public virtual Task<IGenericResult<string>> BuildAuthFragment(
-        IReadOnlyDictionary<string, string?> values,
-        ISecretManager? supplied,
-        ISecretManagerProvider? provider,
-        CancellationToken cancellationToken = default)
-        => Task.FromResult(BuildAuthFragment(values, resolvedPassword: null));
+    public virtual IGenericResult<SecretRequirement> RequiredSecret(IReadOnlyDictionary<string, string?> values)
+        => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 
     /// <inheritdoc />
     public abstract IGenericResult Validate(IReadOnlyDictionary<string, string?> values);

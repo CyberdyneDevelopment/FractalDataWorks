@@ -6,6 +6,6 @@ namespace Fdw.Services.Hosts.Abstractions;
 /// Resolves hosting services by configuration name or id.
 /// </summary>
 public interface IHostServiceProvider
-    : IPlatformServiceProvider<IHostService, IHostImplementationConfiguration>
+    : IDomainServiceProvider<IHostService, IHostImplementationConfiguration>
 {
 }

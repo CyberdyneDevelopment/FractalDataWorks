@@ -65,82 +65,26 @@ public sealed class SqlAuthConfiguration : MsSqlAuthenticationConfiguration
     }
 
     /// <inheritdoc/>
-    public override async Task<IGenericResult<string>> BuildAuthFragment(
-        IReadOnlyDictionary<string, string?> values,
-        ISecretManager? supplied,
-        ISecretManagerProvider? provider,
-        CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// SecretManagerName and SecretKeyName are this type's own properties, so naming the store and
+    /// the key belongs here rather than in whatever builds the connection. Naming the manager rather
+    /// than accepting one is also what makes a silent credential substitution impossible: the
+    /// provider reads the store this connection declared and has no way to prefer a different one.
+    /// </remarks>
+    public override IGenericResult<SecretRequirement> RequiredSecret(IReadOnlyDictionary<string, string?> values)
     {
         var validation = Validate(values);
         if (!validation.IsSuccess)
-            return validation.ToNewResult<string>();
+            return validation.ToNewResult<SecretRequirement>();
 
-        string? resolvedPassword = null;
         values.TryGetValue("SecretKeyName", out var secretKeyName);
-        if (!string.IsNullOrEmpty(secretKeyName))
-        {
-            var manager = await Manager(values, supplied, provider, cancellationToken).ConfigureAwait(false);
-            if (!manager.IsSuccess)
-                return manager.ToNewResult<string>();
+        if (string.IsNullOrEmpty(secretKeyName))
+            return GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 
-            var secretManager = manager.Value;
-            if (secretManager is null)
-            {
-                return GenericResult<string>.Failure(
-                    MsSqlResultCodes.ByName("AuthenticationValidationFailed"),
-                    ResultDetails.Create("ValidationErrors",
-                        "SqlAuth requires a SecretManager to resolve SecretKeyName but none was supplied."));
-            }
-            var secretCommand = GetSecretManagerCommand.Latest(null, secretKeyName);
-            var secretResult = await secretManager.Execute(secretCommand, cancellationToken).ConfigureAwait(false);
-            if (!secretResult.IsSuccess || secretResult.Value is null)
-                return secretResult.ToNewResult<string>();
-            resolvedPassword = secretResult.Value.GetStringValue();
-        }
-
-        return BuildAuthFragment(values, resolvedPassword);
-    }
-
-    /// <summary>Finds the manager holding this connection's password.</summary>
-    /// <remarks>
-    /// SecretManagerName is one of this type's own properties, so choosing the manager belongs here
-    /// rather than in whatever is building the connection. A supplied manager still has to BE the
-    /// store this connection named: reading a password out of a store the connection never declared
-    /// is a silent credential substitution, so a mismatch is refused rather than preferred.
-    /// </remarks>
-    private async Task<IGenericResult<ISecretManager?>> Manager(
-        IReadOnlyDictionary<string, string?> values,
-        ISecretManager? supplied,
-        ISecretManagerProvider? provider,
-        CancellationToken cancellationToken)
-    {
+        // A declared key with no store to read it from is a configuration defect, not "no secret".
         var declared = GetValue(values, "SecretManagerName");
-        if (!declared.IsSuccess)
-            return declared.ToNewResult<ISecretManager?>();
-
-        if (supplied is not null)
-        {
-            return string.Equals(supplied.Name, declared.Value, StringComparison.OrdinalIgnoreCase)
-                ? GenericResult<ISecretManager?>.Success(supplied)
-                : GenericResult<ISecretManager?>.Failure(
-                    MsSqlResultCodes.ByName("AuthenticationValidationFailed"),
-                    ResultDetails.Create(
-                        "ValidationErrors",
-                        $"The connection declares secret manager \'{declared.Value}\' but \'{supplied.Name}\' was supplied."));
-        }
-
-        if (provider is null)
-        {
-            return GenericResult<ISecretManager?>.Failure(
-                MsSqlResultCodes.ByName("AuthenticationValidationFailed"),
-                ResultDetails.Create(
-                    "ValidationErrors",
-                    $"SqlAuth needs secret manager \'{declared.Value}\' and no provider was available to resolve it."));
-        }
-
-        var resolved = await provider.Get(declared.Value!, cancellationToken).ConfigureAwait(false);
-        return resolved.IsSuccess && resolved.Value is not null
-            ? GenericResult<ISecretManager?>.Success(resolved.Value)
-            : resolved.ToNewResult<ISecretManager?>();
+        return declared.IsSuccess
+            ? GenericResult<SecretRequirement>.Success(new SecretRequirement(declared.Value!, secretKeyName!))
+            : declared.ToNewResult<SecretRequirement>();
     }
 }

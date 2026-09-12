@@ -14,12 +14,12 @@ namespace Fdw.Services.Credentials;
 
 /// <summary>
 /// Default implementation of <see cref="ICredentialServiceProvider"/>.
-/// Wraps <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
+/// Wraps <see cref="DomainServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
 /// and adds credential-service-specific cache-by-name lookup and the typed
 /// <see cref="Get(CredentialServiceRequest, CancellationToken)"/> entry point.
 /// </summary>
 public sealed class CredentialServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           ICredentialService,
           ICredentialServiceImplementationConfiguration,
           ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>,

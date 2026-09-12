@@ -26,7 +26,7 @@ public class DefaultServiceProviderTests
 
     public DefaultServiceProviderTests()
     {
-        var logger = NullLogger<PlatformServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
+        var logger = NullLogger<DomainServiceProviderBase<IGenericService, TestConfiguration, IServiceFactory<IGenericService>, IDomainConfigurationProvider<TestConfiguration>>>.Instance;
         _provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), logger);
         _mockConfigProvider = new Mock<IDomainConfigurationProvider<TestConfiguration>>();
         _mockFactory = new Mock<IServiceFactory<IGenericService>>();
@@ -197,7 +197,7 @@ public class DefaultServiceProviderTests
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
 
-        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
+        var result = await ((IDomainServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(testService);
@@ -222,7 +222,7 @@ public class DefaultServiceProviderTests
         _provider.Register("TestType", _mockFactory.Object);
 
         // Try to cast to a type it doesn't implement
-        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
+        var result = await ((IDomainServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }
@@ -248,7 +248,7 @@ public class DefaultServiceProviderTests
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", mockFactory.Object);
 
-        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
+        var result = await ((IDomainServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(testService);
@@ -273,7 +273,7 @@ public class DefaultServiceProviderTests
         _provider.Register(_mockConfigProvider.Object);
         _provider.Register("TestType", _mockFactory.Object);
 
-        var result = await ((IPlatformServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
+        var result = await ((IDomainServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
     }

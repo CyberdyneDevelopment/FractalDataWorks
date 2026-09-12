@@ -28,7 +28,7 @@ namespace Fdw.Services.Connections;
 /// nothing.
 /// </remarks>
 public sealed class ConnectionProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IGenericConnection,
           IConnectionImplementationConfiguration,
           IServiceFactory<IGenericConnection>,

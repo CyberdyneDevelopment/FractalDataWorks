@@ -36,7 +36,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Tests;
 public sealed class ProvisionerFactoryResolutionCycleTests
 {
     private static readonly Type ProviderServiceType =
-        typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>);
+        typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>);
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -100,13 +100,13 @@ public sealed class ProvisionerFactoryResolutionCycleTests
             .SelectMany(t => t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .SelectMany(c => c.GetParameters())
                 .Where(p => p.ParameterType.IsGenericType
-                            && p.ParameterType.GetGenericTypeDefinition() == typeof(IPlatformServiceProvider<,>))
+                            && p.ParameterType.GetGenericTypeDefinition() == typeof(IDomainServiceProvider<,>))
                 .Select(p => $"{t.Name}({p.ParameterType.Name} {p.Name})"))
             .ToList();
 
         // Assert
         offenders.ShouldBeEmpty(
-            "a factory taking IPlatformServiceProvider<,> directly re-enters that provider's generated scoped "
+            "a factory taking IDomainServiceProvider<,> directly re-enters that provider's generated scoped "
             + "resolver lambda when the option's RegisterFactory resolves it, causing an unbounded, silent "
             + "recursion. Wrap the dependency in Lazy<T>. Offenders: " + string.Join(", ", offenders));
     }

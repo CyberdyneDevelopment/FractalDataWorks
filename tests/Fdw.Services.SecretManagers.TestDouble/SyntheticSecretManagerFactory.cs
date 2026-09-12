@@ -12,7 +12,7 @@ namespace Fdw.Services.SecretManagers.TestDouble;
 /// Builds <see cref="SyntheticSecretManager"/> instances from a declared configuration.
 /// </summary>
 /// <remarks>
-/// Why the header unwrap: <c>PlatformServiceProviderBase</c> hands the composed
+/// Why the header unwrap: <c>DomainServiceProviderBase</c> hands the composed
 /// the implementation configuration to the factory, so
 /// the factory takes the name from the header and the settings from the body — the same shape every
 /// shipped backend factory uses.

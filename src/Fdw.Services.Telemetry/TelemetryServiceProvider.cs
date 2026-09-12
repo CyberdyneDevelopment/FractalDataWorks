@@ -10,7 +10,7 @@ namespace Fdw.Services.Telemetry;
 /// The telemetry domain's service provider.
 /// </summary>
 public sealed class TelemetryServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         ITelemetryService,
         ITelemetryImplementationConfiguration,
         ITelemetryFactory<ITelemetryService, ITelemetryImplementationConfiguration>,

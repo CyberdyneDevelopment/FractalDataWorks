@@ -8,7 +8,7 @@ namespace Fdw.Services.DataVault.Abstractions;
 /// <summary>
 /// Provider for configured data vault instances.
 /// </summary>
-public interface IDataVaultProvider : IPlatformServiceProvider<IDataVault, IDataVaultImplementationConfiguration>
+public interface IDataVaultProvider : IDomainServiceProvider<IDataVault, IDataVaultImplementationConfiguration>
 {
     /// <summary>
     /// Gets a vault matching the supplied typed request (Id and/or Name).

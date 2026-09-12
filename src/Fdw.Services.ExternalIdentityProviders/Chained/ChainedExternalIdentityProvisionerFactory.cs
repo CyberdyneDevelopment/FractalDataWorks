@@ -22,7 +22,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Chained;
 /// <para>
 /// <strong>Do not ctor-inject a provider here.</strong> This factory is resolved from inside the
 /// source-generated scoped resolver lambda for
-/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration&gt;</c>.
+/// <c>IDomainServiceProvider&lt;IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration&gt;</c>.
 /// Taking that provider as a constructor dependency made resolving the factory re-enter the same lambda —
 /// whose cache entry is not published yet — producing unbounded recursion. MEDI's StackGuard migrates it
 /// onto fresh stacks instead of throwing, so the host HANGS SILENTLY (no exception, no log) until it is
@@ -54,7 +54,7 @@ internal sealed class ChainedExternalIdentityProvisionerFactory
     /// <inheritdoc />
     public IGenericResult<IExternalIdentityProvisioner> Create(
         IExternalIdentityProvisionerImplementationConfiguration configuration,
-        IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
+        IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration> provisionerProvider)
     {
         if (configuration is null)
             return GenericResult<IExternalIdentityProvisioner>.Failure(

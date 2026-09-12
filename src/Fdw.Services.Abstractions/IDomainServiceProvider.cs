@@ -13,7 +13,7 @@ namespace Fdw.ServiceTypes;
 /// Base interface for Fdw service providers.
 /// Use when you need to get any service without knowing the specific TService type.
 /// </summary>
-public interface IPlatformServiceProvider
+public interface IDomainServiceProvider
 {
     /// <summary>Gets a service instance by configuration name.</summary>
     Task<IGenericResult<T>> Get<T>(string name, CancellationToken cancellationToken = default) where T : IGenericService;
@@ -29,7 +29,7 @@ public interface IPlatformServiceProvider
 /// Strongly-typed service provider interface.
 /// </summary>
 /// <typeparam name="TService">The type of service this provider manages.</typeparam>
-public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
+public interface IDomainServiceProvider<TService> : IDomainServiceProvider
     where TService : IGenericService
 {
     /// <summary>Gets a service instance by configuration name.</summary>
@@ -56,15 +56,25 @@ public interface IPlatformServiceProvider<TService> : IPlatformServiceProvider
 /// </summary>
 /// <typeparam name="TService">The type of service this provider manages.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
-public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
+public interface IDomainServiceProvider<TService, TConfiguration> : IDomainServiceProvider<TService>
     where TService : IGenericService
     where TConfiguration : IImplementationConfiguration
 {
 
     /// <summary>
-    /// Registers a factory for a service option type.
+    /// Registers the provider that builds one implementation of this domain.
     /// </summary>
-    IGenericResult Register(string implementation, IServiceFactory<TService> factory);
+    /// <param name="implementation">The implementation name a domain row carries.</param>
+    /// <param name="implementationProvider">The provider that resolves and builds that implementation.</param>
+    /// <returns>Success, or a structured failure.</returns>
+    /// <remarks>
+    /// This only keeps what it is handed. Constructing the implementation provider and registering it
+    /// in the container is a three-phase Register body's job, as every other DI registration in this
+    /// framework is — so a domain provider never resolves anything and needs no container.
+    /// </remarks>
+    IGenericResult Register(
+        string implementation,
+        IImplementationServiceProvider<TService, TConfiguration> implementationProvider);
     /// <summary>
     /// Registers a parent configuration provider for direct name-to-type resolution.
     /// The parent provider holds ALL configurations across all service option types,
@@ -83,8 +93,8 @@ public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformS
 /// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
 /// <typeparam name="TFactory">The factory type for creating service instances.</typeparam>
 /// <typeparam name="TConfigurationProvider">The configuration provider type.</typeparam>
-public interface IPlatformServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
-    : IPlatformServiceProvider<TService, TConfiguration>
+public interface IDomainServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : IDomainServiceProvider<TService, TConfiguration>
     where TService : IGenericService
     where TConfiguration : IImplementationConfiguration
     where TFactory : IServiceFactory<TService>

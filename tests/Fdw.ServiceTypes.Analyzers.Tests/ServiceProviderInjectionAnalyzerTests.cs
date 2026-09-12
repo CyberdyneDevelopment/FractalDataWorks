@@ -38,11 +38,11 @@ public class ServiceProviderInjectionAnalyzerTests
         {
             using Fdw.Abstractions;
 
-            public interface IPlatformServiceProvider<TService> where TService : IGenericService
+            public interface IDomainServiceProvider<TService> where TService : IGenericService
             {
             }
 
-            public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
+            public interface IDomainServiceProvider<TService, TConfiguration> : IDomainServiceProvider<TService>
                 where TService : IGenericService
             {
             }
@@ -110,7 +110,7 @@ public class ServiceProviderInjectionAnalyzerTests
 
                 public class EtlPipeline : IEtlPipeline
                 {
-                    public EtlPipeline(IPlatformServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
+                    public EtlPipeline(IDomainServiceProvider<ISecretManager, SecretManagerConfiguration> secretManagerProvider)
                     {
                     }
                 }
