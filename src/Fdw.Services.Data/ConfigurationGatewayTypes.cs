@@ -136,14 +136,17 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
                     log, connectionName, declared.Implementation));
 
         // The implementation provider, not the factory: resolving whatever this connection needs
-        // fetched is its job, here as everywhere else. This is the one caller that cannot reach it
-        // through the domain provider, because the domain's registry is populated from the store
-        // this is being built to open.
-        if (services.GetService(connectionType.ProviderType)
-                is not IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider)
-            return GenericResult<IConfigurationGateway>.Failure(
-                ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
-                    log, connectionName, connectionType.ProviderType.Name));
+        // fetched is its job, here as everywhere else. Resolved LAZILY, because the provider's own
+        // dependencies reach the logging domain, which reads its configuration back through this
+        // gateway -- eager resolution here is a cycle that parks the host with no exception and no
+        // log line. At first use the container is built and the cycle cannot form.
+        var connectionProvider =
+            new Lazy<IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>>(
+                () => services.GetService(connectionType.ProviderType)
+                    as IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>
+                    ?? throw new InvalidOperationException(
+                        FormattableString.Invariant(
+                            $"Connection '{connectionName}' names implementation provider '{connectionType.ProviderType.Name}', which is not registered.")));
 
 
         return GenericResult<IConfigurationGateway>.Success(
