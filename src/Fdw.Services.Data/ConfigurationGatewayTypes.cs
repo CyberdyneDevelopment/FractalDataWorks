@@ -91,7 +91,27 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             // so this doesn't duplicate the gateway a named lookup later produces for the same
             // connection -- it just builds it here instead of at first ask.
             using var built = builder.Services.BuildServiceProvider();
-            var bareGateway = built.GetRequiredService<IConfigurationGatewayProvider>().Get(ConfigurationConnection);
+            var gateways = built.GetRequiredService<IConfigurationGatewayProvider>();
+
+            // ServerConfiguration first, and deliberately. It is the store the logging domain reads
+            // its own rows from, and it is reached over a FileSystem connection -- no secret, no
+            // database. Building it first means logging can stand up before anything opens
+            // PlatformConfiguration, which is MsSql and whose factory asks for a logger. Built the
+            // other way round, that request re-enters Serilog's configure callback, which reads the
+            // logging row, which comes back through this gateway: a cycle DI turns into
+            // cross-thread waits, so the host parks with no exception and no log line.
+            // Get() memoizes, so the named lookup a caller makes later reuses this instance.
+            var serverGateway = gateways.Get(ServerTierConnectionName);
+            if (serverGateway.IsFailure || serverGateway.Value is null)
+            {
+                var serverLog = loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
+                    ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConfigurationGatewayTypes>.Instance;
+                return GenericResult<IHostApplicationBuilder>.Failure(
+                    ConfigurationGatewayProviderLog.BareGatewayUnavailable(
+                        serverLog, ServerTierConnectionName, serverGateway.CurrentMessage ?? string.Empty));
+            }
+
+            var bareGateway = gateways.Get(ConfigurationConnection);
             if (bareGateway.IsFailure || bareGateway.Value is null)
             {
                 var log = loggerFactory?.CreateLogger<ConfigurationGatewayTypes>()
@@ -141,12 +161,7 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
         // secret-manager provider, a logger -- which reaches the logging domain, which reads its
         // configuration back through here. That cycle parks the host silently. The connections a
         // gateway opens declare no secret, so there is nothing for a richer provider to do.
-        // Constructed, not resolved, and constructed through a view that hands back null loggers.
-        // Resolving this factory from the container asks for an ILogger, which re-enters Serilog's
-        // AddSerilog callback, which reads the logging domain's configuration -- through this
-        // gateway. That cycle does not throw; it parks the host silently.
-        if (ActivatorUtilities.CreateInstance(
-                new LoggerlessServiceProvider(services), connectionType.FactoryType) is not IConnectionFactory factory)
+        if (services.GetService(connectionType.FactoryType) is not IConnectionFactory factory)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
                     log, connectionName, connectionType.FactoryType.Name));
