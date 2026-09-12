@@ -12,6 +12,7 @@ namespace Fdw.Configuration;
 /// implementation of it -- and it holds no implementation, because it is never returned. It is the
 /// lookup, not the answer.
 /// </remarks>
+[global::Fdw.Data.GenerateMapper]
 public sealed partial class DomainConfiguration : IDomainConfiguration
 {
     /// <summary>Gets or sets the identifier assigned by the store.</summary>
