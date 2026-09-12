@@ -50,7 +50,15 @@ public sealed class RoslynWorkspaceConnectionType
             services.GetRequiredService<ConnectionConfigurationProvider>()
                 .Register(
                     Name, services.GetRequiredService<IRoslynWorkspaceConnectionConfigurationProvider>());
-    
+
+            // The line above tells the connection domain how to READ this option's rows; this hands the
+            // runtime connection provider what it BUILDS a workspace connection with. Without it
+            // IConnectionProvider's registry has no entry for this option and every workspace
+            // connection fails with "no factory for service option".
+            var implementationRegistered = services.GetRequiredService<IConnectionProvider>()
+                .Register(Name, services.GetRequiredService<IRoslynWorkspaceConnectionProvider>());
+            if (!implementationRegistered.IsSuccess) return implementationRegistered.ToNewResult<IHost>();
+
             return GenericResult<IHost>.Success(host);
         });
 
