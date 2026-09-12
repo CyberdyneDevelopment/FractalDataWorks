@@ -169,12 +169,18 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
 
                 entry.Authority = issuer.Value;
 
-                // Which option serves this row is the row's own implementation type: the domain
-                // handed back the implementation it named, and the collection is what maps a
-                // configuration type back to the option that declared it.
-                if (All().Values.FirstOrDefault(t => t.ConfigurationType == entry.GetType()) is not AuthenticationServiceTypeBase option)
+                // Which option serves this row is the row's own Implementation -- the same name the
+                // option registered its implementation provider under, stamped onto the row by the
+                // domain provider during dispatch. Matching on the configuration TYPE could never
+                // work: ConfigurationType is ServiceTypeBase's TConfiguration, and every option here
+                // closes it to IServiceConfiguration, so all of them compared equal to each other and
+                // none to the concrete row. Every declared service was reported as an unreadable
+                // section no matter how correctly it was configured.
+                if (ByName(entry.Implementation) is not AuthenticationServiceTypeBase option
+                    || option == NotFound)
                     return GenericResult<IHost>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, serviceName));
+                        AuthenticationValidationLog.NoOptionForImplementation(
+                            log, serviceName, entry.Implementation));
 
                 var kind = option.Name;
 

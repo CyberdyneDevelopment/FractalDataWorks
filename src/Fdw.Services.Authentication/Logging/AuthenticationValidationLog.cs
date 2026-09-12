@@ -51,10 +51,10 @@ public static partial class AuthenticationValidationLog
         Message = "Authentication service '{serviceName}' ({mechanism}) reported success without producing a scheme binding")]
     public static partial IGenericMessage SchemeNotProduced(ILogger logger, string serviceName, string mechanism);
 
-    /// <summary>Logs an AuthenticationServices section that could not be read.</summary>
+    /// <summary>Logs a declared authentication service whose Implementation names no registered option.</summary>
     [MessageLogging(EventId = 71108, Level = LogLevel.Error,
-        Message = "The AuthenticationServices declarations for mechanism '{mechanism}' reported success with no entries. The section was readable and empty - check that an entry names Implementation '{mechanism}' exactly, since a mechanism name that matches no registered option is silently skipped rather than rejected")]
-    public static partial IGenericMessage SectionUnreadable(ILogger logger, string mechanism);
+        Message = "Authentication service '{serviceName}' names Implementation '{implementation}', and no option is registered under that name. The row was read and composed; what is missing is the package that declares that implementation, so either the name is misspelled or this host does not reference it")]
+    public static partial IGenericMessage NoOptionForImplementation(ILogger logger, string serviceName, string implementation);
 
     /// <summary>Logs a validated token that carried no claims identity.</summary>
     [MessageLogging(EventId = 71109, Level = LogLevel.Error,
