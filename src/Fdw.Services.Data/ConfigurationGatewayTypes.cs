@@ -130,21 +130,26 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionDeclaresNoKind(log, connectionName));
 
-        if (ConnectionTypes.ByName(declared.Implementation) is not IServiceType connectionType)
+        if (ConnectionTypes.ByName(declared.Implementation) is not IConnectionType connectionType)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionKindNotRegistered(
                     log, connectionName, declared.Implementation));
 
-        if (services.GetService(connectionType.FactoryType) is not IConnectionFactory factory)
+        // The implementation provider, not the factory: resolving whatever this connection needs
+        // fetched is its job, here as everywhere else. This is the one caller that cannot reach it
+        // through the domain provider, because the domain's registry is populated from the store
+        // this is being built to open.
+        if (services.GetService(connectionType.ProviderType)
+                is not IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider)
             return GenericResult<IConfigurationGateway>.Failure(
                 ConfigurationGatewayProviderLog.ConnectionFactoryUnavailable(
-                    log, connectionName, connectionType.FactoryType.Name));
+                    log, connectionName, connectionType.ProviderType.Name));
 
 
         return GenericResult<IConfigurationGateway>.Success(
             new ConfigurationGateway(
                 connectionName,
-                factory,
+                connectionProvider,
                 schema,
                 services.GetService<ILogger<ConfigurationGateway>>(),
                 services.GetService<DataGatewayResultCache>(),

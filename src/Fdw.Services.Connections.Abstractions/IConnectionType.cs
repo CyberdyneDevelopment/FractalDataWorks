@@ -28,6 +28,14 @@ public interface IConnectionType<TService, TConfiguration, TFactory> : IServiceT
 /// </summary>
 public interface IConnectionType : IServiceType
 {
+    /// <summary>Gets the implementation provider type that resolves and builds this connection.</summary>
+    /// <remarks>
+    /// Beside <c>FactoryType</c>, not instead of it: the factory still constructs. This names the
+    /// provider that resolves whatever must be fetched first, which is what a caller needs when it
+    /// has to open a connection before any domain provider's registry has been populated.
+    /// </remarks>
+    System.Type ProviderType { get; }
+
     /// <summary>
     /// Gets the command capabilities this connection supports.
     /// The pipeline builder reads this list to populate the capability picker and then renders

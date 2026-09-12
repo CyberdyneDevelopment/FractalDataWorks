@@ -31,7 +31,7 @@ namespace Fdw.Services.Connections.RoslynWorkspace.Registration;
 [ExcludeFromCodeCoverage]
 [Implementation(typeof(ConnectionTypes), "RoslynWorkspace")]
 public sealed class RoslynWorkspaceConnectionType
-    : ConnectionTypeBase<IGenericConnection, IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionConfiguration>
+    : ConnectionTypeBase<IGenericConnection, IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionConfiguration, IRoslynWorkspaceConnectionProvider>
 {
 
     /// <summary>

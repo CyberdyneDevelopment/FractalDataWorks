@@ -30,18 +30,25 @@ namespace Fdw.Services.Connections;
 /// <typeparam name="TConfiguration">The typed body configuration type (e.g. MsSqlConnectionConfiguration).
 /// Must implement <see cref="IGenericConfiguration"/> — no longer required to extend <see cref="IConnectionImplementationConfiguration"/>
 /// after the parent/typed-body split.</typeparam>
-public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration> :
+/// <typeparam name="TProvider">The implementation provider that resolves what this connection needs
+/// fetched and then builds it. Named beside the factory, not instead of it: the factory still
+/// constructs.</typeparam>
+public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration, TProvider> :
     ServiceTypeBase<TService, TFactory, TConfiguration>,
     IConnectionType<TService, TConfiguration, TFactory>,
     ISchemaDiscovery
     where TService : IGenericConnection
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IConnectionFactory<TService, TConfiguration>
+    where TProvider : IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration>
 {
+    /// <inheritdoc />
+    public Type ProviderType => typeof(TProvider);
+
     /// <inheritdoc />
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectionTypeBase{TService,TFactory,TConfiguration}"/> class.
+    /// Initializes a new instance of the <see cref="ConnectionTypeBase{TService,TFactory,TConfiguration,TProvider}"/> class.
     /// </summary>
     /// <param name="name">The name of this connection service type.</param>
     /// <param name="sectionName">The configuration section name</param>
