@@ -67,7 +67,15 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
                 sp => sp.GetRequiredService<MultitenancyConfigurationProvider>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
-        Initialization(static (host, _) => GenericResult<IHost>.Success(host));
+        // Forward to the option Configure selected. This collection drives its one option's Configure
+        // and Register by hand, so the generated collect that would have run the option's Initialize
+        // never does -- a bare Success here meant SqlMultitenancyType's Initialize body never ran, its
+        // implementation was never registered with the domain provider, and every tenant read failed
+        // at request time with "no implementation configuration provider registered for 'Sql'".
+        // GetRequiredService, not GetService: Configure registered exactly one IMultitenancyType or
+        // failed the host before this phase, so its absence here is a fault, not an option to skip.
+        Initialization(static (host, loggerFactory) =>
+            host.Services.GetRequiredService<IMultitenancyType>().Initialize(host, loggerFactory));
     }
 #pragma warning restore CA2255
 
