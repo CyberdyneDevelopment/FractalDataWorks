@@ -122,6 +122,19 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(CredentialServiceTypes));
                     throw;
                 }
+
+                // Why here and not each option's Initialize: Initialize runs once, against root,
+                // before any request scope exists. This factory runs once PER SCOPE -- so calling
+                // each option in HERE, with the sp THIS construction received, reaches every scope
+                // that ever builds a CredentialServiceProvider, not only root's.
+                foreach (var option in Options)
+                {
+                    if (option is not ICredentialServiceType credentialOption)
+                        continue;
+
+                    credentialOption.RegisterImplementationProvider(provider, sp, stLogger);
+                }
+
                 return provider;
             });
 

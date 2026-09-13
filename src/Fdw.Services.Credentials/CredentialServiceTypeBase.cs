@@ -1,6 +1,9 @@
+using System;
 using Fdw.Configuration;
+using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Credentials.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Credentials;
 
@@ -42,4 +45,12 @@ public abstract class CredentialServiceTypeBase<TService, TFactory, TConfigurati
                defaultContainerName: "CredentialService")
     {
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base no-op: an option with nothing to contribute reports success and leaves the domain
+    /// provider's registry unchanged.
+    /// </remarks>
+    public virtual IGenericResult RegisterImplementationProvider(ICredentialServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+        => GenericResult.Success();
 }
