@@ -32,8 +32,6 @@ namespace Fdw.Services.Telemetry;
     typeof(ITelemetryType),
     typeof(TelemetryTypes),
     ServiceInterface = typeof(ITelemetryService),
-    ProviderType = typeof(TelemetryServiceProvider),
-    ProviderInterface = typeof(ITelemetryServiceProvider),
     ServiceCategory = "Telemetry")]
 public partial class TelemetryTypes : ServiceTypeCollectionBase<
     TelemetryTypeBase<ITelemetryService, ITelemetryImplementationConfiguration, ITelemetryFactory<ITelemetryService, ITelemetryImplementationConfiguration>>,
@@ -45,8 +43,6 @@ public partial class TelemetryTypes : ServiceTypeCollectionBase<
     static TelemetryTypes()
     {
         var collectOptions = RegisterFunc;
-
-        var providerService = typeof(ITelemetryServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
@@ -71,41 +67,6 @@ public partial class TelemetryTypes : ServiceTypeCollectionBase<
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(TelemetryTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(TelemetryTypes), providerService);
-
-            builder.Services.AddScoped<ITelemetryServiceProvider>(sp =>
-            {
-                var provider = new TelemetryServiceProvider(
-                    sp.GetService<ILogger<TelemetryServiceProvider>>()
-                    ?? NullLogger<TelemetryServiceProvider>.Instance);
-
-                var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<TelemetryTypes>()
-                    ?? NullLogger<TelemetryTypes>.Instance;
-                ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(TelemetryTypes), provider.GetType().Name);
-                if (sp.GetService<ITelemetryConfigurationProvider>() is { } cfgProvider)
-                {
-                    var domainResult = provider.Register(cfgProvider);
-                    if (domainResult.IsSuccess)
-                        ServiceTypeLog.DomainConfigurationSourceAttached(stLogger, nameof(TelemetryTypes), provider.GetType().Name, cfgProvider.GetType().Name);
-                    else
-                        ServiceTypeLog.DomainConfigurationSourceRejected(stLogger, nameof(TelemetryTypes), provider.GetType().Name, cfgProvider.GetType().Name, domainResult.CurrentMessage);
-                }
-                else
-                {
-                    ServiceTypeLog.DomainHasNoConfigurationSource(
-                        stLogger,
-                        nameof(TelemetryTypes),
-                        provider.GetType().Name,
-                        typeof(IImplementationConfigurationProvider<ITelemetryImplementationConfiguration>).ToString());
-                }
-
-                return provider;
-            });
-
-            if (declaredOptions.Length == 0)
-                ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(TelemetryTypes), providerService);
-            else
-                ServiceTypeLog.DomainRegistered(log, nameof(TelemetryTypes), declaredOptions.Length, optionNames, providerService);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

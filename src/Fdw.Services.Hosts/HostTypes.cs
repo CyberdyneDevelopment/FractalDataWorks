@@ -30,8 +30,6 @@ namespace Fdw.Services.Hosts;
     typeof(IHostType),
     typeof(HostTypes),
     ServiceInterface = typeof(IHostService),
-    ProviderType = typeof(HostServiceProvider),
-    ProviderInterface = typeof(IHostServiceProvider),
     ServiceCategory = "Host")]
 public partial class HostTypes : ServiceTypeCollectionBase<
     HostTypeBase<IHostService, IHostImplementationConfiguration, IHostFactory<IHostService, IHostImplementationConfiguration>>,
@@ -89,13 +87,6 @@ public partial class HostTypes : ServiceTypeCollectionBase<
             });
             builder.Services.TryAddSingleton<IHostConfigurationProvider>(
                 sp => sp.GetRequiredService<HostConfigurationProvider>());
-
-            // Declared as this collection's ProviderType/ProviderInterface but never itself wired --
-            // those two attribute properties are metadata only, nothing generates a registration from
-            // them (see TelemetryTypes/LoggingTypes for the same gap).
-            builder.Services.TryAddSingleton<IHostServiceProvider>(sp =>
-                new HostServiceProvider(
-                    sp.GetService<ILogger<HostServiceProvider>>() ?? NullLogger<HostServiceProvider>.Instance));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
