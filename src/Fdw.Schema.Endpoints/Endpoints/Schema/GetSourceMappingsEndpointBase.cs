@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 // DataSetRecord and DataSetSourcePayload now in this namespace
@@ -32,16 +33,19 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
     private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetSourceMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetSourceMappingsEndpointBase"/> class.
     /// </summary>
     /// <param name="dataGateways">The data gateway for database operations.</param>
+    /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected GetSourceMappingsEndpointBase(IDataGatewayProvider dataGateways, ILogger<GetSourceMappingsEndpointBase> logger)
+    protected GetSourceMappingsEndpointBase(IDataGatewayProvider dataGateways, DataSetConfigurationProvider dataSetProvider, ILogger<GetSourceMappingsEndpointBase> logger)
     {
         _dataGateways = dataGateways;
+        _dataSetProvider = dataSetProvider;
         _logger = logger;
     }
 
@@ -68,7 +72,9 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
     {
         EndpointLog.GettingResource(_logger, "source mappings", req.Name);
 
-        var dataSetResult = await FindDataSet(req.Name, ct).ConfigureAwait(false);
+        // Get(name) composes Sources and Fields onto the implementation record, so the data set and its
+        // children are one read.
+        var dataSetResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
             await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
@@ -82,14 +88,7 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
             return;
         }
 
-        var sourceResult = await FindSource(dataSet.Id, req.SourceName, ct).ConfigureAwait(false);
-        if (!sourceResult.IsSuccess)
-        {
-            await SendReadFailure("data set source", sourceResult.CurrentMessage, ct).ConfigureAwait(false);
-            return;
-        }
-
-        if (sourceResult.Value is not { } source)
+        if (dataSet.Sources.FirstOrDefault(s => string.Equals(s.SourceName, req.SourceName, StringComparison.OrdinalIgnoreCase)) is not { } source)
         {
             EndpointLog.ResourceNotFound(_logger, "DataSet source", req.SourceName);
             await Send.NotFoundAsync(ct).ConfigureAwait(false);
@@ -107,71 +106,6 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
 
         var response = mappings.Select(m => MapToResponse(m, source.SourceName)).ToList();
         await Send.OkAsync(response, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Finds a data set record by name.</summary>
-    protected virtual async Task<IGenericResult<DataSetRecord?>> FindDataSet(string name, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "Name",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = name
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<DataSetRecord?>();
-        }
-
-        return GenericResult<DataSetRecord?>.Success(result.Value?.FirstOrDefault());
-    }
-
-    /// <summary>Finds a source record by data set identifier and source name.</summary>
-    protected virtual async Task<IGenericResult<DataSetSourceConfiguration?>> FindSource(Guid dataSetId, string sourceName, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterGroup
-                {
-                    Operator = LogicalOperator.And,
-                    Nodes =
-                    [
-                        new FilterCondition
-                        {
-                            PropertyName = "DataSetId",
-                            Operator = FilterOperators.ByName("Equal"),
-                            Value = dataSetId
-                        },
-                        new FilterCondition
-                        {
-                            PropertyName = "SourceName",
-                            Operator = FilterOperators.ByName("Equal"),
-                            Value = sourceName
-                        }
-                    ]
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<DataSetSourceConfiguration?>();
-        }
-
-        return GenericResult<DataSetSourceConfiguration?>.Success(result.Value?.FirstOrDefault());
     }
 
     /// <summary>Gets all active (non-deleted) field mapping records for the specified source.</summary>
