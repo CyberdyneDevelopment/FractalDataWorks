@@ -49,8 +49,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
 
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<RoleSettingImplementationConfigurationProvider>(sp => new RoleSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RoleSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IRoleSettingImplementationConfigurationProvider>(sp => sp.GetRequiredService<RoleSettingImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IRoleSettingImplementationConfigurationProvider, RoleSettingImplementationConfigurationProvider>(sp => new RoleSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RoleSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<RoleSettingConfigurationProvider>(sp =>
             {
                 var domain = new RoleSettingConfigurationProvider(
@@ -61,8 +60,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             });
             builder.Services.TryAddSingleton<IRoleSettingConfigurationProvider>(sp => sp.GetRequiredService<RoleSettingConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<TenantSettingImplementationConfigurationProvider>(sp => new TenantSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<TenantSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ITenantSettingImplementationConfigurationProvider>(sp => sp.GetRequiredService<TenantSettingImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<ITenantSettingImplementationConfigurationProvider, TenantSettingImplementationConfigurationProvider>(sp => new TenantSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<TenantSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<TenantSettingConfigurationProvider>(sp =>
             {
                 var domain = new TenantSettingConfigurationProvider(
@@ -74,8 +72,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<ITenantSettingConfigurationProvider>(sp => sp.GetRequiredService<TenantSettingConfigurationProvider>());
 
 
-            builder.Services.TryAddSingleton<ServerSettingImplementationConfigurationProvider>(sp => new ServerSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IServerSettingImplementationConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IServerSettingImplementationConfigurationProvider, ServerSettingImplementationConfigurationProvider>(sp => new ServerSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
             // The domain is built with its one implementation registered into it, as RoleMapping is:
             // a domain provider with nothing registered answers every read with NoImplementationProvider.
             builder.Services.TryAddSingleton<ServerSettingConfigurationProvider>(sp =>

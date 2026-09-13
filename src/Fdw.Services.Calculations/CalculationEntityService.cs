@@ -32,7 +32,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
     /// </summary>
     private const string CalculationEntityDomain = "CalculationEntity";
 
-    private readonly CalculationConfigurationProvider _provider;
+    private readonly ICalculationConfigurationProvider _provider;
     private readonly ICalculationInputResolver _inputResolver;
     private readonly ILogger<CalculationEntityService> _logger;
 
@@ -40,7 +40,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
     /// Initializes a new instance of <see cref="CalculationEntityService"/>.
     /// </summary>
     public CalculationEntityService(
-        CalculationConfigurationProvider provider,
+        ICalculationConfigurationProvider provider,
         ICalculationInputResolver inputResolver,
         ILogger<CalculationEntityService>? logger)
     {

@@ -18,7 +18,7 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretManagerRequest, SecretManagerDetailResponse>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<CreateSecretManagerEndpointBase> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -30,7 +30,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
     /// Initializes a new instance of the <see cref="CreateSecretManagerEndpointBase"/> class.
     /// </summary>
     protected CreateSecretManagerEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<CreateSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;

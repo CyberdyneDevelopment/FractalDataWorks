@@ -38,8 +38,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<JwtBearerAuthenticationConfigurationProvider>(sp => new JwtBearerAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IJwtBearerAuthenticationConfigurationProvider>(sp => sp.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+            builder.Services.AddSingleton<IJwtBearerAuthenticationConfigurationProvider, JwtBearerAuthenticationConfigurationProvider>(sp => new JwtBearerAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
 
             // Transient for the same reason LocalKey's is: the handler holds the scheme and the
             // request it was initialised for in fields, so one instance per resolution is required.

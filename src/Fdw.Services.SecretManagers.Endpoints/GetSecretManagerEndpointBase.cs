@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
+using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
@@ -17,14 +18,14 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRequest, SecretManagerDetailResponse>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<GetSecretManagerEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetSecretManagerEndpointBase"/> class.
     /// </summary>
     protected GetSecretManagerEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<GetSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;

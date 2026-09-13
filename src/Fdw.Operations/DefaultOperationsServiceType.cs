@@ -48,8 +48,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<EscalationPolicyImplementationConfigurationProvider>(sp => new EscalationPolicyImplementationConfigurationProvider(sp.GetRequiredService<ILogger<EscalationPolicyImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IEscalationPolicyImplementationConfigurationProvider>(sp => sp.GetRequiredService<EscalationPolicyImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IEscalationPolicyImplementationConfigurationProvider, EscalationPolicyImplementationConfigurationProvider>(sp => new EscalationPolicyImplementationConfigurationProvider(sp.GetRequiredService<ILogger<EscalationPolicyImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
             {
                 var domain = new EscalationConfigurationProvider(

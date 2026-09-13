@@ -85,8 +85,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // GetRequiredService and registered nowhere, so the flow provider could not be built -
             // it surfaced as "No service for type ImplementationConfigurationProviderBase`2[...]"
             // only once everything ahead of it in startup had been fixed.
-            builder.Services.TryAddSingleton<AuthenticationFlowImplementationConfigurationProvider>(sp => new AuthenticationFlowImplementationConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationFlowImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IAuthenticationFlowImplementationConfigurationProvider>(sp => sp.GetRequiredService<AuthenticationFlowImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IAuthenticationFlowImplementationConfigurationProvider, AuthenticationFlowImplementationConfigurationProvider>(sp => new AuthenticationFlowImplementationConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationFlowImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<AuthenticationFlowConfigurationProvider>(sp =>
             {
                 var domain = new AuthenticationFlowConfigurationProvider(
@@ -97,14 +96,12 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             });
             builder.Services.TryAddSingleton<IAuthenticationFlowConfigurationProvider>(sp => sp.GetRequiredService<AuthenticationFlowConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<AuthenticationFlowStepConfigurationProvider>(sp => new AuthenticationFlowStepConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationFlowStepConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IAuthenticationFlowStepConfigurationProvider>(sp => sp.GetRequiredService<AuthenticationFlowStepConfigurationProvider>());
+            builder.Services.AddSingleton<IAuthenticationFlowStepConfigurationProvider, AuthenticationFlowStepConfigurationProvider>(sp => new AuthenticationFlowStepConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationFlowStepConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
 
             // What the foreign-token exchange needs. A caller arriving on another authority's token
             // is bound to a local user through ExternalIdentity rows, so the binding reads its own
             // container the way every other implementation provider does.
-            builder.Services.TryAddSingleton<ExternalIdentityImplementationConfigurationProvider>(sp => new ExternalIdentityImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IExternalIdentityImplementationConfigurationProvider>(sp => sp.GetRequiredService<ExternalIdentityImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IExternalIdentityImplementationConfigurationProvider, ExternalIdentityImplementationConfigurationProvider>(sp => new ExternalIdentityImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationStepTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ExternalIdentityConfigurationProvider>(sp =>
             {
                 var domain = new ExternalIdentityConfigurationProvider(

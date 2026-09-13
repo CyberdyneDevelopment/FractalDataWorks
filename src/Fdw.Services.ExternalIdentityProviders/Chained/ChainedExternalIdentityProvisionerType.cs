@@ -62,8 +62,7 @@ public sealed class ChainedExternalIdentityProvisionerType
         Registration((builder, loggerFactory) =>
         {
 
-            builder.Services.TryAddSingleton<ChainedExternalIdentityProvisionerConfigurationProvider>(sp => new ChainedExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IChainedExternalIdentityProvisionerConfigurationProvider>(sp => sp.GetRequiredService<ChainedExternalIdentityProvisionerConfigurationProvider>());
+            builder.Services.AddSingleton<IChainedExternalIdentityProvisionerConfigurationProvider, ChainedExternalIdentityProvisionerConfigurationProvider>(sp => new ChainedExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ChainedExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection));
 
             builder.Services.TryAdd(new ServiceDescriptor(
                 typeof(IChainedExternalIdentityProvisionerFactory), typeof(ChainedExternalIdentityProvisionerFactory), ServiceLifetime.Scoped));

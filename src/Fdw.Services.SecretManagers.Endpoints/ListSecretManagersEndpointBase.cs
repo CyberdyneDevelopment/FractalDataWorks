@@ -18,14 +18,14 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<PaginatedResponse<SecretManagerSummaryResponse>>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<ListSecretManagersEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ListSecretManagersEndpointBase"/> class.
     /// </summary>
     protected ListSecretManagersEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<ListSecretManagersEndpointBase> logger)
     {
         _configProvider = configProvider;

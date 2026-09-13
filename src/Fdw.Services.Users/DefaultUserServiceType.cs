@@ -41,8 +41,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<UsersServiceImplementationConfigurationProvider>(sp => new UsersServiceImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UsersServiceImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IUsersServiceImplementationConfigurationProvider>(sp => sp.GetRequiredService<UsersServiceImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IUsersServiceImplementationConfigurationProvider, UsersServiceImplementationConfigurationProvider>(sp => new UsersServiceImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UsersServiceImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<UsersServiceConfigurationProvider>(sp =>
             {
                 var domain = new UsersServiceConfigurationProvider(
@@ -54,8 +53,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IUsersServiceConfigurationProvider>(sp => sp.GetRequiredService<UsersServiceConfigurationProvider>());
 
 
-            builder.Services.TryAddSingleton<UserImplementationConfigurationProvider>(sp => new UserImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IUserImplementationConfigurationProvider>(sp => sp.GetRequiredService<UserImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IUserImplementationConfigurationProvider, UserImplementationConfigurationProvider>(sp => new UserImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
             {
                 var domain = new UserConfigurationProvider(
@@ -67,8 +65,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IUserConfigurationProvider>(sp => sp.GetRequiredService<UserConfigurationProvider>());
 
 
-            builder.Services.TryAddSingleton<UserTenantImplementationConfigurationProvider>(sp => new UserTenantImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserTenantImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IUserTenantImplementationConfigurationProvider>(sp => sp.GetRequiredService<UserTenantImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IUserTenantImplementationConfigurationProvider, UserTenantImplementationConfigurationProvider>(sp => new UserTenantImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserTenantImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<UserTenantConfigurationProvider>(sp =>
             {
                 var domain = new UserTenantConfigurationProvider(
@@ -80,8 +77,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IUserTenantConfigurationProvider>(sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
 
 
-            builder.Services.TryAddSingleton<UserPreferencesImplementationConfigurationProvider>(sp => new UserPreferencesImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserPreferencesImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IUserPreferencesImplementationConfigurationProvider>(sp => sp.GetRequiredService<UserPreferencesImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IUserPreferencesImplementationConfigurationProvider, UserPreferencesImplementationConfigurationProvider>(sp => new UserPreferencesImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserPreferencesImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>
             {
                 var domain = new UserPreferenceConfigurationProvider(

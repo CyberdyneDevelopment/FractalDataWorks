@@ -82,13 +82,11 @@ public partial class NotificationServiceTypes
 
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<INotificationConfigurationProvider>(sp => sp.GetRequiredService<NotificationConfigurationProvider>());
+            builder.Services.AddSingleton<INotificationConfigurationProvider, NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<INotificationConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<NotificationRuleImplementationConfigurationProvider>(sp => new NotificationRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<INotificationRuleImplementationConfigurationProvider>(sp => sp.GetRequiredService<NotificationRuleImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<INotificationRuleImplementationConfigurationProvider, NotificationRuleImplementationConfigurationProvider>(sp => new NotificationRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<NotificationRuleConfigurationProvider>(sp =>
             {
                 var domain = new NotificationRuleConfigurationProvider(

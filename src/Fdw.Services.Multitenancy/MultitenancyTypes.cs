@@ -62,8 +62,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
         Configuration(SelectAndConfigureSingleOption);
         Registration(static (builder, _) =>
         {
-            builder.Services.TryAddSingleton<MultitenancyConfigurationProvider>(sp => new MultitenancyConfigurationProvider(sp.GetRequiredService<ILogger<MultitenancyConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MultitenancyTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IMultitenancyConfigurationProvider>(sp => sp.GetRequiredService<MultitenancyConfigurationProvider>());
+            builder.Services.AddSingleton<IMultitenancyConfigurationProvider, MultitenancyConfigurationProvider>(sp => new MultitenancyConfigurationProvider(sp.GetRequiredService<ILogger<MultitenancyConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MultitenancyTypes.ConfigurationConnection));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
         // Forward to the option Configure selected. This collection drives its one option's Configure

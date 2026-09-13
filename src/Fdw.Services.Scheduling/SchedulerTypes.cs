@@ -93,8 +93,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
-            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(sp => new SchedulerConfigurationProvider(sp.GetRequiredService<ILogger<SchedulerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+            builder.Services.AddSingleton<ISchedulerConfigurationProvider, SchedulerConfigurationProvider>(sp => new SchedulerConfigurationProvider(sp.GetRequiredService<ILogger<SchedulerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ISchedulerConfigurationProvider>());
 

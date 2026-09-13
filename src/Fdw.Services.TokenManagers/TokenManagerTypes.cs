@@ -66,11 +66,9 @@ public static class TokenManagerTypes
         if (defer)
             return GenericResult<IHostApplicationBuilder>.Success(builder);
 
-            builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(sp => new TokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<TokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+            builder.Services.AddSingleton<ITokenManagerConfigurationProvider, TokenManagerConfigurationProvider>(sp => new TokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<TokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
 
-        builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp => new JwtTokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<JwtTokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
-        builder.Services.TryAddSingleton<IJwtTokenManagerConfigurationProvider>(sp => sp.GetRequiredService<JwtTokenManagerConfigurationProvider>());
+        builder.Services.AddSingleton<IJwtTokenManagerConfigurationProvider, JwtTokenManagerConfigurationProvider>(sp => new JwtTokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<JwtTokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
 
         builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
             new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));

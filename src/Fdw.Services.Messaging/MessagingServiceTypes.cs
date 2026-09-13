@@ -51,8 +51,7 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
-            builder.Services.TryAddSingleton<MessagingImplementationConfigurationProvider>(sp => new MessagingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<MessagingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IMessagingImplementationConfigurationProvider>(sp => sp.GetRequiredService<MessagingImplementationConfigurationProvider>());
+            builder.Services.AddSingleton<IMessagingImplementationConfigurationProvider, MessagingImplementationConfigurationProvider>(sp => new MessagingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<MessagingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<MessagingConfigurationProvider>(sp =>
             {
                 var domain = new MessagingConfigurationProvider(
