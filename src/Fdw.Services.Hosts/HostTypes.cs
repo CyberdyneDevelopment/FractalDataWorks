@@ -73,6 +73,7 @@ public partial class HostTypes : ServiceTypeCollectionBase<
                 new HostImplementationConfigurationProvider(
                     sp.GetService<ILogger<HostImplementationConfigurationProvider>>() ?? NullLogger<HostImplementationConfigurationProvider>.Instance,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), HostTypes.ConfigurationConnection));
+            builder.Services.TryAddSingleton<IHostImplementationConfigurationProvider>(sp => sp.GetRequiredService<HostImplementationConfigurationProvider>());
 
             builder.Services.TryAddSingleton<HostConfigurationProvider>(sp =>
             {
