@@ -9,6 +9,7 @@ using Fdw.Services.Identity;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
+using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -73,15 +74,31 @@ public sealed class JwtAssertionIdentityType
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<IJwtAssertionConfigurationProvider>());
 
-            // The line above tells the identity domain how to READ this option's rows; this hands the
-            // runtime identity provider what it BUILDS an identity service with. Without it
-            // IIdentityServiceProvider's registry has no entry for "JwtAssertion" and every resolve by
-            // that name fails with "no factory for service option".
-            var identityRegistered = services.GetRequiredService<IIdentityServiceProvider>()
-                .Register(Name, () => services.GetRequiredService<IJwtAssertionIdentityProvider>());
-            if (!identityRegistered.IsSuccess) return identityRegistered.ToNewResult<IHost>();
-
             return GenericResult<IHost>.Success(host);
         });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
+    /// <see cref="IIdentityServiceProvider"/> from the ROOT container once, at startup, and this
+    /// domain provider is registered <c>AddScoped</c> — so root's copy is one instance among many
+    /// a real request never sees, and a real request's own instance never had this call reach it.
+    /// This method is instead called once per construction, by <c>IdentityServiceTypes</c>'s own
+    /// factory, and handed THAT construction's <paramref name="serviceProvider"/> — the same
+    /// scope root or a request actually used to build <paramref name="domainProvider"/> itself.
+    /// </remarks>
+    public override IGenericResult RegisterImplementationProvider(IIdentityServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+    {
+        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IJwtAssertionIdentityProvider>());
+        if (!factoryResult.IsSuccess)
+        {
+            ServiceTypeLog.OptionFactoryRegistrationFailed(
+                logger, nameof(JwtAssertionIdentityType), Name, nameof(IJwtAssertionIdentityProvider), factoryResult.CurrentMessage);
+            return factoryResult;
+        }
+
+        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(JwtAssertionIdentityType), Name, nameof(IJwtAssertionIdentityProvider));
+        return factoryResult;
     }
 }

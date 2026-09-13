@@ -1,7 +1,10 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Identity.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity;
 
@@ -43,4 +46,13 @@ public abstract class IdentityServiceTypeBase<TService, TConfiguration, TFactory
                defaultContainerName: defaultContainerName)
     {
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base no-op: an option with nothing to contribute (none exist yet, but the base must not
+    /// force every option to override this) reports success and leaves the domain provider's
+    /// registry unchanged.
+    /// </remarks>
+    public virtual IGenericResult RegisterImplementationProvider(IIdentityServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+        => GenericResult.Success();
 }
