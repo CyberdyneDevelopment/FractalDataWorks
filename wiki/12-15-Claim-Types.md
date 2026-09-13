@@ -111,13 +111,13 @@ Consequences:
 ## Producing a claim's value
 
 Registering a `ClaimDefinition` tells the pipeline **how** to serialise a claim; it does not by
-itself put a value on the token. The value must be present on the principal that
-`ProcessSignInClaimsHandler` bakes from. For the built-ins, `DefaultPrincipalResolver` produces the
-values (sub/tenant/org/roles/perm) from the user's tenant, roles, and resolved permissions. To emit
-a **new** claim's value you either:
+itself put a value on the token. The value must be present on the authentication context the
+issuing step bakes from. For the built-ins, the flow's steps produce the values: `PasswordCredential`
+contributes the principal (sub, tenant) and `BakePermissions` the `perm` claims resolved from the
+user's roles. To emit a **new** claim's value you either:
 
 1. add it on the inbound principal (e.g. an external-identity claim that should pass through), or
-2. contribute it where the principal is built (the resolver / issuance path),
+2. contribute it where the principal is built (a flow step / the issuance path),
 
 and the generic baking will serialise it per its `ClaimDefinition`.
 

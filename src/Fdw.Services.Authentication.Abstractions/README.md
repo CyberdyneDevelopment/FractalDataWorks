@@ -21,7 +21,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IFrameworkAuthorizationService` | interface | Provides role-based authorization services for validating user permissions and access rights. This… |
 | `IOutboundCredentialService` | interface | Acquires credentials for non-interactive outbound calls (service-to-service, agent-to-service). Uses the… |
 | `IPersonalAccessTokenService` | interface | Manages the lifecycle of Personal Access Tokens (PATs) for long-lived programmatic authentication. |
-| `IPrincipalResolver` | interface | Resolves the FDW for a given user identity by: Resolving the user's active tenant (and optionally org).… |
 | `IRoleProvider` | interface | Provides role management services for assigning, removing, and querying user roles and role permissions.… |
 | `ISecurityTokenService` | interface | Provides security token generation, parsing, and validation services for authentication systems. This… |
 

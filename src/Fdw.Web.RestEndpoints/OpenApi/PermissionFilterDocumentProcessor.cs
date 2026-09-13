@@ -79,7 +79,7 @@ public sealed class PermissionFilterDocumentProcessor : IDocumentProcessor
         }
 
         // Read through the TypeCollection, not a literal. This read said "permission" while every
-        // writer - DefaultPrincipalResolver, BakePermissionsStepType, JwtBearerAuthenticationHandler -
+        // writer - BakePermissionsStepType, JwtBearerAuthenticationHandler -
         // uses ClaimDefinitions.perm.Name, which is "perm". So the set was always empty and every
         // operation whose policy was checked got removed. Admins short-circuit above, which is why
         // it survived: the people most likely to open Scalar could not see it.

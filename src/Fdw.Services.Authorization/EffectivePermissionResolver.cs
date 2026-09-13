@@ -18,8 +18,8 @@ namespace Fdw.Services.Authorization;
 /// Default implementation of <see cref="IEffectivePermissionResolver"/>.
 /// Applies the global∪tenant∪org 3-tier union and returns the permission set for
 /// the roles the user is ACTUALLY ASSIGNED — not the entire catalog.
-/// Invoked at token-issue time by <c>DefaultPrincipalResolver</c> and
-/// <c>ConnectTokenEndpoint</c> to bake the permission set into the JWT.
+/// Invoked by <c>BakePermissionsStepType</c> at token issuance and by
+/// <c>ApiKeyAuthenticationHandler</c> to bake the permission set onto the caller.
 /// </summary>
 public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 {

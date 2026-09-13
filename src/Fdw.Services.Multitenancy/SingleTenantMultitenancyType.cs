@@ -15,8 +15,8 @@ namespace Fdw.Services.Multitenancy;
 /// Multitenancy option for hosts that run a single tenant — the explicit "no real tenant store"
 /// choice. Registers only the always-on request-scoped contexts and the null-object
 /// <see cref="ITenantProvider"/>/<see cref="IOrganizationProvider"/> implementations so that
-/// consumers which always inject these interfaces (e.g. Tenant admin endpoints,
-/// <c>DefaultPrincipalResolver</c> during sign-in) resolve without a DI failure — every query simply
+/// consumers which always inject these interfaces (e.g. Tenant admin endpoints) resolve without a
+/// DI failure — every query simply
 /// reports "no tenant"/"no organization" rather than crashing the host.
 /// </summary>
 [ExcludeFromCodeCoverage]

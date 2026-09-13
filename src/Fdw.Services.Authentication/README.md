@@ -34,7 +34,6 @@ This package declares 2 model(s).
 |---|---|---|
 | `AuthenticationLogger` | class | Static logger class for authentication provider operations. |
 | `AuthenticationProviderLogger` | class | Static logger class for authentication provider operations. |
-| `DefaultPrincipalResolver` | class | Default — resolves the FDW claims principal by combining tenant/org context with… |
 
 ## Installation
 
