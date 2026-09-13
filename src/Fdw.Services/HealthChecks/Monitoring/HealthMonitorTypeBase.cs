@@ -1,6 +1,7 @@
 using System;
 using Fdw.Configuration;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.Logging;
@@ -45,12 +46,27 @@ public abstract class HealthMonitorTypeBase<TService, TFactory, TConfiguration> 
     {
     }
 
+    // ── Domain-provider/domain-configuration-provider registration ─────────────────────────────
+    // An overload of Registration/Register, not a new phase and not a new method name. Stored and
+    // invoked exactly like the DI-wiring Registration(Func<IHostApplicationBuilder, ...>) overload
+    // already inherited from ServiceTypeBase -- this is simply a second signature of the same verb,
+    // distinguished by its parameter types, the way every other framework-wide "the verb, overloaded"
+    // convention already works in this codebase.
+
+    private Func<IServiceProvider, IHealthMonitorProvider?, IHealthMonitorConfigurationProvider?, ILogger<IHealthMonitorType>, IGenericResult> _domainRegistrationMethod
+        = static (_, _, _, _) => GenericResult.Success();
+
+    /// <inheritdoc/>
+    public void Registration(Func<IServiceProvider, IHealthMonitorProvider?, IHealthMonitorConfigurationProvider?, ILogger<IHealthMonitorType>, IGenericResult> method)
+    {
+        _domainRegistrationMethod = method;
+    }
+
     /// <inheritdoc/>
     /// <remarks>
-    /// Base no-op: an option with nothing to contribute (none exist yet, but the base must not
-    /// force every option to override this) reports success and leaves the domain provider's
-    /// registry unchanged.
+    /// Base default: an option that never called the overload above (none exist yet, but the base
+    /// must not force every option to set one) reports success and leaves both providers untouched.
     /// </remarks>
-    public virtual IGenericResult RegisterImplementationProvider(IHealthMonitorProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
-        => GenericResult.Success();
+    public IGenericResult Register(IServiceProvider serviceProvider, IHealthMonitorProvider? domainProvider, IHealthMonitorConfigurationProvider? domainConfigurationProvider, ILogger<IHealthMonitorType> logger)
+        => _domainRegistrationMethod(serviceProvider, domainProvider, domainConfigurationProvider, logger);
 }
