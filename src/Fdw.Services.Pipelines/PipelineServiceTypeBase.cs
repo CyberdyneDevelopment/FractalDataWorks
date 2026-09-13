@@ -1,6 +1,10 @@
+using System;
 using Fdw.Abstractions;
+using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.ServiceTypes;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines;
 
@@ -21,4 +25,12 @@ public abstract class PipelineServiceTypeBase : ServiceTypeBase<IGenericService,
         : base(name, sectionName, displayName, description, category ?? "PipelineService")
     {
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base no-op: an option with nothing to contribute reports success and leaves the domain
+    /// provider's registry unchanged.
+    /// </remarks>
+    public virtual IGenericResult RegisterImplementationProvider(IPipelineServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+        => GenericResult.Success();
 }
