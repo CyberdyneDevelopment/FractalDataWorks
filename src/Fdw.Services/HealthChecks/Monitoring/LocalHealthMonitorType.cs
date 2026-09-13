@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Logging;
+using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -64,12 +65,32 @@ public sealed class LocalHealthMonitorType
             var services = host.Services;
             services.GetRequiredService<IHealthMonitorConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<ILocalHealthMonitorConfigurationProvider>());
-            services.GetRequiredService<IHealthMonitorProvider>()
-                .Register(Name, () => services.GetRequiredService<ILocalHealthMonitorProvider>());
             return GenericResult<IHost>.Success(host);
         });
 
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
+    /// <see cref="IHealthMonitorProvider"/> from the ROOT container once, at startup, and this
+    /// domain provider is registered <c>AddScoped</c> — so root's copy is one instance among many
+    /// a real request never sees, and a real request's own instance never had this call reach it.
+    /// This method is instead called once per construction, by <c>HealthMonitorTypes</c>'s own
+    /// factory, and handed THAT construction's <paramref name="serviceProvider"/> — the same
+    /// scope root or a request actually used to build <paramref name="domainProvider"/> itself.
+    /// </remarks>
+    public override IGenericResult RegisterImplementationProvider(IHealthMonitorProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+    {
+        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<ILocalHealthMonitorProvider>());
+        if (!factoryResult.IsSuccess)
+        {
+            ServiceTypeLog.OptionFactoryRegistrationFailed(
+                logger, nameof(LocalHealthMonitorType), Name, nameof(ILocalHealthMonitorProvider), factoryResult.CurrentMessage);
+            return factoryResult;
+        }
 
+        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(LocalHealthMonitorType), Name, nameof(ILocalHealthMonitorProvider));
+        return factoryResult;
+    }
 }

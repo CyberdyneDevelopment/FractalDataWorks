@@ -1,6 +1,9 @@
+using System;
 using Fdw.Configuration;
+using Fdw.Results;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.ServiceTypes;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
@@ -41,4 +44,13 @@ public abstract class HealthMonitorTypeBase<TService, TFactory, TConfiguration> 
                defaultContainerName: "HealthMonitor")
     {
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base no-op: an option with nothing to contribute (none exist yet, but the base must not
+    /// force every option to override this) reports success and leaves the domain provider's
+    /// registry unchanged.
+    /// </remarks>
+    public virtual IGenericResult RegisterImplementationProvider(IHealthMonitorProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+        => GenericResult.Success();
 }
