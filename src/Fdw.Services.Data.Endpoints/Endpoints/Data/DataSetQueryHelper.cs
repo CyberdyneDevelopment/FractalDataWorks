@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Calculations.Aggregations;
@@ -172,10 +172,19 @@ internal static class DataSetQueryHelper
 
     internal static DataSetFieldPayload MapToFieldDto(DataSetFieldConfiguration field) => new()
     {
+        Id = field.Id,
+        // Save stamps the data set's domain Id onto its implementation, so the implementation id a
+        // field hangs off is the data set's own Id.
+        DataSetId = field.DataSetImplementationId,
         Name = field.Name,
         DataType = field.TypeName,
-        IsNullable = !field.IsRequired,
+        TypeName = field.TypeName,
+        IsNullable = field.IsNullable,
+        IsRequired = field.IsRequired,
         IsKey = field.IsKey,
+        IsIndexed = field.IsIndexed,
+        MaxLength = field.MaxLength,
+        DefaultValue = field.DefaultValue,
         Ordinal = field.Ordinal,
         Description = field.Description,
         Role = field.Role,
