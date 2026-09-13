@@ -67,30 +67,6 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IEtlPipelineProvider>();
-            var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
-
-            // Resolve factory from DI (registered in Phase 1)
-
-            // Register factory instance with provider
-            var factoryResult = provider.Register(Name, () => services.GetRequiredService<IStreamingPipelineProvider>());
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    log,
-                    nameof(StreamingPipelineType),
-                    Name,
-                    nameof(IStreamingPipelineFactory),
-                    factoryResult.CurrentMessage);
-                return GenericResult<IHost>.Success(host);
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(
-                log,
-                nameof(StreamingPipelineType),
-                Name,
-                nameof(IStreamingPipelineFactory));
-
 
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
             etlKindProvider.Register(Name, services.GetRequiredService<StreamingPipelineConfigurationProvider>());
@@ -136,6 +112,29 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
+    /// <see cref="IEtlPipelineProvider"/> from the ROOT container once, at startup, and this
+    /// domain provider is registered <c>AddScoped</c> — so root's copy is one instance among many
+    /// a real request never sees, and a real request's own instance never had this call reach it.
+    /// This method is instead called once per construction, by <c>EtlPipelineTypes</c>'s own
+    /// factory, and handed THAT construction's <paramref name="serviceProvider"/> — the same
+    /// scope root or a request actually used to build <paramref name="domainProvider"/> itself.
+    /// </remarks>
+    public override IGenericResult RegisterImplementationProvider(IEtlPipelineProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+    {
+        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IStreamingPipelineProvider>());
+        if (!factoryResult.IsSuccess)
+        {
+            ServiceTypeLog.OptionFactoryRegistrationFailed(logger, nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory), factoryResult.CurrentMessage);
+            return factoryResult;
+        }
+
+        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory));
+        return factoryResult;
     }
 
 }

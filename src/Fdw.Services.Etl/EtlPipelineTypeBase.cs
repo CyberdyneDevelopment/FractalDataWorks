@@ -1,7 +1,9 @@
 using System;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Fdw.Configuration;
+using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Pipelines;
@@ -53,4 +55,13 @@ public abstract class EtlPipelineTypeBase<TPipeline, TFactory, TConfiguration> :
     }
 
     // which registers configuration loader using IOptions<List<TConfiguration>> lookup by Name
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base no-op: an option with nothing to contribute (none exist yet, but the base must not
+    /// force every option to override this) reports success and leaves the domain provider's
+    /// registry unchanged.
+    /// </remarks>
+    public virtual IGenericResult RegisterImplementationProvider(IEtlPipelineProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+        => GenericResult.Success();
 }

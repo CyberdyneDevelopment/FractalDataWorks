@@ -194,6 +194,19 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(EtlPipelineTypes));
                     throw;
                 }
+
+                // Why here and not each option's Initialize: Initialize runs once, against root,
+                // before any request scope exists. This factory runs once PER SCOPE -- so calling
+                // each option in HERE, with the sp THIS construction received, reaches every scope
+                // that ever builds an EtlPipelineProvider, not only root's.
+                foreach (var option in Options)
+                {
+                    if (option is not IEtlPipelineType etlPipelineOption)
+                        continue;
+
+                    etlPipelineOption.RegisterImplementationProvider(provider, sp, stLogger);
+                }
+
                 return provider;
             });
 
