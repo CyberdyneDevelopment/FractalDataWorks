@@ -41,7 +41,7 @@ public abstract class GetServiceHealthHistoryEndpointBase : Endpoint<ServiceHeal
     public override void Configure()
     {
         Get("/health/services/{Name}/history");
-        Policies("authenticated");
+        AllowAnonymous();
         Summary(s => s.Summary = "Get service health check history");
         ConfigureEndpoint();
     }

@@ -40,7 +40,7 @@ public abstract class GetSystemHealthEndpointBase : EndpointWithoutRequest<Syste
     public override void Configure()
     {
         Get("/health/system");
-        Policies("authenticated");
+        AllowAnonymous();
         Summary(s => s.Summary = "Get system health snapshot");
         ConfigureEndpoint();
     }

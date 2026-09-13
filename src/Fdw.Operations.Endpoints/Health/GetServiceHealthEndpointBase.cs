@@ -40,7 +40,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
     public override void Configure()
     {
         Get("/health/services/{Name}");
-        Policies("authenticated");
+        AllowAnonymous();
         Summary(s => s.Summary = "Get service health snapshot");
         ConfigureEndpoint();
     }
