@@ -33,9 +33,8 @@ public sealed class TenantClientType : ApiClientTypeBase<TenantApiClient>
         {
             builder.Services.AddScoped<TenantApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<TenantApiClient>>() ?? NullLogger<TenantApiClient>.Instance;
-                return new TenantApiClient(factory.CreateClient(Name), logger);
+                return new TenantApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

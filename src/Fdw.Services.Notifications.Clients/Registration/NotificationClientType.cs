@@ -33,9 +33,8 @@ public sealed class NotificationClientType : ApiClientTypeBase<NotificationApiCl
         {
             builder.Services.AddScoped<NotificationApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<NotificationApiClient>>() ?? NullLogger<NotificationApiClient>.Instance;
-                return new NotificationApiClient(factory.CreateClient(Name), logger);
+                return new NotificationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

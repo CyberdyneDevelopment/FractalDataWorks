@@ -38,9 +38,8 @@ public sealed class PipelineClientType : ApiClientTypeBase<IPipelineClient>
         {
             builder.Services.AddScoped<IPipelineClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<PipelineHttpClient>>() ?? NullLogger<PipelineHttpClient>.Instance;
-                return new PipelineHttpClient(factory.CreateClient(Name), logger);
+                return new PipelineHttpClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

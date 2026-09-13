@@ -75,6 +75,14 @@ public sealed class ClientCredentialsIdentityType
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<IClientCredentialsConfigurationProvider>());
 
+            // The line above tells the identity domain how to READ this option's rows; this hands the
+            // runtime identity provider what it BUILDS an identity service with. Without it
+            // IIdentityServiceProvider's registry has no entry for "ClientCredentials" and every
+            // resolve by that name fails with "no factory for service option".
+            var identityRegistered = services.GetRequiredService<IIdentityServiceProvider>()
+                .Register(Name, () => services.GetRequiredService<IClientCredentialsIdentityProvider>());
+            if (!identityRegistered.IsSuccess) return identityRegistered.ToNewResult<IHost>();
+
             IdentityLog.MechanismRegistered(
                 loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
                     ?? NullLogger<ClientCredentialsIdentityType>.Instance,

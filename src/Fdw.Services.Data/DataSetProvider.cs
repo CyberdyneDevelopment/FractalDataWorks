@@ -82,8 +82,7 @@ public sealed class DataSetProvider
 
         // The configuration interface resolves to the domain provider; this one is the DataSet
         // domain's platform service provider, and reads through it.
-        services.TryAddSingleton<IDataSetConfigurationProvider>(
-            sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+        services.TryAddSingleton<IDataSetConfigurationProvider>(sp => sp.GetRequiredService<DataSetConfigurationProvider>());
 
         services.TryAddSingleton<DataSetProvider>(sp =>
             new DataSetProvider(

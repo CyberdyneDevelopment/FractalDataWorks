@@ -33,9 +33,8 @@ public sealed class LineageClientType : ApiClientTypeBase<LineageApiClient>
         {
             builder.Services.AddScoped<LineageApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<LineageApiClient>>() ?? NullLogger<LineageApiClient>.Instance;
-                return new LineageApiClient(factory.CreateClient(Name), logger);
+                return new LineageApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -57,12 +57,10 @@ public sealed class ClaimMappedProvisionerType
             var logger = loggerFactory.CreateLogger<ClaimMappedProvisionerType>();
 
             var implementationProvider = services.GetRequiredService<IClaimMappedProvisionerProvider>();
-            var domainProvider = services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>();
-            var typedProvider = services.GetRequiredService<IClaimMappedExternalIdentityProvisionerConfigurationProvider>();
 
-            domainProvider.Register("ClaimMapped", typedProvider);
+            services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>().Register("ClaimMapped", services.GetRequiredService<IClaimMappedExternalIdentityProvisionerConfigurationProvider>());
 
-            var factoryResult = provider.Register("ClaimMapped", implementationProvider);
+            var factoryResult = provider.Register("ClaimMapped", () => implementationProvider);
             if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
 
             ServiceTypeLog.OptionFactoryRegistered(

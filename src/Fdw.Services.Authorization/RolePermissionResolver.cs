@@ -21,9 +21,9 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 public sealed class RolePermissionResolver : IRolePermissionResolver
 {
-    private readonly RoleConfigurationProvider _roleProvider;
-    private readonly PermissionConfigurationProvider _permissionProvider;
-    private readonly RolePermissionConfigurationProvider _rolePermissionProvider;
+    private readonly IRoleConfigurationProvider _roleProvider;
+    private readonly IPermissionConfigurationProvider _permissionProvider;
+    private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
     private readonly ILogger<RolePermissionResolver> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RolePermissionResolver"/> class.</summary>
@@ -32,9 +32,9 @@ public sealed class RolePermissionResolver : IRolePermissionResolver
     /// <param name="rolePermissionProvider">Reads the role/permission junction.</param>
     /// <param name="logger">Optional logger.</param>
     public RolePermissionResolver(
-        RoleConfigurationProvider roleProvider,
-        PermissionConfigurationProvider permissionProvider,
-        RolePermissionConfigurationProvider rolePermissionProvider,
+        IRoleConfigurationProvider roleProvider,
+        IPermissionConfigurationProvider permissionProvider,
+        IRolePermissionConfigurationProvider rolePermissionProvider,
         ILogger<RolePermissionResolver>? logger)
     {
         _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));

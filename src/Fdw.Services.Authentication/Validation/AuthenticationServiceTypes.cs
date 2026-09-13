@@ -85,8 +85,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             // because two hosts sharing a tenant legitimately trust different issuers, the same
             // reason the flows themselves live there.
             builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>(sp => new AuthenticationServiceConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationServiceConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IAuthenticationServiceConfigurationProvider>(sp =>
-                sp.GetRequiredService<AuthenticationServiceConfigurationProvider>());
+            builder.Services.TryAddSingleton<IAuthenticationServiceConfigurationProvider>(sp => sp.GetRequiredService<AuthenticationServiceConfigurationProvider>());
 
             // Filled during Initialize, once the gateway can be reached. The selector reads it per
             // request, so it cannot be a set of service registrations made before the container is
@@ -146,7 +145,6 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             if (!declared.IsSuccess || declared.Value is null)
                 return declared.ToNewResult<IHost>();
 
-            var schemes = services.GetRequiredService<IAuthenticationSchemeProvider>();
             var bindings = services.GetRequiredService<AuthenticationSchemeBindings>();
 
             foreach (var entry in declared.Value)
@@ -184,7 +182,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
 
                 var kind = option.Name;
 
-                var binding = option.TakeScheme(entry, schemes, services, hostLoggerFactory);
+                var binding = option.TakeScheme(entry, services.GetRequiredService<IAuthenticationSchemeProvider>(), services, hostLoggerFactory);
                 if (!binding.IsSuccess || binding.Value is null)
                     return binding.ToNewResult<IHost>();
 

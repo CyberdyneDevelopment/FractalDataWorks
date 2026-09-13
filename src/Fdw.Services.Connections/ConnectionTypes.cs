@@ -127,8 +127,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
                     sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection));
 
-            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(
-                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
+            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
 
             builder.Services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());

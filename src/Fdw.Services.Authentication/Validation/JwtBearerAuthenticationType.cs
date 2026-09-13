@@ -39,8 +39,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         Registration((builder, loggerFactory) =>
         {
             builder.Services.TryAddSingleton<JwtBearerAuthenticationConfigurationProvider>(sp => new JwtBearerAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IJwtBearerAuthenticationConfigurationProvider>(sp =>
-                sp.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IJwtBearerAuthenticationConfigurationProvider>(sp => sp.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
 
             // Transient for the same reason LocalKey's is: the handler holds the scheme and the
             // request it was initialised for in fields, so one instance per resolution is required.
@@ -55,7 +54,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         Initialization((host, loggerFactory) =>
         {
             host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                .Register(Name, host.Services.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+                .Register(Name, host.Services.GetRequiredService<IJwtBearerAuthenticationConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
     }

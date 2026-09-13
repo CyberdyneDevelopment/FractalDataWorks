@@ -33,9 +33,8 @@ public sealed class TableClientType : ApiClientTypeBase<TableApiClient>
         {
             builder.Services.AddScoped<TableApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<TableApiClient>>() ?? NullLogger<TableApiClient>.Instance;
-                return new TableApiClient(factory.CreateClient(Name), logger);
+                return new TableApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

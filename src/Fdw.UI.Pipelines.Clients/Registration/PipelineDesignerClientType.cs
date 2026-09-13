@@ -33,9 +33,8 @@ public sealed class PipelineDesignerClientType : ApiClientTypeBase<IPipelineDesi
         {
             builder.Services.AddScoped<IPipelineDesignerClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<PipelineDesignerApiClient>>() ?? NullLogger<PipelineDesignerApiClient>.Instance;
-                return new PipelineDesignerApiClient(factory.CreateClient(Name), logger);
+                return new PipelineDesignerApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

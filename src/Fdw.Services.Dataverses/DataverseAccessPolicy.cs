@@ -38,7 +38,7 @@ namespace Fdw.Services.Dataverses;
 public sealed class DataverseAccessPolicy : IDataverseAccessPolicy
 {
     private readonly IAuthenticationContextAccessor _authContext;
-    private readonly RoleConfigurationProvider _roles;
+    private readonly IRoleConfigurationProvider _roles;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="DataverseAccessPolicy"/> class.</summary>
@@ -47,7 +47,7 @@ public sealed class DataverseAccessPolicy : IDataverseAccessPolicy
     /// <param name="logger">The logger.</param>
     public DataverseAccessPolicy(
         IAuthenticationContextAccessor authContext,
-        RoleConfigurationProvider roles,
+        IRoleConfigurationProvider roles,
         ILogger<DataverseAccessPolicy>? logger = null)
     {
         _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));

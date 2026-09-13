@@ -56,7 +56,7 @@ public sealed class PasswordCredentialStepType
     // Captured when the host is built rather than taken through the constructor: an option is
     // created by its module initializer, which needs a parameterless constructor, so what it needs
     // arrives in Initialize where a live container exists.
-    private UserConfigurationProvider? _users;
+    private IUserConfigurationProvider? _users;
     private IUserCredentialService? _credentials;
     private IPasswordCredentialAccessor? _presented;
     private ITenantResolver? _tenants;
@@ -73,7 +73,7 @@ public sealed class PasswordCredentialStepType
         {
             var services = host.Services;
 
-            _users = services.GetRequiredService<UserConfigurationProvider>();
+            _users = services.GetRequiredService<IUserConfigurationProvider>();
             _credentials = services.GetRequiredService<IUserCredentialService>();
             _presented = services.GetRequiredService<IPasswordCredentialAccessor>();
             _tenants = services.GetRequiredService<ITenantResolver>();

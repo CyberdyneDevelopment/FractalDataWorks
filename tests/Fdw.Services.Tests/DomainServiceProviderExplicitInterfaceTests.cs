@@ -59,7 +59,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(testService));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", mockFactory.Object);
+        _provider.Register("TestType", () => mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
@@ -85,7 +85,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
@@ -131,7 +131,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(testService));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", mockFactory.Object);
+        _provider.Register("TestType", () => mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>(id, TestContext.Current.CancellationToken);
 
@@ -158,7 +158,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await explicitProvider.Get<TestService>(id, TestContext.Current.CancellationToken);
 
@@ -199,7 +199,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get(id, TestContext.Current.CancellationToken);
 
@@ -220,7 +220,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed due to X")));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get("MyService", TestContext.Current.CancellationToken);
 
@@ -243,7 +243,7 @@ public class DefaultServiceProviderExplicitInterfaceTests
             .ReturnsAsync(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed due to X")));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get(id, TestContext.Current.CancellationToken);
 

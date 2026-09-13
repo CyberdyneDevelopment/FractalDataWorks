@@ -108,7 +108,7 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                 return domain;
             });
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetImplementationConfiguration>>(
-                sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+                sp => sp.GetRequiredService<IDataSetConfigurationProvider>());
 
             // Lineage reads containers that span domains and, in the transform schema, have no
             // configuration types of their own. It is registered beside the DataSet provider because

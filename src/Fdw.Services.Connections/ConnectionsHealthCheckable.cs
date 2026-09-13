@@ -65,10 +65,9 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         ConnectionsHealthLog.CheckStarting(_logger);
         var stopwatch = Stopwatch.StartNew();
 
-        var configProvider = serviceProvider.GetRequiredService<ConnectionConfigurationProvider>();
         var connectionProvider = serviceProvider.GetRequiredService<IConnectionProvider>();
 
-        var allResult = await configProvider.Get(cancellationToken).ConfigureAwait(false);
+        var allResult = await serviceProvider.GetRequiredService<IConnectionConfigurationProvider>().Get(cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess)
         {
             var reason = allResult.CurrentMessage ?? "Unknown error";

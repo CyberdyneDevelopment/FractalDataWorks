@@ -44,13 +44,11 @@ public sealed class ChainedExternalIdentityProvisionerType
             var logger = loggerFactory.CreateLogger<ChainedExternalIdentityProvisionerType>();
 
             var implementationProvider = services.GetRequiredService<IChainedExternalIdentityProvisionerProvider>();
-            var domainProvider = services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>();
-            var typedProvider = services.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>();
 
-            domainProvider.Register("Chained", typedProvider);
+            services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>().Register("Chained", services.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>());
 
 
-            var factoryResult = provider.Register("Chained", implementationProvider);
+            var factoryResult = provider.Register("Chained", () => implementationProvider);
             if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
 
             ServiceTypeLog.OptionFactoryRegistered(

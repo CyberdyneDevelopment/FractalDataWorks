@@ -36,9 +36,8 @@ public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
         {
             builder.Services.AddScoped<AnalyticsApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<AnalyticsApiClient>>() ?? NullLogger<AnalyticsApiClient>.Instance;
-                return new AnalyticsApiClient(factory.CreateClient(Name), logger);
+                return new AnalyticsApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
 
             builder.Services.TryAddSingleton<IAnalyticsService, AnalyticsService>();

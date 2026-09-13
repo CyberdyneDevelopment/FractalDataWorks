@@ -36,9 +36,8 @@ public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
             // TableWizardProvider [Inject]s ISchemaProvider — without this the schema wizard crashes.
             builder.Services.AddScoped<ISchemaProvider>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SchemaApiClient>>() ?? NullLogger<SchemaApiClient>.Instance;
-                return new SchemaApiClient(factory.CreateClient(Name), logger);
+                return new SchemaApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

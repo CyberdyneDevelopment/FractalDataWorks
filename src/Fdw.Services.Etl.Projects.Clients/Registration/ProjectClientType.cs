@@ -32,9 +32,8 @@ public sealed class ProjectClientType : ApiClientTypeBase<ProjectApiClient>
         {
             builder.Services.AddScoped<ProjectApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ProjectApiClient>>() ?? NullLogger<ProjectApiClient>.Instance;
-                return new ProjectApiClient(factory.CreateClient(Name), logger);
+                return new ProjectApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

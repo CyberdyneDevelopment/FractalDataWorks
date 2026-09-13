@@ -34,9 +34,8 @@ public sealed class PromotionClientType : ApiClientTypeBase<PromotionApiClient>
         {
             builder.Services.AddScoped<PromotionApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<PromotionApiClient>>() ?? NullLogger<PromotionApiClient>.Instance;
-                return new PromotionApiClient(factory.CreateClient(Name), logger);
+                return new PromotionApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

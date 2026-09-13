@@ -56,18 +56,18 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
 
             builder.Services.TryAddSingleton<IEffectivePermissionResolver>(sp =>
                 new EffectivePermissionResolver(
-                    sp.GetRequiredService<RoleConfigurationProvider>(),
-                    sp.GetRequiredService<PermissionConfigurationProvider>(),
-                    sp.GetRequiredService<RolePermissionConfigurationProvider>(),
-                    sp.GetRequiredService<UserRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IPermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IUserRoleConfigurationProvider>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EffectivePermissionResolver>(),
                     sp.GetRequiredService<IOrgAccessProvider>()));
 
             builder.Services.TryAddSingleton<IRolePermissionResolver>(sp =>
                 new RolePermissionResolver(
-                    sp.GetRequiredService<RoleConfigurationProvider>(),
-                    sp.GetRequiredService<PermissionConfigurationProvider>(),
-                    sp.GetRequiredService<RolePermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IPermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<RolePermissionResolver>()));
 
             builder.Services.TryAddSingleton<IFrameworkAuthorizationService, DefaultAuthorizationService>();

@@ -75,8 +75,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
 
 
             builder.Services.TryAddSingleton<ServerSettingImplementationConfigurationProvider>(sp => new ServerSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IServerSettingImplementationConfigurationProvider>(
-                sp => sp.GetRequiredService<ServerSettingImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServerSettingImplementationConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingImplementationConfigurationProvider>());
             // The domain is built with its one implementation registered into it, as RoleMapping is:
             // a domain provider with nothing registered answers every read with NoImplementationProvider.
             builder.Services.TryAddSingleton<ServerSettingConfigurationProvider>(sp =>
@@ -87,8 +86,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
                 domain.Register("ServerSetting", sp.GetRequiredService<IServerSettingImplementationConfigurationProvider>());
                 return domain;
             });
-            builder.Services.TryAddSingleton<IServerSettingConfigurationProvider>(
-                sp => sp.GetRequiredService<ServerSettingConfigurationProvider>());
+            builder.Services.TryAddSingleton<IServerSettingConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);

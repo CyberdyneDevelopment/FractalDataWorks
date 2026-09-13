@@ -33,9 +33,8 @@ public sealed class QualityClientType : ApiClientTypeBase<QualityApiClient>
         {
             builder.Services.AddScoped<QualityApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<QualityApiClient>>() ?? NullLogger<QualityApiClient>.Instance;
-                return new QualityApiClient(factory.CreateClient(Name), logger);
+                return new QualityApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -39,7 +39,7 @@ public class DefaultServiceProviderTests
     [Trait("Category", "CoreFramework")]
     public void RegisterFactoryReturnsSuccess()
     {
-        var result = _provider.Register("TestType", _mockFactory.Object);
+        var result = _provider.Register("TestType", () => _mockFactory.Object);
 
         result.IsSuccess.ShouldBeTrue();
     }
@@ -86,7 +86,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get("MyService", TestContext.Current.CancellationToken);
 
@@ -108,7 +108,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed")));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get("MyService", TestContext.Current.CancellationToken);
 
@@ -132,7 +132,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get(id, TestContext.Current.CancellationToken);
 
@@ -169,7 +169,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Failure(new GenericMessage("Creation failed")));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await _provider.Get(id, TestContext.Current.CancellationToken);
 
@@ -195,7 +195,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(testService));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", mockFactory.Object);
+        _provider.Register("TestType", () => mockFactory.Object);
 
         var result = await ((IDomainServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
 
@@ -219,7 +219,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         // Try to cast to a type it doesn't implement
         var result = await ((IDomainServiceProvider)_provider).Get<TestService>("MyService", TestContext.Current.CancellationToken);
@@ -246,7 +246,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(testService));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", mockFactory.Object);
+        _provider.Register("TestType", () => mockFactory.Object);
 
         var result = await ((IDomainServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
 
@@ -271,7 +271,7 @@ public class DefaultServiceProviderTests
             .ReturnsAsync(GenericResult<IGenericService>.Success(mockService.Object));
 
         _provider.Register(_mockConfigProvider.Object);
-        _provider.Register("TestType", _mockFactory.Object);
+        _provider.Register("TestType", () => _mockFactory.Object);
 
         var result = await ((IDomainServiceProvider)_provider).Get<TestService>(id, TestContext.Current.CancellationToken);
 
@@ -286,8 +286,8 @@ public class DefaultServiceProviderTests
         var mockFactory1 = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
         var mockFactory2 = new Mock<IImplementationServiceProvider<IGenericService, TestConfiguration>>();
 
-        _provider.Register("TestType", mockFactory1.Object);
-        _provider.Register("TestType", mockFactory2.Object);
+        _provider.Register("TestType", () => mockFactory1.Object);
+        _provider.Register("TestType", () => mockFactory2.Object);
 
         var config = new TestConfiguration { Id = Guid.NewGuid(), Name = "MyService", Implementation = "TestType" };
         var mockService = new Mock<IGenericService>();

@@ -33,9 +33,8 @@ public sealed class AuthenticationClientType : ApiClientTypeBase<AuthenticationA
         {
             builder.Services.AddScoped<AuthenticationApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<AuthenticationApiClient>>() ?? NullLogger<AuthenticationApiClient>.Instance;
-                return new AuthenticationApiClient(factory.CreateClient(Name), logger);
+                return new AuthenticationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -34,9 +34,8 @@ public static class SpectreRegistrationExtensions
 
         services.TryAddTransient<SpectreRenderContext>(sp =>
         {
-            var console = sp.GetRequiredService<IAnsiConsole>();
             var theme = MenuThemes.ById(defaultThemeId);
-            return new SpectreRenderContext(console, theme);
+            return new SpectreRenderContext(sp.GetRequiredService<IAnsiConsole>(), theme);
         });
 
         services.TryAddSingleton<SpectreUIRenderer>();

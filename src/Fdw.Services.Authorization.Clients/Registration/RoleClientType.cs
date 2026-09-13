@@ -33,9 +33,8 @@ public sealed class RoleClientType : ApiClientTypeBase<RoleApiClient>
         {
             builder.Services.AddScoped<RoleApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<RoleApiClient>>() ?? NullLogger<RoleApiClient>.Instance;
-                return new RoleApiClient(factory.CreateClient(Name), logger);
+                return new RoleApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

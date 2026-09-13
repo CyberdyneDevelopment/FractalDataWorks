@@ -48,8 +48,6 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
                 // Get(configTypeName) scans all DataStores for a container, so a container declared
                 // on ServerConfiguration is invisible if only PlatformConfiguration is loaded.
                 // The provider builds each gateway on demand from its declaration and caches it.
-                var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
-                var schema = sp.GetRequiredService<ConfigurationSchema>();
                 // Resolved on every lookup rather than cached. A cache here is wrong twice over:
                 // the first caller may run before every gateway has registered, and would pin an
                 // incomplete list for the life of the host; and a Lazy whose factory asks the
@@ -59,9 +57,9 @@ public sealed class ConfigurationGatewayServiceType : ConfigurationGatewayTypeBa
                 IReadOnlyList<IDataStore> DataStores()
                 {
                     var stores = new List<IDataStore>();
-                    foreach (var connection in schema.Connections)
+                    foreach (var connection in sp.GetRequiredService<ConfigurationSchema>().Connections)
                     {
-                        var gateway = gatewayProvider.Get(connection.Name);
+                        var gateway = sp.GetRequiredService<IConfigurationGatewayProvider>().Get(connection.Name);
                         if (!gateway.IsSuccess || gateway.Value is null)
                             continue;
 

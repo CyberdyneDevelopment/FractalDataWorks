@@ -67,8 +67,7 @@ public static class TokenManagerTypes
             return GenericResult<IHostApplicationBuilder>.Success(builder);
 
             builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(sp => new TokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<TokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(
-                sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
 
         builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp => new JwtTokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<JwtTokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
         builder.Services.TryAddSingleton<IJwtTokenManagerConfigurationProvider>(sp => sp.GetRequiredService<JwtTokenManagerConfigurationProvider>());
@@ -111,7 +110,7 @@ public static class TokenManagerTypes
         if (defer)
             return GenericResult<IHost>.Success(host);
 
-        var registered = host.Services.GetRequiredService<TokenManagerConfigurationProvider>()
+        var registered = host.Services.GetRequiredService<ITokenManagerConfigurationProvider>()
             .Register(JwtImplementation, host.Services.GetRequiredService<IJwtTokenManagerConfigurationProvider>());
         return registered.IsSuccess
             ? GenericResult<IHost>.Success(host)

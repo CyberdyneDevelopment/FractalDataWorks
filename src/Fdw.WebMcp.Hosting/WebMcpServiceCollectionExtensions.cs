@@ -70,12 +70,11 @@ public static class WebMcpServiceCollectionExtensions
             ((IEndpointRouteBuilder)app).DataSources.SelectMany(static source => source.Endpoints).ToList(),
             logger);
 
-        var generator = app.Services.GetRequiredService<WebMcpJsGenerator>();
 
         app.MapGet("/.well-known/webmcp.js", (HttpContext httpContext) =>
         {
             httpContext.Response.Headers.CacheControl = "public, max-age=3600";
-            var js = generator.Generate();
+            var js = app.Services.GetRequiredService<WebMcpJsGenerator>().Generate();
             return Microsoft.AspNetCore.Http.Results.Content(js, "application/javascript");
         })
         .ExcludeFromDescription();

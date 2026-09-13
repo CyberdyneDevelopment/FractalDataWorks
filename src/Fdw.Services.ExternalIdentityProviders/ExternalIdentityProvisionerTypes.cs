@@ -94,8 +94,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
 
 
             builder.Services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(sp => new ExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(
-                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
             builder.Services.AddScoped<IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
             {

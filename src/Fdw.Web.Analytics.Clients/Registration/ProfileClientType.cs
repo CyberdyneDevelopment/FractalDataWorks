@@ -34,9 +34,8 @@ public sealed class ProfileClientType : ApiClientTypeBase<ProfileApiClient>
         {
             builder.Services.AddScoped<ProfileApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ProfileApiClient>>() ?? NullLogger<ProfileApiClient>.Instance;
-                return new ProfileApiClient(factory.CreateClient(Name), logger);
+                return new ProfileApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

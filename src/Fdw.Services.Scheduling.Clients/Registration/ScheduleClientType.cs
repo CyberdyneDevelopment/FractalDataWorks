@@ -34,9 +34,8 @@ public sealed class ScheduleClientType : ApiClientTypeBase<IScheduleClient>
         {
             builder.Services.AddScoped<IScheduleClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ScheduleHttpClient>>() ?? NullLogger<ScheduleHttpClient>.Instance;
-                return new ScheduleHttpClient(factory.CreateClient(Name), logger);
+                return new ScheduleHttpClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

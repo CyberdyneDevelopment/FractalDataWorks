@@ -47,7 +47,7 @@ public sealed class RoslynWorkspaceConnectionType
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            services.GetRequiredService<ConnectionConfigurationProvider>()
+            services.GetRequiredService<IConnectionConfigurationProvider>()
                 .Register(
                     Name, services.GetRequiredService<IRoslynWorkspaceConnectionConfigurationProvider>());
 
@@ -56,7 +56,7 @@ public sealed class RoslynWorkspaceConnectionType
             // IConnectionProvider's registry has no entry for this option and every workspace
             // connection fails with "no factory for service option".
             var implementationRegistered = services.GetRequiredService<IConnectionProvider>()
-                .Register(Name, services.GetRequiredService<IRoslynWorkspaceConnectionProvider>());
+                .Register(Name, () => services.GetRequiredService<IRoslynWorkspaceConnectionProvider>());
             if (!implementationRegistered.IsSuccess) return implementationRegistered.ToNewResult<IHost>();
 
             return GenericResult<IHost>.Success(host);

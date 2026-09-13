@@ -94,10 +94,9 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
             builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(sp => new SchedulerConfigurationProvider(sp.GetRequiredService<ILogger<SchedulerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(
-                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
-                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+                sp => sp.GetRequiredService<ISchedulerConfigurationProvider>());
 
             builder.Services.TryAddSingleton<ScheduleImplementationConfigurationProvider>(sp =>
                 new ScheduleImplementationConfigurationProvider(
@@ -114,16 +113,14 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                 // sched.ScheduleImplementation row and the domain row's Implementation names which
                 // kind it is, so dispatch lands on the one provider whatever the kind. Without these
                 // the domain read finds its row and then has nothing to hand it to.
-                var implementation = sp.GetRequiredService<ScheduleImplementationConfigurationProvider>();
                 foreach (var kind in TriggerTypes.All())
                 {
-                    domain.Register(kind.Name, implementation);
+                    domain.Register(kind.Name, sp.GetRequiredService<ScheduleImplementationConfigurationProvider>());
                 }
 
                 return domain;
             });
-            builder.Services.TryAddSingleton<IScheduleConfigurationProvider>(
-                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+            builder.Services.TryAddSingleton<IScheduleConfigurationProvider>(sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
             {

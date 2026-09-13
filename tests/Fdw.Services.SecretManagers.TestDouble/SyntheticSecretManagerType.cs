@@ -63,7 +63,7 @@ public sealed class SyntheticSecretManagerType
             var services = host.Services;
             services
                 .GetRequiredService<ISecretManagerProvider>()
-                .Register(Name, new SyntheticSecretManagerProvider(services.GetRequiredService<ISyntheticSecretManagerFactory>()));
+                .Register(Name, () => new SyntheticSecretManagerProvider(services.GetRequiredService<ISyntheticSecretManagerFactory>()));
 
             return GenericResult<IHost>.Success(host);
         });

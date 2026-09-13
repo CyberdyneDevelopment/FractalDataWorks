@@ -34,9 +34,8 @@ public sealed class ThemeClientType : ApiClientTypeBase<ThemeApiClient>
         {
             builder.Services.AddScoped<ThemeApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ThemeApiClient>>() ?? NullLogger<ThemeApiClient>.Instance;
-                return new ThemeApiClient(factory.CreateClient(Name), logger);
+                return new ThemeApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

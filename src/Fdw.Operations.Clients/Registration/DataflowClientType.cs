@@ -33,9 +33,8 @@ public sealed class DataflowClientType : ApiClientTypeBase<DataflowApiClient>
         {
             builder.Services.AddScoped<DataflowApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<DataflowApiClient>>() ?? NullLogger<DataflowApiClient>.Instance;
-                return new DataflowApiClient(factory.CreateClient(Name), logger);
+                return new DataflowApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

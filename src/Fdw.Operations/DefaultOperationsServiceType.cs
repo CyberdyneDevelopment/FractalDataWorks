@@ -64,17 +64,15 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                var gatewayProvider = sp.GetRequiredService<IDataGatewayProvider>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
                 var ruleProvider = sp.GetService<INotificationRuleConfigurationProvider>();
-                return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
+                return new ExecutionTrackingService(sp.GetRequiredService<IDataGatewayProvider>(), lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                var provider = sp.GetRequiredService<EscalationConfigurationProvider>();
-                return new EscalationService(provider, lf);
+                return new EscalationService(sp.GetRequiredService<IEscalationConfigurationProvider>(), lf);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -33,9 +33,8 @@ public sealed class AgentActionClientType : ApiClientTypeBase<AgentActionClient>
         {
             builder.Services.AddScoped<AgentActionClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<AgentActionClient>>() ?? NullLogger<AgentActionClient>.Instance;
-                return new AgentActionClient(factory.CreateClient(Name), logger);
+                return new AgentActionClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -33,9 +33,8 @@ public sealed class UserClientType : ApiClientTypeBase<UserApiClient>
         {
             builder.Services.AddScoped<UserApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<UserApiClient>>() ?? NullLogger<UserApiClient>.Instance;
-                return new UserApiClient(factory.CreateClient(Name), logger);
+                return new UserApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

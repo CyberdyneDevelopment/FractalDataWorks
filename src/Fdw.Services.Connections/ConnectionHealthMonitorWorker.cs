@@ -111,7 +111,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            var configProvider = scope.ServiceProvider.GetRequiredService<ConnectionConfigurationProvider>();
+            var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
             var allResult = await configProvider.Get(ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
             {
@@ -150,7 +150,7 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            var configProvider = scope.ServiceProvider.GetRequiredService<ConnectionConfigurationProvider>();
+            var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
             var allResult = await configProvider.Get(ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
             {
@@ -191,10 +191,9 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
 
         _lastChecked[connection.Id] = DateTimeOffset.UtcNow;
 
-        var connectionProvider = services.GetRequiredService<IConnectionProvider>();
         var healthService = services.GetRequiredService<IConnectionHealthService>();
 
-        var getResult = await connectionProvider.Get(connection.Name, ct).ConfigureAwait(false);
+        var getResult = await services.GetRequiredService<IConnectionProvider>().Get(connection.Name, ct).ConfigureAwait(false);
         if (!getResult.IsSuccess || getResult.Value is null)
         {
             var reason = getResult.CurrentMessage ?? "Connection could not be resolved";

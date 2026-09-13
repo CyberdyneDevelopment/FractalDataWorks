@@ -54,7 +54,7 @@ public sealed class ResolvePrincipalStepType
     // Captured when the host is built: an option is created by its module initializer, which needs
     // a parameterless constructor, so what it needs arrives where a live container exists.
     private IPrincipalBinding? _bindings;
-    private ExternalIdentityProvisionerBindingConfigurationProvider? _provisionerBindings;
+    private IExternalIdentityProvisionerBindingConfigurationProvider? _provisionerBindings;
     private IExternalIdentityProvisionerServiceProvider? _provisioners;
     private ITenantResolver? _tenants;
     private ILogger _logger = NullLogger<ResolvePrincipalStepType>.Instance;
@@ -69,7 +69,7 @@ public sealed class ResolvePrincipalStepType
         Initialization((host, loggerFactory) =>
         {
             _bindings = host.Services.GetRequiredService<IPrincipalBinding>();
-            _provisionerBindings = host.Services.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>();
+            _provisionerBindings = host.Services.GetRequiredService<IExternalIdentityProvisionerBindingConfigurationProvider>();
             _provisioners = host.Services.GetRequiredService<IExternalIdentityProvisionerServiceProvider>();
             _tenants = host.Services.GetRequiredService<ITenantResolver>();
             _logger = loggerFactory?.CreateLogger<ResolvePrincipalStepType>()

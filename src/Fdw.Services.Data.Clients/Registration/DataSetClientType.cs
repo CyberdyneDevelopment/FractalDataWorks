@@ -33,9 +33,8 @@ public sealed class DataSetClientType : ApiClientTypeBase<DataSetApiClient>
         {
             builder.Services.AddScoped<DataSetApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<DataSetApiClient>>() ?? NullLogger<DataSetApiClient>.Instance;
-                return new DataSetApiClient(factory.CreateClient(Name), logger);
+                return new DataSetApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

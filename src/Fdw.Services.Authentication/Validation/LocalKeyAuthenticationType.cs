@@ -45,8 +45,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
         Registration((builder, loggerFactory) =>
         {
             builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>(sp => new LocalKeyAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<LocalKeyAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
-                sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+            builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp => sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
 
             // Transient, because the handler holds the scheme and the request it was initialised
             // for in fields. One instance per resolution is what AuthenticationBuilder.AddScheme
@@ -65,7 +64,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
         Initialization((host, loggerFactory) =>
         {
             host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                .Register(Name, host.Services.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+                .Register(Name, host.Services.GetRequiredService<ILocalKeyAuthenticationConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
     }

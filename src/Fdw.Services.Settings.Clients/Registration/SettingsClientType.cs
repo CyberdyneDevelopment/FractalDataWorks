@@ -33,9 +33,8 @@ public sealed class SettingsClientType : ApiClientTypeBase<SettingsApiClient>
         {
             builder.Services.AddScoped<SettingsApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SettingsApiClient>>() ?? NullLogger<SettingsApiClient>.Instance;
-                return new SettingsApiClient(factory.CreateClient(Name), logger);
+                return new SettingsApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

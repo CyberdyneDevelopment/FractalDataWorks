@@ -35,12 +35,12 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
     where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
 {
     private readonly ILogger<DomainServiceProviderBase<TService, TConfiguration, TFactory, TConfigurationProvider>> _logger;
-    private readonly Dictionary<string, IImplementationServiceProvider<TService, TConfiguration>> _implementations
+    private readonly Dictionary<string, Func<IImplementationServiceProvider<TService, TConfiguration>>> _implementations
         = new(StringComparer.OrdinalIgnoreCase);
     private IDomainConfigurationProvider<TConfiguration>? _domainConfigurationProvider;
 
-    /// <summary>Gets the registered implementation providers keyed by implementation.</summary>
-    protected IDictionary<string, IImplementationServiceProvider<TService, TConfiguration>> Implementations => _implementations;
+    /// <summary>Gets the registered implementation-provider factories keyed by implementation.</summary>
+    protected IDictionary<string, Func<IImplementationServiceProvider<TService, TConfiguration>>> Implementations => _implementations;
 
     /// <summary>Gets the domain's parent configuration provider.</summary>
     protected IDomainConfigurationProvider<TConfiguration>? DomainConfigurationProvider => _domainConfigurationProvider;
@@ -64,9 +64,9 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
     /// <inheritdoc />
     public IGenericResult Register(
         string implementation,
-        IImplementationServiceProvider<TService, TConfiguration> implementationProvider)
+        Func<IImplementationServiceProvider<TService, TConfiguration>> implementationProviderFactory)
     {
-        _implementations[implementation] = implementationProvider;
+        _implementations[implementation] = implementationProviderFactory;
         ServiceLogger.ProviderFactoryRegistered(_logger, implementation);
         return GenericResult.Success();
     }
@@ -115,7 +115,7 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
                 ResultDetails.Create("Identifier", identifier));
         }
 
-        if (!_implementations.TryGetValue(configuration.Value.Implementation, out var implementationProvider))
+        if (!_implementations.TryGetValue(configuration.Value.Implementation, out var implementationProviderFactory))
         {
             ServiceLogger.NoFactoryRegistered(_logger, configuration.Value.Implementation);
             ServiceLogger.FactoryLookupMiss(
@@ -127,6 +127,11 @@ public abstract class DomainServiceProviderBase<TService, TConfiguration, TFacto
         }
 
         ServiceLogger.FactoryLookupSucceeded(_logger, configuration.Value.Implementation);
+
+        // Invoked here, not stored: the implementation provider is resolved fresh on every call, so
+        // whatever lifetime it is actually registered with — Scoped, Transient, Singleton — is honoured
+        // every time, instead of freezing whatever the first resolution happened to return.
+        var implementationProvider = implementationProviderFactory();
 
         // The implementation the row names resolves whatever it needs and builds. This provider does
         // not know what that is, and must not: knowing would mean knowing the implementation.

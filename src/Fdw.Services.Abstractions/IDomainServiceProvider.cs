@@ -62,19 +62,25 @@ public interface IDomainServiceProvider<TService, TConfiguration> : IDomainServi
 {
 
     /// <summary>
-    /// Registers the provider that builds one implementation of this domain.
+    /// Registers how to obtain the provider that builds one implementation of this domain.
     /// </summary>
     /// <param name="implementation">The implementation name a domain row carries.</param>
-    /// <param name="implementationProvider">The provider that resolves and builds that implementation.</param>
+    /// <param name="implementationProviderFactory">
+    /// Resolves the provider that builds that implementation. Called fresh on every <c>Get</c> —
+    /// never invoked here and never cached — so the container honours whatever lifetime the
+    /// implementation provider is actually registered with (Scoped, Transient, or Singleton) instead
+    /// of freezing whatever the first call happened to return.
+    /// </param>
     /// <returns>Success, or a structured failure.</returns>
     /// <remarks>
     /// This only keeps what it is handed. Constructing the implementation provider and registering it
     /// in the container is a three-phase Register body's job, as every other DI registration in this
-    /// framework is — so a domain provider never resolves anything and needs no container.
+    /// framework is — so a domain provider never resolves anything itself and needs no container of
+    /// its own; the closure the caller hands in is the only place <c>IServiceProvider</c> appears.
     /// </remarks>
     IGenericResult Register(
         string implementation,
-        IImplementationServiceProvider<TService, TConfiguration> implementationProvider);
+        Func<IImplementationServiceProvider<TService, TConfiguration>> implementationProviderFactory);
     /// <summary>
     /// Registers a parent configuration provider for direct name-to-type resolution.
     /// The parent provider holds ALL configurations across all service option types,

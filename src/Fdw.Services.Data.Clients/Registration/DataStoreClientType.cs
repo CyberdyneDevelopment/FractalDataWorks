@@ -33,9 +33,8 @@ public sealed class DataStoreClientType : ApiClientTypeBase<DataStoreApiClient>
         {
             builder.Services.AddScoped<DataStoreApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<DataStoreApiClient>>() ?? NullLogger<DataStoreApiClient>.Instance;
-                return new DataStoreApiClient(factory.CreateClient(Name), logger);
+                return new DataStoreApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

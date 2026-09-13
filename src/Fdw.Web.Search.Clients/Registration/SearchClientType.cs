@@ -34,9 +34,8 @@ public sealed class SearchClientType : ApiClientTypeBase<SearchApiClient>
         {
             builder.Services.AddScoped<SearchApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SearchApiClient>>() ?? NullLogger<SearchApiClient>.Instance;
-                return new SearchApiClient(factory.CreateClient(Name), logger);
+                return new SearchApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

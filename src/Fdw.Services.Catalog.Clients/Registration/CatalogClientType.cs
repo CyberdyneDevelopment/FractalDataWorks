@@ -33,9 +33,8 @@ public sealed class CatalogClientType : ApiClientTypeBase<CatalogApiClient>
         {
             builder.Services.AddScoped<CatalogApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<CatalogApiClient>>() ?? NullLogger<CatalogApiClient>.Instance;
-                return new CatalogApiClient(factory.CreateClient(Name), logger);
+                return new CatalogApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -33,9 +33,8 @@ public sealed class SecretManagerClientType : ApiClientTypeBase<SecretManagerApi
         {
             builder.Services.AddScoped<SecretManagerApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SecretManagerApiClient>>() ?? NullLogger<SecretManagerApiClient>.Instance;
-                return new SecretManagerApiClient(factory.CreateClient(Name), logger);
+                return new SecretManagerApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -64,6 +64,20 @@ public sealed class HttpHealthMonitorClientType
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
+        // Why Initialize: this wiring needs a LIVE container, and Register runs while the container
+        // is still being built. This option has no configuration row of its own — it queries the
+        // API host's health endpoints over HTTP rather than reading a store — so only the runtime
+        // provider needs registering, not a configuration source.
+        Initialization((host, loggerFactory) =>
+        {
+            var services = host.Services;
+            var registered = services.GetRequiredService<IHealthMonitorProvider>()
+                .Register(Name, () => services.GetRequiredService<IHttpHealthMonitorProvider>());
+            return registered.IsSuccess
+                ? GenericResult<IHost>.Success(host)
+                : registered.ToNewResult<IHost>();
+        });
+
     }
 
 }

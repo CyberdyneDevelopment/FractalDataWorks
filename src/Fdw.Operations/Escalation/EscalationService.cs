@@ -22,7 +22,7 @@ public sealed class EscalationService : IEscalationService
 {
     private const string EscalationPolicyDomain = "EscalationPolicy";
 
-    private readonly EscalationConfigurationProvider _provider;
+    private readonly IEscalationConfigurationProvider _provider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,7 +31,7 @@ public sealed class EscalationService : IEscalationService
     /// <param name="provider">The escalation configuration provider (composes the aggregate on read, cascades on save).</param>
     /// <param name="loggerFactory">Logger factory.</param>
     public EscalationService(
-        EscalationConfigurationProvider provider,
+        IEscalationConfigurationProvider provider,
         ILoggerFactory loggerFactory)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));

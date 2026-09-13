@@ -82,11 +82,10 @@ public partial class HostTypes : ServiceTypeCollectionBase<
 
                 // Host is a single-implementation domain, so one registration under its own name.
                 // Without it the domain read finds its row and then has nothing to hand it to.
-                domain.Register(HostImplementationName, sp.GetRequiredService<HostImplementationConfigurationProvider>());
+                domain.Register(HostImplementationName, sp.GetRequiredService<IHostImplementationConfigurationProvider>());
                 return domain;
             });
-            builder.Services.TryAddSingleton<IHostConfigurationProvider>(
-                sp => sp.GetRequiredService<HostConfigurationProvider>());
+            builder.Services.TryAddSingleton<IHostConfigurationProvider>(sp => sp.GetRequiredService<HostConfigurationProvider>());
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

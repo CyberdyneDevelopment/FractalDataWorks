@@ -74,6 +74,14 @@ public sealed class JwtAssertionIdentityType
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<IJwtAssertionConfigurationProvider>());
 
+            // The line above tells the identity domain how to READ this option's rows; this hands the
+            // runtime identity provider what it BUILDS an identity service with. Without it
+            // IIdentityServiceProvider's registry has no entry for "JwtAssertion" and every resolve by
+            // that name fails with "no factory for service option".
+            var identityRegistered = services.GetRequiredService<IIdentityServiceProvider>()
+                .Register(Name, () => services.GetRequiredService<IJwtAssertionIdentityProvider>());
+            if (!identityRegistered.IsSuccess) return identityRegistered.ToNewResult<IHost>();
+
             return GenericResult<IHost>.Success(host);
         });
     }

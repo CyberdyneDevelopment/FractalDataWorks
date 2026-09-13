@@ -57,11 +57,10 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
         {
             EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
 
-            var orchestrator = scope.ServiceProvider.GetRequiredService<IOrchestrationNodeOrchestrator>();
 
             try
             {
-                await orchestrator.Execute(request, stoppingToken).ConfigureAwait(false);
+                await scope.ServiceProvider.GetRequiredService<IOrchestrationNodeOrchestrator>().Execute(request, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {

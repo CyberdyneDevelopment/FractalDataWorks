@@ -33,9 +33,8 @@ public sealed class ConnectionClientType : ApiClientTypeBase<ConnectionApiClient
         {
             builder.Services.AddScoped<ConnectionApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ConnectionApiClient>>() ?? NullLogger<ConnectionApiClient>.Instance;
-                return new ConnectionApiClient(factory.CreateClient(Name), logger);
+                return new ConnectionApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -32,9 +32,8 @@ public sealed class NodeClientType : ApiClientTypeBase<NodeApiClient>
         {
             builder.Services.AddScoped<NodeApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<NodeApiClient>>() ?? NullLogger<NodeApiClient>.Instance;
-                return new NodeApiClient(factory.CreateClient(Name), logger);
+                return new NodeApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

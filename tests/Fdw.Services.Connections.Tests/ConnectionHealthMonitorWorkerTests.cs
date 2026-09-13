@@ -8,6 +8,7 @@ using Fdw.Configuration;
 using Fdw.Data.Abstractions.Results;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -140,6 +141,7 @@ public sealed class ConnectionHealthMonitorWorkerTests
         var services = new ServiceCollection();
 
         services.AddSingleton<ConnectionConfigurationProvider>(provider);
+        services.AddSingleton<IConnectionConfigurationProvider>(sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
 
         var logger = new RecordingLogger();
         return (new ConnectionHealthMonitorWorker(

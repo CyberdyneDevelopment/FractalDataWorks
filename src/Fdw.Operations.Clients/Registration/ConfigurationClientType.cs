@@ -33,9 +33,8 @@ public sealed class ConfigurationClientType : ApiClientTypeBase<ConfigurationApi
         {
             builder.Services.AddScoped<ConfigurationApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ConfigurationApiClient>>() ?? NullLogger<ConfigurationApiClient>.Instance;
-                return new ConfigurationApiClient(factory.CreateClient(Name), logger);
+                return new ConfigurationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -52,8 +52,7 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
                 return registered;
 
             builder.Services.TryAddSingleton<MessagingImplementationConfigurationProvider>(sp => new MessagingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<MessagingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<IMessagingImplementationConfigurationProvider>(
-                sp => sp.GetRequiredService<MessagingImplementationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IMessagingImplementationConfigurationProvider>(sp => sp.GetRequiredService<MessagingImplementationConfigurationProvider>());
             builder.Services.TryAddSingleton<MessagingConfigurationProvider>(sp =>
             {
                 var domain = new MessagingConfigurationProvider(
@@ -62,10 +61,9 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
                 domain.Register("Messaging", sp.GetRequiredService<IMessagingImplementationConfigurationProvider>());
                 return domain;
             });
-            builder.Services.TryAddSingleton<IMessagingConfigurationProvider>(
-                sp => sp.GetRequiredService<MessagingConfigurationProvider>());
+            builder.Services.TryAddSingleton<IMessagingConfigurationProvider>(sp => sp.GetRequiredService<MessagingConfigurationProvider>());
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IMessagingImplementationConfiguration>>(
-                sp => sp.GetRequiredService<MessagingConfigurationProvider>());
+                sp => sp.GetRequiredService<IMessagingConfigurationProvider>());
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

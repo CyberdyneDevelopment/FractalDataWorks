@@ -71,10 +71,9 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
-            var implementationProvider = services.GetRequiredService<IStreamingPipelineProvider>();
 
             // Register factory instance with provider
-            var factoryResult = provider.Register(Name, implementationProvider);
+            var factoryResult = provider.Register(Name, () => services.GetRequiredService<IStreamingPipelineProvider>());
             if (!factoryResult.IsSuccess)
             {
                 ServiceTypeLog.OptionFactoryRegistrationFailed(
@@ -92,13 +91,11 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
                 Name,
                 nameof(IStreamingPipelineFactory));
 
-            var configProvider = services.GetRequiredService<StreamingPipelineConfigurationProvider>();
 
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.Register(Name, configProvider);
+            etlKindProvider.Register(Name, services.GetRequiredService<StreamingPipelineConfigurationProvider>());
 
-            var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.Register("Etl", etlKindProvider);
+            services.GetRequiredService<PipelineServiceConfigurationProvider>().Register("Etl", etlKindProvider);
     
             return GenericResult<IHost>.Success(host);
         });

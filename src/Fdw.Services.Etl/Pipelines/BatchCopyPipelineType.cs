@@ -70,10 +70,9 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
             var log = loggerFactory?.CreateLogger<BatchCopyPipelineType>() ?? NullLogger<BatchCopyPipelineType>.Instance;
 
             // Resolve factory from DI (registered in Phase 1)
-            var implementationProvider = services.GetRequiredService<IBatchCopyPipelineProvider>();
 
             // Register factory instance with provider
-            var factoryResult = provider.Register(Name, implementationProvider);
+            var factoryResult = provider.Register(Name, () => services.GetRequiredService<IBatchCopyPipelineProvider>());
             if (!factoryResult.IsSuccess)
             {
                 ServiceTypeLog.OptionFactoryRegistrationFailed(
@@ -91,13 +90,11 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
                 Name,
                 nameof(IBatchCopyPipelineFactory));
 
-            var configProvider = services.GetRequiredService<BatchCopyPipelineConfigurationProvider>();
 
             var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.Register(Name, configProvider);
+            etlKindProvider.Register(Name, services.GetRequiredService<BatchCopyPipelineConfigurationProvider>());
 
-            var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.Register("Etl", etlKindProvider);
+            services.GetRequiredService<PipelineServiceConfigurationProvider>().Register("Etl", etlKindProvider);
     
             return GenericResult<IHost>.Success(host);
         });

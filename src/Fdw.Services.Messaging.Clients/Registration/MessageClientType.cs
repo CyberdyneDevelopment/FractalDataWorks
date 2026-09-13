@@ -34,9 +34,8 @@ public sealed class MessageClientType : ApiClientTypeBase<MessageApiClient>
         {
             builder.Services.AddScoped<MessageApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<MessageApiClient>>() ?? NullLogger<MessageApiClient>.Instance;
-                return new MessageApiClient(factory.CreateClient(Name), logger);
+                return new MessageApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

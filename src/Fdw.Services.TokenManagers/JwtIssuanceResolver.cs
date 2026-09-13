@@ -92,7 +92,7 @@ internal sealed class JwtIssuanceResolver : IDisposable
                 return GenericResult.Success();
 
             var headers = await _services
-                .GetRequiredService<TokenManagerConfigurationProvider>()
+                .GetRequiredService<ITokenManagerConfigurationProvider>()
                 .Get(cancellationToken)
                 .ConfigureAwait(false);
 

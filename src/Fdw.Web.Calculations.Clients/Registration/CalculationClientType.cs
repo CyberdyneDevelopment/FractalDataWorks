@@ -35,9 +35,8 @@ public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClie
 
             builder.Services.AddScoped<CalculationApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<CalculationApiClient>>() ?? NullLogger<CalculationApiClient>.Instance;
-                return new CalculationApiClient(factory.CreateClient(Name), logger);
+                return new CalculationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             builder.Services.AddScoped<ICalculationApiClient>(sp => sp.GetRequiredService<CalculationApiClient>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);
