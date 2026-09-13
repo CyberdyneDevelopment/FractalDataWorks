@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 // DataSetRecord and DataSetSourcePayload now in this namespace
@@ -32,16 +33,19 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
     private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetDataSetMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetDataSetMappingsEndpointBase"/> class.
     /// </summary>
     /// <param name="dataGateways">The data gateway for database operations.</param>
+    /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected GetDataSetMappingsEndpointBase(IDataGatewayProvider dataGateways, ILogger<GetDataSetMappingsEndpointBase> logger)
+    protected GetDataSetMappingsEndpointBase(IDataGatewayProvider dataGateways, DataSetConfigurationProvider dataSetProvider, ILogger<GetDataSetMappingsEndpointBase> logger)
     {
         _dataGateways = dataGateways;
+        _dataSetProvider = dataSetProvider;
         _logger = logger;
     }
 
@@ -68,7 +72,9 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
     {
         EndpointLog.GettingResource(_logger, "field mappings", req.Name);
 
-        var dataSetResult = await FindDataSet(req.Name, ct).ConfigureAwait(false);
+        // Get(name) composes Sources and Fields onto the implementation record, so the data set and its
+        // children are one read.
+        var dataSetResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
             await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
@@ -82,14 +88,7 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
             return;
         }
 
-        var sourcesResult = await GetSources(dataSet.Id, ct).ConfigureAwait(false);
-        if (!sourcesResult.IsSuccess)
-        {
-            await SendReadFailure("data set sources", sourcesResult.CurrentMessage, ct).ConfigureAwait(false);
-            return;
-        }
-
-        var sources = sourcesResult.Value ?? [];
+        var sources = dataSet.Sources;
         if (sources.Count == 0)
         {
             await Send.OkAsync(new List<FieldMappingResponsePayload>(), ct).ConfigureAwait(false);
@@ -110,58 +109,6 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
         }
 
         await Send.OkAsync(allMappings, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Finds a data set record by name.</summary>
-    protected virtual async Task<IGenericResult<DataSetRecord?>> FindDataSet(string name, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "Name",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = name
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<DataSetRecord?>();
-        }
-
-        return GenericResult<DataSetRecord?>.Success(result.Value?.FirstOrDefault());
-    }
-
-    /// <summary>Gets all source records for the specified data set.</summary>
-    protected virtual async Task<IGenericResult<IList<DataSetSourceConfiguration>>> GetSources(Guid dataSetId, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "DataSetId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = dataSetId
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<IList<DataSetSourceConfiguration>>();
-        }
-
-        return GenericResult<IList<DataSetSourceConfiguration>>.Success(result.Value?.ToList() ?? []);
     }
 
     /// <summary>Gets all active (non-deleted) field mapping records for the specified source.</summary>

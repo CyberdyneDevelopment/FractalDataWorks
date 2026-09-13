@@ -1,4 +1,5 @@
-﻿using Fdw.Services.Data.Clients.Models;
+﻿using Microsoft.AspNetCore.Http;
+using Fdw.Services.Data.Clients.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +8,8 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 // DataSetRecord and DataSetSourcePayload now in this namespace
@@ -22,21 +25,17 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRequest, MappingValidationResponse>
 {
-    private readonly IDataGatewayProvider _dataGateways;
-
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<ValidateMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ValidateMappingsEndpointBase"/> class.
     /// </summary>
-    /// <param name="dataGateways">The data gateway for database operations.</param>
+    /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected ValidateMappingsEndpointBase(IDataGatewayProvider dataGateways, ILogger<ValidateMappingsEndpointBase> logger)
+    protected ValidateMappingsEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<ValidateMappingsEndpointBase> logger)
     {
-        _dataGateways = dataGateways;
+        _dataSetProvider = dataSetProvider;
         _logger = logger;
     }
 
@@ -64,8 +63,17 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
         var errors = new List<MappingValidationError>();
         var warnings = new List<MappingValidationWarning>();
 
-        var dataSet = await FindDataSet(req.Name, ct).ConfigureAwait(false);
-        if (dataSet == null)
+        // Get(name) composes Fields onto the implementation record. A failed read is reported as one:
+        // validating against an empty field list would pass or fail mappings for a reason that has
+        // nothing to do with them.
+        var dataSetResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
+        if (!dataSetResult.IsSuccess)
+        {
+            await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
+            return;
+        }
+
+        if (dataSetResult.Value is not { } dataSet)
         {
             errors.Add(new MappingValidationError
             {
@@ -82,9 +90,7 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
             return;
         }
 
-        var fields = await GetDataSetFields(dataSet.Id, ct).ConfigureAwait(false);
-
-        ValidateMappingEntries(req.Mappings, fields, errors, warnings);
+        ValidateMappingEntries(req.Mappings, dataSet.Fields, errors, warnings);
 
         var response = new MappingValidationResponse
         {
@@ -96,64 +102,12 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
         await Send.OkAsync(response, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Finds a data set record by name.</summary>
-    protected virtual async Task<DataSetRecord?> FindDataSet(string name, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "Name",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = name
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return null;
-        }
-
-        return result.Value?.FirstOrDefault();
-    }
-
-    /// <summary>Gets all field records for the specified data set.</summary>
-    protected virtual async Task<IList<DataSetFieldPayload>> GetDataSetFields(Guid dataSetId, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetFieldPayload>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "DataSetId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = dataSetId
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetFieldPayload>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetField"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return [];
-        }
-
-        return result.Value?.ToList() ?? [];
-    }
-
     /// <summary>
     /// Validates mapping entries against the data set fields, checking for empty names, unknown fields, duplicates, and unmapped required fields.
     /// </summary>
     protected virtual void ValidateMappingEntries(
         IList<FieldMappingInputPayload> mappings,
-        IList<DataSetFieldPayload> fields,
+        IList<DataSetFieldConfiguration> fields,
         IList<MappingValidationError> errors,
         IList<MappingValidationWarning> warnings)
     {
@@ -215,5 +169,16 @@ public abstract class ValidateMappingsEndpointBase : Endpoint<ValidateMappingsRe
                 Message = $"Required field '{unmapped}' has no mapping"
             });
         }
+    }
+
+    private Task SendReadFailure(string what, string? reason, CancellationToken ct)
+    {
+        HttpContext.Response.StatusCode = 500;
+        HttpContext.Response.ContentType = "application/json";
+        return HttpContext.Response.WriteAsJsonAsync(new
+        {
+            errorCode = "ReadFailed",
+            messages = new[] { $"Reading {what} failed: {reason ?? "no reason given"}" }
+        }, ct);
     }
 }
