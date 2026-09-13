@@ -1,5 +1,4 @@
 using System;
-using Fdw.Configuration;
 
 namespace Fdw.Services.Credentials.Sql.Configuration;
 
@@ -10,7 +9,7 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 /// The marker is what keeps the domain closed: only a configuration carrying it can be
 /// registered against this domain or handed back by a read of it.
 /// </remarks>
-public interface ICredentialsSqlImplementationConfiguration : IImplementationConfiguration
+public interface ICredentialsSqlImplementationConfiguration : ICredentialStoreImplementationConfiguration
 {
 
     /// <summary>Gets or sets the name of the credential service whose store this configures.</summary>
