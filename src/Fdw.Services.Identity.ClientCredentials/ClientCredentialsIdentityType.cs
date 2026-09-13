@@ -9,6 +9,7 @@ using Fdw.Services.Identity;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.Logging;
+using Fdw.ServiceTypes.Logging;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,14 +75,6 @@ public sealed class ClientCredentialsIdentityType
             services.GetRequiredService<IIdentityServiceConfigurationProvider>()
                 .Register(Name, services.GetRequiredService<IClientCredentialsConfigurationProvider>());
 
-            // The line above tells the identity domain how to READ this option's rows; this hands the
-            // runtime identity provider what it BUILDS an identity service with. Without it
-            // IIdentityServiceProvider's registry has no entry for "ClientCredentials" and every
-            // resolve by that name fails with "no factory for service option".
-            var identityRegistered = services.GetRequiredService<IIdentityServiceProvider>()
-                .Register(Name, () => services.GetRequiredService<IClientCredentialsIdentityProvider>());
-            if (!identityRegistered.IsSuccess) return identityRegistered.ToNewResult<IHost>();
-
             IdentityLog.MechanismRegistered(
                 loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
                     ?? NullLogger<ClientCredentialsIdentityType>.Instance,
@@ -89,5 +82,29 @@ public sealed class ClientCredentialsIdentityType
 
             return GenericResult<IHost>.Success(host);
         });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
+    /// <see cref="IIdentityServiceProvider"/> from the ROOT container once, at startup, and this
+    /// domain provider is registered <c>AddScoped</c> — so root's copy is one instance among many
+    /// a real request never sees, and a real request's own instance never had this call reach it.
+    /// This method is instead called once per construction, by <c>IdentityServiceTypes</c>'s own
+    /// factory, and handed THAT construction's <paramref name="serviceProvider"/> — the same
+    /// scope root or a request actually used to build <paramref name="domainProvider"/> itself.
+    /// </remarks>
+    public override IGenericResult RegisterImplementationProvider(IIdentityServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+    {
+        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IClientCredentialsIdentityProvider>());
+        if (!factoryResult.IsSuccess)
+        {
+            ServiceTypeLog.OptionFactoryRegistrationFailed(
+                logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider), factoryResult.CurrentMessage);
+            return factoryResult;
+        }
+
+        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider));
+        return factoryResult;
     }
 }
