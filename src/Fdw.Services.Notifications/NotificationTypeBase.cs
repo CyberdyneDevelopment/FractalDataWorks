@@ -1,8 +1,10 @@
 using System;
+using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Notifications.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Notifications;
 
@@ -54,4 +56,11 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
         _channelName = channelName;
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base no-op: an option with nothing to contribute reports success and leaves the domain
+    /// provider's registry unchanged.
+    /// </remarks>
+    public virtual IGenericResult RegisterImplementationProvider(INotificationServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+        => GenericResult.Success();
 }
