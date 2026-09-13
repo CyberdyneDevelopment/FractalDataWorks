@@ -127,6 +127,19 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(ExternalIdentityProvisionerTypes));
                     throw;
                 }
+
+                // Why here and not each option's Initialize: Initialize runs once, against root,
+                // before any request scope exists. This factory runs once PER SCOPE -- so calling
+                // each option in HERE, with the sp THIS construction received, reaches every scope
+                // that ever builds an ExternalIdentityProvisionerServiceProvider, not only root's.
+                foreach (var option in Options)
+                {
+                    if (option is not IExternalIdentityProvisionerType externalIdpOption)
+                        continue;
+
+                    externalIdpOption.RegisterImplementationProvider(provider, sp, stLogger);
+                }
+
                 return provider;
             });
 

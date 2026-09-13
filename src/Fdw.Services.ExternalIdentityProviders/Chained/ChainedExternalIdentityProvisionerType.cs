@@ -38,21 +38,11 @@ public sealed class ChainedExternalIdentityProvisionerType
         Initialization((host, hostLoggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>();
 
             var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
             var logger = loggerFactory.CreateLogger<ChainedExternalIdentityProvisionerType>();
 
-            var implementationProvider = services.GetRequiredService<IChainedExternalIdentityProvisionerProvider>();
-
             services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>().Register("Chained", services.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>());
-
-
-            var factoryResult = provider.Register("Chained", () => implementationProvider);
-            if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
-
-            ServiceTypeLog.OptionFactoryRegistered(
-                logger, nameof(ChainedExternalIdentityProvisionerType), Name, implementationProvider.GetType().Name);
 
             ExternalIdentityProvisionerLog.ProviderRegistered(logger, "Chained");
 
@@ -73,4 +63,28 @@ public sealed class ChainedExternalIdentityProvisionerType
 
     }
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
+    /// <see cref="IDomainServiceProvider{TService, TConfiguration}"/> from the ROOT container
+    /// once, at startup, and this domain provider is registered <c>TryAddScoped</c> — so root's
+    /// copy is one instance among many a real request never sees, and a real request's own
+    /// instance never had this call reach it. This method is instead called once per
+    /// construction, by <c>ExternalIdentityProvisionerTypes</c>'s own factory, and handed THAT
+    /// construction's <paramref name="serviceProvider"/> — the same scope root or a request
+    /// actually used to build <paramref name="domainProvider"/> itself.
+    /// </remarks>
+    public override IGenericResult RegisterImplementationProvider(IExternalIdentityProvisionerServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
+    {
+        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IChainedExternalIdentityProvisionerProvider>());
+        if (!factoryResult.IsSuccess)
+        {
+            ServiceTypeLog.OptionFactoryRegistrationFailed(
+                logger, nameof(ChainedExternalIdentityProvisionerType), Name, nameof(IChainedExternalIdentityProvisionerProvider), factoryResult.CurrentMessage);
+            return factoryResult;
+        }
+
+        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(ChainedExternalIdentityProvisionerType), Name, nameof(IChainedExternalIdentityProvisionerProvider));
+        return factoryResult;
+    }
 }
