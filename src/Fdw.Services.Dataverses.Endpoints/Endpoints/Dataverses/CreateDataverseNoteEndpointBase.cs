@@ -143,6 +143,8 @@ public abstract class CreateDataverseNoteEndpointBase : CrudCreateEndpointBase<C
             // Why CreateVersion7: the database mints no Id, and a time-ordered id keeps insert
             // order and sort order the same thing.
             Id = Guid.CreateVersion7(),
+            // The implementation the Note domain provider is registered under; '' is registered for nothing.
+            Implementation = "Note",
             // dataverse.Note.Name is NOT NULL but a note has no name of its own -- it is the body.
             // The id is used rather than a slice of the body, which would look like a title and
             // become one.

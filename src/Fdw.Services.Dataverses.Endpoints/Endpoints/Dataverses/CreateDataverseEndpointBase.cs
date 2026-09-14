@@ -94,6 +94,9 @@ public abstract class CreateDataverseEndpointBase : CrudCreateEndpointBase<Creat
         var config = new DataverseImplementationConfiguration
         {
             Id = Guid.CreateVersion7(),
+            // The implementation the domain provider is registered under. A new record names it or the
+            // save refuses it: Save looks the name up before writing, and '' is registered for nothing.
+            Implementation = "Dataverse",
             OwnerUserId = ownerUserId,
             Name = request.Name,
             DisplayName = request.DisplayName,
