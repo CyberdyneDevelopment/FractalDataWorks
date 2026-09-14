@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Services.Abstractions.Health.Monitoring;
@@ -57,30 +58,43 @@ public sealed class LocalHealthMonitorType
                 nameof(LocalHealthMonitorFactory));
 
             builder.Services.AddSingleton<ILocalHealthMonitorConfigurationProvider, LocalHealthMonitorConfigurationProvider>(sp => new LocalHealthMonitorConfigurationProvider(sp.GetRequiredService<ILogger<LocalHealthMonitorConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), HealthMonitorTypes.ConfigurationConnection));
+
+            // Decorate the domain's own AddScoped<IHealthMonitorProvider> registration -- it already
+            // exists in builder.Services by the time this runs, since HealthMonitorTypes' own
+            // Registration body sets it up before running the option collect. Wrapping its factory
+            // (rather than being handed the provider as a parameter) means this runs inside whichever
+            // scope actually constructs the instance -- root at startup, a real request's own scope
+            // for a request -- using that construction's own IServiceProvider.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IHealthMonitorProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
+            {
+                var provider = (IHealthMonitorProvider)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<ILocalHealthMonitorProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<LocalHealthMonitorType>()
+                        ?? NullLogger<LocalHealthMonitorType>.Instance;
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        logger, nameof(LocalHealthMonitorType), Name, nameof(ILocalHealthMonitorProvider), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Called once per HealthMonitorTypes AddScoped construction, with THAT construction's own
-        // serviceProvider — so whichever scope actually builds domainProvider (root at startup, a
-        // real request's own scope for a request) is the same scope this closure resolves against.
-        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
+        // IHealthMonitorConfigurationProvider is Singleton, so root's Initialize call reaches the
+        // same instance every later resolution sees -- unlike the domain SERVICE provider above,
+        // this one is safe to populate once, here, unmodified.
+        Initialization((host, loggerFactory) =>
         {
-            if (domainConfigurationProvider is not null)
-                domainConfigurationProvider.Register(Name, serviceProvider.GetRequiredService<ILocalHealthMonitorConfigurationProvider>());
-
-            if (domainProvider is null)
-                return GenericResult.Success();
-
-            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<ILocalHealthMonitorProvider>());
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    logger, nameof(LocalHealthMonitorType), Name, nameof(ILocalHealthMonitorProvider), factoryResult.CurrentMessage);
-                return factoryResult;
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(LocalHealthMonitorType), Name, nameof(ILocalHealthMonitorProvider));
-            return factoryResult;
+            var services = host.Services;
+            services.GetRequiredService<IHealthMonitorConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<ILocalHealthMonitorConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
         });
     }
 }

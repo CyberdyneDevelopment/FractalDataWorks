@@ -60,23 +60,11 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
     /// </remarks>
     static ExternalIdentityProvisionerTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ExternalIdentityProvisionerTypes>() ?? NullLogger<ExternalIdentityProvisionerTypes>.Instance;
-
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
 
             builder.Services.AddSingleton<IExternalIdentityProvisionerBindingImplementationConfigurationProvider, ExternalIdentityProvisionerBindingImplementationConfigurationProvider>(sp => new ExternalIdentityProvisionerBindingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityProvisionerBindingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
@@ -129,22 +117,6 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     throw;
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds an
-                // ExternalIdentityProvisionerServiceProvider, not only root's. optionLogger is
-                // resolved once here, not per option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IExternalIdentityProvisionerType>()
-                    ?? NullLogger<IExternalIdentityProvisionerType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not IExternalIdentityProvisionerType externalIdpOption)
-                        continue;
-
-                    externalIdpOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
 
@@ -157,6 +129,19 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
             builder.Services.TryAddScoped<IExternalIdentityProvisionerServiceProvider>(sp =>
                 (IExternalIdentityProvisionerServiceProvider)sp.GetRequiredService<
                     IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>());
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ExternalIdentityProvisionerTypes), providerService);

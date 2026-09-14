@@ -65,14 +65,8 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
     /// </summary>
     static PipelineServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         Registration((builder, loggerFactory) =>
         {
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
             builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
                 new PipelineServiceConfigurationProvider(
                     sp.GetRequiredService<ILogger<PipelineServiceConfigurationProvider>>(),
@@ -119,24 +113,15 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                         typeof(IPipelineConfigurationProvider).ToString());
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds a
-                // PipelineServiceProvider, not only root's. optionLogger is resolved once here, not
-                // per option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IPipelineServiceType>()
-                    ?? NullLogger<IPipelineServiceType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not IPipelineServiceType pipelineOption)
-                        continue;
-
-                    pipelineOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

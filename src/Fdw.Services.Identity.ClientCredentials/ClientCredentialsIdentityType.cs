@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Http;
 using Fdw.Collections;
 using Fdw.Results;
@@ -65,31 +66,39 @@ public sealed class ClientCredentialsIdentityType
 
             IdentityHttpClient.Register(builder.Services);
 
+            // Decorate the domain's own AddScoped<IIdentityServiceProvider> registration -- already
+            // in builder.Services by the time this runs, since IdentityServiceTypes' own Registration
+            // body sets it up before running the option collect.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IIdentityServiceProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IIdentityServiceProvider>(sp =>
+            {
+                var provider = (IIdentityServiceProvider)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IClientCredentialsIdentityProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        sp.GetService<ILoggerFactory>()?.CreateLogger<ClientCredentialsIdentityType>() ?? NullLogger<ClientCredentialsIdentityType>.Instance,
+                        nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             IdentityLog.MechanismRegistered(log, Name);
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Called once per IdentityServiceTypes AddScoped construction, with THAT construction's own
-        // serviceProvider — so whichever scope actually builds domainProvider (root at startup, a
-        // real request's own scope for a request) is the same scope this closure resolves against.
-        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
+        // IIdentityServiceConfigurationProvider is Singleton, so root's Initialize call reaches the
+        // same instance every later resolution sees -- unlike the domain SERVICE provider above,
+        // this one is safe to populate once, here, unmodified.
+        Initialization((host, loggerFactory) =>
         {
-            if (domainConfigurationProvider is not null)
-                domainConfigurationProvider.Register(Name, serviceProvider.GetRequiredService<IClientCredentialsConfigurationProvider>());
-
-            if (domainProvider is null)
-                return GenericResult.Success();
-
-            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IClientCredentialsIdentityProvider>());
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider), factoryResult.CurrentMessage);
-                return factoryResult;
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider));
-            return factoryResult;
+            var services = host.Services;
+            services.GetRequiredService<IIdentityServiceConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<IClientCredentialsConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
         });
     }
 }

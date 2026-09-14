@@ -80,8 +80,6 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
 
     static HealthMonitorTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IHealthMonitorProvider).ToString();
 
         Registration((builder, loggerFactory) =>
@@ -95,16 +93,10 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 
-            var collected = collectOptions(builder, loggerFactory);
-            if (collected.IsFailure)
-                return collected;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(HealthMonitorTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(HealthMonitorTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- it has to already be in
+            // builder.Services before any option's own Register() runs, since each option decorates
+            // this registration (wraps its factory, adding its own name) rather than being handed
+            // the provider as a parameter.
             builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
             {
                 var provider = new HealthMonitorProvider(
@@ -114,10 +106,9 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<HealthMonitorTypes>()
                     ?? NullLogger<HealthMonitorTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(HealthMonitorTypes), provider.GetType().Name);
-                var cfgProvider = sp.GetService<IHealthMonitorConfigurationProvider>();
                 try
                 {
-                    if (cfgProvider is not null)
+                    if (sp.GetService<IHealthMonitorConfigurationProvider>() is { } cfgProvider)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -140,24 +131,25 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     throw;
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds a
-                // HealthMonitorProvider, not only root's. optionLogger is resolved once here, not
-                // per option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IHealthMonitorType>()
-                    ?? NullLogger<IHealthMonitorType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not IHealthMonitorType healthMonitorOption)
-                        continue;
-
-                    healthMonitorOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
+
+            // Runs each option's own Register(builder, loggerFactory) -- unchanged, existing
+            // signature. Each option decorates the AddScoped<IHealthMonitorProvider> registration
+            // set up immediately above, wrapping its factory so its own name gets registered
+            // whichever scope actually constructs the instance.
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(HealthMonitorTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(HealthMonitorTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(HealthMonitorTypes), providerService);

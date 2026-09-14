@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.Collections;
+using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
@@ -44,34 +46,42 @@ public sealed class ChainedExternalIdentityProvisionerType
                 typeof(IChainedExternalIdentityProvisionerFactory), typeof(ChainedExternalIdentityProvisionerFactory), ServiceLifetime.Scoped));
             builder.Services.TryAdd(new ServiceDescriptor(
                 typeof(IChainedExternalIdentityProvisionerProvider), typeof(ChainedExternalIdentityProvisionerProvider), ServiceLifetime.Scoped));
+
+            // Decorate the domain's own AddScoped<IDomainServiceProvider<...>> registration --
+            // already in builder.Services by the time this runs, since ExternalIdentityProvisionerTypes'
+            // own Registration body sets it up before running the option loop.
+            var existing = builder.Services.Single(d =>
+                d.ServiceType == typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
+            {
+                var provider = (IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IChainedExternalIdentityProvisionerProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        sp.GetService<ILoggerFactory>()?.CreateLogger<ChainedExternalIdentityProvisionerType>() ?? NullLogger<ChainedExternalIdentityProvisionerType>.Instance,
+                        nameof(ChainedExternalIdentityProvisionerType), Name, nameof(IChainedExternalIdentityProvisionerProvider), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        // Called once per ExternalIdentityProvisionerTypes AddScoped construction, with THAT
-        // construction's own serviceProvider — so whichever scope actually builds domainProvider
-        // (root at startup, a real request's own scope for a request) is the same scope this
-        // closure resolves against.
-        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
+        // IExternalIdentityProvisionerConfigurationProvider is Singleton, so root's Initialize call
+        // reaches the same instance every later resolution sees -- unlike the domain SERVICE
+        // provider above, this one is safe to populate once, here, unmodified.
+        Initialization((host, loggerFactory) =>
         {
-            if (domainConfigurationProvider is not null)
-            {
-                domainConfigurationProvider.Register(Name, serviceProvider.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>());
-                ExternalIdentityProvisionerLog.ProviderRegistered(logger, Name);
-            }
-
-            if (domainProvider is null)
-                return GenericResult.Success();
-
-            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IChainedExternalIdentityProvisionerProvider>());
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    logger, nameof(ChainedExternalIdentityProvisionerType), Name, nameof(IChainedExternalIdentityProvisionerProvider), factoryResult.CurrentMessage);
-                return factoryResult;
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(ChainedExternalIdentityProvisionerType), Name, nameof(IChainedExternalIdentityProvisionerProvider));
-            return factoryResult;
+            var services = host.Services;
+            services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<IChainedExternalIdentityProvisionerConfigurationProvider>());
+            ExternalIdentityProvisionerLog.ProviderRegistered(
+                loggerFactory?.CreateLogger<ChainedExternalIdentityProvisionerType>() ?? NullLogger<ChainedExternalIdentityProvisionerType>.Instance, Name);
+            return GenericResult<IHost>.Success(host);
         });
     }
 }

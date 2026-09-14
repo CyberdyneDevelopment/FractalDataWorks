@@ -60,17 +60,11 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static IdentityServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IIdentityServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<IdentityServiceTypes>() ?? NullLogger<IdentityServiceTypes>.Instance;
-
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
 
             builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
                 new IdentityServiceConfigurationProvider(
@@ -85,12 +79,9 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     ?? NullLogger<IdentityTokenCache>.Instance,
                     IdentityTokenCache.DefaultRefreshSkew));
 
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<IIdentityServiceProvider>(sp =>
             {
                 var provider = new IdentityServiceProvider(
@@ -100,10 +91,9 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceTypes>()
                     ?? NullLogger<IdentityServiceTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(IdentityServiceTypes), provider.GetType().Name);
-                var cfgProvider = sp.GetService<IIdentityServiceConfigurationProvider>();
                 try
                 {
-                    if (cfgProvider is not null)
+                    if (sp.GetService<IIdentityServiceConfigurationProvider>() is { } cfgProvider)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -126,24 +116,21 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     throw;
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds an
-                // IdentityServiceProvider, not only root's. optionLogger is resolved once here, not
-                // per option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IIdentityServiceType>()
-                    ?? NullLogger<IIdentityServiceType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not IIdentityServiceType identityOption)
-                        continue;
-
-                    identityOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(IdentityServiceTypes), providerService);

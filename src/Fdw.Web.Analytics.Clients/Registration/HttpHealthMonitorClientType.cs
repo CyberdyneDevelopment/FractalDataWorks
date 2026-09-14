@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Http;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -62,32 +63,29 @@ public sealed class HttpHealthMonitorClientType
                 typeof(IHttpHealthMonitorFactory), typeof(HttpHealthMonitorFactory), ServiceLifetime.Singleton));
             builder.Services.TryAdd(new ServiceDescriptor(
                 typeof(IHttpHealthMonitorProvider), typeof(HttpHealthMonitorProvider), ServiceLifetime.Singleton));
+
+            // Decorate the domain's own AddScoped<IHealthMonitorProvider> registration -- already in
+            // builder.Services by the time this runs, since HealthMonitorTypes' own Registration body
+            // sets it up before running the option collect.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IHealthMonitorProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
+            {
+                var provider = (IHealthMonitorProvider)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IHttpHealthMonitorProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<HttpHealthMonitorClientType>()
+                        ?? NullLogger<HttpHealthMonitorClientType>.Instance;
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        logger, nameof(HttpHealthMonitorClientType), Name, nameof(IHttpHealthMonitorProvider), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
-
-        // Called once per HealthMonitorTypes AddScoped construction, with THAT construction's own
-        // serviceProvider — so whichever scope actually builds domainProvider (root at startup, a
-        // real request's own scope for a request) is the same scope this closure resolves against.
-        // This option has no configuration row of its own — it queries the API host's health
-        // endpoints over HTTP rather than reading a store — so only the runtime provider needs
-        // registering, not a configuration source.
-        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
-        {
-            if (domainProvider is null)
-                return GenericResult.Success();
-
-            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IHttpHealthMonitorProvider>());
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    logger, nameof(HttpHealthMonitorClientType), Name, nameof(IHttpHealthMonitorProvider), factoryResult.CurrentMessage);
-                return factoryResult;
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(HttpHealthMonitorClientType), Name, nameof(IHttpHealthMonitorProvider));
-            return factoryResult;
-        });
-
     }
-
 }

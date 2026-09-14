@@ -1,13 +1,6 @@
-using System;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Fdw.Configuration;
-using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Etl.Abstractions;
-using Fdw.Services.Pipelines;
-using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl;
 
@@ -56,27 +49,4 @@ public abstract class EtlPipelineTypeBase<TPipeline, TFactory, TConfiguration> :
     }
 
     // which registers configuration loader using IOptions<List<TConfiguration>> lookup by Name
-
-    // ── Domain-provider/domain-configuration-provider registration ─────────────────────────────
-    // An overload of Registration/Register, not a new phase and not a new method name. Stored and
-    // invoked exactly like the DI-wiring Registration(Func<IHostApplicationBuilder, ...>) overload
-    // already inherited from ServiceTypeBase -- this is simply a second signature of the same verb,
-    // distinguished by its parameter types.
-
-    private Func<IServiceProvider, IEtlPipelineProvider?, IPipelineConfigurationProvider?, ILogger<IEtlPipelineType>, IGenericResult> _domainRegistrationMethod
-        = static (_, _, _, _) => GenericResult.Success();
-
-    /// <inheritdoc/>
-    public void Registration(Func<IServiceProvider, IEtlPipelineProvider?, IPipelineConfigurationProvider?, ILogger<IEtlPipelineType>, IGenericResult> method)
-    {
-        _domainRegistrationMethod = method;
-    }
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Base default: an option that never called the overload above reports success and leaves
-    /// both providers untouched.
-    /// </remarks>
-    public IGenericResult Register(IServiceProvider serviceProvider, IEtlPipelineProvider? domainProvider, IPipelineConfigurationProvider? domainConfigurationProvider, ILogger<IEtlPipelineType> logger)
-        => _domainRegistrationMethod(serviceProvider, domainProvider, domainConfigurationProvider, logger);
 }

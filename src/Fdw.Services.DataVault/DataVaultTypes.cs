@@ -54,17 +54,11 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static DataVaultTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IDataVaultProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<DataVaultTypes>() ?? NullLogger<DataVaultTypes>.Instance;
-
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
 
             // The configuration provider for this domain, registered once here rather than by every
             // caller that happens to need it.
@@ -72,12 +66,9 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataVaultImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IDataVaultConfigurationProvider>());
 
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<IDataVaultProvider>(sp =>
             {
                 var provider = new DataVaultProvider(
@@ -113,24 +104,21 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
                     throw;
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds a
-                // DataVaultProvider, not only root's. optionLogger is resolved once here, not per
-                // option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IDataVaultType>()
-                    ?? NullLogger<IDataVaultType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not IDataVaultType dataVaultOption)
-                        continue;
-
-                    dataVaultOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(DataVaultTypes), providerService);

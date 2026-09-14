@@ -75,23 +75,11 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static SchedulerTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(ISchedulerServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<SchedulerTypes>() ?? NullLogger<SchedulerTypes>.Instance;
-
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
             builder.Services.AddSingleton<ISchedulerConfigurationProvider, SchedulerConfigurationProvider>(sp => new SchedulerConfigurationProvider(sp.GetRequiredService<ILogger<SchedulerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection));
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
@@ -121,6 +109,9 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
             });
             builder.Services.TryAddSingleton<IScheduleConfigurationProvider>(sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
 
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
             {
                 var provider = new SchedulerServiceProvider(
@@ -156,24 +147,21 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                     throw;
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds a
-                // SchedulerServiceProvider, not only root's. optionLogger is resolved once here,
-                // not per option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<ISchedulerType>()
-                    ?? NullLogger<ISchedulerType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not ISchedulerType schedulerOption)
-                        continue;
-
-                    schedulerOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(SchedulerTypes), providerService);

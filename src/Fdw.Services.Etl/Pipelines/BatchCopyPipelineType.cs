@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -109,26 +110,28 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
 
             EtlPipelineTypes.RegisterPipelineExecutionQueue(builder.Services);
             EtlPipelineTypes.RegisterAdditionalServices(builder.Services);
-            return GenericResult<IHostApplicationBuilder>.Success(builder);
-        });
 
-        // Called once per EtlPipelineTypes AddScoped construction, with THAT construction's own
-        // serviceProvider — so whichever scope actually builds domainProvider (root at startup, a
-        // real request's own scope for a request) is the same scope this closure resolves against.
-        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
-        {
-            if (domainProvider is null)
-                return GenericResult.Success();
-
-            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IBatchCopyPipelineProvider>());
-            if (!factoryResult.IsSuccess)
+            // Decorate the domain's own AddScoped<IEtlPipelineProvider> registration -- already in
+            // builder.Services by the time this runs, since EtlPipelineTypes' own Registration body
+            // sets it up before running the option collect.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IEtlPipelineProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
             {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(logger, nameof(BatchCopyPipelineType), Name, nameof(IBatchCopyPipelineFactory), factoryResult.CurrentMessage);
-                return factoryResult;
-            }
+                var provider = (IEtlPipelineProvider)existing.ImplementationFactory!(sp);
 
-            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(BatchCopyPipelineType), Name, nameof(IBatchCopyPipelineFactory));
-            return factoryResult;
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IBatchCopyPipelineProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        sp.GetService<ILoggerFactory>()?.CreateLogger<BatchCopyPipelineType>() ?? NullLogger<BatchCopyPipelineType>.Instance,
+                        nameof(BatchCopyPipelineType), Name, nameof(IBatchCopyPipelineFactory), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
     }
 }

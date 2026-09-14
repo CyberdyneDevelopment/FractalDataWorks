@@ -66,17 +66,12 @@ public partial class NotificationServiceTypes
     /// </remarks>
     static NotificationServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(INotificationServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<NotificationServiceTypes>() ?? NullLogger<NotificationServiceTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
             // Notification configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
@@ -97,13 +92,9 @@ public partial class NotificationServiceTypes
             });
             builder.Services.TryAddSingleton<INotificationRuleConfigurationProvider>(sp => sp.GetRequiredService<NotificationRuleConfigurationProvider>());
 
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationServiceTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationServiceTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<INotificationServiceProvider>(sp =>
             {
                 var provider = new NotificationServiceProvider(
@@ -139,24 +130,21 @@ public partial class NotificationServiceTypes
                     throw;
                 }
 
-                // Why here and not each option's Initialize: Initialize runs once, against root,
-                // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
-                // with the sp THIS construction received, reaches every scope that ever builds a
-                // NotificationServiceProvider, not only root's. optionLogger is resolved once here,
-                // not per option, so every option logs through the same instance.
-                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<INotificationType>()
-                    ?? NullLogger<INotificationType>.Instance;
-                foreach (var option in Options)
-                {
-                    if (option is not INotificationType notificationOption)
-                        continue;
-
-                    notificationOption.Register(sp, provider, cfgProvider, optionLogger);
-                }
-
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationServiceTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(NotificationServiceTypes), providerService);
