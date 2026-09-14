@@ -99,7 +99,8 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                     ?? NullLogger<PipelineServiceTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(PipelineServiceTypes), provider.GetType().Name);
 
-                if (sp.GetService<IPipelineConfigurationProvider>() is { } cfgProvider)
+                var cfgProvider = sp.GetService<IPipelineConfigurationProvider>();
+                if (cfgProvider is not null)
                 {
                     var domainResult = provider.Register(cfgProvider);
                     if (domainResult.IsSuccess)
@@ -120,14 +121,18 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
 
                 // Why here and not each option's Initialize: Initialize runs once, against root,
                 // before any request scope exists. This factory runs once PER SCOPE -- so calling
-                // each option in HERE, with the sp THIS construction received, reaches every scope
-                // that ever builds a PipelineServiceProvider, not only root's.
+                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
+                // with the sp THIS construction received, reaches every scope that ever builds a
+                // PipelineServiceProvider, not only root's. optionLogger is resolved once here, not
+                // per option, so every option logs through the same instance.
+                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IPipelineServiceType>()
+                    ?? NullLogger<IPipelineServiceType>.Instance;
                 foreach (var option in Options)
                 {
                     if (option is not IPipelineServiceType pipelineOption)
                         continue;
 
-                    pipelineOption.RegisterImplementationProvider(provider, sp, stLogger);
+                    pipelineOption.Register(sp, provider, cfgProvider, optionLogger);
                 }
 
                 return provider;

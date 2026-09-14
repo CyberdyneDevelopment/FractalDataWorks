@@ -112,29 +112,23 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-    }
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
-    /// <see cref="IEtlPipelineProvider"/> from the ROOT container once, at startup, and this
-    /// domain provider is registered <c>AddScoped</c> — so root's copy is one instance among many
-    /// a real request never sees, and a real request's own instance never had this call reach it.
-    /// This method is instead called once per construction, by <c>EtlPipelineTypes</c>'s own
-    /// factory, and handed THAT construction's <paramref name="serviceProvider"/> — the same
-    /// scope root or a request actually used to build <paramref name="domainProvider"/> itself.
-    /// </remarks>
-    public override IGenericResult RegisterImplementationProvider(IEtlPipelineProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
-    {
-        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IStreamingPipelineProvider>());
-        if (!factoryResult.IsSuccess)
+        // Called once per EtlPipelineTypes AddScoped construction, with THAT construction's own
+        // serviceProvider — so whichever scope actually builds domainProvider (root at startup, a
+        // real request's own scope for a request) is the same scope this closure resolves against.
+        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
         {
-            ServiceTypeLog.OptionFactoryRegistrationFailed(logger, nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory), factoryResult.CurrentMessage);
+            if (domainProvider is null)
+                return GenericResult.Success();
+
+            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IStreamingPipelineProvider>());
+            if (!factoryResult.IsSuccess)
+            {
+                ServiceTypeLog.OptionFactoryRegistrationFailed(logger, nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory), factoryResult.CurrentMessage);
+                return factoryResult;
+            }
+
+            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory));
             return factoryResult;
-        }
-
-        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory));
-        return factoryResult;
+        });
     }
-
 }

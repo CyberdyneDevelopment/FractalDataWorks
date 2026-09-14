@@ -69,42 +69,27 @@ public sealed class ClientCredentialsIdentityType
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        Initialization((host, loggerFactory) =>
+        // Called once per IdentityServiceTypes AddScoped construction, with THAT construction's own
+        // serviceProvider — so whichever scope actually builds domainProvider (root at startup, a
+        // real request's own scope for a request) is the same scope this closure resolves against.
+        Registration((serviceProvider, domainProvider, domainConfigurationProvider, logger) =>
         {
-            var services = host.Services;
-            services.GetRequiredService<IIdentityServiceConfigurationProvider>()
-                .Register(Name, services.GetRequiredService<IClientCredentialsConfigurationProvider>());
+            if (domainConfigurationProvider is not null)
+                domainConfigurationProvider.Register(Name, serviceProvider.GetRequiredService<IClientCredentialsConfigurationProvider>());
 
-            IdentityLog.MechanismRegistered(
-                loggerFactory?.CreateLogger<ClientCredentialsIdentityType>()
-                    ?? NullLogger<ClientCredentialsIdentityType>.Instance,
-                Name);
+            if (domainProvider is null)
+                return GenericResult.Success();
 
-            return GenericResult<IHost>.Success(host);
-        });
-    }
+            var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IClientCredentialsIdentityProvider>());
+            if (!factoryResult.IsSuccess)
+            {
+                ServiceTypeLog.OptionFactoryRegistrationFailed(
+                    logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider), factoryResult.CurrentMessage);
+                return factoryResult;
+            }
 
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Why this replaces what used to be here in <c>Initialization</c>: that callback resolved
-    /// <see cref="IIdentityServiceProvider"/> from the ROOT container once, at startup, and this
-    /// domain provider is registered <c>AddScoped</c> — so root's copy is one instance among many
-    /// a real request never sees, and a real request's own instance never had this call reach it.
-    /// This method is instead called once per construction, by <c>IdentityServiceTypes</c>'s own
-    /// factory, and handed THAT construction's <paramref name="serviceProvider"/> — the same
-    /// scope root or a request actually used to build <paramref name="domainProvider"/> itself.
-    /// </remarks>
-    public override IGenericResult RegisterImplementationProvider(IIdentityServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
-    {
-        var factoryResult = domainProvider.Register(Name, () => serviceProvider.GetRequiredService<IClientCredentialsIdentityProvider>());
-        if (!factoryResult.IsSuccess)
-        {
-            ServiceTypeLog.OptionFactoryRegistrationFailed(
-                logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider), factoryResult.CurrentMessage);
+            ServiceTypeLog.OptionFactoryRegistered(logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider));
             return factoryResult;
-        }
-
-        ServiceTypeLog.OptionFactoryRegistered(logger, nameof(ClientCredentialsIdentityType), Name, nameof(IClientCredentialsIdentityProvider));
-        return factoryResult;
+        });
     }
 }

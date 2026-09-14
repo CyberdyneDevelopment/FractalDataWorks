@@ -87,9 +87,10 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultTypes>()
                     ?? NullLogger<DataVaultTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(DataVaultTypes), provider.GetType().Name);
+                var cfgProvider = sp.GetService<IDataVaultConfigurationProvider>();
                 try
                 {
-                    if (sp.GetService<IDataVaultConfigurationProvider>() is { } cfgProvider)
+                    if (cfgProvider is not null)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -111,6 +112,23 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(DataVaultTypes));
                     throw;
                 }
+
+                // Why here and not each option's Initialize: Initialize runs once, against root,
+                // before any request scope exists. This factory runs once PER SCOPE -- so calling
+                // each option's Register(sp, provider, cfgProvider, optionLogger) overload in HERE,
+                // with the sp THIS construction received, reaches every scope that ever builds a
+                // DataVaultProvider, not only root's. optionLogger is resolved once here, not per
+                // option, so every option logs through the same instance.
+                var optionLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<IDataVaultType>()
+                    ?? NullLogger<IDataVaultType>.Instance;
+                foreach (var option in Options)
+                {
+                    if (option is not IDataVaultType dataVaultOption)
+                        continue;
+
+                    dataVaultOption.Register(sp, provider, cfgProvider, optionLogger);
+                }
+
                 return provider;
             });
 

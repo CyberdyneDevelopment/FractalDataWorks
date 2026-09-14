@@ -1,6 +1,9 @@
+using System;
 using Fdw.Configuration;
+using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.DataVault.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.DataVault;
 
@@ -42,4 +45,27 @@ public abstract class DataVaultTypeBase<TService, TFactory, TConfiguration> :
                defaultContainerName: "DataVault")
     {
     }
+
+    // ── Domain-provider/domain-configuration-provider registration ─────────────────────────────
+    // An overload of Registration/Register, not a new phase and not a new method name. Stored and
+    // invoked exactly like the DI-wiring Registration(Func<IHostApplicationBuilder, ...>) overload
+    // already inherited from ServiceTypeBase -- this is simply a second signature of the same verb,
+    // distinguished by its parameter types.
+
+    private Func<IServiceProvider, IDataVaultProvider?, IDataVaultConfigurationProvider?, ILogger<IDataVaultType>, IGenericResult> _domainRegistrationMethod
+        = static (_, _, _, _) => GenericResult.Success();
+
+    /// <inheritdoc/>
+    public void Registration(Func<IServiceProvider, IDataVaultProvider?, IDataVaultConfigurationProvider?, ILogger<IDataVaultType>, IGenericResult> method)
+    {
+        _domainRegistrationMethod = method;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Base default: an option that never called the overload above reports success and leaves
+    /// both providers untouched.
+    /// </remarks>
+    public IGenericResult Register(IServiceProvider serviceProvider, IDataVaultProvider? domainProvider, IDataVaultConfigurationProvider? domainConfigurationProvider, ILogger<IDataVaultType> logger)
+        => _domainRegistrationMethod(serviceProvider, domainProvider, domainConfigurationProvider, logger);
 }

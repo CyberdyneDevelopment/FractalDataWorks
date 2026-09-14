@@ -47,12 +47,26 @@ public abstract class IdentityServiceTypeBase<TService, TConfiguration, TFactory
     {
     }
 
+    // ── Domain-provider/domain-configuration-provider registration ─────────────────────────────
+    // An overload of Registration/Register, not a new phase and not a new method name. Stored and
+    // invoked exactly like the DI-wiring Registration(Func<IHostApplicationBuilder, ...>) overload
+    // already inherited from ServiceTypeBase -- this is simply a second signature of the same verb,
+    // distinguished by its parameter types.
+
+    private Func<IServiceProvider, IIdentityServiceProvider?, IIdentityServiceConfigurationProvider?, ILogger<IIdentityServiceType>, IGenericResult> _domainRegistrationMethod
+        = static (_, _, _, _) => GenericResult.Success();
+
+    /// <inheritdoc/>
+    public void Registration(Func<IServiceProvider, IIdentityServiceProvider?, IIdentityServiceConfigurationProvider?, ILogger<IIdentityServiceType>, IGenericResult> method)
+    {
+        _domainRegistrationMethod = method;
+    }
+
     /// <inheritdoc/>
     /// <remarks>
-    /// Base no-op: an option with nothing to contribute (none exist yet, but the base must not
-    /// force every option to override this) reports success and leaves the domain provider's
-    /// registry unchanged.
+    /// Base default: an option that never called the overload above reports success and leaves
+    /// both providers untouched.
     /// </remarks>
-    public virtual IGenericResult RegisterImplementationProvider(IIdentityServiceProvider domainProvider, IServiceProvider serviceProvider, ILogger logger)
-        => GenericResult.Success();
+    public IGenericResult Register(IServiceProvider serviceProvider, IIdentityServiceProvider? domainProvider, IIdentityServiceConfigurationProvider? domainConfigurationProvider, ILogger<IIdentityServiceType> logger)
+        => _domainRegistrationMethod(serviceProvider, domainProvider, domainConfigurationProvider, logger);
 }
