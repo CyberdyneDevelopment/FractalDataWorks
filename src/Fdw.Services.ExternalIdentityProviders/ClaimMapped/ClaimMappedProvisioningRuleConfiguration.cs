@@ -75,4 +75,14 @@ public sealed partial class ClaimMappedProvisioningRuleConfiguration : IGenericC
 
     /// <summary>Gets or sets the ascending order in which this rule is tried.</summary>
     public int ExecutionOrder { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a matched account is also granted <see cref="TenantId"/> ACCESS
+    /// (a <c>tenant.UserTenants</c> row), not just created under it. Defaults to <c>false</c>: every
+    /// rule configured before this field existed keeps behaving exactly as it does today — creating
+    /// the account under <see cref="TenantId"/> without a separate access grant. Opt in per rule for a
+    /// deployment whose tenant-access model requires the explicit grant row, e.g. a first-login
+    /// bootstrap rule provisioning an administrator.
+    /// </summary>
+    public bool GrantTenantAccess { get; set; }
 }
