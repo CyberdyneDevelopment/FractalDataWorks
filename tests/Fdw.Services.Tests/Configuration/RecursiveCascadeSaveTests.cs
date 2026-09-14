@@ -80,6 +80,46 @@ public sealed class RecursiveCascadeSaveTests
         result.IsSuccess.ShouldBeFalse();
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Cascade")]
+    public async Task DomainSaveStampsTheDomainIdOntoTheImplementation()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // The save translator resolves TestRootDomainRowId from TestRootDomainId. Stamping only Id
+        // left it empty, and the database refused the implementation row with a NULL RowId.
+        result.IsSuccess.ShouldBeTrue();
+        var domainRow = gateway.SavedConfigs.OfType<DomainConfiguration>().ShouldHaveSingleItem();
+        var implementation = gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
+        implementation.TestRootDomainId.ShouldBe(domainRow.Id);
+        implementation.Id.ShouldBe(domainRow.Id);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Cascade")]
+    public async Task DomainSaveRemovesTheDomainRowItMintedWhenTheImplementationIsRefused()
+    {
+        var gateway = new RecordingGateway { RefuseImplementation = true };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Save(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // No transaction spans the two writes; a domain row left behind names an implementation that
+        // does not exist.
+        result.IsSuccess.ShouldBeFalse();
+        var domainRow = gateway.SavedConfigs.OfType<DomainConfiguration>().ShouldHaveSingleItem();
+        gateway.Deleted.ShouldContain(domainRow.Id);
+    }
+
     private static TestRootImplementationProvider ImplementationProvider(IConfigurationGateway gateway)
         => new(GatewayProviderFor(gateway));
 
@@ -98,6 +138,9 @@ public sealed class RecursiveCascadeSaveTests
         public string Domain { get; set; } = string.Empty;
 
         public string Implementation { get; set; } = "Default";
+
+        /// <summary>The domain row this implementation belongs to (TestRootDomainProvider's table + "Id").</summary>
+        public Guid TestRootDomainId { get; set; }
 
         public IList<TestOpConfiguration> Operations { get; set; } = [];
     }
@@ -186,6 +229,12 @@ public sealed class RecursiveCascadeSaveTests
 
         public List<object> SavedConfigs { get; } = [];
 
+        /// <summary>Refuse the implementation row's insert, as the database does when it cannot resolve the domain RowId.</summary>
+        public bool RefuseImplementation { get; init; }
+
+        /// <summary>Ids named by delete commands, in call order.</summary>
+        public List<Guid> Deleted { get; } = [];
+
         public IReadOnlyList<IDataStore> DataStores { get; } = [];
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, CancellationToken cancellationToken = default)
@@ -199,6 +248,15 @@ public sealed class RecursiveCascadeSaveTests
             // A read asks for a sequence — the record is new, so nothing comes back.
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));
+
+            if (command is ConfigurationDeleteCommand delete)
+            {
+                Deleted.Add(delete.Data);
+                return Task.FromResult(GenericResult<T>.Success(default!));
+            }
+
+            if (RefuseImplementation && command is IConfigurationSaveCommand { InputData: TestRootConfiguration })
+                return Task.FromResult(GenericResult<T>.Failure(new GenericMessage("Cannot insert the value NULL into column 'TestRootDomainRowId'")));
 
             // A save command exposes the saved POCO via IConfigurationSaveCommand.InputData.
             if (command is IConfigurationSaveCommand save && save.InputData is not null)

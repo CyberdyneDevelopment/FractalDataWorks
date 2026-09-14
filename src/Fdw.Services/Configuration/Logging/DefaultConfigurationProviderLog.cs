@@ -488,4 +488,38 @@ public static partial class DefaultConfigurationProviderLog
     /// </summary>
     [MessageLogging(EventId = 91003, Level = LogLevel.Error, Message = "Cannot save '{actualType}': this provider handles '{expectedType}'")]
     public static partial IGenericMessage UntypedSaveTypeMismatch(ILogger logger, string expectedType, string actualType);
+
+    /// <summary>
+    /// Logs that an implementation configuration cannot be saved because it has no property naming its
+    /// domain row, so the save translator could not resolve the domain RowId.
+    /// </summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="implementationType">The implementation configuration type being saved.</param>
+    /// <param name="domainKey">The property that must carry the domain row's Id.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61011, Level = LogLevel.Error,
+        Message = "Cannot save {implementationType}: it has no '{domainKey}' property to name its domain row, so the domain RowId cannot be resolved")]
+    public static partial IGenericMessage ImplementationHasNoDomainKey(ILogger logger, string implementationType, string domainKey);
+
+    /// <summary>
+    /// Logs that the domain row minted for a save was removed because its implementation was refused.
+    /// </summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="name">The member's name.</param>
+    /// <param name="domainId">The removed domain row's Id.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 11039, Level = LogLevel.Information,
+        Message = "Removed domain row {domainId} minted for '{name}': its implementation was refused")]
+    public static partial IGenericMessage DomainRowRemovedAfterRefusedImplementation(ILogger logger, string name, string domainId);
+
+    /// <summary>
+    /// Logs that the domain row minted for a save could not be removed after its implementation was refused.
+    /// </summary>
+    /// <param name="logger">The logger to write the event to.</param>
+    /// <param name="name">The member's name.</param>
+    /// <param name="domainId">The domain row's Id, which now names an implementation that does not exist.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61012, Level = LogLevel.Error,
+        Message = "Domain row {domainId} minted for '{name}' was not removed after its implementation was refused; it names an implementation that does not exist")]
+    public static partial IGenericMessage DomainRowNotRemovedAfterRefusedImplementation(ILogger logger, string name, string domainId);
 }

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration.Logging;
@@ -256,6 +257,18 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
             return GenericResult.Failure(
                 DefaultConfigurationProviderLog.NoImplementationProvider(_logger, name, implementationName));
 
+        // The implementation row reaches its domain row through {domain table}Id -- the save translator
+        // resolves {domain table}RowId from it. Id is not that column: an implementation saved with only
+        // Id stamped inserts a NULL domain RowId and the database refuses it. Checked before anything is
+        // written, so a domain row is never minted for an implementation that cannot name it.
+        var domainKey = _commands.TableName + "Id";
+        var mapper = PocoMapperCollection.ByName(implementationConfiguration.GetType().Name);
+        if (mapper == PocoMapperCollection.NotFound
+            || !mapper.GetPropertyNames().Contains(domainKey, StringComparer.Ordinal))
+            return GenericResult.Failure(
+                DefaultConfigurationProviderLog.ImplementationHasNoDomainKey(
+                    _logger, implementationConfiguration.GetType().Name, domainKey));
+
         var gateway = _gatewayProvider.Get(DataStoreName);
         if (gateway.IsFailure) return gateway.ToNewResult<TImplementationConfiguration>();
 
@@ -267,7 +280,8 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         // The two rows are never written apart: a domain row naming an implementation that was not
         // written is the record that fails to compose on the next read.
         var domainId = existing.Value?.FirstOrDefault()?.Id ?? Guid.Empty;
-        if (domainId == Guid.Empty)
+        var minted = domainId == Guid.Empty;
+        if (minted)
         {
             var record = new DomainConfiguration
             {
@@ -288,7 +302,22 @@ public abstract class DomainConfigurationProviderBase<TImplementationConfigurati
         implementationConfiguration.Domain = domain;
         implementationConfiguration.Implementation = implementationName;
         implementationConfiguration.Id = domainId;
-        return await provider.Save(implementationConfiguration, ct).ConfigureAwait(false);
+        mapper.SetValue(implementationConfiguration, domainKey, domainId);
+
+        var saved = await provider.Save(implementationConfiguration, ct).ConfigureAwait(false);
+        if (saved.IsSuccess || !minted) return saved;
+
+        // No transaction spans the two writes, so a domain row minted for an implementation that was
+        // then refused is removed here. Left behind, it names an implementation that does not exist and
+        // every later read of that name fails to compose.
+        var removed = await gateway.Value!.Execute<DomainConfiguration>(
+            _commands.Delete(DataStoreName, PathName, domainId), Target, ct).ConfigureAwait(false);
+        if (removed.IsSuccess)
+            DefaultConfigurationProviderLog.DomainRowRemovedAfterRefusedImplementation(_logger, name, domainId.ToString());
+        else
+            DefaultConfigurationProviderLog.DomainRowNotRemovedAfterRefusedImplementation(_logger, name, domainId.ToString());
+
+        return saved;
     }
 
     /// <inheritdoc/>
