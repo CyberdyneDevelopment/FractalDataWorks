@@ -570,7 +570,13 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         descriptor.SetCollection(ownerRow, typedList);
     }
 
-    private IDataCommand BuildChildJoinQuery(
+    /// <summary>Builds the query that loads one child collection of an implementation row.</summary>
+    /// <remarks>
+    /// Filters the child's own IsCurrent and IsDeleted as well as the owner's. Filtering only the
+    /// owner composed every retired version and every deleted row of the child into the collection:
+    /// a detached dataverse resource stayed on the map, and readiness kept counting it (FDW-795).
+    /// </remarks>
+    protected IDataCommand BuildChildJoinQuery(
         string childContainer,
         string fkColumn,
         string ownerContainer,
@@ -591,7 +597,13 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
                     .Where(string.Concat(ownerContainer, ".EffectiveEnd"), FilterOperators.ByName("IsNull"), null)
                 .EndGroup();
 
+        // The child is versioned exactly as its owner is: only its current row is part of the
+        // composed collection, and a deleted child is not part of it at any time.
+        if (asOf is null)
+            builder = builder.Where(string.Concat(childContainer, ".IsCurrent"), true);
+
         return builder
+            .Where(string.Concat(childContainer, ".IsDeleted"), false)
             .Where(string.Concat(ownerContainer, ".IsDeleted"), false)
             .Where(string.Concat(ownerContainer, ".", ownerLogicalCol), ownerId)
             .Build().Command;

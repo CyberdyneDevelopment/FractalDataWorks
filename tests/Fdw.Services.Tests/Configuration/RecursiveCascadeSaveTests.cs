@@ -120,6 +120,40 @@ public sealed class RecursiveCascadeSaveTests
         gateway.Deleted.ShouldContain(domainRow.Id);
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Cascade")]
+    public void ChildCollectionReadExcludesTheChildsRetiredAndDeletedRows()
+    {
+        var provider = ImplementationProvider(new RecordingGateway());
+
+        var query = (IQueryCommand)provider.ChildJoin("TestOp", "TestRootRowId", "TestRoot", "RowId", "Id", Guid.NewGuid());
+
+        // Filtering only the owner's flags composed every detached and retired child into the
+        // collection: a detached dataverse resource stayed on the map (FDW-795).
+        var conditions = Conditions(query.Filter!.Root!).ToList();
+        conditions.ShouldContain(c => c.PropertyName == "TestOp.IsCurrent" && Equals(c.Value, true));
+        conditions.ShouldContain(c => c.PropertyName == "TestOp.IsDeleted" && Equals(c.Value, false));
+        conditions.ShouldContain(c => c.PropertyName == "TestRoot.IsCurrent" && Equals(c.Value, true));
+        conditions.ShouldContain(c => c.PropertyName == "TestRoot.IsDeleted" && Equals(c.Value, false));
+    }
+
+    private static IEnumerable<FilterCondition> Conditions(IFilterNode node)
+    {
+        if (node is FilterCondition condition)
+        {
+            yield return condition;
+            yield break;
+        }
+
+        if (node is FilterGroup group)
+        {
+            foreach (var child in group.Nodes)
+                foreach (var nested in Conditions(child))
+                    yield return nested;
+        }
+    }
+
     private static TestRootImplementationProvider ImplementationProvider(IConfigurationGateway gateway)
         => new(GatewayProviderFor(gateway));
 
@@ -184,6 +218,10 @@ public sealed class RecursiveCascadeSaveTests
                 "TestRoot")
         {
         }
+
+        /// <summary>Exposes the child join query for inspection.</summary>
+        public IDataCommand ChildJoin(string childContainer, string fkColumn, string ownerContainer, string ownerPhysicalCol, string ownerLogicalCol, Guid ownerId)
+            => BuildChildJoinQuery(childContainer, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, null);
     }
 
     /// <summary>The domain provider: it owns the registry and dispatches by the row's implementation.</summary>
