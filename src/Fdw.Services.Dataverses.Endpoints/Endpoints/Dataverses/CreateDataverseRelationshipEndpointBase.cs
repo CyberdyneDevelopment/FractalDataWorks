@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
+using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
@@ -122,8 +123,12 @@ public abstract class CreateDataverseRelationshipEndpointBase
             CreateDate = DateTimeOffset.UtcNow,
         };
 
+        // ConfigurationSaveCommand, not InsertCommand -- see AttachDataverseResourceEndpointBase
+        // for why: DataverseImplementationRowId is a physical FK with no matching C# property, and
+        // only MsSqlConfigurationSaveTranslator resolves it via subquery.
         var target = new DataStoreTarget(_dataverses.DataStoreName, _dataverses.PathName, "DataverseRelationship");
-        var insertResult = await Gateway.Execute<int>(new InsertCommand<DataverseRelationshipConfiguration>(relationship), target, ct)
+        var insertResult = await Gateway.Execute<int>(
+            new ConfigurationSaveCommand<DataverseRelationshipConfiguration>(relationship), target, ct)
             .ConfigureAwait(false);
         if (insertResult.IsFailure) return insertResult.ToNewResult<DataverseMapEdgeDto>();
 

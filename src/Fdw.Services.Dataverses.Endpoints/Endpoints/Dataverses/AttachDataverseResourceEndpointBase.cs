@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
+using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
@@ -158,8 +159,14 @@ public abstract class AttachDataverseResourceEndpointBase
             CreateDate = DateTimeOffset.UtcNow,
         };
 
+        // ConfigurationSaveCommand, not InsertCommand: DataverseImplementationRowId is a physical
+        // FK with no matching C# property (only the logical DataverseImplementationId is on the
+        // POCO), and only MsSqlConfigurationSaveTranslator resolves that via a subquery on the
+        // logical Id -- a plain InsertCommand sends it as NULL and the NOT NULL constraint refuses
+        // the row. Version-on-write is harmless here: there is no existing current row to retire.
         var target = new DataStoreTarget(_dataverses.DataStoreName, _dataverses.PathName, "DataverseResource");
-        var insertResult = await Gateway.Execute<int>(new InsertCommand<DataverseResourceConfiguration>(resource), target, ct)
+        var insertResult = await Gateway.Execute<int>(
+            new ConfigurationSaveCommand<DataverseResourceConfiguration>(resource), target, ct)
             .ConfigureAwait(false);
         if (insertResult.IsFailure) return insertResult.ToNewResult<DataverseMapNodeDto>();
 
