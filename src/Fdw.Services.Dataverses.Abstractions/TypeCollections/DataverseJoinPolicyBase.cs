@@ -12,7 +12,17 @@ public abstract class DataverseJoinPolicyBase : TypeOptionBase<DataverseJoinPoli
 {
     /// <summary>Initializes a new instance of the <see cref="DataverseJoinPolicyBase"/> class.</summary>
     /// <param name="name">The option name, which is the value persisted.</param>
-    protected DataverseJoinPolicyBase(string name) : base(name)
+    /// <param name="acceptsRequests">Whether this policy accepts a membership request at all.</param>
+    /// <param name="autoApproves">Whether an accepted request grants membership immediately, with no review.</param>
+    protected DataverseJoinPolicyBase(string name, bool acceptsRequests, bool autoApproves) : base(name)
     {
+        AcceptsRequests = acceptsRequests;
+        AutoApproves = autoApproves;
     }
+
+    /// <summary>Gets whether this policy accepts a membership request at all.</summary>
+    public bool AcceptsRequests { get; }
+
+    /// <summary>Gets whether an accepted request grants membership immediately, with no review.</summary>
+    public bool AutoApproves { get; }
 }

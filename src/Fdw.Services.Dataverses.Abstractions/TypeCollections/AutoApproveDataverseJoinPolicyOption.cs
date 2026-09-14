@@ -9,7 +9,7 @@ namespace Fdw.Services.Dataverses.Abstractions;
 public sealed class AutoApproveDataverseJoinPolicyOption : DataverseJoinPolicyBase
 {
     /// <summary>Initializes a new instance of the <see cref="AutoApproveDataverseJoinPolicyOption"/> class.</summary>
-    public AutoApproveDataverseJoinPolicyOption() : base("AutoApprove")
+    public AutoApproveDataverseJoinPolicyOption() : base("AutoApprove", acceptsRequests: true, autoApproves: true)
     {
     }
 }

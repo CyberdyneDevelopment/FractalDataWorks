@@ -9,7 +9,7 @@ namespace Fdw.Services.Dataverses.Abstractions;
 public sealed class RequestToJoinDataverseJoinPolicyOption : DataverseJoinPolicyBase
 {
     /// <summary>Initializes a new instance of the <see cref="RequestToJoinDataverseJoinPolicyOption"/> class.</summary>
-    public RequestToJoinDataverseJoinPolicyOption() : base("RequestToJoin")
+    public RequestToJoinDataverseJoinPolicyOption() : base("RequestToJoin", acceptsRequests: true, autoApproves: false)
     {
     }
 }
