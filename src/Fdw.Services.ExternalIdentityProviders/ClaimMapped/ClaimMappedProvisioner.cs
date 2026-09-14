@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization;
 using Fdw.Services.Configuration;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
@@ -12,6 +13,7 @@ using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.Services.ExternalIdentityProviders.Logging;
 using Fdw.Services.ExternalIdentityProviders.Results;
 using Fdw.Services.Users;
+using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -41,21 +43,36 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
     private const string ExternalIdentityDomain = "ExternalIdentity";
     private const string UserRoleDomain = "UserRole";
     private const string UsersDomain = "Users";
+    private const string UserTenantsDomain = "UserTenants";
 
     private readonly ClaimMappedExternalIdentityProvisionerConfiguration _configuration;
     private readonly UserConfigurationProvider _users;
     private readonly UserRoleConfigurationProvider _userRoles;
     private readonly RoleConfigurationProvider _roles;
     private readonly IExternalIdentityConfigurationProvider _identities;
+    private readonly UserTenantConfigurationProvider _userTenants;
+    private readonly IAuthenticationContextAccessor? _authContextAccessor;
     private readonly ILogger<ClaimMappedProvisioner> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ClaimMappedProvisioner"/> class.</summary>
+    /// <param name="configuration">This provisioner's own header + rules.</param>
+    /// <param name="users">Reads/writes the provisioned account.</param>
+    /// <param name="userRoles">Grants a matched rule's mapped roles.</param>
+    /// <param name="roles">Resolves a role name to its id.</param>
+    /// <param name="identities">Links the provisioned account to the external subject.</param>
+    /// <param name="userTenants">Grants tenant access when a matched rule's
+    /// <see cref="ClaimMappedProvisioningRuleConfiguration.GrantTenantAccess"/> is set.</param>
+    /// <param name="authContextAccessor">Elevates the write context below when available; see the
+    /// remarks on <see cref="Provision"/>.</param>
+    /// <param name="logger">This provisioner's logger.</param>
     public ClaimMappedProvisioner(
         ClaimMappedExternalIdentityProvisionerConfiguration configuration,
         UserConfigurationProvider users,
         UserRoleConfigurationProvider userRoles,
         RoleConfigurationProvider roles,
         IExternalIdentityConfigurationProvider identities,
+        UserTenantConfigurationProvider userTenants,
+        IAuthenticationContextAccessor? authContextAccessor,
         ILogger<ClaimMappedProvisioner>? logger = null)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -63,6 +80,8 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
         _userRoles = userRoles ?? throw new ArgumentNullException(nameof(userRoles));
         _roles = roles ?? throw new ArgumentNullException(nameof(roles));
         _identities = identities ?? throw new ArgumentNullException(nameof(identities));
+        _userTenants = userTenants ?? throw new ArgumentNullException(nameof(userTenants));
+        _authContextAccessor = authContextAccessor;
         _logger = logger ?? NullLogger<ClaimMappedProvisioner>.Instance;
     }
 
@@ -91,11 +110,35 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
     // ── IExternalIdentityProvisioner ────────────────────────────────────────────────
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Runs under <see cref="SystemAuthenticationContextScope"/> when an
+    /// <see cref="IAuthenticationContextAccessor"/> was supplied: <see cref="Provision"/> always runs
+    /// pre-authentication (FDW consults a provisioner only on an <c>auth.ExternalIdentity</c> lookup
+    /// miss — there is never an already-authenticated caller here), so every write below runs under
+    /// the RLS deny principal without it. This is a pure widening: a write that already succeeded
+    /// under the deny principal (a shared/anonymous-visible row) succeeds identically under elevation;
+    /// only a write that was silently blocked by RLS starts succeeding. No previously-working call is
+    /// made to fail by elevating. A host with no accessor registered (see the constructor's remarks)
+    /// keeps today's un-elevated behavior, unchanged.
+    /// </remarks>
     public async Task<IGenericResult<Guid>> Provision(
         string provider,
         string externalSubject,
         ClaimsPrincipal externalPrincipal,
         CancellationToken cancellationToken = default)
+    {
+        if (_authContextAccessor is null)
+            return await ProvisionCore(provider, externalSubject, externalPrincipal, cancellationToken).ConfigureAwait(false);
+
+        using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
+        return await ProvisionCore(provider, externalSubject, externalPrincipal, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<Guid>> ProvisionCore(
+        string provider,
+        string externalSubject,
+        ClaimsPrincipal externalPrincipal,
+        CancellationToken cancellationToken)
     {
         var rule = _configuration.Rules
             .OrderBy(r => r.ExecutionOrder)
@@ -147,6 +190,24 @@ public sealed class ClaimMappedProvisioner : IExternalIdentityProvisioner
 
             if (grant.IsFailure)
                 return grant.ToNewResult<Guid>();
+        }
+
+        if (rule.GrantTenantAccess)
+        {
+            // {userId}:{tenantId} mirrors the role grant's own Name convention just above.
+            var tenantGrantName = $"{userId.Value}:{rule.TenantId}";
+            var tenantGrant = await _userTenants.Save(
+                new UserTenantImplementationConfiguration
+                {
+                    Name = tenantGrantName,
+                    UserId = userId.Value,
+                    TenantId = rule.TenantId,
+                    IsDefault = true,
+                },
+                UserTenantsDomain, UserTenantsDomain, tenantGrantName, cancellationToken).ConfigureAwait(false);
+
+            if (tenantGrant.IsFailure)
+                return tenantGrant.ToNewResult<Guid>();
         }
 
         // Required by the interface contract: without this row, the NEXT login for the same subject
