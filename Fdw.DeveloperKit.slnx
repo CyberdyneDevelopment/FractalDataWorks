@@ -361,6 +361,7 @@
     <Project Path="src/Fdw.UI.Themes.Abstractions/Fdw.UI.Themes.Abstractions.csproj" />
     <Project Path="src/Fdw.UI.Themes.Components/Fdw.UI.Themes.Components.csproj" />
     <Project Path="src/Fdw.UI.Themes.Endpoints/Fdw.UI.Themes.Endpoints.csproj" />
+    <Project Path="src/Fdw.UI.Themes.Registration/Fdw.UI.Themes.Registration.csproj" />
     <Project Path="src/Fdw.UI.WebMcp/Fdw.UI.WebMcp.csproj" />
     <Project Path="src/Fdw.UI.Wizard/Fdw.UI.Wizard.csproj" />
     <Project Path="src/Fdw.UI/Fdw.UI.csproj" />
