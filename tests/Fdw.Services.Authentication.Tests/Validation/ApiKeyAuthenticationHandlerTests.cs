@@ -157,8 +157,8 @@ public class ApiKeyAuthenticationHandlerTests
         resolver
             .Setup(r => r.Resolve(It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(permissions is null
-                ? GenericResult<IReadOnlyCollection<string>>.Failure(new GenericMessage("resolver unavailable"))
-                : GenericResult<IReadOnlyCollection<string>>.Success(permissions));
+                ? GenericResult<EffectiveAuthorization>.Failure(new GenericMessage("resolver unavailable"))
+                : GenericResult<EffectiveAuthorization>.Success(new EffectiveAuthorization(permissions, Array.Empty<string>())));
 
         var context = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
         context.Request.Headers.Authorization = authorizationHeader;

@@ -26,11 +26,11 @@ public interface IEffectivePermissionResolver
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    ///     On success, the union of all three permission tiers.
+    ///     On success, the union of all three permission tiers plus the assigned role names.
     ///     On failure (any provider query failed), returns a failure result — callers must
     ///     treat failure as "deny access" (fail-closed).
     /// </returns>
-    Task<IGenericResult<IReadOnlyCollection<string>>> Resolve(
+    Task<IGenericResult<EffectiveAuthorization>> Resolve(
         string userId,
         Guid? tenantId,
         Guid? orgId,

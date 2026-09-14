@@ -108,8 +108,8 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
             return AuthenticateResult.Fail("Agent key is not valid.");
         }
 
-        var permissions = await ResolvePermissions(validation.UserId.ToString()).ConfigureAwait(false);
-        if (permissions is null)
+        var authorization = await ResolvePermissions(validation.UserId.ToString()).ConfigureAwait(false);
+        if (authorization is null)
         {
             return AuthenticateResult.Fail("Permissions could not be resolved.");
         }
@@ -124,10 +124,11 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
             new(ClaimDefinitions.agentLabel.Name, validation.Label),
             new(ClaimDefinitions.agentKeyId.Name, validation.AgentKeyId.ToString(CultureInfo.InvariantCulture)),
         };
-        claims.AddRange(permissions.Select(p => new Claim(ClaimDefinitions.perm.Name, p)));
+        claims.AddRange(authorization.Permissions.Select(p => new Claim(ClaimDefinitions.perm.Name, p)));
+        claims.AddRange(authorization.RoleNames.Select(r => new Claim(ClaimDefinitions.roles.Name, r)));
 
         AuthenticationValidationLog.AgentKeyAccepted(
-            _log, validation.Label, validation.UserId.ToString(), permissions.Count);
+            _log, validation.Label, validation.UserId.ToString(), authorization.Permissions.Count);
 
         return Success(claims);
     }
@@ -157,16 +158,17 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
             return AuthenticateResult.Fail("Personal access token is not valid.");
         }
 
-        var permissions = await ResolvePermissions(validation.UserId.ToString()).ConfigureAwait(false);
-        if (permissions is null)
+        var authorization = await ResolvePermissions(validation.UserId.ToString()).ConfigureAwait(false);
+        if (authorization is null)
         {
             return AuthenticateResult.Fail("Permissions could not be resolved.");
         }
 
         var claims = new List<Claim> { new(ClaimDefinitions.sub.Name, validation.UserId.ToString()) };
-        claims.AddRange(permissions.Select(p => new Claim(ClaimDefinitions.perm.Name, p)));
+        claims.AddRange(authorization.Permissions.Select(p => new Claim(ClaimDefinitions.perm.Name, p)));
+        claims.AddRange(authorization.RoleNames.Select(r => new Claim(ClaimDefinitions.roles.Name, r)));
 
-        AuthenticationValidationLog.PersonalAccessTokenAccepted(_log, validation.UserId.ToString(), permissions.Count);
+        AuthenticationValidationLog.PersonalAccessTokenAccepted(_log, validation.UserId.ToString(), authorization.Permissions.Count);
 
         return Success(claims);
     }
@@ -182,15 +184,15 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
     /// contract says callers must treat failure as deny, and an empty permission set is
     /// indistinguishable from a legitimately unprivileged user.
     /// </remarks>
-    private async Task<IReadOnlyCollection<string>?> ResolvePermissions(string userId)
+    private async Task<EffectiveAuthorization?> ResolvePermissions(string userId)
     {
         var resolved = await _permissions
             .Resolve(userId, tenantId: null, orgId: null, isGlobalTenant: false, _context!.RequestAborted)
             .ConfigureAwait(false);
 
-        if (resolved.IsSuccess && resolved.Value is { } permissions)
+        if (resolved.IsSuccess && resolved.Value is { } authorization)
         {
-            return permissions;
+            return authorization;
         }
 
         AuthenticationValidationLog.PermissionResolutionFailed(

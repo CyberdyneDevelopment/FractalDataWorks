@@ -58,8 +58,8 @@ public sealed class OrgAwareAuthorizationTests
         var result = await resolver.Resolve(User1Id.ToString(), TenantId, OrgId, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldContain("global:admin");
-        result.Value!.ShouldContain("org:read");
+        result.Value!.Permissions.ShouldContain("global:admin");
+        result.Value!.Permissions.ShouldContain("org:read");
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class OrgAwareAuthorizationTests
         var result = await resolver.Resolve(User1Id.ToString(), TenantId, OrgId, isGlobalTenant: true, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldContain("tenant:read");
+        result.Value!.Permissions.ShouldContain("tenant:read");
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public sealed class OrgAwareAuthorizationTests
         var result = await resolver.Resolve(User2Id.ToString(), TenantId, OrgId, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldContain("org:read");
+        result.Value!.Permissions.ShouldContain("org:read");
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public sealed class OrgAwareAuthorizationTests
         var result = await resolver.Resolve(User3Id.ToString(), TenantId, OrgId, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldContain("reports:read");
+        result.Value!.Permissions.ShouldContain("reports:read");
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public sealed class OrgAwareAuthorizationTests
         var result = await resolver.Resolve(User1Id.ToString(), wrongTenantId, OrgId, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldNotContain("tenant:read");
+        result.Value!.Permissions.ShouldNotContain("tenant:read");
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class OrgAwareAuthorizationTests
         var result = await resolver.Resolve(User1Id.ToString(), TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldNotContain("org:read");
+        result.Value!.Permissions.ShouldNotContain("org:read");
     }
 
     // ──────────────────────────────────────────────────────────────────────────────

@@ -50,7 +50,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyCollection<string>>> Resolve(
+    public async Task<IGenericResult<EffectiveAuthorization>> Resolve(
         string userId,
         Guid? tenantId,
         Guid? orgId,
@@ -59,7 +59,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
     {
         var catalogResult = await LoadCatalog(cancellationToken).ConfigureAwait(false);
         if (catalogResult is null)
-            return GenericResult<IReadOnlyCollection<string>>.Failure(AuthorizationLog.RoleProviderQueryFailed(_logger));
+            return GenericResult<EffectiveAuthorization>.Failure(AuthorizationLog.RoleProviderQueryFailed(_logger));
 
         var (allRoles, allPermissions, allRolePermissions) = catalogResult.Value;
 
@@ -70,13 +70,14 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         var userRoleAssignmentsResult = await _userRoleProvider.Find<UserRoleImplementationConfiguration>(
                 assignment => Guid.TryParse(assignment.UserId, out var assigned) && assigned == subjectId, cancellationToken).ConfigureAwait(false);
         if (!userRoleAssignmentsResult.IsSuccess || userRoleAssignmentsResult.Value is null)
-            return GenericResult<IReadOnlyCollection<string>>.Failure(
+            return GenericResult<EffectiveAuthorization>.Failure(
                 AuthorizationLog.UserRoleAssignmentLoadFailed(_logger, userId));
 
         var userRoleAssignments = userRoleAssignmentsResult.Value;
         AuthorizationLog.UserRoleAssignmentsLoaded(_logger, userRoleAssignments.Count, userId);
 
         var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var roleNameToId = allRoles.ToDictionary(r => r.Name, r => r.Id, StringComparer.OrdinalIgnoreCase);
 
         var globalCount = 0;
@@ -97,7 +98,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
             (globalCount, tenantCount) = ApplyRoleTiers(
                 userId, allRoles, allPermissions, allRolePermissions, roleNameToId,
-                tenantId, isGlobalTenant, assignedRoleIds, permissions);
+                tenantId, isGlobalTenant, assignedRoleIds, permissions, roleNames);
         }
 
         var orgCount = await ApplyOrgTier(
@@ -105,7 +106,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
 
         AuthorizationLog.ThreeTierPermissionsResolved(_logger, globalCount, tenantCount, orgCount, permissions.Count, userId);
 
-        return GenericResult<IReadOnlyCollection<string>>.Success(permissions);
+        return GenericResult<EffectiveAuthorization>.Success(new EffectiveAuthorization(permissions, roleNames));
     }
 
     private async Task<(IReadOnlyList<IRoleImplementationConfiguration>, IReadOnlyList<IPermissionImplementationConfiguration>, IReadOnlyList<IRolePermissionImplementationConfiguration>)?> LoadCatalog(
@@ -144,7 +145,8 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         Guid? currentTenantId,
         bool isGlobalTenant,
         HashSet<Guid> assignedRoleIds,
-        HashSet<string> permissions)
+        HashSet<string> permissions,
+        HashSet<string> roleNames)
     {
         var globalPermCount = 0;
         var tenantPermCount = 0;
@@ -159,6 +161,8 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
             var roleIsGlobal = !role.IsTenantScoped;
             if (!roleIsGlobal && !RoleContributesToTenant(role, currentTenantId, isGlobalTenant))
                 continue;
+
+            roleNames.Add(role.Name);
 
             var rolePerms = allRolePermissions.Where(rp => rp.RoleId == role.Id).ToList();
             AuthorizationLog.RolePermissionsMatched(_logger, role.Name, role.Id.ToString(), rolePerms.Count);

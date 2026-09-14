@@ -106,7 +106,8 @@ public sealed class BakePermissionsStepType
         if (resolved.IsFailure)
             return resolved.ToNewResult<StepOutcome>();
 
-        var permissions = resolved.Value ?? [];
+        var permissions = resolved.Value?.Permissions ?? [];
+        var roleNames = resolved.Value?.RoleNames ?? [];
 
         // Why Local and not Derived: these are read from this platform's own authorization tables.
         // Derived is for what the runner works out itself, such as an assurance level.
@@ -118,6 +119,16 @@ public sealed class BakePermissionsStepType
                 Source = ClaimSources.Local,
             })
             .ToList();
+
+        // Same tier the permissions above were resolved at -- the JwtBearerAuthenticationHandler's
+        // RoleClaimType is wired to this claim, which is what makes ClaimsPrincipal.IsInRole/
+        // ISystemRoleConfiguration.IsInRole able to answer for the 8 call sites that ask.
+        claims.AddRange(roleNames.Select(roleName => new Claim
+        {
+            Type = ClaimDefinitions.roles.Name,
+            Value = roleName,
+            Source = ClaimSources.Local,
+        }));
 
         PermissionBakingLog.Baked(_logger, principal.Id, claims.Count);
 

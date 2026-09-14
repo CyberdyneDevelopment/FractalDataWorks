@@ -147,9 +147,9 @@ public sealed class EffectivePermissionResolverTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("global:admin");   // global tier
-        result.Value.ShouldContain("tenant:read");    // tenant tier
-        result.Value.ShouldContain("org:read");       // org tier
+        result.Value.Permissions.ShouldContain("global:admin");   // global tier
+        result.Value.Permissions.ShouldContain("tenant:read");    // tenant tier
+        result.Value.Permissions.ShouldContain("org:read");       // org tier
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public sealed class EffectivePermissionResolverTests
 
         // Assert — TenantUser role still contributes because isGlobalTenant = true
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.ShouldContain("tenant:read");
+        result.Value!.Permissions.ShouldContain("tenant:read");
     }
 
     [Fact]
@@ -182,9 +182,9 @@ public sealed class EffectivePermissionResolverTests
         // Assert — global+tenant tiers present, no org permission
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value!.ShouldContain("global:admin");
-        result.Value.ShouldContain("tenant:read");
-        result.Value.ShouldNotContain("org:read");
+        result.Value!.Permissions.ShouldContain("global:admin");
+        result.Value.Permissions.ShouldContain("tenant:read");
+        result.Value.Permissions.ShouldNotContain("org:read");
     }
 
     [Fact]
@@ -232,20 +232,20 @@ public sealed class EffectivePermissionResolverTests
         result.Value.ShouldNotBeNull();
 
         // Viewer MUST have their own permissions
-        result.Value.ShouldContain("viewer:read1");
-        result.Value.ShouldContain("viewer:read2");
+        result.Value.Permissions.ShouldContain("viewer:read1");
+        result.Value.Permissions.ShouldContain("viewer:read2");
 
         // Viewer MUST NOT have admin-only permissions (this was the escalation bug)
-        result.Value.ShouldNotContain("admin:delete",
+        result.Value.Permissions.ShouldNotContain("admin:delete",
             "Viewer must not receive admin:delete — this was the FDW-532 privilege escalation");
-        result.Value.ShouldNotContain("global:admin",
+        result.Value.Permissions.ShouldNotContain("global:admin",
             "Viewer must not receive global:admin — they are not assigned the GlobalAdmin role");
-        result.Value.ShouldNotContain("tenant:read",
+        result.Value.Permissions.ShouldNotContain("tenant:read",
             "Viewer must not receive tenant:read — they are not assigned the TenantUser role");
 
         // Critical count assertion: 2 viewer perms only, not the full 5-perm catalog
-        result.Value.Count.ShouldBe(2,
-            $"Viewer with 1 role (2 perms) must resolve to exactly 2 permissions, not {result.Value.Count} (which would indicate catalog bleed)");
+        result.Value.Permissions.Count.ShouldBe(2,
+            $"Viewer with 1 role (2 perms) must resolve to exactly 2 permissions, not {result.Value.Permissions.Count} (which would indicate catalog bleed)");
     }
 
     [Fact]
@@ -269,19 +269,19 @@ public sealed class EffectivePermissionResolverTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("admin:delete");
-        result.Value.ShouldContain("global:admin");
+        result.Value.Permissions.ShouldContain("admin:delete");
+        result.Value.Permissions.ShouldContain("global:admin");
 
         // Admin MUST NOT have viewer-only permissions
-        result.Value.ShouldNotContain("viewer:read1",
+        result.Value.Permissions.ShouldNotContain("viewer:read1",
             "Admin must not receive viewer:read1 — they are not assigned the Viewer role");
-        result.Value.ShouldNotContain("viewer:read2",
+        result.Value.Permissions.ShouldNotContain("viewer:read2",
             "Admin must not receive viewer:read2 — they are not assigned the Viewer role");
-        result.Value.ShouldNotContain("tenant:read",
+        result.Value.Permissions.ShouldNotContain("tenant:read",
             "Admin must not receive tenant:read — they are not assigned the TenantUser role");
 
-        result.Value.Count.ShouldBe(2,
-            $"Admin with 1 role (2 perms) must resolve to exactly 2 permissions, not {result.Value.Count}");
+        result.Value.Permissions.Count.ShouldBe(2,
+            $"Admin with 1 role (2 perms) must resolve to exactly 2 permissions, not {result.Value.Permissions.Count}");
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public sealed class EffectivePermissionResolverTests
         // Assert
         result.IsSuccess.ShouldBeTrue("Zero assignments is a valid state — empty result, not failure");
         result.Value.ShouldNotBeNull();
-        result.Value.Count.ShouldBe(0,
+        result.Value.Permissions.Count.ShouldBe(0,
             "User with no role assignments must get zero permissions, not the full catalog");
     }
 
@@ -347,16 +347,16 @@ public sealed class EffectivePermissionResolverTests
         result.Value.ShouldNotBeNull();
 
         // Viewer count must be far below total catalog — not 88 real perms all assigned to everyone
-        result.Value.Count.ShouldBeLessThan(totalCatalogPermissions,
-            $"Viewer perm count ({result.Value.Count}) must be less than total catalog ({totalCatalogPermissions})");
+        result.Value.Permissions.Count.ShouldBeLessThan(totalCatalogPermissions,
+            $"Viewer perm count ({result.Value.Permissions.Count}) must be less than total catalog ({totalCatalogPermissions})");
 
         // No admin-only perms
-        result.Value.ShouldNotContain("admin:delete");
-        result.Value.ShouldNotContain("global:admin");
+        result.Value.Permissions.ShouldNotContain("admin:delete");
+        result.Value.Permissions.ShouldNotContain("global:admin");
 
         // Explicitly verify the "escalation gap": before the fix a viewer would get ALL perms
         var unexpectedPermsIfBugExists = new[] { "admin:delete", "global:admin", "tenant:read" };
-        var leakedPerms = unexpectedPermsIfBugExists.Where(p => result.Value.Contains(p)).ToList();
+        var leakedPerms = unexpectedPermsIfBugExists.Where(p => result.Value.Permissions.Contains(p)).ToList();
         leakedPerms.ShouldBeEmpty(
             $"FDW-532 regression: viewer received elevated permissions: [{string.Join(", ", leakedPerms)}]");
     }
@@ -379,13 +379,13 @@ public sealed class EffectivePermissionResolverTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value.ShouldContain("viewer:read1");
-        result.Value.ShouldContain("viewer:read2");
-        result.Value.ShouldContain("admin:delete");
-        result.Value.ShouldContain("global:admin");
-        result.Value.ShouldNotContain("tenant:read",
+        result.Value.Permissions.ShouldContain("viewer:read1");
+        result.Value.Permissions.ShouldContain("viewer:read2");
+        result.Value.Permissions.ShouldContain("admin:delete");
+        result.Value.Permissions.ShouldContain("global:admin");
+        result.Value.Permissions.ShouldNotContain("tenant:read",
             "User is not assigned TenantUser role — tenant:read must not appear");
-        result.Value.Count.ShouldBe(4);
+        result.Value.Permissions.Count.ShouldBe(4);
     }
 
     [Fact]
@@ -410,7 +410,7 @@ public sealed class EffectivePermissionResolverTests
         result.Value.ShouldNotBeNull();
         // The user's assignment targets TenantId but we're resolving for otherTenantId.
         // Assignment-tier filter: TenantId != otherTenantId → role excluded from assignedRoleIds.
-        result.Value.Count.ShouldBe(0,
+        result.Value.Permissions.Count.ShouldBe(0,
             "User has a tenant-scoped assignment for a different tenant — zero perms for this tenant context");
     }
 
