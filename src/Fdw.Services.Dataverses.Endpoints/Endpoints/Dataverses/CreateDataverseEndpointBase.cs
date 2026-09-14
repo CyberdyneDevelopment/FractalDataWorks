@@ -97,6 +97,11 @@ public abstract class CreateDataverseEndpointBase : CrudCreateEndpointBase<Creat
             // The implementation the domain provider is registered under. A new record names it or the
             // save refuses it: Save looks the name up before writing, and '' is registered for nothing.
             Implementation = "Dataverse",
+            // Why stamped here rather than left to the column DEFAULT: MsSqlInsertTranslator writes
+            // every mapped column explicitly, including ones nobody set, so the unset CLR default
+            // (0001-01-01) overwrites DEFAULT (sysdatetimeoffset()) rather than deferring to it. Same
+            // reason CreateDataverseNoteEndpointBase already stamps its own CreateDate. (FDW-793)
+            CreateDate = DateTimeOffset.UtcNow,
             OwnerUserId = ownerUserId,
             Name = request.Name,
             DisplayName = request.DisplayName,
