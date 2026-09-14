@@ -3,7 +3,7 @@ using System.Linq;
 using System.Reflection;
 using Fdw.ServiceTypes;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
-using Fdw.Services.ExternalIdentityProviders.Chained;
+using Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 using Microsoft.Extensions.Logging;
 using Shouldly;
 using Xunit;
@@ -24,72 +24,25 @@ namespace Fdw.Services.ExternalIdentityProviders.Tests;
 /// without bound. MEDI's <c>StackGuard.RunOnEmptyStack</c> migrates that recursion onto fresh stacks
 /// rather than throwing <see cref="StackOverflowException"/>, so the host HANGS SILENTLY — no
 /// exception, no log — until the container runtime kills it. A production dump showed ~83,000 frames
-/// cycling through <c>ExternalIdentityProvisionerTypes.&lt;Register&gt;b__16_1</c> →
-/// <c>ChainedExternalIdentityProvisionerType.RegisterFactory</c> → <c>GetRequiredService</c> → repeat.
+/// cycling through the (now-removed) Chained provisioner's own factory resolution, the option that
+/// first hit this. Its two dedicated regression tests were removed along with it; the general guard
+/// below stays, since the hazard is generic to ANY provisioner factory, not specific to that option.
 /// </para>
 /// <para>
 /// The break is to take the provider as <see cref="Lazy{T}"/> so resolution is deferred past
-/// construction. These tests pin that contract by reflection: they are deterministic, need no
-/// container, and fail on the pre-fix code.
+/// construction. This test pins that contract by reflection: it is deterministic, needs no
+/// container, and fails on a factory reintroducing the same mistake.
 /// </para>
 /// </remarks>
 public sealed class ProvisionerFactoryResolutionCycleTests
 {
-    private static readonly Type ProviderServiceType =
-        typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>);
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ChainedProvisionerFactoryDoesNotTakeItsOwnProviderDirectly()
-    {
-        // Arrange
-        var constructor = typeof(ChainedExternalIdentityProvisionerFactory)
-            .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-            .Single();
-
-        // Act
-        var direct = constructor.GetParameters().Where(p => p.ParameterType == ProviderServiceType).ToList();
-
-        // Assert
-        direct.ShouldBeEmpty(
-            "ChainedExternalIdentityProvisionerFactory must not take its own collection's provider as a "
-            + "direct constructor dependency — it is resolved from inside that provider's generated scoped "
-            + "resolver lambda, so a direct dependency re-enters the lambda and recurses until the host is "
-            + "killed (silently — StackGuard suppresses StackOverflowException). Use Lazy<T>.");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ChainedProvisionerFactoryIsAPureConstructor()
-    {
-        // Arrange
-        var constructor = typeof(ChainedExternalIdentityProvisionerFactory)
-            .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-            .Single();
-
-        // Act
-        var nonLoggerParameters = constructor.GetParameters()
-            .Where(p => p.ParameterType != typeof(ILoggerFactory))
-            .Select(p => $"{p.ParameterType.Name} {p.Name}")
-            .ToList();
-
-        // Assert
-        nonLoggerParameters.ShouldBeEmpty(
-            "a provisioner factory must be a pure constructor — the provider supplies resolved values to "
-            + "Create(configuration, provisionerProvider). Holding a provider (even as Lazy<T>) keeps the "
-            + "deviation alive instead of removing it. Offending parameters: "
-            + string.Join(", ", nonLoggerParameters));
-    }
-
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
     public void NoProvisionerFactoryTakesAFdwServiceProviderDirectly()
     {
         // Arrange
-        var factoryTypes = typeof(ChainedExternalIdentityProvisionerFactory).Assembly
+        var factoryTypes = typeof(ClaimMappedProvisionerFactory).Assembly
             .GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false })
             .Where(t => t.Name.EndsWith("Factory", StringComparison.Ordinal))

@@ -17,11 +17,10 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
 /// <summary>
 /// Factory that builds <see cref="ClaimMappedProvisioner"/> instances from a resolved
-/// <see cref="IExternalIdentityProvisionerImplementationConfiguration"/> header. Unlike
-/// <see cref="Chained.ChainedExternalIdentityProvisionerFactory"/>, this one DOES take its
-/// dependencies through the constructor — it never needs to resolve the provisioner provider itself
-/// (it has no siblings to delegate to), so the re-entrancy hazard that forces Chained's factory to
-/// stay pure does not apply here.
+/// <see cref="IExternalIdentityProvisionerImplementationConfiguration"/> header. It takes its
+/// dependencies through the constructor — it never needs to resolve its own domain provider (it has
+/// no siblings to delegate to), so it has no re-entrancy hazard to stay pure against (see
+/// <c>ProvisionerFactoryResolutionCycleTests</c> for the general shape of that hazard).
 /// </summary>
 internal sealed class ClaimMappedProvisionerFactory
     : IClaimMappedProvisionerFactory

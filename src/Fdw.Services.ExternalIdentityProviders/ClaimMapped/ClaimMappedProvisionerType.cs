@@ -25,7 +25,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// ClaimMapped <see cref="ExternalIdentityProvisionerTypes"/> Implementation. Registers the header
 /// + typed-body gateway-backed configuration providers and the
 /// <see cref="ClaimMappedProvisionerFactory"/> that builds <see cref="ClaimMappedProvisioner"/>
-/// instances. Mirrors <see cref="Chained.ChainedExternalIdentityProvisionerType"/> structurally.
+/// instances.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [Implementation(typeof(ExternalIdentityProvisionerTypes), "ClaimMapped")]

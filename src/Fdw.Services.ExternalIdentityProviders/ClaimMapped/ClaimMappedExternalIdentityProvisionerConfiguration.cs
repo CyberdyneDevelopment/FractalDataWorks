@@ -14,8 +14,7 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// Persisted to <c>sec.ClaimMappedExternalIdentityProvisioner</c> as a child of
 /// <c>sec.ExternalIdentityProvisioner</c> via <see cref="ExternalIdentityProvisionerId"/>. Carries no
 /// scalar columns of its own — its policy lives entirely in the ordered <see cref="Rules"/> child
-/// collection (<c>sec.ClaimMappedProvisioningRule</c>), mirroring
-/// <see cref="Chained.ChainedExternalIdentityProvisionerConfiguration"/>'s ordered-children shape.
+/// collection (<c>sec.ClaimMappedProvisioningRule</c>).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

@@ -8,11 +8,10 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// <summary>
 /// One matchable rule of <see cref="ClaimMappedExternalIdentityProvisionerConfiguration"/> — a claim
 /// to look for on the presented <see cref="System.Security.Claims.ClaimsPrincipal"/>, and what to do
-/// when it matches. Ordered children, mirroring
-/// <see cref="Fdw.Services.ExternalIdentityProviders.Chained.ChainedProvisionerStepConfiguration"/>:
-/// the read cascade does not apply an ORDER BY, so <see cref="ClaimMapped.ClaimMappedProvisioner"/>
-/// sorts <see cref="ExecutionOrder"/> ascending itself before matching. The first matching rule wins;
-/// no matching rule is this provisioner's "not mine" outcome, not a hard failure.
+/// when it matches. Ordered children: the read cascade does not apply an ORDER BY, so
+/// <see cref="ClaimMapped.ClaimMappedProvisioner"/> sorts <see cref="ExecutionOrder"/> ascending
+/// itself before matching. The first matching rule wins; no matching rule is this provisioner's "not
+/// mine" outcome, not a hard failure.
 /// </summary>
 /// <remarks>
 /// Everything here is configuration, deliberately — no claim type, claim value, role name, or
