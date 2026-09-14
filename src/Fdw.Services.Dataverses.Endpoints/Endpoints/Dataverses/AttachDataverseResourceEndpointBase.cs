@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
@@ -97,23 +99,56 @@ public abstract class AttachDataverseResourceEndpointBase
     }
 
     /// <inheritdoc />
-    protected override Task<IGenericResult<bool>> CheckExists(AttachDataverseResourceRequest request, CancellationToken ct)
-        // A dataverse may attach the same data set twice under different relationships (a
-        // relationship it Owns and one it merely Uses), so there is nothing here to collide with.
-        => Task.FromResult(GenericResult<bool>.Success(false));
+    /// <remarks>
+    /// UX_DataverseResource_Dataverse_Type_Resource_Current is unique on (DataverseImplementationId,
+    /// ResourceType, ResourceId) WHERE IsCurrent = 1 -- the same resource cannot be attached to the
+    /// same dataverse twice, under any relationship. A prior version of this comment said otherwise;
+    /// the schema was always the truth and the comment was wrong, not the constraint.
+    /// </remarks>
+    protected override async Task<IGenericResult<bool>> CheckExists(AttachDataverseResourceRequest request, CancellationToken ct)
+    {
+        var dataverse = await _dataverses.Get(request.Name, ct).ConfigureAwait(false);
+        if (dataverse.IsFailure) return dataverse.ToNewResult<bool>();
+        if (dataverse.Value is null) return GenericResult<bool>.Success(false);
+
+        var target = new DataStoreTarget(_dataverses.DataStoreName, _dataverses.PathName, "DataverseResource");
+        var existingCommand = new QueryCommand<DataverseResourceConfiguration>
+        {
+            Filter = new FilterExpression
+            {
+                Root = new FilterGroup
+                {
+                    Operator = LogicalOperator.And,
+                    Nodes =
+                    [
+                        new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverse.Value.Id },
+                        new FilterCondition { PropertyName = "ResourceType", Operator = FilterOperators.ByName("Equal"), Value = request.ResourceType },
+                        new FilterCondition { PropertyName = "ResourceId", Operator = FilterOperators.ByName("Equal"), Value = request.ResourceId },
+                        new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
+                    ]
+                }
+            }
+        };
+
+        var existing = await Gateway.Execute<IEnumerable<DataverseResourceConfiguration>>(existingCommand, target, ct)
+            .ConfigureAwait(false);
+        if (existing.IsFailure) return existing.ToNewResult<bool>();
+
+        return GenericResult<bool>.Success(existing.Value?.Any() ?? false);
+    }
 
     /// <inheritdoc />
     protected override async Task<IGenericResult<DataverseMapNodeDto>> Create(
         AttachDataverseResourceRequest request, CancellationToken ct)
     {
-        if (DataverseResourceKinds.ByName(request.ResourceType) is null)
+        if (ReferenceEquals(DataverseResourceKinds.ByName(request.ResourceType), DataverseResourceKinds.NotFound))
         {
             return GenericResult<DataverseMapNodeDto>.Failure(
                 DataversesResultCodes.ByName("DataverseLifecycleValueInvalid"), Logger,
                 ResultDetails.Create("name", request.Name, "field", "resourceType", "value", request.ResourceType));
         }
 
-        if (string.IsNullOrWhiteSpace(request.Relationship))
+        if (ReferenceEquals(DataverseResourceRelationships.ByName(request.Relationship), DataverseResourceRelationships.NotFound))
         {
             return GenericResult<DataverseMapNodeDto>.Failure(
                 DataversesResultCodes.ByName("DataverseLifecycleValueInvalid"), Logger,

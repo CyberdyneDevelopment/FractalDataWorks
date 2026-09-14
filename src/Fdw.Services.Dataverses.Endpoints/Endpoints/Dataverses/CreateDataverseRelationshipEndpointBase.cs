@@ -7,6 +7,7 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Dataverses.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Dataverses.Results;
@@ -79,7 +80,7 @@ public abstract class CreateDataverseRelationshipEndpointBase
     protected override async Task<IGenericResult<DataverseMapEdgeDto>> Create(
         CreateDataverseRelationshipRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Cardinality))
+        if (ReferenceEquals(DataverseRelationshipCardinalities.ByName(request.Cardinality), DataverseRelationshipCardinalities.NotFound))
         {
             return GenericResult<DataverseMapEdgeDto>.Failure(
                 DataversesResultCodes.ByName("DataverseLifecycleValueInvalid"), Logger,
