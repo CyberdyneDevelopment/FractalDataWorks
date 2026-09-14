@@ -105,6 +105,14 @@ public abstract class CreateDataverseRelationshipEndpointBase
         var right = await ValidateDataSet("rightDataSetId", request.RightDataSetId, ct).ConfigureAwait(false);
         if (right.IsFailure) return right.ToNewResult<DataverseMapEdgeDto>();
 
+        var leftField = await DataverseFieldOwnershipValidator.Validate(
+            _dataSets, Logger, request.Name, "left", request.LeftDataSetId, request.LeftFieldId, ct).ConfigureAwait(false);
+        if (leftField.IsFailure) return leftField.ToNewResult<DataverseMapEdgeDto>();
+
+        var rightField = await DataverseFieldOwnershipValidator.Validate(
+            _dataSets, Logger, request.Name, "right", request.RightDataSetId, request.RightFieldId, ct).ConfigureAwait(false);
+        if (rightField.IsFailure) return rightField.ToNewResult<DataverseMapEdgeDto>();
+
         var relationship = new DataverseRelationshipConfiguration
         {
             Id = Guid.CreateVersion7(),

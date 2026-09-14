@@ -40,6 +40,11 @@ public abstract class AttachDataverseResourceEndpointBase
     // would be a captive dependency. The provider is asked when a call is actually being made.
     private IDataGateway Gateway => _dataGateways.ByName("Main");
 
+    // Set by CheckExists when it finds a conflict, read back by DuplicateMessage -- both run within
+    // the same request via CrudCreateEndpointBase.HandleAsync, in that order, on a per-request
+    // endpoint instance, so this is never stale or shared across requests.
+    private DataverseResourceConfiguration? _conflict;
+
     /// <inheritdoc />
     protected AttachDataverseResourceEndpointBase(
         ILogger<AttachDataverseResourceEndpointBase> logger,
@@ -134,8 +139,22 @@ public abstract class AttachDataverseResourceEndpointBase
             .ConfigureAwait(false);
         if (existing.IsFailure) return existing.ToNewResult<bool>();
 
-        return GenericResult<bool>.Success(existing.Value?.Any() ?? false);
+        _conflict = existing.Value?.FirstOrDefault();
+        return GenericResult<bool>.Success(_conflict is not null);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The generic base wording ("A dataverses with this name already exists") is CrudCreate's
+    /// duplicate-by-name text, and this endpoint's conflict isn't about the dataverse's name at
+    /// all -- it's a resource already attached under another relationship. _conflict's Name is
+    /// already the resolved data set label (stamped when it was first attached), so naming it here
+    /// costs nothing extra.
+    /// </remarks>
+    protected override string DuplicateMessage(AttachDataverseResourceRequest request) =>
+        _conflict is null
+            ? base.DuplicateMessage(request)
+            : $"'{_conflict.Name}' is already attached to '{request.Name}' as {_conflict.Relationship}";
 
     /// <inheritdoc />
     protected override async Task<IGenericResult<DataverseMapNodeDto>> Create(

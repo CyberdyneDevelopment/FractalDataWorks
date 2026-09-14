@@ -113,7 +113,7 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
             if (existsResult.Value)
             {
                 OnAlreadyExists(resourceName);
-                ThrowError($"A {ResourceName} with this name already exists", 409);
+                ThrowError(DuplicateMessage(req), 409);
                 return;
             }
 
@@ -161,6 +161,13 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     /// Checks whether a resource with the same name already exists. Return true for conflict.
     /// </summary>
     protected abstract Task<IGenericResult<bool>> CheckExists(TCreateRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Gets the 409 body sent when <see cref="CheckExists"/> reports a conflict. Override when the
+    /// generic wording doesn't name what actually collided — a duplicate that CheckExists already
+    /// identified (a specific row, a specific value) reads better named than left generic.
+    /// </summary>
+    protected virtual string DuplicateMessage(TCreateRequest request) => $"A {ResourceName} with this name already exists";
 
     /// <summary>
     /// Performs the actual resource creation. Returns the created detail DTO.
