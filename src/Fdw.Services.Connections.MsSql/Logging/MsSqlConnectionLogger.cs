@@ -460,8 +460,8 @@ public static partial class MsSqlConnectionLogger
     /// seed or mapper bug. Either something forgot to elevate, or a genuinely anonymous caller is
     /// reading; both are worth seeing, and neither is visible at Trace, which production filters out.
     /// </remarks>
-    [MessageLogging(EventId = 11067, Level = LogLevel.Warning, Message = "Connection opened as the deny principal (no authentication context): reads on it return only shared rows, with tenant-scoped and restricted rows silently absent")]
-    public static partial IGenericMessage NoAccessPrincipalContextSet(ILogger logger);
+    [MessageLogging(EventId = 11067, Level = LogLevel.Warning, Message = "Connection opened as the deny principal ({reason}): reads on it return only shared rows, with tenant-scoped and restricted rows silently absent")]
+    public static partial IGenericMessage NoAccessPrincipalContextSet(ILogger logger, string reason);
 
     /// <summary>
     /// Logs when setting tenant SESSION_CONTEXT fails.

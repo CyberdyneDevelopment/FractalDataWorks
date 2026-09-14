@@ -75,6 +75,13 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         {
             [ClaimDefinitions.sub.Name] = request.PrincipalId.ToString(),
 
+            // Same value under the .NET-standard claim type, alongside "sub" rather than instead of
+            // it: every consumer that resolves the caller via System.Security.Claims.ClaimTypes.
+            // NameIdentifier (the ASP.NET Core convention several endpoint bases already assume)
+            // finds it without a bespoke "sub" fallback at each of those call sites -- one place
+            // decides what a claim is called, same as tenantId below.
+            [ClaimTypes.NameIdentifier] = request.PrincipalId.ToString(),
+
             // A per-token identifier, distinct from the principal it was issued for: revocation
             // (LogoutEndpoint -> ITokenRevocationStore) targets one presented token, never every
             // token a principal happens to hold.

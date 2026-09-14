@@ -58,7 +58,24 @@ public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
 
     /// <inheritdoc />
     public override SessionContextPlan Plan(IAuthenticationContext? authenticationContext)
-        => SessionContextPlan.Deny;
+        => SessionContextPlan.Deny(DescribeReason(authenticationContext));
+
+    /// <summary>
+    /// Names which of <see cref="Governs"/>'s two sub-cases actually applied — <c>IsResolvedUser</c>
+    /// is itself two checks (authenticated, and <c>UserId</c> Guid-parseable), collapsed into one
+    /// boolean there. <c>IsSystemElevation</c> is already ruled out by the time this runs (only
+    /// called when <see cref="Governs"/> returned true), so this only distinguishes the other two.
+    /// </summary>
+    private static string DescribeReason(IAuthenticationContext? authenticationContext)
+    {
+        if (authenticationContext is null)
+            return "no IAuthenticationContext was established for this connection";
+
+        if (!authenticationContext.IsAuthenticated)
+            return $"context for UserId '{authenticationContext.UserId}' is not authenticated";
+
+        return $"authenticated context's UserId '{authenticationContext.UserId}' is not Guid-parseable";
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -89,6 +106,6 @@ public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
             logger,
             cancellationToken).ConfigureAwait(false);
 
-        MsSqlConnectionLogger.NoAccessPrincipalContextSet(logger);
+        MsSqlConnectionLogger.NoAccessPrincipalContextSet(logger, plan.DenyReason);
     }
 }

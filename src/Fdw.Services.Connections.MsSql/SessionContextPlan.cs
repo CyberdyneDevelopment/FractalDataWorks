@@ -27,13 +27,14 @@ namespace Fdw.Services.Connections.MsSql;
 /// </remarks>
 public readonly struct SessionContextPlan
 {
-    private SessionContextPlan(bool isSystem, Guid? userId, Guid? tenantId, bool isCrossTenant, bool canReadSecrets)
+    private SessionContextPlan(bool isSystem, Guid? userId, Guid? tenantId, bool isCrossTenant, bool canReadSecrets, string denyReason)
     {
         IsSystem = isSystem;
         UserId = userId;
         TenantId = tenantId;
         IsCrossTenant = isCrossTenant;
         CanReadSecrets = canReadSecrets;
+        DenyReason = denyReason;
     }
 
     /// <summary>
@@ -74,21 +75,34 @@ public readonly struct SessionContextPlan
     public bool CanReadSecrets { get; }
 
     /// <summary>
-    /// Gets the singleton plan for explicit system elevation — the ONLY plan that sets nothing.
+    /// Gets which of <see cref="DenySessionContext"/>'s three governing cases produced this plan —
+    /// no authentication context established at all, an unauthenticated one, or one whose
+    /// <c>UserId</c> is not <see cref="Guid"/>-parseable. Empty for <see cref="System"/> and
+    /// <see cref="ForUser"/> plans, which are never governed by that decision.
     /// </summary>
-    public static SessionContextPlan System { get; } = new(isSystem: true, userId: null, tenantId: null, isCrossTenant: false, canReadSecrets: false);
+    public string DenyReason { get; }
 
     /// <summary>
-    /// Gets the singleton deny-everywhere plan: sets <c>UserId</c> to the reserved
+    /// Gets the singleton plan for explicit system elevation — the ONLY plan that sets nothing.
+    /// </summary>
+    public static SessionContextPlan System { get; } = new(isSystem: true, userId: null, tenantId: null, isCrossTenant: false, canReadSecrets: false, denyReason: string.Empty);
+
+    /// <summary>
+    /// Builds the deny-everywhere plan: sets <c>UserId</c> to the reserved
     /// <see cref="AuthConstants.NoAccessPrincipalId"/> and nothing else. Used whenever no
     /// <c>IAuthenticationContext</c> is established at all, or the established one has no
     /// Guid-parseable <c>UserId</c> and is not an explicit system elevation.
     /// </summary>
-    public static SessionContextPlan Deny { get; } = new(isSystem: false, userId: AuthConstants.NoAccessPrincipalId, tenantId: null, isCrossTenant: false, canReadSecrets: false);
+    /// <param name="reason">
+    /// Which governing case produced this plan — carried through to the connection-open warning so
+    /// the log names the actual cause instead of a single hardcoded guess.
+    /// </param>
+    public static SessionContextPlan Deny(string reason)
+        => new(isSystem: false, userId: AuthConstants.NoAccessPrincipalId, tenantId: null, isCrossTenant: false, canReadSecrets: false, denyReason: reason);
 
     /// <summary>
     /// Builds the plan for an authenticated, Guid-identified real user.
     /// </summary>
     public static SessionContextPlan ForUser(Guid userId, Guid? tenantId, bool isCrossTenant, bool canReadSecrets)
-        => new(isSystem: false, userId, tenantId, isCrossTenant, canReadSecrets);
+        => new(isSystem: false, userId, tenantId, isCrossTenant, canReadSecrets, denyReason: string.Empty);
 }
