@@ -15,7 +15,7 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ChainedExternalIdentityProvisionerType` | class | Chained Implementation. Registers the header + typed-body gateway-backed configuration providers and… |
+| `ClaimMappedProvisionerType` | class | ClaimMapped Implementation. Registers the header + typed-body gateway-backed configuration providers and… |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.
 
@@ -25,8 +25,8 @@ Configuration classes are `[ManagedConfiguration]`: they generate their own DDL,
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ChainedExternalIdentityProvisionerConfiguration` | class | Typed-body configuration for the Chained external-identity-provisioner TypeOption. Standalone POCO —… |
-| `ChainedProvisionerStepConfiguration` | class | Ordered child of — one row per sibling sec.ExternalIdentityProvisioner the chain delegates Provision to,… |
+| `ClaimMappedExternalIdentityProvisionerConfiguration` | class | Typed-body configuration for the ClaimMapped external-identity-provisioner TypeOption. Standalone POCO —… |
+| `ClaimMappedProvisioningRuleConfiguration` | class | One matchable rule of ClaimMappedExternalIdentityProvisionerConfiguration — a claim to look for on the… |
 | `ExternalIdentityProviderConfiguration` | class | Header configuration for external identity provider services representing the… |
 | `ExternalIdentityProviderTypeBase<TService, TConfiguration, TFactory>` | class | Base class for external identity provider service type definitions. Structurally copies… |
 | `ExternalIdentityProvisionerBindingConfiguration` | class | Flat selector row binding a (, ) pair to the named sec.ExternalIdentityProvisioner that should handle… |
@@ -49,4 +49,6 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04; hand-patched on 2026-09-14 (FDW-797) to drop the
+     Chained option/configuration rows deleted in 91126c961 -- regenerate properly rather than
+     hand-editing further -->

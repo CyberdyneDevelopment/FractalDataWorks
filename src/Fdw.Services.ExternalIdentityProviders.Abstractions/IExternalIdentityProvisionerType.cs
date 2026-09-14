@@ -9,9 +9,9 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// <c>IExternalIdentityProviderType</c>'s generic/non-generic split. Like TokenManagers (and unlike
 /// ExternalIdentityProviders), this domain resolves to exactly one active provisioner per (tenant,
 /// external provider) selector via <c>ExternalIdentityProvisionerBindingConfigurationProvider</c> —
-/// but multiple <c>ExternalIdentityProvisionerTypes</c> options (e.g. Chained plus, in the future, a
-/// leaf provisioner) may still be simultaneously registered. Stays a pure marker (no domain-specific
-/// capability properties).
+/// but multiple <c>ExternalIdentityProvisionerTypes</c> options (today, just
+/// <c>ClaimMappedProvisionerType</c>; future options register the same way) may still be
+/// simultaneously registered. Stays a pure marker (no domain-specific capability properties).
 /// </summary>
 /// <typeparam name="TService">The external identity provisioner service interface type.</typeparam>
 /// <typeparam name="TConfiguration">The configuration type for the external identity provisioner service.</typeparam>

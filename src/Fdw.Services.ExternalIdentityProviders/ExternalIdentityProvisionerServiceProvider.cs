@@ -15,9 +15,9 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// look up sibling provisioners by name at <c>Provision</c> time.
 /// </summary>
 /// <remarks>
-/// A chained provisioner needs the provider to resolve its sibling steps at Provision time. It is
-/// given that provider when its factory is constructed, so nothing resolves it from the container at
-/// create time — which is what recursed without bound when it did (FDW-615).
+/// A provisioner that needs to resolve another provisioner by name (composing over more than one
+/// candidate) is given this provider when its factory is constructed, so nothing resolves it from the
+/// container at create time — which is what recursed without bound when it did (FDW-615).
 /// </remarks>
 public class ExternalIdentityProvisionerServiceProvider
     : DomainServiceProviderBase<
