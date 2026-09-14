@@ -8,6 +8,9 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public class DataStoreSummaryResponse : ResourceSummary
 {
+    /// <summary>Gets or sets the domain record's durable id.</summary>
+    public Guid Id { get; set; }
+
     /// <summary>Gets or sets the data store type (e.g., MsSql).</summary>
     public string? StoreType { get; set; }
 

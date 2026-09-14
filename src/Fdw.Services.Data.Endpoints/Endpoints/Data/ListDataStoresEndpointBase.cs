@@ -74,6 +74,7 @@ public abstract class ListDataStoresEndpointBase : CrudListEndpointBase<DataStor
         connectionNameMap.TryGetValue(config.ConnectionId, out var connectionName);
         return new DataStoreSummaryResponse
         {
+            Id = config.DataStoreId,
             Name = config.Name,
             StoreType = config.Implementation,
             ConnectionId = config.ConnectionId,
