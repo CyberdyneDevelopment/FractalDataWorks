@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions.Results;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -111,6 +112,14 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
+            // This worker runs on its own internal timer, never inside an HTTP request, so it has
+            // no caller identity to read a context from -- without this elevation every probe (and
+            // the config read above it) lands on DenySessionContext instead of the intended system
+            // bypass. Same remediation FDW-767 applied to PipelineExecutionBackgroundService /
+            // OrchestrationNodeOrchestratorBackgroundService.
+            using var elevation = new SystemAuthenticationContextScope(
+                scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>());
+
             var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
             var allResult = await configProvider.Get(ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
@@ -150,6 +159,14 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
+            // Same elevation as RunStartupProbes, and for the same reason: this fires on the
+            // worker's own internal timer every ScanTick, never inside an HTTP request, so without
+            // it every tick's config read (and any due probe) lands on DenySessionContext instead
+            // of the intended system bypass -- observed live as a deny-principal warning burst every
+            // 15 seconds, unattributed to any real request.
+            using var elevation = new SystemAuthenticationContextScope(
+                scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>());
+
             var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
             var allResult = await configProvider.Get(ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
