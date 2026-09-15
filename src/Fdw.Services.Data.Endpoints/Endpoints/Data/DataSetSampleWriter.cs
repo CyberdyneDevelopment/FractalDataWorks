@@ -49,6 +49,12 @@ internal static class DataSetSampleWriter
             new ConfigurationSaveCommand<DataSetSampleConfiguration>(sample), sampleTarget, ct).ConfigureAwait(false);
         if (sampleResult.IsFailure) return sampleResult.ToNewResult<DataSetSampleResponse>();
 
+        if (request.IsDefault)
+        {
+            var clearedOthers = await ClearOtherDefaults(gateway, sampleTarget, dataSetImplementationId, sample.Id, now, ct).ConfigureAwait(false);
+            if (clearedOthers.IsFailure) return clearedOthers.ToNewResult<DataSetSampleResponse>();
+        }
+
         var rows = new List<Dictionary<string, string?>>();
         var rowTarget = new DataStoreTarget(dataStoreName, pathName, "DataSetSampleRow");
         var valueTarget = new DataStoreTarget(dataStoreName, pathName, "DataSetSampleValue");
@@ -155,5 +161,54 @@ internal static class DataSetSampleWriter
 
         var retired = await gateway.Execute<int>(updateCommand, sampleTarget, ct).ConfigureAwait(false);
         return retired.IsFailure ? retired : GenericResult.Success();
+    }
+
+    /// <summary>Clears IsDefault on every other current sample for this data set, so at most one
+    /// current sample is ever the default — confirmed live by react-ui-design as a real gap
+    /// (happy-path and HappyPath both came back IsDefault=true).</summary>
+    private static async Task<IGenericResult> ClearOtherDefaults(
+        IDataGateway gateway, DataStoreTarget sampleTarget, Guid dataSetImplementationId, Guid exceptSampleId, DateTimeOffset now, CancellationToken ct)
+    {
+        var othersCommand = new QueryCommand<DataSetSampleConfiguration>
+        {
+            Filter = new FilterExpression
+            {
+                Root = new FilterGroup
+                {
+                    Operator = LogicalOperator.And,
+                    Nodes =
+                    [
+                        new FilterCondition { PropertyName = "DataSetImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataSetImplementationId },
+                        new FilterCondition { PropertyName = "IsDefault", Operator = FilterOperators.ByName("Equal"), Value = true },
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
+                        new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
+                    ]
+                }
+            }
+        };
+
+        var others = await gateway.Execute<IEnumerable<DataSetSampleConfiguration>>(othersCommand, sampleTarget, ct).ConfigureAwait(false);
+        if (others.IsFailure) return others;
+
+        foreach (var other in others.Value ?? [])
+        {
+            if (other.Id == exceptSampleId) continue;
+
+            other.IsDefault = false;
+            other.ModifyDate = now;
+
+            var updateCommand = new UpdateCommand<DataSetSampleConfiguration>(other)
+            {
+                Filter = new FilterExpression
+                {
+                    Root = new FilterCondition { PropertyName = "Id", Operator = FilterOperators.ByName("Equal"), Value = other.Id }
+                }
+            };
+
+            var cleared = await gateway.Execute<int>(updateCommand, sampleTarget, ct).ConfigureAwait(false);
+            if (cleared.IsFailure) return cleared;
+        }
+
+        return GenericResult.Success();
     }
 }
