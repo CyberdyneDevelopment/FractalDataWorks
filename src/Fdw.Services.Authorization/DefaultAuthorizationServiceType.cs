@@ -150,7 +150,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IConfigurationGatewayProvider>(),
                     sp.GetService<ILogger<TenantOrgAccessConfigurationProvider>>()));
 
-            builder.Services.TryAddScoped<IOrgAccessProvider>(sp =>
+            builder.Services.TryAddSingleton<IOrgAccessProvider>(sp =>
                 new DefaultOrgAccessProvider(
                     sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
                     sp.GetService<ILogger<DefaultOrgAccessProvider>>()));
