@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Security.Hashing;
 using Fdw.Services.Credentials.Abstractions;
 using Fdw.Services.Credentials.Abstractions.Outcomes;
@@ -44,6 +45,7 @@ public sealed class UserCredentialService : IUserCredentialService
     private readonly ICredentialServiceProvider _credentialServiceProvider;
     private readonly UsersServiceConfigurationProvider _configuration;
     private readonly UserConfigurationProvider _userProvider;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<UserCredentialService> _logger;
 
     private ICredentialService? _credentialService;
@@ -55,11 +57,13 @@ public sealed class UserCredentialService : IUserCredentialService
         ICredentialServiceProvider credentialServiceProvider,
         UsersServiceConfigurationProvider configuration,
         UserConfigurationProvider userProvider,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserCredentialService>? logger = null)
     {
         _credentialServiceProvider = credentialServiceProvider ?? throw new ArgumentNullException(nameof(credentialServiceProvider));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<UserCredentialService>.Instance;
     }
 
@@ -70,6 +74,9 @@ public sealed class UserCredentialService : IUserCredentialService
     {
         if (!string.Equals(secretType, PasswordSecretType, StringComparison.OrdinalIgnoreCase))
             return GenericResult<ICredentialOutcome>.Failure(UserLog.SecretTypeNotSupported(_logger, userId, secretType));
+
+        // This platform authentication lookup precedes the request authentication context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var configurationResult = await LoadConfiguration(cancellationToken).ConfigureAwait(false);
         if (configurationResult.IsFailure)

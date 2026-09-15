@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.TokenManagers.Logging;
@@ -33,6 +34,7 @@ namespace Fdw.Services.TokenManagers;
 /// </remarks>
 internal sealed class JwtIssuanceResolver : IDisposable
 {
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly IServiceProvider _services;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly ILogger<JwtIssuanceResolver> _logger;
@@ -42,10 +44,12 @@ internal sealed class JwtIssuanceResolver : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="JwtIssuanceResolver"/> class.</summary>
     /// <param name="services">The container the providers come from.</param>
+    /// <param name="authContextAccessor">Establishes context for platform issuer configuration reads.</param>
     /// <param name="logger">The logger.</param>
-    public JwtIssuanceResolver(IServiceProvider services, ILogger<JwtIssuanceResolver>? logger = null)
+    public JwtIssuanceResolver(IServiceProvider services, IAuthenticationContextAccessor authContextAccessor, ILogger<JwtIssuanceResolver>? logger = null)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<JwtIssuanceResolver>.Instance;
     }
 
@@ -91,6 +95,8 @@ internal sealed class JwtIssuanceResolver : IDisposable
             if (_issuer is not null && _credentials is not null)
                 return GenericResult.Success();
 
+            using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
+
             var headers = await _services
                 .GetRequiredService<ITokenManagerConfigurationProvider>()
                 .Get(cancellationToken)
@@ -123,6 +129,7 @@ internal sealed class JwtIssuanceResolver : IDisposable
                 secretManager,
                 secretKey,
                 TimeSpan.FromMinutes(10),
+                _authContextAccessor,
                 _services.GetService<ILogger<SecretManagerSigningCredentialProvider>>());
 
             _issuer = new JwtTokenIssuer(

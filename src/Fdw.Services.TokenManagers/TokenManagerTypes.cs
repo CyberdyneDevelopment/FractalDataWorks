@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 
@@ -70,8 +71,9 @@ public static class TokenManagerTypes
 
         builder.Services.AddSingleton<IJwtTokenManagerConfigurationProvider, JwtTokenManagerConfigurationProvider>(sp => new JwtTokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<JwtTokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection));
 
+        builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
         builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
-            new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));
+            new JwtIssuanceResolver(sp, sp.GetRequiredService<IAuthenticationContextAccessor>(), sp.GetService<ILogger<JwtIssuanceResolver>>()));
 
         builder.Services.TryAddSingleton<ITokenIssuer>(sp =>
             new ConfiguredTokenIssuer(sp.GetRequiredService<JwtIssuanceResolver>()));

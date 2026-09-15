@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
@@ -57,6 +58,7 @@ public sealed class ResolvePrincipalStepType
     private IExternalIdentityProvisionerBindingConfigurationProvider? _provisionerBindings;
     private IExternalIdentityProvisionerServiceProvider? _provisioners;
     private ITenantResolver? _tenants;
+    private IAuthenticationContextAccessor? _authContextAccessor;
     private ILogger _logger = NullLogger<ResolvePrincipalStepType>.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="ResolvePrincipalStepType"/> class.</summary>
@@ -68,6 +70,7 @@ public sealed class ResolvePrincipalStepType
     {
         Initialization((host, loggerFactory) =>
         {
+            _authContextAccessor = host.Services.GetRequiredService<IAuthenticationContextAccessor>();
             _bindings = host.Services.GetRequiredService<IPrincipalBinding>();
             _provisionerBindings = host.Services.GetRequiredService<IExternalIdentityProvisionerBindingConfigurationProvider>();
             _provisioners = host.Services.GetRequiredService<IExternalIdentityProvisionerServiceProvider>();
@@ -93,8 +96,11 @@ public sealed class ResolvePrincipalStepType
     public async Task<IGenericResult<StepOutcome>> Execute(
         AuthenticationContext context, CancellationToken cancellationToken = default)
     {
-        if (_bindings is null || _provisionerBindings is null || _provisioners is null || _tenants is null)
+        if (_bindings is null || _provisionerBindings is null || _provisioners is null || _tenants is null || _authContextAccessor is null)
             return GenericResult<StepOutcome>.Failure(StepLog.NotInitialized(_logger, Name));
+
+        // Only this trusted built-in authentication operation runs under system context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var subject = context.Subject!;
 

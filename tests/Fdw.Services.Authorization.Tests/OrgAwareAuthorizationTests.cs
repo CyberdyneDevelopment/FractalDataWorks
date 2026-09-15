@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -217,6 +217,7 @@ public sealed class OrgAwareAuthorizationTests
             permProvider,
             rolePermProvider,
             userRoleProvider,
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<EffectivePermissionResolver>.Instance,
             orgAccessMock.Object);
     }

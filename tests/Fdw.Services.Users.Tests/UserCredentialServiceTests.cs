@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Messages;
@@ -138,6 +138,7 @@ public class UserCredentialServiceTests
             credentialServiceProvider,
             ConfigurationStore.UsersService(configuration).Provider,
             userProvider,
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<UserCredentialService>.Instance);
     }
 

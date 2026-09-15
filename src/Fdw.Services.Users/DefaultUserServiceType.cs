@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.Users;
 
@@ -89,6 +90,7 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
             builder.Services.TryAddSingleton<IUserPreferenceConfigurationProvider>(sp => sp.GetRequiredService<UserPreferenceConfigurationProvider>());
 
 
+            builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -104,6 +104,7 @@ public sealed class EffectivePermissionResolverTests
             permProvider,
             rolePermProvider,
             userRoleProvider,
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<EffectivePermissionResolver>.Instance,
             orgAccessProvider);
     }
@@ -115,7 +116,7 @@ public sealed class EffectivePermissionResolverTests
     private static EffectivePermissionResolver BuildResolver(
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
         IOrgAccessProvider? orgAccessProvider = null,
-        string userId = "1",
+        string userId = "00000000-0000-0000-0000-000000000002",
         bool includeGlobalRole = true,
         bool includeTenantRole = true)
     {
@@ -159,10 +160,10 @@ public sealed class EffectivePermissionResolverTests
         // Arrange: isGlobalTenant = true → tenant-scoped role contributes even if tenantId doesn't match
         var differentTenantId = Guid.NewGuid();
         // User has TenantRole assignment scoped to original TenantId; isGlobalTenant overrides matching
-        var sut = BuildResolver(orgGrants: [], userId: "99");
+        var sut = BuildResolver(orgGrants: [], userId: "00000000-0000-0000-0000-000000000001");
 
         // Act — passing a different tenantId but isGlobalTenant = true
-        var result = await sut.Resolve("99", differentTenantId, orgId: null, isGlobalTenant: true, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000001", differentTenantId, orgId: null, isGlobalTenant: true, TestContext.Current.CancellationToken);
 
         // Assert — TenantUser role still contributes because isGlobalTenant = true
         result.IsSuccess.ShouldBeTrue();
@@ -174,10 +175,10 @@ public sealed class EffectivePermissionResolverTests
     public async Task Resolve_OrgIdNull_SkipsOrgTier()
     {
         // Arrange: no org context
-        var sut = BuildResolver(orgGrants: null, userId: "1");
+        var sut = BuildResolver(orgGrants: null, userId: "00000000-0000-0000-0000-000000000002");
 
         // Act
-        var result = await sut.Resolve("1", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000002", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         // Assert — global+tenant tiers present, no org permission
         result.IsSuccess.ShouldBeTrue();
@@ -197,10 +198,11 @@ public sealed class EffectivePermissionResolverTests
             ConfigurationCatalog.Permissions(new[] { new PermissionImplementationConfiguration() }),
             ConfigurationCatalog.RolePermissions(Array.Empty<RolePermissionImplementationConfiguration>()),
             ConfigurationCatalog.UserRoles([]),
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<EffectivePermissionResolver>.Instance);
 
         // Act
-        var result = await sut.Resolve("1", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000002", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         // Assert — fail-closed: provider failure returns failure result
         result.IsSuccess.ShouldBeFalse();
@@ -218,14 +220,14 @@ public sealed class EffectivePermissionResolverTests
         // After fix, they must receive only viewer:read1 and viewer:read2.
         var viewerAssignment = new UserRoleImplementationConfiguration
         {
-            UserId = "viewer-user",
+            UserId = "00000000-0000-0000-0000-000000000003",
             RoleId = ViewerRoleId,
             TenantId = null // global role assignment
         };
         var sut = BuildResolverWithAssignments([viewerAssignment], orgGrants: []);
 
         // Act
-        var result = await sut.Resolve("viewer-user", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000003", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -257,14 +259,14 @@ public sealed class EffectivePermissionResolverTests
         // After fix, they get exactly the 2 admin role permissions.
         var adminAssignment = new UserRoleImplementationConfiguration
         {
-            UserId = "admin-user",
+            UserId = "00000000-0000-0000-0000-000000000004",
             RoleId = AdminRoleId,
             TenantId = null
         };
         var sut = BuildResolverWithAssignments([adminAssignment], orgGrants: []);
 
         // Act
-        var result = await sut.Resolve("admin-user", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000004", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -294,7 +296,7 @@ public sealed class EffectivePermissionResolverTests
         var sut = BuildResolverWithAssignments([], orgGrants: []);
 
         // Act
-        var result = await sut.Resolve("unassigned-user", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000005", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue("Zero assignments is a valid state — empty result, not failure");
@@ -316,10 +318,11 @@ public sealed class EffectivePermissionResolverTests
             ConfigurationCatalog.Permissions(AllPermissions),
             ConfigurationCatalog.RolePermissions(AllRolePermissions),
             ConfigurationCatalog.UnreadableUserRoles("DB unavailable"),
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<EffectivePermissionResolver>.Instance);
 
         // Act
-        var result = await sut.Resolve("any-user", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000006", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         // Assert — MUST be failure, not a fallback to the full permission catalog
         result.IsSuccess.ShouldBeFalse(
@@ -334,14 +337,14 @@ public sealed class EffectivePermissionResolverTests
         // This test explicitly quantifies the attack surface closed by FDW-532.
         var viewerAssignment = new UserRoleImplementationConfiguration
         {
-            UserId = "viewer-sub",
+            UserId = "00000000-0000-0000-0000-000000000007",
             RoleId = ViewerRoleId,
             TenantId = null
         };
         const int totalCatalogPermissions = 5; // admin:delete, global:admin, tenant:read, viewer:read1, viewer:read2
 
         var sut = BuildResolverWithAssignments([viewerAssignment], orgGrants: []);
-        var result = await sut.Resolve("viewer-sub", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000007", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -370,12 +373,12 @@ public sealed class EffectivePermissionResolverTests
         // Must NOT get tenant:read (not assigned to TenantUser role).
         var assignments = new List<UserRoleImplementationConfiguration>
         {
-            new() { UserId = "multi-role-user", RoleId = ViewerRoleId, TenantId = null },
-            new() { UserId = "multi-role-user", RoleId = AdminRoleId,  TenantId = null },
+            new() { UserId = "00000000-0000-0000-0000-000000000008", RoleId = ViewerRoleId, TenantId = null },
+            new() { UserId = "00000000-0000-0000-0000-000000000008", RoleId = AdminRoleId,  TenantId = null },
         };
         var sut = BuildResolverWithAssignments(assignments, orgGrants: []);
 
-        var result = await sut.Resolve("multi-role-user", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000008", TenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -397,14 +400,14 @@ public sealed class EffectivePermissionResolverTests
         var otherTenantId = Guid.NewGuid();
         var tenantAssignment = new UserRoleImplementationConfiguration
         {
-            UserId = "tenant-user",
+            UserId = "00000000-0000-0000-0000-000000000009",
             RoleId = TenantRoleId,
             TenantId = TenantId // assigned only for TenantId
         };
         var sut = BuildResolverWithAssignments([tenantAssignment], orgGrants: []);
 
         // Act: resolve for a DIFFERENT tenant (not the one the role is scoped to)
-        var result = await sut.Resolve("tenant-user", otherTenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
+        var result = await sut.Resolve("00000000-0000-0000-0000-000000000009", otherTenantId, orgId: null, isGlobalTenant: false, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();

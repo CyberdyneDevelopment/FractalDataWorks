@@ -9,6 +9,7 @@ using Fdw.Services.Authentication.Binding;
 using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.ServiceTypes;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Execution;
 using Fdw.Services.Authentication.Execution;
 using Fdw.Services.Authentication.Steps;
@@ -66,6 +67,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
         {
             collectOptions?.Invoke(builder, loggerFactory);
 
+            builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddSingleton<IAcrPolicy, StandardAcrPolicy>();
 
             // What the shipped steps take beyond their own registration. A step is activated on
@@ -133,6 +135,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                 new AuthenticationFlowProvider(
                     sp.GetRequiredService<IAuthenticationFlowConfigurationProvider>(),
                     sp.GetRequiredService<IAuthenticationFlowStepConfigurationProvider>(),
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILogger<AuthenticationFlowProvider>>()));
 
             builder.Services.TryAddSingleton<IPasswordCredentialAccessor, HttpPasswordCredentialAccessor>();

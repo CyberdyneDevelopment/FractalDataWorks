@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
@@ -25,19 +26,23 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
 {
     private readonly IExternalIdentityConfigurationProvider _identities;
     private readonly ITenantResolver _tenants;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<ExternalIdentityBinding> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="ExternalIdentityBinding"/> class.</summary>
     /// <param name="identities">Reads the binding rows.</param>
     /// <param name="tenants">Supplies the tenant a user belongs to.</param>
+    /// <param name="authContextAccessor">Establishes the trusted context for pre-authentication reads.</param>
     /// <param name="logger">The logger.</param>
     public ExternalIdentityBinding(
         IExternalIdentityConfigurationProvider identities,
         ITenantResolver tenants,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<ExternalIdentityBinding>? logger = null)
     {
         _identities = identities ?? throw new ArgumentNullException(nameof(identities));
         _tenants = tenants ?? throw new ArgumentNullException(nameof(tenants));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<ExternalIdentityBinding>.Instance;
     }
 
@@ -47,6 +52,9 @@ public sealed class ExternalIdentityBinding : IPrincipalBinding
     {
         if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(subjectId))
             return GenericResult<Principal?>.Failure(BindingLog.LookupIncomplete(_logger));
+
+        // This platform authentication lookup precedes the request authentication context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var all = await _identities.Get(cancellationToken).ConfigureAwait(false);
         if (all.IsFailure)

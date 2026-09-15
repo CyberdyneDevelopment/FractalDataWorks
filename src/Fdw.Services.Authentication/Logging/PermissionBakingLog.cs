@@ -20,7 +20,7 @@ internal static partial class PermissionBakingLog
     // The count, not the permissions: the list is long enough to bury every other line at Trace,
     // and the count is what answers the question actually asked of this log - whether baking
     // happened at all. A token carrying zero permissions is the failure worth seeing.
-    [MessageLogging(EventId = 91245, Level = LogLevel.Trace,
+    [MessageLogging(EventId = 91245, Level = LogLevel.Information,
         Message = "Baked {count} permission(s) for principal {principalId}")]
     internal static partial IGenericMessage Baked(
         ILogger logger, Guid principalId, int count);

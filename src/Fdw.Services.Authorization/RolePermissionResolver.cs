@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
@@ -24,22 +25,26 @@ public sealed class RolePermissionResolver : IRolePermissionResolver
     private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IPermissionConfigurationProvider _permissionProvider;
     private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<RolePermissionResolver> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RolePermissionResolver"/> class.</summary>
     /// <param name="roleProvider">Reads the role catalogue.</param>
     /// <param name="permissionProvider">Reads the permission catalogue.</param>
     /// <param name="rolePermissionProvider">Reads the role/permission junction.</param>
+    /// <param name="authContextAccessor">Establishes context for trusted JWT role expansion.</param>
     /// <param name="logger">Optional logger.</param>
     public RolePermissionResolver(
         IRoleConfigurationProvider roleProvider,
         IPermissionConfigurationProvider permissionProvider,
         IRolePermissionConfigurationProvider rolePermissionProvider,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<RolePermissionResolver>? logger)
     {
         _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
         _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
         _rolePermissionProvider = rolePermissionProvider ?? throw new ArgumentNullException(nameof(rolePermissionProvider));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<RolePermissionResolver>.Instance;
     }
 
@@ -51,6 +56,8 @@ public sealed class RolePermissionResolver : IRolePermissionResolver
         if (roleNames is null || roleNames.Count == 0)
             return GenericResult<IReadOnlyCollection<string>>.Failure(
                 AuthorizationLog.RoleExpansionNamesRequired(_logger));
+
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var allRoles = await _roleProvider.Get(cancellationToken).ConfigureAwait(false);
         if (!allRoles.IsSuccess)

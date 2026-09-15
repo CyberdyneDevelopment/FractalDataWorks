@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
@@ -41,19 +42,23 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     private readonly IAuthenticationFlowConfigurationProvider _flows;
     private readonly IAuthenticationFlowStepConfigurationProvider _steps;
     private readonly ConcurrentDictionary<string, CachedFlow> _cache = new(StringComparer.Ordinal);
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<AuthenticationFlowProvider> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="AuthenticationFlowProvider"/> class.</summary>
     /// <param name="flows">Reads the flow rows.</param>
     /// <param name="steps">Reads their step rows.</param>
+    /// <param name="authContextAccessor">Establishes context for platform flow configuration reads.</param>
     /// <param name="logger">The logger.</param>
     public AuthenticationFlowProvider(
         IAuthenticationFlowConfigurationProvider flows,
         IAuthenticationFlowStepConfigurationProvider steps,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<AuthenticationFlowProvider>? logger = null)
     {
         _flows = flows ?? throw new ArgumentNullException(nameof(flows));
         _steps = steps ?? throw new ArgumentNullException(nameof(steps));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<AuthenticationFlowProvider>.Instance;
     }
 
@@ -124,6 +129,7 @@ public sealed class AuthenticationFlowProvider : IAuthenticationFlowProvider
     /// <inheritdoc />
     public async Task<IGenericResult> LoadAndValidate(CancellationToken cancellationToken = default)
     {
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
         var rows = await _flows.Get(cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure)
             return GenericResult.Failure(FlowProviderLog.RowsUnreadable(_logger, "auth.AuthenticationFlow"));

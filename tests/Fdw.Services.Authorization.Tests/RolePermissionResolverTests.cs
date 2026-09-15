@@ -114,6 +114,7 @@ public sealed class RolePermissionResolverTests
             ConfigurationCatalog.UnreadableRoles("the catalogue is unreachable"),
             ConfigurationCatalog.Permissions(Permissions),
             ConfigurationCatalog.RolePermissions(RolePermissions),
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<RolePermissionResolver>.Instance);
 
         var result = await resolver.Resolve(["ServicePipelineRunner"], TestContext.Current.CancellationToken);
@@ -129,6 +130,7 @@ public sealed class RolePermissionResolverTests
             ConfigurationCatalog.Roles(Roles),
             ConfigurationCatalog.Permissions(Permissions),
             ConfigurationCatalog.RolePermissions(rolePermissions ?? RolePermissions),
+            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<RolePermissionResolver>.Instance);
 
 }

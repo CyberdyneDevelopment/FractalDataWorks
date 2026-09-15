@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
@@ -60,6 +61,7 @@ public sealed class PasswordCredentialStepType
     private IUserCredentialService? _credentials;
     private IPasswordCredentialAccessor? _presented;
     private ITenantResolver? _tenants;
+    private IAuthenticationContextAccessor? _authContextAccessor;
     private ILogger _logger = NullLogger<PasswordCredentialStepType>.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="PasswordCredentialStepType"/> class.</summary>
@@ -71,6 +73,7 @@ public sealed class PasswordCredentialStepType
     {
         Initialization((host, loggerFactory) =>
         {
+            _authContextAccessor = host.Services.GetRequiredService<IAuthenticationContextAccessor>();
             var services = host.Services;
 
             _users = services.GetRequiredService<IUserConfigurationProvider>();
@@ -100,7 +103,7 @@ public sealed class PasswordCredentialStepType
     {
         // An option whose Initialize never ran has nothing to verify against, and admitting a caller
         // on that basis would be the worst possible reading of a missing dependency.
-        if (_users is null || _credentials is null || _presented is null || _tenants is null)
+        if (_users is null || _credentials is null || _presented is null || _tenants is null || _authContextAccessor is null)
             return GenericResult<StepOutcome>.Failure(PasswordCredentialLog.NotInitialized(_logger, Name));
 
         var username = _presented.Username;
@@ -108,6 +111,9 @@ public sealed class PasswordCredentialStepType
 
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             return GenericResult<StepOutcome>.Failure(PasswordCredentialLog.NothingPresented(_logger));
+
+        // Only this trusted built-in authentication operation runs under system context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var found = await _users.Get(username, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure)

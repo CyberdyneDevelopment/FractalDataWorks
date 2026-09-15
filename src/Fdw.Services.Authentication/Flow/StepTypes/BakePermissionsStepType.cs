@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
@@ -38,6 +39,7 @@ public sealed class BakePermissionsStepType
     // a parameterless constructor, so what it needs arrives where a live container exists.
     private IEffectivePermissionResolver? _permissions;
     private IServiceProvider? _services;
+    private IAuthenticationContextAccessor? _authContextAccessor;
     private ILogger _logger = NullLogger<BakePermissionsStepType>.Instance;
 
     /// <summary>Initializes a new instance of the <see cref="BakePermissionsStepType"/> class.</summary>
@@ -49,6 +51,7 @@ public sealed class BakePermissionsStepType
     {
         Initialization((host, loggerFactory) =>
         {
+            _authContextAccessor = host.Services.GetRequiredService<IAuthenticationContextAccessor>();
             _permissions = host.Services.GetRequiredService<IEffectivePermissionResolver>();
 
             // Why the provider and not ITenantProvider itself: resolving it here made this step's
@@ -80,8 +83,11 @@ public sealed class BakePermissionsStepType
     {
         // Baking nothing would hand out a token carrying no permissions, which reads downstream as
         // a caller who may do nothing rather than as a step that never ran.
-        if (_permissions is null)
+        if (_permissions is null || _authContextAccessor is null)
             return GenericResult<StepOutcome>.Failure(PermissionBakingLog.NotInitialized(_logger, Name));
+
+        // Only this trusted built-in authentication operation runs under system context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var principal = context.Principal!;
 
@@ -130,7 +136,7 @@ public sealed class BakePermissionsStepType
             Source = ClaimSources.Local,
         }));
 
-        PermissionBakingLog.Baked(_logger, principal.Id, claims.Count);
+        PermissionBakingLog.Baked(_logger, principal.Id, permissions.Count);
 
         return GenericResult<StepOutcome>.Success(
             new StepOutcome.Contributed(new ContextContribution { Claims = claims }));

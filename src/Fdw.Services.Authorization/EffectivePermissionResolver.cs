@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
@@ -27,6 +28,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
     private readonly IPermissionConfigurationProvider _permissionProvider;
     private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
     private readonly IUserRoleConfigurationProvider _userRoleProvider;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly IOrgAccessProvider _orgAccessProvider;
     private readonly ILogger<EffectivePermissionResolver> _logger;
 
@@ -38,6 +40,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         IPermissionConfigurationProvider permissionProvider,
         IRolePermissionConfigurationProvider rolePermissionProvider,
         IUserRoleConfigurationProvider userRoleProvider,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<EffectivePermissionResolver>? logger,
         IOrgAccessProvider? orgAccessProvider = null)
     {
@@ -45,6 +48,7 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
         _rolePermissionProvider = rolePermissionProvider ?? throw new ArgumentNullException(nameof(rolePermissionProvider));
         _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<EffectivePermissionResolver>.Instance;
         _orgAccessProvider = orgAccessProvider ?? NullOrgAccessProvider.Instance;
     }
@@ -57,6 +61,8 @@ public sealed class EffectivePermissionResolver : IEffectivePermissionResolver
         bool isGlobalTenant,
         CancellationToken cancellationToken = default)
     {
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
+
         var catalogResult = await LoadCatalog(cancellationToken).ConfigureAwait(false);
         if (catalogResult is null)
             return GenericResult<EffectiveAuthorization>.Failure(AuthorizationLog.RoleProviderQueryFailed(_logger));

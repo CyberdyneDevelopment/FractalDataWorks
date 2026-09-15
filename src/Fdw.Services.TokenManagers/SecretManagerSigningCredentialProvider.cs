@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Commands;
@@ -25,6 +26,7 @@ namespace Fdw.Services.TokenManagers;
 /// </remarks>
 public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialProvider, IDisposable
 {
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ISecretManagerProvider _secrets;
     private readonly string _secretManagerName;
     private readonly string _keyName;
@@ -40,18 +42,21 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
     /// <param name="secretManagerName">Which secret manager holds the key.</param>
     /// <param name="keyName">The key's name within it.</param>
     /// <param name="cacheLifetime">How long a fetched key is reused.</param>
+    /// <param name="authContextAccessor">Establishes context for signing-key resolution and rotation.</param>
     /// <param name="logger">The logger.</param>
     public SecretManagerSigningCredentialProvider(
         ISecretManagerProvider secrets,
         string secretManagerName,
         string keyName,
         TimeSpan cacheLifetime,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<SecretManagerSigningCredentialProvider>? logger = null)
     {
         _secrets = secrets ?? throw new ArgumentNullException(nameof(secrets));
         _secretManagerName = secretManagerName ?? throw new ArgumentNullException(nameof(secretManagerName));
         _keyName = keyName ?? throw new ArgumentNullException(nameof(keyName));
         _cacheLifetime = cacheLifetime;
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<SecretManagerSigningCredentialProvider>.Instance;
     }
 
@@ -69,6 +74,8 @@ public sealed class SecretManagerSigningCredentialProvider : ISigningCredentialP
         {
             if (_cached is not null && _cachedAt.Add(_cacheLifetime) > DateTimeOffset.UtcNow)
                 return GenericResult<SigningCredentials>.Success(_cached);
+
+            using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
             var manager = await _secrets.Get(_secretManagerName, cancellationToken).ConfigureAwait(false);
             if (manager.IsFailure)

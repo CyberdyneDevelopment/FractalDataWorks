@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Users;
@@ -19,22 +20,29 @@ namespace Fdw.Services.Authentication.Binding;
 public sealed class UserTenantResolver : ITenantResolver
 {
     private readonly IUserConfigurationProvider _users;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<UserTenantResolver> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserTenantResolver"/> class.</summary>
     /// <param name="users">Reads user records.</param>
+    /// <param name="authContextAccessor">Establishes the trusted context for pre-authentication reads.</param>
     /// <param name="logger">The logger.</param>
     public UserTenantResolver(
         IUserConfigurationProvider users,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserTenantResolver>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<UserTenantResolver>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<Guid>> TenantFor(Guid userId, CancellationToken cancellationToken = default)
     {
+        // This platform authentication lookup precedes the request authentication context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
+
         var user = await _users.Get(userId, cancellationToken).ConfigureAwait(false);
         if (user.IsFailure)
             return user.ToNewResult<Guid>();

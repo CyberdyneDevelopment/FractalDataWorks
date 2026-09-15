@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
@@ -23,16 +24,20 @@ namespace Fdw.Services.Authentication.Steps;
 public sealed class UserAccountEligibility : IIssuanceEligibility
 {
     private readonly IUserConfigurationProvider _users;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<UserAccountEligibility> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserAccountEligibility"/> class.</summary>
     /// <param name="users">Reads user records.</param>
+    /// <param name="authContextAccessor">Establishes the trusted context for pre-authentication reads.</param>
     /// <param name="logger">The logger.</param>
     public UserAccountEligibility(
         IUserConfigurationProvider users,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserAccountEligibility>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<UserAccountEligibility>.Instance;
     }
 
@@ -42,6 +47,9 @@ public sealed class UserAccountEligibility : IIssuanceEligibility
     {
         if (principal is null)
             return GenericResult<Decision>.Failure(EligibilityLog.PrincipalMissing(_logger));
+
+        // This platform authentication lookup precedes the request authentication context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var user = await _users.Get(principal.Id, cancellationToken).ConfigureAwait(false);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
@@ -54,12 +54,14 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
         {
 
 
+            builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddSingleton<IEffectivePermissionResolver>(sp =>
                 new EffectivePermissionResolver(
                     sp.GetRequiredService<IRoleConfigurationProvider>(),
                     sp.GetRequiredService<IPermissionConfigurationProvider>(),
                     sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
                     sp.GetRequiredService<IUserRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EffectivePermissionResolver>(),
                     sp.GetRequiredService<IOrgAccessProvider>()));
 
@@ -68,6 +70,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IRoleConfigurationProvider>(),
                     sp.GetRequiredService<IPermissionConfigurationProvider>(),
                     sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<RolePermissionResolver>()));
 
             builder.Services.TryAddSingleton<IFrameworkAuthorizationService, DefaultAuthorizationService>();
