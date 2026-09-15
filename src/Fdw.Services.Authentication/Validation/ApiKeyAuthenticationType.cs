@@ -4,6 +4,7 @@ using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -72,7 +73,22 @@ public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
             // Transient for the same reason the other handlers are: the handler holds the scheme and
             // the request it was initialised for in fields, so one instance per resolution.
             builder.Services.TryAddTransient<ApiKeyAuthenticationHandler>();
+
+            builder.Services.AddSingleton<IApiKeyAuthenticationConfigurationProvider, ApiKeyAuthenticationConfigurationProvider>(sp => new ApiKeyAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<ApiKeyAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+        // Initialize, because both providers have to be resolvable: the option is the only thing that
+        // knows which implementation it is, and the domain provider dispatches by the name registered
+        // here. Without this the domain row names a kind the registry has never heard of, and the
+        // read fails at the point a credential arrives rather than at startup -- the gap this option
+        // shipped with: every sibling kind (LocalKey, JwtBearer) registers itself here, and this one
+        // never did, so a row naming "ApiKey" could never be read.
+        Initialization((host, loggerFactory) =>
+        {
+            host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                .Register(Name, host.Services.GetRequiredService<IApiKeyAuthenticationConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
         });
     }
 
