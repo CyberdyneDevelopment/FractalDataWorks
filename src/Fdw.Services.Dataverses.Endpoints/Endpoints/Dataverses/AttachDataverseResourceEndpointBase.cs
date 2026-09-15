@@ -34,6 +34,7 @@ public abstract class AttachDataverseResourceEndpointBase
     private readonly IDataverseAccessPolicy _access;
     private readonly IDataGatewayProvider _dataGateways;
     private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly ISavedViewConfigurationProvider _savedViews;
     private readonly IAuthenticationContextAccessor _authContext;
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
@@ -52,12 +53,14 @@ public abstract class AttachDataverseResourceEndpointBase
         IDataverseAccessPolicy access,
         IDataGatewayProvider dataGateways,
         IDataSetConfigurationProvider dataSets,
+        ISavedViewConfigurationProvider savedViews,
         IAuthenticationContextAccessor authContext) : base(logger)
     {
         _dataverses = dataverses;
         _access = access;
         _dataGateways = dataGateways;
         _dataSets = dataSets;
+        _savedViews = savedViews;
         _authContext = authContext;
     }
 
@@ -79,8 +82,8 @@ public abstract class AttachDataverseResourceEndpointBase
 
     /// <summary>Resolves a human label for the attached resource, for the kinds that cost one lookup.</summary>
     /// <remarks>
-    /// Only DataSet is wired today. An unresolvable kind refuses rather than falling back to the raw
-    /// resource id as a label — a resource genuinely has no name yet for kinds this has not been
+    /// DataSet and SavedView are wired. An unresolvable kind refuses rather than falling back to the
+    /// raw resource id as a label — a resource genuinely has no name yet for kinds this has not been
     /// extended to, and inventing one would read as a real label rather than as the gap it is.
     /// </remarks>
     protected virtual async Task<IGenericResult<string>> ResolveResourceLabel(
@@ -91,6 +94,17 @@ public abstract class AttachDataverseResourceEndpointBase
             var dataSet = await _dataSets.Get(resourceId, ct).ConfigureAwait(false);
             if (dataSet.IsFailure) return dataSet.ToNewResult<string>();
             return dataSet.Value is { Name.Length: > 0 } found
+                ? GenericResult<string>.Success(found.Name)
+                : GenericResult<string>.Failure(
+                    DataversesResultCodes.ByName("DataverseChildNotFound"), Logger,
+                    ResultDetails.Create("name", resourceType, "kind", "resource", "id", resourceId.ToString()));
+        }
+
+        if (string.Equals(resourceType, "SavedView", StringComparison.Ordinal))
+        {
+            var savedView = await _savedViews.Get(resourceId, ct).ConfigureAwait(false);
+            if (savedView.IsFailure) return savedView.ToNewResult<string>();
+            return savedView.Value is { Name.Length: > 0 } found
                 ? GenericResult<string>.Success(found.Name)
                 : GenericResult<string>.Failure(
                     DataversesResultCodes.ByName("DataverseChildNotFound"), Logger,
