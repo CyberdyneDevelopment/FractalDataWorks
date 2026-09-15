@@ -17,8 +17,12 @@ public abstract class ListStandInStrategiesEndpointBase : CrudListEndpointBase<S
     {
     }
 
-    /// <summary>Gets the resource name used for route and policy generation.</summary>
+    /// <summary>Gets the resource name used for route generation.</summary>
     protected override string ResourceName => "standin-strategies";
+
+    /// <summary>Gated by "datasets:read" — strategies are a sub-resource of the DataSets domain and
+    /// "standin-strategies:read" was never seeded, confirmed live (403).</summary>
+    protected override string ReadPolicy => "datasets:read";
 
     /// <inheritdoc />
     protected override Task<IGenericResult<List<StandInStrategyDto>>> LoadItems(CancellationToken ct)
