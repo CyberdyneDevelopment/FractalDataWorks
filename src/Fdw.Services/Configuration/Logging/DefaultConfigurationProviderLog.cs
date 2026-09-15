@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -522,4 +522,18 @@ public static partial class DefaultConfigurationProviderLog
     [MessageLogging(EventId = 61012, Level = LogLevel.Error,
         Message = "Domain row {domainId} minted for '{name}' was not removed after its implementation was refused; it names an implementation that does not exist")]
     public static partial IGenericMessage DomainRowNotRemovedAfterRefusedImplementation(ILogger logger, string name, string domainId);
+    /// <summary>Reports a missing mapper when detaching cached configuration rows.</summary>
+    [MessageLogging(EventId = 61013, Level = LogLevel.Error,
+        Message = "Cannot detach cached configuration '{configurationType}': no POCO mapper is registered")]
+    public static partial IGenericMessage DetachMapperMissing(ILogger logger, string configurationType);
+
+    /// <summary>Identifies the owner and physical join used to load child configuration.</summary>
+    [MessageLogging(EventId = 11040, Level = LogLevel.Information,
+        Message = "Configuration child read: store='{store}', path='{path}', child='{child}', owner='{owner}', ownerId={ownerId}, foreignKey='{foreignKey}'")]
+    public static partial IGenericMessage ChildReadStarting(ILogger logger, string store, string path, string child, string owner, string ownerId, string foreignKey);
+
+    /// <summary>Reports the number of composed child configuration rows.</summary>
+    [MessageLogging(EventId = 11041, Level = LogLevel.Information,
+        Message = "Configuration child read completed: child='{child}', ownerId={ownerId}, rows={count}")]
+    public static partial IGenericMessage ChildReadCompleted(ILogger logger, string child, string ownerId, int count);
 }

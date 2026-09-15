@@ -74,7 +74,10 @@ public class DefaultConfigurationProviderTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value!.ShouldHaveSingleItem().ShouldBe(row);
+        var loaded = result.Value!.ShouldHaveSingleItem();
+        loaded.ShouldNotBeSameAs(row);
+        loaded.Id.ShouldBe(row.Id);
+        loaded.Name.ShouldBe(row.Name);
     }
 
     [Fact]
@@ -357,6 +360,7 @@ public class DefaultConfigurationProviderTests
     // Test types
     // ========================================================================
 
+    [Fdw.Data.GenerateMapper]
     public sealed class TestDualConfig : ITestDualConfigImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();

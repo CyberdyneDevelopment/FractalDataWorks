@@ -367,7 +367,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         {
             if (prop.IsInitOnly)
                 continue;
-            var baseType = prop.TypeName.TrimEnd('?');
+            var baseType = prop.TypeName;
             sb.AppendLine($"                    case \"{prop.ColumnName}\": typed.{prop.Name} = ({baseType})value!; break;");
         }
 

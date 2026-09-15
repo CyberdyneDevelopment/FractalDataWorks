@@ -29,6 +29,7 @@ public sealed class ServicesTypeCollectionFixture
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderTests.TestContainerCommand());
         ConfigurationCommands.RegisterMember(new DefaultConfigurationProviderTests.TestContainerFieldCommand());
 
+        PocoMapperCollection.RegisterMember(new TestDualConfigPocoMapper());
         PocoMapperCollection.RegisterMember(new TestRootConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new TestOpConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new TestMapConfigurationPocoMapper());

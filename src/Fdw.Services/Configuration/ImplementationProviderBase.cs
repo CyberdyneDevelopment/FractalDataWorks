@@ -132,8 +132,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             _commands.List(DataStoreName, PathName), Target, cancellationToken).ConfigureAwait(false);
         if (!rows.IsSuccess) return rows.ToNewResult<IReadOnlyList<TConfiguration>>();
 
-        return GenericResult<IReadOnlyList<TConfiguration>>.Success(
-            await Compose(rows.Value, null, cancellationToken).ConfigureAwait(false));
+        return await Compose(rows.Value, null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc/>
@@ -250,8 +249,10 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             Target, ct).ConfigureAwait(false);
         if (!rows.IsSuccess) return rows;
 
-        return GenericResult<IEnumerable<TConfiguration>>.Success(
-            await Compose(rows.Value, asOf, ct).ConfigureAwait(false));
+        var composed = await Compose(rows.Value, asOf, ct).ConfigureAwait(false);
+        return composed.IsSuccess
+            ? GenericResult<IEnumerable<TConfiguration>>.Success(composed.Value!)
+            : composed.ToNewResult<IEnumerable<TConfiguration>>();
     }
 
     private static IContainerKey? ForeignKeyToDomain(IReadOnlyList<IContainerKey> keys, IDataNodePath path)
@@ -416,21 +417,31 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     // write re-saves every child with its logical {Owner}Id set; the save translator resolves the
     // physical RowId from it.
 
-    private async Task<IReadOnlyList<TConfiguration>> Compose(
+    private async Task<IGenericResult<IReadOnlyList<TConfiguration>>> Compose(
         IEnumerable<TConfiguration>? rows, DateTimeOffset? asOf, CancellationToken ct)
     {
         var composed = new List<TConfiguration>();
-        if (rows is null) return composed;
+        if (rows is null)
+            return GenericResult<IReadOnlyList<TConfiguration>>.Success(composed);
 
         var mapper = PocoMapperCollection.ByName(typeof(TConfiguration).Name);
         foreach (var row in rows)
         {
-            if (mapper != PocoMapperCollection.NotFound)
-                await LoadChildrenInto(row, mapper, _commands.TableName, asOf, ct).ConfigureAwait(false);
-            composed.Add(row);
+            if (mapper == PocoMapperCollection.NotFound)
+                return GenericResult<IReadOnlyList<TConfiguration>>.Failure(
+                    DefaultConfigurationProviderLog.DetachMapperMissing(_logger, typeof(TConfiguration).Name));
+
+            // The gateway owns its cached rows. Domain composition replaces Id with the domain Id;
+            // doing that on the cached implementation makes later child joins use the wrong owner Id.
+            var detached = new TConfiguration();
+            foreach (var parameter in mapper.MapToParameters(row))
+                mapper.SetValue(detached, parameter.Key, parameter.Value);
+
+            await LoadChildrenInto(detached, mapper, _commands.TableName, asOf, ct).ConfigureAwait(false);
+            composed.Add(detached);
         }
 
-        return composed;
+        return GenericResult<IReadOnlyList<TConfiguration>>.Success(composed);
     }
 
     private async Task LoadChildrenInto(object ownerRow, IPocoMapper ownerMapper, string ownerContainerName, DateTimeOffset? asOf, CancellationToken ct)
@@ -533,6 +544,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
             return;
         }
 
+        DefaultConfigurationProviderLog.ChildReadStarting(_logger, DataStoreName, PathName, childContainerName, ownerContainer, ownerId.ToString(), fkColumn);
         var cmd = BuildChildJoinQuery(childContainerName, fkColumn, ownerContainer, ownerPhysicalCol, ownerLogicalCol, ownerId, asOf);
         var target = new DataStoreTarget(DataStoreName, PathName, childContainerName);
         var gateway = Gateway();
@@ -568,6 +580,7 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         }
 
         descriptor.SetCollection(ownerRow, typedList);
+        DefaultConfigurationProviderLog.ChildReadCompleted(_logger, childContainerName, ownerId.ToString(), typedList.Count);
     }
 
     /// <summary>Builds the query that loads one child collection of an implementation row.</summary>

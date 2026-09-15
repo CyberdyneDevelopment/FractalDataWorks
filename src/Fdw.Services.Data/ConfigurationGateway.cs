@@ -163,7 +163,10 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             }
 
             if (useCache && _cache!.TryGet<T>(cacheKey, out var cached) && cached is not null)
+            {
+                ConfigurationGatewayLog.CachedRead(_logger, target.DataStore, target.Path, target.Container);
                 return cached;
+            }
         }
 
         var result = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);

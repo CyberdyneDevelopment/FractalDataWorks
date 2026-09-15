@@ -403,9 +403,9 @@ public static partial class MsSqlConnectionLogger
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Traces entry into the MsSqlConnection.Execute method.
+    /// Logs the translated SQL before the connection is opened. Parameter values are not included.
     /// </summary>
-    [MessageLogging(EventId = 11020, Level = LogLevel.Trace, Message = "Entering MsSqlConnection.Execute for '{commandText}'")]
+    [MessageLogging(EventId = 11020, Level = LogLevel.Information, Message = "SQL command built: {commandText}")]
     public static partial IGenericMessage TraceExecuteEntry(ILogger logger, string commandText);
 
     /// <summary>

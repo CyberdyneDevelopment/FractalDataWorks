@@ -155,4 +155,8 @@ public static partial class ConfigurationGatewayLog
                 + "at assembly load, so an unreferenced package contributes nothing. Registered types: {registeredTypes}")]
     public static partial IGenericMessage ConnectionTypeNotRegistered(
         ILogger logger, string connectionType, string schemaFile, string registeredTypes);
+    /// <summary>Explains why a configuration read does not execute SQL.</summary>
+    [MessageLogging(EventId = 11021, Level = LogLevel.Information,
+        Message = "Configuration cache hit: store='{dataStore}', path='{path}', container='{container}'; SQL execution skipped")]
+    public static partial IGenericMessage CachedRead(ILogger logger, string dataStore, string? path, string container);
 }
