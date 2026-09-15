@@ -22,6 +22,13 @@ namespace Fdw.Services.Dataverses.Endpoints;
 internal static class DataverseMembershipRequestLookup
 {
     /// <summary>Loads the request and confirms it is still Pending.</summary>
+    /// <remarks>
+    /// Filters IsCurrent=1, not just IsDeleted=0: version-on-write only flips IsCurrent on the row it
+    /// retires, never Status, so a retired row's Status column stays frozen at whatever it was before
+    /// the retiring save -- often still literally "Pending" forever. Without the IsCurrent filter,
+    /// that stale snapshot satisfies this method's own Pending check even after a later version moved
+    /// the request to Approved or Declined.
+    /// </remarks>
     public static async Task<IGenericResult<DataverseMembershipRequestConfiguration>> FindPending(
         IDataGateway gateway,
         DataverseConfigurationProvider dataverses,
@@ -43,6 +50,7 @@ internal static class DataverseMembershipRequestLookup
                     [
                         new FilterCondition { PropertyName = "Id", Operator = FilterOperators.ByName("Equal"), Value = requestId },
                         new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverseImplementationId },
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }

@@ -92,6 +92,10 @@ public abstract class DetachDataverseRelationshipEndpointBase : Endpoint<DetachD
                     [
                         new FilterCondition { PropertyName = "Id", Operator = FilterOperators.ByName("Equal"), Value = req.RelationshipId },
                         new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverse.Value.Id },
+                        // Without this, detaching a relationship that was PATCHed at least once could
+                        // retire its stale prior version instead of the current row, leaving the
+                        // actual current relationship still active and undetached.
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }

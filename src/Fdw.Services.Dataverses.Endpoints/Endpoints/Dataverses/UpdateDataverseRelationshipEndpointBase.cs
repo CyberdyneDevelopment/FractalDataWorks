@@ -91,6 +91,10 @@ public abstract class UpdateDataverseRelationshipEndpointBase
                     [
                         new FilterCondition { PropertyName = "Id", Operator = FilterOperators.ByName("Equal"), Value = request.RelationshipId },
                         new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverse.Value.Id },
+                        // Without this, a relationship PATCHed more than once could load a retired,
+                        // stale version instead of the current one (two non-deleted rows share the
+                        // same Id once a version-on-write save has happened at all).
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }

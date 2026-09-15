@@ -84,6 +84,11 @@ public abstract class RequestDataverseMembershipEndpointBase
                         new FilterCondition { PropertyName = "SubjectType", Operator = FilterOperators.ByName("Equal"), Value = request.SubjectType },
                         new FilterCondition { PropertyName = "SubjectId", Operator = FilterOperators.ByName("Equal"), Value = request.SubjectId },
                         new FilterCondition { PropertyName = "Status", Operator = FilterOperators.ByName("Equal"), Value = "Pending" },
+                        // IsCurrent, not just IsDeleted: a retired row's Status column is frozen at
+                        // its pre-retirement value -- see DataverseMembershipRequestLookup's remarks.
+                        // Without this, a subject whose Pending request was already reviewed could
+                        // never request again, blocked forever by the retired row's stale "Pending".
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }

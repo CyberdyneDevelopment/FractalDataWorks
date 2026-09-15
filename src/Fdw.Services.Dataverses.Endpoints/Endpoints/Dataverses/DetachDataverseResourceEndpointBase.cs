@@ -92,6 +92,10 @@ public abstract class DetachDataverseResourceEndpointBase : Endpoint<DetachDatav
                     [
                         new FilterCondition { PropertyName = "Id", Operator = FilterOperators.ByName("Equal"), Value = req.ResourceAttachmentId },
                         new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverse.Value.Id },
+                        // Defensive: resources have no update path today, so only one non-deleted
+                        // version can exist per Id, but the same find-by-Id-and-not-deleted shape
+                        // elsewhere in this domain has proven unsafe the moment an update path exists.
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }

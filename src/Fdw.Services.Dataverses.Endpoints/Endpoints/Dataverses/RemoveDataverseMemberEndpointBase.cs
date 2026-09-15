@@ -92,6 +92,10 @@ public abstract class RemoveDataverseMemberEndpointBase : Endpoint<RemoveDataver
                     [
                         new FilterCondition { PropertyName = "Id", Operator = FilterOperators.ByName("Equal"), Value = req.MemberId },
                         new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverse.Value.Id },
+                        // Without this, removing a member whose role was changed at least once could
+                        // retire the stale prior version instead of the current row, leaving the
+                        // actual current membership still active and unremoved.
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }

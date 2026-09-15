@@ -67,6 +67,9 @@ public abstract class ListDataverseMembershipRequestsEndpointBase
                     Nodes =
                     [
                         new FilterCondition { PropertyName = "DataverseImplementationId", Operator = FilterOperators.ByName("Equal"), Value = dataverse.Value.Id },
+                        // Without this, a request that has been reviewed more than once (e.g. two
+                        // approve calls racing) shows every retired version alongside the current one.
+                        new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
                         new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
                     ]
                 }
