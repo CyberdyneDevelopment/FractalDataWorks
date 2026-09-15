@@ -39,4 +39,12 @@ public interface IConnectionHealthService
         Guid connectionId,
         int count = 20,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves the latest health check result for every connection, one row per connection
+    /// (Status="Unknown" for a connection never probed).
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IGenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>> GetAllCurrent(
+        CancellationToken cancellationToken = default);
 }

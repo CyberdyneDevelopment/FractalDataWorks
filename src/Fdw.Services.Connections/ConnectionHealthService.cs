@@ -136,6 +136,36 @@ public sealed class ConnectionHealthService : IConnectionHealthService
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<IGenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>> GetAllCurrent(
+        CancellationToken cancellationToken = default)
+    {
+        ConnectionHealthServiceLog.QueryingAllCurrent(_logger);
+
+        try
+        {
+            var command = Query.From<ConnectionHealthCurrentRecord>(DataStoreName, PathName, "ConnectionHealthCurrent").Build();
+
+            var result = await Gateway.Execute<IEnumerable<ConnectionHealthCurrentRecord>>(command, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!result.IsSuccess)
+            {
+                ConnectionHealthServiceLog.QueryAllCurrentCommandFailed(_logger);
+                return result.ToNewResult<IReadOnlyList<ConnectionHealthCurrentRecord>>();
+            }
+
+            var current = (result.Value ?? []).ToList();
+            ConnectionHealthServiceLog.AllCurrentRetrieved(_logger, current.Count);
+            return GenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>.Success(current);
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>.Failure(
+                ConnectionHealthServiceLog.QueryAllCurrentFailed(_logger, ex.Message));
+        }
+    }
+
     /// <summary>
     /// Internal record for inserting into ops.ConnectionHealthCheck. Excludes CheckedAt/CheckedBy so
     /// their DB defaults apply.
