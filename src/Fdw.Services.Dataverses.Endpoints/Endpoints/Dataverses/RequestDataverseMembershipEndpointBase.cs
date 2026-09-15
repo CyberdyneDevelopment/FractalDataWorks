@@ -144,7 +144,7 @@ public abstract class RequestDataverseMembershipEndpointBase
         if (ReferenceEquals(policy, DataverseJoinPolicies.NotFound) || !policy.AcceptsRequests)
         {
             return GenericResult<DataverseMembershipRequestDto>.Failure(
-                DataversesResultCodes.ByName("DataverseWriteNotPermitted"), Logger,
+                DataversesResultCodes.ByName("DataverseJoinPolicyRefused"), Logger,
                 ResultDetails.Create("name", request.Name, "reason", $"'{dataverse.Value.JoinPolicy}' does not accept membership requests"));
         }
 
