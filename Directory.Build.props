@@ -1,6 +1,8 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
 	  <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Suppress the verbose pruning output -->
+    <NuGetPruneVerbosity>quiet</NuGetPruneVerbosity>
 	  <!-- Language version and framework settings -->
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
@@ -26,7 +28,7 @@
     <!-- Package settings -->
     <!-- Default to not packable, src projects override below -->
     <IsPackable>false</IsPackable>
-    <IsPackable Condition="$(MSBuildProjectDirectory.Contains('\src\'))">true</IsPackable>
+    <IsPackable Condition="$(MSBuildProjectDirectory.Contains('/src/')) OR $(MSBuildProjectDirectory.Contains('\src\'))">true</IsPackable>
 
     <Authors>Fdw Team</Authors>
     <Company>Cyberdyne Development</Company>
@@ -34,7 +36,7 @@
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/CyberdyneDevelopment/FractalDataWorks.git</RepositoryUrl>
-    <PackageDescription>Development tools and utilities for the FractalDataWorks ecosystem. Build: $(NBGV_GitCommitIdShort)</PackageDescription>
+    <PackageDescription>Development tools and utilities for the Fdw ecosystem.</PackageDescription>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- Suppress SourceLink warning when not in CI (source control info not available locally) -->
@@ -50,20 +52,56 @@
     <PackageReadmeFile Condition="Exists('$(MSBuildProjectDirectory)\README.md')">README.md</PackageReadmeFile>
     
     <!-- Central Package Management -->
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	  <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <!-- Exclude samples from central package management and global settings -->
-    <ManagePackageVersionsCentrally Condition="$(MSBuildProjectDirectory.Contains('\samples\'))">false</ManagePackageVersionsCentrally>
+    <ManagePackageVersionsCentrally Condition="$(MSBuildProjectDirectory.Contains('/samples/')) OR $(MSBuildProjectDirectory.Contains('\samples\'))">false</ManagePackageVersionsCentrally>
     
-    <!-- Disable specific warnings -->
-    <!-- CA1510: Use ArgumentNullException.ThrowIfNull (new .NET feature) -->
-    <!-- CA1834: Use StringBuilder.Append(char) (performance) -->
-    <!-- MA0051: Method too long (style preference) -->
-    <!-- CA1707: Underscores in member names (allow _camelCase for private/protected) -->
-    <NoWarn>$(NoWarn);VSTHRD200;CA1716;CA1000;CA1848;CA1510;CA1834;MA0051;MA0048;CA1711;CA1707;NETSDK1195</NoWarn>
+    <!-- Disable specific warnings globally (one per line: code — description — justification) -->
+    <NoWarn>$(NoWarn)</NoWarn>
+    <NoWarn>$(NoWarn);VSTHRD200</NoWarn>   <!-- Use Async suffix — FDW convention omits Async suffix on all methods -->
+    <NoWarn>$(NoWarn);CA1716</NoWarn>      <!-- Identifiers should not match keywords — FDW uses Execute, Default etc. C#-only repo -->
+    <NoWarn>$(NoWarn);CA1000</NoWarn>      <!-- No static members on generic types — TypeCollection pattern requires them -->
+    <NoWarn>$(NoWarn);CA1848</NoWarn>      <!-- Use LoggerMessage delegates — FDW uses its own MessageLogging source generator -->
+    <NoWarn>$(NoWarn);CA1510</NoWarn>      <!-- Use ArgumentNullException.ThrowIfNull — unavailable in netstandard2.0 targets -->
+    <NoWarn>$(NoWarn);CA1834</NoWarn>      <!-- Use StringBuilder.Append(char) — unavailable in netstandard2.0 targets -->
+    <NoWarn>$(NoWarn);MA0051</NoWarn>      <!-- Method is too long — replaced by FDW006 (lines) + FDW007 (complexity) with [ConventionOverride] support -->
+    <NoWarn>$(NoWarn);MA0048</NoWarn>      <!-- File name must match type name — replaced by FDW005 with MoveTypeToFile code fix support -->
+    <NoWarn>$(NoWarn);MA0196</NoWarn>      <!-- inheritdoc on members that don't inherit — suppressed pending ResolveInheritDoc Roslyn MCP command -->
+    <NoWarn>$(NoWarn);FDW011</NoWarn>     <!-- Misplaced implementation type (warning) — not enforced yet, pending architectural review -->
+    <NoWarn>$(NoWarn);NU5123</NoWarn>     <!-- NuGet long path warning — only affects legacy systems without long path support -->
+
+    <NoWarn>$(NoWarn);CA1711</NoWarn>      <!-- Identifiers should not have incorrect suffix — FDW uses Collection, Permission suffixes intentionally -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>      <!-- Identifiers should not contain underscores — allows _camelCase for private/protected fields -->
+    <NoWarn>$(NoWarn);NETSDK1195</NoWarn>  <!-- .NET SDK trimming warning — not relevant for non-trimmed builds -->
     
-    <!-- Nerdbank.GitVersioning -->
-    <GitVersioningVersion>3.7.115</GitVersioningVersion>
+    
   </PropertyGroup>
+
+  <!-- Conventions Analyzer Configuration -->
+  <PropertyGroup>
+    <FDW_MaxMethodLines>60</FDW_MaxMethodLines>
+    <FDW_MaxCyclomaticComplexity>15</FDW_MaxCyclomaticComplexity>
+    <FDW_DefaultStringComparison>Ordinal</FDW_DefaultStringComparison>
+  </PropertyGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="FDW_MaxMethodLines" />
+    <CompilerVisibleProperty Include="FDW_MaxCyclomaticComplexity" />
+    <CompilerVisibleProperty Include="FDW_DefaultStringComparison" />
+  </ItemGroup>
+
+  <!--
+    Ship .razor source files in all packable UI packages so consuming apps can run
+    Tailwind CSS against the actual component source. Files land at:
+      {package-id}/{version}/razor-sources/**/*.razor
+    in the NuGet global packages folder. BuildAction=None prevents recompilation
+    in consuming projects — these files are for Tailwind scanning only.
+  -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="**/*.razor"
+          Pack="true"
+          PackagePath="razor-sources/%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="Never" />
+  </ItemGroup>
 
   <!-- Debug / Debug-Local: Minimal checks for fast development -->
   <PropertyGroup Condition="'$(BaseConfiguration)' == 'Debug'">
@@ -101,6 +139,14 @@
     <DebugSymbols>true</DebugSymbols>
     <Optimize>true</Optimize>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- FDW012-015 (GenericResult handling): warnings-only during gradual adoption, promote to errors after remediation -->
+    <!-- FDW016 (UncheckedResultValueAccess): suppressed for gradual adoption -->
+    <!-- FDW017-019 (TypeCollection opportunities): suppressed for gradual adoption -->
+    <!-- FDW010 (MisplacedImplementationType): implementation-specific types in base/abstractions assemblies; kept non-error so existing violations surface but don't break the build, pending architectural review. NOTE: FDW010 is NOT a fallback rule — the no-`??`-fallback rule is enforced by convention/review + FDW002/003/004. -->
+    <!-- FDW022 (SwallowedException): warnings-only during gradual adoption, promote to error after remediation. FDW023 (broad catch survey) is Info, never an error. -->
+    <!-- TC001 (MissingTypeOptionAnalyzer, Fdw.ServiceTypes.Analyzers/Fdw.Collections.Analyzers): Warning-by-design; newly wired globally, fires on pre-existing TypeCollection-derived types missing [TypeOption] — warnings-only during gradual adoption, promote to error after remediation. -->
+    <!-- FDW048 (LocalStatusClassMapper): component-local value-to-CSS-class helpers — warnings-only until the mapping moves to a shared component/helper, promote to error after remediation. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);FDW010;FDW012;FDW013;FDW014;FDW015;FDW016;FDW017;FDW018;FDW019;FDW022;FDW048;TC001</WarningsNotAsErrors>
     <WarningLevel>4</WarningLevel>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <RunAnalyzers>true</RunAnalyzers>
@@ -121,8 +167,8 @@
     <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
   </PropertyGroup>
 
-  <!-- Target Framework for FractalDataWorks.net -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'FractalDataWorks.net'">
+  <!-- Target Framework for Fdw.net -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Fdw.net'">
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
@@ -147,21 +193,35 @@
 
   <!-- Use local NuGet config when using a -Local configuration and LocalNugetFolder is set -->
   <PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
-    <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
+    <RestoreConfigFile>$(LocalNugetFolder)/$(LocalNugetConfigFileName)</RestoreConfigFile>
   </PropertyGroup>
 
-  <!-- Nerdbank.GitVersioning -->
-  <ItemGroup Condition="!$(MSBuildProjectDirectory.Contains('\samples\'))">
-    <PackageReference Include="Nerdbank.GitVersioning" PrivateAssets="all" Condition="'$(IsTestProject)' != 'true'" />
-  </ItemGroup>
+  <!-- Version: EXPLICIT and hand-set. This is the single source of truth for the version of
+       every FDW package, and for the <FdwVersion> the whole ecosystem pins. Every versioned repo
+       in the workspace is LOCKSTEP to this number (see workspace CLAUDE.md "Versioning").
+
+       Why not MinVer/tag inference: the version must change only when we decide it changes.
+       Height-based inference bumped the version on every commit and constantly drifted FDW out
+       of sync with the apps pinning it. Bump prefix/suffix here, pack, and propagate — nothing else.
+
+       The package version is VersionPrefix + optional -VersionSuffix => 1.0.2 + rc.1 = 1.0.2-rc.1
+       (SemVer 2.0, 3-digit + prerelease). AssemblyVersion/FileVersion are the 4-part form
+       (1.0.0.0) because assembly identity is always 4-part and cannot carry a prerelease tag;
+       NuGet normalizes the trailing zero revision away, so the PACKAGE is 1.0.0-rc.1. -->
+  <PropertyGroup>
+    <VersionPrefix>1.2.0</VersionPrefix>
+    <VersionSuffix></VersionSuffix>
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).0</FileVersion>
+  </PropertyGroup>
 
   <!-- Microsoft.Build.Framework for MSBuild/Roslyn workspace projects -->
-  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('FractalDataWorks.Tools.')) OR $(MSBuildProjectName) == 'FractalDataWorks.Workspace.Roslyn'">
+  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('Fdw.Tools.')) OR $(MSBuildProjectName) == 'Fdw.Workspace.Roslyn'">
     <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- Source Link -->
-  <ItemGroup Condition="!$(MSBuildProjectDirectory.Contains('\samples\'))">
+  <ItemGroup Condition="!$(MSBuildProjectDirectory.Contains('/samples/')) AND !$(MSBuildProjectDirectory.Contains('\samples\'))">
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
@@ -170,14 +230,14 @@
     <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <!-- Suppress XML documentation warnings for generated files -->
+  <!-- Release-only suppressions -->
   <PropertyGroup>
-    <!-- Add CS1570 to global NoWarn for source generator XML issues -->
+    <!-- CS1570: Invalid XML comment — source generators emit XML docs that consuming projects can't control -->
     <NoWarn Condition="'$(BaseConfiguration)' == 'Release'">$(NoWarn);CS1570</NoWarn>
   </PropertyGroup>
 
   <!-- Analyzers - Applied to all projects except samples -->
-  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('\samples\'))">
+  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('/samples/')) AND !$(MSBuildProjectDirectory.Contains('\samples\'))">
     <PackageReference Include="AsyncFixer" PrivateAssets="All" />
     <PackageReference Include="Meziantou.Analyzer" PrivateAssets="All" />
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" PrivateAssets="All" />
@@ -185,12 +245,24 @@
     <PackageReference Include="SecurityCodeScan.VS2019" PrivateAssets="All" />
   </ItemGroup>
 
-  <!-- FractalDataWorks Code Style Analyzers - Applied to all projects except samples and the analyzer itself -->
-  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('\samples\')) AND '$(MSBuildProjectName)' != 'FractalDataWorks.Analyzers' AND '$(MSBuildProjectName)' != 'FractalDataWorks.CodeFixes'">
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\FractalDataWorks.Analyzers\FractalDataWorks.Analyzers.csproj"
+  <!-- Fdw Code Style Analyzers - Applied to all projects except samples and the analyzers themselves -->
+  <ItemGroup Condition="'$(IsTestProject)' != 'true' AND !$(MSBuildProjectDirectory.Contains('/samples/')) AND !$(MSBuildProjectDirectory.Contains('\samples\')) AND '$(MSBuildProjectName)' != 'Fdw.Analyzers' AND '$(MSBuildProjectName)' != 'Fdw.CodeFixes' AND '$(MSBuildProjectName)' != 'Fdw.Conventions.Analyzers' AND '$(MSBuildProjectName)' != 'Fdw.Conventions.CodeFixes' AND '$(MSBuildProjectName)' != 'Fdw.ServiceTypes.Analyzers' AND '$(MSBuildProjectName)' != 'Fdw.Collections.Analyzers'">
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Analyzers\Fdw.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src\FractalDataWorks.CodeFixes\FractalDataWorks.CodeFixes.csproj"
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.CodeFixes\Fdw.CodeFixes.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Conventions.Analyzers\Fdw.Conventions.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Conventions.CodeFixes\Fdw.Conventions.CodeFixes.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.ServiceTypes.Analyzers\Fdw.ServiceTypes.Analyzers.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\Fdw.Collections.Analyzers\Fdw.Collections.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
   </ItemGroup>

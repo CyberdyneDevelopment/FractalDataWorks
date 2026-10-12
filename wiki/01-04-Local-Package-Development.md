@@ -10,8 +10,8 @@ This guide explains how to set up and use local NuGet packages for development a
 
 The local package development workflow allows you to:
 1. Pack packages to a local folder instead of publishing to nuget.org
-2. Automatically use local packages in Debug/Alpha/Beta builds
-3. Seamlessly switch to published packages for Release builds
+2. Automatically use local packages when building any `*-Local` configuration (e.g. `Debug-Local`, `Release-Local`)
+3. Seamlessly switch to published packages for non-`-Local` builds
 4. Clean old package versions from local cache
 5. Customize config names for different workflows
 
@@ -22,13 +22,13 @@ The local package development workflow allows you to:
 **PowerShell:**
 ```powershell
 cd public
-.\scripts\powershell\setup-local-nuget.ps1
+.\scripts\setup-local-nuget.ps1
 ```
 
 **Bash/Linux/Mac:**
 ```bash
 cd public
-./scripts/bash/setup-local-nuget.sh
+./scripts/setup-local-nuget.sh
 ```
 
 This creates:
@@ -71,29 +71,29 @@ source ~/.bashrc
 **PowerShell:**
 ```powershell
 cd public
-.\scripts\powershell\pack-local.ps1
+.\scripts\pack-local.ps1
 ```
 
 **Bash:**
 ```bash
 cd public
-./scripts/bash/pack-local.sh
+./scripts/pack-local.sh
 ```
 
 This will:
-1. Detect current version (via Nerdbank.GitVersioning)
+1. Read the hand-set version from `Directory.Build.props` (`VersionPrefix`/`VersionSuffix`)
 2. Delete old packages with same version from local folder
 3. Clear matching versions from NuGet cache (`~/.nuget/packages`)
 4. Generate/update `Fdw.Local.nuget.config` with source mapping
-5. Pack all FractalDataWorks.* packages to local folder
+5. Pack all Fdw.* packages to local folder
 
 ### 4. Build Your Projects
 
 Projects configured with the local NuGet setup will automatically use local packages when:
-- Building in **Debug, Alpha, or Beta** configuration
+- Building in a configuration whose name ends in `-Local` (for example `Debug-Local` or `Release-Local`)
 - `LocalNugetFolder` environment variable is set
 
-Release builds always use the standard NuGet config (published packages).
+Configurations without the `-Local` suffix always use the standard NuGet config (published packages).
 
 ## Advanced Configuration
 
@@ -104,19 +104,19 @@ You can customize the NuGet config filename for different workflows (e.g., separ
 **Setup with custom name:**
 ```powershell
 # PowerShell
-.\scripts\powershell\setup-local-nuget.ps1 -Path C:\dev\fdw-local -ConfigName MyProject.nuget.config
+.\scripts\setup-local-nuget.ps1 -Path C:\dev\fdw-local -ConfigName MyProject.nuget.config
 
 # Bash
-./scripts/bash/setup-local-nuget.sh ~/dev/fdw-local MyProject.nuget.config
+./scripts/setup-local-nuget.sh ~/dev/fdw-local MyProject.nuget.config
 ```
 
 **Pack with custom name:**
 ```powershell
 # PowerShell
-.\scripts\powershell\pack-local.ps1 -ConfigName MyProject.nuget.config
+.\scripts\pack-local.ps1 -ConfigName MyProject.nuget.config
 
 # Bash
-./scripts/bash/pack-local.sh MyProject.nuget.config
+./scripts/pack-local.sh MyProject.nuget.config
 ```
 
 **Configure in your project:**
@@ -134,8 +134,8 @@ You can maintain separate local NuGet folders for different purposes:
 
 ```powershell
 # Setup multiple folders
-.\scripts\powershell\setup-local-nuget.ps1 C:\dev\fdw-stable -ConfigName Stable.nuget.config
-.\scripts\powershell\setup-local-nuget.ps1 C:\dev\fdw-experimental -ConfigName Experimental.nuget.config
+.\scripts\setup-local-nuget.ps1 C:\dev\fdw-stable -ConfigName Stable.nuget.config
+.\scripts\setup-local-nuget.ps1 C:\dev\fdw-experimental -ConfigName Experimental.nuget.config
 
 # Switch between them by changing environment variable
 $env:LocalNugetFolder = "C:\dev\fdw-stable"
@@ -150,13 +150,13 @@ $env:LocalNugetConfigFileName = "Experimental.nuget.config"
 
 **PowerShell:**
 ```powershell
-.\scripts\powershell\setup-local-nuget.ps1 -Path D:\Projects\NuGetLocal
+.\scripts\setup-local-nuget.ps1 -Path D:\Projects\NuGetLocal
 $env:LocalNugetFolder = "D:\Projects\NuGetLocal"
 ```
 
 **Bash:**
 ```bash
-./scripts/bash/setup-local-nuget.sh /mnt/data/nuget-local
+./scripts/setup-local-nuget.sh /mnt/data/nuget-local
 export LocalNugetFolder="/mnt/data/nuget-local"
 ```
 
@@ -186,7 +186,7 @@ This ensures:
 
 Projects can use `Directory.Build.props` to conditionally use the local config.
 
-From [`samples/ReferenceSolution/Directory.Build.props:21-30`](../samples/ReferenceSolution/Directory.Build.props#L21-L30):
+From [`public/Directory.Build.props:184-193`](../Directory.Build.props#L184-L193):
 
 ```xml
 <!-- Local NuGet Development Configuration -->
@@ -195,28 +195,28 @@ From [`samples/ReferenceSolution/Directory.Build.props:21-30`](../samples/Refere
   <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
 </PropertyGroup>
 
-<!-- Use local NuGet config when LocalNugetFolder is set and not in Release -->
-<PropertyGroup Condition="'$(Configuration)' != 'Release' AND '$(LocalNugetFolder)' != ''">
+<!-- Use local NuGet config when using a -Local configuration and LocalNugetFolder is set -->
+<PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
   <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
 </PropertyGroup>
 ```
 
+`IsLocalConfiguration` is set to `true` when `$(Configuration)` ends with `-Local` (see `public/Directory.Build.props:16-17`).
+
 This pattern allows:
-- **Local Development**: Debug/Alpha/Beta builds use local packages
-- **CI/CD**: Release builds use published packages from nuget.org
+- **Local Development**: `*-Local` configurations use local packages
+- **CI/CD**: Non-`-Local` configurations use published packages from nuget.org
 - **Flexibility**: Projects can override `LocalNugetConfigFileName` for custom workflows
 
 ### Version Detection and Cleanup
 
-The pack script uses **Nerdbank.GitVersioning** to detect the current package version based on:
-- Git history
-- Version.json configuration
-- Current branch/commit
+The pack script reads the hand-set version from `Directory.Build.props`
+(`VersionPrefix` + `VersionSuffix`, e.g. `1.0.0-rc.1`) — git tags and commit distance play no part.
 
 It then:
-1. Finds packages in local folder matching: `FractalDataWorks.*.{version}.nupkg`
+1. Finds packages in local folder matching: `Fdw.*.{version}.nupkg`
 2. Deletes them to prevent stale packages
-3. Scans `~/.nuget/packages/fractaldataworks.*/{version}/` and removes cached versions
+3. Scans `~/.nuget/packages/fdw.*/{version}/` and removes cached versions
 4. Packs fresh packages with current version
 
 This ensures you're always testing the latest local changes.
@@ -235,8 +235,8 @@ echo $LocalNugetFolder
 ```
 
 **Verify build configuration:**
-- Local config only applies to Debug/Alpha/Beta
-- Release builds intentionally use nuget.org
+- Local config only applies to `*-Local` configurations (e.g. `Debug-Local`)
+- Non-`-Local` builds intentionally use nuget.org
 
 **Check config file exists:**
 ```powershell
@@ -273,7 +273,7 @@ If you're still getting old versions:
 
 3. **Run pack-local script again:**
    ```bash
-   .\scripts\powershell\pack-local.ps1
+   .\scripts\pack-local.ps1
    ```
 
 ### IDE Not Picking Up Changes
@@ -294,7 +294,7 @@ If you're still getting old versions:
 
 1. **Set up once per machine:**
    ```bash
-   .\scripts\powershell\setup-local-nuget.ps1
+   .\scripts\setup-local-nuget.ps1
    ```
 
 2. **Add to PowerShell profile for automatic setup:**
@@ -305,7 +305,7 @@ If you're still getting old versions:
 3. **Use pack-local before testing changes:**
    ```bash
    # Make changes to FractalDataWorks code
-   .\scripts\powershell\pack-local.ps1
+   .\scripts\pack-local.ps1
 
    # Build your test project
    cd samples/ReferenceSolution
@@ -325,7 +325,7 @@ If you're still getting old versions:
 
 1. **Create project-specific config:**
    ```powershell
-   .\scripts\powershell\setup-local-nuget.ps1 `
+   .\scripts\setup-local-nuget.ps1 `
      -Path C:\MyApp\local-packages `
      -ConfigName MyApp.nuget.config
    ```
@@ -334,9 +334,11 @@ If you're still getting old versions:
    ```xml
    <PropertyGroup>
      <LocalNugetConfigFileName>MyApp.nuget.config</LocalNugetConfigFileName>
+     <IsLocalConfiguration>false</IsLocalConfiguration>
+     <IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>
    </PropertyGroup>
 
-   <PropertyGroup Condition="'$(Configuration)' != 'Release' AND '$(LocalNugetFolder)' != ''">
+   <PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
      <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
    </PropertyGroup>
    ```
@@ -361,7 +363,7 @@ If you're still getting old versions:
 1. Contributor packs their changes:
    ```bash
    git checkout feature/new-feature
-   .\scripts\powershell\pack-local.ps1
+   .\scripts\pack-local.ps1
    ```
 
 2. Share the package version with team:
@@ -387,7 +389,7 @@ If you're still getting old versions:
 The local package development workflow is designed to be **CI/CD safe**:
 
 - **Local Config Ignored**: Local config files (in `LocalNugetFolder`) are never committed to the repository
-- **Release Builds**: CI/CD typically builds in Release configuration, which ignores `LocalNugetFolder`
+- **Non-`-Local` Builds**: CI/CD typically builds without the `-Local` suffix, which ignores `LocalNugetFolder`
 - **No Environment Variable**: CI/CD agents don't have `LocalNugetFolder` set, so they use standard `public/nuget.config`
 - **Predictable Behavior**: Published packages always come from nuget.org in CI/CD
 

@@ -1,0 +1,91 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+using Fdw.Services.Connections.Abstractions;
+
+namespace Fdw.Services.Connections.RoslynWorkspace;
+
+/// <summary>
+/// Configuration for RoslynWorkspace connections.
+/// Persisted to <c>conn.RoslynWorkspaceConnectionConfiguration</c> as a child of <c>conn.Connection</c> via <c>ConnectionRowId</c>.
+/// </summary>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "RoslynWorkspace")]
+public partial class RoslynWorkspaceConnectionConfiguration : IConnectionImplementationConfiguration
+{
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    [ValuesFrom(typeof(SchemaDiscoveryTypes))]
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
+    // ========================================
+    // IGenericConfiguration — typed body identity
+    // ========================================
+
+    /// <summary>
+    /// Gets or sets the unique identifier for this typed body row (conn.RoslynWorkspaceConnection.Id).
+    /// Minted via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
+
+
+    // ========================================
+    // RoslynWorkspace-specific properties
+    // ========================================
+
+    /// <summary>
+    /// Gets or sets the path to the .sln or .slnx file to load.
+    /// </summary>
+    public string SolutionPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the workspace mode name (e.g. "Snapshot", "Live").
+    /// </summary>
+    public string ModeName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets glob patterns for projects to exclude from the workspace.
+    /// Matching projects are not loaded initially; they can be loaded on demand.
+    /// </summary>
+    public IList<string> ExcludePatterns { get; set; } = new List<string>();
+}

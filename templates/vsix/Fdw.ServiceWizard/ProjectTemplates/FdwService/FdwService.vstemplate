@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VSTemplate Version="3.0.0" Type="ProjectGroup" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005">
+  <TemplateData>
+    <Name>FractalDataWorks Service</Name>
+    <Description>Create a FractalDataWorks service with domain contracts and/or implementation projects.</Description>
+    <Icon>__TemplateIcon.ico</Icon>
+    <ProjectType>CSharp</ProjectType>
+    <SortOrder>1000</SortOrder>
+    <TemplateID>FractalDataWorks.Service</TemplateID>
+    <CreateNewFolder>true</CreateNewFolder>
+    <DefaultName>FdwService</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <CreateInPlace>true</CreateInPlace>
+    <LanguageTag>csharp</LanguageTag>
+    <PlatformTag>windows</PlatformTag>
+    <PlatformTag>linux</PlatformTag>
+    <PlatformTag>macos</PlatformTag>
+    <ProjectTypeTag>service</ProjectTypeTag>
+    <ProjectTypeTag>library</ProjectTypeTag>
+  </TemplateData>
+  <TemplateContent>
+    <ProjectCollection>
+      <SolutionFolder Name="src">
+        <ProjectTemplateLink ProjectName="$serviceName$.Abstractions" CopyParameters="true" Condition="$createDomain$ == True">
+          Abstractions\Abstractions.vstemplate
+        </ProjectTemplateLink>
+        <ProjectTemplateLink ProjectName="$serviceName$" CopyParameters="true" Condition="$createDomain$ == True">
+          Base\Base.vstemplate
+        </ProjectTemplateLink>
+        <ProjectTemplateLink ProjectName="$serviceName$.$implName$" CopyParameters="true" Condition="$createImpl$ == True">
+          Implementation\Implementation.vstemplate
+        </ProjectTemplateLink>
+      </SolutionFolder>
+    </ProjectCollection>
+  </TemplateContent>
+  <WizardExtension>
+    <Assembly>FractalDataWorks.ServiceWizard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null</Assembly>
+    <FullClassName>FractalDataWorks.ServiceWizard.ServiceWizard</FullClassName>
+  </WizardExtension>
+</VSTemplate>

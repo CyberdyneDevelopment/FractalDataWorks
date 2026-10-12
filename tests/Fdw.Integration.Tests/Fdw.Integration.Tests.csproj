@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- Test packages are inherited from tests/Directory.Build.props -->
+
+  <ItemGroup>
+    <!-- Core FDW projects -->
+    <ProjectReference Include="..\..\src\Fdw.Configuration\Fdw.Configuration.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+
+    <ProjectReference Include="..\..\src\Fdw.Data.DataContainers.Abstractions\Fdw.Data.DataContainers.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Results\Fdw.Results.csproj" />
+
+    <!-- Calculations projects -->
+    <ProjectReference Include="..\..\src\Fdw.Calculations.Abstractions\Fdw.Calculations.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Calculations\Fdw.Calculations.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Calculations.Aggregations\Fdw.Calculations.Aggregations.csproj" />
+
+    <!-- Transformations projects -->
+    <ProjectReference Include="..\..\src\Fdw.Services.Transformations.Abstractions\Fdw.Services.Transformations.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Connections.MsSql\Fdw.Services.Connections.MsSql.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Additional packages needed for integration tests -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <!-- Why: xunit.v3.common transitively pins Microsoft.Bcl.AsyncInterfaces 6.0.0
+         (minimum bound), conflicting with the 10.0.x demanded by the FDW chain.
+         A direct reference here promotes it to primary so the central pin wins. -->
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,125 @@
+using System;
+using Fdw.Services.Results;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Collections;
+using Fdw.Configuration;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Connections;
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Endpoints;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Workspace.Roslyn;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Fdw.Services.Connections.Abstractions.Authentication;
+using Fdw.Services.Connections.Results;
+
+namespace Fdw.Services.Connections.RoslynWorkspace.Registration;
+
+/// <summary>
+/// Connection type definition for RoslynWorkspace connections.
+/// Registers <see cref="IRoslynWorkspaceConnectionFactory"/> and binds
+/// <see cref="RoslynWorkspaceConnectionConfiguration"/> from <c>Connections:RoslynWorkspace</c>.
+/// </summary>
+[ExcludeFromCodeCoverage]
+[Implementation(typeof(ConnectionTypes), "RoslynWorkspace")]
+public sealed class RoslynWorkspaceConnectionType
+    : ConnectionTypeBase<IGenericConnection, IRoslynWorkspaceConnectionFactory, RoslynWorkspaceConnectionConfiguration>
+{
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RoslynWorkspaceConnectionType"/> class.
+    /// </summary>
+    public RoslynWorkspaceConnectionType() : base(
+        name: "RoslynWorkspace",
+        sectionName: "RoslynWorkspace",
+        displayName: "Roslyn Workspace",
+        description: "Roslyn MSBuildWorkspace for source code analysis and navigation",
+        category: "Development", defaultContainerName: "RoslynWorkspaceConnectionConfiguration")
+    {
+        // The flat create request carried the solution path in BaseUrl and the mode in Protocol.
+        EndpointAlias("baseUrl", nameof(RoslynWorkspaceConnectionConfiguration.SolutionPath));
+        EndpointAlias("protocol", nameof(RoslynWorkspaceConnectionConfiguration.ModeName));
+
+        Initialization((host, loggerFactory) =>
+        {
+            var services = host.Services;
+            services.GetRequiredService<IConnectionConfigurationProvider>()
+                .Register(
+                    Name, services.GetRequiredService<IRoslynWorkspaceConnectionConfigurationProvider>());
+
+            // The line above tells the connection domain how to READ this option's rows; this hands the
+            // runtime connection provider what it BUILDS a workspace connection with. Without it
+            // IConnectionProvider's registry has no entry for this option and every workspace
+            // connection fails with "no factory for service option".
+            var implementationRegistered = services.GetRequiredService<IConnectionProvider>()
+                .Register(Name, () => services.GetRequiredService<IRoslynWorkspaceConnectionProvider>());
+            if (!implementationRegistered.IsSuccess) return implementationRegistered.ToNewResult<IHost>();
+
+            return GenericResult<IHost>.Success(host);
+        });
+
+        Configuration(builder =>
+        {
+
+    
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
+});
+
+        Registration((builder, loggerFactory) =>
+        {
+            builder.Services.AddSingleton<IRoslynWorkspaceFactory, RoslynWorkspaceFactory>();
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IRoslynWorkspaceConnectionFactory), typeof(RoslynWorkspaceConnectionFactory), ServiceLifetime.Singleton));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IRoslynWorkspaceConnectionProvider), typeof(RoslynWorkspaceConnectionProvider), ServiceLifetime.Singleton));
+            builder.Services.AddSingleton<IRoslynWorkspaceConnectionConfigurationProvider, RoslynWorkspaceConnectionConfigurationProvider>(sp => new RoslynWorkspaceConnectionConfigurationProvider(sp.GetRequiredService<ILogger<RoslynWorkspaceConnectionConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, PathName, Container));
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+    }
+
+    /// <summary>Phase 1: Register factory with main DI container.</summary>
+
+    /// <summary>Phase 2: Resolve factory from DI and register with connection provider.</summary>
+
+    /// <summary>Phase 3: Bind RoslynWorkspaceConnectionConfiguration from appsettings.</summary>
+
+    /// <summary>
+    /// RoslynWorkspace supports WorkspaceGraph and GetSymbolSource capabilities.
+    /// </summary>
+    public override IReadOnlyList<ICommandCapabilityType> SupportedCommands =>
+    [
+        CommandCapabilityTypes.ByName("WorkspaceGraph"),
+        CommandCapabilityTypes.ByName("GetSymbolSource"),
+    ];
+
+    /// <inheritdoc/>
+    /// <remarks>A workspace connection opens a solution from the host's disk with the host process's own file-system access, so every such connection acts as the host.</remarks>
+    protected override IGenericResult<bool> DecideHostIdentity(RoslynWorkspaceConnectionConfiguration configuration)
+        => GenericResult<bool>.Success(true);
+
+    /// <inheritdoc/>
+    /// <remarks>A workspace connection opens files with the host process's own access; it carries no stored credential.</remarks>
+    protected override IGenericResult<ConnectionCredentialSlots> DescribeCredentials(RoslynWorkspaceConnectionConfiguration configuration)
+        => GenericResult<ConnectionCredentialSlots>.Success(ConnectionCredentialSlots.None);
+
+    /// <inheritdoc/>
+    protected override IGenericResult BindCredentialReferences(
+        RoslynWorkspaceConnectionConfiguration configuration,
+        string secretManagerName,
+        IReadOnlyDictionary<string, string> secretKeyByField)
+        => GenericResult.Failure(
+            ConnectionsResultCodes.ByName("CredentialsUndetermined"),
+            ResultDetails.Create("name", configuration.Name, "reason", "this kind of connection carries no stored credential"));
+}

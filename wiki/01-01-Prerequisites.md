@@ -16,11 +16,13 @@ dotnet --version
 
 The FractalDataWorks packages are published to nuget.org:
 
-- `FractalDataWorks.Collections` - TypeCollection base classes and interfaces
-- `FractalDataWorks.Collections.SourceGenerators` - Source generators for O(1) lookups
-- `FractalDataWorks.MessageLogging.Abstractions` - Logging abstractions
-- `FractalDataWorks.MessageLogging.SourceGenerators` - Source generators for structured logging
-- `FractalDataWorks.Results` - Result pattern implementation
+- `Fdw.Abstractions` - Core abstractions (IGenericConfiguration, IGenericService)
+- `Fdw.Collections` - TypeCollection base classes and interfaces
+- `Fdw.Collections.SourceGenerators` - Source generators for TypeCollection O(1) lookups
+- `Fdw.Registration.SourceGenerators` - Cross-assembly TypeOption registration via module initializers
+- `Fdw.MessageLogging.Abstractions` - Logging abstractions
+- `Fdw.MessageLogging.SourceGenerators` - Source generators for structured logging
+- `Fdw.Results` - Result pattern implementation (IGenericResult)
 
 ## Next Steps
 

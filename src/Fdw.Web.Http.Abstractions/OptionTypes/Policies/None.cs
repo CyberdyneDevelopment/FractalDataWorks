@@ -1,0 +1,26 @@
+using Fdw.Collections.Attributes;
+
+namespace Fdw.Web.Http.Abstractions.Policies;
+
+/// <summary>
+/// No rate limiting applied.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[TypeOption(typeof(RateLimitPolicies), "None", RestrictToCurrentCompilation = true)]
+public sealed class None : RateLimitPolicyBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="None"/> class.
+    /// </summary>
+    public None() : base(
+        name: "None",
+        maxRequests: int.MaxValue,
+        windowSizeInSeconds: 0,
+        policyType: "None",
+        isEnabled: false,
+        defaultRequestLimit: null,
+        defaultTimeWindowSeconds: null,
+        supportsBurstCapacity: false)
+    {
+    }
+}

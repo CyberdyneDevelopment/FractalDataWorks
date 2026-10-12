@@ -10,18 +10,11 @@ ReferenceSolution/
 |   |-- 01-type-collections/            <-- TypeCollection patterns
 |   |-- 02-service-types/               <-- ServiceType with DI
 |   |-- 03-message-logging/             <-- MessageLogging pattern
-|   |-- 04-results/                     <-- IGenericResult patterns
 |   |-- 05-configuration/               <-- Configuration binding
 |   |-- 06-data-layer/                  <-- Data access patterns
-|   |-- 07-translators/                 <-- Data translation
 |
-|-- integration/                        <-- Combined pattern examples
-|   |-- 01-pipeline/                    <-- Multi-step pipelines
-|   |-- 02-custom-connection/           <-- Custom connection types
-|   |-- 03-full-translator/             <-- Complete translator example
-|   |-- 04-three-phase-di/              <-- Service registration pattern
-|
-|-- appsettings.json                    <-- Shared configuration
+|-- Directory.Build.props               <-- Shared MSBuild settings
+|-- Directory.Packages.props            <-- Central package versions
 |-- README.md                           <-- Setup instructions
 ```
 
@@ -31,7 +24,7 @@ ReferenceSolution/
 
 TypeCollections replace enums with extensible, type-safe alternatives.
 
-From [`concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs:26-28`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs#L26-L28):
+From [`concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs:17-19`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs#L17-L19):
 
 ```csharp
 [TypeCollection(typeof(PaymentMethodBase), typeof(IPaymentMethod), typeof(PaymentMethods))]
@@ -39,7 +32,7 @@ public abstract partial class PaymentMethods : TypeCollectionBase<PaymentMethodB
 {
 ```
 
-From [`concepts/01-type-collections/src/Reference.TypeCollections/Program.cs:16-24`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L16-L24):
+From [`concepts/01-type-collections/src/Reference.TypeCollections/Program.cs:21-29`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L21-L29):
 
 ```csharp
 // Access via static property (generated)
@@ -58,39 +51,37 @@ Console.WriteLine($"   All payment methods: {string.Join(", ", PaymentMethods.Al
 
 MessageLogging provides structured logging that returns messages for result integration.
 
-From [`concepts/03-message-logging/src/Reference.MessageLogging/Program.cs:25-34`](../../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Program.cs#L25-L34):
+From [`concepts/03-message-logging/src/Reference.MessageLogging/Program.cs:24-30`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Program.cs#L24-L30):
 
 ```csharp
-var result1 = orderService.CreateOrder("CUST001", "ITEM001", 5);
-if (result1.IsSuccess)
-{
-    Console.WriteLine($"   Order created: {result1.Value!.OrderId}");
-    Console.WriteLine($"   Messages returned: {result1.Messages.Count}");
-    foreach (var msg in result1.Messages)
-    {
-        Console.WriteLine($"   - {msg.Message}");
-    }
-}
+var orderServiceLogger = loggerFactory.CreateLogger<OrderService>();
+var orderService = new OrderService(orderServiceLogger);
+
+// 1. Successful order creation
+Console.WriteLine("1. Creating a valid order...");
+var result = orderService.CreateOrder("customer-123", "product-456", 2);
+PrintResult(result);
 ```
+
+Where `PrintResult` walks `IGenericResult<T>.IsSuccess`, `.Value`, and `.Messages` (lines 80-89).
 
 ### 3. Configuration Pattern
 
 Configuration demonstrates binding to strongly-typed classes.
 
-From [`concepts/05-configuration/src/Reference.Configuration/appsettings.json:8-18`](../../samples/ReferenceSolution/concepts/05-configuration/src/Reference.Configuration/appsettings.json#L8-L18):
+From [`concepts/05-configuration/src/Reference.Configuration/appsettings.json:8-17`](../samples/ReferenceSolution/concepts/05-configuration/src/Reference.Configuration/appsettings.json#L8-L17):
 
 ```json
 "Connections": {
-  "OrdersDb": {
-    "Name": "OrdersDb",
-    "Type": "Sql",
-    "IsEnabled": true,
-    "TimeoutSeconds": 30,
-    "Server": "localhost",
-    "Database": "Orders",
-    "Port": 1433,
-    "IntegratedSecurity": true
-  }
+  "MsSql": [
+    {
+      "Name": "OrdersDb",
+      "Server": "localhost",
+      "Database": "Orders",
+      "Port": 1433,
+      "Encrypt": true,
+      "TrustServerCertificate": true
+    },
 ```
 
 ## Running the Examples

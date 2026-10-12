@@ -4,20 +4,19 @@ MessageLogging integrates with the Result pattern. Log methods return `IGenericM
 
 ## Pattern
 
-From [`OrderService.cs:115-126`](../../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs#L115-L126):
+From [`OrderService.cs`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs):
 
 ```csharp
 public IGenericResult<Order> GetOrder(string orderId)
 {
-    // Simulate order not found
-    if (orderId.StartsWith("NOTFOUND"))
+    if (orderId == "NOT_FOUND")
     {
-        // Log AND return failure - the message is both logged and returned
         return GenericResult<Order>.Failure(
             OrderLog.OrderNotFound(_logger, orderId));
     }
 
-    return GenericResult<Order>.Success(new Order { OrderId = orderId, Status = "Found" });
+    var order = new Order(orderId, "customer-1", "product-1", 1);
+    return GenericResult<Order>.Success(order);
 }
 ```
 
@@ -49,7 +48,7 @@ return GenericResult<Order>.Failure(
 
 For exceptions, use methods that accept `Exception`. Note that the exception parameter comes after `ILogger`:
 
-From [`OrderLog.cs:165-172`](../../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L165-L172):
+From [`OrderLog.cs:165-172`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L165-L172):
 
 ```csharp
 [MessageLogging(
@@ -62,7 +61,7 @@ public static partial IGenericMessage ProcessingException(
     string orderId);
 ```
 
-From [`OrderService.cs:82-88`](../../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs#L82-L88):
+From [`OrderService.cs:82-88`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs#L82-L88):
 
 ```csharp
 catch (Exception ex)

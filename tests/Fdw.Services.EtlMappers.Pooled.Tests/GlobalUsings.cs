@@ -1,0 +1,10 @@
+global using Xunit;
+global using Shouldly;
+global using Moq;
+global using System;
+global using System.Collections.Generic;
+global using System.Data;
+global using System.Diagnostics.CodeAnalysis;
+global using Fdw;
+global using Fdw.Services;
+global using Fdw.Services.EtlMappers;

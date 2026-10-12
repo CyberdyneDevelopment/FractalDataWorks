@@ -50,6 +50,7 @@ public interface IResultCode : ITypeOption<int, ResultCodeBase>
     string Code { get; }              // e.g., "MSSQL_CONN_TIMEOUT"
     int EventId { get; }              // e.g., 5201
     IResultSeverity Severity { get; } // Error, Warning, etc.
+    LogLevel LogLevel { get; }        // Microsoft.Extensions.Logging.LogLevel derived from Severity
     string Domain { get; }            // e.g., "MsSql"
     string MessageTemplate { get; }   // e.g., "Connection to {server} timed out"
     bool IsRetryable { get; }         // true for transient failures
@@ -59,6 +60,8 @@ public interface IResultCode : ITypeOption<int, ResultCodeBase>
     IResultCode LogAndReturn(ILogger logger, IResultDetails? details = null);
 }
 ```
+
+(See [`IResultCode.cs`](../src/Fdw.Results.Abstractions/IResultCode.cs) for the full interface including XML docs.)
 
 ### IResultSeverity
 
@@ -113,7 +116,7 @@ Services.{Domain}/
 
 ### Four Required Components
 
-From [`DataServiceResultCodes.cs`](../src/FractalDataWorks.Services.Data/Results/DataServiceResultCodes.cs):
+From [`DataServiceResultCodes.cs`](../src/Fdw.Services.Data/Results/DataServiceResultCodes.cs):
 
 ```csharp
 // 1. Interface (optional but recommended)
@@ -175,41 +178,79 @@ public sealed class DataStoreNameRequiredCode : DataServiceResultCodeBase
 | Property | Convention | Example |
 |----------|------------|---------|
 | Name | PascalCase, descriptive | `ConnectionTimeout` |
-| Code | SCREAMING_SNAKE_CASE | `MSSQL_CONN_TIMEOUT` |
+| Code | `{PREFIX}-{number}` | `MSSQL-21000` |
 | Class | `{Name}Code` suffix | `ConnectionTimeoutCode` |
 
-### EventId Allocation
+### Number Allocation
 
-Claim a range in your domain and document it in the class XML docs:
+**The number IS the identity.** `Id == EventId ==` the numeric part of `Code` (`"{PREFIX}-{number}"`).
+The prefix says which package the code belongs to; the leading digit says how the condition is handled.
 
-```csharp
-/// <summary>
-/// TypeCollection for MsSql result codes.
-/// EventId range: 5200-5299
-/// </summary>
-```
+`Category = Id / 10000`. The closed `ResultCategories` TypeCollection carries the behaviour
+(`RangeBase` / `IsFailure` / `IsRetryable` / `HttpStatus`) on each option — dispatch off the option,
+never off a magic-number range check at a call site.
 
-| Range | Domain |
-|-------|--------|
-| 5000-5099 | Core Connections |
-| 5100-5199 | HTTP Connections |
-| 5200-5299 | MsSql Connections |
-| 5300-5399 | Authentication |
-| 5400-5499 | Secret Managers |
-| 5500-5599 | Pipelines |
-| 5600-5649 | REST DataStores |
-| 5650-5699 | Data Services |
-| 5700-5799 | Workflows |
-| 6000-6099 | CodeBuilder |
-| 6100-6199 | Schema Importers |
-| 6200-6299 | SqlServer DataStores |
-| 7000-7099 | Calculations |
-| 8000-8099 | ServiceTypes |
-| 8100-8199 | ETL |
-| 8200-8299 | Scheduling |
-| 8300-8399 | UI Rendering |
-| 9000-9099 | Roslyn Workspace |
-| 9100-9199 | Roslyn Commands |
+| Category | Band | Meaning | Handling |
+|----------|------|---------|----------|
+| 1 | 10000–19999 | Non-error outcomes — Success, Informational, Cancelled | continue |
+| 2 | 20000–29999 | Validation / BadInput | 400, do not retry |
+| 3 | 30000–39999 | NotFound / Missing | 404 |
+| 4 | 40000–49999 | Conflict / State | 409 |
+| 5 | 50000–59999 | Auth (N & Z) | 401 / 403 |
+| 6 | 60000–69999 | Configuration / Setup | fail fast at boot |
+| 7 | 70000–79999 | Dependency / Connection / IO | 502 / 503, often retry |
+| 8 | 80000–89999 | Timeout / Transient | retry with backoff |
+| 9 | 90000–99999 | Internal / Unexpected | 500, alert |
+
+`IsFailure => Id >= 20000` — category 1 is the non-failure band, so Success **and** Cancelled correctly
+read as non-failures.
+
+**The NUMBER is not unique — `{PREFIX}-{number}` is.** The same number appears under many prefixes:
+`FDW-10001`, `CON-10001` and `SQLCON-10001` are all valid and all distinct codes. What must hold is that
+the number carries the **same general meaning under every prefix** — if `10001` means "informational" for
+one package it means the same kind of thing for all of them. The prefix says *whose* it is; the number
+says *what kind* it is.
+
+Numbers are **progressive within a category**: allocate the next one in the band as the meaning gets more
+specific, so related conditions stay adjacent and a reader can tell roughly what a code is from its number
+alone.
+
+**Therefore: allocate by meaning, not by availability.** The order is:
+
+1. **Search for a related or similar existing code.** If one already represents this meaning — a canonical,
+   or the number another package uses for the same kind of condition — **reuse that number** under your
+   own prefix.
+2. **If nothing existing represents it** — the meaning is genuinely new, or the closest numbers mean
+   something else — **take a free number** in the correct category band, and pick it progressively
+   (adjacent to the related codes it belongs with).
+
+The mistake to avoid is starting at step 2: asking "what number is free?" without first asking "what does
+this mean, and does that meaning already have a number?" That yields a code whose number contradicts its
+meaning, and breaks the property that a number means the same kind of thing under every prefix.
+
+Reserved canonicals (`C0000–C0999`) — use one of these before inventing anything:
+
+| Number | Name | Use |
+|--------|------|-----|
+| 10000 | Succeeded | the `Success()` default |
+| 10010 | Cancelled | caller/token-initiated; Warning severity, non-failure |
+| 20000 | RequiredValueMissing | a required value was not provided |
+| 20001 | InvalidInput | a value is present but invalid |
+| 20002 | ValidationFailed | multi-field validation failure |
+| 30000 | NotFound | every not-found condition, all domains |
+| 40000 | InvalidState | operation invalid in the current state |
+| 40001 | AlreadyExists | duplicate natural key |
+| 40002 | VersionConflict | stale version on a version-on-write save |
+| 50000 | AuthenticationFailed | |
+| 50001 | PermissionDenied | |
+
+A code with no canonical goes in the open band (`C1000–C9999`) of the category it belongs to — e.g. a
+setup failure specific to one package lands at `61000+`.
+
+> Authoritative source: **`RESULTCODE-CATALOG.md`** at the repository root. The older per-domain EventId
+> bands (`5000-5099 Core Connections`, `5200-5299 MsSql Connections`, …) and the underscore `Code` format
+> are **RETIRED** — `EVENTID-ALLOCATION.md` and the dev-guide allocation table were archived under
+> `docs/_archive/` by FDW-608. Do not allocate from them.
 
 ## Usage Patterns
 
@@ -362,8 +403,8 @@ Add these references to use ResultCodes:
 
 ```xml
 <ItemGroup>
-  <ProjectReference Include="..\FractalDataWorks.Results\FractalDataWorks.Results.csproj" />
-  <ProjectReference Include="..\FractalDataWorks.Collections\FractalDataWorks.Collections.csproj" />
+  <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+  <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
 </ItemGroup>
 ```
 

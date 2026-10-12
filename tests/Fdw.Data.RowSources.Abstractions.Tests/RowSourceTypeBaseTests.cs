@@ -1,0 +1,84 @@
+using Fdw.Data.RowSources.Abstractions;
+
+namespace Fdw.Data.RowSources.Abstractions.Tests;
+
+public class RowSourceTypeBaseTests
+{
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void ConstructorSetsName()
+    {
+        var sut = new TestRowSourceType();
+
+        sut.Name.ShouldBe("TestSource");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void SupportsSyncReturnsConfiguredValue()
+    {
+        var sut = new TestRowSourceType();
+
+        sut.SupportsSync.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void SupportsAsyncReturnsConfiguredValue()
+    {
+        var sut = new TestRowSourceType();
+
+        sut.SupportsAsync.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void SupportsResetReturnsConfiguredValue()
+    {
+        var sut = new TestRowSourceType();
+
+        sut.SupportsReset.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void TypicalAllocationsPerRowReturnsConfiguredValue()
+    {
+        var sut = new TestRowSourceType();
+
+        sut.TypicalAllocationsPerRow.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void FormatReturnsConfiguredValue()
+    {
+        var sut = new TestRowSourceType();
+
+        sut.Format.ShouldBe("TestFormat");
+    }
+
+    private sealed class TestRowSourceType : RecordSourceTypeBase
+    {
+        public TestRowSourceType() : base("TestSource") { }
+
+        public override bool SupportsSync => true;
+        public override bool SupportsAsync => true;
+        public override bool SupportsReset => false;
+        public override int TypicalAllocationsPerRow => 2;
+        public override string Format => "TestFormat";
+
+        public override IRowSourceReader CreateReader(System.IO.Stream content, RowSourceOptions? options)
+            => throw new System.NotSupportedException("Test fixture does not create readers.");
+
+        public override IRecordSource<DataRecord> Create(RecordSourceContext context)
+            => throw new System.NotSupportedException("Test fixture does not create record sources.");
+    }
+}

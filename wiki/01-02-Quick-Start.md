@@ -4,7 +4,7 @@ This guide walks through building and running the Reference Solution samples.
 
 ## Clone and Build
 
-The Reference Solution contains concept samples and integration samples. Build individual concept samples:
+The Reference Solution contains concept samples. Build an individual concept sample:
 
 ```bash
 cd public/samples/ReferenceSolution/concepts/01-type-collections
@@ -20,15 +20,11 @@ cd public/samples/ReferenceSolution/concepts/01-type-collections
 dotnet run --project src/Reference.TypeCollections
 ```
 
-Expected output (from [`Program.cs`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs)):
+Expected output (from [`Program.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs)):
 ```
-=== FractalDataWorks TypeCollections Reference ===
+=== TypeCollections Demo ===
 
-1. TypeCollection (Basic, Immutable)
-   - Compile-time discovered options
-   - FrozenDictionary for O(1) lookups
-   - Singleton instances
-
+1. Basic TypeCollection (PaymentMethods)
    PaymentMethods.Cash: Cash, Fee: 0%
    PaymentMethods.ByName("CreditCard"): CreditCard
    All payment methods: Cash, CreditCard, BankTransfer
@@ -44,23 +40,16 @@ The Reference Solution is organized into concept samples and integration samples
 | `concepts/01-type-collections` | Reference.TypeCollections | TypeCollection patterns |
 | `concepts/02-service-types` | Reference.ServiceTypes | ServiceType with DI integration |
 | `concepts/03-message-logging` | Reference.MessageLogging | MessageLogging attribute usage |
-| `concepts/04-results` | Reference.Results | IGenericResult patterns |
 | `concepts/05-configuration` | Reference.Configuration | ManagedConfiguration patterns |
 | `concepts/06-data-layer` | Reference.DataLayer | DataGateway and commands |
-| `concepts/07-translators` | Reference.Translators | Data translation patterns |
-| `integration/01-pipeline` | Reference.Pipeline | Combined pipeline execution |
-| `integration/02-custom-connection` | Reference.CustomConnection | Custom connection implementation |
-| `integration/03-full-translator` | Reference.FullTranslator | Complete translator example |
-| `integration/04-three-phase-di` | Reference.ThreePhaseDi | Three-phase DI registration |
 
 ## Building an API
 
-FractalDataWorks uses **FastEndpoints** with **Scalar** for API development. Here's how to set up an API project:
+FractalDataWorks uses **FastEndpoints** with **Scalar** for API development. The full Reference.Api project has been moved to a separate repository (`reference-api`); the patterns below show how to set up an API project in your own solution.
 
 ### 1. Create the Project
 
 ```bash
-cd public/samples/ReferenceSolution/api
 dotnet new webapi -n Reference.Api
 cd Reference.Api
 ```
@@ -80,65 +69,42 @@ dotnet add package Serilog.AspNetCore
 dotnet add package Serilog.Extensions.Logging
 
 # FractalDataWorks
-dotnet add package FractalDataWorks.Services.Connections
-dotnet add package FractalDataWorks.Services.Connections.MsSql
-dotnet add package FractalDataWorks.Configuration.MsSql
+dotnet add package Fdw.Services.Connections
+dotnet add package Fdw.Services.Connections.MsSql
+dotnet add package Fdw.Configuration.MsSql
 ```
 
-### 3. Bootstrap Pattern
+### 3. Startup Pattern
 
 The configuration database connection is created **directly** using the factory (not via ConnectionProvider) since it's needed to load all other configurations:
 
 ```csharp
-// Create bootstrap logger factory for MessageLogging during startup
-using var bootstrapLoggerFactory = new SerilogLoggerFactory(Log.Logger);
-var bootstrapLogger = bootstrapLoggerFactory.CreateLogger("Reference.Api.Bootstrap");
+var builder = WebApplication.CreateBuilder(args);
 
-// Load ConfigurationDb config from appsettings.json
-var configDbConfig = builder.Configuration
-    .GetSection("ConfigurationDb")
-    .Get<MsSqlConnectionConfiguration>()!;
+// 1. Logger factory (used during phase 1).
+var loggerFactory = builder.AddFrameworkSerilog("Reference.Api");
 
-// Create secret manager factory for password resolution
-var secretManagerFactory = new EnvironmentVariableSecretManagerFactory(
-    bootstrapLoggerFactory.CreateLogger<EnvironmentVariableSecretManagerFactory>());
-var secretManagerResult = await secretManagerFactory.Create(new EnvironmentVariableConfiguration());
-var secretManager = secretManagerResult.Value;
+// 2. JSON-driven configuration startup. Reads configurationSchema.json from the
+//    app's content root and registers IConfigurationGateway.
+builder.Services.AddConfigurationGateway<MsSqlConnectionFactory, EnvironmentVariableSecretManager>(
+    "configurationSchema.json");
 
-// Create connection factory
-var connectionFactory = new MsSqlConnectionFactory(
-    bootstrapLoggerFactory.CreateLogger<MsSqlConnectionFactory>(),
-    bootstrapLoggerFactory.CreateLogger<MsSqlConnection>());
+// 3. ONE PlatformServices sweep — every [ServiceTypeCollection] discovered by the
+//    generated module initializer participates (ConnectionTypes among them). Each connection-kind
+//    [Implementation] registers ConnectionConfigurationProvider itself (idempotent) — no
+//    hand-written RegisterDomainServices call here.
+PlatformServices.Configure(builder, loggerFactory);
+PlatformServices.Register(builder.Services, loggerFactory);
 
-// Create bootstrap connection - factory accepts ISecretManager directly
-var connectionResult = await connectionFactory.Create(
-    configDbConfig, secretManager, bootstrapLoggerFactory);
+var app = builder.Build();
 
-if (!connectionResult.IsSuccess)
-{
-    ConfigurationMsSqlLogger.ConfigurationDbConnectionFailed(
-        bootstrapLogger,
-        connectionResult.CurrentMessage ?? "Unknown error");
-}
-else
-{
-    using var bootstrapConnection = (MsSqlConnection)connectionResult.Value!;
-    var connectResult = await bootstrapConnection.Connect();
-
-    if (connectResult.IsSuccess)
-    {
-        builder.Configuration.AddMsSqlConfiguration(bootstrapConnection, options =>
-        {
-            options.SectionName = "Connections";
-            options.ServiceCategory = "Connection";
-        });
-    }
-}
-
-// Three-phase registration
-ConnectionTypes.Configure(builder.Services, builder.Configuration, bootstrapLoggerFactory);
-ConnectionTypes.Register(builder.Services, bootstrapLoggerFactory);
+// 4. Initialize phase — runs after Build, before middleware. One sweep, dependency order.
+PlatformServices.Initialize(app.Services, loggerFactory);
 ```
+
+See [JSON-Driven Configuration Startup](03-05-JSON-Driven-Configuration.md) for the
+shape of `configurationSchema.json` and [Configuration Provider Registration](03-05-Configuration-Provider-Registration-Pattern.md)
+for the three-phase lifecycle.
 
 ### 4. MessageLogging (Never Use Log.Warning)
 
@@ -146,15 +112,15 @@ Always use MessageLogging instead of direct Serilog calls:
 
 ```csharp
 // WRONG - direct Serilog
-Log.Warning("Could not connect: {Error}", error);
+Log.Error(ex, "Could not load configuration for {Section}", sectionName);
 
 // CORRECT - MessageLogging
-ConfigurationMsSqlLogger.ConfigurationDbConnectionFailed(logger, error);
+ConfigurationMsSqlLogger.ConfigurationLoadFailed(logger, ex, sectionName);
 ```
 
-### 5. FastEndpoints Response Methods (v7.x)
+### 5. FastEndpoints Response Methods (v8.x)
 
-FastEndpoints 7.x uses the `Send` property for responses:
+FastEndpoints 8.x uses the `Send` property for responses:
 
 ```csharp
 public sealed class ListConnectionsEndpoint : EndpointWithoutRequest<List<ConnectionResponse>>
@@ -178,11 +144,10 @@ public sealed class ListConnectionsEndpoint : EndpointWithoutRequest<List<Connec
 ### 6. Run the API
 
 ```bash
-cd public/samples/ReferenceSolution/api/Reference.Api
-dotnet run
+dotnet run --project Reference.Api
 ```
 
-Open `http://localhost:5149/scalar` for the Scalar API documentation UI.
+Open `http://localhost:5149/` for the API reference: it redirects to `/api/v1/scalar`, where you sign in, and lists the reference pages you may open. `/api/v1/reference/scalar` is the whole API, cut to what you may call (FDW-919).
 
 ### 7. API Endpoints
 

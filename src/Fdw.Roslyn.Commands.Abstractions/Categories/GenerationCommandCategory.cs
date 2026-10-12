@@ -1,0 +1,18 @@
+using Fdw.Collections.Attributes;
+
+namespace Fdw.Roslyn.Commands.Abstractions;
+
+/// <summary>
+/// Command category for code generation operations.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[TypeOption(typeof(RoslynCommandCategories), "Generation", RestrictToCurrentCompilation = true)]
+public sealed class GenerationCommandCategory : RoslynCommandCategoryBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GenerationCommandCategory"/> class.
+    /// </summary>
+    public GenerationCommandCategory() : base("Generation", "Code generation operations")
+    {
+    }
+}

@@ -1,0 +1,159 @@
+using System;
+using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Claims.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions;
+using Fdw.Services.TokenManagers.Abstractions;
+using Fdw.Services.TokenManagers.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
+
+namespace Fdw.Services.TokenManagers;
+
+/// <summary>
+/// Mints a signed JWT asserting what a completed flow established.
+/// </summary>
+/// <remarks>
+/// Follows the access-token profile in RFC 9068, so a resource server can verify one without
+/// agreeing a private convention first. It mints and nothing else — what may be minted was settled
+/// before this is reached.
+/// </remarks>
+public sealed class JwtTokenIssuer : ITokenIssuer
+{
+    private readonly JwtTokenIssuerConfiguration _configuration;
+    private readonly ISigningCredentialProvider _credentials;
+    private readonly ILogger<JwtTokenIssuer> _logger;
+
+    /// <summary>Initializes a new instance of the <see cref="JwtTokenIssuer"/> class.</summary>
+    /// <param name="configuration">Issuer identity and token lifetime.</param>
+    /// <param name="credentials">Supplies the current signing key.</param>
+    /// <param name="logger">The logger.</param>
+    public JwtTokenIssuer(
+        JwtTokenIssuerConfiguration configuration,
+        ISigningCredentialProvider credentials,
+        ILogger<JwtTokenIssuer>? logger = null)
+    {
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+        _logger = logger ?? NullLogger<JwtTokenIssuer>.Instance;
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IssuedToken>> Issue(
+        IssuanceRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request is null)
+            return GenericResult<IssuedToken>.Failure(IssuerLog.RequestMissing(_logger));
+
+        if (string.IsNullOrWhiteSpace(request.Audience))
+            return GenericResult<IssuedToken>.Failure(IssuerLog.AudienceMissing(_logger));
+
+        // Validated, never rewritten (see Fdw.Services.Authentication.Validation.IssuerName.Read):
+        // the validation side compares against auth.JwtTokenManager.Issuer exactly as configured, so
+        // minting anything other than that exact string -- including a Uri-canonicalised form --
+        // guarantees a mismatch.
+        if (!Uri.TryCreate(_configuration.Issuer, UriKind.Absolute, out var issuerUri)
+            || (issuerUri.Scheme != Uri.UriSchemeHttps && issuerUri.Scheme != Uri.UriSchemeHttp))
+        {
+            return GenericResult<IssuedToken>.Failure(IssuerLog.IssuerNotAbsolute(_logger, _configuration.Issuer));
+        }
+
+        var signing = await _credentials.Current(cancellationToken).ConfigureAwait(false);
+        if (signing.IsFailure)
+            return signing.ToNewResult<IssuedToken>();
+
+        var issuedAt = DateTimeOffset.UtcNow;
+        var expiresAt = issuedAt.Add(_configuration.Lifetime);
+
+        // The configured lifetime is a ceiling, not a promise: a token never outlives the claims it
+        // carries (FDW-862). A cap already passed means what the token would assert is no longer true,
+        // and minting one that is born expired would only look like success.
+        if (request.ValidUntil is { } validUntil && validUntil < expiresAt)
+        {
+            if (validUntil <= issuedAt)
+                return GenericResult<IssuedToken>.Failure(IssuerLog.ClaimsAlreadyExpired(_logger, request.Audience, request.PrincipalId, validUntil));
+
+            IssuerLog.ExpiryCapped(_logger, request.Audience, request.PrincipalId, expiresAt, validUntil);
+            expiresAt = validUntil;
+        }
+
+        var jti = Guid.CreateVersion7();
+
+        var claims = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            [ClaimDefinitions.sub.Name] = request.PrincipalId.ToString(),
+
+            // Same value under the .NET-standard claim type, alongside "sub" rather than instead of
+            // it: every consumer that resolves the caller via System.Security.Claims.ClaimTypes.
+            // NameIdentifier (the ASP.NET Core convention several endpoint bases already assume)
+            // finds it without a bespoke "sub" fallback at each of those call sites -- one place
+            // decides what a claim is called, same as tenantId below.
+            [ClaimTypes.NameIdentifier] = request.PrincipalId.ToString(),
+
+            // A per-token identifier, distinct from the principal it was issued for: revocation
+            // (LogoutEndpoint -> ITokenRevocationStore) targets one presented token, never every
+            // token a principal happens to hold.
+            [ClaimDefinitions.jti.Name] = jti.ToString(),
+
+            // ClaimDefinitions rather than a literal: the RLS path reads the tenant through the
+            // same definition, and a token minting "tid" while the session-context builder looks
+            // for "tenantId" produces a request that reaches the database with no tenant scoping
+            // at all. One place decides what a claim is called.
+            [ClaimDefinitions.tenantId.Name] = request.TenantId.ToString(),
+
+            // RFC 9068 §2.2 — a JWT access token is typed, so a resource server can refuse an
+            // id_token presented in its place rather than accepting one that happens to verify.
+            ["scope"] = string.Join(' ', request.Scopes),
+        };
+
+        if (request.AuthenticationMethods.Count > 0)
+            claims["amr"] = request.AuthenticationMethods;
+
+        if (!string.IsNullOrWhiteSpace(request.Acr))
+            claims["acr"] = request.Acr;
+
+        // Why the list is unwrapped when it holds one value: a resource server reading "sub" expects
+        // a string, and a single-element array is not one. Only genuinely repeated claims - perm,
+        // roles - stay arrays, which is what a reader of those expects.
+        foreach (var (type, values) in request.Claims)
+        {
+            if (values.Count == 0)
+                continue;
+
+            claims.TryAdd(type, values.Count == 1 ? values[0] : values);
+        }
+
+        IssuerLog.Minting(_logger, request.Audience, claims.Count);
+        IssuerLog.ClaimTypesAssembled(_logger, request.Audience, string.Join(", ", claims.Keys));
+
+        var token = new JsonWebTokenHandler
+        {
+            SetDefaultTimesOnTokenCreation = false,
+        }
+        .CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = _configuration.Issuer,
+            Audience = request.Audience,
+            Claims = claims,
+            IssuedAt = issuedAt.UtcDateTime,
+            NotBefore = issuedAt.UtcDateTime,
+            Expires = expiresAt.UtcDateTime,
+            SigningCredentials = signing.Value,
+            TokenType = "at+jwt",
+        });
+
+        IssuerLog.Issued(_logger, request.Audience, request.PrincipalId, request.Acr ?? "none");
+
+        return GenericResult<IssuedToken>.Success(new IssuedToken
+        {
+            AccessToken = token,
+            TokenType = "Bearer",
+            ExpiresAt = expiresAt,
+        });
+    }
+}

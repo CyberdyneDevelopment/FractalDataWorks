@@ -1,0 +1,9 @@
+global using Xunit;
+global using Shouldly;
+global using Moq;
+global using System.Diagnostics.CodeAnalysis;
+global using Fdw.Abstractions;
+global using Fdw.Commands.Abstractions;
+global using Fdw.Data.Abstractions;
+global using Fdw.Messages;
+global using Fdw.Results;

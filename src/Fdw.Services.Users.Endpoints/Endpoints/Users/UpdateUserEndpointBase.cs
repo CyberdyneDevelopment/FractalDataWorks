@@ -1,0 +1,77 @@
+﻿using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Results;
+using Fdw.Services.Users;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Users.Endpoints;
+
+/// <summary>
+/// Generic base endpoint for updating a user.
+/// </summary>
+/// <typeparam name="TRequest">The request type, host-extensible beyond <see cref="UpdateUserRequest"/>.</typeparam>
+public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
+    where TRequest : UpdateUserRequest
+{
+    /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
+        private readonly UserConfigurationProvider _userProvider;
+
+    /// <summary>
+    /// Gets the logger instance.
+    /// </summary>
+    protected ILogger EndpointLogger { get; }
+
+    /// <summary>Initializes a new instance of the <see cref="UpdateUserEndpointBase{TRequest}"/> class.</summary>
+    protected UpdateUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    {
+        EndpointLogger = logger;
+        _userProvider = userProvider;
+    }
+
+
+    /// <summary>
+    /// Gets the user provider.
+    /// </summary>
+    protected UserConfigurationProvider UserProvider => _userProvider;
+
+    /// <summary>
+    /// Gets the RBAC policy required by this endpoint. Defaults to "users:write".
+    /// </summary>
+    protected virtual string WritePolicy => "users:write";
+
+    /// <inheritdoc />
+    public override void Configure()
+    {
+        // FDW-1047: route param is {IdOrName}, like every other /users/{...} route. One template has one parameter name,
+        // or the reference document lists two paths that OpenAPI cannot tell apart.
+        Patch("/users/{IdOrName}");
+        Policies(WritePolicy);
+        ConfigureEndpoint();
+    }
+
+    /// <summary>
+    /// Override to configure endpoint-specific settings (auth, summary, etc.).
+    /// </summary>
+    protected abstract void ConfigureEndpoint();
+
+    /// <inheritdoc />
+    public override async Task HandleAsync(TRequest req, CancellationToken ct)
+    {
+        
+        var result = await Update(req, ct).ConfigureAwait(false);
+
+        if (!result.IsSuccess)
+        {
+            ThrowError(result.CurrentMessage ?? "Failed to update user", 500);
+            return;
+        }
+
+        await Send.NoContentAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs the update operation. Implementers must provide update logic.
+    /// </summary>
+    protected abstract Task<IGenericResult> Update(TRequest request, CancellationToken ct);
+}

@@ -1,0 +1,75 @@
+﻿using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Services.Pipelines.Clients.Abstractions;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Pipelines.Endpoints;
+
+/// <summary>
+/// Base endpoint for proxying ETL job trigger requests.
+/// </summary>
+public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlRequest, TriggerPipelineResponse>
+{
+    /// <summary>Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.</summary>
+        private readonly IPipelineJobClient _client;
+
+    /// <summary>
+    /// Gets the logger instance.
+    /// </summary>
+    protected ILogger EndpointLogger { get; }
+
+    /// <summary>Initializes a new instance of the <see cref="TriggerEtlJobProxyEndpointBase"/> class.</summary>
+    protected TriggerEtlJobProxyEndpointBase(ILogger logger, IPipelineJobClient client)
+    {
+        EndpointLogger = logger;
+        _client = client;
+    }
+
+
+    /// <inheritdoc />
+    public override void Configure()
+    {
+        Post("/etl/trigger");
+#if DEVELOP
+        AllowAnonymous();
+#else
+        Policies("pipelines:execute");
+#endif
+        ConfigureEndpoint();
+    }
+
+    /// <summary>
+    /// Override to configure endpoint-specific settings (summary, tags, etc.).
+    /// </summary>
+    protected abstract void ConfigureEndpoint();
+
+    /// <inheritdoc />
+    public override async Task HandleAsync(ProxyTriggerEtlRequest req, CancellationToken ct)
+    {
+        
+        ProxyEndpointLog.ProxyRequest(EndpointLogger, "POST", "Etl", "etl/trigger");
+
+        var request = new TriggerPipelineRequest
+        {
+            Name = req.PipelineName,
+            TriggerSource = req.TriggerSource,
+            Parameters = req.Parameters,
+            RunRoles = req.RunRoles,
+        };
+
+        var result = await _client.Trigger(request, ct).ConfigureAwait(false);
+
+        if (!result.IsSuccess)
+        {
+            var errorMessage = result.CurrentMessage ?? "Proxy request failed";
+            ProxyEndpointLog.ProxyFailed(EndpointLogger, "Etl", errorMessage);
+            AddError("Failed to proxy request to EtlServer");
+            await Send.ErrorsAsync(502, ct).ConfigureAwait(false);
+            return;
+        }
+
+        ProxyEndpointLog.ProxyResponse(EndpointLogger, "Etl", 202);
+        await Send.ResponseAsync(result.Value!, 202, ct).ConfigureAwait(false);
+    }
+}

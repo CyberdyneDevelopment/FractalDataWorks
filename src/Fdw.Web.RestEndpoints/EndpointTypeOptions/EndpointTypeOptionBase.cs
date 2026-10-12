@@ -1,0 +1,375 @@
+using System;
+using System.Reflection;
+using Fdw.Collections;
+using Fdw.Results;
+using Fdw.WebMcp.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
+
+/// <summary>
+/// Base for a declared endpoint. Carries the endpoint's type and its registration switch.
+/// </summary>
+/// <remarks>
+/// Identity reaches the collection through this constructor rather than through overridden
+/// properties, matching how every other option family in the framework is built:
+/// DevelopmentCommandBase, RoslynCommandBase and SqlCommandBase all take their values as
+/// constructor arguments. None of them passes an id; <c>TypeOptionBase&lt;TBase&gt;</c> derives it
+/// from the option's fully qualified type name.
+/// </remarks>
+public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOptionBase>, IEndpointTypeOption
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EndpointTypeOptionBase"/> class.
+    /// </summary>
+    /// <param name="name">The option's name — its discriminator within the collection.</param>
+    /// <param name="endpointType">The endpoint class this option declares.</param>
+    /// <param name="description">What the endpoint does.</param>
+    /// <param name="category">The option's category; defaults to <c>Endpoint</c>.</param>
+    protected EndpointTypeOptionBase(
+        string name,
+        Type endpointType,
+        string description,
+        string? category = null)
+        : base(name, name, name, description, category ?? "Endpoint")
+    {
+        EndpointType = endpointType ?? throw new ArgumentNullException(nameof(endpointType));
+    }
+
+    /// <inheritdoc />
+    public Type EndpointType { get; }
+
+    /// <inheritdoc />
+    public bool SkipRegistration { get; set; }
+    /// <summary>Gets or sets a value indicating whether Configure is switched off.</summary>
+    /// <remarks>
+    /// One flag per phase, because they are switched off for different reasons: a domain may
+    /// need its services registered while its post-Build wiring is suppressed, and a single flag
+    /// named for one phase silently governing the other two says something false about what it does.
+    /// </remarks>
+    public bool SkipConfiguration { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Initialize is switched off.</summary>
+    public bool SkipInitialization { get; set; }
+
+    /// <summary>Gets a value indicating whether Configure has run.</summary>
+    /// <remarks>
+    /// A phase runs once. An endpoint option is reachable from its collection and directly, and
+    /// AddTransient plus DeclaredEndpoints.Declare are not free to repeat - declaring the same
+    /// endpoint twice is how a route ends up registered twice.
+    /// </remarks>
+    public bool Configured { get; private set; }
+
+    /// <summary>Gets a value indicating whether Register has run.</summary>
+    public bool Registered { get; private set; }
+
+    /// <summary>Gets a value indicating whether Initialize has run.</summary>
+    public bool Initialized { get; private set; }
+
+    // ── The three registration methods ──────────────────────────────────────────────────────────
+    // Same shape as ServiceTypeBase: a func holding the body, a gerund that sets it, and a method
+    // that invokes it. It is here at the ENDPOINT level so an endpoint that needs something of its
+    // own - a validator, a typed client, an accessor - registers it beside itself instead of in a
+    // host's Program.cs, where the dependency is invisible to anyone reading the endpoint.
+    //
+    // Defaults are set in the declaration so a func is never null and the invokers never guard.
+
+    /// <summary>Gets the body run during Configure.</summary>
+    protected Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> ConfigurationMethod { get; private set; }
+        = static builder => GenericResult<IHostApplicationBuilder>.Success(builder);
+
+    /// <summary>Gets the body run during Register.</summary>
+    protected Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> RegistrationMethod { get; private set; }
+        = static (builder, loggerFactory) => GenericResult<IHostApplicationBuilder>.Success(builder);
+
+    /// <summary>Gets the body run during Initialize.</summary>
+    protected Func<IHost, ILoggerFactory?, IGenericResult<IHost>> InitializationMethod { get; private set; }
+        = static (host, loggerFactory) => GenericResult<IHost>.Success(host);
+
+
+
+
+    /// <summary>Sets the body run during Configure.</summary>
+    /// <param name="method">The body.</param>
+    public void Configuration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        ConfigurationMethod = method;
+    }
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Configuration"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = existing(builder);
+            return result.IsFailure ? result : method(builder);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependConfiguration(Func<IHostApplicationBuilder, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = ConfigurationMethod;
+        ConfigurationMethod = (builder) =>
+        {
+            var result = method(builder);
+            return result.IsFailure ? result : existing(builder);
+        };
+    }
+
+    /// <summary>Sets the body run during Register.</summary>
+    /// <param name="method">The body.</param>
+    public void Registration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        RegistrationMethod = method;
+    }
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Registration"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = existing(builder, loggerFactory);
+            return result.IsFailure ? result : method(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependRegistration(Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = RegistrationMethod;
+        RegistrationMethod = (builder, loggerFactory) =>
+        {
+            var result = method(builder, loggerFactory);
+            return result.IsFailure ? result : existing(builder, loggerFactory);
+        };
+    }
+
+    /// <summary>Sets the body run during Initialize.</summary>
+    /// <param name="method">The body.</param>
+    public void Initialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        InitializationMethod = method;
+    }
+
+    /// <summary>Runs <paramref name="method"/> after whatever is already chained.</summary>
+    /// <remarks>Prefer this to <see cref="Initialization"/>, which assigns and so discards anything
+    /// another contributor already chained.</remarks>
+    /// <param name="method">The body to run after.</param>
+    public void AppendInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = existing(host, loggerFactory);
+            return result.IsFailure ? result : method(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs <paramref name="method"/> before whatever is already chained.</summary>
+    /// <param name="method">The body to run first.</param>
+    public void PrependInitialization(Func<IHost, ILoggerFactory?, IGenericResult<IHost>> method)
+    {
+        if (method is null)
+        {
+            return;
+        }
+
+        var existing = InitializationMethod;
+        InitializationMethod = (host, loggerFactory) =>
+        {
+            var result = method(host, loggerFactory);
+            return result.IsFailure ? result : existing(host, loggerFactory);
+        };
+    }
+
+    /// <summary>Runs this endpoint's Configure body.</summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <returns>The builder, or a failure the caller decides what to do with.</returns>
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, bool force = false)
+    {
+        if (!force && (Configured || SkipConfiguration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        var result = ConfigurationMethod(builder);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        Configured = true;
+        return result;
+    }
+
+    /// <summary>Runs this endpoint's Register body, and registers the endpoint type itself.</summary>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The logger factory, if the host has one yet.</param>
+    /// <returns>The builder, or a failure the caller decides what to do with.</returns>
+    /// <remarks>
+    /// <see cref="SkipRegistration"/> is honoured by the COLLECTION, not here. An option asked
+    /// directly to register does so: skipping is a composition decision the collection makes while
+    /// cycling, and burying it here would make a direct call silently do nothing.
+    /// </remarks>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    public IGenericResult<IHostApplicationBuilder> Register(
+        IHostApplicationBuilder builder,
+        ILoggerFactory? loggerFactory = null,
+        bool force = false)
+    {
+        if (!force && (Registered || SkipRegistration))
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        Registered = true;
+
+        // The endpoint registers ITSELF, in two places, then runs whatever else it needs.
+        //
+        // DI, so the container can construct it. And DeclaredEndpoints, because FastEndpoints has no
+        // per-endpoint registration call: with auto-discovery off, the only way in is the
+        // SourceGeneratorDiscoveredTypes list read when AddFastEndpoints runs. Doing both here is
+        // what makes SkipRegistration mean something — an endpoint that is skipped is never routed,
+        // where a scanner would have found and routed it regardless.
+        builder.Services.AddTransient(EndpointType);
+        DeclaredEndpoints.Declare(EndpointType);
+        DeclareWebMcpTool();
+
+        return RegistrationMethod(builder, loggerFactory);
+    }
+
+    /// <summary>Runs this endpoint's Initialize body.</summary>
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <returns>The host, or a failure the caller decides what to do with.</returns>
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        if (!force && (Initialized || SkipInitialization))
+        {
+            return GenericResult<IHost>.Success(host);
+        }
+
+        var result = InitializationMethod(host, loggerFactory);
+        if (result.IsFailure)
+        {
+            return result;
+        }
+
+        Initialized = true;
+        return result;
+    }
+
+    /// <summary>
+    /// Offers this endpoint to AI agents when the option is marked <see cref="WebMcpToolAttribute"/>.
+    /// </summary>
+    /// <remarks>
+    /// Called from Register, on the line after the endpoint declares itself, because those two facts
+    /// are the same fact: a tool is worth offering exactly when its route is switched on. Reading the
+    /// mark off the OPTION rather than the endpoint class is what ties them together — an endpoint
+    /// that is never declared is never routed, and a tool the agent cannot call is worse than a
+    /// missing one, because the agent has no way to tell a 404 from a genuine empty result.
+    ///
+    /// No route is read here. It is not known yet: FastEndpoints has not built the route table at
+    /// Register time, and the route lives in the endpoint's Configure body regardless. The WebMcp
+    /// registrant's Initialize joins these declarations against the live route table once it exists.
+    /// </remarks>
+    private void DeclareWebMcpTool()
+    {
+        var tool = GetType().GetCustomAttribute<WebMcpToolAttribute>(inherit: false);
+        if (tool is null)
+        {
+            return;
+        }
+
+        DeclaredWebMcpTools.Declare(new WebMcpToolDeclaration(
+            EndpointType,
+            tool.Name,
+            tool.Description,
+            tool.ReadOnly,
+            tool.HttpMethod,
+            tool.PresetFieldName,
+            tool.PresetOptionType));
+    }
+
+    /// <summary>
+    /// Derives an option's name from the endpoint class it declares.
+    /// </summary>
+    /// <remarks>
+    /// The trailing "Endpoint" is trimmed so an option reads as the resource operation —
+    /// <c>ListServerSettings</c>, not <c>ListServerSettingsEndpoint</c>.
+    ///
+    /// Protected rather than private because a collection binds to one non-generic member base, so
+    /// every resource declares its own pair: a closed base for the collection and a generic one for
+    /// members to close. The generic half needs this to derive its name, and duplicating the trim
+    /// per resource is how the convention would drift.
+    /// </remarks>
+    /// <param name="endpointType">The endpoint class.</param>
+    /// <returns>The option name for that endpoint.</returns>
+    protected static string DeriveName(Type endpointType)
+    {
+        if (endpointType is null)
+        {
+            throw new ArgumentNullException(nameof(endpointType));
+        }
+
+        var name = endpointType.Name;
+        return name.EndsWith("Endpoint", StringComparison.Ordinal) && name.Length > "Endpoint".Length
+            ? name.Substring(0, name.Length - "Endpoint".Length)
+            : name;
+    }
+}

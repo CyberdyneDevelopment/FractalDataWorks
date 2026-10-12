@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.Web.Search.Clients</RootNamespace>
+    <PackageId>Fdw.Web.Search.Clients.Models</PackageId>
+    <Title>Fdw Search Client Models</Title>
+    <Description>DTO models for search API client operations.</Description>
+  </PropertyGroup>
+</Project>

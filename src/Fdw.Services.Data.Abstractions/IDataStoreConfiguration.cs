@@ -1,0 +1,21 @@
+using System;
+using Fdw.Configuration;
+
+namespace Fdw.Services.Data.Abstractions;
+
+/// <summary>
+/// Marker interface for typed data store body configurations
+/// (MsSqlDataStoreConfiguration, FileSystemDataStoreConfiguration, etc.).
+/// Each typed body implements this interface directly without inheriting from
+/// <c>DataStoreImplementationConfiguration</c>.
+/// </summary>
+/// <remarks>
+/// DataStore bodies are persisted in their own tables (data.MsSqlDataStore,
+/// data.FileSystemDataStore, etc.) and linked to the parent <c>data.DataStore</c>
+/// row via a <c>DataStoreId</c> foreign key property.
+/// The parent <c>DataStoreImplementationConfiguration</c> carries an
+/// <c>IDataStoreConfiguration? Configuration</c> property populated on the read path.
+/// </remarks>
+public interface IDataStoreConfiguration : IImplementationConfiguration
+{
+}

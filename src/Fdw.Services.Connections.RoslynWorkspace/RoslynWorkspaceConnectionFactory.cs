@@ -1,0 +1,176 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Abstractions;
+using Fdw.Configuration;
+using Fdw.Results;
+using Fdw.Services.Connections;
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.RoslynWorkspace.Abstractions;
+using Fdw.Services.Connections.RoslynWorkspace.Abstractions.Logging;
+using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.ServiceTypes;
+using Fdw.Workspace.Roslyn;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Fdw.Services.Connections.RoslynWorkspace;
+
+/// <summary>
+/// Factory for creating <see cref="RoslynWorkspaceConnection"/> instances.
+/// Validates SolutionPath and resolves the operating mode before building the connection.
+/// </summary>
+public sealed class RoslynWorkspaceConnectionFactory : IRoslynWorkspaceConnectionFactory
+{
+    private readonly IRoslynWorkspaceFactory _workspaceFactory;
+    private readonly ILogger<RoslynWorkspaceConnectionFactory> _logger;
+    private readonly ILogger<RoslynWorkspaceConnection> _connectionLogger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RoslynWorkspaceConnectionFactory"/> class.
+    /// </summary>
+    public RoslynWorkspaceConnectionFactory(
+        IRoslynWorkspaceFactory workspaceFactory,
+        ILogger<RoslynWorkspaceConnectionFactory> logger,
+        ILogger<RoslynWorkspaceConnection> connectionLogger)
+    {
+        _workspaceFactory = workspaceFactory;
+        _logger = logger ?? NullLogger<RoslynWorkspaceConnectionFactory>.Instance;
+        _connectionLogger = connectionLogger ?? NullLogger<RoslynWorkspaceConnection>.Instance;
+    }
+
+    /// <inheritdoc />
+    public IGenericResult<IGenericConnection> Create(IGenericConfiguration configuration)
+    {
+        if (configuration is not RoslynWorkspaceConnectionConfiguration config)
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger,
+                    configuration?.GetType().Name ?? "null",
+                    $"Expected RoslynWorkspaceConnectionConfiguration but got {configuration?.GetType().Name ?? "null"}"));
+
+        return GenericResult<IGenericConnection>.Failure(
+            RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                _logger, config.Id.ToString(),
+                "RoslynWorkspaceConnection requires async creation (workspace loading is async). Use the async overload."));
+    }
+
+    /// <inheritdoc />
+    public IGenericResult<IGenericConnection> Create(RoslynWorkspaceConnectionConfiguration configuration)
+    {
+        return GenericResult<IGenericConnection>.Failure(
+            RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                _logger, configuration.Id.ToString(),
+                "RoslynWorkspaceConnection requires async creation. Use the async overload."));
+    }
+
+    /// <summary>
+    /// Creates the connection from an already-opened workspace.
+    /// </summary>
+    /// <param name="configuration">The connection configuration.</param>
+    /// <param name="workspace">
+    /// The opened workspace, which Live mode requires and Snapshot mode ignores — Snapshot opens
+    /// lazily through its own client.
+    /// </param>
+    /// <returns>The connection, or a structured failure.</returns>
+    /// <remarks>
+    /// Why this takes the workspace rather than opening one: opening is resolution, it is the only
+    /// thing here that had to await, and resolution is the implementation provider's job. This is
+    /// declared on <see cref="IRoslynWorkspaceConnectionFactory"/> rather than the domain-wide
+    /// contract, because a workspace is meaningful to this implementation and to nothing else.
+    /// </remarks>
+    public IGenericResult<IGenericConnection> Create(
+        RoslynWorkspaceConnectionConfiguration configuration,
+        IRoslynWorkspace? workspace)
+    {
+        if (string.IsNullOrWhiteSpace(configuration.Name))
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger, configuration.Id.ToString(),
+                    "Name is required but was empty or whitespace; the domain provider stamps it from the domain row"));
+
+        var connectionName = configuration.Name;
+
+        if (string.IsNullOrWhiteSpace(configuration.SolutionPath))
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger, connectionName, "SolutionPath is required but was empty or whitespace"));
+
+        if (!File.Exists(configuration.SolutionPath))
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger, connectionName,
+                    $"Solution file not found: {configuration.SolutionPath}"));
+
+        if (string.IsNullOrWhiteSpace(configuration.ModeName))
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger, connectionName, "ModeName is required but was empty or whitespace"));
+
+        var modeOption = RoslynWorkspaceModes.ByName(configuration.ModeName);
+        if (modeOption == RoslynWorkspaceModes.NotFound)
+            return GenericResult<IGenericConnection>.Failure(
+                RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                    _logger, connectionName,
+                    $"ModeName '{configuration.ModeName}' is not a valid RoslynWorkspace mode. Valid values: Live, Snapshot"));
+
+        var mode = (RoslynWorkspaceModeBase)modeOption;
+
+        IReadOnlyList<string> excludePatterns = configuration.ExcludePatterns?.ToList()
+            ?? (IReadOnlyList<string>)new List<string>();
+
+        if (mode.Name.Equals("Live", System.StringComparison.Ordinal))
+        {
+            // Live mode cannot be built without one: the provider opens it before calling here.
+            if (workspace is null)
+                return GenericResult<IGenericConnection>.Failure(
+                    RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                        _logger, connectionName,
+                        "Live mode requires an opened workspace, and none was supplied"));
+
+            return GenericResult<IGenericConnection>.Success(
+                new RoslynWorkspaceConnection(configuration, workspace, mode, connectionName, _connectionLogger));
+        }
+
+        // Snapshot mode: return a connection with a lazy-loading client; no workspace yet.
+        var snapshotClient = new SnapshotRoslynWorkspaceClient(
+            _workspaceFactory,
+            configuration.SolutionPath,
+            excludePatterns,
+            connectionName,
+            _connectionLogger);
+
+        return GenericResult<IGenericConnection>.Success(
+            new SnapshotRoslynWorkspaceConnection(configuration, snapshotClient, mode, connectionName, _connectionLogger));
+    }
+
+    #region IServiceFactory Implementation
+
+    IGenericResult<T> IServiceFactory.Create<T>(IGenericConfiguration configuration)
+    {
+        var result = Create(configuration);
+        if (!result.IsSuccess || result.Value == null)
+            return result.ToNewResult<T>();
+
+        if (result.Value is T typedResult)
+            return GenericResult<T>.Success(typedResult);
+
+        return GenericResult<T>.Failure(
+            RoslynWorkspaceConnectionLog.FactoryValidationFailed(
+                _logger, configuration?.GetType().Name ?? "null",
+                $"Connection is not assignable to {typeof(T).Name}"));
+    }
+
+    IGenericResult<IGenericService> IServiceFactory.Create(IGenericConfiguration configuration)
+    {
+        var result = Create(configuration);
+        if (!result.IsSuccess || result.Value == null)
+            return result.ToNewResult<IGenericService>();
+
+        return GenericResult<IGenericService>.Success(result.Value);
+    }
+
+    #endregion
+}

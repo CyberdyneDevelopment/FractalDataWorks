@@ -8,26 +8,16 @@ From Reference Solution [`OrderLog.cs:1-48`](../samples/ReferenceSolution/concep
 
 ```csharp
 using System;
+using Fdw.Abstractions;
+using Fdw.MessageLogging;
 using Microsoft.Extensions.Logging;
-using FractalDataWorks.Messages;
-using FractalDataWorks.MessageLogging;
 
 namespace Reference.MessageLogging.Logging;
 
 /// <summary>
-/// MessageLogging class for order processing operations.
-/// Demonstrates the FDW pattern: every log message returns IGenericMessage.
+/// MessageLogging for order processing operations.
+/// EventId range: 8000-8099
 /// </summary>
-/// <remarks>
-/// <para>
-/// Key Principles:
-/// </para>
-/// <list type="bullet">
-/// <item>Every failure mode has an explicit method</item>
-/// <item>Every log message is returned in the result</item>
-/// <item>NO generic error methods - all messages are specific</item>
-/// </list>
-/// </remarks>
 public static partial class OrderLog
 {
     // =========================================================================
@@ -88,7 +78,7 @@ Reference.MessageLogging/
     |-- OrderLog.cs
 ```
 
-From framework source (`FractalDataWorks.Services.Connections.Abstractions`):
+From framework source (`Fdw.Services.Connections.Abstractions`):
 
 ```
 Logging/

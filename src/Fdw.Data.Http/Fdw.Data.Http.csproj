@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <!-- Why: the HTTP VOCABULARY — the endpoint container kind, the path, the REST query
+       translator and the data-side result codes. Free of Fdw.Services.Connections, so the
+       endpoint vocabulary is consumable without the connection service domain.
+       Mirrors Fdw.Data.MsSql / Fdw.Data.PostgreSql. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <!-- Why: ContainerTypes — the collection EndpointContainerType registers itself into -->
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Embed Registration generator DLL for transitive NuGet flow -->
+  <ItemGroup>
+    <None Include="..\Fdw.Collections.SourceGenerators.Registration\bin\$(Configuration)\netstandard2.0\Fdw.Collections.SourceGenerators.Registration.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="Exists('..\Fdw.Collections.SourceGenerators.Registration\bin\$(Configuration)\netstandard2.0\Fdw.Collections.SourceGenerators.Registration.dll')" />
+  </ItemGroup>
+
+</Project>

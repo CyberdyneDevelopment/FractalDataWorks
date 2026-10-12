@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Aegis\Fdw.Aegis.csproj" />
+    <ProjectReference Include="..\Fdw.Aegis.Abstractions\Fdw.Aegis.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Aegis.Configuration\Fdw.Aegis.Configuration.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections.Http\Fdw.Services.Connections.Http.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="ModelContextProtocol" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <Title>Fdw Aegis MCP Server</Title>
+    <Description>The Aegis Gateway's stdio MCP tool surface and host wiring: deterministic approval-policy evaluation and secret-below-the-boundary injection. The entry point that hosts it lives in reference-servicetypes.</Description>
+    <PackageDescription>$(Description)</PackageDescription>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,26 @@
+using Fdw.Collections.Attributes;
+
+namespace Fdw.Services.Notifications.Abstractions;
+
+/// <summary>
+/// Email notification channel.
+/// Sends notifications via SMTP email.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[TypeOption(typeof(NotificationChannels), "Email", RestrictToCurrentCompilation = true)]
+public sealed class EmailChannel : NotificationChannelBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailChannel"/> class.
+    /// </summary>
+    public EmailChannel()
+        : base(
+            name: "Email",
+            description: "SMTP email notifications",
+            supportsBatchSend: true,
+            supportsRichContent: true,
+            supportsAttachments: true,
+            maxMessageLength: null)
+    {
+    }
+}

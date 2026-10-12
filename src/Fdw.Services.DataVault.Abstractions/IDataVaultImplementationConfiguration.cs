@@ -1,0 +1,29 @@
+using System;
+using Fdw.Configuration;
+
+namespace Fdw.Services.DataVault.Abstractions;
+
+/// <summary>
+/// Marker interface for typed data vault body configurations (SqlDataVaultConfiguration,
+/// etc.). Each typed body implements this interface directly without inheriting from the
+/// parent <c>DataVaultConfiguration</c> header.
+/// </summary>
+/// <remarks>
+/// Vault bodies are persisted in their own tables (sec.DefaultDataVault, etc.) and linked to
+/// the parent <c>sec.DataVault</c> row via a <c>DataVaultId</c> foreign key property. The
+/// parent header carries an <c>IDataVaultImplementationConfiguration? Configuration</c> property populated
+/// on the read path.
+/// </remarks>
+public interface IDataVaultImplementationConfiguration : IImplementationConfiguration
+{
+
+
+    /// <summary>Gets or sets the name of the configurationSchema-declared connection the vault rides.</summary>
+    string ConnectionName { get; set; }
+
+    /// <summary>Gets or sets the name of the secret manager that holds the vault's pepper (HMAC key).</summary>
+    string SecretManagerName { get; set; }
+
+    /// <summary>Gets or sets the secret key under which the pepper is stored in the secret manager.</summary>
+    string PepperSecretName { get; set; }
+}

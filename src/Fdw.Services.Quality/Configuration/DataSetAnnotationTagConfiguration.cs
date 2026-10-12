@@ -1,0 +1,32 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+
+namespace Fdw.Services.Quality.Configuration;
+
+/// <summary>
+/// Configuration for a data set annotation tag.
+/// Child of DataSetAnnotationImplementationConfiguration.
+/// </summary>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration( ServiceCategory = "Catalog")]
+public sealed partial class DataSetAnnotationTagConfiguration : IGenericConfiguration
+{
+
+    /// <summary>
+    /// Gets or sets the unique identifier.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name for display/binding.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the tag value.
+    /// </summary>
+    public string Tag { get; set; } = string.Empty;
+}

@@ -1,6 +1,6 @@
 # Schema Abstractions
 
-The `FractalDataWorks.Schema.Abstractions` package provides a unified schema system for describing data structures across different storage systems (SQL tables, JSON documents, CSV files, REST APIs, etc.).
+The `Fdw.Schema.Abstractions` package provides a unified schema system for describing data structures across different storage systems (SQL tables, JSON documents, CSV files, REST APIs, etc.).
 
 ## Overview
 
@@ -29,7 +29,7 @@ PropertyRoles define the **semantic meaning** of properties in a schema. This el
 ### Example: Using PropertyRoles
 
 ```csharp
-using FractalDataWorks.Schema;
+using Fdw.Schema;
 
 var idProperty = new PropertyDefinition
 {
@@ -109,7 +109,7 @@ DataLayouts define the **structural characteristics** of data, enabling layout-s
 ### Example: Using DataLayouts
 
 ```csharp
-using FractalDataWorks.Schema;
+using Fdw.Schema;
 
 // SQL table schema
 var sqlSchema = new SchemaDefinition
@@ -220,7 +220,7 @@ public interface ISchemaDefinition<TProperty> where TProperty : IPropertyDefinit
 
     // Query methods
     TProperty? GetProperty(string name);
-    IReadOnlyList<TProperty> GetByRole(IPropertyRole role);
+    IReadOnlyList<TProperty> Get(IPropertyRole role);
 }
 ```
 
@@ -324,7 +324,7 @@ var activeCustomersIndex = new IndexDefinition<IColumnDefinition>
 
 ## DDL Generation
 
-The `FractalDataWorks.Schema.Ddl` package provides DDL generation from schema definitions.
+The `Fdw.Schema.Ddl` package provides DDL generation from schema definitions.
 
 ### IDdlGenerator Interface
 
@@ -340,8 +340,8 @@ public interface IDdlGenerator
 ### Example: MsSqlDdlGenerator
 
 ```csharp
-using FractalDataWorks.Schema.Ddl;
-using FractalDataWorks.Schema.Ddl.MsSql;
+using Fdw.Schema.Ddl;
+using Fdw.Schema.Ddl.MsSql;
 
 var generator = new MsSqlDdlGenerator();
 

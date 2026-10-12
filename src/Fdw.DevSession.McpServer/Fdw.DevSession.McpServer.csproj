@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.DevSession\Fdw.DevSession.csproj" />
+    <ProjectReference Include="..\Fdw.DevSession.Abstractions\Fdw.DevSession.Abstractions.csproj" />
+    <!-- Analyzer-only: emits the [ModuleInitializer] that registers cross-assembly [TypeOption]s
+         (IsolationLevels, SessionStates, StrandStates, ViewIntents) into their TypeCollections at
+         assembly load. An entry-point exe is the one place this reference belongs. Without it,
+         every ByName lookup returns the NotFound sentinel and nothing can open a session. -->
+    <ProjectReference Include="..\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="ModelContextProtocol" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- dotnet tool packaging, mirroring Fdw.Aegis.McpServer. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>devsession-mcp</ToolCommandName>
+    <PackageId>Fdw.DevSession.McpServer</PackageId>
+    <Title>Fdw DevSession MCP Server</Title>
+    <Description>Stdio MCP server exposing development sessions: isolated copies (branch or worktree), session lifecycle, and strand fencing for concurrent agents working in one session.</Description>
+    <PackageDescription>$(Description)</PackageDescription>
+  </PropertyGroup>
+
+</Project>

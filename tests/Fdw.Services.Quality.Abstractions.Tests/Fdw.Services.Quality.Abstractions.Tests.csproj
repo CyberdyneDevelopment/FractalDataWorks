@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- Override coverage to only include the target project -->
+    <Include>[Fdw.Services.Quality.Abstractions]*</Include>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Services.Quality.Abstractions\Fdw.Services.Quality.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

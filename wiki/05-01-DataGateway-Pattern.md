@@ -9,17 +9,40 @@ The IDataGateway pattern routes data commands to appropriate connections without
 1. **Direct Injection** - API endpoints inject `IDataGateway` directly
 2. **No Service Wrappers** - Do NOT create domain services that wrap IDataGateway
 3. **Command-Based** - Use concrete data commands (`QueryCommand<T>`, `InsertCommand<T>`, etc.)
-4. **Connection Routing** - DataGateway routes commands to connections by `ConnectionName`
+4. **DataStore/Path/Container Routing** - Commands specify DataStoreName, PathName, and ContainerName
 5. **Railway-Oriented** - All operations return `IGenericResult<T>` for consistent error handling
+
+## DataStore/Path/Container Hierarchy
+
+Every data command requires three location parameters:
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| **DataStoreName** | The DataStore (connection/database) | `"ConfigurationDb"`, `"NflStats"` |
+| **PathName** | The DataPath within the DataStore (schema) | `"conn"`, `"dbo"`, `"auth"` |
+| **ContainerName** | The DataContainer (table/view) | `"Customers"`, `"Users"` |
+
+```csharp
+// Fluent API (preferred)
+var command = Query.From<Customer>("OrdersDb", "dbo", "Customers")
+    .Where(c => c.Name).Equal("Acme")
+    .Build();
+
+// Or for Insert/Update/Delete
+var command = Insert.Into<Customer>("Customers")
+    .DataStore("OrdersDb")
+    .Path("dbo")
+    .Value(customer);
+```
 
 ## The IDataGateway Interface
 
-From [`IDataGateway.cs:9-24`](../../src/FractalDataWorks.Services.Data.Abstractions/IDataGateway.cs#L9-L24):
+From [`IDataGateway.cs:9-24`](../src/Fdw.Services.Data.Abstractions/IDataGateway.cs#L9-L24):
 
 ```csharp
 /// <summary>
 /// Service that routes data commands to the appropriate connection.
-/// The DataGateway selects the correct connection based on the command's ConnectionName
+/// The DataGateway selects the correct DataStore based on the command's DataStoreName
 /// and delegates execution to that connection.
 /// </summary>
 public interface IDataGateway
@@ -28,7 +51,7 @@ public interface IDataGateway
     /// Executes a data command by routing it to the appropriate connection.
     /// </summary>
     /// <typeparam name="T">The result type.</typeparam>
-    /// <param name="command">The data command containing ConnectionName.</param>
+    /// <param name="command">The data command containing DataStoreName, PathName, and ContainerName.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The execution result.</returns>
     Task<IGenericResult<T>> Execute<T>(IDataCommand command, CancellationToken cancellationToken = default);
@@ -37,13 +60,22 @@ public interface IDataGateway
 
 ## Service Registration
 
-DataGateway is registered during application startup. See the framework extension methods for registration patterns.
+DataGateway is registered automatically by `DefaultDataGatewayServiceType` (a `Implementation`) through the framework's ServiceTypeCollection three-phase registration — there is **no** standalone `services.AddDataGateway()` call. See [Creating a Server](12-01-Creating-A-Server.md).
 
 ```csharp
-// Register DataGateway service
-// Routes IDataCommand to appropriate connections
-// API endpoints inject IDataGateway directly - no service wrappers
-services.AddDataGateway();
+// DefaultDataGatewayServiceType.RegisterRequiredServices(...) wires this up:
+//
+//   Scoped (per request):
+//     services.AddScoped<IDataGateway, LimitEnforcementDataGateway>();
+//       → decorates DataGatewayService  (caching is built-in, no separate decorator)
+//
+//   Singleton cache store (cross-request cache state):
+//     services.AddSingleton<DataGatewayResultCache>();   // owns IMemoryCache + tag sidecar
+//
+// Caching is built directly into DataGatewayService, not layered as a separate decorator.
+// Cache keys are tenant/org-discriminated. DataGatewayService holds a reference to the
+// singleton DataGatewayResultCache; cross-request state never leaks between scopes.
+// API endpoints inject IDataGateway directly — no service wrappers.
 ```
 
 ## Data Commands
@@ -54,7 +86,7 @@ FractalDataWorks provides four core data commands that work across all connectio
 
 Retrieves data (SELECT operation). Returns `IEnumerable<T>`.
 
-From [`QueryCommand.cs:60-106`](../../src/FractalDataWorks.Commands.Data/Commands/QueryCommand.cs#L60-L106):
+From [`QueryCommand.cs:60-106`](../src/Fdw.Commands.Data/Commands/QueryCommand.cs#L60-L106):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Query")]
@@ -101,7 +133,7 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
 
 Inserts new records (INSERT operation). Returns the inserted entity or affected row count.
 
-From [`InsertCommand.cs:35-47`](../../src/FractalDataWorks.Commands.Data/Commands/InsertCommand.cs#L35-L47):
+From [`InsertCommand.cs:35-47`](../src/Fdw.Commands.Data/Commands/InsertCommand.cs#L35-L47):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Insert")]
@@ -123,7 +155,7 @@ public sealed class InsertCommand<T> : DataCommandBase<int, T>
 
 Updates existing records (UPDATE operation). Returns affected row count.
 
-From [`UpdateCommand.cs:47-65`](../../src/FractalDataWorks.Commands.Data/Commands/UpdateCommand.cs#L47-L65):
+From [`UpdateCommand.cs:47-65`](../src/Fdw.Commands.Data/Commands/UpdateCommand.cs#L47-L65):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Update")]
@@ -151,7 +183,7 @@ public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableComma
 
 Deletes records (DELETE operation). Returns affected row count.
 
-From [`DeleteCommand.cs:45-62`](../../src/FractalDataWorks.Commands.Data/Commands/DeleteCommand.cs#L45-L62):
+From [`DeleteCommand.cs:45-62`](../src/Fdw.Commands.Data/Commands/DeleteCommand.cs#L45-L62):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Delete")]
@@ -179,13 +211,13 @@ public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand
 When using IDataGateway in endpoints:
 
 1. Inject `IDataGateway` via constructor
-2. Create a data command with `ConnectionName`
+2. Create a data command using fluent builders with `DataStore`, `Path`, and `Container`
 3. Execute via `_dataGateway.Execute<T>(command, ct)`
 4. Handle `IGenericResult<T>` (check `IsFailure`, access `Value`)
 
 ## Example: Query with Filter
 
-From Reference.DataLayer [`Program.cs:141-168`](../../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L141-L168):
+From Reference.DataLayer [`Program.cs:141-168`](../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L141-L168):
 
 ```csharp
 var directQuery = new QueryCommand<CustomerDto>("dbo.Customers")
@@ -220,7 +252,7 @@ var directQuery = new QueryCommand<CustomerDto>("dbo.Customers")
 
 ## Example: Filter Conditions
 
-From Reference.DataLayer [`Program.cs:66-91`](../../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L66-L91):
+From Reference.DataLayer [`Program.cs:66-91`](../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L66-L91):
 
 ```csharp
 // Simple equality condition
@@ -250,7 +282,7 @@ var nullCheck = new FilterCondition
 
 ## Example: Insert Operation
 
-From Reference.DataLayer [`Program.cs:190-199`](../../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L190-L199):
+From Reference.DataLayer [`Program.cs:190-199`](../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L190-L199):
 
 ```csharp
 // Insert - data is passed to constructor
@@ -267,7 +299,7 @@ var insertCommand = new InsertCommand<CustomerDto>("dbo.Customers", newCustomer)
 
 ## Example: Update Operation
 
-From Reference.DataLayer [`Program.cs:201-222`](../../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L201-L222):
+From Reference.DataLayer [`Program.cs:201-222`](../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L201-L222):
 
 ```csharp
 // Update - data passed to constructor, filter via init
@@ -295,7 +327,7 @@ var updateCommand = new UpdateCommand<CustomerDto>("dbo.Customers", updatedCusto
 
 ## Example: Delete Operation
 
-From Reference.DataLayer [`Program.cs:224-236`](../../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L224-L236):
+From Reference.DataLayer [`Program.cs:224-236`](../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L224-L236):
 
 ```csharp
 // Delete
@@ -315,7 +347,7 @@ var deleteCommand = new DeleteCommand("dbo.Customers")
 
 ## Example: Using QueryCommandBuilder (Fluent API)
 
-From Reference.DataLayer [`Program.cs:121-126`](../../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L121-L126):
+From Reference.DataLayer [`Program.cs:121-126`](../samples/ReferenceSolution/concepts/06-data-layer/src/Reference.DataLayer/Program.cs#L121-L126):
 
 ```csharp
 var query = new QueryCommandBuilder<CustomerDto>("dbo.Customers")
@@ -377,11 +409,11 @@ var result = await _dataGateway.Execute<IEnumerable<Team>>(command, ct);
 
 if (!result.IsSuccess)
 {
-    var errorMessage = result.CurrentMessage ?? "Unknown error";
-    NflLog.TeamsFetchFailed(_logger, errorMessage);  // Log AND return
+    // The failed result carries a structured message — use it directly, never a `?? "fallback"`.
+    NflLog.TeamsFetchFailed(_logger, result.CurrentMessage);  // Log AND return
     HttpContext.Response.StatusCode = 500;
     await HttpContext.Response.WriteAsJsonAsync(
-        new ApiErrorResponse { Error = "Failed to fetch teams", Details = errorMessage }, ct);
+        new ApiErrorResponse { Error = "Failed to fetch teams", Details = result.CurrentMessage }, ct);
     return;
 }
 ```
@@ -431,23 +463,30 @@ public sealed class ApiErrorResponse
 | `result.Value?.FirstOrDefault()` is null | 404 | Empty response |
 | Success with data | 200 | The data |
 
-## ConnectionName Resolution
+## DataStore/Path/Container Resolution
 
-Every data command must specify a `ConnectionName`:
+Every data command must specify DataStoreName, PathName, and ContainerName using the fluent builders:
 
 ```csharp
-var command = new QueryCommand<Customer>("Customers")
-{
-    ConnectionName = "OrdersDb",  // Required - tells DataGateway which connection to use
-    Filter = ...
-};
+// Query - all three in From() call
+var command = Query.From<Customer>("OrdersDb", "dbo", "Customers")
+    .Where(c => c.IsActive).Equal(true)
+    .Build();
+
+// Insert/Update/Delete - fluent methods
+var command = Insert.Into<Customer>("Customers")
+    .DataStore("OrdersDb")
+    .Path("dbo")
+    .Value(customer);
 ```
 
 The DataGateway:
 1. Receives the command
-2. Reads the `ConnectionName` property
-3. Resolves the connection from `IDataConnectionProvider`
-4. Routes the command to that connection for execution
+2. Reads the `DataStoreName` property
+3. Resolves the DataStore from `IDataStoreProvider`
+4. Uses `PathName` to locate the schema within the DataStore
+5. Uses `ContainerName` to locate the specific table/view
+6. Routes the command to the appropriate connection for execution
 
 ## Best Practices
 
@@ -467,15 +506,13 @@ public MyEndpoint(ICustomerService customerService)
 }
 ```
 
-### 2. Create Commands In-Place
+### 2. Create Commands In-Place Using Fluent Builders
 
 ```csharp
-// CORRECT - command creation is explicit and visible
-var command = new QueryCommand<Customer>("Customers")
-{
-    ConnectionName = "OrdersDb",
-    Filter = new FilterExpression { ... }
-};
+// CORRECT - command creation is explicit and visible using fluent API
+var command = Query.From<Customer>("OrdersDb", "dbo", "Customers")
+    .Where(c => c.IsActive).Equal(true)
+    .Build();
 
 var result = await _dataGateway.Execute<IEnumerable<Customer>>(command, ct);
 
@@ -510,18 +547,20 @@ var result = await _dataGateway.ExecuteDynamic(command, ct);
 var customers = (List<Customer>)result.Value; // Requires casting, runtime errors
 ```
 
-### 5. Specify ConnectionName Explicitly
+### 5. Specify DataStore/Path/Container Explicitly
 
 ```csharp
-// CORRECT - explicit connection
-var command = new QueryCommand<Customer>("Customers")
-{
-    ConnectionName = "OrdersDb"
-};
+// CORRECT - explicit DataStore, Path, and Container
+var command = Query.From<Customer>("OrdersDb", "dbo", "Customers").Build();
 
-// WRONG - relying on defaults or implicit resolution
-var command = new QueryCommand<Customer>("Customers");
-// Missing ConnectionName will cause runtime error
+// For mutations - use fluent methods
+var command = Insert.Into<Customer>("Customers")
+    .DataStore("OrdersDb")
+    .Path("dbo")
+    .Value(customer);
+
+// WRONG - missing required parameters
+var command = Query.From<Customer>("Customers").Build();  // Compile error - requires 3 parameters
 ```
 
 ## Testing
@@ -539,25 +578,16 @@ public async Task ExecuteQueryCommandReturnsExpectedResult()
     mockGateway
         .Setup(g => g.Execute<IEnumerable<CustomerDto>>(
             It.Is<QueryCommand<CustomerDto>>(cmd =>
-                cmd.ConnectionName == "OrdersDb" &&
+                cmd.DataStoreName == "OrdersDb" &&
+                cmd.PathName == "dbo" &&
                 cmd.ContainerName == "Customers"),
             It.IsAny<CancellationToken>()))
         .ReturnsAsync(GenericResult<IEnumerable<CustomerDto>>.Success([expectedCustomer]));
 
-    // Act
-    var command = new QueryCommand<CustomerDto>("Customers")
-    {
-        ConnectionName = "OrdersDb",
-        Filter = new FilterExpression
-        {
-            Root = new FilterCondition
-            {
-                PropertyName = "Id",
-                Operator = FilterOperators.Equal,
-                Value = 1
-            }
-        }
-    };
+    // Act - use fluent builder
+    var command = Query.From<CustomerDto>("OrdersDb", "dbo", "Customers")
+        .Where(c => c.Id).Equal(1)
+        .Build();
     var result = await mockGateway.Object.Execute<IEnumerable<CustomerDto>>(command, CancellationToken.None);
 
     // Assert
@@ -588,7 +618,7 @@ The DataGateway pattern in FractalDataWorks provides:
 
 1. **Direct data access** - No unnecessary abstraction layers
 2. **Command-based operations** - Explicit, type-safe data commands
-3. **Connection routing** - Automatic routing by ConnectionName
+3. **DataStore routing** - Automatic routing by DataStoreName/PathName/ContainerName
 4. **Railway-Oriented** - Consistent error handling with IGenericResult
 5. **Testability** - Mock IDataGateway, verify commands sent
 
@@ -598,4 +628,4 @@ Follow the Reference Solution examples for correct implementation patterns.
 
 - [DataSets](05-02-DataSets.md) - Logical data abstraction layer
 - [TypeCollections Overview](04-01-Overview.md) - Type-safe lookup collections
-- [Reference Solution Data Layer](../../samples/ReferenceSolution/concepts/06-data-layer/) - Working examples
+- [Reference Solution Data Layer](../samples/ReferenceSolution/concepts/06-data-layer/) - Working examples

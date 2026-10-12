@@ -1,0 +1,166 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Mappers.PocoMappers;
+using Fdw.Results;
+using Fdw.Services.Connections.Logging;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Connections.RowQuery;
+
+/// <summary>
+/// Materializes already-filtered/joined rows (flat name→value dictionaries) into a requested POCO type
+/// <c>T</c> — a single row, or a collection — through the generated
+/// <c>PocoMapperCollection.ByName(typeof(T).Name)</c> mapper via <see cref="RecordDictionaryReader"/>
+/// (coercing, so it must call <c>MapFromReader</c>, never <c>MapFromDictionary</c>).
+/// </summary>
+public static class RecordRowMaterializer
+{
+    /// <summary>
+    /// Materializes <paramref name="rows"/> into <typeparamref name="T"/>: a single element when
+    /// <typeparamref name="T"/> is not a recognised collection shape, otherwise a collection of the
+    /// element type. A no-mapper condition and a per-row mapping failure both fail loud with
+    /// structured MessageLogging — never a silent default/empty materialization.
+    /// </summary>
+    public static IGenericResult<T> Materialize<T>(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
+        IStorageContainer container,
+        ILogger logger)
+    {
+        var targetType = typeof(T);
+        return IsCollectionType(targetType, out var itemType)
+            ? MaterializeCollection<T>(rows, itemType!, container, logger)
+            : MaterializeSingle<T>(rows, targetType, container, logger);
+    }
+
+    private static IGenericResult<T> MaterializeCollection<T>(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows, Type itemType, IStorageContainer container, ILogger logger)
+    {
+        var byType = MaterializeByType(rows, itemType, container, logger);
+        if (!byType.IsSuccess)
+            return byType.ToNewResult<T>();
+
+        // A raw Dictionary<string, object?> item has no generated mapper to build its list through --
+        // byType.Value is already the exact Dictionary instances (see MaterializeByType), so wrap them
+        // directly instead of routing through PocoMapperCollection.ByName("Dictionary`2"), which is
+        // NotFound by design.
+        if (itemType == typeof(Dictionary<string, object?>))
+        {
+            var rawList = byType.Value!.Cast<Dictionary<string, object?>>().ToList();
+            return GenericResult<T>.Success((T)ConvertToCollectionType(rawList, typeof(T), itemType));
+        }
+
+        var list = PocoMapperCollection.ByName(itemType.Name).CreateList();
+        foreach (var item in byType.Value!)
+            list.Add(item);
+
+        return GenericResult<T>.Success((T)ConvertToCollectionType(list, typeof(T), itemType));
+    }
+
+    /// <summary>
+    /// Materializes <paramref name="rows"/> into instances of <paramref name="itemType"/> via its
+    /// generated mapper, resolved by name -- the same mapper lookup <see cref="Materialize{T}"/> uses,
+    /// but for a runtime <see cref="Type"/> rather than a compile-time <c>T</c>. Used by
+    /// <c>ConnectionBase.ExecuteRowsByType</c> overrides (e.g. a typed-list cascade child) that only
+    /// have the element type at runtime, not as a generic parameter, and by
+    /// <c>ConnectionBase.ExecuteRelationshipRead</c>'s default parent read
+    /// (<c>Execute&lt;IEnumerable&lt;Dictionary&lt;string, object?&gt;&gt;&gt;</c>), which resolves to
+    /// this same method through <see cref="MaterializeCollection{T}"/>.
+    /// </summary>
+    public static IGenericResult<IEnumerable<object>> MaterializeByType(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows, Type itemType, IStorageContainer container, ILogger logger)
+    {
+        // A caller asking for the raw Dictionary<string, object?> shape (ImplementationProviderBase's
+        // owner-physical-key capture, and ConnectionBase.ExecuteRelationshipRead's default parent read)
+        // wants the matched rows themselves, not a POCO -- a dictionary has no generated mapper to look
+        // up, and routing it through the mapper lookup below always fails with "No PocoMapper
+        // registered for type 'Dictionary`2'". Every row this pipeline produces is already an
+        // IReadOnlyDictionary<string, object?>, so satisfying that request is a copy, not a lookup.
+        if (itemType == typeof(Dictionary<string, object?>))
+        {
+            return GenericResult<IEnumerable<object>>.Success(
+                rows.Select(row => (object)new Dictionary<string, object?>(row, StringComparer.Ordinal)).ToList());
+        }
+
+        var mapper = PocoMapperCollection.ByName(itemType.Name);
+        if (mapper == PocoMapperCollection.NotFound)
+            return GenericResult<IEnumerable<object>>.Failure(RecordQueryLog.NoMapperFound(logger, itemType.Name));
+
+        var results = new List<object>();
+        using var reader = new RecordDictionaryReader(rows);
+        while (reader.Read())
+        {
+            var mapResult = mapper.MapFromReader(reader, container);
+            if (!mapResult.IsSuccess)
+                return GenericResult<IEnumerable<object>>.Failure(RecordQueryLog.MaterializationFailed(logger, itemType.Name, mapResult.CurrentMessage));
+
+            results.Add(mapResult.Value!);
+        }
+
+        return GenericResult<IEnumerable<object>>.Success(results);
+    }
+
+    private static IGenericResult<T> MaterializeSingle<T>(
+        IReadOnlyList<IReadOnlyDictionary<string, object?>> rows, Type targetType, IStorageContainer container, ILogger logger)
+    {
+        if (rows.Count == 0)
+            return GenericResult<T>.Success(default!);
+
+        var mapper = PocoMapperCollection.ByName(targetType.Name);
+        if (mapper == PocoMapperCollection.NotFound)
+            return GenericResult<T>.Failure(RecordQueryLog.NoMapperFound(logger, targetType.Name));
+
+        using var reader = new RecordDictionaryReader(rows);
+        reader.Read();
+        var mapResult = mapper.MapFromReader(reader, container);
+        if (!mapResult.IsSuccess)
+            return GenericResult<T>.Failure(RecordQueryLog.MaterializationFailed(logger, targetType.Name, mapResult.CurrentMessage));
+
+        return GenericResult<T>.Success((T)mapResult.Value!);
+    }
+
+    private static bool IsCollectionType(Type type, out Type? itemType)
+    {
+        if (type.IsArray)
+        {
+            itemType = type.GetElementType();
+            return true;
+        }
+
+        if (type.IsGenericType)
+        {
+            var genericTypeDef = type.GetGenericTypeDefinition();
+            if (genericTypeDef == typeof(IEnumerable<>) || genericTypeDef == typeof(List<>)
+                || genericTypeDef == typeof(IList<>) || genericTypeDef == typeof(ICollection<>))
+            {
+                itemType = type.GetGenericArguments()[0];
+                return true;
+            }
+        }
+
+        var enumerableInterface = type.GetInterfaces()
+            .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+
+        if (enumerableInterface != null)
+        {
+            itemType = enumerableInterface.GetGenericArguments()[0];
+            return true;
+        }
+
+        itemType = null;
+        return false;
+    }
+
+    private static object ConvertToCollectionType(IList list, Type targetType, Type itemType)
+    {
+        if (targetType.IsArray)
+        {
+            var array = Array.CreateInstance(itemType, list.Count);
+            list.CopyTo(array, 0);
+            return array;
+        }
+        return list;
+    }
+}

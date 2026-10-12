@@ -1,0 +1,77 @@
+using System;
+using System.Collections.Generic;
+using Fdw.Web.Clients.Abstractions.Contracts;
+
+namespace Fdw.Services.Data.Clients.Models;
+
+/// <summary>
+/// Represents a field in a DataSet.
+/// </summary>
+public sealed class DataSetFieldPayload : IDataSetField
+{
+    /// <summary>Gets or sets the unique identifier.</summary>
+    public Guid Id { get; set; }
+    /// <summary>Gets or sets the field name.</summary>
+    public string Name { get; set; } = string.Empty;
+    /// <summary>Gets or sets the description.</summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the field's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>DatumTypeId</c> of what the field's data is (see <c>GET /datum-types</c>);
+    /// <c>NotYetTyped</c> until someone picks one (FDW-988).
+    /// </summary>
+    public int DatumTypeId { get; set; }
+    /// <summary>Gets or sets the data type.</summary>
+    public string DataType { get; set; } = string.Empty;
+    /// <summary>Gets or sets whether the field is a key.</summary>
+    public bool IsKey { get; set; }
+    /// <summary>Gets or sets whether the field is required.</summary>
+    public bool IsRequired { get; set; }
+    /// <summary>Gets or sets whether the field is indexed.</summary>
+    public bool IsIndexed { get; set; }
+    /// <summary>Gets or sets whether API callers may filter on the field.</summary>
+    public bool IsFilterable { get; set; }
+    /// <summary>
+    /// Gets or sets the operators a filter on the field may use, by name: the datum type's, narrowed to what the data type
+    /// carries. Empty when the field is not filterable or is not yet typed, so a console shows "filter by" only when it
+    /// has operators.
+    /// </summary>
+    public List<string> FilterOperators { get; set; } = [];
+    /// <summary>Gets or sets the maximum length.</summary>
+    public int? MaxLength { get; set; }
+    /// <summary>Gets or sets the default value.</summary>
+    public string? DefaultValue { get; set; }
+    /// <summary>Gets or sets whether the field is calculated.</summary>
+    public bool IsCalculated { get; set; }
+    /// <summary>Gets or sets the name of the configured calculation that computes this field's value when <see cref="IsCalculated"/> is true.</summary>
+    public string? CalculationName { get; set; }
+    /// <summary>Gets or sets whether this field participates as a join key for cross-source joins.</summary>
+    public bool IsJoinKey { get; set; }
+    /// <summary>Gets or sets the property role.</summary>
+    public string? Role { get; set; }
+    /// <summary>Gets or sets the ordinal position.</summary>
+    public int Ordinal { get; set; }
+
+    /// <summary>Gets or sets the dataset this field belongs to.</summary>
+    /// <remarks>
+    /// Redundant when the field arrives nested under its dataset, and carried anyway: identity is
+    /// always knowable, and the type that carried it separately was one of three copies of this
+    /// shape that drifted apart.
+    /// </remarks>
+    public Guid DataSetId { get; set; }
+
+    /// <summary>Gets or sets the field's declared type name.</summary>
+    /// <remarks>
+    /// Distinct from <see cref="DataType"/>: the declared name as the source states it, where
+    /// DataType is the storage type it maps onto.
+    /// </remarks>
+    public string TypeName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether the field accepts null.</summary>
+    public bool IsNullable { get; set; }
+}

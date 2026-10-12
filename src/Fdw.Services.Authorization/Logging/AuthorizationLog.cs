@@ -1,0 +1,227 @@
+using System;
+using Fdw.MessageLogging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Authorization.Logging;
+
+/// <summary>
+/// High-performance MessageLogging for authorization service operations.
+/// EventId range: 3100-3199
+/// </summary>
+[MessageLoggingTypeCode("AUTHORIZATION")]
+public static partial class AuthorizationLog
+{
+    /// <summary>
+    /// Logs when authorization context is null.
+    /// </summary>
+    [MessageLogging(EventId = 21000, Level = LogLevel.Warning,
+        Message = "Authorization context is null")]
+    public static partial IGenericMessage AuthorizationContextNull(ILogger logger);
+
+    /// <summary>
+    /// Logs when resource parameter is required.
+    /// </summary>
+    [MessageLogging(EventId = 21001, Level = LogLevel.Warning,
+        Message = "Resource parameter is required for authorization")]
+    public static partial IGenericMessage ResourceRequired(ILogger logger);
+
+    /// <summary>
+    /// Logs when action parameter is required.
+    /// </summary>
+    [MessageLogging(EventId = 21002, Level = LogLevel.Warning,
+        Message = "Action parameter is required for authorization")]
+    public static partial IGenericMessage ActionRequired(ILogger logger);
+
+    /// <summary>
+    /// Logs when role parameter is required.
+    /// </summary>
+    [MessageLogging(EventId = 21003, Level = LogLevel.Warning,
+        Message = "Role parameter is required")]
+    public static partial IGenericMessage RoleRequired(ILogger logger);
+
+    /// <summary>
+    /// Logs when permission parameter is required.
+    /// </summary>
+    [MessageLogging(EventId = 21004, Level = LogLevel.Warning,
+        Message = "Permission parameter is required")]
+    public static partial IGenericMessage PermissionRequired(ILogger logger);
+
+    /// <summary>
+    /// Logs when authorization is denied due to not being authenticated.
+    /// </summary>
+    [MessageLogging(EventId = 51000, Level = LogLevel.Warning,
+        Message = "Authorization denied for {resource}:{action} - user not authenticated")]
+    public static partial IGenericMessage AuthorizationDeniedNotAuthenticated(
+        ILogger logger,
+        string resource,
+        string action);
+
+    /// <summary>
+    /// Logs when authorization is denied for a specific permission.
+    /// </summary>
+    [MessageLogging(EventId = 51001, Level = LogLevel.Warning,
+        Message = "Authorization denied for user '{userId}' on permission '{permission}'")]
+    public static partial IGenericMessage AuthorizationDenied(
+        ILogger logger,
+        string userId,
+        string permission);
+
+    /// <summary>
+    /// Logs when authorization is granted for a specific permission.
+    /// </summary>
+    [MessageLogging(EventId = 11000, Level = LogLevel.Debug,
+        Message = "Authorization granted for user '{userId}' on permission '{permission}'")]
+    public static partial IGenericMessage AuthorizationGranted(
+        ILogger logger,
+        string userId,
+        string permission);
+
+    /// <summary>
+    /// Logs permission resolution data counts for debugging.
+    /// </summary>
+    [MessageLogging(EventId = 11001, Level = LogLevel.Debug,
+        Message = "Permission resolution: userRoles={userRoleCount}, permissions={permissionCount}, rolePermissions={rolePermissionCount}, roles={roleCount}")]
+    public static partial IGenericMessage PermissionResolutionDebug(
+        ILogger logger,
+        int userRoleCount,
+        int permissionCount,
+        int rolePermissionCount,
+        int roleCount);
+
+    /// <summary>Logs role-permission match count during effective permission resolution.</summary>
+    [MessageLogging(EventId = 11002, Level = LogLevel.Debug,
+        Message = "Role '{roleName}' (id={roleId}) matched {count} role-permission assignments")]
+    public static partial IGenericMessage RolePermissionsMatched(
+        ILogger logger, string roleName, string roleId, int count);
+
+    /// <summary>Logs when a user's JWT role claim has no matching role definition.</summary>
+    [MessageLogging(EventId = 31000, Level = LogLevel.Warning,
+        Message = "Role '{roleName}' not found in loaded roles. Available: [{availableRoles}]")]
+    public static partial IGenericMessage RoleNotFoundInLoadedRoles(
+        ILogger logger, string roleName, string availableRoles);
+
+    /// <summary>Logs when a RolePermission references a PermissionId that doesn't resolve.</summary>
+    [MessageLogging(EventId = 31001, Level = LogLevel.Warning,
+        Message = "RolePermission references unknown PermissionId '{permissionId}' (sample Permission.Id='{sampleId}')")]
+    public static partial IGenericMessage PermissionIdUnresolved(
+        ILogger logger, string permissionId, string sampleId);
+
+    /// <summary>Logs effective permission count resolved for a user.</summary>
+    [MessageLogging(EventId = 11003, Level = LogLevel.Debug,
+        Message = "Resolved {count} effective permissions for user '{userId}'")]
+    public static partial IGenericMessage EffectivePermissionsResolved(
+        ILogger logger, int count, string userId);
+
+    /// <summary>Logs when role provider query fails during permission resolution — authorization denied.</summary>
+    [MessageLogging(EventId = 71000, Level = LogLevel.Error,
+        Message = "Authorization denied: failed to load roles from provider")]
+    public static partial IGenericMessage RoleProviderQueryFailed(ILogger logger);
+
+    /// <summary>Logs when permission provider query fails during permission resolution — authorization denied.</summary>
+    [MessageLogging(EventId = 71001, Level = LogLevel.Error,
+        Message = "Authorization denied: failed to load permissions from provider")]
+    public static partial IGenericMessage PermissionProviderQueryFailed(ILogger logger);
+
+    /// <summary>Logs when role-permission provider query fails during permission resolution — authorization denied.</summary>
+    [MessageLogging(EventId = 71002, Level = LogLevel.Error,
+        Message = "Authorization denied: failed to load role-permission assignments from provider")]
+    public static partial IGenericMessage RolePermissionProviderQueryFailed(ILogger logger);
+
+    // -- Org-tier (3-tier union) -- EventId range 3123-3130
+
+    /// <summary>Logs the start of an org-access grant query.</summary>
+    [MessageLogging(EventId = 11004, Level = LogLevel.Trace,
+        Message = "Querying org access grants for userId={userId} orgId={orgId}")]
+    public static partial IGenericMessage OrgAccessQueryStarted(ILogger logger, Guid userId, Guid orgId);
+
+    /// <summary>Logs when the org-access query fails — org tier contributes zero grants.</summary>
+    [MessageLogging(EventId = 71003, Level = LogLevel.Error,
+        Message = "Org access query failed for userId={userId} orgId={orgId} — org tier contributes no grants")]
+    public static partial IGenericMessage OrgAccessQueryFailed(ILogger logger, Guid userId, Guid orgId);
+
+    /// <summary>Logs the count of org-access grants loaded.</summary>
+    [MessageLogging(EventId = 11005, Level = LogLevel.Debug,
+        Message = "Loaded {count} org access grants for userId={userId} orgId={orgId}")]
+    public static partial IGenericMessage OrgAccessGrantsLoaded(ILogger logger, int count, Guid userId, Guid orgId);
+
+    /// <summary>Logs effective permissions resolved including all three tiers.</summary>
+    [MessageLogging(EventId = 11006, Level = LogLevel.Debug,
+        Message = "3-tier effective permissions resolved: global={globalCount}, tenant={tenantCount}, org={orgCount}, total={total} for user '{userId}'")]
+    public static partial IGenericMessage ThreeTierPermissionsResolved(
+        ILogger logger, int globalCount, int tenantCount, int orgCount, int total, string userId);
+
+    /// <summary>Logs when org context is not available — org tier skipped.</summary>
+    [MessageLogging(EventId = 11007, Level = LogLevel.Trace,
+        Message = "Org context not available for user '{userId}' — org tier skipped in permission resolution")]
+    public static partial IGenericMessage OrgTierSkippedNoOrgContext(ILogger logger, string userId);
+
+    /// <summary>Logs when tenant context is not available — tenant and org tiers skipped.</summary>
+    [MessageLogging(EventId = 11008, Level = LogLevel.Trace,
+        Message = "Tenant context not available for user '{userId}' — tenant and org tiers skipped")]
+    public static partial IGenericMessage TenantTierSkippedNoTenantContext(ILogger logger, string userId);
+
+    /// <summary>Logs when the user ID cannot be parsed as a Guid for the org-access query.</summary>
+    [MessageLogging(EventId = 21005, Level = LogLevel.Warning,
+        Message = "Cannot parse userId '{userId}' as Guid for org-access query — org tier skipped")]
+    public static partial IGenericMessage OrgTierSkippedNonGuidUserId(ILogger logger, string userId);
+
+
+    // -- User-role assignment tier (FDW-532 fix) -- EventId range 3137-3142
+
+    /// <summary>Logs when user-role assignment load fails — fail-closed, token not issued.</summary>
+    [MessageLogging(EventId = 71004, Level = LogLevel.Error,
+        Message = "Authorization denied: failed to load role assignments for user '{userId}'")]
+    public static partial IGenericMessage UserRoleAssignmentLoadFailed(ILogger logger, string userId);
+
+    /// <summary>Logs count of role assignments found for a user.</summary>
+    [MessageLogging(EventId = 11009, Level = LogLevel.Trace,
+        Message = "Loaded {count} role assignments for user '{userId}'")]
+    public static partial IGenericMessage UserRoleAssignmentsLoaded(ILogger logger, int count, string userId);
+
+    /// <summary>Logs when a user has zero role assignments — zero permissions granted.</summary>
+    [MessageLogging(EventId = 11010, Level = LogLevel.Debug,
+        Message = "User '{userId}' has no role assignments — zero permissions granted")]
+    public static partial IGenericMessage UserHasNoRoleAssignments(ILogger logger, string userId);
+
+    /// <summary>Logs count of roles selected after filtering by user assignments.</summary>
+    [MessageLogging(EventId = 11011, Level = LogLevel.Trace,
+        Message = "Selected {count} roles for user '{userId}' from {total} in catalog after assignment filter")]
+    public static partial IGenericMessage UserRolesSelected(ILogger logger, int count, string userId, int total);
+
+    /// <summary>Logs when role expansion was asked for with no role names.</summary>
+    [MessageLogging(EventId = 71005, Level = LogLevel.Error,
+        Message = "Role permission expansion requires at least one role name")]
+    public static partial IGenericMessage RoleExpansionNamesRequired(ILogger logger);
+
+    /// <summary>Logs when a declared role name matches no row in the role catalogue.</summary>
+    [MessageLogging(EventId = 71006, Level = LogLevel.Error,
+        Message = "Role '{roleName}' does not exist in the role catalogue — the declaration names a row that is not there")]
+    public static partial IGenericMessage RoleNameUnknown(ILogger logger, string roleName);
+
+    /// <summary>Logs when a role/permission junction row points at a permission that is not in the catalogue.</summary>
+    [MessageLogging(EventId = 71007, Level = LogLevel.Error,
+        Message = "Role '{roleName}' grants permission id '{permissionId}', which is not in the permission catalogue")]
+    public static partial IGenericMessage RolePermissionUnresolved(ILogger logger, string roleName, string permissionId);
+
+    /// <summary>Logs the outcome of expanding role names to permissions.</summary>
+    [MessageLogging(EventId = 11012, Level = LogLevel.Debug,
+        Message = "Expanded {roleCount} role(s) to {permissionCount} permission(s): {roleNames}")]
+    public static partial IGenericMessage RolePermissionsExpanded(ILogger logger, int roleCount, int permissionCount, string roleNames);
+
+    /// <summary>Logs a role/permission grant that is not owned by the role's own tenant, and so is not counted.</summary>
+    /// <remarks>
+    /// A role's grants are the ones its owning tenant wrote. A grant owned by any other tenant was written by a
+    /// tenant that did not own the role; counting it would let one tenant change what a shared role grants in
+    /// every other tenant.
+    /// </remarks>
+    [MessageLogging(EventId = 41000, Level = LogLevel.Warning,
+        Message = "Role '{roleName}' (tenant '{roleTenantId}') has a grant of permission id '{permissionId}' owned by tenant '{grantTenantId}'; it is not counted")]
+    public static partial IGenericMessage RolePermissionOutsideRoleTenant(
+        ILogger logger, string roleName, string roleTenantId, string permissionId, string grantTenantId);
+
+    /// <summary>Logs a role whose owning tenant is not recorded, so none of its grants can be counted.</summary>
+    [MessageLogging(EventId = 61000, Level = LogLevel.Error,
+        Message = "Role '{roleName}' has no owning tenant recorded; none of its grants are counted")]
+    public static partial IGenericMessage RoleTenantNotRecorded(ILogger logger, string roleName);
+}

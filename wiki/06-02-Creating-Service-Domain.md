@@ -2,15 +2,28 @@
 
 This guide walks through creating a complete service domain from scratch. Use MsSql Connection as the reference implementation.
 
+## Choosing a Schema for New Configuration Types
+
+Pick the ConfigurationDb schema that matches your domain — there is one schema per service
+category (`conn`, `data`, `auth`, `pipe`, `sched`, `notify`, `transform`, `workflow`,
+`agent`, `audit`, `calc`, `quality`, `sec`, `settings`, `authz`, `usr`, `tenant`,
+`catalog`). All `[ManagedConfiguration]` records are writable through their domain's
+`IServiceConfigurationWriter<T> (or IDynamicConfigurationWriter)`.
+
+Implementation metadata (e.g. `OdbcConnectionType`) is registered at assembly load via
+the `Registration.SourceGenerators` module initialiser — it doesn't need a database row.
+ServiceConfiguration **instances** (e.g. `OdbcConnectionConfiguration`) live as runtime
+rows in the domain schema and are written through `IServiceConfigurationWriter<T> (or IDynamicConfigurationWriter)`.
+
 ## Project Structure
 
 A service domain consists of three project types:
 
 ```
 src/
-├── FractalDataWorks.Services.{Domain}.Abstractions/    # Interfaces, base classes
-├── FractalDataWorks.Services.{Domain}/                  # Provider, collection, registration
-└── FractalDataWorks.Services.{Domain}.{Implementation}/ # Concrete implementations
+├── Fdw.Services.{Domain}.Abstractions/    # Interfaces, base classes
+├── Fdw.Services.{Domain}/                  # Provider, collection, registration
+└── Fdw.Services.{Domain}.{Implementation}/ # Concrete implementations
 ```
 
 ### Where Each Component Goes
@@ -26,7 +39,7 @@ src/
 | `I{Domain}Provider` interface | `.Abstractions` | `IConnectionProvider` |
 | `Default{Domain}Provider` | Base package | `DefaultConnectionProvider` |
 | `{Domain}Log` MessageLogging | Base package | `ConnectionLog` |
-| `{Name}Type` ServiceTypeOption | `.{Implementation}` | `MsSqlConnectionType` |
+| `{Name}Type` Implementation | `.{Implementation}` | `MsSqlConnectionType` |
 | `{Name}Factory` | `.{Implementation}` | `MsSqlConnectionFactory` |
 | `{Name}Configuration` | `.{Implementation}` | `MsSqlConnectionConfiguration` |
 | `{Name}Log` MessageLogging | `.{Implementation}` | `MsSqlConnectionLog` |
@@ -37,7 +50,7 @@ src/
 
 ```csharp
 // Services.{Domain}.Abstractions/I{Domain}.cs
-namespace FractalDataWorks.Services.{Domain}.Abstractions;
+namespace Fdw.Services.{Domain}.Abstractions;
 
 public interface I{Domain} : IGenericService
 {
@@ -122,8 +135,7 @@ public abstract class {Domain}TypeBase<TService, TFactory, TConfiguration>
         string displayName,
         string description,
         string? category = null)
-        : base(name, sectionName, displayName, description,
-               OptionsLoaderBase.Snapshot, category)
+        : base(name, sectionName, displayName, description, category)
     {
     }
 }
@@ -168,8 +180,8 @@ public sealed class Default{Domain}Provider
 ```
 
 The `DefaultServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>` base class provides:
-- `Register(string serviceOptionType, IServiceFactory<TService> factory)`
-- `Register(string serviceOptionType, IServiceConfigurationProvider<TConfiguration> configurationProvider)`
+- `Register(string implementation, IServiceFactory<TService> factory)`
+- `Register(string implementation, IServiceConfigurationProvider<TConfiguration> configurationProvider)`
 - `Get(string name)` / `Get(Guid id)` - looks up configuration, finds factory, creates service
 - `Get<T>(string name)` / `Get<T>(Guid id)` - typed variants
 
@@ -203,18 +215,18 @@ public static partial class {Domain}Log
 ### 2.5 Project References (.csproj)
 
 ```xml
-<!-- Services.{Domain}/FractalDataWorks.Services.{Domain}.csproj -->
+<!-- Services.{Domain}/Fdw.Services.{Domain}.csproj -->
 <ItemGroup>
-  <ProjectReference Include="..\FractalDataWorks.Services.{Domain}.Abstractions\..." />
-  <ProjectReference Include="..\FractalDataWorks.Services.Abstractions\..." />
-  <ProjectReference Include="..\FractalDataWorks.Collections.SourceGenerators\..."
+  <ProjectReference Include="..\Fdw.Services.{Domain}.Abstractions\..." />
+  <ProjectReference Include="..\Fdw.Services.Abstractions\..." />
+  <ProjectReference Include="..\Fdw.Collections.SourceGenerators\..."
                     OutputItemType="Analyzer"
                     ReferenceOutputAssembly="false"
                     PrivateAssets="all" />
-  <ProjectReference Include="..\FractalDataWorks.Registration.SourceGenerators\..."
+  <ProjectReference Include="..\Fdw.Registration.SourceGenerators\..."
                     OutputItemType="Analyzer"
                     ReferenceOutputAssembly="false" />
-  <ProjectReference Include="..\FractalDataWorks.MessageLogging.SourceGenerators\..."
+  <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\..."
                     OutputItemType="Analyzer"
                     ReferenceOutputAssembly="false"
                     PrivateAssets="all" />
@@ -222,7 +234,7 @@ public static partial class {Domain}Log
 
 <!-- Embed Registration generator for transitive NuGet flow -->
 <ItemGroup>
-  <None Include="..\FractalDataWorks.Registration.SourceGenerators\bin\$(Configuration)\netstandard2.0\FractalDataWorks.Registration.SourceGenerators.dll"
+  <None Include="..\Fdw.Registration.SourceGenerators\bin\$(Configuration)\netstandard2.0\Fdw.Registration.SourceGenerators.dll"
         Pack="true"
         PackagePath="analyzers/dotnet/cs"
         Visible="false"
@@ -232,11 +244,11 @@ public static partial class {Domain}Log
 
 ## Step 3: Implementation Package
 
-### 3.1 ServiceTypeOption
+### 3.1 Implementation
 
 ```csharp
 // Services.{Domain}.{Implementation}/{Implementation}Type.cs
-[ServiceTypeOption(typeof({Domain}Types), "{Implementation}")]
+[Implementation(typeof({Domain}Types), "{Implementation}")]
 public sealed class {Implementation}Type
     : {Domain}TypeBase<I{Domain}, I{Implementation}Factory, {Implementation}Configuration>
 {
@@ -251,8 +263,19 @@ public sealed class {Implementation}Type
 
     public override IServiceCollection RegisterRequiredServices(IServiceCollection services)
     {
-        // Register factory as singleton
+        // Factories are singleton (stateless, thread-safe).
         services.AddSingleton<I{Implementation}Factory, {Implementation}Factory>();
+
+        // Typed config provider is singleton (reads via IConfigurationGateway; caching lives in
+        // the built-in gateway layer backed by the singleton DataGatewayResultCache, not in the provider).
+        services.AddSingleton(sp => new DefaultConfigurationProvider<{Implementation}Configuration>(
+            sp.GetRequiredService<IOptionsMonitor<List<{Implementation}Configuration>>>(),
+            sp.GetRequiredService<ILoggerFactory>()
+                .CreateLogger<DefaultConfigurationProvider<{Implementation}Configuration>>(),
+            sp.GetRequiredService<IConfigurationGatewayProvider>(),
+            ConfigurationTypes.GetByServiceType("{Domain}", "{Implementation}")!,
+            "ConfigurationDb"));
+
         return services;
     }
 
@@ -260,8 +283,17 @@ public sealed class {Implementation}Type
         Default{Domain}Provider provider,
         IServiceProvider services)
     {
+        // Resolve factory and register with domain provider
         var factory = services.GetRequiredService<I{Implementation}Factory>();
         provider.Register(Name, factory);
+
+        // Resolve typed config provider from DI (already wired with Lazy gateway)
+        var configProvider = services.GetRequiredService<DefaultConfigurationProvider<{Implementation}Configuration>>();
+        provider.Register(Name, configProvider);
+
+        // Register in domain provider's typed lookup dictionary
+        var domainProvider = services.GetService<{Domain}ConfigurationProvider>();
+        domainProvider?.Register(Name, configProvider);
     }
 
     public override void Configure(
@@ -276,7 +308,7 @@ public sealed class {Implementation}Type
 
 ### 3.2 Factory
 
-Factories inject their dependencies directly via constructor. They're registered as singletons but can use scoped services when needed via provider injection.
+Factories inject their dependencies directly via constructor. They're registered as singletons (stateless, thread-safe). Domain providers are registered **Scoped** by default (the `ProviderLifetime` named arg on `[ServiceTypeCollection]` controls this); factories wired inside a scoped provider resolver are resolved per request scope, not once at startup from root.
 
 ```csharp
 // Services.{Domain}.{Implementation}/{Implementation}Factory.cs
@@ -334,10 +366,10 @@ public sealed class {Implementation}Factory : I{Implementation}Factory
 
 ```csharp
 // Services.{Domain}.{Implementation}/{Implementation}Configuration.cs
+// The attribute carries only the ServiceCategory/ServiceType discriminators.
+// Schema, table name, and parent relationships come from naming conventions /
+// the IDataNode object model — not from the attribute.
 [ManagedConfiguration(
-    Schema = "cfg",
-    TableName = "{Implementation}{Domain}",
-    Parent = nameof({Domain}ConfigurationBase<{Implementation}Configuration>),
     ServiceCategory = "{Domain}",
     ServiceType = "{Implementation}")]
 public partial class {Implementation}Configuration
@@ -390,17 +422,17 @@ public static partial class {Implementation}Log
 ### 3.5 Project References (.csproj)
 
 ```xml
-<!-- Services.{Domain}.{Implementation}/FractalDataWorks.Services.{Domain}.{Implementation}.csproj -->
+<!-- Services.{Domain}.{Implementation}/Fdw.Services.{Domain}.{Implementation}.csproj -->
 <ItemGroup>
-  <ProjectReference Include="..\FractalDataWorks.Services.{Domain}\..." />
-  <ProjectReference Include="..\FractalDataWorks.Registration.SourceGenerators\..."
+  <ProjectReference Include="..\Fdw.Services.{Domain}\..." />
+  <ProjectReference Include="..\Fdw.Registration.SourceGenerators\..."
                     OutputItemType="Analyzer"
                     ReferenceOutputAssembly="false" />
-  <ProjectReference Include="..\FractalDataWorks.MessageLogging.SourceGenerators\..."
+  <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\..."
                     OutputItemType="Analyzer"
                     ReferenceOutputAssembly="false"
                     PrivateAssets="all" />
-  <ProjectReference Include="..\FractalDataWorks.Configuration.SourceGenerators\..."
+  <ProjectReference Include="..\Fdw.Configuration.SourceGenerators\..."
                     OutputItemType="Analyzer"
                     ReferenceOutputAssembly="false"
                     PrivateAssets="all" />
@@ -412,7 +444,7 @@ public static partial class {Implementation}Log
 The `Registration.SourceGenerators` package automatically generates a module initializer in each implementation package:
 
 ```csharp
-// Generated: ServiceTypeOptionModuleInitializer.g.cs
+// Generated: ImplementationModuleInitializer.g.cs
 [ModuleInitializer]
 internal static void Initialize()
 {
@@ -420,7 +452,7 @@ internal static void Initialize()
 }
 ```
 
-This runs before `Main()`, ensuring the ServiceTypeOption is registered with the collection before `{Domain}Types.Configure()` or `{Domain}Types.Register()` is called.
+This runs before `Main()`, ensuring the Implementation is registered with the collection before `{Domain}Types.Configure()` or `{Domain}Types.Register()` is called.
 
 ## Checklist
 
@@ -440,7 +472,7 @@ This runs before `Main()`, ensuring the ServiceTypeOption is registered with the
 - [ ] Embedded Registration generator for NuGet
 
 ### Implementation Package
-- [ ] `{Implementation}Type` with `[ServiceTypeOption]`
+- [ ] `{Implementation}Type` with `[Implementation]`
 - [ ] `{Implementation}Factory` with MessageLogging
 - [ ] `{Implementation}Configuration` with `[ManagedConfiguration]`
 - [ ] `{Implementation}Log` MessageLogging class
@@ -492,9 +524,7 @@ The base class generates the parent table and must have `[ManagedConfiguration]`
 ```csharp
 // Services.{Domain}/{Domain}ConfigurationBase.cs
 [ManagedConfiguration(
-    Schema = "cfg",
-    TableName = "{Domain}",           // Parent table name
-    ServiceCategory = "{Domain}")]    // Used by MsSqlConfigurationSource
+    ServiceCategory = "{Domain}")]    // Discriminator for the IOptions binding path
 public abstract partial class {Domain}ConfigurationBase : I{Domain}Configuration
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -512,9 +542,6 @@ Each implementation configuration class must reference its parent:
 ```csharp
 // Services.{Domain}.{Implementation}/{Implementation}Configuration.cs
 [ManagedConfiguration(
-    Schema = "cfg",
-    TableName = "{Implementation}{Domain}",    // Child table name
-    ParentTableName = "{Domain}",              // FK to parent table
     ServiceCategory = "{Domain}",              // MUST match parent
     ServiceType = "{Implementation}")]         // Discriminator value
 public sealed partial class {Implementation}Configuration
@@ -552,9 +579,9 @@ When configurations are loaded from the database via `MsSqlConfigurationProvider
 
 This organization allows `IOptions<List<TConfiguration>>` binding to work correctly, grouping all configurations of the same type together so the provider can look them up by Name at runtime.
 
-### Configuration Binding in ServiceTypeOption
+### Configuration Binding in Implementation
 
-The `Configure()` method in each ServiceTypeOption binds `IOptions<List<TConfiguration>>` from the section organized by ServiceType:
+The `Configure()` method in each Implementation binds `IOptions<List<TConfiguration>>` from the section organized by ServiceType:
 
 ```csharp
 public override void Configure(
@@ -636,11 +663,11 @@ VALUES
 
 | ServiceCategory | Parent Table | Example Child Tables | Status |
 |-----------------|--------------|---------------------|--------|
-| Connection | cfg.Connection | cfg.MsSqlConnection, cfg.HttpConnection | ✅ Complete |
-| SecretManager | cfg.SecretManager | cfg.EnvironmentVariableSecretManager | ❌ Missing parent |
-| Authentication | cfg.Authentication | cfg.JwtAuthentication | ❌ Not implemented |
-| Pipeline | cfg.Pipeline | cfg.BatchCopyPipeline | ⚠️ Partial |
-| Schedule | cfg.Schedule | cfg.CronSchedule, cfg.IntervalSchedule | ⚠️ Partial |
+| Connection | conn.Connection | conn.MsSqlConnection, conn.HttpConnection | ✅ Complete |
+| SecretManager | sec.SecretManager | sec.EnvironmentVariableSecretManager, sec.AzureKeyVaultSecretManager | ✅ Complete |
+| Authentication | auth.Authentication | auth.JwtAuthentication, auth.BasicAuthentication, auth.OAuth2Authentication | ✅ Complete |
+| Pipeline | pipe.Pipeline | pipe.BatchCopyPipeline, pipe.StreamingPipeline | ✅ Complete |
+| Schedule | sched.Schedule | (no typed-body tables — CronExpression/IntervalSeconds on parent) | ✅ Complete |
 
 ### Troubleshooting
 
@@ -651,25 +678,24 @@ VALUES
 4. Configuration seeding only inserted into child table, not parent
 
 **"Secret manager not found"** - Usually means:
-1. No `cfg.SecretManager` parent table exists
-2. `RegisterProviderServices` not implemented for SecretManagerTypeBase
+1. No `sec.SecretManager` parent table exists
+2. `RegisterFactory` not registering the option's factory with the domain provider
 3. SecretManager configurations not seeded into database
 
 ## Reference Implementations
 
 ### Connections (Primary Reference)
 See the MsSql Connection implementation:
-- [`Services.Connections.Abstractions`](../../src/FractalDataWorks.Services.Connections.Abstractions/)
-- [`Services.Connections`](../../src/FractalDataWorks.Services.Connections/)
-- [`Services.Connections.MsSql`](../../src/FractalDataWorks.Services.Connections.MsSql/)
+- [`Services.Connections.Abstractions`](../src/Fdw.Services.Connections.Abstractions/)
+- [`Services.Connections`](../src/Fdw.Services.Connections/)
+- [`Services.Connections.MsSql`](../src/Fdw.Services.Connections.MsSql/)
 
 ### DataStores (Three-Phase Pattern)
 See the DataStore implementation for another complete example:
-- [`Services.Data.Abstractions`](../../src/FractalDataWorks.Services.Data.Abstractions/) - `IDataStoreServiceType`, `IDataStoreFactory`, `IDataStoreConfiguration`
-- [`Services.Data`](../../src/FractalDataWorks.Services.Data/) - `DataStoreServiceTypes`, `DefaultDataStoreProvider`
-- [`Data.DataStores.SqlServer`](../../src/FractalDataWorks.Data.DataStores.SqlServer/) - `MsSqlDataStoreServiceType`
-- [`Data.DataStores.Rest`](../../src/FractalDataWorks.Data.DataStores.Rest/) - `RestDataStoreServiceType`
-- [`Data.DataStores.FileSystem`](../../src/FractalDataWorks.Data.DataStores.FileSystem/) - `FileSystemDataStoreServiceType`
+- [`Services.Data.Abstractions`](../src/Fdw.Services.Data.Abstractions/) - `IDataStoreServiceType`, `IDataStoreFactory`, `IDataStoreConfiguration`
+- [`Services.Data`](../src/Fdw.Services.Data/) - `DataStoreServiceTypes`, `DefaultDataStoreProvider`
+- [`Data.DataStores.SqlServer`](../src/Fdw.Data.DataStores.SqlServer/) - `MsSqlDataStoreServiceType`
+- [`Data.DataStores.Rest`](../src/Fdw.Data.DataStores.Rest/) - `RestDataStoreServiceType`
 
 **Key Pattern Differences:**
 - DataStores have `TranslatorType` for command translation (MsSql → SQL, Rest → HTTP)

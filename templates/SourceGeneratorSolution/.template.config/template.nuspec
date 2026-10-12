@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>FractalDataWorks.Templates.SourceGenerator</id>
+    <version>$version$</version>
+    <authors>FractalDataWorks</authors>
+    <description>
+      Source Generator Solution template for creating Roslyn source generators with ILRepack integration.
+      Creates three projects: Runtime (types/attributes), SourceGenerators (analyzer), and Abstractions (consumer package).
+    </description>
+    <language>en-US</language>
+    <projectUrl>https://github.com/your-org/FractalDataWorks</projectUrl>
+    <license type="expression">MIT</license>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>dotnet-new templates source-generator roslyn csharp</tags>
+    <packageTypes>
+      <packageType name="Template" />
+    </packageTypes>
+  </metadata>
+  <files>
+    <file src="**\*" target="content" exclude="**\.vs\**;**\.git\**;**\bin\**;**\obj\**;**\*.user" />
+  </files>
+</package>

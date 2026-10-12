@@ -1,0 +1,80 @@
+using System.Linq;
+using Fdw.Abstractions;
+using Fdw.Collections;
+using Fdw.Configuration;
+using Fdw.Results;
+using Fdw.Services;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Logging.Abstractions;
+using Fdw.ServiceTypes;
+using Fdw.ServiceTypes.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Fdw.Services.Logging;
+
+/// <summary>
+/// The logging option set — one option per logging implementation.
+/// </summary>
+/// <remarks>
+/// Logging is the earliest domain to come up, so its configuration is read through the
+/// <c>ServerConfiguration</c> connection declared in <c>configurationSchema.json</c> rather than
+/// <c>PlatformConfiguration</c>: a logging pipeline has to exist before the platform store is
+/// reachable.
+/// </remarks>
+[ServiceTypeCollection(
+    typeof(LoggingTypeBase<ILoggingService, ILoggingImplementationConfiguration, ILoggingFactory<ILoggingService, ILoggingImplementationConfiguration>>),
+    typeof(ILoggingType),
+    typeof(LoggingTypes),
+    ServiceInterface = typeof(ILoggingService),
+    ServiceCategory = "Logging")]
+public partial class LoggingTypes : ServiceTypeCollectionBase<
+    LoggingTypeBase<ILoggingService, ILoggingImplementationConfiguration, ILoggingFactory<ILoggingService, ILoggingImplementationConfiguration>>,
+    ILoggingType>
+{
+    /// <summary>The connection this domain's configuration rows are read from and written to.</summary>
+    public static string ConfigurationConnection => ServerConnection.Name;
+
+    static LoggingTypes()
+    {
+        var collectOptions = RegisterFunc;
+
+        Registration((builder, loggerFactory) =>
+        {
+            var log = loggerFactory?.CreateLogger<LoggingTypes>() ?? NullLogger<LoggingTypes>.Instance;
+
+            // The domain's own provider goes in BEFORE its options are collected, because an
+            // option's Register exists to hand this provider an implementation and cannot do that
+            // against a provider the container does not have yet. Collecting first left every
+            // option registering against nothing.
+            // Why NullLogger and not a resolved ILogger: this provider is what the logging system
+            // reads its own configuration from, so it sits INSIDE logger construction. Resolving
+            // ILogger<T> here asks the container for a logger in order to build the logger --
+            // AddSerilog's callback resolves this provider, whose ctor would resolve ILoggerFactory,
+            // which runs that callback again. DI turns that recursion into cross-thread waits via
+            // StackGuard, so it parks silently instead of throwing: the host never finishes starting.
+            builder.Services.TryAddSingleton<ILoggingConfigurationProvider>(sp =>
+                new LoggingConfigurationProvider(
+                    NullLogger<LoggingConfigurationProvider>.Instance,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), LoggingTypes.ConfigurationConnection, "log", "Logging"));
+            builder.Services.TryAddSingleton<LoggingConfigurationProvider>(
+                sp => (LoggingConfigurationProvider)sp.GetRequiredService<ILoggingConfigurationProvider>());
+
+            var registered = collectOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(LoggingTypes), declaredOptions.Length, optionNames);
+
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+    }
+}

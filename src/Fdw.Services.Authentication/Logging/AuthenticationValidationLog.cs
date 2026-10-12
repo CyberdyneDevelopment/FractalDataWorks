@@ -1,0 +1,237 @@
+using Fdw.MessageLogging;
+using Fdw.Messages;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Authentication.Logging;
+
+/// <summary>
+/// MessageLogging for the inbound-token validation domain — the declaration of authentication
+/// services, the schemes they register, and the per-request routing between them.
+/// </summary>
+[MessageLoggingTypeCode("AUTHVALIDATION")]
+public static partial class AuthenticationValidationLog
+{
+    /// <summary>Logs an AuthenticationServices entry that names no mechanism.</summary>
+    [MessageLogging(EventId = 71100, Level = LogLevel.Error,
+        Message = "Authentication service at '{sectionPath}' declares no Implementation. Set it to a REGISTERED member of AuthenticationServiceTypes - 'OpenIddict' for tokens this host issues, 'JwtBearer' for tokens a remote authority issues. A value that is not a registered member registers no scheme at all, and every request then falls through to UnmatchedIssuerHandler")]
+    public static partial IGenericMessage EntryMissingImplementation(ILogger logger, string sectionPath);
+
+    /// <summary>Logs an enabled AuthenticationServices entry with no name.</summary>
+    [MessageLogging(EventId = 71101, Level = LogLevel.Error,
+        Message = "Authentication service at '{sectionPath}' declares no Name. Set Name to a unique label for this issuer - it becomes the ASP.NET scheme name and the identifier in every routing and rejection log line")]
+    public static partial IGenericMessage EntryMissingName(ILogger logger, string sectionPath);
+
+    /// <summary>Logs an enabled AuthenticationServices entry with no authority.</summary>
+    [MessageLogging(EventId = 71102, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' declares no Authority. Set Authority to the absolute issuer URL its tokens carry in their 'iss' claim - this host's own authority for OpenIddict, or the remote authority for JwtBearer (e.g. https://login.example.dev/application/o/{{slug}}/). There is NO default: without it no scheme is registered and every token from this issuer is rejected. The trailing slash is compared literally - take the value from the issuer's own /.well-known/openid-configuration rather than typing it")]
+    public static partial IGenericMessage EntryMissingAuthority(ILogger logger, string serviceName);
+
+    /// <summary>Logs an authority that is not an absolute http(s) URL.</summary>
+    [MessageLogging(EventId = 71103, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' declares Authority '{authority}', which is not an absolute http(s) URL. It must be the full issuer URL including scheme - https://host/path, not a host name, a relative path, or a bare name")]
+    public static partial IGenericMessage AuthorityNotAbsolute(ILogger logger, string serviceName, string authority);
+
+    /// <summary>Logs a JwtBearer entry with no audience.</summary>
+    [MessageLogging(EventId = 71104, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' declares no Audience. Set Audience to the value this host's tokens carry in their 'aud' claim - decode a real token and read it rather than assuming, since a token minted for an application carries the client id while one minted for an exposed API carries that API's identifier. Without it, the roles below would be conferred on EVERY token this issuer mints, for any audience")]
+    public static partial IGenericMessage JwtBearerMissingAudience(ILogger logger, string serviceName);
+
+    /// <summary>Logs a JwtBearer entry with no roles.</summary>
+    [MessageLogging(EventId = 71105, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' declares no Roles. Set Roles to the local role names a caller from this issuer receives - they must exist in authz.Role, and their permissions are what every role-gated endpoint checks. Registration is refused rather than authenticating a caller into nothing: with no roles the caller would pass authentication and be denied by every route it reaches")]
+    public static partial IGenericMessage JwtBearerMissingRoles(ILogger logger, string serviceName);
+
+    /// <summary>Logs a host that registered a validation mechanism but declared no authentication services.</summary>
+    [MessageLogging(EventId = 71106, Level = LogLevel.Error,
+        Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a Implementation and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
+    public static partial IGenericMessage NoAuthenticationServicesDeclared(ILogger logger, string sectionName);
+
+    /// <summary>Logs a mechanism that returned success without producing a scheme binding.</summary>
+    [MessageLogging(EventId = 71107, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' ({mechanism}) reported success without producing a scheme binding")]
+    public static partial IGenericMessage SchemeNotProduced(ILogger logger, string serviceName, string mechanism);
+
+    /// <summary>Logs a declared authentication service whose Implementation names no registered option.</summary>
+    [MessageLogging(EventId = 71108, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' names Implementation '{implementation}', and no option is registered under that name. The row was read and composed; what is missing is the package that declares that implementation, so either the name is misspelled or this host does not reference it")]
+    public static partial IGenericMessage NoOptionForImplementation(ILogger logger, string serviceName, string implementation);
+
+    /// <summary>Logs a validated token that carried no claims identity.</summary>
+    [MessageLogging(EventId = 71109, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' validated a token that produced no claims identity")]
+    public static partial IGenericMessage ValidatedTokenHasNoIdentity(ILogger logger, string serviceName);
+
+    /// <summary>Logs declared roles that could not be expanded to permissions.</summary>
+    [MessageLogging(EventId = 71110, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' could not resolve its declared roles '{roles}' to permissions: {reason}. Each name must match a row in authz.Role, and that role needs grants in authz.RolePermission - a role that exists with no grants resolves to an empty permission set and authorises nothing")]
+    public static partial IGenericMessage DeclaredRolesNotResolved(ILogger logger, string serviceName, string roles, string reason);
+
+    /// <summary>Logs a bearer token whose issuer no authentication service declared.</summary>
+    [MessageLogging(EventId = 51100, Level = LogLevel.Warning,
+        Message = "No authentication service declares issuer '{issuer}' (declared: {declaredIssuers}); rejecting {path}")]
+    public static partial IGenericMessage IssuerNotDeclared(ILogger logger, string issuer, string declaredIssuers, string path);
+
+    /// <summary>Logs a request carrying no readable bearer token.</summary>
+    [MessageLogging(EventId = 11100, Level = LogLevel.Debug,
+        Message = "No readable bearer token on {path}; no authentication scheme can be selected")]
+    public static partial IGenericMessage NoReadableBearerToken(ILogger logger, string path);
+
+    /// <summary>Logs an entry that is present but disabled.</summary>
+    [MessageLogging(EventId = 11101, Level = LogLevel.Debug,
+        Message = "Authentication service '{serviceName}' ({mechanism}) is declared but not enabled")]
+    public static partial IGenericMessage EntryDisabled(ILogger logger, string serviceName, string mechanism);
+
+    /// <summary>Logs a scheme registered for one declared authentication service.</summary>
+    [MessageLogging(EventId = 31100, Level = LogLevel.Information,
+        Message = "Authentication service '{serviceName}' ({mechanism}) validates issuer '{issuer}' on scheme '{schemeName}'")]
+    public static partial IGenericMessage SchemeRegistered(ILogger logger, string serviceName, string mechanism, string schemeName, string issuer);
+
+    /// <summary>Logs the routing registration once every mechanism has contributed its schemes.</summary>
+    [MessageLogging(EventId = 31101, Level = LogLevel.Information,
+        Message = "Routing {bindingCount} trusted issuer(s) through the '{selectorScheme}' policy scheme")]
+    public static partial IGenericMessage RoutingRegistered(ILogger logger, int bindingCount, string selectorScheme);
+
+    /// <summary>Logs the scheme a request was routed to.</summary>
+    [MessageLogging(EventId = 11102, Level = LogLevel.Debug,
+        Message = "Issuer '{issuer}' routed to scheme '{schemeName}' (authentication service '{serviceName}')")]
+    public static partial IGenericMessage IssuerRouted(ILogger logger, string issuer, string schemeName, string serviceName);
+
+    /// <summary>Logs the roles and permissions conferred on a validated external token.</summary>
+    [MessageLogging(EventId = 31102, Level = LogLevel.Information,
+        Message = "Authentication service '{serviceName}' conferred {roleCount} role(s) and {permissionCount} permission(s) on subject '{subject}'")]
+    public static partial IGenericMessage DeclaredRolesConferred(ILogger logger, string serviceName, int roleCount, int permissionCount, string subject);
+
+    /// <summary>Logs a bearer token whose payload segment could not be read.</summary>
+    [MessageLogging(EventId = 11103, Level = LogLevel.Debug,
+        Message = "The bearer token on {path} has an unreadable payload; no issuer to select a scheme by")]
+    public static partial IGenericMessage BearerTokenPayloadUnreadable(ILogger logger, System.Exception exception, string path);
+
+    /// <summary>Logs an OpenIddict host whose server options carry no issuer.</summary>
+    [MessageLogging(EventId = 71111, Level = LogLevel.Error,
+        Message = "OpenIddict stamped no issuer on its server options; there is nothing to match this host's declared authority against")]
+    public static partial IGenericMessage OpenIddictIssuerNotStamped(ILogger logger);
+
+    /// <summary>Logs a declared authority that does not match the issuer OpenIddict stamps on its tokens.</summary>
+    [MessageLogging(EventId = 71112, Level = LogLevel.Error,
+        Message = "Authentication service '{serviceName}' declares authority '{declared}', but OpenIddict stamps issuer '{stamped}' — every token this host issues would route to no scheme")]
+    public static partial IGenericMessage OpenIddictIssuerMismatch(ILogger logger, string serviceName, string declared, string stamped);
+
+    /// <summary>Logs a host that carries the validation domain with no mechanism registered in it.</summary>
+    [MessageLogging(EventId = 11104, Level = LogLevel.Debug,
+        Message = "No token-validation mechanism is registered; this host validates no tokens of its own")]
+    public static partial IGenericMessage NoMechanismsRegistered(ILogger logger);
+
+    /// <summary>The signing key this host validates its own tokens with could not be read.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="serviceName">The entry whose scheme needed it.</param>
+    // Why Error and why registration fails on it: a scheme that cannot check a signature refuses
+    // every token it exists to accept. Failing here stops the host with the cause named, rather
+    // than starting one that 401s everything and says nothing about why.
+    [MessageLogging(EventId = 71113, Level = LogLevel.Error,
+        Message = "No local signing key is available for '{serviceName}', so its tokens cannot be validated")]
+    public static partial IGenericMessage LocalSigningKeyUnavailable(ILogger logger, string serviceName);
+
+    /// <summary>Logs a LocalKey entry that declared no audience.</summary>
+    // Separate from JwtBearerMissingAudience so the message can say what a LocalKey audience is
+    // for. Here it is what this host mints into its own tokens, not a value agreed with a remote
+    // issuer, so the thing to go change is the flow rather than the provider registration.
+    [MessageLogging(EventId = 71114, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' declares no Audience. Set it to the audience this host's flows mint - a token is only accepted for the audience it names, so a mismatch rejects every token this host issued")]
+    public static partial IGenericMessage LocalKeyMissingAudience(ILogger logger, string serviceName);
+
+    // Why an error and not a skip: the domain provider dispatches by the kind the domain row names,
+    // so a provider only ever sees rows of its own kind. Another kind arriving means the registry
+    // sent the row to the wrong provider, and silently dropping it would hide that.
+    [MessageLogging(EventId = 71115, Level = LogLevel.Error,
+        Message = "Expected a {expected} configuration but the row read as '{actual}'. The domain provider dispatched this row to the wrong implementation provider")]
+    public static partial IGenericMessage ImplementationKindMismatch(ILogger logger, string expected, string actual);
+
+    [MessageLogging(EventId = 71116, Level = LogLevel.Error,
+        Message = "LocalKey authentication service '{serviceName}' could not be read, so its scheme validates with no key and no issuer and every token it is handed will be refused")]
+    public static partial IGenericMessage LocalKeyEntryUnreadable(ILogger logger, string serviceName);
+
+    /// <summary>Logs a JwtBearer entry whose row could not be read.</summary>
+    [MessageLogging(EventId = 71119, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' could not be read, so its scheme validates with no issuer and no audience and every token it is handed will be refused")]
+    public static partial IGenericMessage JwtBearerEntryUnreadable(ILogger logger, string serviceName);
+
+    /// <summary>Logs an issuer that published an OpenID document carrying no signing keys.</summary>
+    [MessageLogging(EventId = 71120, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' read the OpenID configuration at '{issuer}' and it published no signing keys, so no token from that issuer can have its signature checked")]
+    public static partial IGenericMessage JwtBearerNoSigningKeys(ILogger logger, string serviceName, string issuer);
+
+    /// <summary>Logs an issuer whose OpenID document could not be fetched.</summary>
+    [MessageLogging(EventId = 71121, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' could not reach the OpenID configuration at '{issuer}': {reason}. The keys are the issuer's to publish, so this is a failure to read them rather than a token that was refused")]
+    public static partial IGenericMessage JwtBearerKeysUnreachable(ILogger logger, string serviceName, string issuer, string reason);
+
+    // Why the reason is carried rather than summarised: IDX codes name exactly which check failed -
+    // issuer, audience, lifetime, signature - and a reader who cannot see which one is left guessing
+    // at the same four possibilities every time.
+    [MessageLogging(EventId = 71117, Level = LogLevel.Information,
+        Message = "Token for authentication service '{serviceName}' was rejected: {reason}")]
+    public static partial IGenericMessage TokenRejected(ILogger logger, string serviceName, string reason);
+
+    [MessageLogging(EventId = 71118, Level = LogLevel.Debug,
+        Message = "Token for authentication service '{serviceName}' accepted for principal '{subject}'")]
+    public static partial IGenericMessage TokenAccepted(ILogger logger, string serviceName, string subject);
+
+    /// <summary>Logged when a request with no Authorization header is routed by its session cookie (FDW-903).</summary>
+    [MessageLogging(EventId = 11500, Level = LogLevel.Debug,
+        Message = "Session cookie '{cookieName}' routed to scheme '{schemeName}' for path '{path}'")]
+    public static partial IGenericMessage SessionCookieRouted(ILogger logger, string cookieName, string schemeName, string path);
+
+    /// <summary>Logged when a request carries the cookies of more than one session service (FDW-903).</summary>
+    [MessageLogging(EventId = 51500, Level = LogLevel.Warning,
+        Message = "Request to '{path}' carries cookies for more than one session service ({cookieNames}). None is chosen: which service the caller meant cannot be told from the request, so it is refused. Each Session service must declare a distinct CookieName, and a browser should hold only one")]
+    public static partial IGenericMessage SessionCookiesAmbiguous(ILogger logger, string path, string cookieNames);
+
+    /// <summary>Logged when an opaque (non-JWT) bearer credential is routed to the API-key scheme.</summary>
+    [MessageLogging(EventId = 71122, Level = LogLevel.Debug,
+        Message = "Opaque (non-JWT) bearer credential routed to the API key scheme for path '{path}'")]
+    public static partial IGenericMessage OpaqueCredentialRouted(ILogger logger, string path);
+
+    /// <summary>Logged when an agent key authenticates.</summary>
+    [MessageLogging(EventId = 71123, Level = LogLevel.Information,
+        Message = "Agent key accepted: '{label}' acting as user '{userId}' with {permissionCount} permission(s)")]
+    public static partial IGenericMessage AgentKeyAccepted(ILogger logger, string label, string userId, int permissionCount);
+
+    /// <summary>Logged when a personal access token authenticates.</summary>
+    [MessageLogging(EventId = 71124, Level = LogLevel.Information,
+        Message = "Personal access token accepted for user '{userId}' with {permissionCount} permission(s)")]
+    public static partial IGenericMessage PersonalAccessTokenAccepted(ILogger logger, string userId, int permissionCount);
+
+    /// <summary>Logged when an opaque credential is rejected.</summary>
+    [MessageLogging(EventId = 71125, Level = LogLevel.Warning,
+        Message = "Opaque credential rejected ({kind}): {reason}")]
+    public static partial IGenericMessage OpaqueCredentialRejected(ILogger logger, string kind, string reason);
+
+    /// <summary>Logged when the service a credential kind needs is not registered.</summary>
+    [MessageLogging(EventId = 71126, Level = LogLevel.Error,
+        Message = "{serviceName} is not registered, so a {kind} credential cannot be validated")]
+    public static partial IGenericMessage CredentialServiceNotRegistered(ILogger logger, string serviceName, string kind);
+
+    /// <summary>Logged when the agent key service cannot say which kind an opaque credential is.</summary>
+    // Error: the kind is read from the credential service's configured prefix (FDW-939), so this means
+    // that configuration could not be read -- the service logs why -- and every API key is refused.
+    [MessageLogging(EventId = 71128, Level = LogLevel.Error,
+        Message = "The kind of an opaque credential could not be determined, so it is refused. The agent key service could not read its credential format")]
+    public static partial IGenericMessage CredentialKindUnresolved(ILogger logger);
+
+    /// <summary>Logged when permission resolution fails for an authenticated credential.</summary>
+    [MessageLogging(EventId = 71127, Level = LogLevel.Error,
+        Message = "Permission resolution failed for user '{userId}': {reason}. Failing closed.")]
+    public static partial IGenericMessage PermissionResolutionFailed(ILogger logger, string userId, string reason);
+
+    /// <summary>Logged when an API key's owner lacks the permission its kind requires (FDW-910).</summary>
+    // Warning, not Error: the handler refused exactly as configured -- an operator limited this kind
+    // of credential to some users, and this owner is not one of them.
+    [MessageLogging(EventId = 51501, Level = LogLevel.Warning,
+        Message = "A {kind} owned by user '{userId}' was refused: the owner does not hold '{permission}', which this API key service requires of that kind")]
+    public static partial IGenericMessage ApiKeyNotPermitted(ILogger logger, string kind, string userId, string permission);
+
+    /// <summary>Logged when the ApiKey service row a scheme was taken for cannot be read (FDW-910).</summary>
+    [MessageLogging(EventId = 61500, Level = LogLevel.Error,
+        Message = "API key service '{serviceName}' could not be read, so no key is accepted by it: {reason}")]
+    public static partial IGenericMessage ApiKeyServiceUnreadable(ILogger logger, string serviceName, string reason);
+}

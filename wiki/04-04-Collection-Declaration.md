@@ -4,11 +4,10 @@ The collection class is a partial class with the `[TypeCollection]` attribute. T
 
 ## Pattern
 
-From [`PaymentMethods.cs:1-34`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs):
+From [`PaymentMethods.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs):
 
 ```csharp
-using FractalDataWorks.Collections;
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic;
 
@@ -45,7 +44,7 @@ public abstract partial class PaymentMethods : TypeCollectionBase<PaymentMethodB
 
 ## TypeCollection Attribute
 
-From [`TypeCollectionAttribute.cs:12-28`](../../src/FractalDataWorks.Collections/Attributes/TypeCollectionAttribute.cs#L12-L28):
+From [`TypeCollectionAttribute.cs:12-28`](../src/Fdw.Collections/Attributes/TypeCollectionAttribute.cs#L12-L28):
 
 ```csharp
 [TypeCollection(typeof(BaseType), typeof(InterfaceType), typeof(CollectionType))]
@@ -59,7 +58,7 @@ From [`TypeCollectionAttribute.cs:12-28`](../../src/FractalDataWorks.Collections
 
 ## Generated Members
 
-The source generator creates the following members (see [`TypeCollectionGenerator.cs`](../../src/FractalDataWorks.Collections.SourceGenerators/TypeCollectionGenerator.cs)):
+The source generator creates the following members (see [`TypeCollectionGenerator.cs`](../src/Fdw.Collections.SourceGenerators/TypeCollectionGenerator.cs)):
 
 ```csharp
 // Static accessors for each [TypeOption] discovered
@@ -119,21 +118,26 @@ This runs before `Main()`, ensuring all TypeOptions are registered.
 
 1. **Before first access**: Options collected via `RegisterMember()`
 2. **On first access**: Collection freezes into `FrozenDictionary`
-3. **After freeze**: `RegisterMember()` throws exception
+3. **After freeze**: `RegisterMember()` is a no-op (silently ignored)
+
+The generator emits roughly:
 
 ```csharp
 public static void RegisterMember(IPaymentMethod type)
 {
-    if (_frozen)
-        throw new InvalidOperationException("Collection is frozen");
+    if (_frozen) return;
 
     lock (_lock)
     {
-        if (!_pendingRegistrations.Any(p => p.Id == type.Id))
-            _pendingRegistrations.Add(type);
+        if (_frozen) return;
+        if (_pendingRegistrations.Any(p => ReferenceEquals(p, type) || p.GetType() == type.GetType()))
+            return;
+        _pendingRegistrations.Add(type);
     }
 }
 ```
+
+The collection is frozen on first read; subsequent `RegisterMember` calls are silently ignored (they do **not** throw).
 
 ### For Package Authors
 
@@ -142,7 +146,7 @@ To enable transitive registration for consumers, embed the Registration generato
 ```xml
 <ItemGroup>
   <!-- Embed for transitive flow -->
-  <None Include="$(OutputPath)FractalDataWorks.Registration.SourceGenerators.dll"
+  <None Include="$(OutputPath)Fdw.Registration.SourceGenerators.dll"
         Pack="true"
         PackagePath="analyzers/dotnet/cs" />
 </ItemGroup>

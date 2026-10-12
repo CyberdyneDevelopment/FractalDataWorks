@@ -1,0 +1,168 @@
+using Fdw.Services.Identity.ClientCredentials;
+using Fdw.Configuration;
+using System;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Fdw.ServiceTypes;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Identity;
+using Fdw.Services.Identity.Abstractions;
+using Fdw.Services.Identity.JwtAssertion;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data;
+
+namespace Fdw.Services.Identity.Tests;
+
+/// <summary>
+/// Boots the identity domain through the real three-phase registration inside a real host builder.
+/// </summary>
+/// <remarks>
+/// <para>
+/// This is the test that answers "does it integrate" rather than "does it compile". Everything else in
+/// this suite exercises a class directly; this one runs <c>Configure</c>, <c>Register</c>,
+/// <c>Build()</c> and <c>Initialize</c> in the order a real entry-point app runs them, and then
+/// resolves out of the built container.
+/// </para>
+/// <para>
+/// The domain is NOT given a host service type. Host service types were removed from the framework —
+/// <c>PlatformServices</c> is the host, and a domain joins it as a sibling category. A host type here
+/// would be reintroducing the thing that was deleted.
+/// </para>
+/// </remarks>
+[Trait("Priority", "P0")]
+[Trait("Category", "Configuration")]
+public sealed class IdentityHostBootTests
+{
+    private const bool Force = true;
+
+    private static HostApplicationBuilder Builder()
+    {
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+
+        // The prerequisites a real entry-point app supplies before any domain registers. Named here
+        // rather than mocked away, because discovering exactly this list is the point of the test.
+        builder.Services.AddHttpClient();
+        builder.Services.AddSingleton<IConfigurationGatewayProvider>(new ConfigurationGatewayProvider());
+
+        return builder;
+    }
+
+    [Theory]
+    [InlineData("ClientCredentials")]
+    [InlineData("JwtAssertion")]
+    public async Task EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
+    {
+        // This is the assertion that proves the option attached AND its Register body ran: the
+        // provider's factory registry is populated per mechanism only by that option's own
+        // registration. The collection's Options array is deliberately protected, so the registry is
+        // the real observable rather than an accessor reaching past the design.
+        //
+        // The failure this guards against is the one the framework calls out by name: an option whose
+        // Register body never put its factory in the registry resolves to "No registered service type
+        // matches Implementation" at the first request, which reads like a configuration fault and
+        // is not one.
+        var builder = Builder();
+        IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
+        IdentityServiceTypes.Register(builder, NullLoggerFactory.Instance, Force);
+
+        using var host = builder.Build();
+        using var scope = host.Services.CreateScope();
+
+        var provider = scope.ServiceProvider
+            .GetRequiredService<IIdentityServiceProvider>();
+
+        // A configuration naming a registered mechanism must not fail with "no factory registered".
+        // It fails for want of a typed body instead, which is the next gate and a different message.
+        // The probe is the mechanism's own implementation record, because the factory is chosen by
+        // the configuration's type now, not by a name on a header row.
+        IGenericConfiguration probe = mechanism switch
+        {
+            "ClientCredentials" => new ClientCredentialsConfiguration { Name = "probe" },
+            "JwtAssertion" => new JwtAssertionConfiguration { Name = "probe" },
+            _ => throw new ArgumentOutOfRangeException(nameof(mechanism), mechanism, "unknown mechanism"),
+        };
+
+        var built = await provider.Get(probe, TestContext.Current.CancellationToken);
+
+        built.IsFailure.ShouldBeTrue();
+        built.CurrentMessage!.ShouldNotContain("NoFactoryRegistered");
+    }
+
+    [Fact]
+    public void ConfigureAndRegisterSucceedAgainstARealHostBuilder()
+    {
+        var builder = Builder();
+        var loggerFactory = NullLoggerFactory.Instance;
+
+        var configured = IdentityServiceTypes.Configure(builder, loggerFactory, Force);
+        configured.IsSuccess.ShouldBeTrue(configured.CurrentMessage);
+
+        var registered = IdentityServiceTypes.Register(builder, loggerFactory, Force);
+        registered.IsSuccess.ShouldBeTrue(registered.CurrentMessage);
+    }
+
+    [Fact]
+    public void TheDomainProviderResolvesOutOfTheBuiltContainer()
+    {
+        var builder = Builder();
+        IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
+        IdentityServiceTypes.Register(builder, NullLoggerFactory.Instance, Force);
+
+        using var host = builder.Build();
+        using var scope = host.Services.CreateScope();
+
+        scope.ServiceProvider
+            .GetService<IIdentityServiceProvider>()
+            .ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void TheTokenCacheIsRegisteredAsASingletonSoOneTokenServesTheProcess()
+    {
+        var builder = Builder();
+        IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
+        IdentityServiceTypes.Register(builder, NullLoggerFactory.Instance, Force);
+
+        using var host = builder.Build();
+
+        var first = host.Services.GetService<IIdentityTokenCache>();
+        first.ShouldNotBeNull();
+
+        // A scoped cache would acquire a new token per scope, which is the behaviour the cache exists
+        // to prevent — so this asserts identity across scopes, not merely that one is registered.
+        using var scope = host.Services.CreateScope();
+        scope.ServiceProvider.GetService<IIdentityTokenCache>().ShouldBeSameAs(first);
+    }
+
+    [Fact]
+    public void TheIdentityHttpClientIsRegisteredUnderItsOwnName()
+    {
+        var builder = Builder();
+        IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
+        IdentityServiceTypes.Register(builder, NullLoggerFactory.Instance, Force);
+
+        using var host = builder.Build();
+
+        host.Services.GetRequiredService<IHttpClientFactory>()
+            .CreateClient(Fdw.Services.Identity.IdentityHttpClient.Name)
+            .ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void InitializeSucceedsAfterBuild()
+    {
+        var builder = Builder();
+        IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
+        IdentityServiceTypes.Register(builder, NullLoggerFactory.Instance, Force);
+
+        using var host = builder.Build();
+
+        var initialized = IdentityServiceTypes.Initialize(host, NullLoggerFactory.Instance, Force);
+        initialized.IsSuccess.ShouldBeTrue(initialized.CurrentMessage);
+    }
+}

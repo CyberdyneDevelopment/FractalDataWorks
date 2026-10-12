@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,69 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Web.RestEndpoints.Models;
+using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.Pagination;
+using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+
+namespace Fdw.UI.Themes.Endpoints;
+
+/// <summary>
+/// Base endpoint to list all available UI themes.
+/// Subclasses must implement <see cref="LoadThemes"/> to provide the theme data.
+/// </summary>
+/// <typeparam name="TSummary">The theme summary DTO type.</typeparam>
+public abstract class ListThemesEndpointBase<TSummary> : EndpointWithoutRequest<PaginatedResponse<TSummary>>
+    where TSummary : class
+{
+    /// <summary>Initializes a new instance of the <see cref="ListThemesEndpointBase{TSummary}"/> class.</summary>
+    protected ListThemesEndpointBase(ILogger logger)
+    {
+        Logger = logger;
+    }
+
+    /// <summary>Gets the resource name used for routing and policies.</summary>
+    protected virtual string ResourceName => "themes";
+
+    /// <summary>Gets the authorization policy name for read operations.</summary>
+    protected virtual string ReadPolicy => "configurations:read";
+
+    /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
+    protected new ILogger Logger { get; }
+
+    /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
+    public override void Configure()
+    {
+        Get($"/{ResourceName}");
+#if DEVELOP
+        AllowAnonymous();
+#else
+        Policies(ReadPolicy);
+#endif
+        Summary(s =>
+        {
+            s.Summary = $"List available {ResourceName}";
+            s.Description = $"Returns a list of all available UI {ResourceName}.";
+        });
+    }
+
+    /// <summary>Returns a list of all available themes.</summary>
+    public override async Task HandleAsync(CancellationToken ct)
+    {
+        var paging = PaginationQuery.Parse(HttpContext, Logger);
+        if (paging.IsFailure)
+        {
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(paging, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(paging.Value!.Apply(LoadThemes()), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Loads all available themes. Override to provide theme data.</summary>
+    protected virtual IReadOnlyList<TSummary> LoadThemes() => [];
+}

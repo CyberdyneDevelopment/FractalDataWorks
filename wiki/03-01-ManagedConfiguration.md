@@ -4,371 +4,347 @@ ManagedConfiguration is FractalDataWorks' pattern for database-persisted, source
 
 ## Overview
 
-The `[ManagedConfiguration]` attribute marks a class for:
-- **DDL Generation** - SQL table definitions with parent-child relationships
-- **ConfigurationType Generation** - Metadata class with SQL queries
-- **Validator Generation** - FluentValidation validators
-- **UI Generation** - Form models for configuration editing
+The `[ManagedConfiguration]` attribute marks a POCO for:
+- **DDL generation** — a C# `DdlDefinition` object model describing the table, columns, and version-on-write keys.
+- **POCO mapper generation** — a `*PocoMapper.g.cs` that maps query rows to the configuration instance.
+
+The attribute lives in the `Fdw.Configuration` namespace and is emitted by
+`Fdw.Configuration.SourceGenerators`. It carries **discriminator and UI-generation
+metadata only** — it does **not** carry the schema, table name, or parent table. Structural
+metadata (schema, table, parent relationships) is owned by the `IDataNode` / `IDataContainer`
+object model, not the attribute.
+
+### Attribute shape
+
+```csharp
+public sealed class ManagedConfigurationAttribute : Attribute
+{
+    public string? DisplayName { get; set; }      // UI display name
+    public string? Description { get; set; }       // UI help text
+    public string? ServiceCategory { get; set; }   // e.g. "Connection" (inferred from class-name suffix if unset)
+    public string? ServiceType { get; set; }       // e.g. "MsSql" (inferred from class-name prefix if unset)
+    public bool GenerateDdl { get; set; } = true;
+    public bool GenerateValidator { get; set; } = true;
+    public bool GenerateUi { get; set; } = true;
+    public string OnDelete { get; set; } = "Cascade";        // Cascade | SetNull | NoAction
+    public string DatabaseProvider { get; set; } = "MsSql";  // MsSql | PostgreSql
+}
+```
+
+There is **no `Schema`, `TableName`, or `ParentTableName`** property. Real usage is just the two
+discriminators:
+
+```csharp
+[ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MsSql")]
+```
+
+> **Note on `GenerateValidator`:** the flag exists, but no validator generator is currently
+> wired. Validators are hand-written (e.g.
+> `MsSqlConnectionConfigurationValidator.cs`). The `ConfigurationTypesGenerator` that once emitted
+> `ConfigurationType` classes and a `ConfigurationTypes` collection has been reduced to a
+> namespace-helper stub — it generates no per-type classes.
 
 ## Architecture Flow
 
 ```mermaid
 flowchart TB
     subgraph "Compile Time"
-        A[Configuration Class] --> B[ManagedConfiguration Attribute]
+        A[Configuration POCO] --> B["[ManagedConfiguration] + [GenerateMapper]"]
         B --> C[Configuration.SourceGenerators]
-        C --> D[DDL Definition]
-        C --> E[ConfigurationType Class]
-        C --> F[Validator]
-        C --> G[ConfigurationTypes Collection]
+        B --> M[Data.SourceGenerators]
+        C --> D["*.Ddl.g.cs (DdlDefinition object model)"]
+        M --> E["*PocoMapper.g.cs (row → POCO mapper)"]
     end
 
-    subgraph "Bootstrap Time"
-        H[appsettings.json] --> I[ConfigurationDb Bootstrap]
-        I --> J[MsSqlConnection to ConfigDb]
-        D --> K[Schema Applied to Database]
+    subgraph "Shipped schema (per entry-point app)"
+        H[configurationSchema.json] --> I["IConfigurationGateway via AddConfigurationGateway<...>"]
+        I --> J[Connection to ConfigurationDb]
     end
 
     subgraph "Runtime"
-        J --> L[ConfigurationLoader]
-        L --> M[QueryCommand via DataCommands]
-        M --> N[cfg.* Tables]
-        N --> O[Configuration Instances]
-        O --> P[IOptionsSnapshot via ServiceType.Configure]
+        J --> L["Per-domain *ConfigurationProvider"]
+        L --> N["IConfigurationGateway → ConfigurationDb domain schema (conn.* / data.* / pipe.*)"]
+        N --> O[Configuration instances]
+        L --> P[Built-in gateway caching + singleton DataGatewayResultCache (cache + tag invalidation)]
     end
 ```
 
 ## Generation Process
 
+A single `[ManagedConfiguration]` POCO produces exactly two generated files (one per generator):
+
 ```mermaid
 flowchart LR
-    subgraph "Source Files"
-        A["[ManagedConfiguration]<br/>MsSqlConnectionConfiguration.cs"]
-    end
-
-    subgraph "Source Generator Output"
-        B["MsSqlConnectionConfiguration.Ddl.g.cs<br/>(DDL definition)"]
-        C["MsSqlConnectionConfigurationConfigurationType.g.cs<br/>(Metadata + SQL queries)"]
-        D["ConfigurationTypes.g.cs<br/>(Static collection)"]
-        E["MsSqlConnectionConfiguration.Validator.g.cs<br/>(FluentValidation)"]
-    end
-
+    A["[ManagedConfiguration] [GenerateMapper]<br/>MsSqlConnectionConfiguration.cs"]
+    B["MsSqlConnectionConfiguration.Ddl.g.cs<br/>(partial class : IConfigurationDdlProvider,<br/>returns a DdlDefinition object)"]
+    C["MsSqlConnectionConfigurationPocoMapper.g.cs<br/>(query-row → POCO mapper)"]
     A --> B
     A --> C
-    A --> D
-    A --> E
 ```
 
-## Parent-Child Configuration
+The DDL generator emits a **C# `DdlDefinition` object model**, not raw `CREATE TABLE` SQL. The
+DDL it describes follows the version-on-write pattern: `RowId` is the version-specific physical PK
+with a `NEWID()` / `NEWSEQUENTIALID()` default, and `Id` is the durable logical identity. No
+`ConfigurationType` class, no `ConfigurationTypes` collection, and no validator class are
+generated.
 
-Configuration types often have inheritance hierarchies. The parent holds common properties, children hold type-specific properties.
+## Parent-child (typed-body) configuration
+
+Multi-variant configuration domains (Connection, Authentication, Pipeline, …) split into a thin
+**parent header** plus one **typed body** per variant. The typed body is **not** a subclass of a
+generic `ConnectionConfigurationBase<T>` — no such base exists. Each typed body implements the
+domain's marker interface directly and carries the FK back to its parent:
 
 ```mermaid
 classDiagram
     class IConnectionConfiguration {
         <<interface>>
         +Guid Id
-        +string Name
+        +Guid RowId
         +string ConnectionType
-        +bool IsEnabled
-    }
-
-    class ConnectionConfigurationBase~T~ {
-        <<abstract>>
-        +Guid Id
-        +string Name
-        +abstract string ConnectionType
-        +bool IsEnabled = true
-        +string? SecretManagerName
     }
 
     class MsSqlConnectionConfiguration {
+        +Guid Id
+        +Guid ConnectionId  // FK → conn.Connection.Id
+        +Guid RowId
         +string ConnectionType = "MsSql"
         +string Server
         +string Database
-        +int Port = 1433
-        +string? Authentication
+        +int Port
+        +string? AuthenticationType
     }
 
-    class RestConnectionConfiguration {
-        +string ConnectionType = "Rest"
-        +string BaseUrl
-        +int TimeoutSeconds = 30
-        +Dictionary~string,string~ DefaultHeaders
+    class HttpConnectionConfiguration {
+        +string ConnectionType = "Http"
+        // body columns on HttpConnectionConfigurationBase
     }
 
-    IConnectionConfiguration <|.. ConnectionConfigurationBase
-    ConnectionConfigurationBase <|-- MsSqlConnectionConfiguration
-    ConnectionConfigurationBase <|-- RestConnectionConfiguration
+    IConnectionConfiguration <|.. MsSqlConnectionConfiguration
+    IConnectionConfiguration <|.. HttpConnectionConfiguration
 ```
 
-### Database Schema
+- `MsSqlConnectionConfiguration : IConnectionConfiguration` (marker interface, not a base class).
+- The REST/HTTP variant is `HttpConnectionConfiguration` — there is **no** `RestConnectionConfiguration`.
+- The MsSql auth column is `AuthenticationType` (validated against `MsSqlAuthenticationTypes`), **not** `Authentication`.
 
-Parent-child relationships create separate tables with foreign keys. Additionally, **shared PK extension tables** provide 1:1 relationships where the extension's Id is both the primary key AND a foreign key to the parent:
+### Database schema
+
+The parent header table holds identity-only columns; each typed body holds the columns its
+factory reads at runtime, linked by a `{Parent}Id` FK to the parent's logical `Id`:
 
 ```mermaid
 erDiagram
     Connection {
-        uniqueidentifier Id PK
-        nvarchar(256) Name UK
-        nvarchar(50) ServiceOptionType
-        bit IsEnabled
-    }
-
-    ConnectionAuthentication {
-        uniqueidentifier Id PK_FK
-        nvarchar(50) Type
-        nvarchar(256) Username
-        nvarchar(256) SecretManagerName
-        nvarchar(256) SecretKeyName
+        uniqueidentifier RowId PK
+        uniqueidentifier Id
+        nvarchar(256) Name
+        nvarchar(50) Implementation
+        bit IsCurrent
+        bit IsDeleted
     }
 
     MsSqlConnection {
-        uniqueidentifier Id PK
+        uniqueidentifier RowId PK
+        uniqueidentifier Id
         uniqueidentifier ConnectionId FK
         nvarchar(256) Server
         nvarchar(256) Database
         int Port
+        nvarchar(50) AuthenticationType
     }
 
-    RestConnection {
-        uniqueidentifier Id PK
+    HttpConnection {
+        uniqueidentifier RowId PK
+        uniqueidentifier Id
         uniqueidentifier ConnectionId FK
-        nvarchar(2048) BaseUrl
-        int TimeoutSeconds
-        nvarchar(max) DefaultHeaders
     }
 
-    Connection ||--o| ConnectionAuthentication : "extends (shared PK)"
-    Connection ||--o| MsSqlConnection : "has"
-    Connection ||--o| RestConnection : "has"
+    Connection ||--o| MsSqlConnection : "typed body"
+    Connection ||--o| HttpConnection : "typed body"
 ```
 
-**Table Relationship Patterns:**
+**Why no hard FK constraint:** under version-on-write the parent's logical `Id` is not unique
+(each version is a new `RowId` row sharing the same `Id`), so the `ConnectionId` link is a plain
+column, not an enforced foreign key. Filtered unique indexes (`IsCurrent = 1`) enforce
+"one current row per logical entity."
 
-| Pattern | FK Column | Use Case |
-|---------|-----------|----------|
-| **Parent-Child** | `{ParentName}Id` (e.g., `ConnectionId`) | Type-specific properties (MsSqlConnection, RestConnection) |
-| **Shared PK Extension** | `Id` (same as parent) | Optional 1:1 extensions (ConnectionAuthentication) |
+For the full parent-vs-typed-body decision rules, see
+[Polymorphic Configuration Pattern](03-07-Polymorphic-Configuration-Pattern.md).
 
-The `MsSqlConfigurationProvider` automatically loads both patterns:
-- **Parent-Child**: Loads parent row first, then flattens child properties
-- **Shared PK Extension**: Loads `{ParentTableName}Authentication` tables (if they exist) and prefixes properties (e.g., `Authentication:Type`)
+## Configuration container lookup
 
-## ConfigurationTypes Collection
-
-ConfigurationTypes follows the TypeCollection pattern for cross-assembly discovery and runtime registration. Each `[ManagedConfiguration]` class generates a `ConfigurationType` that is automatically registered.
-
-### TypeCollection Architecture
-
-```mermaid
-classDiagram
-    class IConfigurationType {
-        <<interface>>
-        +string Schema
-        +string TableName
-        +string? ParentName
-        +string? ServiceCategory
-        +string? ServiceType
-        +Type ConfigurationClrType
-    }
-
-    class ConfigurationTypeBase {
-        <<abstract>>
-        +string Schema
-        +string TableName
-        +string? ParentName
-        +string? ServiceCategory
-        +Type ConfigurationClrType
-    }
-
-    class MsSqlConnectionConfigurationType {
-        +Schema = "cfg"
-        +TableName = "MsSqlConnection"
-        +ParentName = "ConnectionConfigurationBase"
-        +ServiceCategory = "Connection"
-    }
-
-    IConfigurationType <|.. ConfigurationTypeBase
-    ConfigurationTypeBase <|-- MsSqlConnectionConfigurationType
-```
-
-### Cross-Assembly Registration
-
-ConfigurationTypes uses module initializers for cross-assembly discovery:
-
-1. **Source Generator** - `ConfigurationSourceGenerator` generates ConfigurationType classes marked with `[ConfigurationTypeOption]`
-2. **Module Initializer Generator** - `ConfigurationTypeModuleInitializerGenerator` (in Registration.SourceGenerators) scans referenced assemblies and generates module initializers in entry points
-3. **Runtime** - Module initializers register types with `ConfigurationTypes.Register()`
+The old `ConfigurationTypes` TypeCollection (`IConfigurationType` / `ConfigurationTypeBase`) was
+removed (Wave C5). Schema and table metadata for a configuration type now lives in `IDataContainer`
+nodes on the ConfigurationDb data-store tree and is resolved through `IConfigurationContainerLookup`
+(in `Fdw.Services.Data.Abstractions`):
 
 ```csharp
-// Generated in entry point (e.g., Reference.Api)
-[ModuleInitializer]
-public static void RegisterConfigurationTypes()
+public interface IConfigurationContainerLookup
 {
-    ConfigurationTypes.Register(new MsSqlConnectionConfigurationType());
-    ConfigurationTypes.Register(new RestConnectionConfigurationType());
-    // ... all discovered types from referenced assemblies
+    IGenericResult<IDataContainer> Get(string configTypeName);     // single type by container Name (case-insensitive)
+    IReadOnlyList<IDataContainer> All();                            // every container across all stores/paths
+    IReadOnlyList<IDataContainer> ByCategory(string sectionPath);   // all containers under a section path
 }
 ```
 
-### Usage
+- `Get("MsSqlConnection")` returns the container for a single configuration type, matched case-insensitively against `IDataNode.Name`.
+- `All()` returns every container in the configuration data-store tree.
+- `ByCategory("Connections")` returns every container whose `SectionPath` metadata matches.
 
-```csharp
-// Lookup by name
-var mssqlType = ConfigurationTypes.ByName("MsSqlConnection");
+This lookup is what configuration endpoint base classes use in place of the deleted
+`ConfigurationTypes.GetByServiceCategory()` / `ConfigurationTypes.All()`.
 
-// Lookup by service category
-var connectionTypes = ConfigurationTypes.All()
-    .Where(t => t.ServiceCategory == "Connection");
+## Runtime loading flow
 
-// Lookup by service type
-var mssqlType = ConfigurationTypes.All()
-    .FirstOrDefault(t => t.ServiceType == "MsSql");
-```
-
-## Generated ConfigurationType
-
-Each `[ManagedConfiguration]` class generates a `ConfigurationType` with:
-
-| Property | Description |
-|----------|-------------|
-| `Schema` | Database schema (e.g., "cfg") |
-| `TableName` | Table name (e.g., "MsSqlConnection") |
-| `ParentName` | Parent configuration name for joins |
-| `ParentForeignKeyProperty` | FK column name |
-| `ServiceCategory` | Grouping (e.g., "Connection", "SecretManager") |
-| `ServiceType` | Discriminator (e.g., "MsSql", "EnvironmentVariable") |
-| `SelectAllQuery` | Generated SQL to load all rows |
-| `SelectByNameQuery` | Generated SQL to load by name |
-| `ConfigurationClrType` | The CLR Type for deserialization |
-
-## Runtime Loading Flow
+There is no `ConfigurationLoader` and no per-`ServiceCategory` `MsSqlConfigurationProvider`. Each
+domain has its own `*ConfigurationProvider` (e.g. `MsSqlConnectionConfigurationProvider :
+DefaultConfigurationProvider<…>`) that reads its rows through `IConfigurationGateway`:
 
 ```mermaid
 sequenceDiagram
     participant App as Application Startup
-    participant Boot as ConfigurationBootstrap
-    participant Conn as MsSqlConnection
-    participant Loader as ConfigurationLoader
-    participant Types as ConfigurationTypes
+    participant Gw as IConfigurationGateway
+    participant Prov as Domain *ConfigurationProvider
+    participant Cache as Built-in gateway caching + DataGatewayResultCache (singleton)
     participant DB as ConfigurationDb
 
-    App->>Boot: Initialize with bootstrap connection string
-    Boot->>Conn: Create connection to ConfigDb
-    App->>Loader: LoadAll()
-
-    loop For each ServiceCategory
-        Loader->>Types: GetByServiceCategory("Connection")
-        Types-->>Loader: [MsSqlConnectionConfigurationType, RestConnectionConfigurationType, ...]
-        loop For each ConfigurationType
-            Loader->>DB: Execute SelectAllQuery
-            DB-->>Loader: DataReader rows
-            Loader->>Loader: Deserialize to Configuration instances
-        end
-    end
-
-    Loader->>App: Register with IOptionsSnapshot
+    App->>Gw: AddConfigurationGateway<TFactory, TSecretManager>(configurationSchema.json)
+    Note over Gw: ConfigurationDb connection comes from the shipped schema file
+    App->>Prov: resolve provider (constructed with Lazy<IConfigurationGateway>)
+    Prov->>Gw: Get(name) / Get(id) / Get()
+    Gw->>Cache: query (e.g. conn.MsSqlConnection)
+    Cache->>DB: query on miss; serve cached on hit
+    DB-->>Cache: rows
+    Cache-->>Prov: mapped configuration instances
+    Prov-->>App: IGenericResult<…>
 ```
+
+Reads return `IGenericResult<…>`; results are cached by the built-in caching inside
+`ConfigurationGateway`, backed by the singleton `DataGatewayResultCache` (owns the IMemoryCache + tag sidecar).
+Cache entries are invalidated on writes via `ICacheInvalidator.InvalidateByTag("{schema}.{table}")`.
+
+## ConfigurationDb schemas
+
+ConfigurationDb is organized as one schema per domain: `conn`, `data`, `auth`, `authz`, `pipe`,
+`sched`, `notify`, `transform`, `workflow`, `agent`, `audit`, `calc`, `quality`, `sec`, `usr`,
+`tenant`, `settings`, `catalog`.
+
+The `[ManagedConfiguration]` attribute does **not** name the schema. The schema/table for a type is
+supplied by the `IDataContainer` metadata registered for it (resolvable via
+`IConfigurationContainerLookup`). The `IsSystem` flag and the "system rows are immutable at runtime"
+rule no longer exist — if a record should not be edited from the admin UI, hide or disable the UI
+control; the database does not refuse the write.
 
 ## Usage Example
 
-### 1. Define Configuration Class
+### 1. Define the configuration POCO
 
 ```csharp
-[ManagedConfiguration(
-    Schema = "cfg",
-    TableName = "MsSqlConnection",
-    Parent = nameof(ConnectionConfigurationBase<MsSqlConnectionConfiguration>),
-    ServiceCategory = "Connection",
-    ServiceType = "MsSql")]
-public partial class MsSqlConnectionConfiguration
-    : ConnectionConfigurationBase<MsSqlConnectionConfiguration>
+[GenerateMapper]
+[ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MsSql")]
+public partial class MsSqlConnectionConfiguration : IConnectionConfiguration
 {
-    public override string ConnectionType => "MsSql";
-
-    public string Server { get; set; } = "localhost";
+    public Guid Id { get; set; }            // durable logical identity
+    public Guid ConnectionId { get; set; }  // FK → conn.Connection.Id (parent header)
+    public Guid RowId { get; set; }         // version-specific physical PK
+    public string Server { get; set; } = string.Empty;
     public string Database { get; set; } = string.Empty;
-    public int Port { get; set; } = 1433;
-
-    [ConfigurationOption(typeof(AuthenticationMethods))]
-    public string? Authentication { get; set; }
+    public int Port { get; set; }
+    public string? AuthenticationType { get; set; }   // validated against MsSqlAuthenticationTypes
+    // ...additional typed-body columns
 }
 ```
 
-### 2. Generated DDL (Simplified)
+The attribute carries only the `ServiceCategory` / `ServiceType` discriminators; the schema, table
+name, and parent relationship are derived from the `IDataContainer` metadata, not from the
+attribute. See the real class at
+[`src/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs`](../src/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs)
+for the full typed-body shape.
 
-```sql
--- Parent table (if not exists)
-CREATE TABLE cfg.ConnectionConfigurationBase (
-    Id uniqueidentifier NOT NULL PRIMARY KEY,
-    Name nvarchar(256) NOT NULL UNIQUE,
-    ConnectionType nvarchar(50) NOT NULL,
-    IsEnabled bit NOT NULL DEFAULT 1,
-    SecretManagerName nvarchar(256) NULL
-);
+### 2. Generated DDL (as a `DdlDefinition` object)
 
--- Child table
-CREATE TABLE cfg.MsSqlConnection (
-    Id uniqueidentifier NOT NULL PRIMARY KEY,
-    Name nvarchar(256) NOT NULL UNIQUE,
-    ConnectionConfigurationId uniqueidentifier NOT NULL,
-    Server nvarchar(256) NOT NULL,
-    [Database] nvarchar(256) NOT NULL,
-    Port int NOT NULL DEFAULT 1433,
-    Authentication nvarchar(50) NULL,
-    CONSTRAINT FK_MsSqlConnection_ConnectionConfigurationBase
-        FOREIGN KEY (ConnectionConfigurationId)
-        REFERENCES cfg.ConnectionConfigurationBase(Id)
-);
+The generator emits a partial class implementing `IConfigurationDdlProvider`, returning a
+`DdlDefinition` — **not** a `.sql` script. Conceptually the parent and typed-body tables look like:
+
+```text
+conn.Connection        (header)  RowId PK [NEWID()], Id, Name, Implementation, IsCurrent, IsDeleted, audit…
+conn.MsSqlConnection   (body)    RowId PK [NEWID()], Id, ConnectionId, Server, Database, Port, AuthenticationType
 ```
 
-### 3. Access at Runtime
+`RowId` defaults to `NEWID()` / `NEWSEQUENTIALID()` per the version-on-write pattern, and there is
+no hard FK constraint on `ConnectionId` because the parent `Id` isn't unique across versions.
+
+### 3. Access at runtime
 
 ```csharp
-// Via ConfigurationTypes collection (generated)
-var mssqlType = ConfigurationTypes.ByName("MsSqlConnectionConfiguration");
-Console.WriteLine($"Table: {mssqlType.Schema}.{mssqlType.TableName}");
-Console.WriteLine($"Parent: {mssqlType.ParentName}");
-
-// Via IOptionsSnapshot (standard .NET)
-public class MyService
+// Schema/table metadata for a configuration type — via IConfigurationContainerLookup
+var lookup = serviceProvider.GetRequiredService<IConfigurationContainerLookup>();
+var containerResult = lookup.Get("MsSqlConnection");
+if (containerResult.IsSuccess)
 {
-    private readonly IOptionsSnapshot<List<MsSqlConnectionConfiguration>> _configs;
+    var container = containerResult.Value;   // container.Name / path expose schema + table metadata
+}
 
-    public MyService(IOptionsSnapshot<List<MsSqlConnectionConfiguration>> configs)
+// Configuration data — via the domain provider (NOT IOptionsMonitor<List<T>>)
+public sealed class CreateMsSqlConnectionEndpoint(
+    ConnectionConfigurationProvider connectionProvider,
+    IServiceConfigurationProvider<MsSqlConnectionConfiguration> typedProvider)
+{
+    public async Task Handle(CreateConnectionRequest request, CancellationToken ct)
     {
-        _configs = configs;
+        var existing = await connectionProvider.Get(request.Name, ct);   // Get(name) / Get(id) / Get()
+        // ...build header + typed body, then:
+        await connectionProvider.Save(connection, ct);   // version-on-write + tag-based cache invalidation
+        await typedProvider.Save(typedBody, ct);
     }
-
-    public MsSqlConnectionConfiguration? GetByName(string name)
-        => _configs.Value.FirstOrDefault(c => c.Name == name);
 }
 ```
 
-## Bootstrap vs Runtime Configuration
+Endpoints inject the domain provider (e.g. `ConnectionConfigurationProvider`,
+`IServiceConfigurationProvider<TConfig>`), never `IOptionsMonitor<List<T>>`.
 
-| Aspect | Bootstrap (appsettings.json) | Runtime (ConfigurationDb) |
-|--------|------------------------------|---------------------------|
-| **Purpose** | Connect to ConfigDb | All service configuration |
-| **Storage** | JSON file | Database tables |
-| **When Loaded** | Application startup | After ConfigDb connection |
-| **Examples** | ConfigDb connection, Serilog | Connections, DataSets, SecretManagers |
-| **Reloadable** | Restart required | Hot-reload supported |
+## Write paths
 
-## Key Components
+| Path | When to use |
+|------|-------------|
+| Domain provider `Save()` / `Delete()` | Top-level named configs (Connection, DataStore, DataSet, Pipeline, Schedule, Settings, Role, SecretManager) |
+| `IDynamicConfigurationWriter.Save()` / `.Delete()` | Generic admin UI with dynamic types |
+| `ConfigurationSaveCommand<T>` via DataGateway | Child config records only (e.g. FieldMappingTransform, FieldMappingTransformParameter) |
+
+There is **no** `IConfigurationWriter<T>` — top-level writes go through the domain provider's own
+`Save()` / `Delete()`. See [Configuration Writers](03-02-ConfigurationWriters.md).
+
+## Shipped schema vs runtime configuration
+
+| Aspect | Shipped schema (`configurationSchema.json`) | Runtime (ConfigurationDb) |
+|--------|---------------------------------------------|---------------------------|
+| **Purpose** | The Connection / SecretManager / DataStore the app needs to *reach* ConfigurationDb | All other service configuration |
+| **Storage** | JSON file shipped in the app's content root | Database tables (per-domain schema) |
+| **When loaded** | At startup, via `AddConfigurationGateway<…>` | On demand through the domain provider |
+| **Examples** | ConfigurationDb connection + its SecretManager + DataStore shape | Other connections, DataSets, pipelines, schedules, themes |
+| **Reloadable** | Restart | Hot — write invalidates the cache tag, next read repopulates |
+
+These are plain `Connection` configurations **declared in the file the app ships with**, not a
+separate "startup" tier. See [Configuration Guide](03-06-Configuration-Guide.md) and
+[JSON-Driven Configuration](03-05-JSON-Driven-Configuration.md).
+
+## Key components
 
 | Component | Package | Purpose |
 |-----------|---------|---------|
-| `[ManagedConfiguration]` | Configuration.SourceGenerators | Attribute to mark config classes |
-| `ConfigurationTypes` | Generated in each assembly | Static lookup collection |
-| `ConfigurationLoader` | Configuration.MsSql | Loads config from database |
-| `FdwConfigurationProvider` | Configuration | IConfiguration provider |
-| `ManagedConfigurationProvider<T>` | Configuration | Caching provider for hot-reload |
+| `[ManagedConfiguration]` | `Fdw.Configuration` (emitted by Configuration.SourceGenerators) | Marks a config POCO; carries discriminators + UI/DDL generation flags |
+| `*.Ddl.g.cs` (`IConfigurationDdlProvider`) | generated | Returns the `DdlDefinition` object model for the table |
+| `*PocoMapper.g.cs` | generated (Data.SourceGenerators) | Maps query rows to the configuration instance |
+| `IConfigurationContainerLookup` | Services.Data.Abstractions | Resolves schema/table metadata by type name or section path |
+| Domain `*ConfigurationProvider` | per-domain package | Reads/writes rows through `IConfigurationGateway`; exposes `Get(name)/Get(id)/Get()` + `Save()/Delete()` |
 
 ## Related Documentation
 
-- [Service Domains Overview](06-01-Service-Domains-Overview.md) - How configs integrate with services
-- [Creating a Service Domain](06-02-Creating-Service-Domain.md) - Step-by-step with configuration
-- [TypeCollections](04-01-Overview.md) - TypeCollections referenced by `[ConfigurationOption]`
-- [Configuration.SourceGenerators README](../src/FractalDataWorks.Configuration.SourceGenerators/README.md) - Detailed attribute reference
+- [Configuration Guide](03-06-Configuration-Guide.md) — the three kinds of configuration and their loaders
+- [Configuration Writers](03-02-ConfigurationWriters.md) — write side and cache invalidation
+- [Per-Category Configuration Reload](03-03-Per-Category-Configuration-Reload.md) — tag-based reload architecture
+- [Cache-Backed Providers](03-04-Cache-Backed-Providers.md) — on-demand DataSet/DataStore/Pipeline loading
+- [JSON-Driven Configuration](03-05-JSON-Driven-Configuration.md) — the shipped schema file shape
+- [Polymorphic Configuration Pattern](03-07-Polymorphic-Configuration-Pattern.md) — parent header vs typed body rules
+- [Configuration.SourceGenerators README](../src/Fdw.Configuration.SourceGenerators/README.md) — generator reference

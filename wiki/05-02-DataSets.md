@@ -3,7 +3,7 @@
 DataSets provide a logical abstraction over physical data sources, supporting:
 - **Field mappings** (logical to physical names)
 - **Calculated fields** (post-query computations)
-- **Multi-source routing** (priority/cost-based selection)
+- **Multi-source routing** (priority-based selection)
 - **Predicate pushdown** (filter optimization)
 
 ## Configuration Methods
@@ -16,7 +16,7 @@ Best for: Strongly-typed datasets with calculated fields.
 
 The `DataSetTypes` collection uses `[MutableTypeCollection]` to allow runtime registration.
 
-From [`DataSetTypes.cs:12-15`](../../src/FractalDataWorks.Data.DataSets.Abstractions/DataSetTypes.cs#L12-L15):
+From [`DataSetTypes.cs:12-15`](../src/Fdw.Data.DataSets.Abstractions/DataSetTypes.cs#L12-L15):
 
 ```csharp
 [MutableTypeCollection(typeof(DataSetTypeBase), typeof(IDataSetType), typeof(DataSetTypes))]
@@ -27,7 +27,7 @@ public abstract partial class DataSetTypes : TypeCollectionBase<DataSetTypeBase,
 
 Dataset implementations extend `DataSetTypeBase` and use the `[TypeOption]` attribute:
 
-From [`DataSetTypeBase.cs:29-41`](../../src/FractalDataWorks.Data.DataSets.Abstractions/DataSetTypeBase.cs#L29-L41) (constructor signature):
+From [`DataSetTypeBase.cs:29-41`](../src/Fdw.Data.DataSets.Abstractions/DataSetTypeBase.cs#L29-L41) (constructor signature):
 
 ```csharp
 protected DataSetTypeBase(
@@ -87,91 +87,44 @@ public sealed class CustomerMetricsDataSet : DataSetTypeBase
 
 Best for: Ops-managed configuration, CI/CD pipelines.
 
-The configuration database uses the `cfg` schema with these entity tables:
+DataSet entities live under the `data` schema in ConfigurationDb (`data.DataSet` parent + child tables `data.DataSetField`, `data.DataSetKeyField`, `data.DataSetSource`, `data.DataSetFieldMapping`, `data.DataSetJoin`, `data.DataSetNote`, `data.DataSetFieldNote`). The parent row carries `Id` (logical identity), `Name`, `Implementation`, `Version`, `Category`, `RecordTypeName`, version/audit columns, and tenant/visibility scoping.
 
-From [`DataSetEntity.cs:9-55`](../../src/FractalDataWorks.Configuration.MsSql/Models/DataSetEntity.cs#L9-L55):
-
-```csharp
-public sealed class DataSetEntity
-{
-    public Guid Id { get; init; }
-    public string Name { get; init; } = string.Empty;
-    public string DataSetName { get; init; } = string.Empty;
-    public string? Description { get; init; }
-    public string Version { get; init; } = "1.0";
-    public string Category { get; init; } = string.Empty;
-    public string? RecordTypeName { get; init; }
-    public DateTime CreatedAt { get; init; }
-    public DateTime? ModifiedAt { get; init; }
-}
-```
-
-Example SQL seed script:
+Example SQL seed (mirror the idempotent pattern from `databases/ConfigurationDb/seed/*`):
 
 ```sql
--- docker/mssql/init.sql
 DECLARE @DataSetId UNIQUEIDENTIFIER = NEWID();
 
-INSERT INTO cfg.DataSet (Id, Name, DataSetName, Description, Version, Category, RecordTypeName, CreatedAt)
-VALUES (@DataSetId, 'CustomerMetrics_Seed', 'CustomerMetrics_Seed',
+INSERT INTO data.DataSet (Id, Name, Implementation, Description, Version, Category, RecordTypeName)
+VALUES (@DataSetId, 'CustomerMetrics_Seed', 'Default',
         'Customer data configured via SQL', '1.0', 'CRM',
-        'ReferenceSolution.Domain.Models.Customer, ReferenceSolution.Domain',
-        GETUTCDATE());
+        'ReferenceSolution.Domain.Models.Customer, ReferenceSolution.Domain');
 
--- Field definitions (IsKey is determined by cfg.DataSetKeyField table)
-INSERT INTO cfg.DataSetField (Id, DataSetId, Name, TypeName, IsRequired, Ordinal)
+-- Field definitions
+INSERT INTO data.DataSetField (Id, DataSetId, Name, TypeName, IsRequired, Ordinal)
 VALUES
-    (NEWID(), @DataSetId, 'Id', 'System.Int32', 1, 0),
+    (NEWID(), @DataSetId, 'Id',   'System.Int32',  1, 0),
     (NEWID(), @DataSetId, 'Name', 'System.String', 1, 1);
 
--- Key field definitions (surrogate key)
-INSERT INTO cfg.DataSetSurrogateKeyField (Id, DataSetId, FieldName, Ordinal)
-VALUES (NEWID(), @DataSetId, 'Id', 0);
+-- Key fields (data.DataSetKeyField — IsKey is derived from this child table)
+INSERT INTO data.DataSetKeyField (Id, DataSetId, FieldName, Ordinal, KeyType)
+VALUES (NEWID(), @DataSetId, 'Id', 0, 'Surrogate');
 
--- Natural key definition (if needed)
--- INSERT INTO cfg.DataSetNaturalKeyField (Id, DataSetId, FieldName, Ordinal)
--- VALUES (NEWID(), @DataSetId, 'Email', 0);
-
--- Source mapping
-DECLARE @SourceId UNIQUEIDENTIFIER = NEWID();
-INSERT INTO cfg.DataSetSource (Id, DataSetId, SourceName, DataStoreName, ConnectionName, ConnectionType,
-                               Priority, EstimatedCost, SqlSchemaName, SqlTableName, SupportsPredicatePushdown)
-VALUES (@SourceId, @DataSetId, 'Primary', 'OrdersStore', 'OrdersDb', 'MsSql',
-        1, 50, 'dbo', 'Customers', 1);
+-- Source binding (data.DataSetSource — variant-specific columns depend on the source type)
+INSERT INTO data.DataSetSource (Id, DataSetId, SourceName, DataStoreName, PathName, Priority)
+VALUES (NEWID(), @DataSetId, 'Primary', 'OrdersDb', 'dbo', 1);
 ```
+
+See `databases/ConfigurationDb/data/Tables/data.DataSet*.sql` for the authoritative column lists.
 
 ### 3. Programmatic (Runtime)
 
 Best for: Dynamic/tenant-specific configuration.
 
-#### IDataSetConfiguration Interface
-
-The `IDataSetConfiguration` interface is defined in `DataSets.Abstractions` (netstandard2.0) to allow services in `Services.Data.Abstractions` to reference DataSet configurations without depending on the full `DataSets` package (net10.0).
-
-From [`IDataSetConfiguration.cs`](../../src/FractalDataWorks.Data.DataSets.Abstractions/IDataSetConfiguration.cs):
-
-```csharp
-public interface IDataSetConfiguration
-{
-    string DataSetName { get; }
-    string Description { get; }
-    string Version { get; }
-    string Category { get; }
-    string RecordTypeName { get; }
-    IList<DataFieldConfiguration> Fields { get; }
-    IList<string> SurrogateKeyFields { get; }
-    IList<string> NaturalKeyFields { get; }
-    IList<Guid> SourceIds { get; }
-    IList<JoinConfiguration> Joins { get; }
-    CachingConfiguration? Caching { get; }
-}
-```
-
 #### DataSetConfiguration Class
 
-The concrete implementation lives in the `DataSets` package (net10.0) and implements both `IDataSetConfiguration` and the ManagedConfiguration pattern.
+The concrete `DataSetConfiguration` class lives in the `Fdw.Data.DataSets` package (net10.0) and applies the `[ManagedConfiguration]` pattern. The aggregate is exposed via the concrete class — there is no `IDataSetConfiguration` interface in the abstractions package.
 
-From [`DataSetConfiguration.cs`](../../src/FractalDataWorks.Data.DataSets/DataSetConfiguration.cs):
+From [`DataSetConfiguration.cs`](../src/Fdw.Data.DataSets/DataSetConfiguration.cs):
 
 ```csharp
 public sealed partial class DataSetConfiguration
@@ -186,14 +139,14 @@ public sealed partial class DataSetConfiguration
     public IList<string> SurrogateKeyFields { get; set; } = new List<string>();
     public IList<string> NaturalKeyFields { get; set; } = new List<string>();
     public IList<Guid> SourceIds { get; set; } = new List<Guid>();
-    public IList<JoinConfiguration> Joins { get; set; } = new List<JoinConfiguration>();
+    public IList<DataSetJoinConfiguration> Joins { get; set; } = new List<DataSetJoinConfiguration>();  // saved to data.DataSetJoin
     public CachingConfiguration? Caching { get; set; }
 }
 ```
 
 #### IDataSetProvider
 
-From [`IDataSetProvider.cs`](../../src/FractalDataWorks.Services.Data.Abstractions/IDataSetProvider.cs):
+From [`IDataSetProvider.cs`](../src/Fdw.Services.Data.Abstractions/IDataSetProvider.cs):
 
 ```csharp
 /// <summary>
@@ -227,9 +180,9 @@ public IGenericResult RegisterProgrammaticDataSets()
         {
             ["Primary"] = new SourceMappingConfiguration
             {
-                ConnectionName = "OrdersDb",
+                DataStoreName = "OrdersDb",
+                PathName = "dbo",
                 ConnectionType = "MsSql",
-                DataStoreName = "OrdersStore",
                 Sql = new SqlMappingConfiguration { TableName = "Customers" }
             }
         }
@@ -248,7 +201,7 @@ Use the Management TUI (`fdw tui`) or POST to `/api/admin/datasets`.
 
 All configuration methods use identical query code. See [05-01-DataGateway-Pattern.md](05-01-DataGateway-Pattern.md) for detailed examples.
 
-From [`QueryCommand.cs:59-72`](../../src/FractalDataWorks.Commands.Data/Commands/QueryCommand.cs#L59-L72):
+From [`QueryCommand.cs:59-72`](../src/Fdw.Commands.Data/Commands/QueryCommand.cs#L59-L72):
 
 ```csharp
 public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCommand
@@ -268,19 +221,10 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
 Example query execution:
 
 ```csharp
-var query = new QueryCommand<Customer>("CustomerMetrics")
-{
-    ConnectionName = "OrdersDb",
-    Filter = new FilterExpression
-    {
-        Root = new FilterCondition
-        {
-            PropertyName = "IsActive",
-            Operator = FilterOperators.Equal,
-            Value = true
-        }
-    }
-};
+// Use fluent API with DataStore, Path, and Container
+var query = Query.From<Customer>("OrdersDb", "dbo", "CustomerMetrics")
+    .Where(c => c.IsActive).Equal(true)
+    .Build();
 
 var result = await _dataGateway.Execute<IEnumerable<Customer>>(query, ct);
 ```
@@ -289,7 +233,7 @@ var result = await _dataGateway.Execute<IEnumerable<Customer>>(query, ct);
 
 Calculated fields execute after the database query, in-memory.
 
-From [`CalculatedDataField.cs:10-60`](../../src/FractalDataWorks.Data.DataSets.Abstractions/CalculatedDataField.cs#L10-L60):
+From [`CalculatedDataField.cs:10-60`](../src/Fdw.Data.DataSets.Abstractions/CalculatedDataField.cs#L10-L60):
 
 ```csharp
 public sealed class CalculatedDataField : IDataField
@@ -334,21 +278,44 @@ new CalculatedDataField(
 
 **Important:** Calculated fields are only supported with TypeCollection configuration because they require C# lambda functions that cannot be serialized to SQL or JSON.
 
-## DataSet Tables (cfg schema)
+## DataSet Tables (data schema)
 
-The configuration database includes these tables for SQL-configured datasets:
+DataSets live in ConfigurationDb's `data` schema:
 
 | Table | Purpose |
 |-------|---------|
-| `cfg.DataSet` | DataSet header (name, description, record type) |
-| `cfg.DataSetField` | Field definitions with PropertyRoles |
-| `cfg.DataSetSurrogateKeyField` | Surrogate key field names (auto-generated keys) |
-| `cfg.DataSetNaturalKeyField` | Natural key field names (business identifiers) |
-| `cfg.DataSetSource` | Source mappings (connection, priority, cost) |
-| `cfg.DataSetFieldMapping` | Logical ↔ physical field name mappings |
+| `data.DataSet` | DataSet header (name, description, record type) |
+| `data.DataSetField` | Field definitions with PropertyRoles |
+| `data.DataSetSurrogateKeyField` | Surrogate key field names (auto-generated keys) |
+| `data.DataSetNaturalKeyField` | Natural key field names (business identifiers) |
+| `data.DataSetSource` | Source mappings (connection, priority) |
+| `data.DataSetFieldMapping` | Logical ↔ physical field name mappings |
+
+DataSet is a top-level named configuration, so writes go through the DataSet domain provider's `Save()`/`Delete()` (version-on-write + tag-based cache invalidation) — there is no `IConfigurationWriter<T>`. The generic admin UI path is `IDynamicConfigurationWriter`; child records use `ConfigurationSaveCommand<T>` via the DataGateway.
+
+## DataSet Source Mapper TypeCollection
+
+DataSet source mappings are resolved via the **DataSet Source Mapper TypeCollection**
+(`DataSetSourceMapperTypes`). Each mapper type (e.g., `XPath`, `Direct`, `Calculated`) is a
+`TypeOption` registered by its owning package via `Registration.SourceGenerators` module
+initialisers. New source mappings reference the mapper type name via
+`DataSetSourceMapperTypes.ByName(mapperTypeName)`.
+
+```csharp
+// O(1) lookup by mapper type name
+var mapper = DataSetSourceMapperTypes.ByName("XPath");
+if (mapper == DataSetSourceMapperTypes.NotFound)
+{
+    // handle unknown mapper type — do not throw
+    DataSetLog.UnknownMapperType(_logger, mapperTypeName);
+    return GenericResult.Failure(...);
+}
+```
+
+See the [DataSet Source Mapper client guide](../docs/CLIENT-GUIDE-DATASET-MAPPERS.md) for migration details.
 
 ## See Also
 
 - [DataGateway Pattern](05-01-DataGateway-Pattern.md) - Data command execution and routing
 - [TypeCollections Overview](04-01-Overview.md) - Compile-time type collections
-- [Reference Solution](../../samples/ReferenceSolution/README.md) - Working implementation examples
+- [Reference Solution](../samples/ReferenceSolution/README.md) - Working implementation examples

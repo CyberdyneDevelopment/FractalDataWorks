@@ -1,0 +1,26 @@
+using Fdw.Collections.Attributes;
+
+namespace Fdw.Services.Notifications.Abstractions;
+
+/// <summary>
+/// Generic webhook notification channel.
+/// Sends notifications via HTTP webhook to custom endpoints.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[TypeOption(typeof(NotificationChannels), "Webhook", RestrictToCurrentCompilation = true)]
+public sealed class WebhookChannel : NotificationChannelBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WebhookChannel"/> class.
+    /// </summary>
+    public WebhookChannel()
+        : base(
+            name: "Webhook",
+            description: "Generic HTTP webhook notifications",
+            supportsBatchSend: true,
+            supportsRichContent: true,
+            supportsAttachments: false,
+            maxMessageLength: null)
+    {
+    }
+}

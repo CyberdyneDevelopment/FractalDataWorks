@@ -1,0 +1,52 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Data.Clients.Models;
+using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Data.Endpoints;
+
+/// <summary>
+/// Generic base endpoint for listing available DataSet types from the source-generated TypeCollection.
+/// Enumerates all registered DataSetTypes and maps each to a summary DTO.
+/// </summary>
+public abstract class ListDataSetTypesEndpointBase : CrudListEndpointBase<DataSetTypeSummaryPayload>
+{
+    /// <summary>Initializes a new instance of the <see cref="ListDataSetTypesEndpointBase"/> class.</summary>
+    protected ListDataSetTypesEndpointBase(ILogger<ListDataSetTypesEndpointBase> logger) : base(logger)
+    {
+    }
+
+    /// <summary>Gets the resource name used for route and policy generation.</summary>
+    protected override string ResourceName => "datasets/types";
+
+    /// <summary>Gets the authorization policy for read access.</summary>
+    protected override string ReadPolicy => "datasets:read";
+
+    /// <summary>Gets the OpenAPI summary for this endpoint.</summary>
+    protected override string EndpointSummary => "List available DataSet types";
+
+    /// <summary>Gets the OpenAPI description for this endpoint.</summary>
+    protected override string EndpointDescription =>
+        "Returns a list of all available DataSet types registered via source-generated TypeCollections.";
+
+    /// <summary>Loads all registered DataSet types as summary DTOs.</summary>
+    protected override Task<IGenericResult<List<DataSetTypeSummaryPayload>>> LoadItems(CancellationToken ct)
+    {
+        var items = DataSetTypes.All()
+            .Select(t => new DataSetTypeSummaryPayload
+            {
+                TypeName = t.Name,
+                DisplayName = t.Name,
+                Description = t.Description,
+                Category = "DataSet"
+            })
+            .ToList();
+
+        return Task.FromResult(GenericResult<List<DataSetTypeSummaryPayload>>.Success(items));
+    }
+}

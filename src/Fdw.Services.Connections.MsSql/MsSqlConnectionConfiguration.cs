@@ -1,0 +1,221 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.MsSql.Authentication;
+using Fdw.Services.Connections.MsSql.Limits;
+
+namespace Fdw.Services.Connections.MsSql;
+
+/// <summary>
+/// Configuration for Microsoft SQL Server connections.
+/// The MsSql implementation of the Connection domain (<see cref="IConnectionImplementationConfiguration"/>).
+/// Persisted to <c>conn.MsSqlConnectionConfiguration</c> hanging from its <c>conn.Connection</c> domain row via <c>ConnectionRowId</c>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Configuration patterns: <b>Pattern A</b> (typed columns: Server, Database, Port, etc.) +
+/// <b>Pattern B</b> (the implementation row: conn.MsSqlConnection.ConnectionId FK to conn.Connection.Id) +
+/// <b>Pattern C</b> (PropertyCollection: <c>AdditionalProperties</c> dict bound via DataContainerKey seed row
+/// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.MsSqlAuthentication).
+/// </para>
+/// <para>
+/// Saving through the Connection domain writes the <c>conn.Connection</c> domain row first, then this
+/// row with <c>ConnectionRowId</c> set to the domain row's <c>RowId</c>.
+/// </para>
+/// </remarks>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MsSql")]
+public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfiguration
+{
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    [ValuesFrom(typeof(SchemaDiscoveryTypes))]
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
+    // ========================================
+    // IGenericConfiguration — identity
+    // ========================================
+
+    /// <summary>
+    /// Gets or sets the identifier (conn.MsSqlConnection.Id). The Connection domain stamps its domain row's Id here
+    /// when it saves the pair.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
+
+
+    #region SQL Server Specific Properties
+
+    /// <summary>
+    /// Gets or sets the SQL Server hostname or IP address.
+    /// </summary>
+    public string Server { get; set; } = "localhost";
+
+    /// <summary>
+    /// Gets or sets the database name.
+    /// </summary>
+    public string Database { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the SQL Server port. Default is 1433.
+    /// </summary>
+    public int Port { get; set; } = 1433;
+
+    /// <summary>
+    /// Gets or sets the SQL Server instance name (for named instances).
+    /// </summary>
+    public string? InstanceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the authentication type discriminator.
+    /// </summary>
+    /// <remarks>
+    /// Why: empty string, never null, is the "not yet supplied" marker — never a chosen business
+    /// default (no "WindowsAuth", no guessed auth method). MsSqlConnectionFactory already fails
+    /// loud via <c>string.IsNullOrEmpty(authTypeName)</c> when this is empty.
+    /// </remarks>
+    [ValuesFrom(typeof(MsSqlAuthenticationTypes))]
+    public string AuthenticationType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the authentication key-value configuration.
+    /// </summary>
+    /// <remarks>
+    /// Populated by the gateway cascade from conn.MsSqlAuthentication (Wave 0.6 PropertyCollection).
+    /// The binding is declared in a <c>data.DataContainerKey</c> seed row:
+    /// <c>TypeId='PropertyCollection', Name='Authentication'</c>.
+    /// [NotMapped] because the values live in the child KVP table, not a column on this row.
+    /// The factory resolves the typed authentication instance via MsSqlAuthenticationTypes.ByName(AuthenticationType).
+    /// </remarks>
+    [NotMapped]
+    [ConfigurationChildTable("MsSqlConnectionProperty")]
+    public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets the command timeout in seconds.
+    /// </summary>
+    public int CommandTimeoutSeconds { get; set; } = 30;
+
+    /// <inheritdoc/>
+    public int MaxSerialInsert { get; set; }
+
+    /// <summary>
+    /// Gets or sets the connection timeout in seconds.
+    /// </summary>
+    public int ConnectionTimeoutSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// Gets or sets the default schema to use for operations.
+    /// </summary>
+    public string DefaultSchema { get; set; } = "dbo";
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to trust the server certificate.
+    /// </summary>
+    public bool TrustServerCertificate { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to encrypt the connection.
+    /// </summary>
+    public bool Encrypt { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to enable connection pooling.
+    /// </summary>
+    public bool EnableConnectionPooling { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the minimum pool size.
+    /// </summary>
+    public int MinPoolSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum pool size.
+    /// </summary>
+    public int MaxPoolSize { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to enable multiple active result sets (MARS).
+    /// </summary>
+    public bool EnableMultipleActiveResultSets { get; set; }
+
+    /// <summary>
+    /// Gets or sets the application name to use in the connection.
+    /// </summary>
+    public string? ApplicationName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to automatically discover and persist schema on connection.
+    /// </summary>
+    public bool AutoDiscoverSchema { get; set; }
+
+    /// <summary>
+    /// Gets or sets the named default-value policy this connection resolves through
+    /// <c>DefaultValues.ByName("MsSql").ByName(...)</c>.
+    /// </summary>
+    /// <remarks>
+    /// Null means "use the framework-shipped <c>\"Default\"</c> policy" — an explicit, approved
+    /// fallback resolved at the call site (<c>DefaultValuePolicy ?? "Default"</c>), never baked in
+    /// here. An organization names its own policy (shipped from its own assembly against
+    /// <c>MsSqlDefaults</c>) to override how this connection decides, per field, whether to omit a
+    /// column on write or send an explicit value.
+    /// </remarks>
+    public string? DefaultValuePolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets when schema was last imported for this connection.
+    /// </summary>
+    public DateTimeOffset? LastSchemaImportDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active connection limits for this connection.
+    /// Multiple limit kinds (RateLimit, QueryTimeout, etc.) can be active simultaneously.
+    /// </summary>
+    /// <remarks>
+    /// [NotMapped] — loaded from conn.MsSqlConnectionLimit header+subtype tables by the cascade loader.
+    /// </remarks>
+    [NotMapped]
+    public IList<MsSqlConnectionLimitConfiguration> Limits { get; set; } = new List<MsSqlConnectionLimitConfiguration>();
+
+    #endregion
+}

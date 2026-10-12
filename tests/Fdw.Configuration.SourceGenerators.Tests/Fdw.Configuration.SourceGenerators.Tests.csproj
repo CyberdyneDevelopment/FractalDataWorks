@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <LangVersion>preview</LangVersion>
+    <!-- Source generators have defensive code paths - lower thresholds -->
+    <Include>[Fdw.Configuration.SourceGenerators]*</Include>
+    <Exclude></Exclude>
+    <Threshold>50</Threshold>
+    <ThresholdType>line,branch,method</ThresholdType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Project References -->
+    <ProjectReference Include="..\..\src\Fdw.Configuration.SourceGenerators\Fdw.Configuration.SourceGenerators.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Configuration\Fdw.Configuration.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Roslyn for Testing -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

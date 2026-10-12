@@ -1,0 +1,26 @@
+using FluentValidation;
+using Fdw.Validation;
+using Fdw.Operations.Configuration;
+
+namespace Fdw.Operations.Validators;
+
+/// <summary>
+/// Validator for <see cref="EscalationPolicyImplementationConfiguration"/>.
+/// </summary>
+public sealed class EscalationPolicyConfigurationValidator : FdwConfigurationValidator<EscalationPolicyImplementationConfiguration>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EscalationPolicyConfigurationValidator"/> class.
+    /// </summary>
+    public EscalationPolicyConfigurationValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty()
+            .WithMessage("Name is required");
+
+        RuleFor(x => x)
+            .Must(x => x.WorkflowId.HasValue || x.ScheduleId.HasValue)
+            .WithMessage("Either WorkflowId or ScheduleId must be specified")
+            .WithName("Scope");
+    }
+}

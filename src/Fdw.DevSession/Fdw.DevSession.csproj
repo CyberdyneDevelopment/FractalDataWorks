@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Why: ScopePaths is the whole basis of strand fencing and is tested directly rather than
+         only through the coordinator, but it is not part of this package's public surface. -->
+    <InternalsVisibleTo Include="Fdw.DevSession.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.DevSession.Abstractions\Fdw.DevSession.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+
+    <!-- Why: the session ledger is published to the MCP event bus rather than a private audit
+         store, so a live subscriber and a late replayer see exactly the same history. -->
+    <ProjectReference Include="..\Fdw.Mcp.Bus.Abstractions\Fdw.Mcp.Bus.Abstractions.csproj" />
+    <!-- Why: AddDevSessions registers the bus it depends on rather than demanding the caller has
+         done so, per the cascade rule that a domain registers the providers it needs. -->
+    <ProjectReference Include="..\Fdw.Mcp.Bus\Fdw.Mcp.Bus.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

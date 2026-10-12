@@ -1,0 +1,100 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Collections;
+using Fdw.Data.Abstractions;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Configuration;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Users.Abstractions;
+using Fdw.Services.Users.Commands;
+using Fdw.Services.Users.Configuration;
+using Fdw.Services.Users.Models;
+using Fdw.Services.Users.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
+
+namespace Fdw.Services.Users;
+
+/// <summary>
+/// Default user service type that registers user stores and credential validation
+/// with the dependency injection container.
+/// </summary>
+[ExcludeFromCodeCoverage]
+[Implementation(typeof(UserServiceTypes), "Default")]
+public sealed class DefaultUserServiceType : UserServiceTypeBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultUserServiceType"/> class.
+    /// </summary>
+    public DefaultUserServiceType()
+        : base(
+            "Default",
+            "Users:Default",
+            "Default User Services",
+            "Default user management services with credential validation and role-based access control")
+    {
+        Registration((builder, loggerFactory) =>
+        {
+            builder.Services.AddSingleton<IUsersServiceImplementationConfigurationProvider, UsersServiceImplementationConfigurationProvider>(sp => new UsersServiceImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UsersServiceImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UsersServiceConfiguration"));
+            builder.Services.TryAddSingleton<UsersServiceConfigurationProvider>(sp =>
+            {
+                var domain = new UsersServiceConfigurationProvider(
+                    sp.GetRequiredService<ILogger<UsersServiceConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UsersService");
+                domain.Register("UsersService", sp.GetRequiredService<IUsersServiceImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IUsersServiceConfigurationProvider>(sp => sp.GetRequiredService<UsersServiceConfigurationProvider>());
+
+
+            builder.Services.AddSingleton<IUserImplementationConfigurationProvider, UserImplementationConfigurationProvider>(sp => new UserImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UsersConfiguration"));
+            builder.Services.TryAddSingleton<UserConfigurationProvider>(sp =>
+            {
+                var domain = new UserConfigurationProvider(
+                    sp.GetRequiredService<ILogger<UserConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "Users");
+                domain.Register("Users", sp.GetRequiredService<IUserImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IUserConfigurationProvider>(sp => sp.GetRequiredService<UserConfigurationProvider>());
+
+
+            builder.Services.AddSingleton<IUserTenantImplementationConfigurationProvider, UserTenantImplementationConfigurationProvider>(sp => new UserTenantImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserTenantImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "tenant", "UserTenantsConfiguration"));
+            builder.Services.TryAddSingleton<UserTenantConfigurationProvider>(sp =>
+            {
+                var domain = new UserTenantConfigurationProvider(
+                    sp.GetRequiredService<ILogger<UserTenantConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "tenant", "UserTenants");
+                domain.Register("UserTenants", sp.GetRequiredService<IUserTenantImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IUserTenantConfigurationProvider>(sp => sp.GetRequiredService<UserTenantConfigurationProvider>());
+
+
+            builder.Services.AddSingleton<IUserPreferencesImplementationConfigurationProvider, UserPreferencesImplementationConfigurationProvider>(sp => new UserPreferencesImplementationConfigurationProvider(sp.GetRequiredService<ILogger<UserPreferencesImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UserPreferencesConfiguration"));
+            builder.Services.TryAddSingleton<UserPreferenceConfigurationProvider>(sp =>
+            {
+                var domain = new UserPreferenceConfigurationProvider(
+                    sp.GetRequiredService<ILogger<UserPreferenceConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), UserServiceTypes.ConfigurationConnection, "usr", "UserPreferences");
+                domain.Register("UserPreferences", sp.GetRequiredService<IUserPreferencesImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IUserPreferenceConfigurationProvider>(sp => sp.GetRequiredService<UserPreferenceConfigurationProvider>());
+
+
+            builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
+            builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+
+    }
+
+}

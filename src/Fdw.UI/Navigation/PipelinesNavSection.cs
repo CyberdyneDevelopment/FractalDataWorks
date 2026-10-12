@@ -1,0 +1,16 @@
+using Fdw.Collections;
+using Fdw.Collections.Attributes;
+
+namespace Fdw.UI.Navigation;
+
+/// <summary>
+/// The "Pipelines" sidebar section.
+/// </summary>
+[TypeOption(typeof(NavSections), "Pipelines")]
+public sealed class PipelinesNavSection : NavSectionBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PipelinesNavSection"/> class.
+    /// </summary>
+    public PipelinesNavSection() : base("Pipelines", "Pipelines", 30) { }
+}

@@ -4,7 +4,7 @@
 
 ## Interface Definition
 
-From [`IGenericMessage.cs:8-27`](../src/FractalDataWorks.Abstractions/IGenericMessage.cs#L8-L27):
+From [`IGenericMessage.cs:8-27`](../src/Fdw.Abstractions/IGenericMessage.cs#L8-L27):
 
 ```csharp
 public interface IGenericMessage
@@ -31,7 +31,7 @@ public interface IGenericMessage
 
 A generic variant with strongly typed severity is also available:
 
-From [`IGenericMessage.cs:29-40`](../src/FractalDataWorks.Abstractions/IGenericMessage.cs#L29-L40):
+From [`IGenericMessage.cs:29-40`](../src/Fdw.Abstractions/IGenericMessage.cs#L29-L40):
 
 ```csharp
 public interface IGenericMessage<TSeverity> : IGenericMessage where TSeverity : Enum
@@ -49,21 +49,20 @@ public interface IGenericMessage<TSeverity> : IGenericMessage where TSeverity : 
 | Property | Description |
 |----------|-------------|
 | `Message` | The formatted message text |
-| `Code` | Event ID as string (e.g., "1002") |
+| `Code` | TypeCode-EventId string (e.g., `"FDW-8001"`) |
 | `Source` | Logger class name |
+
+The `Code` property uses the format `"{TypeCode}-{EventId}"` where TypeCode defaults to `"FDW"` and can be customized via the `TypeCode` property on `[MessageLogging]`. See [MessageLogging Attribute](07-02-MessageLogging-Attribute.md#typecode) for details.
 
 ## Usage
 
 ### Defining MessageLogging Methods
 
-From Reference Solution [`OrderLog.cs:114-120`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L114-L120):
+From Reference Solution [`OrderLog.cs:127-134`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L127-L134):
 
 ```csharp
-/// <summary>
-/// Logs when an order is not found.
-/// </summary>
 [MessageLogging(
-    EventId = 8030,
+    EventId = 8033,
     Level = LogLevel.Error,
     Message = "Order '{orderId}' not found")]
 public static partial IGenericMessage OrderNotFound(
@@ -73,34 +72,28 @@ public static partial IGenericMessage OrderNotFound(
 
 ### Logging and Returning in Result
 
-From Reference Solution [`OrderService.cs:115-126`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs#L115-L126):
+From Reference Solution [`OrderService.cs`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs):
 
 ```csharp
-/// <summary>
-/// Gets an order by ID, demonstrating "not found" error pattern.
-/// </summary>
 public IGenericResult<Order> GetOrder(string orderId)
 {
-    // Simulate order not found
-    if (orderId.StartsWith("NOTFOUND"))
+    if (orderId == "NOT_FOUND")
     {
-        // Log AND return failure - the message is both logged and returned
         return GenericResult<Order>.Failure(
             OrderLog.OrderNotFound(_logger, orderId));
     }
 
-    return GenericResult<Order>.Success(new Order { OrderId = orderId, Status = "Found" });
+    var order = new Order(orderId, "customer-1", "product-1", 1);
+    return GenericResult<Order>.Success(order);
 }
 ```
 
 ### Accessing Message Properties
 
-From Reference Solution [`Program.cs:64-68`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Program.cs#L64-L68):
-
 ```csharp
-var result4 = orderService.GetOrder("NOTFOUND123");
-Console.WriteLine($"   Success: {result4.IsSuccess}");
-Console.WriteLine($"   Error: {result4.Messages[0].Message}");
+var result = orderService.GetOrder("NOT_FOUND");
+Console.WriteLine($"   Success: {result.IsSuccess}");
+Console.WriteLine($"   Error: {result.Messages[0].Message}");
 ```
 
 ## Next Steps

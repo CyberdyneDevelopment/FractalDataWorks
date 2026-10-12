@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.ServiceManager</RootNamespace>
+
+    <!-- Tool packaging -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>fdw-services</ToolCommandName>
+    <PackageId>Fdw.ServiceManager</PackageId>
+    <Title>Fdw Service Manager</Title>
+    <Description>Interactive TUI for managing Fdw reference solution services (API, Scheduler, ETL, UI)</Description>
+    <PackageTags>fdw;cli;tui;services;docker;management</PackageTags>
+
+    <!-- Exclude from main solution builds -->
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- FDW UI Components -->
+    <PackageReference Include="Fdw.UI.Components.RazorConsole" Version="$(FdwVersion)" />
+    <PackageReference Include="Fdw.UI.Components.TUI" Version="$(FdwVersion)" />
+
+    <!-- Spectre.Console for direct TUI -->
+    <PackageReference Include="Spectre.Console" />
+
+    <!-- Process management -->
+    <PackageReference Include="CliWrap" Version="3.7.0" />
+  </ItemGroup>
+
+</Project>

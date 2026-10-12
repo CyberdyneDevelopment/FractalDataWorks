@@ -1,0 +1,6 @@
+root = false
+
+# Disable namespace must match folder structure since we organize by feature folders
+# but don't want namespace to change
+[*.cs]
+dotnet_style_namespace_match_folder = false

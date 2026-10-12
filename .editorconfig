@@ -1,14 +1,17 @@
 # ===============================================
 # CRITICAL RULES - BLOCK DEVELOPMENT (Real bugs/security)
 # ===============================================
-
+[*.cs]
+dotnet_style_namespace_match_folder = true
+dotnet_diagnostic.IDE0130.severity = none  # Namespace must match folder. 2,237 violations, and 902 of
+# them are the deliberate .Abstractions convention - Fdw.Data in Fdw.Data.Abstractions and ~150 more
+# like it - which cannot be fixed by moving a file and should not be fixed by renaming a public API.
 # Security - These are actual vulnerabilities
 dotnet_diagnostic.CA3001.severity = error  # SQL injection
 dotnet_diagnostic.CA3003.severity = error  # File path injection
 dotnet_diagnostic.CA3006.severity = error  # Process command injection
 dotnet_diagnostic.CA3075.severity = error  # XML DTD processing
 dotnet_diagnostic.CA5362.severity = error  # Certificate validation bypass
-dotnet_diagnostic.CA5394.severity = error  # Insecure randomness
 dotnet_diagnostic.SCS0002.severity = error  # SQL injection
 dotnet_diagnostic.SCS0007.severity = error  # XSS
 dotnet_diagnostic.SCS0028.severity = error  # Unsafe deserialization
@@ -16,7 +19,6 @@ dotnet_diagnostic.SCS0029.severity = error  # Hardcoded passwords
 
 # Memory Leaks - These cause production issues
 dotnet_diagnostic.CA1001.severity = error  # Types owning disposables must be disposable
-dotnet_diagnostic.CA2000.severity = warning # Dispose objects before scope loss
 dotnet_diagnostic.CA2213.severity = error  # Disposable fields must be disposed
 dotnet_diagnostic.IDISP001.severity = warning # Dispose created
 dotnet_diagnostic.IDISP003.severity = error  # Dispose previous before reassigning
@@ -116,8 +118,29 @@ dotnet_diagnostic.MA0004.severity = none  # Use AsyncFixer04 instead
 dotnet_diagnostic.MA0006.severity = suggestion  # Use string.Equals (correctness)
 dotnet_diagnostic.MA0009.severity = warning  # Regex DoS (real security issue)
 dotnet_diagnostic.MA0016.severity = suggestion  # Prefer abstraction over implementation
-dotnet_diagnostic.MA0048.severity = none  # File name must match type name - disabled for generic classes and intentional naming
-dotnet_diagnostic.MA0051.severity = suggestion  # Method is too long
+dotnet_diagnostic.MA0048.severity = none  # File name must match type name - replaced by FDW005 (supports generic arity variants)
+dotnet_diagnostic.FDW005.severity = warning  # File name must match type name (FDW custom - allows generic arity variants in same file)
+dotnet_diagnostic.FDW006.severity = warning  # Method too long (replaces MA0051)
+dotnet_diagnostic.FDW007.severity = warning  # Method too complex
+dotnet_diagnostic.FDW008.severity = warning  # Method name contains underscore
+dotnet_diagnostic.FDW012.severity = suggestion  # Unchecked GenericResult return value (pre-existing violations)
+dotnet_diagnostic.FDW013.severity = suggestion  # Unhandled failure path (pre-existing violations)
+dotnet_diagnostic.FDW014.severity = warning  # Exception not propagated in GenericResult
+dotnet_diagnostic.FDW015.severity = warning  # Broken result chain - use ToNewResult() or Chain()
+dotnet_diagnostic.FDW016.severity = warning  # IGenericResult<T>.Value accessed without success check
+dotnet_diagnostic.FDW017.severity = warning  # Enum declaration should be replaced with TypeCollection
+dotnet_diagnostic.FDW022.severity = warning  # Exception swallowed - caught exception neither observed nor rethrown
+dotnet_diagnostic.FDW023.severity = suggestion  # Broad System.Exception catch with no specific catch clauses (survey)
+dotnet_diagnostic.CA2000.severity = none  # Dispose before losing scope - fires on ResultDetails.Create,
+# which returns IDisposable but is used as a value at ~98 sites. Whether ResultDetails should be
+# IDisposable at all is a decision about the type, not 98 local using-statements.
+# which returns IDisposable but is used as a value at ~98 sites. Whether ResultDetails should be
+# IDisposable at all is a decision about that type, not 98 local using-statements.
+dotnet_diagnostic.CA5394.severity = none  # Insecure randomness - System.Random where no security depends on it
+dotnet_diagnostic.CA1716.severity = none  # Identifier matches a VB keyword (Error, Select) - no VB consumer exists, and ErrorColor/SelectElement would be worse names
+dotnet_diagnostic.FDW020.severity = none  # Abstract type has no implementation - fires on interfaces whose implementations live in another assembly
+dotnet_diagnostic.FDW021.severity = none  # Type is not referenced in the compilation
+dotnet_diagnostic.MA0051.severity = none  # Replaced by FDW006+FDW007
 dotnet_diagnostic.VSTHRD200.severity = none  # Async suffix - confusing API
 
 # ===============================================

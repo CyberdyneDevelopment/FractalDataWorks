@@ -1,0 +1,105 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+<!--#if (EmbedGenerator) -->
+    <IsPackable>false</IsPackable>
+<!--#else -->
+    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\artifacts\packages</PackageOutputPath>
+<!--#endif -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+    <!-- Suppress warnings about lack of documentation -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Roslyn analyzer dependencies -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
+    <!-- ILRepack for merging dependencies -->
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared generator helpers (optional - comment out if not using Fdw) -->
+    <!-- If packaging these, use PackageReference instead: -->
+    <!--
+    <PackageReference Include="Fdw.SourceGenerators" />
+    <PackageReference Include="Fdw.CodeBuilder.CSharp" />
+    -->
+    <!-- For local development with Fdw: -->
+    <ProjectReference Include="..\..\src\Fdw.SourceGenerators\Fdw.SourceGenerators.csproj" Condition="Exists('..\..\src\Fdw.SourceGenerators\Fdw.SourceGenerators.csproj')" />
+    <ProjectReference Include="..\..\src\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj" Condition="Exists('..\..\src\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj')" />
+    <ProjectReference Include="..\..\src\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj" Condition="Exists('..\..\src\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj')" />
+
+    <!-- Reference Runtime for attribute discovery -->
+<!--#if (CreateRuntime) -->
+    <ProjectReference Include="..\__Name__.Runtime\__Name__.Runtime.csproj" />
+<!--#else -->
+    <PackageReference Include="__ExistingRuntimePackage__" />
+<!--#endif -->
+  </ItemGroup>
+
+  <!-- ILRepack target to merge dependencies into analyzer DLL -->
+  <Target Name="MergeAnalyzerDependencies" AfterTargets="Build" Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PropertyGroup>
+      <OutputPath>$(MSBuildProjectDirectory)\bin\$(Configuration)\$(TargetFramework)</OutputPath>
+      <AnalyzerDll>$(OutputPath)\$(AssemblyName).dll</AnalyzerDll>
+      <OriginalAnalyzerDll>$(OutputPath)\$(AssemblyName).original.dll</OriginalAnalyzerDll>
+    </PropertyGroup>
+
+    <Message Importance="high" Text="ILRepack: Merging assemblies directly to $(AnalyzerDll)" />
+
+    <!-- Backup original DLL -->
+    <Move SourceFiles="$(AnalyzerDll)" DestinationFiles="$(OriginalAnalyzerDll)" />
+
+    <!-- Merge dependencies -->
+    <ItemGroup>
+      <MergeAssemblies Include="$(OriginalAnalyzerDll)" />
+      <!-- Include Fdw helpers if they exist -->
+      <MergeAssemblies Include="$(OutputPath)\Fdw.SourceGenerators.dll" Condition="Exists('$(OutputPath)\Fdw.SourceGenerators.dll')" />
+      <MergeAssemblies Include="$(OutputPath)\Fdw.CodeBuilder.Abstractions.dll" Condition="Exists('$(OutputPath)\Fdw.CodeBuilder.Abstractions.dll')" />
+      <MergeAssemblies Include="$(OutputPath)\Fdw.CodeBuilder.CSharp.dll" Condition="Exists('$(OutputPath)\Fdw.CodeBuilder.CSharp.dll')" />
+      <!-- Always include Runtime -->
+      <MergeAssemblies Include="$(OutputPath)\__Name__.Runtime.dll" />
+    </ItemGroup>
+
+    <Message Importance="high" Text="Added assembly '@(MergeAssemblies)'" />
+    <Message Importance="high" Text="Excluding namespaces/types matching pattern '^System\.Index$|^System\.Range$' from being internalized" />
+
+    <ILRepack
+      OutputFile="$(AnalyzerDll)"
+      InputAssemblies="@(MergeAssemblies)"
+      Internalize="true"
+      InternalizeExcludePattern="^System\.Index$|^System\.Range$"
+      LogFile="$(OutputPath)\ILRepack.log"
+      WorkingDirectory="$(OutputPath)" />
+
+    <Message Importance="high" Text="ILRepack: Successfully merged source generator dependencies" />
+  </Target>
+
+  <!-- Empty ILRepack.targets to disable default behavior -->
+  <Import Project="ILRepack.targets" Condition="Exists('ILRepack.targets')" />
+
+</Project>
+
+<!--#if (!EmbedGenerator) -->
+  <!-- Package the analyzer when standalone -->
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+<!--#endif -->

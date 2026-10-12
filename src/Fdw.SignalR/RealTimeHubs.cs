@@ -1,0 +1,167 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Fdw.Collections;
+using Fdw.Collections.Attributes;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
+
+namespace Fdw.SignalR;
+
+/// <summary>
+/// TypeCollection of every FDW real-time SignalR hub.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The source generator creates <c>All()</c>, <c>ByName()</c>, <c>ById()</c> and a static property
+/// per <c>[TypeOption]</c>. Hubs declared in downstream domain assemblies are registered into this
+/// collection at assembly load by the entry-point application's <c>Registration.SourceGenerators</c>
+/// module initializer — exactly like every other extensible FDW TypeCollection.
+/// </para>
+/// <para>
+/// Hosts wire the hubs through <see cref="Register"/> (before <c>Build()</c>) and
+/// the host's Initialize phase (after <c>Build()</c>) — SignalR
+/// registration and hub mapping are driven entirely by the collection, with no per-application
+/// wiring.
+/// </para>
+/// <para>
+/// <c>[PlatformServiceProvider]</c> marks this hand-written three-phase class for the
+/// <c>PlatformServicesRegistrationGenerator</c> collect, alongside every <c>[ServiceTypeCollection]</c>
+/// domain — <see cref="Configure"/> and <see cref="Initialize"/> are no-ops declared only to
+/// satisfy the required shape; <see cref="Register"/> does the only real pre-Build work this domain
+/// needs. Endpoint mapping is a post-Build
+/// call each host still makes manually — it is not part of this three-phase shape and is not collected.
+/// </para>
+/// </remarks>
+[TypeCollection(typeof(RealTimeHubOptionBase), typeof(IRealTimeHub), typeof(RealTimeHubs))]
+[PlatformServiceProvider(ServiceCategory = "RealTimeHubs")]
+public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptionBase, IRealTimeHub>
+{
+    // Source generator emits the static constructor, a static property per [TypeOption] hub, and
+    // All(), ByName(string), ById(int) plus the NotFound sentinel.
+
+    /// <summary>
+    /// No-op — this domain has no pre-Build IOptions binding to perform; <see cref="Register"/> does
+    /// the collection's only real work. Declared only so the <c>[PlatformServiceProvider]</c> three-phase
+    /// shape requirement is satisfied by ServiceTypeCollectionBase.
+    /// </summary>
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">Unused.</param>
+    /// <returns><paramref name="builder"/>, unchanged.</returns>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
+        => GenericResult<IHostApplicationBuilder>.Success(builder);
+
+    /// <summary>
+    /// Registers SignalR and every discovered real-time hub's services.
+    /// </summary>
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">Optional logger factory for registration logging.</param>
+    /// <remarks>
+    /// Call before <c>Build()</c>. Calls <c>AddSignalR()</c> once and asks each
+    /// <see cref="IRealTimeHub"/> in the collection to register its own broadcaster. New hubs are
+    /// picked up automatically — declaring a <c>[TypeOption(typeof(RealTimeHubs), ...)]</c> in any
+    /// referenced assembly is the only step.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="builder"/> is <see langword="null"/>.</exception>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
+    {
+        // Why: defer is the host claiming this phase to run at a position it chooses.
+        // Stateless, so there is no flag to set - returning is the whole of it.
+        if (defer)
+        {
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        }
+
+        ArgumentNullException.ThrowIfNull(builder);
+        var services = builder.Services;
+
+        ILogger logger = loggerFactory?.CreateLogger("Fdw.SignalR") ?? NullLogger.Instance;
+
+        services.AddSignalR();
+
+        List<IRealTimeHub> hubs = All().ToList();
+        SignalRLog.RealTimeHubsRegistering(logger, hubs.Count);
+
+        foreach (var hub in hubs)
+        {
+            hub.RegisterServices(services, loggerFactory);
+            SignalRLog.RealTimeHubServicesRegistered(logger, hub.Name, hub.HubType.Name, hub.Route);
+        }
+
+        SignalRLog.RealTimeHubsRegistered(logger, hubs.Count);
+
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
+    }
+
+    /// <summary>
+    /// No-op — this domain has no post-Build eager-resolve step; every hub's broadcaster is registered
+    /// directly in <see cref="Register"/>. Declared only so the <c>[PlatformServiceProvider]</c>
+    /// three-phase shape requirement is satisfied by ServiceTypeCollectionBase.
+    /// </summary>
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">Unused.</param>
+    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
+    public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
+        => GenericResult<IHost>.Success(host);
+
+    // Map() is deliberately outside the Configure/Register/Initialize three-phase shape (see the
+    // method's own remarks), so it gets none of PlatformServiceEntry's Ran/Deferred tracking. A
+    // second call would re-map every hub route -- endpoints.MapHub<T> does not reject a duplicate
+    // pattern at mapping time, it adds a second endpoint entry, and a real connection then throws
+    // AmbiguousMatchException at request time. This guard is what actually prevents that, not
+    // caller discipline about how many places call Map().
+    private static volatile bool _mapped;
+
+    /// <summary>
+    /// Maps every discovered real-time hub's endpoint.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="loggerFactory">Optional logger factory for mapping logging.</param>
+    /// <remarks>
+    /// Call after <c>Build()</c>, in whichever host should actually serve hub connections. This is
+    /// deliberately not part of the Configure/Register/Initialize three-phase shape <see cref="Register"/>
+    /// runs through: a host that registers hub services (so a domain running in it can broadcast
+    /// through <c>IHubContext</c>) is not necessarily a host that should accept inbound hub
+    /// connections from it — e.g. FDW-809, where every hub option loads into every host (confirmed:
+    /// the package graph does not distinguish them — see each host's own generated
+    /// TypeOptionModuleInitializer), but only the api host should map the routes browsers connect to.
+    /// Calling this from a host that should not serve hubs would map every hub there too, so a host
+    /// calls it only when it is meant to be a hub endpoint. Safe to call more than once — only the
+    /// first call maps anything, the rest are a logged no-op.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
+    public static void Map(IEndpointRouteBuilder endpoints, ILoggerFactory? loggerFactory = null)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        ILogger logger = loggerFactory?.CreateLogger("Fdw.SignalR") ?? NullLogger.Instance;
+
+        if (_mapped)
+        {
+            SignalRLog.RealTimeHubsAlreadyMapped(logger);
+            return;
+        }
+
+        _mapped = true;
+
+        List<IRealTimeHub> hubs = All().ToList();
+        SignalRLog.RealTimeHubsMapping(logger, hubs.Count);
+
+        foreach (var hub in hubs)
+        {
+            hub.Map(endpoints);
+            SignalRLog.RealTimeHubMapped(logger, hub.Name, hub.HubType.Name, hub.Route);
+        }
+
+        SignalRLog.RealTimeHubsMapped(logger, hubs.Count);
+    }
+}

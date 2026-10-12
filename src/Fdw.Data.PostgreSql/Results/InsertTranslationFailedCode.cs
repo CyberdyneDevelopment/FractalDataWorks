@@ -1,0 +1,24 @@
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Collections.Attributes;
+using Fdw.Results;
+
+namespace Fdw.Data.PostgreSql.Results;
+
+/// <summary>
+/// Insert translation failed with exception.
+/// </summary>
+[TypeOption(typeof(PostgreSqlDataResultCodes), "InsertTranslationFailed", RestrictToCurrentCompilation = true)]
+[ExcludeFromCodeCoverage]
+public sealed class InsertTranslationFailedCode : PostgreSqlDataResultCodeBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InsertTranslationFailedCode"/> class.
+    /// </summary>
+    public InsertTranslationFailedCode()
+        : base(91001, "InsertTranslationFailed",
+            ResultSeverities.ByName("Error"),
+            "Failed to translate insert: {ErrorMessage}",
+            isRetryable: false)
+    {
+    }
+}

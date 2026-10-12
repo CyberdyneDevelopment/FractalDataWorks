@@ -1,0 +1,109 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Fdw.Abstractions;
+using Fdw.Configuration;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+
+namespace Fdw.ServiceTypes;
+
+/// <summary>
+/// Base interface for Fdw service providers.
+/// Use when you need to get any service without knowing the specific TService type.
+/// </summary>
+public interface IDomainServiceProvider
+{
+    /// <summary>Gets a service instance by configuration name.</summary>
+    Task<IGenericResult<T>> Get<T>(string name, CancellationToken cancellationToken = default) where T : IGenericService;
+
+    /// <summary>Gets a service instance by configuration ID.</summary>
+    Task<IGenericResult<T>> Get<T>(Guid id, CancellationToken cancellationToken = default) where T : IGenericService;
+
+    /// <summary>Gets all service instances.</summary>
+    Task<IGenericResult<IReadOnlyList<T>>> Get<T>(CancellationToken cancellationToken = default) where T : IGenericService;
+}
+
+/// <summary>
+/// Strongly-typed service provider interface.
+/// </summary>
+/// <typeparam name="TService">The type of service this provider manages.</typeparam>
+public interface IDomainServiceProvider<TService> : IDomainServiceProvider
+    where TService : IGenericService
+{
+    /// <summary>Gets a service instance by configuration name.</summary>
+    Task<IGenericResult<TService>> Get(string name, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets a service instance by configuration ID.</summary>
+    Task<IGenericResult<TService>> Get(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Gets all service instances.</summary>
+    Task<IGenericResult<IReadOnlyList<TService>>> Get(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets a service instance built from the supplied configuration. No name/id lookup is
+    /// performed — the configuration's <see cref="IDomainConfiguration.Implementation"/>
+    /// selects the factory directly. A null configuration or missing Implementation is a
+    /// structured failure, never a fallback.
+    /// </summary>
+    Task<IGenericResult<TService>> Get(IGenericConfiguration configuration, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Strongly-typed service provider interface with configuration type constraint and registration support.
+/// Use this for providers that participate in the ServiceType registration pattern.
+/// </summary>
+/// <typeparam name="TService">The type of service this provider manages.</typeparam>
+/// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
+public interface IDomainServiceProvider<TService, TConfiguration> : IDomainServiceProvider<TService>
+    where TService : IGenericService
+    where TConfiguration : IImplementationConfiguration
+{
+
+    /// <summary>
+    /// Registers how to obtain the provider that builds one implementation of this domain.
+    /// </summary>
+    /// <param name="implementation">The implementation name a domain row carries.</param>
+    /// <param name="implementationProviderFactory">
+    /// Resolves the provider that builds that implementation. Called fresh on every <c>Get</c> —
+    /// never invoked here and never cached — so the container honours whatever lifetime the
+    /// implementation provider is actually registered with (Scoped, Transient, or Singleton) instead
+    /// of freezing whatever the first call happened to return.
+    /// </param>
+    /// <returns>Success, or a structured failure.</returns>
+    /// <remarks>
+    /// This only keeps what it is handed. Constructing the implementation provider and registering it
+    /// in the container is a three-phase Register body's job, as every other DI registration in this
+    /// framework is — so a domain provider never resolves anything itself and needs no container of
+    /// its own; the closure the caller hands in is the only place <c>IServiceProvider</c> appears.
+    /// </remarks>
+    IGenericResult Register(
+        string implementation,
+        Func<IImplementationServiceProvider<TService, TConfiguration>> implementationProviderFactory);
+    /// <summary>
+    /// Registers a parent configuration provider for direct name-to-type resolution.
+    /// The parent provider holds ALL configurations across all service option types,
+    /// enabling O(1) lookup by name to determine which factory to use via
+    /// <see cref="IDomainConfiguration.Implementation"/>.
+    /// </summary>
+    /// <param name="domainConfigurationProvider">The parent configuration provider.</param>
+    IGenericResult Register(IDomainConfigurationProvider<TConfiguration> domainConfigurationProvider);
+
+}
+
+/// <summary>
+/// Full service provider interface with specific factory and configuration provider type constraints.
+/// </summary>
+/// <typeparam name="TService">The type of service this provider manages.</typeparam>
+/// <typeparam name="TConfiguration">The configuration type for this service domain.</typeparam>
+/// <typeparam name="TFactory">The factory type for creating service instances.</typeparam>
+/// <typeparam name="TConfigurationProvider">The configuration provider type.</typeparam>
+public interface IDomainServiceProvider<TService, TConfiguration, TFactory, TConfigurationProvider>
+    : IDomainServiceProvider<TService, TConfiguration>
+    where TService : IGenericService
+    where TConfiguration : IImplementationConfiguration
+    where TFactory : IServiceFactory<TService>
+    where TConfigurationProvider : IDomainConfigurationProvider<TConfiguration>
+{
+}

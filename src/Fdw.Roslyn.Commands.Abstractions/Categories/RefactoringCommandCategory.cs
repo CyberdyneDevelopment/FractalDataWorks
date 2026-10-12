@@ -1,0 +1,18 @@
+using Fdw.Collections.Attributes;
+
+namespace Fdw.Roslyn.Commands.Abstractions;
+
+/// <summary>
+/// Command category for code refactoring operations.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[TypeOption(typeof(RoslynCommandCategories), "Refactoring", RestrictToCurrentCompilation = true)]
+public sealed class RefactoringCommandCategory : RoslynCommandCategoryBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RefactoringCommandCategory"/> class.
+    /// </summary>
+    public RefactoringCommandCategory() : base("Refactoring", "Code refactoring operations")
+    {
+    }
+}

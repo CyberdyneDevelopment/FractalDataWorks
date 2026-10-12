@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Types.Abstractions\Fdw.Types.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fdw.UI.Schema.Clients</RootNamespace>
+    <PackageId>Fdw.UI.Schema.Clients.Abstractions</PackageId>
+    <Title>Fdw Schema UI Client Abstractions</Title>
+    <Description>Schema visualization UI DTOs for Fdw Management UIs.</Description>
+    <PackageTags>schema;ui;clients</PackageTags>
+  </PropertyGroup>
+</Project>

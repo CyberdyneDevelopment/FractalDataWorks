@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.Orchestration.Abstractions\Fdw.Orchestration.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

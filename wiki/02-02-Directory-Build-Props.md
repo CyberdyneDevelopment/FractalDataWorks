@@ -1,97 +1,95 @@
 # Directory.Build.props
 
-The `Directory.Build.props` file provides shared MSBuild properties for all projects in the solution.
+`Directory.Build.props` provides shared MSBuild properties for every project in the FractalDataWorks repository. The authoritative file lives at [`public/Directory.Build.props`](../Directory.Build.props) and is much richer than the per-sample one.
 
-## Full Configuration
+## Key Settings (from `public/Directory.Build.props`)
 
-From [`Directory.Build.props`](../../samples/ReferenceSolution/Directory.Build.props):
-
-```xml
-<Project>
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <WarningsAsErrors />
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
-  </PropertyGroup>
-
-  <PropertyGroup>
-    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-  </PropertyGroup>
-
-  <!-- Local NuGet Development Configuration -->
-  <PropertyGroup>
-    <!-- Default config filename - can be overridden in project files -->
-    <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
-  </PropertyGroup>
-
-  <!-- Use local NuGet config when LocalNugetFolder is set and not in Release -->
-  <PropertyGroup Condition="'$(Configuration)' != 'Release' AND '$(LocalNugetFolder)' != ''">
-    <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
-  </PropertyGroup>
-</Project>
-```
-
-## Key Settings
-
-### Target Framework
+### Language & framework
 
 ```xml
-<TargetFramework>net10.0</TargetFramework>
-```
-
-All projects target .NET 10.
-
-### Nullable Reference Types
-
-```xml
+<LangVersion>preview</LangVersion>
 <Nullable>enable</Nullable>
+<ImplicitUsings>disable</ImplicitUsings>
 ```
 
-Enables nullable reference type analysis across all projects.
+`ImplicitUsings` is intentionally disabled — all `using` directives are explicit.
 
-### Warnings as Errors
+### Configurations
 
 ```xml
-<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+<Configurations>Debug;Debug-Local;Develop;Develop-Local;Release;Release-Local;Test;Test-Local</Configurations>
+<IsLocalConfiguration>false</IsLocalConfiguration>
+<IsLocalConfiguration Condition="$(Configuration.EndsWith('-Local'))">true</IsLocalConfiguration>
+<BaseConfiguration>$(Configuration)</BaseConfiguration>
+<BaseConfiguration Condition="'$(IsLocalConfiguration)' == 'true'">$(Configuration.Replace('-Local', ''))</BaseConfiguration>
 ```
 
-Treats all warnings as errors to ensure code quality.
+`-Local` configurations resolve packages from `$(LocalNugetFolder)` (see [Local Package Development](01-04-Local-Package-Development.md)). `BaseConfiguration` strips the suffix so consumers can branch on the underlying build mode.
 
 ### Central Package Management
 
 ```xml
 <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+<ManagePackageVersionsCentrally Condition="$(MSBuildProjectDirectory.Contains('/samples/')) OR $(MSBuildProjectDirectory.Contains('\samples\'))">false</ManagePackageVersionsCentrally>
 ```
 
-Enables central package version management. See [Package Management](02-03-Package-Management.md).
+Samples opt out of CPM so they can pin to specific published package versions.
 
-## Local NuGet Development
-
-From [`Directory.Build.props:21-30`](../../samples/ReferenceSolution/Directory.Build.props#L21-L30):
+### Packaging defaults
 
 ```xml
-<!-- Local NuGet Development Configuration -->
+<IsPackable>false</IsPackable>
+<IsPackable Condition="$(MSBuildProjectDirectory.Contains('/src/')) OR $(MSBuildProjectDirectory.Contains('\src\'))">true</IsPackable>
+```
+
+Only projects under `src/` are packable by default.
+
+### Source Link and symbols
+
+```xml
+<IncludeSymbols>true</IncludeSymbols>
+<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+<PublishRepositoryUrl>true</PublishRepositoryUrl>
+<EmbedUntrackedSources>true</EmbedUntrackedSources>
+```
+
+Source Link is disabled outside CI to avoid local "no source control info" warnings:
+
+```xml
+<WarnOnNonCIBuild Condition="'$(CI)' != 'true'">false</WarnOnNonCIBuild>
+<EnableSourceLink Condition="'$(CI)' != 'true'">false</EnableSourceLink>
+```
+
+### Versioning
+
+The version is a single hand-set number — MinVer and tag-driven stamping are removed. The repo's
+`Directory.Build.props` declares it once and every package in the repo is stamped with it:
+
+```xml
+<VersionPrefix>1.0.0</VersionPrefix>
+<VersionSuffix>rc.1</VersionSuffix>
+```
+
+Branching, building, and committing never change the number; bumping it is a deliberate edit of
+these two properties (kept in lockstep across all ecosystem repos), never a side effect of a commit.
+
+### Local NuGet config selection
+
+```xml
 <PropertyGroup>
-  <!-- Default config filename - can be overridden in project files -->
   <LocalNugetConfigFileName Condition="'$(LocalNugetConfigFileName)' == ''">Fdw.Local.nuget.config</LocalNugetConfigFileName>
 </PropertyGroup>
 
-<!-- Use local NuGet config when LocalNuGetFolder is set and not in Release -->
-<PropertyGroup Condition="'$(Configuration)' != 'Release' AND '$(LocalNugetFolder)' != ''">
+<PropertyGroup Condition="'$(IsLocalConfiguration)' == 'true' AND '$(LocalNugetFolder)' != ''">
   <RestoreConfigFile>$(LocalNugetFolder)\$(LocalNugetConfigFileName)</RestoreConfigFile>
 </PropertyGroup>
 ```
 
-This configuration enables local NuGet package development by pointing to a local feed when `LocalNugetFolder` is set and the build configuration is not Release.
+The local config is selected only when **both** the configuration ends in `-Local` and `LocalNugetFolder` is set.
+
+## Sample Solution Override
+
+The `public/samples/ReferenceSolution/Directory.Build.props` file is intentionally minimal — it only sets `TargetFramework`, `LangVersion`, `NuGetPruneVerbosity`, `Nullable`, and `ImplicitUsings`. The parent `public/Directory.Build.props` still applies via MSBuild's directory walk; samples that need to opt out of behaviour (e.g. central package management) do so explicitly in the parent file.
 
 ## Next Steps
 

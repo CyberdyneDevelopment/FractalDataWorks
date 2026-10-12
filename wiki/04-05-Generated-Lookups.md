@@ -4,7 +4,7 @@ The source generator creates O(1) lookup methods for accessing type options.
 
 ## Usage Examples
 
-From Reference Solution [`Program.cs:15-28`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L15-L28):
+From Reference Solution [`Program.cs:15-28`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L15-L28):
 
 ### Access by Property
 
@@ -24,7 +24,7 @@ Console.WriteLine($"   PaymentMethods.ByName(\"CreditCard\"): {creditCard.Name}"
 
 ### Access by ID (O(1))
 
-From Framework [`SucceededStatus.cs`](../../src/FractalDataWorks.Orchestration/TypeCollections/ExecutionStatuses/SucceededStatus.cs):
+From Framework [`SucceededStatus.cs`](../src/Fdw.Orchestration/TypeCollections/ExecutionStatuses/SucceededStatus.cs):
 
 ```csharp
 // ExecutionStatuses uses integer IDs - Succeeded has id: 4
@@ -37,7 +37,7 @@ if (succeeded is not null)
 
 ### Enumerate All Options
 
-From Reference Solution [`Program.cs:24`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L24):
+From Reference Solution [`Program.cs:24`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L24):
 
 ```csharp
 // Iterate all options
@@ -46,7 +46,7 @@ Console.WriteLine($"   All payment methods: {string.Join(", ", PaymentMethods.Al
 
 ## Polymorphic Usage
 
-Use properties instead of switch statements. From [`IExecutionStatus.cs:12-48`](../../src/FractalDataWorks.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L48):
+Use properties instead of switch statements. From [`IExecutionStatus.cs:12-48`](../src/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L48):
 
 ```csharp
 // CORRECT: Use polymorphism

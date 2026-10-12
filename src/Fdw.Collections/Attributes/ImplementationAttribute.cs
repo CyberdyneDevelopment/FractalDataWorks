@@ -1,0 +1,48 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
+
+namespace Fdw.Collections;
+
+/// <summary>
+/// Marks a class as a Implementation that belongs to a ServiceTypeCollection.
+/// Can be in any project that references the collection's assembly.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+[ExcludeFromCodeCoverage]
+public sealed class ImplementationAttribute : Attribute
+{
+    /// <summary>
+    /// Marks this class as a Implementation belonging to the specified collection.
+    /// </summary>
+    /// <param name="collectionType">The ServiceTypeCollection this option belongs to.</param>
+    /// <param name="name">
+    /// The name used for the static property accessor and ByName() lookup.
+    /// Must be unique within the collection and a valid C# identifier.
+    /// </param>
+    /// <remarks>
+    /// The name is the option's key for its static property accessor and for <c>ByName</c>. Its Id does
+    /// not come from the name: <c>GuidTypeOptionBase&lt;TBase&gt;</c> derives it from the option's own fully
+    /// qualified type name, so the option's generic arguments are irrelevant to identity. Deriving the Id
+    /// from the closed &lt;TService, TFactory&gt; pair was an earlier scheme and was replaced because a
+    /// domain's options routinely close the base identically: every option in <c>SessionStateTypes</c> is
+    /// the same closed type, so the id was one value shared by the whole domain and
+    /// <c>ServiceTypeCollectionBase.RegisterMember</c>, which keys membership on it, dropped every option
+    /// after the first without a word.
+    /// </remarks>
+    public ImplementationAttribute(Type collectionType, string name)
+    {
+        CollectionType = collectionType;
+        Name = name;
+    }
+
+    /// <summary>
+    /// The ServiceTypeCollection this option belongs to.
+    /// Supports unbound generics: typeof(MyCollection&lt;,&gt;)
+    /// </summary>
+    public Type CollectionType { get; }
+
+    /// <summary>
+    /// The name used for the static property, ByName() lookup, and Id generation.
+    /// </summary>
+    public string Name { get; }
+}

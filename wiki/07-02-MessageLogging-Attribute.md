@@ -4,7 +4,7 @@ The `[MessageLogging]` attribute defines structured log messages that return `IG
 
 ## Attribute Parameters
 
-From [`MessageLoggingAttribute.cs:82-116`](../src/FractalDataWorks.MessageLogging.Abstractions/MessageLoggingAttribute.cs#L82-L116):
+From [`MessageLoggingAttribute.cs:82-116`](../src/Fdw.MessageLogging.Abstractions/MessageLoggingAttribute.cs#L82-L116):
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -15,68 +15,89 @@ From [`MessageLoggingAttribute.cs:82-116`](../src/FractalDataWorks.MessageLoggin
 | `SkipEnabledCheck` | bool | Skip log level enabled check |
 | `Severity` | MessageSeverity | Severity for IGenericMessage |
 | `AutoMapSeverity` | bool | Auto-map severity from LogLevel (default: true) |
+| `TypeCode` | char[]? | Type code prefix for message code (default: `{ 'F', 'D', 'W' }`) |
+
+### TypeCode
+
+The `TypeCode` property controls the prefix in the generated message code. The source generator produces a `Code` value in the format `"{TypeCode}-{EventId}"` (e.g., `"FDW-8101"`).
+
+- Defaults to `FDW` when not specified
+- Must be 2-6 uppercase alphanumeric characters
+- Invalid values emit diagnostic `SYSLIB1028`
+
+```csharp
+// Default TypeCode (FDW):
+[MessageLogging(EventId = 8001, Level = LogLevel.Error, Message = "Operation failed")]
+public static partial IGenericMessage OperationFailed(ILogger logger);
+// Generated Code: "FDW-8001"
+
+// Custom TypeCode:
+[MessageLogging(EventId = 1001, Level = LogLevel.Error, Message = "API error",
+    TypeCode = new[] { 'A', 'P', 'I' })]
+public static partial IGenericMessage ApiError(ILogger logger);
+// Generated Code: "API-1001"
+```
 
 ## Examples
 
 ### Basic Usage (Debug Level)
 
-From Reference Solution [`OrderLog.cs:31-37`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L31-L37):
+From [`ConnectionProviderLogger.cs`](../src/Fdw.Services.Connections/Logging/ConnectionProviderLogger.cs):
 
 ```csharp
 [MessageLogging(
-    EventId = 8001,
+    EventId = 7101,
     Level = LogLevel.Debug,
-    Message = "Starting order processing for order '{orderId}'")]
-public static partial IGenericMessage ProcessingStarted(
+    Message = "Looking up connection '{name}'")]
+public static partial IGenericMessage LookingUpConnection(
     ILogger logger,
-    string orderId);
+    string name);
 ```
 
 ### With Multiple Parameters
 
-From Reference Solution [`OrderLog.cs:57-64`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L57-L64):
+Example (pattern; full file lives in the separate `reference-api` repository):
 
 ```csharp
 [MessageLogging(
-    EventId = 8010,
+    EventId = 10001,
     Level = LogLevel.Information,
-    Message = "Order '{orderId}' created successfully for customer '{customerId}'")]
-public static partial IGenericMessage OrderCreated(
+    Message = "Starting {serviceName} version {version}")]
+public static partial IGenericMessage ServiceStarting(
     ILogger logger,
-    string orderId,
-    string customerId);
+    string serviceName,
+    string version);
 ```
 
 ### With Exception
 
-From Reference Solution [`OrderLog.cs:165-172`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L165-L172):
+Example (pattern; full file lives in the separate `reference-api` repository):
 
 ```csharp
 [MessageLogging(
-    EventId = 8034,
+    EventId = 7010,
     Level = LogLevel.Error,
-    Message = "Order '{orderId}': Unexpected error during processing")]
-public static partial IGenericMessage ProcessingException(
+    Message = "Authentication failed for user '{username}'")]
+public static partial IGenericMessage AuthenticationFailed(
     ILogger logger,
-    Exception exception,
-    string orderId);
+    Exception ex,
+    string username);
 ```
 
 Note: The `Exception` parameter is placed immediately after `ILogger` for proper exception logging by the source generator.
 
 ### Error Level (Specific Failure Modes)
 
-From Reference Solution [`OrderLog.cs:137-145`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L137-L145):
+From [`ConnectionProviderLogger.cs`](../src/Fdw.Services.Connections/Logging/ConnectionProviderLogger.cs):
 
 ```csharp
 [MessageLogging(
-    EventId = 8032,
+    EventId = 7103,
     Level = LogLevel.Error,
-    Message = "Order '{orderId}': Payment declined - {declineReason}")]
-public static partial IGenericMessage PaymentDeclined(
+    Message = "Connection '{name}' not found")]
+public static partial IGenericMessage ConnectionNotFound(
     ILogger logger,
-    string orderId,
-    string declineReason);
+    string name);
 ```
 
 ## Event ID Conventions

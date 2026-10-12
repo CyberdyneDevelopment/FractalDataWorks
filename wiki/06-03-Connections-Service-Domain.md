@@ -6,7 +6,7 @@ The Connections service domain provides a plugin architecture for database and A
 
 The Connections domain consists of:
 
-- **Abstractions Package** - `FractalDataWorks.Services.Connections.Abstractions`
+- **Abstractions Package** - `Fdw.Services.Connections.Abstractions`
   - `IGenericConnection` - Service interface
   - `IConnectionConfiguration` - Configuration interface
   - `ConnectionConfigurationBase` - Configuration base class
@@ -14,15 +14,15 @@ The Connections domain consists of:
   - `IConnectionProvider` - Provider interface
   - `ConnectionTypeBase` - ServiceType base class
 
-- **Base Package** - `FractalDataWorks.Services.Connections`
+- **Base Package** - `Fdw.Services.Connections`
   - `ConnectionTypes` - ServiceTypeCollection
   - `DefaultConnectionProvider` - Provider implementation
   - `ConnectionLog` - MessageLogging class
 
 - **Implementation Packages**
-  - `FractalDataWorks.Services.Connections.MsSql` - SQL Server connections
-  - `FractalDataWorks.Services.Connections.PostgreSql` - PostgreSQL connections (future)
-  - `FractalDataWorks.Services.Connections.Rest` - REST API connections (future)
+  - `Fdw.Services.Connections.MsSql` - SQL Server connections
+  - `Fdw.Services.Connections.PostgreSql` - PostgreSQL connections (future)
+  - `Fdw.Services.Connections.Rest` - REST API connections (future)
 
 ## MsSql Connection Implementation
 
@@ -32,7 +32,7 @@ The MsSql connection implementation demonstrates the processor pattern for exten
 
 ```
 Services.Connections.MsSql/
-├── MsSqlConnectionType.cs              # ServiceTypeOption registration
+├── MsSqlConnectionType.cs              # Implementation registration
 ├── MsSqlConnectionFactory.cs           # Factory implementation
 ├── MsSqlConnectionConfiguration.cs     # Configuration class
 ├── Processors/
@@ -44,13 +44,11 @@ Services.Connections.MsSql/
 │   ├── WindowsAuthProcessor.cs             # Windows authentication
 │   ├── EntraIdAuthProcessor.cs             # Entra ID authentication
 │   └── ManagedIdentityAuthProcessor.cs     # Managed Identity authentication
-└── Authentication/ (deprecated)
-    └── MsSqlAuthenticationTypes.cs         # Old pattern - being replaced
 ```
 
 ### MsSqlAuthenticationProcessors TypeCollection
 
-The `MsSqlAuthenticationProcessors` TypeCollection provides a type-safe, extensible way to handle different authentication strategies for SQL Server connections. This pattern replaces the older `MsSqlAuthenticationTypes` approach.
+The `MsSqlAuthenticationProcessors` TypeCollection provides a type-safe, extensible way to handle different authentication strategies for SQL Server connections.
 
 #### Why Processors?
 
@@ -163,7 +161,8 @@ public sealed class SqlAuthProcessor : MsSqlAuthenticationProcessorBase
             return GenericResult<StringBuilder>.Failure(validationResult.CurrentMessage);
         }
 
-        command.Append($"User Id={context.Configuration.Authentication!.Username};");
+        context.Configuration.AdditionalProperties.TryGetValue("Username", out var username);
+        command.Append($"User Id={username};");
 
         if (!string.IsNullOrEmpty(context.ResolvedPassword))
         {
@@ -242,7 +241,7 @@ public class MsSqlConnectionFactory : IMsSqlConnectionFactory
 
         // 2. Look up authentication processor by type name from configuration
         var processor = MsSqlAuthenticationProcessors.ByName(
-            configuration.Authentication?.Type ?? "WindowsAuth");
+            configuration.AuthenticationType ?? "WindowsAuth");
 
         if (processor.IsEmpty)
         {
@@ -286,8 +285,8 @@ public class MsSqlConnectionFactory : IMsSqlConnectionFactory
         "Name": "OrdersDb",
         "Server": "localhost",
         "Database": "Orders",
+        "AuthenticationType": "SqlAuth",
         "Authentication": {
-          "Type": "SqlAuth",
           "Username": "app_user",
           "SecretManagerName": "AzureKeyVault",
           "SecretKeyName": "OrdersDb-Password"
@@ -297,9 +296,8 @@ public class MsSqlConnectionFactory : IMsSqlConnectionFactory
         "Name": "ReportsDb",
         "Server": "localhost",
         "Database": "Reports",
-        "Authentication": {
-          "Type": "WindowsAuth"
-        }
+        "AuthenticationType": "WindowsAuth",
+        "Authentication": {}
       }
     ]
   }
@@ -308,110 +306,66 @@ public class MsSqlConnectionFactory : IMsSqlConnectionFactory
 
 ### Database Configuration Loading
 
-When configurations are loaded from the database (via `MsSqlConfigurationProvider`), they are organized by **ServiceType** with array indexing to match the JSON structure above:
+Connection configurations are runtime rows in ConfigurationDb's `conn` schema, read through
+`IConnectionConfigurationProvider` over `IConfigurationGateway`. Rows are never flattened into
+`IConfiguration` keys — the provider composes the whole aggregate and callers dot-walk it.
 
 **Database Tables:**
 ```sql
--- Parent table (contains Name and discriminator)
-cfg.Connection
+-- Parent table (identity-only header)
+conn.Connection
   Id: GUID
   Name: 'OrdersDb'
-  ServiceOptionType: 'MsSql'  -- Discriminator for ServiceType lookup
+  Implementation: 'MsSql'
 
--- Shared PK extension table (1:1 relationship - same Id as parent)
-cfg.ConnectionAuthentication
-  Id: GUID  -- Both PK and FK to cfg.Connection(Id)
-  Type: 'SqlAuth'
-  Username: 'app_user'
-  SecretManagerName: 'AzureKeyVault'
-  SecretKeyName: 'OrdersDb-Password'
-
--- Child table (contains type-specific properties)
-cfg.MsSqlConnection
-  Id: GUID
-  ConnectionId: GUID  -- FK to cfg.Connection
+-- Typed body (every field the factory reads at runtime)
+conn.MsSqlConnection
+  ConnectionRowId          -- FK to conn.Connection.RowId
   Server: 'localhost'
   Database: 'Orders'
+  AuthenticationType: 'SqlAuth'   -- discriminator column
+
+-- KVP child table (authentication key-value pairs)
+conn.MsSqlConnectionAuthentication
+  MsSqlConnectionConfigurationRowId     -- FK to conn.MsSqlConnection.RowId
+  Name: 'Username'         -- Property name
+  Value: 'app_user'        -- Property value
 ```
 
-**Shared PK Extension Pattern:**
+**KVP Child Table Pattern:**
 
-The `cfg.ConnectionAuthentication` table uses a shared primary key pattern where its `Id` column is both the primary key AND a foreign key to `cfg.Connection(Id)`. This creates a strict 1:1 relationship - each connection has at most one authentication record with the same ID.
+The `conn.MsSqlConnectionAuthentication` table stores authentication settings as key-value pairs
+(configuration Pattern C — a `PropertyCollection`-typed child bound via the container's
+`DataContainerKey` seed). The `AuthenticationType` discriminator on `conn.MsSqlConnection`
+indicates which authentication type is active. The `MsSqlAuthenticationProcessors` TypeCollection
+validates that all required properties are present for each type (e.g., SqlAuth requires Username
+and SecretKeyName).
 
 This pattern is used because:
-1. **Not all connections need authentication** - Some use Windows Integrated Security
-2. **Keeps the parent table lean** - Core connection properties stay in `cfg.Connection`
-3. **Authentication is a separate concern** - Can be loaded/validated independently
-
-The `MsSqlConfigurationProvider` automatically loads shared PK extension tables (like `ConnectionAuthentication`) after loading the parent row, prefixing properties with the extension name (e.g., `Authentication:Type`, `Authentication:Username`).
-
-**IConfiguration Keys Generated:**
-```
-Connections:MsSql:0:Name = "OrdersDb"
-Connections:MsSql:0:Server = "localhost"
-Connections:MsSql:0:Database = "Orders"
-Connections:MsSql:0:Authentication:Type = "SqlAuth"
-Connections:MsSql:0:Authentication:Username = "app_user"
-```
-
-**Key Structure:** `{ServiceCategory}s:{ServiceType}:{Index}:{Property}`
-- `ServiceCategory`: Singular form (Connection, SecretManager, Pipeline)
-- `{ServiceCategory}s`: Plural form for section prefix (Connections, SecretManagers, Pipelines)
-- `ServiceType`: From `cfg.Connection.ConnectionType` field (MsSql, Rest, Http)
-- `Index`: Zero-based array index (0, 1, 2...)
-- `Property`: Property name from configuration class
-
-**Why This Structure?**
-
-This organization allows `IOptions<List<TConfiguration>>` binding to work correctly:
-
-```csharp
-// MsSqlConnectionType.Configure() binds ALL MsSql connections
-services.Configure<List<MsSqlConnectionConfiguration>>(
-    configuration.GetSection("Connections:MsSql"));
-
-// At runtime, provider looks up by Name
-var config = _options.Value.FirstOrDefault(c => c.Name == "OrdersDb");
-```
+1. **Different auth types need different properties** - SqlAuth needs Username/Password, WindowsAuth needs nothing, EntraId needs ClientId/TenantId
+2. **Extensible without schema changes** - New auth types add processors, not columns
+3. **Loaded by the configuration cascade** - the gateway reads the `PropertyCollection` key
+   binding from the container seed and fills the configuration's `Authentication` dictionary
 
 **Configuration Flow:**
 
-1. **Database** → Parent-child tables with Name and type-specific properties
-2. **MsSqlConfigurationProvider** → Loads into IConfiguration with array-indexed keys
-3. **ServiceTypeOption.Configure()** → Binds `IOptions<List<TConfig>>` by ServiceType
-4. **DefaultConnectionProvider** → Looks up by Name from the bound list at runtime
+1. **Database** → `conn.Connection` header + `conn.MsSqlConnection` typed body + KVP children
+2. **IConfigurationGateway** → composes the aggregate (header, typed body, property-collection children)
+3. **ConnectionConfigurationProvider** → `Get(name)` / `Get(id)` / `Get()` over the gateway, cached with tag-based invalidation
+4. **DefaultConnectionProvider** → resolves the named configuration and hands it to the connection factory
 
-## Processors vs Authentication Types
+## Authentication Processor Pattern
 
-The processor pattern replaces the older `MsSqlAuthenticationTypes` approach:
-
-| Aspect | Old Pattern (AuthenticationTypes) | New Pattern (Processors) |
-|--------|-----------------------------------|--------------------------|
-| **Purpose** | Type identity + connection string building | Separate validation and processing |
-| **Base Class** | `MsSqlAuthenticationTypeBase` | `MsSqlAuthenticationProcessorBase` |
-| **Collection** | `MsSqlAuthenticationTypes` | `MsSqlAuthenticationProcessors` |
-| **Method** | `BuildConnectionString(config, password)` | `Validate(context)` + `Process(command, context)` |
-| **Context** | Separate parameters | `MsSqlProcessorContext` record struct |
-| **Validation** | Implicit in build method | Explicit `Validate()` method |
-| **Extensibility** | Add new type class | Add new processor class |
-
-### Migration Path
-
-The old `MsSqlAuthenticationTypes` pattern is being phased out:
+The `MsSqlAuthenticationProcessors` TypeCollection separates validation and processing for different authentication strategies:
 
 ```csharp
-// OLD PATTERN (deprecated)
-var authType = MsSqlAuthenticationTypes.ByName(config.Authentication.Type);
-var connectionString = authType.BuildConnectionString(config, password);
-
-// NEW PATTERN (current)
-var processor = MsSqlAuthenticationProcessors.ByName(config.Authentication.Type);
+var processor = MsSqlAuthenticationProcessors.ByName(config.AuthenticationType);
 var builder = new StringBuilder("Server=...;Database=...;");
 var context = new MsSqlProcessorContext(config, resolvedPassword);
 var result = processor.Process(builder, context);
 ```
 
-Benefits of the processor pattern:
+**Benefits:**
 1. **Explicit validation** - `Validate()` can be called separately
 2. **Composable processing** - Multiple processors can be chained
 3. **Testability** - Validation and processing can be tested independently
@@ -493,24 +447,81 @@ The source generator automatically discovers the new processor via the `[TypeOpt
 
 ## Three-Phase Registration
 
-The Connections domain follows the standard three-phase DI registration pattern:
+The Connections domain follows the standard three-phase DI registration pattern. `ConnectionTypes` is
+an ordinary `[ServiceTypeCollection]`, so its three phases run inside the single
+`PlatformServices.Configure`/`Register`/`Initialize` sweep alongside every other domain (see
+[12-01 Creating a Server](12-01-Creating-A-Server.md)) — there is no hand-written
+`ConnectionTypes.Configure(...)` call in `Program.cs`:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-// Optional: Logger for startup diagnostics
-using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+var loggerFactory = builder.AddFrameworkSerilog("MyApp");
 
-// Phase 1: Configure and Register
-ConnectionTypes.Configure(builder.Services, builder.Configuration, loggerFactory);
-ConnectionTypes.Register(builder.Services, loggerFactory);
+// Phase 1: Configure and Register — one sweep drives ConnectionTypes (and every other
+// [ServiceTypeCollection]/[PlatformServiceProvider] domain) in dependency-safe order.
+PlatformServices.Configure(builder, loggerFactory);
+PlatformServices.Register(builder.Services, loggerFactory);
 
 var app = builder.Build();
 
-// Phase 2: Initialize (optional - for eager validation)
-ConnectionTypes.Initialize(app.Services, loggerFactory);
+// Phase 2: Initialize (eager validation + auto schema discovery for MsSql) — same sweep.
+PlatformServices.Initialize(app.Services, loggerFactory);
 
 app.Run();
+```
+
+## Automatic Schema Discovery (MsSql)
+
+During `ConnectionTypes`' own `Initialize()` — run for you inside the `PlatformServices.Initialize`
+sweep — `MsSqlConnectionType.RegisterFactory()` automatically discovers and persists database
+schemas for all configured MsSql connections. This eliminates the need for manual seed scripts to
+define containers.
+
+### What Happens
+
+1. When the provider is resolved, `MsSqlConnectionType.RegisterFactory()` is called
+2. For each configured MsSql connection (in parallel):
+   - Creates the connection via the factory
+   - Calls `MsSqlSchemaCommands.DiscoverSchema()` to introspect the database
+   - Calls `MsSqlSchemaCommands.PersistSchema()` to write discovered metadata
+
+### Configuration Tables Populated
+
+| Table | Content |
+|-------|---------|
+| `data.DataStore` | One entry per database/connection |
+| `data.DataPath` | One entry per schema |
+| `data.DataContainer` | One entry per table/view |
+| `data.DataContainerField` | One entry per column |
+
+### Requirements
+
+- `IConfigurationWriterFactory` must be registered (integrated into hosting startup)
+- `DataStoreTypes` must be populated (module-init `RegisterMember`) and
+  `ConfigurationGatewayDataStoreProvider`'s `Configure` must have run (for IOptionsMonitor bindings)
+- Skips gracefully if `IConfigurationWriterFactory` is not available (e.g., in tests)
+
+### Benefits
+
+- **No manual seed scripts** - Container metadata is auto-discovered from the database
+- **DataGateway resolution** - Containers (e.g., "Users", "Orders") can be resolved by name
+- **Schema change detection** - Changes are detected on restart
+- **Zero configuration** - Works automatically when configuration writers are registered
+
+### Example Flow
+
+```csharp
+// One PlatformServices sweep replaces the per-domain Configure/Register/Initialize list —
+// SecretManagerTypes, ConnectionTypes, and the DataStore domain's ConfigurationGatewayDataStoreProvider
+// all participate automatically, in dependency-safe Group order.
+PlatformServices.Configure(builder, loggerFactory);
+PlatformServices.Register(builder.Services, loggerFactory);
+
+var app = builder.Build();
+
+// Initialize - MsSql connections auto-discover schemas here, DataStore containers become available.
+PlatformServices.Initialize(app.Services, loggerFactory);
 ```
 
 ## Runtime Usage

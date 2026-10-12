@@ -1,0 +1,326 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Globalization;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Commands.Data;
+using Fdw.Data;
+using Fdw.Data.Abstractions;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Quality;
+using Fdw.Services.Quality.Configuration;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Quality.Endpoints;
+
+
+/// <summary>Endpoint that executes a single quality check by rule identifier.</summary>
+public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRequest, QualityCheckResultResponse>
+{
+    /// <summary>Initializes a new instance of the <see cref="ExecuteQualityCheckEndpointBase"/> class.</summary>
+        private readonly IQualityRuleConfigurationProvider _provider;
+    private readonly IDataGatewayProvider _dataGateways;
+
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    private IDataGateway Gateway => _dataGateways.ByName("Main");
+
+    /// <summary>Initializes a new instance of the <see cref="ExecuteQualityCheckEndpointBase"/> class.</summary>
+    protected ExecuteQualityCheckEndpointBase(ILogger logger, IQualityRuleConfigurationProvider provider, IDataGatewayProvider dataGateways)
+    {
+        Logger = logger;
+        _provider = provider;
+        _dataGateways = dataGateways;
+    }
+
+
+    /// <summary>Gets the authorization policy required for read operations.</summary>
+    protected virtual string ReadPolicy => "datasets:read";
+
+    /// <summary>Gets the logger instance for this endpoint.</summary>
+    protected new ILogger Logger { get; }
+
+    /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
+    public override void Configure()
+    {
+        Post("/quality/rules/{Id}/execute");
+#if DEVELOP
+        AllowAnonymous();
+#else
+        Policies(ReadPolicy);
+#endif
+        Summary(s => s.Summary = "Execute a quality check");
+    }
+
+    /// <summary>Fetches the quality rule, queries the associated DataSet, and executes the check. Returns Skipped if the rule is disabled, or 404 if the rule is not found.</summary>
+    public override async Task HandleAsync(QualityRuleIdRequest req, CancellationToken ct)
+    {
+        
+        var ruleResult = await _provider.Get(req.Id, ct).ConfigureAwait(false);
+
+        if (!ruleResult.IsSuccess)
+        {
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch quality rule", Details = ruleResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            return;
+        }
+
+        if (ruleResult.Value is null)
+        {
+            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            return;
+        }
+
+        var rule = ruleResult.Value;
+
+        if (!rule.IsEnabled)
+        {
+            await Send.OkAsync(new QualityCheckResultResponse
+            {
+                RuleId = req.Id,
+                Status = "Skipped",
+                FailureCount = 0,
+                TotalCount = 0,
+                ExecutedAt = DateTime.UtcNow,
+                ErrorMessage = "Rule is disabled"
+            }, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var named = QualityRuleTarget.RequireDataSet($"Quality rule {req.Id}", rule.DataSetName, Logger);
+        if (named.IsFailure)
+        {
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Quality rule names no data set", Details = named.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            return;
+        }
+
+        // Why a failed read is the answer and not a 200 whose check "Failed" (FDW-1162): the rule never ran. The read's own
+        // code decides the status, and a refusal's reason reaches the caller through the mapper, written once.
+        var rows = await QualityRuleTarget.ReadRows(Gateway, rule.DataSetName, Logger, ct).ConfigureAwait(false);
+        if (rows.IsFailure || rows.Value is not { } data)
+        {
+            var (statusCode, problem) = ResultHttpStatusMapper.Map(rows, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        var totalCount = data.Count;
+
+        var result = ExecuteRule(rule, data, totalCount);
+        result.RuleId = req.Id;
+        result.ExecutedAt = DateTime.UtcNow;
+
+        await Send.OkAsync(result, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Executes a single quality rule against the provided data and returns the result.</summary>
+    protected virtual QualityCheckResultResponse ExecuteRule(IQualityRuleImplementationConfiguration rule, IReadOnlyList<Dictionary<string, object>> data, int totalCount)
+    {
+        return rule.RuleType switch
+        {
+            "NotNull" => ValidateNotNull(data, rule.FieldName, totalCount),
+            "Unique" => ValidateUnique(data, rule.FieldName, totalCount),
+            "InRange" => ValidateInRange(data, rule.FieldName, rule.MinValue, rule.MaxValue, totalCount),
+            "MatchesPattern" => ValidatePattern(data, rule.FieldName, rule.Pattern, totalCount),
+            "CustomExpression" => new QualityCheckResultResponse
+            {
+                Status = "NotSupported",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "CustomExpression rules are not yet supported"
+            },
+            _ => new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = $"Unknown rule type: {rule.RuleType}"
+            }
+        };
+    }
+
+    /// <summary>Validates that the specified field is not null or empty in all rows.</summary>
+    protected static QualityCheckResultResponse ValidateNotNull(IReadOnlyList<Dictionary<string, object>> data, string? fieldName, int totalCount)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "FieldName is required for NotNull rule"
+            };
+        }
+
+        var failureCount = data.Count(row =>
+            !row.ContainsKey(fieldName) ||
+            row[fieldName] == null ||
+            (row[fieldName] is string str && string.IsNullOrWhiteSpace(str)));
+
+        return new QualityCheckResultResponse
+        {
+            Status = failureCount == 0 ? "Passed" : "Failed",
+            FailureCount = failureCount,
+            TotalCount = totalCount
+        };
+    }
+
+    /// <summary>Validates that the specified field contains unique values across all rows.</summary>
+    protected static QualityCheckResultResponse ValidateUnique(IReadOnlyList<Dictionary<string, object>> data, string? fieldName, int totalCount)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "FieldName is required for Unique rule"
+            };
+        }
+
+        var values = data
+            .Where(row => row.ContainsKey(fieldName) && row[fieldName] != null)
+            .Select(row => row[fieldName]?.ToString() ?? string.Empty)
+            .ToList();
+
+        var uniqueValues = values.Distinct(StringComparer.Ordinal).Count();
+        var failureCount = values.Count - uniqueValues;
+
+        return new QualityCheckResultResponse
+        {
+            Status = failureCount == 0 ? "Passed" : "Failed",
+            FailureCount = failureCount,
+            TotalCount = totalCount
+        };
+    }
+
+    /// <summary>Validates that the specified field values fall within the given numeric range.</summary>
+    protected static QualityCheckResultResponse ValidateInRange(
+        IReadOnlyList<Dictionary<string, object>> data,
+        string? fieldName,
+        string? minValue,
+        string? maxValue,
+        int totalCount)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "FieldName is required for InRange rule"
+            };
+        }
+
+        if (!double.TryParse(minValue, CultureInfo.InvariantCulture, out var min) || !double.TryParse(maxValue, CultureInfo.InvariantCulture, out var max))
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "MinValue and MaxValue must be numeric"
+            };
+        }
+
+        var failureCount = data.Count(row =>
+        {
+            if (!row.TryGetValue(fieldName, out var fieldValue) || fieldValue == null)
+                return true;
+
+            var valueStr = fieldValue.ToString();
+            if (!double.TryParse(valueStr, CultureInfo.InvariantCulture, out var value))
+                return true;
+
+            return value < min || value > max;
+        });
+
+        return new QualityCheckResultResponse
+        {
+            Status = failureCount == 0 ? "Passed" : "Failed",
+            FailureCount = failureCount,
+            TotalCount = totalCount
+        };
+    }
+
+    /// <summary>Validates that the specified field values match the given regex pattern.</summary>
+    protected static QualityCheckResultResponse ValidatePattern(
+        IReadOnlyList<Dictionary<string, object>> data,
+        string? fieldName,
+        string? pattern,
+        int totalCount)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName))
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "FieldName is required for MatchesPattern rule"
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = "Pattern is required for MatchesPattern rule"
+            };
+        }
+
+        Regex regex;
+        try
+        {
+            regex = new Regex(pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+        }
+        catch (Exception ex)
+        {
+            return new QualityCheckResultResponse
+            {
+                Status = "Failed",
+                FailureCount = 0,
+                TotalCount = totalCount,
+                ErrorMessage = $"Invalid regex pattern: {ex.Message}"
+            };
+        }
+
+        var failureCount = data.Count(row =>
+        {
+            if (!row.TryGetValue(fieldName, out var fieldValue) || fieldValue == null)
+                return true;
+
+            var valueStr = fieldValue.ToString();
+            if (string.IsNullOrEmpty(valueStr))
+                return true;
+
+            try
+            {
+                return !regex.IsMatch(valueStr);
+            }
+            catch (System.Text.RegularExpressions.RegexMatchTimeoutException ex)
+            {
+                _ = ex;
+                return true;
+            }
+        });
+
+        return new QualityCheckResultResponse
+        {
+            Status = failureCount == 0 ? "Passed" : "Failed",
+            FailureCount = failureCount,
+            TotalCount = totalCount
+        };
+    }
+}

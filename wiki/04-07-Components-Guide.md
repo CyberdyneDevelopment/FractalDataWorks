@@ -53,7 +53,7 @@ From [`IPaymentMethod.cs`](../samples/ReferenceSolution/concepts/01-type-collect
 // ═══════════════════════════════════════════════════════════════════
 // 1. INTERFACE - Defines the contract
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic;
 
@@ -69,9 +69,9 @@ public interface IPaymentMethod : ITypeOption<int, PaymentMethodBase>
     decimal FeePercentage { get; }
 
     /// <summary>
-    /// Gets a value indicating whether this method requires external authorization.
+    /// Gets a value indicating whether this method requires verification.
     /// </summary>
-    bool RequiresAuthorization { get; }
+    bool RequiresVerification { get; }
 
     /// <summary>
     /// Calculates the total amount including fees.
@@ -86,7 +86,7 @@ From [`PaymentMethodBase.cs`](../samples/ReferenceSolution/concepts/01-type-coll
 // ═══════════════════════════════════════════════════════════════════
 // 2. BASE CLASS - Common implementation
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic;
 
@@ -100,24 +100,23 @@ public abstract class PaymentMethodBase : TypeOptionBase<int, PaymentMethodBase>
         int id,
         string name,
         decimal feePercentage,
-        bool requiresAuthorization)
+        bool requiresVerification)
         : base(id, name)
     {
         FeePercentage = feePercentage;
-        RequiresAuthorization = requiresAuthorization;
+        RequiresVerification = requiresVerification;
     }
 
     /// <inheritdoc />
     public decimal FeePercentage { get; }
 
     /// <inheritdoc />
-    public bool RequiresAuthorization { get; }
+    public bool RequiresVerification { get; }
 
     /// <inheritdoc />
-    public virtual decimal CalculateTotal(decimal amount)
+    public decimal CalculateTotal(decimal amount)
     {
-        // Default implementation adds fee percentage
-        return amount * (1 + FeePercentage / 100);
+        return amount * (1 + FeePercentage / 100m);
     }
 }
 ```
@@ -127,8 +126,7 @@ From [`PaymentMethods.cs`](../samples/ReferenceSolution/concepts/01-type-collect
 // ═══════════════════════════════════════════════════════════════════
 // 3. COLLECTION - The static accessor class (partial for generation)
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections;
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic;
 
@@ -152,12 +150,12 @@ From [`CashPayment.cs`](../samples/ReferenceSolution/concepts/01-type-collection
 // ═══════════════════════════════════════════════════════════════════
 // 4. TYPE OPTIONS - Concrete implementations
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic.Options;
 
 /// <summary>
-/// Cash payment method - no fees, no authorization required.
+/// Cash payment method - no fees, no verification required.
 /// </summary>
 [TypeOption(typeof(PaymentMethods), "Cash")]
 public sealed class CashPayment : PaymentMethodBase
@@ -167,15 +165,8 @@ public sealed class CashPayment : PaymentMethodBase
             id: 1,
             name: "Cash",
             feePercentage: 0m,
-            requiresAuthorization: false)
+            requiresVerification: false)
     {
-    }
-
-    /// <inheritdoc />
-    public override decimal CalculateTotal(decimal amount)
-    {
-        // Cash has no fees
-        return amount;
     }
 }
 ```
@@ -239,8 +230,7 @@ Same components as TypeCollection, but uses `[MutableTypeCollection]` attribute.
 
 From [`Plugins.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Mutable/Plugins.cs):
 ```csharp
-using FractalDataWorks.Collections;
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Mutable;
 
@@ -324,8 +314,7 @@ Same components as TypeCollection, but uses `[TypeInstanceCollection]` attribute
 
 From [`Validators.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Instance/Validators.cs):
 ```csharp
-using FractalDataWorks.Collections;
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Instance;
 
@@ -395,10 +384,10 @@ ServiceTypeCollections extend TypeCollections with dependency injection support 
 +---------------------------------------------------------------------+
 |  Same as TypeCollection, PLUS:                                      |
 +---------------------------------------------------------------------+
-|  - Uses int keys (same as TypeCollection)                           |
+|  - Uses Guid keys (UUID v5 derived from the type)                   |
 |  - Base class has RegisterServices() and RegisterFactory() methods  |
 |  - Collection has RegisterAll() and InitializeFactories() methods   |
-|  - Uses [TypeOption] attribute (NOT [ServiceTypeOption])            |
+|  - Uses [TypeOption] attribute (NOT [Implementation])            |
 |  - Three-phase registration pattern for proper DI lifecycle         |
 +---------------------------------------------------------------------+
 ```
@@ -412,7 +401,7 @@ From [`NotificationTypeBase.cs`](../samples/ReferenceSolution/concepts/02-servic
 // ═══════════════════════════════════════════════════════════════════
 // 1. INTERFACE AND BASE CLASS
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections;
+using Fdw.Collections;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Reference.ServiceTypes.ServiceTypes;
@@ -457,8 +446,7 @@ From [`NotificationTypes.cs`](../samples/ReferenceSolution/concepts/02-service-t
 // ═══════════════════════════════════════════════════════════════════
 // 2. COLLECTION - With three-phase registration methods
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections;
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Reference.ServiceTypes.ServiceTypes;
@@ -472,8 +460,8 @@ public abstract partial class NotificationTypes : TypeCollectionBase<Notificatio
     /// </summary>
     public static void RegisterAll(IServiceCollection services)
     {
-        // Register the provider as singleton
-        services.AddSingleton<NotificationProvider>();
+        // Register the provider as Scoped (default ProviderLifetime for [ServiceTypeCollection]).
+        services.AddScoped<NotificationProvider>();
 
         // Register each notification type's services
         foreach (var type in All())
@@ -507,7 +495,7 @@ From [`EmailNotificationType.cs`](../samples/ReferenceSolution/concepts/02-servi
 // ═══════════════════════════════════════════════════════════════════
 // 3. SERVICE TYPE OPTIONS
 // ═══════════════════════════════════════════════════════════════════
-using FractalDataWorks.Collections.Attributes;
+using Fdw.Collections;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Reference.ServiceTypes.Channels.Email;
@@ -646,15 +634,16 @@ Order? order = await orderReader.ReadAsync("456");
 
 ### Analyzer Diagnostics
 
-| Code | Description |
-|------|-------------|
-| TC001 | Id Hash Collision |
-| TC003 | No TypeOptions Found |
-| TC007 | Duplicate Option Name |
-| TC008 | Duplicate Lookup Value |
-| ST001 | ServiceType Id Collision |
-| ST004 | Duplicate ServiceType Name |
-| ST005 | Duplicate ServiceType Lookup Value |
+| Code | Severity | Description |
+|------|----------|-------------|
+| TC001 | Warning | Type option missing required `[TypeOption]` attribute (won't be discovered) |
+| TC002 | Error | Generic return type in base class doesn't match the `[TypeCollection]` attribute |
+| TC003 | Error | Base type in base class doesn't match the `[TypeCollection]` attribute |
+| TC004 | Error | Generic type argument mismatch between `[TypeOption]` and the base class |
+| TYPECOLL001 | Warning | A `[TypeLookup]` generates a method that conflicts with a collection member |
+| ENHENUM001 | Warning | Duplicate lookup values without `AllowMultiple` |
+
+(ServiceType collections share the same `TC*` analyzers; there is no separate `ST*` rule family.)
 
 ---
 

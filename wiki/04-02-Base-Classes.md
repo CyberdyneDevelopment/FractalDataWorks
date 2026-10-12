@@ -4,89 +4,53 @@ Base classes define the shared properties and behavior for all type options. **A
 
 ## Interface Definition
 
-From [`IPaymentMethod.cs:1-30`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/IPaymentMethod.cs):
+From [`IPaymentMethod.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/IPaymentMethod.cs):
 
 ```csharp
-using FractalDataWorks.Collections;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic;
 
 /// <summary>
 /// Interface for payment method type options.
-/// Extends ITypeOption to enable TypeCollection discovery.
+/// Defines the contract for all payment methods in the TypeCollection.
 /// </summary>
-/// <remarks>
-/// The interface defines the contract that all payment methods must implement.
-/// Each payment method knows its own processing logic - no switch statements needed!
-/// </remarks>
 public interface IPaymentMethod : ITypeOption<int, PaymentMethodBase>
 {
-    /// <summary>
-    /// Gets the processing fee percentage for this payment method.
-    /// </summary>
     decimal FeePercentage { get; }
-
-    /// <summary>
-    /// Gets a value indicating whether this method requires external authorization.
-    /// </summary>
-    bool RequiresAuthorization { get; }
-
-    /// <summary>
-    /// Calculates the total amount including fees.
-    /// Each payment method implements its own calculation logic.
-    /// </summary>
+    bool RequiresVerification { get; }
     decimal CalculateTotal(decimal amount);
 }
 ```
 
 ## Base Class Definition
 
-From [`PaymentMethodBase.cs:1-45`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethodBase.cs):
+From [`PaymentMethodBase.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethodBase.cs):
 
 ```csharp
-using FractalDataWorks.Collections;
+using Fdw.Collections;
 
 namespace Reference.TypeCollections.Basic;
 
-/// <summary>
-/// Abstract base class for payment methods.
-/// Inherits from TypeOptionBase for TypeCollection integration.
-/// </summary>
-/// <remarks>
-/// The base class provides common implementation and ensures all
-/// payment methods have the required TypeOption infrastructure.
-/// </remarks>
 public abstract class PaymentMethodBase : TypeOptionBase<int, PaymentMethodBase>, IPaymentMethod
 {
-    /// <summary>
-    /// Initializes a new instance of PaymentMethodBase.
-    /// </summary>
-    /// <param name="id">Unique identifier for this payment method.</param>
-    /// <param name="name">Name of the payment method (must match TypeOption attribute).</param>
-    /// <param name="feePercentage">Processing fee percentage.</param>
-    /// <param name="requiresAuthorization">Whether external authorization is required.</param>
     protected PaymentMethodBase(
         int id,
         string name,
         decimal feePercentage,
-        bool requiresAuthorization)
+        bool requiresVerification)
         : base(id, name)
     {
         FeePercentage = feePercentage;
-        RequiresAuthorization = requiresAuthorization;
+        RequiresVerification = requiresVerification;
     }
 
-    /// <inheritdoc />
     public decimal FeePercentage { get; }
+    public bool RequiresVerification { get; }
 
-    /// <inheritdoc />
-    public bool RequiresAuthorization { get; }
-
-    /// <inheritdoc />
-    public virtual decimal CalculateTotal(decimal amount)
+    public decimal CalculateTotal(decimal amount)
     {
-        // Default implementation adds fee percentage
-        return amount * (1 + FeePercentage / 100);
+        return amount * (1 + FeePercentage / 100m);
     }
 }
 ```
@@ -100,7 +64,7 @@ public abstract class PaymentMethodBase : TypeOptionBase<int, PaymentMethodBase>
 
 ## Framework Base Class
 
-From [`TypeOptionBase.cs:12-88`](../src/FractalDataWorks.Collections/TypeOptionBase.cs):
+From [`TypeOptionBase.cs:12-88`](../src/Fdw.Collections/TypeOptionBase.cs):
 
 ```csharp
 public abstract class TypeOptionBase<TKey, T> : ITypeOption<TKey, T>
@@ -145,7 +109,7 @@ public abstract class PaymentMethodBase
 }
 
 // WRONG: Virtual properties with default values encourage override chains
-public virtual bool RequiresAuthorization => false;  // NEVER - set via constructor
+public virtual bool RequiresVerification => false;  // NEVER - set via constructor
 ```
 
 ## Next Steps

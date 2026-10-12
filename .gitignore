@@ -2,11 +2,6 @@
 # Visual Studio and .NET
 # ===============================================
 
-# Local scripts (development only)
-scripts/
-# Exception: Allow SQL schema scripts in source folders
-!**/src/**/Scripts/*.sql
-
 # User-specific files
 *.rsuser
 *.suo
@@ -130,6 +125,7 @@ lcov.info
 # Coverage reports
 CoverageReport/
 coverage-report/
+coverage-report-*/
 tests/coverage/
 coverage/
 coverage-report.txt
@@ -379,3 +375,6 @@ gen/
 .claude-tools/
 .claude/
 agent-tools/
+
+# Auto-generated Tailwind safelist (emitted by generate-tailwind-safelist.{ps1,sh} at build/pack)
+src/FractalDataWorks.UI/wwwroot/tailwind-safelist.html

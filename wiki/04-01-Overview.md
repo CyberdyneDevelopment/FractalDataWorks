@@ -12,28 +12,27 @@ TypeCollections are enhanced enums with O(1) lookups and rich behavior. They rep
 
 ## Quick Example
 
-From Reference Solution [`Program.cs:15-28`](../../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Program.cs#L15-L28):
+From [`FilterOperators.cs`](../src/Fdw.Data/Operators/FilterOperators.cs):
 
 ```csharp
 // Access via static property (generated)
-var cash = PaymentMethods.Cash;
-Console.WriteLine($"   PaymentMethods.Cash: {cash.Name}, Fee: {cash.FeePercentage}%");
+var equalOp = FilterOperators.Equal;
+Console.WriteLine($"   FilterOperators.Equal: {equalOp.Name}");
 
 // Access via lookup
-var creditCard = PaymentMethods.ByName("CreditCard");
-Console.WriteLine($"   PaymentMethods.ByName(\"CreditCard\"): {creditCard.Name}");
+var greaterThan = FilterOperators.ByName("GreaterThan");
+Console.WriteLine($"   FilterOperators.ByName(\"GreaterThan\"): {greaterThan.Name}");
 
 // Iterate all options
-Console.WriteLine($"   All payment methods: {string.Join(", ", PaymentMethods.All().Select(p => p.Name))}");
+Console.WriteLine($"   All operators: {string.Join(", ", FilterOperators.All().Select(p => p.Name))}");
 
 // Use behavior - no switch statements needed!
-var amount = 100m;
-Console.WriteLine($"   ${amount} via {creditCard.Name} = ${creditCard.CalculateTotal(amount):F2}");
+// Each operator knows how to generate SQL predicates, etc.
 ```
 
-For TypeCollections with terminal state handling, see [`ExecutionStatuses`](../../src/FractalDataWorks.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/):
+For TypeCollections with terminal state handling, see [`ExecutionStatuses`](../src/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/):
 
-From [`IExecutionStatus.cs:12-27`](../../src/FractalDataWorks.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L27):
+From [`IExecutionStatus.cs:12-27`](../src/Fdw.Orchestration.Abstractions/TypeCollections/ExecutionStatuses/IExecutionStatus.cs#L12-L27):
 
 ```csharp
 public interface IExecutionStatus : ITypeOption<int, ExecutionStatusBase>

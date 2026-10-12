@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <!-- Add the source generator analyzer -->
+    <Analyzer Include="$(MSBuildThisFileDirectory)..\analyzers\dotnet\cs\Fdw.MessageLogging.SourceGenerators.dll" />
+  </ItemGroup>
+</Project>

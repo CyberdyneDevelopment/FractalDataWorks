@@ -1,0 +1,46 @@
+﻿using System;
+using System.Net.Http;
+using Fdw.Collections;
+using Fdw.Web.Calculations.Clients.ApiClients;
+using Fdw.Web.Clients.Abstractions.Registration;
+using Fdw.Web.Http.Authentication;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Results;
+
+namespace Fdw.Web.Calculations.Clients;
+
+/// <summary>
+/// Implementation for the Calculation API client.
+/// </summary>
+// TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
+[Implementation(typeof(ApiClientTypes), "CalculationClient")]
+public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClient>
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CalculationClientType"/> class.
+    /// </summary>
+    public CalculationClientType() : base("CalculationClient", "Calculation API Client") {
+        Configuration(builder =>
+        {
+            builder.Services.AddApiHttpClient(Name);
+                    return GenericResult<IHostApplicationBuilder>.Success(builder);
+});
+
+        Registration((builder, loggerFactory) =>
+        {
+
+            builder.Services.AddScoped<CalculationApiClient>(sp =>
+            {
+                var logger = sp.GetService<ILogger<CalculationApiClient>>() ?? NullLogger<CalculationApiClient>.Instance;
+                return new CalculationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
+            });
+            builder.Services.AddScoped<ICalculationApiClient>(sp => sp.GetRequiredService<CalculationApiClient>());
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+ }
+
+}

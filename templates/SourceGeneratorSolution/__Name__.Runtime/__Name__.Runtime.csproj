@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet Package Metadata -->
+    <IsPackable>true</IsPackable>
+    <Description>Runtime types, attributes, and base classes for __Name__.</Description>
+    <PackageTags>__Name__;Runtime;Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- No external dependencies for maximum compatibility -->
+  </ItemGroup>
+
+</Project>

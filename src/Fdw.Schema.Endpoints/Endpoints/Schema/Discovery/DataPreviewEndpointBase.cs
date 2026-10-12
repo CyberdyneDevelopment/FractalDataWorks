@@ -1,0 +1,263 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Commands.Data;
+using Fdw.Data;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.Logging;
+
+namespace Fdw.Schema.Endpoints.Discovery;
+
+/// <summary>
+/// Abstract base endpoint for previewing data from a DataSet or direct container access.
+/// Provides default implementation using <see cref="IDataGateway"/> with virtual hooks
+/// for customization.
+/// </summary>
+public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, DataPreviewResponse>
+{
+    private readonly IDataGatewayProvider _dataGateways;
+    private readonly ILogger<DataPreviewEndpointBase> _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataPreviewEndpointBase"/> class.
+    /// </summary>
+    /// <param name="dataGateways">The data gateway for database operations.</param>
+    /// <param name="logger">The logger instance.</param>
+    protected DataPreviewEndpointBase(IDataGatewayProvider dataGateways, ILogger<DataPreviewEndpointBase>? logger = null)
+    {
+        _dataGateways = dataGateways;
+        _logger = logger ?? NullLogger<DataPreviewEndpointBase>.Instance;
+    }
+
+    /// <summary>
+    /// Gets the data gateway instance for use by derived classes.
+    /// </summary>
+    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
+    // would be a captive dependency. The provider is asked when a call is actually being made.
+    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
+
+    /// <summary>
+    /// Gets the route for this endpoint. Default is "/data/preview".
+    /// </summary>
+    protected virtual string Route => "/data/preview";
+
+    /// <summary>
+    /// Gets the policy name for authorization. Default is "schema:read".
+    /// </summary>
+    protected virtual string PolicyName => "schema:read";
+
+    /// <summary>
+    /// Gets the maximum allowed value for MaxRows. Default is 1000.
+    /// </summary>
+    protected virtual int MaxRowsLimit => 1000;
+
+    /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
+    public override void Configure()
+    {
+        Post(Route);
+#if DEVELOP
+        AllowAnonymous();
+#else
+        Policies(PolicyName);
+#endif
+        Summary(s =>
+        {
+            s.Summary = "Preview data";
+            s.Description = "Returns a preview of data from a DataSet or direct container access.";
+        });
+
+        OnBeforeConfiguring();
+    }
+
+    /// <summary>
+    /// Virtual hook called at the end of <see cref="Configure"/>.
+    /// Override to add additional endpoint configuration.
+    /// </summary>
+    protected virtual void OnBeforeConfiguring()
+    {
+    }
+
+    /// <summary>
+    /// Handles the request by validating input and executing the data preview.
+    /// </summary>
+    /// <remarks>
+    /// The response is written exactly once (FDW-1162). A preview the gateway refuses or cannot read answers with that
+    /// failure's own status through <see cref="ResultHttpStatusMapper"/>; nothing is written before the outcome is known,
+    /// and no rows are reported for a preview that was not read.
+    /// </remarks>
+    public override async Task HandleAsync(DataPreviewRequest req, CancellationToken ct)
+    {
+        RequireTarget(req);
+
+        var maxRows = Math.Min(Math.Max(req.MaxRows, 1), MaxRowsLimit);
+        var byDataSet = !string.IsNullOrEmpty(req.DataSetName);
+        var source = byDataSet ? req.DataSetName! : req.ContainerName!;
+        SchemaEndpointLog.PreviewingData(_logger, source, maxRows);
+
+        var preview = byDataSet
+            ? await PreviewFromDataSet(req.DataSetName!, maxRows, req.Columns, ct).ConfigureAwait(false)
+            : await PreviewFromContainer(req.DataStoreName!, req.PathName!, req.ContainerName!, maxRows, req.Columns, ct).ConfigureAwait(false);
+
+        if (preview.IsFailure || preview.Value is not { } response)
+        {
+            SchemaEndpointLog.PreviewNotAnswered(_logger, source);
+            var (statusCode, problem) = ResultHttpStatusMapper.Map(preview, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        SchemaEndpointLog.DataPreviewed(_logger, response.Source, response.RowCount);
+        await Send.OkAsync(response, ct).ConfigureAwait(false);
+    }
+
+    // Refuses, before anything is read, a request that names neither a data set nor a whole container address
+    // (data store, path and container). Each refusal is a 400 that says which part is missing.
+    private void RequireTarget(DataPreviewRequest req)
+    {
+        if (!string.IsNullOrEmpty(req.DataSetName))
+            return;
+
+        if (string.IsNullOrEmpty(req.ContainerName))
+        {
+            SchemaEndpointLog.PreviewValidationFailed(_logger, "Either DataSetName or ContainerName must be provided");
+            ThrowError("Either DataSetName or ContainerName must be provided", 400);
+        }
+
+        if (string.IsNullOrEmpty(req.DataStoreName))
+        {
+            SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "DataStoreName");
+            ThrowError("DataStoreName is required when ContainerName is provided", 400);
+        }
+
+        if (string.IsNullOrEmpty(req.PathName))
+        {
+            SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "PathName");
+            ThrowError("PathName is required when ContainerName is provided", 400);
+        }
+    }
+
+    /// <summary>
+    /// Previews data from a registered DataSet.
+    /// Override to customize DataSet-based preview behavior.
+    /// </summary>
+    /// <param name="dataSetName">The DataSet name.</param>
+    /// <param name="maxRows">Maximum rows to return.</param>
+    /// <param name="columns">Optional columns to include.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The preview, or the gateway's own failure when the data set was refused or could not be read.</returns>
+    protected virtual async Task<IGenericResult<DataPreviewResponse>> PreviewFromDataSet(
+        string dataSetName,
+        int maxRows,
+        IList<string>? columns,
+        CancellationToken ct)
+    {
+        var command = new QueryCommand<Dictionary<string, object?>>
+        {
+            Paging = new PagingExpression { Skip = 0, Take = maxRows },
+            Projection = BuildProjection(columns)
+        };
+
+        return Previewed(
+            await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(dataSetName), ct).ConfigureAwait(false),
+            $"DataSet: {dataSetName}",
+            maxRows);
+    }
+
+    /// <summary>
+    /// Previews data from a container identified by DataStore+Path+Container address.
+    /// Override to customize container-based preview behavior.
+    /// </summary>
+    /// <param name="dataStoreName">The DataStore name.</param>
+    /// <param name="pathName">The path name within the DataStore.</param>
+    /// <param name="containerName">The container name within the path.</param>
+    /// <param name="maxRows">Maximum rows to return.</param>
+    /// <param name="columns">Optional columns to include.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The preview, or the gateway's own failure when the container was refused or could not be read.</returns>
+    protected virtual async Task<IGenericResult<DataPreviewResponse>> PreviewFromContainer(
+        string dataStoreName,
+        string pathName,
+        string containerName,
+        int maxRows,
+        IList<string>? columns,
+        CancellationToken ct)
+    {
+        var command = new QueryCommand<Dictionary<string, object?>>
+        {
+            Paging = new PagingExpression { Skip = 0, Take = maxRows },
+            Projection = BuildProjection(columns)
+        };
+
+        return Previewed(
+            await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataStoreTarget(dataStoreName, pathName, containerName), ct).ConfigureAwait(false),
+            $"Container: {dataStoreName}/{pathName}/{containerName}",
+            maxRows);
+    }
+
+    // Why the gateway's own result travels on: its code is what decides the status and, for a refusal, the reason the
+    // caller is shown. A read that failed carries no rows, so it is never turned into an empty preview.
+    private static IGenericResult<DataPreviewResponse> Previewed(
+        IGenericResult<IEnumerable<Dictionary<string, object?>>> read, string source, int maxRows)
+    {
+        if (read.IsFailure || read.Value is not { } found)
+            return read.ToNewResult<DataPreviewResponse>();
+
+        var rows = found.ToList();
+        return GenericResult<DataPreviewResponse>.Success(new DataPreviewResponse
+        {
+            Source = source,
+            Columns = InferColumnsFromRows(rows),
+            Rows = rows,
+            RowCount = rows.Count,
+            HasMoreRows = rows.Count >= maxRows
+        });
+    }
+
+    /// <summary>
+    /// Builds a projection expression from the specified column names.
+    /// </summary>
+    /// <param name="columns">The columns to include, or null for all columns.</param>
+    /// <returns>A projection expression, or null if all columns should be included.</returns>
+    protected static ProjectionExpression? BuildProjection(IList<string>? columns)
+    {
+        if (columns == null || columns.Count == 0)
+        {
+            return null;
+        }
+
+        return new ProjectionExpression
+        {
+            Fields = columns.Select(c => new ProjectionField { PropertyName = c }).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Infers column definitions from the first row of data.
+    /// </summary>
+    /// <param name="rows">The data rows.</param>
+    /// <returns>A list of preview column DTOs.</returns>
+    protected static IList<PreviewColumnDto> InferColumnsFromRows(IList<Dictionary<string, object?>> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return [];
+        }
+
+        var firstRow = rows[0];
+        return firstRow.Keys.Select(k => new PreviewColumnDto
+        {
+            Name = k,
+            DataType = firstRow[k]?.GetType().Name ?? "Unknown",
+            IsKey = false
+        }).ToList();
+    }
+}

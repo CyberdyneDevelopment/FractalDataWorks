@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- Only include Fdw.CodeBuilder.CSharp in coverage -->
+    <Include>[Fdw.CodeBuilder.CSharp]*</Include>
+    <!-- Exclude everything else -->
+    <Exclude>[Fdw.*.Abstractions]*,[Fdw.Messages]*,[Fdw.EnhancedEnums]*,[Fdw.Abstractions]*</Exclude>
+  </PropertyGroup>
+</Project>

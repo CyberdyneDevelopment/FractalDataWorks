@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <!-- Defaults consumers override in their .csproj -->
+    <FdwVsCodeExtensionId Condition="'$(FdwVsCodeExtensionId)' == ''">$(MSBuildProjectName.ToLowerInvariant())</FdwVsCodeExtensionId>
+    <FdwVsCodeDisplayName Condition="'$(FdwVsCodeDisplayName)' == ''">$(MSBuildProjectName)</FdwVsCodeDisplayName>
+    <FdwVsCodeDescription Condition="'$(FdwVsCodeDescription)' == ''">$(MSBuildProjectName)</FdwVsCodeDescription>
+    <FdwVsCodePublisher Condition="'$(FdwVsCodePublisher)' == ''">fractaldataworks</FdwVsCodePublisher>
+    <FdwVsCodeVersion Condition="'$(FdwVsCodeVersion)' == ''">0.0.1</FdwVsCodeVersion>
+    <FdwVsCodeEntryDll Condition="'$(FdwVsCodeEntryDll)' == ''">$(AssemblyName).dll</FdwVsCodeEntryDll>
+    <FdwVsCodeStageDir Condition="'$(FdwVsCodeStageDir)' == ''">$(MSBuildProjectDirectory)\vsix\</FdwVsCodeStageDir>
+  </PropertyGroup>
+</Project>

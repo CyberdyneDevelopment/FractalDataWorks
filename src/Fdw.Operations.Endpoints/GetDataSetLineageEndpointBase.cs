@@ -1,0 +1,239 @@
+using Fdw.Data.DataSets;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Data.Clients.Models;
+using System;
+using System.Reflection;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Commands.Data;
+using Fdw.Data;
+using Fdw.Services.Data;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Data.Abstractions;
+using Fdw.Services.Pipelines;
+// DataSetRecord and DataSetSourceConfiguration now in this namespace
+// ApiEndpointLog now in this namespace
+using Microsoft.Extensions.Logging;
+using Fdw.Services.Calculations;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.Logging;
+
+namespace Fdw.Operations.Endpoints;
+
+/// <summary>
+/// Endpoint to get lineage for a specific DataSet.
+/// </summary>
+public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageRequest, DataSetLineageResponse>
+{
+    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly ILogger<GetDataSetLineageEndpointBase> _logger;
+    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly ICalculationConfigurationProvider _calculations;
+    private readonly LineageConfigurationProvider _lineage;
+
+    /// <inheritdoc />
+    protected GetDataSetLineageEndpointBase(
+        DataSetConfigurationProvider dataSetProvider,
+        PipelineServiceConfigurationProvider pipelineProvider,
+        ICalculationConfigurationProvider calculations,
+        LineageConfigurationProvider lineage,
+        ILogger<GetDataSetLineageEndpointBase> logger)
+    {
+        _dataSetProvider = dataSetProvider;
+        _pipelineProvider = pipelineProvider;
+        _calculations = calculations;
+        _lineage = lineage;
+        _logger = logger ?? NullLogger<GetDataSetLineageEndpointBase>.Instance;
+    }
+
+    /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
+    public override void Configure()
+    {
+        Get("/dataflow/lineage/{Name}");
+#if DEVELOP
+        AllowAnonymous();
+#else
+        Policies("pipelines:read");
+#endif
+        Summary(s =>
+        {
+            s.Summary = "Get DataSet lineage";
+            s.Description = "Returns upstream sources and downstream consumers for a specific DataSet.";
+        });
+    }
+
+    /// <summary>Handles the lineage request by building upstream sources, downstream consumers, and field-level lineage.</summary>
+    public override async Task HandleAsync(DataSetLineageRequest req, CancellationToken ct)
+    {
+        EndpointLog.GettingResource(_logger, "DataSet lineage", req.Name);
+
+        var dataSet = await FindDataSet(req.Name, ct).ConfigureAwait(false);
+        if (dataSet == null)
+        {
+            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            return;
+        }
+
+        var sources = GetSources(dataSet);
+        var upstreamSources = BuildUpstreamSources(sources);
+        var fieldLineage = await BuildFieldLineage(sources, ct).ConfigureAwait(false);
+
+        // Who reads each field (API-173). An unreadable relation fails the request: an empty
+        // consumer list must mean "nothing reads this field", never "the read broke".
+        var consumers = await FieldConsumerScanner.Scan(
+            req.Name, [.. fieldLineage.Select(f => f.LogicalField)],
+            _dataSetProvider, _pipelineProvider, _calculations, _logger, ct).ConfigureAwait(false);
+        if (consumers.IsFailure)
+        {
+            FieldConsumerScanLog.ScanFailed(_logger, req.Name);
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(consumers, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        foreach (var field in fieldLineage)
+            field.Consumers = consumers.Value![field.LogicalField];
+        var downstreamConsumers = await BuildDownstreamConsumers(req.Name, ct).ConfigureAwait(false);
+
+        await Send.OkAsync(new DataSetLineageResponse
+        {
+            DataSetName = req.Name,
+            UpstreamSources = upstreamSources.ToList(),
+            DownstreamConsumers = downstreamConsumers.ToList(),
+            FieldLineage = fieldLineage.ToList()
+        }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Finds a DataSet by name.</summary>
+    /// <remarks>
+    /// The provider knows which store, path and container a DataSet lives in, so none of that is
+    /// named here. It also composes the aggregate — sources, and each source's field mappings —
+    /// which is why the three separate reads this endpoint used to issue are one call.
+    /// </remarks>
+    protected virtual async Task<IDataSetImplementationConfiguration?> FindDataSet(string name, CancellationToken ct)
+    {
+        var result = await _dataSetProvider.Get(name, ct).ConfigureAwait(false);
+        return result.IsSuccess ? result.Value : null;
+    }
+
+    /// <summary>The DataSet's sources, in priority order.</summary>
+    /// <remarks>Ordered here rather than in a query: they arrive on the aggregate already.</remarks>
+    protected static IReadOnlyList<DataSetSourceConfiguration> GetSources(IDataSetImplementationConfiguration dataSet) =>
+        [.. (dataSet.Sources ?? []).OrderBy(s => s.Priority)];
+
+    /// <summary>Builds upstream source DTOs from source records, classifying source types by their physical location.</summary>
+    protected virtual IReadOnlyList<LineageSourceResponse> BuildUpstreamSources(IReadOnlyList<DataSetSourceConfiguration> sources)
+    {
+        return sources.Select(s =>
+        {
+            var sourceType = "Unknown";
+            var physicalLocation = "";
+
+            if (!string.IsNullOrEmpty(s.ContainerName))
+            {
+                sourceType = "Database";
+                physicalLocation = !string.IsNullOrEmpty(s.PathValue)
+                    ? $"{s.PathValue}.{s.ContainerName}"
+                    : s.ContainerName;
+            }
+            else if (!string.IsNullOrEmpty(s.HttpEndpoint))
+            {
+                sourceType = "REST API";
+                physicalLocation = s.HttpEndpoint;
+            }
+            else if (!string.IsNullOrEmpty(s.FilePath))
+            {
+                sourceType = "File";
+                physicalLocation = s.FilePath;
+            }
+
+            return new LineageSourceResponse
+            {
+                Name = s.SourceName,
+                SourceType = sourceType,
+                ConnectionName = s.ConnectionName,
+                DataStoreName = s.DataStoreName,
+                PhysicalLocation = physicalLocation,
+                Priority = s.Priority
+            };
+        }).ToList();
+    }
+
+    /// <summary>Builds field-level lineage by loading field mappings for each source.</summary>
+    protected virtual async Task<IReadOnlyList<FieldLineageResponse>> BuildFieldLineage(IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken ct)
+    {
+        var fieldLineage = new List<FieldLineageResponse>();
+
+        foreach (var source in sources)
+        {
+            // The provider composed these onto the source; a query here would re-read what the
+            // aggregate already carries, against a container this endpoint would have to name.
+            var mappings = source.Mappings ?? [];
+
+            foreach (var mapping in mappings)
+            {
+                var existingField = fieldLineage.FirstOrDefault(f =>
+                    f.LogicalField.Equals(mapping.LogicalFieldName, StringComparison.OrdinalIgnoreCase));
+
+                if (existingField == null)
+                {
+                    existingField = new FieldLineageResponse
+                    {
+                        LogicalField = mapping.LogicalFieldName,
+                        Sources = []
+                    };
+                    fieldLineage.Add(existingField);
+                }
+
+                existingField.Sources.Add(new FieldSourceMappingResponse
+                {
+                    SourceName = source.SourceName,
+                    PhysicalField = mapping.PhysicalFieldName ?? string.Empty
+                });
+            }
+        }
+
+        return fieldLineage;
+    }
+
+    /// <summary>Identifies downstream consumers by finding pipelines that reference this DataSet.</summary>
+    protected virtual async Task<IReadOnlyList<LineageConsumerResponse>> BuildDownstreamConsumers(string dataSetName, CancellationToken ct)
+    {
+        var downstreamConsumers = new List<LineageConsumerResponse>();
+
+        var pipelines = await PipelineLineageLoader.Load(_pipelineProvider, _logger, ct).ConfigureAwait(false);
+
+        var pipelinesAsSource = pipelines
+            .Where(p => string.Equals(p.SourceDataSet, dataSetName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var pipelinesAsDest = pipelines
+            .Where(p => string.Equals(p.DestinationDataSet, dataSetName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var pipeline in pipelinesAsSource)
+        {
+            downstreamConsumers.Add(new LineageConsumerResponse
+            {
+                Name = pipeline.Name,
+                ConsumerType = $"Pipeline ({pipeline.Implementation})"
+            });
+        }
+
+        foreach (var pipeline in pipelinesAsDest.Where(p => !pipelinesAsSource.Any(ps =>
+            ps.Id == p.Id)))
+        {
+            downstreamConsumers.Add(new LineageConsumerResponse
+            {
+                Name = pipeline.Name,
+                ConsumerType = $"Pipeline Producer ({pipeline.Implementation})"
+            });
+        }
+
+        return downstreamConsumers;
+    }
+}

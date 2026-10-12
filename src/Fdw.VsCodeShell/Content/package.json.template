@@ -1,0 +1,14 @@
+{
+  "name": "$ExtensionId$",
+  "displayName": "$DisplayName$",
+  "description": "$Description$",
+  "version": "$Version$",
+  "publisher": "$Publisher$",
+  "engines": { "vscode": "^1.85.0" },
+  "main": "./extension.js",
+  "activationEvents": [ "onStartupFinished" ],
+  "contributes": $Contributes$,
+  "fdw": {
+    "entryDll": "$EntryDll$"
+  }
+}

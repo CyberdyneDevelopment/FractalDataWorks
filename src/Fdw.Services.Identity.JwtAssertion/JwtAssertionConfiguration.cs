@@ -1,0 +1,117 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System;
+using System.Diagnostics.CodeAnalysis;
+using Fdw.Configuration;
+using Fdw.Data;
+using Fdw.Services.Identity.Abstractions;
+using Fdw.Services.Identity.JwtAssertion.Assertions;
+
+namespace Fdw.Services.Identity.JwtAssertion;
+
+/// <summary>
+/// Typed configuration body for the JWT-assertion mechanism — the authorization server trusts an external
+/// OIDC issuer's signing keys directly, and this workload exchanges an assertion that issuer already
+/// minted for it.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>No static secret exists anywhere in this mechanism.</b> The assertion is minted per workload
+/// (a CI system's per-job OIDC tokens being the motivating case), expires in minutes, and is bound
+/// to the workload's identity by the issuing system itself. This is the mechanism to prefer wherever
+/// the workload already has a trustworthy issuer.
+/// </para>
+/// <para>
+/// Its precondition is exactly that: something must already be minting per-workload assertions. A
+/// long-running service with no such issuer cannot use this and wants
+/// <c>ClientCredentialsConfiguration</c> instead.
+/// </para>
+/// <para>
+/// <see cref="AssertionSource"/> names <em>how</em> the incoming assertion is read (a
+/// <c>FederatedAssertionSources</c> TypeOption) and <see cref="AssertionLocation"/> names
+/// <em>where</em> — an environment variable name, a file path. Splitting carrier from location is
+/// what lets a new carrier be added without touching the exchange.
+/// </para>
+/// </remarks>
+[ExcludeFromCodeCoverage]
+[GenerateMapper]
+[ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "JwtAssertion")]
+public partial class JwtAssertionConfiguration : IIdentityServiceImplementationConfiguration
+{
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="JwtAssertionConfiguration"/> class.
+    /// </summary>
+    public JwtAssertionConfiguration()
+    {
+    }
+
+    /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>
+    public Guid Id { get; set; }
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the issuer URL.</summary>
+    public string? Issuer { get; set; }
+
+    /// <summary>Gets or sets the absolute token endpoint URL this mechanism posts to.</summary>
+    public string? TokenEndpoint { get; set; }
+
+    /// <summary>Gets or sets the OAuth2 client id of the authorization server backing this identity.</summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>FederatedAssertionSources</c> TypeOption name describing how the incoming
+    /// assertion is carried (e.g. <c>EnvironmentVariable</c>, <c>File</c>).
+    /// </summary>
+    [ValuesFrom(typeof(FederatedAssertionSources))]
+    public string? AssertionSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the assertion source looks — an environment variable name for
+    /// <c>EnvironmentVariable</c>, a path for <c>File</c>.
+    /// </summary>
+    public string? AssertionLocation { get; set; }
+
+    /// <summary>Gets or sets the space-delimited scopes requested when no caller supplies them.</summary>
+    public string? Scopes { get; set; }
+
+    /// <summary>Gets or sets an optional human-readable description for this configuration.</summary>
+    public string? Description { get; set; }
+
+    // ── Tenant / visibility / audit ──────────────────────────────────────────
+
+    /// <summary>Gets or sets the tenant identifier for tenant isolation. Null means system-wide.</summary>
+    public Guid? TenantId { get; set; }
+
+    /// <summary>Gets or sets the optional visibility group identifier.</summary>
+    public Guid? VisibilityGroupId { get; set; }
+
+    /// <summary>Gets or sets the source create date (set by DB).</summary>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <summary>Gets or sets the user who created this record.</summary>
+    public string? CreateBy { get; set; }
+
+    /// <summary>Gets or sets the on-behalf-of user for create (impersonation).</summary>
+    public string? CreateOnBehalfOf { get; set; }
+
+    /// <summary>Gets or sets the last modification date.</summary>
+    public DateTimeOffset? ModifyDate { get; set; }
+
+    /// <summary>Gets or sets the user who last modified this record.</summary>
+    public string? ModifyBy { get; set; }
+
+    /// <summary>Gets or sets the on-behalf-of user for modify (impersonation).</summary>
+    public string? ModifyOnBehalfOf { get; set; }
+}

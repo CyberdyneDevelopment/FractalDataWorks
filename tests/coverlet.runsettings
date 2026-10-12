@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[Fdw.*]*</Include>
+          <Exclude>[*.Tests]*,[*.TestDouble]*,[xunit.*]*,[Moq]*,[Shouldly]*,[*]*.TypeOptions.*,[*.SourceGenerators]*,[*.Analyzers]*,[*.CodeFixes]*,[Fdw.CodeBuilder.Analysis.CSharp]*</Exclude>
+          <ExcludeByAttribute>GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute,CompilerGeneratedAttribute</ExcludeByAttribute>
+          <ExcludeByFile>**/*.g.cs,**/obj/**/*.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

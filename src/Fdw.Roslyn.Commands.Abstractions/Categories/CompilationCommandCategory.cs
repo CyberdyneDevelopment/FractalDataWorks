@@ -1,0 +1,18 @@
+using Fdw.Collections.Attributes;
+
+namespace Fdw.Roslyn.Commands.Abstractions;
+
+/// <summary>
+/// Command category for compilation operations.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+[TypeOption(typeof(RoslynCommandCategories), "Compilation", RestrictToCurrentCompilation = true)]
+public sealed class CompilationCommandCategory : RoslynCommandCategoryBase
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CompilationCommandCategory"/> class.
+    /// </summary>
+    public CompilationCommandCategory() : base("Compilation", "Compilation operations")
+    {
+    }
+}

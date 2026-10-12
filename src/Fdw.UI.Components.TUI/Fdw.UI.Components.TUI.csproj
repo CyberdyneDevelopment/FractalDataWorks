@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+
+    <!-- Package Information -->
+    <PackageId>Fdw.UI.Components.TUI</PackageId>
+    <Title>Fdw Terminal UI Components</Title>
+    <Description>Terminal User Interface implementation of Fdw UI components using Spectre.Console.</Description>
+    <PackageTags>tui;terminal;console;spectre;ui;components</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Project References -->
+    <ProjectReference Include="..\Fdw.UI.Abstractions\Fdw.UI.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.UI.Themes\Fdw.UI.Themes.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+
+    <!-- Spectre.Console -->
+    <PackageReference Include="Spectre.Console" />
+  </ItemGroup>
+
+</Project>

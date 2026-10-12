@@ -1,0 +1,134 @@
+using System;
+using System.Collections.Generic;
+using Fdw.Data;
+using Fdw.Data.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Connections.Logging;
+using Microsoft.Extensions.Logging;
+
+namespace Fdw.Services.Connections.RowQuery;
+
+/// <summary>
+/// Validates that every column a filter condition or join condition references is a DECLARED field on
+/// the relevant container's schema — the container's <see cref="IDataNode.Nodes"/> field children
+/// ARE the schema, and a filter/join referencing an undeclared column is a schema/configuration error,
+/// not a "no match" data condition.
+/// </summary>
+/// <remarks>
+/// Why this exists: without this check, a filter or join column absent from the target container's
+/// declared schema (a typo, or a schema/query mismatch) resolves to <see langword="null"/> when read
+/// from a row and is silently treated as "no match" by <see cref="RecordRowMatcher"/> — the read then
+/// returns zero rows and still reports SUCCESS. Combined with <see cref="RecordRowValidator"/> (which
+/// guarantees every DECLARED non-nullable field is actually present on every row), this closes the gap:
+/// a column that is genuinely part of the schema and required is guaranteed present; a column that is
+/// NOT part of the schema at all is now a fail-loud configuration error instead of a silent empty match.
+/// </remarks>
+public static class RecordColumnValidator
+{
+    /// <summary>
+    /// Validates the join's field pair: the child-side field must be declared on
+    /// <paramref name="primaryContainer"/>; the parent-side field must be declared on
+    /// <paramref name="joinedContainer"/>.
+    /// </summary>
+    public static IGenericResult ValidateJoinColumns(
+        string leftField,
+        string rightField,
+        IDataContainer primaryContainer,
+        IDataContainer joinedContainer,
+        ILogger logger)
+    {
+        if (!ContainerFields.Declares(primaryContainer, leftField))
+            return GenericResult.Failure(RecordQueryLog.JoinColumnNotDeclared(logger, leftField, primaryContainer.Name));
+
+        if (!ContainerFields.Declares(joinedContainer, rightField))
+            return GenericResult.Failure(RecordQueryLog.JoinColumnNotDeclared(logger, rightField, joinedContainer.Name));
+
+        return GenericResult.Success();
+    }
+
+    /// <summary>
+    /// Walks the (already grammar-validated — see <see cref="RecordQueryValidator"/>) filter tree and
+    /// validates every referenced column against the relevant container's declared fields: a bare column
+    /// against <paramref name="primaryContainer"/>, a <c>"{parentContainerName}.Column"</c>-qualified
+    /// one against <paramref name="joinedContainer"/>.
+    /// </summary>
+    public static IGenericResult ValidateFilterColumns(
+        IFilterNode? node,
+        IDataContainer primaryContainer,
+        IDataContainer? joinedContainer,
+        string? parentContainerName,
+        ILogger logger)
+    {
+        var joined = new Dictionary<string, IDataContainer>(StringComparer.Ordinal);
+        if (joinedContainer is not null && parentContainerName is not null)
+            joined[parentContainerName] = joinedContainer;
+        return ValidateFilterColumns(node, primaryContainer, joined, logger);
+    }
+
+    /// <summary>
+    /// Validates every referenced column against the relevant container's declared fields: a bare
+    /// column against <paramref name="primaryContainer"/>, a <c>"{container}.Column"</c>-qualified one
+    /// against the joined container of that name.
+    /// </summary>
+    public static IGenericResult ValidateFilterColumns(
+        IFilterNode? node,
+        IDataContainer primaryContainer,
+        IReadOnlyDictionary<string, IDataContainer> joinedContainers,
+        ILogger logger)
+    {
+        switch (node)
+        {
+            case null:
+                return GenericResult.Success();
+
+            case FilterCondition condition:
+                return ValidateCondition(condition, primaryContainer, joinedContainers, logger);
+
+            case FilterGroup group:
+                foreach (var child in group.Nodes)
+                {
+                    var childResult = ValidateFilterColumns(child, primaryContainer, joinedContainers, logger);
+                    if (!childResult.IsSuccess)
+                        return childResult;
+                }
+                return GenericResult.Success();
+
+            default:
+                return GenericResult.Failure(RecordQueryLog.UnsupportedFilterNodeType(logger, node.GetType().Name));
+        }
+    }
+
+    private static IGenericResult ValidateCondition(
+        FilterCondition condition,
+        IDataContainer primaryContainer,
+        IReadOnlyDictionary<string, IDataContainer> joinedContainers,
+        ILogger logger)
+    {
+        var (qualifier, column) = QualifiedColumn.Split(condition.PropertyName);
+
+        if (qualifier is null)
+        {
+            return ContainerFields.Declares(primaryContainer, column)
+                ? GenericResult.Success()
+                : GenericResult.Failure(RecordQueryLog.FilterColumnNotDeclared(logger, column, primaryContainer.Name));
+        }
+
+        // A condition may qualify with the queried container's own name. SQL accepts that form, so
+        // a caller that writes it is not making a mistake.
+        if (string.Equals(qualifier, primaryContainer.Name, StringComparison.Ordinal))
+        {
+            return ContainerFields.Declares(primaryContainer, column)
+                ? GenericResult.Success()
+                : GenericResult.Failure(RecordQueryLog.FilterColumnNotDeclared(logger, column, primaryContainer.Name));
+        }
+
+        if (joinedContainers.TryGetValue(qualifier, out var joinedContainer))
+        {
+            return ContainerFields.Declares(joinedContainer, column)
+                ? GenericResult.Success()
+                : GenericResult.Failure(RecordQueryLog.FilterColumnNotDeclared(logger, column, joinedContainer.Name));
+        }
+
+        return GenericResult.Failure(RecordQueryLog.UnknownFilterQualifier(logger, qualifier, condition.PropertyName));
+    }
+}

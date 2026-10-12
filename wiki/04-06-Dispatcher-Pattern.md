@@ -105,7 +105,7 @@ var filter = commandType.GetProperty("Filter")?.GetValue(command) as IFilterExpr
 
 **Step 1: Create Interface**
 
-From [`IQueryCommand.cs:14-45`](../../src/FractalDataWorks.Commands.Data.Abstractions/Commands/IQueryCommand.cs#L14-L45):
+From [`IQueryCommand.cs:14-45`](../src/Fdw.Commands.Data.Abstractions/Commands/IQueryCommand.cs#L14-L45):
 
 ```csharp
 public interface IQueryCommand : IDataCommand
@@ -144,7 +144,7 @@ public interface IQueryCommand : IDataCommand
 
 **Step 2: Implement Interface**
 
-From [`QueryCommand.cs:59-106`](../../src/FractalDataWorks.Commands.Data/Commands/QueryCommand.cs#L59-L106):
+From [`QueryCommand.cs:59-106`](../src/Fdw.Commands.Data/Commands/QueryCommand.cs#L59-L106):
 
 ```csharp
 [TypeOption(typeof(DataCommands), "Query")]
@@ -166,7 +166,7 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
 
 **Step 3: Translator with Overloads**
 
-From [`MsSqlQueryTranslator.cs:38-108`](../../src/FractalDataWorks.Data.MsSql/Translators/MsSqlQueryTranslator.cs#L38-L108):
+From [`MsSqlQueryTranslator.cs:38-108`](../src/Fdw.Data.MsSql/Translators/MsSqlQueryTranslator.cs#L38-L108):
 
 ```csharp
 [TypeOption(typeof(MsSqlDataCommandTranslators), "Query")]
@@ -251,7 +251,7 @@ When you call `_queryTranslator.Translate(command, container, ct)`:
 
 Commands expose their type via property (set in constructor).
 
-From [`DataCommandBase.cs:21-52`](../../src/FractalDataWorks.Commands.Data.Abstractions/Commands/DataCommandBase.cs#L21-L52):
+From [`DataCommandBase.cs:21-52`](../src/Fdw.Commands.Data.Abstractions/Commands/DataCommandBase.cs#L21-L52):
 
 ```csharp
 public abstract class DataCommandBase : IDataCommand
@@ -282,7 +282,7 @@ public abstract class DataCommandBase : IDataCommand
 
 Translators calculate deterministic IDs from names using **FNV-1a hash**.
 
-From [`DataCommandTranslatorBase.cs:33-61`](../../src/FractalDataWorks.Commands.Data.Abstractions/Translators/DataCommandTranslatorBase.cs#L33-L61):
+From [`DataCommandTranslatorBase.cs:33-61`](../src/Fdw.Commands.Data.Abstractions/Translators/DataCommandTranslatorBase.cs#L33-L61):
 
 ```csharp
 protected DataCommandTranslatorBase(string name, string domainName)
@@ -322,7 +322,7 @@ private static int GenerateIdFromName(string name)
 
 Translators are discovered via TypeCollection.
 
-From [`MsSqlDataCommandTranslators.cs:37-49`](../../src/FractalDataWorks.Data.MsSql/Translators/MsSqlDataCommandTranslators.cs#L37-L49):
+From [`MsSqlDataCommandTranslators.cs:37-49`](../src/Fdw.Data.MsSql/Translators/MsSqlDataCommandTranslators.cs#L37-L49):
 
 ```csharp
 [TypeCollection(typeof(MsSqlDataCommandTranslatorBase), typeof(IDataCommandTranslator<SqlCommand>), typeof(MsSqlDataCommandTranslators))]
@@ -370,7 +370,7 @@ return translator.Translate(command, container, cancellationToken); // Overload 
 
 Use MessageLogging (not string literals) for errors.
 
-From [`MsSqlTranslatorLog.cs:10-24`](../../src/FractalDataWorks.Data.MsSql/Logging/MsSqlTranslatorLog.cs#L10-L24):
+From [`MsSqlTranslatorLog.cs:10-24`](../src/Fdw.Data.MsSql/Logging/MsSqlTranslatorLog.cs#L10-L24):
 
 ```csharp
 public static partial class MsSqlTranslatorLog
@@ -427,24 +427,24 @@ MsSqlTranslatorLog.InvalidCommandType(
 ## Implementation Files
 
 **Command Interfaces:**
-- [`IQueryCommand.cs`](../../src/FractalDataWorks.Commands.Data.Abstractions/Commands/IQueryCommand.cs)
-- [`IFilterableCommand.cs`](../../src/FractalDataWorks.Commands.Data.Abstractions/Commands/IFilterableCommand.cs)
+- [`IQueryCommand.cs`](../src/Fdw.Commands.Data.Abstractions/Commands/IQueryCommand.cs)
+- [`IFilterableCommand.cs`](../src/Fdw.Commands.Data.Abstractions/Commands/IFilterableCommand.cs)
 
 **Command Implementations:**
-- [`QueryCommand.cs`](../../src/FractalDataWorks.Commands.Data/Commands/QueryCommand.cs)
-- [`UpdateCommand.cs`](../../src/FractalDataWorks.Commands.Data/Commands/UpdateCommand.cs)
-- [`DeleteCommand.cs`](../../src/FractalDataWorks.Commands.Data/Commands/DeleteCommand.cs)
+- [`QueryCommand.cs`](../src/Fdw.Commands.Data/Commands/QueryCommand.cs)
+- [`UpdateCommand.cs`](../src/Fdw.Commands.Data/Commands/UpdateCommand.cs)
+- [`DeleteCommand.cs`](../src/Fdw.Commands.Data/Commands/DeleteCommand.cs)
 
 **Translators:**
-- [`MsSqlQueryTranslator.cs`](../../src/FractalDataWorks.Data.MsSql/Translators/MsSqlQueryTranslator.cs)
-- [`MsSqlUpdateTranslator.cs`](../../src/FractalDataWorks.Data.MsSql/Translators/MsSqlUpdateTranslator.cs)
-- [`MsSqlDeleteTranslator.cs`](../../src/FractalDataWorks.Data.MsSql/Translators/MsSqlDeleteTranslator.cs)
+- [`MsSqlQueryTranslator.cs`](../src/Fdw.Data.MsSql/Translators/MsSqlQueryTranslator.cs)
+- [`MsSqlUpdateTranslator.cs`](../src/Fdw.Data.MsSql/Translators/MsSqlUpdateTranslator.cs)
+- [`MsSqlDeleteTranslator.cs`](../src/Fdw.Data.MsSql/Translators/MsSqlDeleteTranslator.cs)
 
 **Dispatcher (TypeCollection):**
-- [`MsSqlDataCommandTranslators.cs`](../../src/FractalDataWorks.Data.MsSql/Translators/MsSqlDataCommandTranslators.cs) - source-generated
+- [`MsSqlDataCommandTranslators.cs`](../src/Fdw.Data.MsSql/Translators/MsSqlDataCommandTranslators.cs) - source-generated
 
 **MessageLogging:**
-- [`MsSqlTranslatorLog.cs`](../../src/FractalDataWorks.Data.MsSql/Logging/MsSqlTranslatorLog.cs)
+- [`MsSqlTranslatorLog.cs`](../src/Fdw.Data.MsSql/Logging/MsSqlTranslatorLog.cs)
 
 ## Related Documentation
 

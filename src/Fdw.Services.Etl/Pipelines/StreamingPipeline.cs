@@ -1,0 +1,846 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Fdw.Configuration;
+using Fdw.Commands.Data;
+using Fdw.Data;
+using Fdw.Data.Transformations.Configuration;
+using Fdw.Messages;
+using Fdw.Results;
+using Fdw.ServiceTypes;
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Abstractions.OptionTypes;
+using Fdw.Services.Etl.Logging;
+using Fdw.Services.Etl.Transforms;
+using Fdw.Services.Notifications.Abstractions;
+using Fdw.Services.Pipelines.Notifications;
+using Fdw.Services.Settings;
+
+namespace Fdw.Services.Etl.Pipelines;
+
+/// <summary>
+/// Streaming pipeline implementation that processes data in a continuous stream.
+/// In test mode: caps extraction, skips destination writes, retains samples in the inspector,
+/// and honors pause/resume/step signals from <see cref="IPipelineTestController"/>.
+/// </summary>
+public sealed class StreamingPipeline : EtlPipelineBase
+{
+    private readonly StreamingPipelineConfiguration _configuration;
+    private readonly ILogger<StreamingPipeline> _logger;
+    private readonly IDataGatewayProvider? _dataGateways;
+    private readonly object? _calculationEngine;
+    private readonly IConnectionProvider? _connectionProvider;
+    private readonly IPipelineTestController? _testController;
+    private readonly IPipelineExecutionInspector? _inspector;
+    private readonly IPipelineStatusBroadcaster? _broadcaster;
+    private readonly ITransformationConfigurationProvider? _transformations;
+    private readonly IRuleNotifier? _ruleNotifier;
+    private readonly IEffectiveSettingsProvider? _settings;
+    private int _isExecuting;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StreamingPipeline"/> class.
+    /// </summary>
+    public StreamingPipeline(
+        StreamingPipelineConfiguration configuration,
+        ILogger<StreamingPipeline> logger,
+        IDataGatewayProvider? dataGateways = null,
+        object? calculationEngine = null,
+        IConnectionProvider? connectionProvider = null,
+        IPipelineTestController? testController = null,
+        IPipelineExecutionInspector? inspector = null,
+        IPipelineStatusBroadcaster? broadcaster = null,
+        ITransformationConfigurationProvider? transformations = null,
+        IRuleNotifier? ruleNotifier = null,
+        IEffectiveSettingsProvider? settings = null)
+        : base(logger)
+    {
+        _configuration = configuration;
+        _logger = logger;
+        _dataGateways = dataGateways;
+        _calculationEngine = calculationEngine;
+        _connectionProvider = connectionProvider;
+        _testController = testController;
+        _inspector = inspector;
+        _broadcaster = broadcaster;
+        _transformations = transformations;
+        _ruleNotifier = ruleNotifier;
+        _settings = settings;
+    }
+
+    /// <inheritdoc />
+    public override string Id => _configuration.Id.ToString();
+
+    /// <inheritdoc />
+    public override string Name => _configuration.Name;
+
+    /// <inheritdoc />
+    public override string PipelineType => "Streaming";
+
+    /// <inheritdoc />
+    public override bool IsExecuting => _isExecuting == 1;
+
+    /// <inheritdoc />
+    public override Task<IGenericResult<IEtlPipelineExecutionResult>> Execute(CancellationToken cancellationToken = default)
+        => Execute(PipelineExecutionOptions.Production, cancellationToken);
+
+    /// <inheritdoc />
+    public override async Task<IGenericResult<IEtlPipelineExecutionResult>> Execute(
+        PipelineExecutionOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        if (Interlocked.CompareExchange(ref _isExecuting, 1, 0) != 0)
+        {
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionFailed(_logger, Name, Guid.Empty, "Pipeline is already executing"));
+        }
+
+        var executionId = Guid.NewGuid();
+        var result = new EtlPipelineExecutionResult(executionId);
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            return await ExecuteWithHooks(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException oce)
+        {
+            result.Complete();
+            EtlLog.ExecutionCompleted(_logger, Name, executionId, result.RecordsLoaded, stopwatch.Elapsed.TotalMilliseconds);
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionException(_logger, oce, Name, executionId));
+        }
+        catch (Exception ex)
+        {
+            result.AddError(ex.Message);
+            result.Complete();
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionException(_logger, ex, Name, executionId));
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isExecuting, 0);
+        }
+    }
+
+    // The Notify stages are gathered and checked before anything is read: a stage that cannot send fails the run at once, and
+    // its OnFailure hooks are not trusted to fire. A stream has no final page of its own, so AfterStage and AfterLoad both
+    // fire once the stream has ended (a test run's single pass, or cancellation), after its last flush has loaded.
+    private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteWithHooks(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        EtlPipelineExecutionResult result,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        var hooks = NotifyHooks.Collect(_configuration.Transforms);
+        var checkedHooks = await hooks.Check(_ruleNotifier, Name, _logger, cancellationToken).ConfigureAwait(false);
+        if (!checkedHooks.IsSuccess)
+        {
+            result.Complete();
+            return checkedHooks.ToNewResult<IEtlPipelineExecutionResult>();
+        }
+
+        var core = await ExecuteCoreObserved(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
+        var settled = core.IsSuccess
+            ? await FireHooks(hooks, options, point => point.FiresAfterStage, result, cancellationToken).ConfigureAwait(false)
+            : core;
+        if (settled.IsSuccess)
+        {
+            settled = await FireHooks(hooks, options, point => point.FiresAfterLoad, result, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (settled.IsSuccess)
+        {
+            return core;
+        }
+
+        await FireHooks(hooks, options, point => point.FiresOnFailure, result, cancellationToken).ConfigureAwait(false);
+        return core.IsSuccess ? settled.ToNewResult<IEtlPipelineExecutionResult>() : core;
+    }
+
+    // An unexpected exception fails the run exactly as Execute reports it, but here, so the OnFailure hooks still fire.
+    private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteCoreObserved(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        EtlPipelineExecutionResult result,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteCore(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            result.AddError(ex.Message);
+            result.Complete();
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionException(_logger, ex, Name, executionId));
+        }
+    }
+
+    // A dry run (test mode that skips destination writes) has no side effects, so it sends nothing; the stages were
+    // still checked at the start of the run.
+    private async Task<IGenericResult> FireHooks(
+        NotifyHooks hooks,
+        PipelineExecutionOptions options,
+        Func<IRunPoint, bool> firesAt,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        if (hooks.IsEmpty || (options.IsTestMode && options.SkipDestinationWrites))
+        {
+            return GenericResult.Success();
+        }
+
+        return await hooks.Fire(
+            firesAt, NotifyRunFacts.Of(_configuration.Id, Name, result), _ruleNotifier!, _logger, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteCore(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        EtlPipelineExecutionResult result,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        EtlLog.ExecutionStarted(_logger, Name, executionId);
+
+        if (_dataGateways == null)
+        {
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionFailed(_logger, Name, executionId, "DataGateway is required for pipeline execution"));
+        }
+
+        IDataGateway gateway;
+        try
+        {
+            gateway = _dataGateways.ByName("Main");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionFailed(_logger, Name, executionId, ex.Message));
+        }
+        var context = await NewTransformContext(executionId, gateway, cancellationToken).ConfigureAwait(false);
+        if (!context.IsSuccess)
+        {
+            return context.ToNewResult<IEtlPipelineExecutionResult>();
+        }
+
+        var transformContext = context.Value!;
+
+        PipelineTestExecutionState? testState = null;
+        if (options.IsTestMode && _testController != null)
+        {
+            testState = _testController.GetState(executionId);
+        }
+
+        // Register the execution with the inspector if in test mode.
+        if (options.IsTestMode)
+        {
+            _inspector?.RegisterExecution(executionId, options);
+        }
+
+        // Determine effective extraction cap.
+        var effectiveTake = options.IsTestMode
+            ? Math.Min(_configuration.BufferSize, options.MaxRowsPerSource)
+            : _configuration.BufferSize;
+
+        var counters = await ProcessStream(
+            executionId, options, effectiveTake, testState,
+            gateway, transformContext, stopwatch, result, cancellationToken).ConfigureAwait(false);
+
+        if (!counters.IsSuccess)
+        {
+            result.Complete();
+            if (options.IsTestMode) _inspector?.UnregisterExecution(executionId);
+            return counters.ToNewResult<IEtlPipelineExecutionResult>();
+        }
+
+        result.Complete();
+        stopwatch.Stop();
+        if (options.IsTestMode) _inspector?.UnregisterExecution(executionId);
+
+        EtlLog.ExecutionCompleted(_logger, Name, executionId, result.RecordsLoaded, stopwatch.Elapsed.TotalMilliseconds);
+        EtlLog.ExecutionMetrics(_logger, Name, result.RecordsExtracted, result.RecordsTransformed, result.RecordsLoaded, result.RecordsFailed);
+
+        return GenericResult<IEtlPipelineExecutionResult>.Success(result);
+    }
+
+    // Why the chains are resolved here, before any record moves: a Map stage's field mapping names its Transformations by id,
+    // and a Transformation that no longer resolves must fail the run naming it, not be skipped halfway through the stream.
+    private async Task<IGenericResult<TransformContext>> NewTransformContext(
+        Guid executionId,
+        IDataGateway gateway,
+        CancellationToken cancellationToken)
+    {
+        var chains = await FieldTransformChains.Resolve(GetOrderedTransforms(), _transformations, _logger, cancellationToken).ConfigureAwait(false);
+        if (!chains.IsSuccess)
+        {
+            return chains.ToNewResult<TransformContext>();
+        }
+
+        var built = await BuiltCalculationResolver.Resolve(GetOrderedTransforms(), _transformations, _settings, _logger, cancellationToken).ConfigureAwait(false);
+        if (!built.IsSuccess)
+        {
+            return built.ToNewResult<TransformContext>();
+        }
+
+        return GenericResult<TransformContext>.Success(new TransformContext(
+            executionId: executionId,
+            logger: _logger,
+            variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
+            calculationEngine: _calculationEngine,
+            connectionProvider: _connectionProvider,
+            dataGateway: gateway,
+            fieldTransformChains: chains.Value!,
+            builtCalculations: built.Value!.Calculations,
+            builtSets: built.Value.Sets));
+    }
+
+    private async Task<IGenericResult> ProcessStream(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        int effectiveTake,
+        PipelineTestExecutionState? testState,
+        IDataGateway gateway,
+        TransformContext transformContext,
+        Stopwatch stopwatch,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        var totalExtracted = 0;
+        var totalTransformed = 0;
+        var totalLoaded = 0;
+        var totalFailed = 0;
+        var buffer = new List<IDictionary<string, object?>>(effectiveTake);
+        var windowStart = DateTime.UtcNow;
+
+        var runOnce = options.IsTestMode;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await ApplyPauseGate(testState, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var iterationStopwatch = Stopwatch.StartNew();
+
+            // totalExtracted is how many source rows this run has already taken, so it is also where the next
+            // read starts: nothing in this pipeline removes or acknowledges a source row, so reading from 0
+            // every poll would hand back, and load again, the same first rows each time (FDW-948).
+            var extractResult = await ExtractAndBuffer(totalExtracted, effectiveTake, gateway, buffer, cancellationToken).ConfigureAwait(false);
+            if (!extractResult.IsSuccess) return extractResult;
+
+            totalExtracted += extractResult.Value.Extracted;
+            totalFailed += extractResult.Value.Failed;
+            NotifyInspectorExtracted(executionId, options, extractResult.Value.Extracted, buffer);
+
+            if (ShouldFlushBuffer(buffer.Count, windowStart) && buffer.Count > 0)
+            {
+                var flushResult = await RunFlushCycle(
+                    executionId, options, gateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
+
+                if (!flushResult.IsSuccess) return flushResult;
+
+                totalTransformed += flushResult.Value.Transformed;
+                totalLoaded += flushResult.Value.Loaded;
+                totalFailed += flushResult.Value.Failed;
+
+                await NotifyBroadcasterAfterFlush(
+                    executionId, totalExtracted, totalLoaded).ConfigureAwait(false);
+
+                if (flushResult.Value.SkipIteration) continue;
+                windowStart = DateTime.UtcNow;
+            }
+
+            ApplyStepRepause(testState);
+            await ApplyRateLimiting(totalLoaded, stopwatch, cancellationToken).ConfigureAwait(false);
+            await WaitForFlushInterval(iterationStopwatch, cancellationToken).ConfigureAwait(false);
+
+            if (runOnce) break;
+        }
+
+        result.RecordsExtracted = totalExtracted;
+        result.RecordsTransformed = totalTransformed;
+        result.RecordsLoaded = totalLoaded;
+        result.RecordsFailed = totalFailed;
+
+        return GenericResult.Success();
+    }
+
+    private static async Task ApplyPauseGate(PipelineTestExecutionState? testState, CancellationToken cancellationToken)
+    {
+        if (testState == null) return;
+        await Task.Run(
+            () => testState.PauseEvent.Wait(cancellationToken),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private void NotifyInspectorExtracted(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        int extractedCount,
+        IEnumerable<IDictionary<string, object?>> buffer)
+    {
+        if (!options.IsTestMode || _inspector == null) return;
+        _inspector.RecordTaskIn(executionId, _configuration.Id, extractedCount);
+        _inspector.AddTaskSamples(executionId, _configuration.Id, buffer);
+    }
+
+    private async Task<IGenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>> RunFlushCycle(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        IDataGateway gateway,
+        List<IDictionary<string, object?>> buffer,
+        TransformContext transformContext,
+        CancellationToken cancellationToken)
+    {
+        if (options.IsTestMode)
+            _inspector?.RecordTaskHeld(executionId, _configuration.Id, buffer.Count);
+
+        var flushOutcome = await ProcessFlush(
+            executionId, options, gateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
+
+        if (options.IsTestMode && _inspector != null)
+        {
+            _inspector.RecordTaskHeld(executionId, _configuration.Id, -buffer.Count);
+            _inspector.RecordTaskOut(executionId, _configuration.Id, flushOutcome.IsSuccess ? flushOutcome.Value.Loaded : 0);
+        }
+
+        if (!flushOutcome.IsSuccess)
+            return flushOutcome.ToNewResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>();
+
+        buffer.Clear();
+
+        return GenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>.Success(
+            (flushOutcome.Value.Transformed, flushOutcome.Value.Loaded, flushOutcome.Value.Failed, flushOutcome.Value.SkipIteration));
+    }
+
+    private async Task NotifyBroadcasterAfterFlush(Guid executionId, long totalExtracted, long totalLoaded)
+    {
+        if (_broadcaster == null) return;
+        var taskState = _inspector?.GetTaskState(executionId, _configuration.Id);
+        await _broadcaster.BroadcastTaskStatus(
+            executionId,
+            _configuration.Id,
+            "Running",
+            taskState?.RecordsIn ?? totalExtracted,
+            taskState?.RecordsOut ?? totalLoaded,
+            taskState?.RecordsDiscarded ?? 0,
+            taskState?.RecordsHeld ?? 0,
+            taskState?.SampleBufferAtCapacity ?? false).ConfigureAwait(false);
+    }
+
+    private static void ApplyStepRepause(PipelineTestExecutionState? testState)
+    {
+        if (testState == null || !testState.StepPending) return;
+        testState.StepPending = false;
+        testState.PauseEvent.Reset();
+    }
+
+    private async Task<IGenericResult<(int Extracted, int Failed)>> ExtractAndBuffer(
+        int skip,
+        int effectiveTake,
+        IDataGateway gateway,
+        List<IDictionary<string, object?>> buffer,
+        CancellationToken cancellationToken)
+    {
+        var extractResult = await ExtractBatch(skip, effectiveTake, gateway, cancellationToken).ConfigureAwait(false);
+        if (!extractResult.IsSuccess)
+        {
+            if (!_configuration.ContinueOnError)
+                return extractResult.ToNewResult<(int Extracted, int Failed)>();
+            return GenericResult<(int Extracted, int Failed)>.Success((0, 1));
+        }
+
+        var records = extractResult.Value!;
+        buffer.AddRange(records);
+        return GenericResult<(int Extracted, int Failed)>.Success((records.Count, 0));
+    }
+
+    private async Task WaitForFlushInterval(Stopwatch iterationStopwatch, CancellationToken cancellationToken)
+    {
+        iterationStopwatch.Stop();
+        var remainingDelay = _configuration.FlushIntervalMs - (int)iterationStopwatch.ElapsedMilliseconds;
+        if (remainingDelay > 0)
+        {
+            await Task.Delay(remainingDelay, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<IGenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>> ProcessFlush(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        IDataGateway gateway,
+        List<IDictionary<string, object?>> buffer,
+        TransformContext transformContext,
+        CancellationToken cancellationToken)
+    {
+        var flushResult = await FlushAndLoad(executionId, options, gateway, buffer, transformContext, cancellationToken).ConfigureAwait(false);
+
+        if (flushResult.IsTransformFailed)
+        {
+            if (!_configuration.ContinueOnError)
+                return GenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>.Failure(flushResult.Messages);
+            return GenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>.Success(
+                (0, 0, buffer.Count, true));
+        }
+
+        if (flushResult.IsLoadFailed)
+        {
+            if (!_configuration.ContinueOnError)
+                return GenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>.Failure(flushResult.Messages);
+            return GenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>.Success(
+                (flushResult.TransformedCount, 0, flushResult.TransformedCount, false));
+        }
+
+        return GenericResult<(int Transformed, int Loaded, int Failed, bool SkipIteration)>.Success(
+            (flushResult.TransformedCount, flushResult.LoadedCount, 0, false));
+    }
+
+    private bool ShouldFlushBuffer(int bufferCount, DateTime windowStart)
+    {
+        var shouldFlush = bufferCount >= _configuration.BufferSize;
+        if (_configuration.UseWindowing)
+        {
+            var windowElapsed = DateTime.UtcNow - windowStart;
+            shouldFlush = shouldFlush || windowElapsed.TotalSeconds >= _configuration.WindowDurationSeconds;
+        }
+
+        return shouldFlush;
+    }
+
+    private async Task<FlushResult> FlushAndLoad(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        IDataGateway gateway,
+        List<IDictionary<string, object?>> buffer,
+        TransformContext transformContext,
+        CancellationToken cancellationToken)
+    {
+        var transformResult = await TransformRecords(buffer, transformContext, cancellationToken).ConfigureAwait(false);
+        if (!transformResult.IsSuccess)
+            return FlushResult.TransformFailed(transformResult.Messages);
+
+        var transformedRecords = transformResult.Value!;
+
+        if (options.IsTestMode && options.SkipDestinationWrites)
+        {
+            EtlLog.TestModeWriteSkipped(_logger, Name, transformedRecords.Count);
+            return FlushResult.Succeeded(transformedRecords.Count, transformedRecords.Count);
+        }
+
+        var loadResult = await LoadRecordsBatch(gateway, transformedRecords, cancellationToken).ConfigureAwait(false);
+        if (!loadResult.IsSuccess)
+            return FlushResult.LoadFailed(transformedRecords.Count, loadResult.Messages);
+
+        return FlushResult.Succeeded(transformedRecords.Count, loadResult.Value);
+    }
+
+    private async Task ApplyRateLimiting(int totalLoaded, Stopwatch stopwatch, CancellationToken cancellationToken)
+    {
+        if (_configuration.MaxRecordsPerSecond.HasValue && totalLoaded > 0)
+        {
+            var expectedDuration = TimeSpan.FromSeconds((double)totalLoaded / _configuration.MaxRecordsPerSecond.Value);
+            var actualDuration = stopwatch.Elapsed;
+            if (actualDuration < expectedDuration)
+            {
+                var delay = expectedDuration - actualDuration;
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Flush result discriminated union — distinguishes transform failures from load failures.
+    /// </summary>
+    private sealed class FlushResult
+    {
+        private FlushResult() { }
+
+        public bool IsTransformFailed { get; private init; }
+        public bool IsLoadFailed { get; private init; }
+        public int TransformedCount { get; private init; }
+        public int LoadedCount { get; private init; }
+        public IEnumerable<IGenericMessage> Messages { get; private init; } = [];
+
+        public static FlushResult Succeeded(int transformedCount, int loadedCount) => new()
+        {
+            TransformedCount = transformedCount,
+            LoadedCount = loadedCount
+        };
+
+        public static FlushResult TransformFailed(IEnumerable<IGenericMessage> messages) => new()
+        {
+            IsTransformFailed = true,
+            Messages = messages
+        };
+
+        public static FlushResult LoadFailed(int transformedCount, IEnumerable<IGenericMessage> messages) => new()
+        {
+            IsLoadFailed = true,
+            TransformedCount = transformedCount,
+            Messages = messages
+        };
+    }
+
+    private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatch(
+        int skip,
+        int effectiveTake,
+        IDataGateway gateway,
+        CancellationToken cancellationToken)
+    {
+        EtlLog.ExtractStarted(_logger, Name);
+        var extractStopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            var queryCommand = new QueryCommand<Dictionary<string, object?>>
+            {
+                Paging = new PagingExpression
+                {
+                    Skip = skip,
+                    Take = effectiveTake
+                }
+            };
+
+            var queryResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+                queryCommand, new DataSetTarget(_configuration.SourceDataSet), cancellationToken).ConfigureAwait(false);
+            extractStopwatch.Stop();
+
+            if (!queryResult.IsSuccess)
+            {
+                var errorMessage = GetFirstMessageText(queryResult.Messages) ?? "Unknown error";
+                return GenericResult<List<IDictionary<string, object?>>>.Failure(
+                    EtlLog.ExtractFailed(_logger, Name, errorMessage));
+            }
+
+            var records = queryResult.Value?.Cast<IDictionary<string, object?>>().ToList() ?? [];
+            EtlLog.ExtractCompleted(_logger, records.Count, extractStopwatch.Elapsed.TotalMilliseconds);
+
+            return GenericResult<List<IDictionary<string, object?>>>.Success(records);
+        }
+        catch (Exception ex)
+        {
+            extractStopwatch.Stop();
+            return GenericResult<List<IDictionary<string, object?>>>.Failure(
+                EtlLog.ExtractFailed(_logger, ex, Name));
+        }
+    }
+
+    private async Task<IGenericResult<List<IDictionary<string, object?>>>> TransformRecords(
+        List<IDictionary<string, object?>> records,
+        TransformContext transformContext,
+        CancellationToken cancellationToken)
+    {
+        var transformCount = _configuration.Transforms?.Count ?? 0;
+        EtlLog.TransformStarted(_logger, transformCount);
+        var transformStopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            var orderedTransforms = GetOrderedTransforms();
+            if (orderedTransforms == null)
+            {
+                transformStopwatch.Stop();
+                EtlLog.TransformCompleted(_logger, records.Count, transformStopwatch.Elapsed.TotalMilliseconds);
+                return GenericResult<List<IDictionary<string, object?>>>.Success(records);
+            }
+
+            var transformedRecords = new List<IDictionary<string, object?>>();
+            var errorCount = 0;
+
+            foreach (var record in records)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var singleResult = await TransformSingleRecord(record, orderedTransforms, transformContext, cancellationToken).ConfigureAwait(false);
+                if (singleResult.HardFailure != null)
+                {
+                    transformStopwatch.Stop();
+                    return singleResult.HardFailure;
+                }
+
+                if (singleResult.IsError) errorCount++;
+                if (!singleResult.RecordFailed) transformedRecords.Add(singleResult.Record!);
+
+                if (errorCount >= _configuration.MaxErrors)
+                {
+                    transformStopwatch.Stop();
+                    return GenericResult<List<IDictionary<string, object?>>>.Failure(
+                        EtlLog.ExecutionFailed(_logger, Name, transformContext.ExecutionId, $"Maximum error count ({_configuration.MaxErrors}) exceeded"));
+                }
+            }
+
+            transformStopwatch.Stop();
+            EtlLog.TransformCompleted(_logger, transformedRecords.Count, transformStopwatch.Elapsed.TotalMilliseconds);
+
+            return GenericResult<List<IDictionary<string, object?>>>.Success(transformedRecords);
+        }
+        catch (Exception ex)
+        {
+            transformStopwatch.Stop();
+            return GenericResult<List<IDictionary<string, object?>>>.Failure(
+                EtlLog.TransformFailed(_logger, ex, Name));
+        }
+    }
+
+    private List<PipelineTransformConfiguration>? GetOrderedTransforms()
+    {
+        if (_configuration.Transforms == null || _configuration.Transforms.Count == 0) return null;
+        return StageRunner.Ordered(_configuration.Transforms);
+    }
+
+    private async Task<SingleRecordTransformResult> TransformSingleRecord(
+        IDictionary<string, object?> record,
+        List<PipelineTransformConfiguration> orderedTransforms,
+        TransformContext transformContext,
+        CancellationToken cancellationToken)
+    {
+        var currentRecord = record;
+
+        foreach (var transformConfig in orderedTransforms)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var transformType = TransformTypes.ByName(transformConfig.OperationType);
+            if (transformType == null)
+            {
+                if (!_configuration.ContinueOnError)
+                {
+                    return SingleRecordTransformResult.AsHardFailure(
+                        GenericResult<List<IDictionary<string, object?>>>.Failure(
+                            EtlLog.TransformFailed(_logger, Name, transformConfig.OperationType, $"Unknown transform type: {transformConfig.OperationType}")));
+                }
+
+                return SingleRecordTransformResult.AsRecordError();
+            }
+
+            var transformResult = await transformType.Transform(currentRecord, transformConfig, transformContext, cancellationToken).ConfigureAwait(false);
+            if (!transformResult.IsSuccess)
+            {
+                if (!_configuration.ContinueOnError || StageFailures.StopsRun(transformResult))
+                    return SingleRecordTransformResult.AsHardFailure(transformResult.ToNewResult<List<IDictionary<string, object?>>>());
+                return SingleRecordTransformResult.AsRecordError();
+            }
+
+            if (transformResult.Value == null) return SingleRecordTransformResult.AsRecordDropped();
+            currentRecord = transformResult.Value;
+        }
+
+        return SingleRecordTransformResult.AsSuccess(currentRecord);
+    }
+
+    private readonly struct SingleRecordTransformResult
+    {
+        private SingleRecordTransformResult(
+            IDictionary<string, object?>? record,
+            bool recordFailed,
+            bool isError,
+            IGenericResult<List<IDictionary<string, object?>>>? hardFailure)
+        {
+            Record = record;
+            RecordFailed = recordFailed;
+            IsError = isError;
+            HardFailure = hardFailure;
+        }
+
+        public IDictionary<string, object?>? Record { get; }
+        public bool RecordFailed { get; }
+        public bool IsError { get; }
+        public IGenericResult<List<IDictionary<string, object?>>>? HardFailure { get; }
+
+        public static SingleRecordTransformResult AsSuccess(IDictionary<string, object?> record) =>
+            new(record, recordFailed: false, isError: false, hardFailure: null);
+
+        public static SingleRecordTransformResult AsRecordError() =>
+            new(record: null, recordFailed: true, isError: true, hardFailure: null);
+
+        public static SingleRecordTransformResult AsRecordDropped() =>
+            new(record: null, recordFailed: true, isError: false, hardFailure: null);
+
+        public static SingleRecordTransformResult AsHardFailure(IGenericResult<List<IDictionary<string, object?>>> failure) =>
+            new(record: null, recordFailed: true, isError: false, hardFailure: failure);
+    }
+
+    private async Task<IGenericResult<int>> LoadRecordsBatch(
+        IDataGateway gateway,
+        List<IDictionary<string, object?>> records,
+        CancellationToken cancellationToken)
+    {
+        EtlLog.LoadStarted(_logger, Name);
+        var loadStopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            if (records.Count == 0)
+            {
+                loadStopwatch.Stop();
+                EtlLog.LoadCompleted(_logger, 0, loadStopwatch.Elapsed.TotalMilliseconds);
+                return GenericResult<int>.Success(0);
+            }
+
+            var insertCommand = new BulkInsertCommand<IDictionary<string, object?>>(records);
+
+            var insertResult = await gateway.Execute<int>(
+                insertCommand, new DataSetTarget(_configuration.DestinationDataSet), cancellationToken).ConfigureAwait(false);
+            loadStopwatch.Stop();
+
+            if (!insertResult.IsSuccess)
+            {
+                var errorMessage = GetFirstMessageText(insertResult.Messages) ?? "Unknown error";
+                return GenericResult<int>.Failure(
+                    EtlLog.LoadFailed(_logger, Name, errorMessage));
+            }
+
+            EtlLog.LoadCompleted(_logger, insertResult.Value, loadStopwatch.Elapsed.TotalMilliseconds);
+            return GenericResult<int>.Success(insertResult.Value);
+        }
+        catch (Exception ex)
+        {
+            loadStopwatch.Stop();
+            return GenericResult<int>.Failure(
+                EtlLog.LoadFailed(_logger, ex, Name));
+        }
+    }
+
+    private static string? GetFirstMessageText(IEnumerable<IGenericMessage> messages)
+    {
+        using var enumerator = messages.GetEnumerator();
+        return enumerator.MoveNext() ? enumerator.Current.Message : null;
+    }
+
+    /// <inheritdoc />
+    public override IGenericResult Validate()
+    {
+        var messages = new List<IGenericMessage>();
+
+        if (string.IsNullOrWhiteSpace(_configuration.Name))
+            messages.Add(EtlLog.PipelineCreationFailed(_logger, "unknown", "Pipeline name is required"));
+
+        if (string.IsNullOrWhiteSpace(_configuration.SourceConnectionName))
+            messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "Source connection name is required"));
+
+        if (string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
+            messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "Destination connection name is required"));
+
+        if (_configuration.BufferSize < 1)
+            messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "BufferSize must be at least 1"));
+
+        if (_configuration.FlushIntervalMs < 100)
+            messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "FlushIntervalMs must be at least 100"));
+
+        if (_configuration.UseWindowing && _configuration.WindowDurationSeconds < 1)
+            messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "WindowDurationSeconds must be at least 1 when windowing is enabled"));
+
+        if (messages.Count > 0) return GenericResult.Failure(messages);
+        return GenericResult.Success();
+    }
+}

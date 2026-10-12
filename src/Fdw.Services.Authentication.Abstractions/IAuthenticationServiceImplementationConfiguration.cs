@@ -1,0 +1,30 @@
+using System;
+using Fdw.Configuration;
+
+namespace Fdw.Services.Authentication.Abstractions;
+
+/// <summary>
+/// The contract every authentication-service implementation configuration satisfies.
+/// </summary>
+/// <remarks>
+/// An authentication service is two rows: the domain row names it and says which kind it is, and one
+/// implementation row carries what that kind needs to validate a token. A LocalKey entry needs an
+/// audience; a remote issuer needs a metadata address. Neither belongs on the domain row, because a
+/// host that declares one kind would carry the other kind's columns empty.
+/// <para>
+/// Held by the domain configuration, never inherited from it. Inheriting locks the domain to its
+/// first implementation: the second kind cannot be added without changing the type the first one is.
+/// </para>
+/// </remarks>
+public interface IAuthenticationServiceImplementationConfiguration : IImplementationConfiguration
+{
+
+    /// <summary>Gets or sets whether this authentication service is in force.</summary>
+    bool Enabled { get; set; }
+
+    /// <summary>Gets or sets the issuer this service validates against.</summary>
+    string? Authority { get; set; }
+
+    /// <summary>Gets or sets the human-readable description.</summary>
+    string? Description { get; set; }
+}

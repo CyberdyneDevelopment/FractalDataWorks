@@ -11,14 +11,15 @@ FractalDataWorks uses structured logging with the `[MessageLogging]` attribute. 
 - **Source-generated** - No reflection at runtime
 - **Type-safe parameters** - Compile-time validation
 - **Result integration** - Messages can be returned in `IGenericResult`
+- **Structured message codes** - Generated `Code` in `"{TypeCode}-{EventId}"` format (e.g., `"FDW-8033"`)
 
 ## Quick Example
 
-From [`OrderLog.cs:114-120`](../../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L114-L120):
+From [`OrderLog.cs:127-134`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Logging/OrderLog.cs#L127-L134):
 
 ```csharp
 [MessageLogging(
-    EventId = 8030,
+    EventId = 8033,
     Level = LogLevel.Error,
     Message = "Order '{orderId}' not found")]
 public static partial IGenericMessage OrderNotFound(
@@ -28,26 +29,27 @@ public static partial IGenericMessage OrderNotFound(
 
 ## Usage
 
-From [`OrderService.cs:115-126`](../../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs#L115-L126):
+From [`OrderService.cs`](../samples/ReferenceSolution/concepts/03-message-logging/src/Reference.MessageLogging/Services/OrderService.cs):
 
 ```csharp
 public IGenericResult<Order> GetOrder(string orderId)
 {
-    // Simulate order not found
-    if (orderId.StartsWith("NOTFOUND"))
+    // Simulate lookup
+    if (orderId == "NOT_FOUND")
     {
-        // Log AND return failure - the message is both logged and returned
         return GenericResult<Order>.Failure(
             OrderLog.OrderNotFound(_logger, orderId));
     }
 
-    return GenericResult<Order>.Success(new Order { OrderId = orderId, Status = "Found" });
+    var order = new Order(orderId, "customer-1", "product-1", 1);
+    return GenericResult<Order>.Success(order);
 }
 ```
 
 ## Next Steps
 
-- [MessageLogging Attribute](02-MessageLogging-Attribute.md) - Attribute parameters
-- [Logger Classes](03-Logger-Classes.md) - Organizing loggers
-- [IGenericMessage](04-IGenericMessage.md) - Message interface
-- [Result Integration](05-Result-Integration.md) - Using with GenericResult
+- [MessageLogging Attribute](07-02-MessageLogging-Attribute.md) - Attribute parameters
+- [Logger Classes](07-03-Logger-Classes.md) - Organizing loggers
+- [IGenericMessage](07-04-IGenericMessage.md) - Message interface
+- [Result Integration](07-05-Result-Integration.md) - Using with GenericResult
+- [External Exception Handling](07-07-External-Exception-Handling.md) - TypeCollection-based error dispatch

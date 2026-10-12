@@ -8,8 +8,8 @@ FractalDataWorks follows consistent naming conventions across projects and names
 |---------|---------|
 | `{Solution}.{Concept}` | `Reference.TypeCollections` |
 | `{Solution}.{Layer}` | `Reference.Domain` |
-| `FractalDataWorks.{Feature}` | `FractalDataWorks.Collections` |
-| `FractalDataWorks.{Feature}.Abstractions` | `FractalDataWorks.Commands.Abstractions` |
+| `FractalDataWorks.{Feature}` | `Fdw.Collections` |
+| `FractalDataWorks.{Feature}.Abstractions` | `Fdw.Commands.Abstractions` |
 
 From Reference Solution ([`concepts/`](../samples/ReferenceSolution/concepts/)):
 - `Reference.TypeCollections` - TypeCollection demonstrations
@@ -26,28 +26,29 @@ Namespaces match project names by default:
 
 This means:
 - `Reference.TypeCollections.csproj` -> `namespace Reference.TypeCollections`
-- `FractalDataWorks.Collections.csproj` -> `namespace FractalDataWorks.Collections`
+- `Fdw.Collections.csproj` -> `namespace Fdw.Collections`
 
 ## Folder-Based Namespaces
 
-Subfolders add to the namespace. From [`FractalDataWorks.Commands.Abstractions`](../src/FractalDataWorks.Commands.Abstractions/):
+Subfolders add to the namespace. From [`Fdw.Commands.Abstractions`](../src/Fdw.Commands.Abstractions/):
 
 ```
-FractalDataWorks.Commands.Abstractions/
-|-- Logging/           -> FractalDataWorks.Commands.Abstractions.Logging
-|-- Messages/          -> FractalDataWorks.Commands.Abstractions.Messages
-|-- Clauses/           -> FractalDataWorks.Commands.Abstractions.Clauses
+Fdw.Commands.Abstractions/
+|-- Logging/           -> Fdw.Commands.Abstractions.Logging
+|-- Messages/          -> Fdw.Commands.Abstractions.Messages
+|-- Clauses/           -> Fdw.Commands.Abstractions.Clauses
 ```
 
 ## File Naming
 
 | Type | Convention | Actual Example |
 |------|------------|----------------|
-| Logger | `{Domain}Logger.cs` | [`CommandLogger.cs`](../src/FractalDataWorks.Commands.Abstractions/Logging/CommandLogger.cs) |
+| MessageLogging | `{Domain}Log.cs` | [`EtlLog.cs`](../src/Fdw.Services.Etl/Logging/EtlLog.cs) |
+| LoggerMessage | `{Domain}Logger.cs` | [`CommandLogger.cs`](../src/Fdw.Commands.Abstractions/Logging/CommandLogger.cs) |
 | TypeCollection | `{Type}s.cs` | [`PaymentMethods.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/PaymentMethods.cs) |
 | TypeOption | `{Name}{Type}.cs` | [`CreditCardPayment.cs`](../samples/ReferenceSolution/concepts/01-type-collections/src/Reference.TypeCollections/Basic/Options/CreditCardPayment.cs) |
-| Endpoint | `{Type}Endpoint.cs` | [`QueryEndpoint.cs`](../src/FractalDataWorks.Web.RestEndpoints/Base/QueryEndpoint.cs) |
-| Validator | `{Type}Validator.cs` | [`MsSqlConfigurationValidator.cs`](../src/FractalDataWorks.Services.Connections.MsSql/MsSqlConfigurationValidator.cs) |
+| Endpoint | `{Type}Endpoint.cs` (or `{Type}EndpointBase.cs` for generic bases) | [`ListConnectionsEndpointBase.cs`](../src/Fdw.Services.Connections.Endpoints/ListConnectionsEndpointBase.cs) |
+| Configuration | `{Type}Configuration.cs` | [`MsSqlConnectionConfiguration.cs`](../src/Fdw.Services.Connections.MsSql/MsSqlConnectionConfiguration.cs) |
 
 ## Class Naming
 
@@ -71,14 +72,21 @@ TypeCollections follow a specific four-component pattern. From [`PaymentMethods`
 
 ## Logger Class Location
 
-Logger classes reside in a `Logging/` subfolder within their domain package:
+Logger classes reside in a `Logging/` subfolder within their domain package. Two naming patterns exist:
+
+- **`{Domain}Log.cs`** -- Uses `[MessageLogging]` attribute, returns `IGenericMessage` (preferred for new code)
+- **`{Domain}Logger.cs`** -- Uses `[LoggerMessage]` attribute, returns `void` (used in projects without MessageLogging reference)
 
 ```
-FractalDataWorks.Commands.Abstractions/
+Fdw.Services.Etl/
 |-- Logging/
-    |-- CommandLogger.cs
+    |-- EtlLog.cs              <-- [MessageLogging] pattern
+
+Fdw.Commands.Abstractions/
+|-- Logging/
+    |-- CommandLogger.cs        <-- [LoggerMessage] pattern
 ```
 
 ## Next Steps
 
-Return to [Home](../Home.md) to continue with more advanced topics.
+Return to [Home](Home.md) to continue with more advanced topics.

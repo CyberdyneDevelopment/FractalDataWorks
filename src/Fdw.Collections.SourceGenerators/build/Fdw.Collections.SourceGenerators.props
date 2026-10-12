@@ -1,0 +1,10 @@
+<Project>
+  <!-- Enable the analyzer to run during builds -->
+  <PropertyGroup>
+    <EnableFractalDataWorksCollectionsSourceGenerators Condition="'$(EnableFractalDataWorksCollectionsSourceGenerators)' == ''">true</EnableFractalDataWorksCollectionsSourceGenerators>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(EnableFractalDataWorksCollectionsSourceGenerators)' == 'true'">
+    <Analyzer Include="$(MSBuildThisFileDirectory)../analyzers/dotnet/cs/Fdw.Collections.SourceGenerators.dll" />
+  </ItemGroup>
+</Project>
