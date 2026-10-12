@@ -145,13 +145,22 @@ public sealed class ConnectionConfigurationDocumentProcessor : IDocumentProcesso
 
     private static void PublishUpdate(OpenApiOperation update, IReadOnlyList<TypeSettings> settings)
     {
-        if (JsonBody(update) is not { Schema: { } request }
-            || !request.ActualSchema.Properties.TryGetValue(ConfigurationProperty, out var configuration))
+        if (JsonBody(update) is not { Schema: { } request } || PropertyOf(request.ActualSchema, ConfigurationProperty) is not { } configuration)
             return;
 
         foreach (var type in settings)
             configuration.OneOf.Add(new JsonSchema { Reference = type.Settings });
     }
+
+    // Why the allOf chain: the update request derives from ResourceUpdateRequest, so its own members are generated as the second
+    // part of allOf [base, own] and are not on the schema itself.
+    private static JsonSchemaProperty? PropertyOf(JsonSchema schema, string name) =>
+        schema.Properties.TryGetValue(name, out var own)
+            ? own
+            : schema.AllOf.Select(part => part.ActualSchema)
+                .Where(part => !ReferenceEquals(part, schema))
+                .Select(part => PropertyOf(part, name))
+                .FirstOrDefault(found => found is not null);
 
     private static OpenApiMediaType? JsonBody(OpenApiOperation operation) =>
         operation.RequestBody is { } body && body.Content.TryGetValue(JsonContent, out var media) ? media : null;

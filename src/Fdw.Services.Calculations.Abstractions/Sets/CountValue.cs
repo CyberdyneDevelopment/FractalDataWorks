@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using Fdw.Results;
 
 namespace Fdw.Services.Calculations.Abstractions.Sets;
 
@@ -16,6 +18,13 @@ public sealed class CountValue : AggregateValueDefinition
 
     /// <inheritdoc />
     public override string Kind => "Count";
+
+    /// <summary>A count asks only that a cell holds a value, so any type counts; an empty cell is not counted.</summary>
+    /// <param name="output">The output being built.</param>
+    /// <param name="raw">The cell's value.</param>
+    /// <returns>One for a cell that holds a value, none for an empty one.</returns>
+    protected override IGenericResult<decimal?> Read(string output, object? raw) =>
+        GenericResult<decimal?>.Success(raw is null || raw is DBNull ? null : 1m);
 
     /// <inheritdoc />
     protected override decimal? Fold(IReadOnlyList<decimal> values)

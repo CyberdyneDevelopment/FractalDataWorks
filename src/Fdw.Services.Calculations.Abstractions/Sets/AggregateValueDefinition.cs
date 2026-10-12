@@ -60,6 +60,15 @@ public abstract class AggregateValueDefinition : DerivedValueDefinition
     /// <returns>The total, or null when there is nothing to total and no total of nothing exists.</returns>
     protected abstract decimal? Fold(IReadOnlyList<decimal> values);
 
+    /// <summary>
+    /// Reads one cell of the column for this aggregate. A total, average, minimum or maximum needs an exact number; a kind whose
+    /// answer does not depend on the value (a count) overrides this to accept any cell that holds one.
+    /// </summary>
+    /// <param name="output">The output being built, which places a refusal.</param>
+    /// <param name="raw">The cell's value.</param>
+    /// <returns>The number it stands for, or none for an empty cell.</returns>
+    protected virtual IGenericResult<decimal?> Read(string output, object? raw) => SetNumbers.Read(output, Column, raw);
+
     private IGenericResult<List<decimal>> Collect(string output, IReadOnlyList<IReadOnlyDictionary<string, object?>> rows)
     {
         var values = new List<decimal>(rows.Count);
@@ -70,7 +79,7 @@ public abstract class AggregateValueDefinition : DerivedValueDefinition
                 return SetFailure.Of<List<decimal>>("SetColumnMissing", output, $"table '{Table}' has a row without column '{Column}'");
             }
 
-            var number = SetNumbers.Read(output, Column, raw);
+            var number = Read(output, raw);
             if (number.IsFailure)
             {
                 return number.ToNewResult<List<decimal>>();

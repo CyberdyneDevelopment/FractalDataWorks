@@ -48,7 +48,7 @@ public sealed class ConnectionConfigurationDocumentProcessorTests
         var document = Process();
 
         var request = RequestSchema(document, MemberPath, OpenApiOperationMethod.Patch).ActualSchema;
-        request.Properties["configuration"].OneOf.Count.ShouldBe(3);
+        PropertyOf(request, "configuration").ShouldNotBeNull().OneOf.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -118,6 +118,12 @@ public sealed class ConnectionConfigurationDocumentProcessorTests
         operation.RequestBody.Content["application/json"] = new OpenApiMediaType { Schema = schema };
         return operation;
     }
+
+    private static JsonSchemaProperty? PropertyOf(JsonSchema schema, string name) =>
+        schema.Properties.TryGetValue(name, out var own)
+            ? own
+            : schema.AllOf.Select(part => part.ActualSchema).Where(part => !ReferenceEquals(part, schema))
+                .Select(part => PropertyOf(part, name)).FirstOrDefault(found => found is not null);
 
     private static JsonSchema RequestSchema(OpenApiDocument document, string path, string method) =>
         document.Paths[path][method].RequestBody!.Content["application/json"].Schema!;

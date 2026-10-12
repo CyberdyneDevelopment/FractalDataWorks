@@ -270,8 +270,8 @@ public class ConnectionCredentialStoreTests
         commands.Count.ShouldBe(2);
         commands.Single(command => command.SecretKey == values[UsernameField]).SecretValue.ShouldBe("u");
         commands.Single(command => command.SecretKey == values[PasswordField]).SecretValue.ShouldBe("p");
-        values[UsernameField].ShouldEndWith("." + UsernameField);
-        values[PasswordField].ShouldEndWith("." + PasswordField);
+        values[UsernameField].ShouldEndWith("-" + UsernameField);
+        values[PasswordField].ShouldEndWith("-" + PasswordField);
         commands.ShouldAllBe(command => command.SecretType == "ConnectionCredential");
     }
 
