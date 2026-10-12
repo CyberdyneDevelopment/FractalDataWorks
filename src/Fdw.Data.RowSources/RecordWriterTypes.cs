@@ -19,4 +19,9 @@ namespace Fdw.Data.RowSources;
 [TypeCollection(typeof(RecordWriterTypeBase), typeof(IRecordWriterType), typeof(RecordWriterTypes))]
 public abstract partial class RecordWriterTypes : TypeCollectionBase<RecordWriterTypeBase, IRecordWriterType>
 {
+    /// <summary>
+    /// The response trailer a streamed response reports its outcome in, once the status code is
+    /// already sent. A deployment whose clients read another name sets this before the host starts.
+    /// </summary>
+    public static string StreamStatusTrailerName { get; set; } = "X-Fdw-Stream-Status";
 }

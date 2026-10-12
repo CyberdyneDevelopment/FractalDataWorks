@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -75,4 +76,42 @@ public class CreateConnectionRequest : ResourceCreateRequest
 
     /// <summary>Gets or sets the interval, in seconds, between periodic health checks. Null means no periodic interval.</summary>
     public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the schema discovery option the connection uses: one of the options its
+    /// connection type offers (<c>discoveryTypes</c> on <c>/connection-types/{name}/capabilities</c>),
+    /// <c>None</c> for a connection that does not discover. Required; there is no default.
+    /// </summary>
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the named default-value policy this connection resolves through
+    /// <c>DefaultValues.ByName(ServiceType).ByName(...)</c>. Null means "use the framework-shipped
+    /// <c>"Default"</c> policy" — applies only to relational connection types (MsSql, PostgreSql,
+    /// Sqlite); ignored for others.
+    /// </summary>
+    public string? DefaultValuePolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets this connection type's own settings: a JSON object shaped like the type's configuration
+    /// class, which OpenAPI publishes as one schema per connection type, chosen by <c>ServiceType</c>. Absent
+    /// members take the configuration's defaults.
+    /// </summary>
+    /// <remarks>
+    /// Preferred over the flat fields on this request (Server, Port, Database, Authentication, BaseUrl, ...),
+    /// which are deprecated and still accepted: they are read as aliases for the type's configuration
+    /// properties, and a member sent here wins over its flat equivalent. They will be removed.
+    /// </remarks>
+    public JsonElement? Configuration { get; set; }
+
+    /// <summary>
+    /// Gets or sets the values of the connection's credentials, keyed by the credential fields its authentication
+    /// method uses (for example <c>SecretKeyName</c> for a password, <c>ApiKeySecretName</c> for an API key).
+    /// </summary>
+    /// <remarks>
+    /// Write-only. The server stores each value in the platform's credential secret manager under a secret it chooses
+    /// and points the connection at it; no response, log line or endpoint ever returns a value, and a caller never
+    /// names the secret manager or the secret (FDW-1086). Required, in full, when the authentication method uses credentials.
+    /// </remarks>
+    public IDictionary<string, string>? Credentials { get; set; }
 }

@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlInetConverter()
     : DataTypeConverterBase(
-        id: 25,
         name: "Inet",
         sourceType: "inet",
         targetClrType: typeof(IPAddress),

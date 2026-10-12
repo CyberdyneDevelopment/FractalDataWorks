@@ -16,7 +16,6 @@ public sealed class StoredProcedureContainerType : ContainerTypeBase
     /// </summary>
     public StoredProcedureContainerType()
         : base(
-            id: 3,
             name: "StoredProcedure",
             displayName: "SQL Stored Procedure",
             description: "SQL Server stored procedure container with parameter discovery",

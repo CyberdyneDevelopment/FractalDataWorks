@@ -9,5 +9,5 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 public sealed class FieldSymbolKindScore : SymbolKindScoreBase
 {
     /// <summary>Initializes the Field scoring option.</summary>
-    public FieldSymbolKindScore() : base(id: 4, name: "Field", weight: 2) { }
+    public FieldSymbolKindScore() : base(name: "Field", weight: 2) { }
 }

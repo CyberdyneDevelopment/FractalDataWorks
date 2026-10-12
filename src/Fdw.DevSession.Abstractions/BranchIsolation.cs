@@ -19,7 +19,7 @@ public sealed class BranchIsolation : IsolationLevelBase
     /// Initializes a new instance of the <see cref="BranchIsolation"/> class.
     /// </summary>
     public BranchIsolation()
-        : base(id: 2, name: "Branch", sharesObjectStore: true)
+        : base(name: "Branch", sharesObjectStore: true)
     {
     }
 

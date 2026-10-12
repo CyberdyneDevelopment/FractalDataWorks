@@ -41,7 +41,7 @@ internal sealed class TestTUIComponent : TUIComponent<TestTUIComponent, string>
         IAnsiConsole console,
         string promptText,
         IEnumerable<TOption> options)
-        where TOption : class, ITypeOption
+        where TOption : class, ITypeOption<int>
     {
         LastPromptTypeCollectionResult = PromptTypeCollectionId(console, promptText, options);
         return LastPromptTypeCollectionResult;

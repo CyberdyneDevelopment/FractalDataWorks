@@ -16,7 +16,6 @@ public sealed class BearerTokenAuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="BearerTokenAuthenticationMethod"/> class.
     /// </summary>
     public BearerTokenAuthenticationMethod() : base(
-        id: 3,
         name: "BearerToken",
         requiresUserInteraction: false,
         supportsTokenRefresh: true,

@@ -9,7 +9,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class MaxAggregateFunction : AggregateFunctionBase
 {
     /// <summary>Initializes a new instance of the <see cref="MaxAggregateFunction"/> class.</summary>
-    public MaxAggregateFunction() : base(5, "Max")
+    public MaxAggregateFunction() : base("Max")
     {
     }
 

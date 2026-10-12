@@ -31,7 +31,6 @@ public sealed class AnalyzeNullabilityTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: iterate parameters, properties, fields, methods for nullability
     public override async Task<IGenericResult<QueryResult<NullabilityAnalysisData>>> Translate(
         AnalyzeNullabilityCommand command,
         Solution solution,
@@ -133,7 +132,6 @@ public sealed class AnalyzeNullabilityTranslator
 
         return GenericResult<QueryResult<NullabilityAnalysisData>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static NullabilitySymbol CreateNullabilityInfo(ISymbol symbol, string memberKind, Location location)
     {

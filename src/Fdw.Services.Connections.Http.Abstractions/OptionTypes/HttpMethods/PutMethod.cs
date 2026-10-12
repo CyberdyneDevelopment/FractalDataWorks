@@ -13,7 +13,7 @@ public sealed class PutMethod : HttpMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PutMethod"/> class.
     /// </summary>
-    public PutMethod() : base(3, "PUT", "Uploads or replaces a resource on the server")
+    public PutMethod() : base("PUT", "Uploads or replaces a resource on the server")
     {
     }
 }

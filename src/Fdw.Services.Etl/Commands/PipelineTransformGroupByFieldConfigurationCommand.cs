@@ -13,9 +13,9 @@ namespace Fdw.Services.Etl.Commands;
 /// <see cref="PipelineTransformGroupByFieldConfiguration"/> item via <c>ConfigurationCommands.All()</c>;
 /// without this TypeOption the cascade would fail loud (NoChildCommandForType) when persisting a group-by field.
 /// </remarks>
-[TypeOption(typeof(ConfigurationCommands), "AggregationGroupByField")]
+[TypeOption(typeof(ConfigurationCommands), "PipelineTransformGroupByField")]
 public sealed class PipelineTransformGroupByFieldConfigurationCommand : ConfigurationCommandBase<PipelineTransformGroupByFieldConfiguration>
 {
     /// <summary>Initializes the command targeting the AggregationGroupByField table.</summary>
-    public PipelineTransformGroupByFieldConfigurationCommand() : base("AggregationGroupByField") { }
+    public PipelineTransformGroupByFieldConfigurationCommand() : base("PipelineTransformGroupByField") { }
 }

@@ -76,12 +76,10 @@ public sealed class SqliteBatchInsertTranslator : SqliteDataCommandTranslatorBas
         }
     }
 
-#pragma warning disable MA0051
     private static SqliteCommand BuildBatchedInsertStatements(
         IStorageContainer container,
         IDatabasePath dbPath,
         IEnumerable collection)
-#pragma warning restore MA0051
     {
         var dialect = dbPath.Dialect;
 

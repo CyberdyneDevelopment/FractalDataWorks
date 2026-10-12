@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "NewZealand")]
 public sealed class NewZealandTimeZoneType : TimeZoneTypeBase
 {
-    public NewZealandTimeZoneType() : base(15, "NewZealand", "New Zealand Standard Time") { }
+    public NewZealandTimeZoneType() : base("NewZealand", "New Zealand Standard Time") { }
 }

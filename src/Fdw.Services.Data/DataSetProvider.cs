@@ -29,7 +29,7 @@ namespace Fdw.Services.Data;
 /// Also provides static Configure/Register/Initialize methods for three-phase DI registration.
 /// </summary>
 [PlatformServiceProvider(ServiceCategory = "DataSet")]
-public sealed class DataSetProvider : IDataSetConfigurationProvider
+public sealed class DataSetProvider
 {
     // ============================================================
     // Static DI Orchestration (three-phase)
@@ -80,12 +80,14 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
 
         var services = builder.Services;
 
-        services.TryAddSingleton<IDataSetConfigurationProvider>(sp =>
-        {
-            var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>();
-            var configProvider = sp.GetService<IServiceConfigurationProvider<DataSetConfiguration>>();
-            return new DataSetProvider(logger, configProvider);
-        });
+        // The configuration interface resolves to the domain provider; this one is the DataSet
+        // domain's platform service provider, and reads through it.
+        services.TryAddSingleton<IDataSetConfigurationProvider>(sp => sp.GetRequiredService<DataSetConfigurationProvider>());
+
+        services.TryAddSingleton<DataSetProvider>(sp =>
+            new DataSetProvider(
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger<DataSetProvider>(),
+                sp.GetRequiredService<IDataSetConfigurationProvider>()));
 
         services.TryAddSingleton<IDataSetBuilder>(sp =>
             new DataSetBuilder(sp.GetService<ILogger<DataSetBuilder>>()));
@@ -136,7 +138,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     // ============================================================
 
     private readonly ILogger<DataSetProvider> _logger;
-    private readonly IServiceConfigurationProvider<DataSetConfiguration>? _configurationProvider;
+    private readonly IDataSetConfigurationProvider? _configurationProvider;
 
     /// <summary>
     /// Initializes a new instance of <see cref="DataSetProvider"/>.
@@ -145,20 +147,20 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// <param name="configurationProvider">Optional DataSet configuration provider for DB-backed lookups.</param>
     public DataSetProvider(
         ILogger<DataSetProvider>? logger,
-        IServiceConfigurationProvider<DataSetConfiguration>? configurationProvider = null)
+        IDataSetConfigurationProvider? configurationProvider = null)
     {
         _logger = logger ?? NullLogger<DataSetProvider>.Instance;
         _configurationProvider = configurationProvider;
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<DataSetConfiguration>> Get(string name, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataSetImplementationConfiguration>> Get(string name, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetEntry(_logger, name);
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<IDataSetImplementationConfiguration>.Failure(
                 DataServiceResultCodes.ByName("DataSetNameRequired"), _logger);
         }
 
@@ -173,13 +175,13 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.DataSetNotFound(_logger, name);
-        return GenericResult<DataSetConfiguration>.Failure(
+        return GenericResult<IDataSetImplementationConfiguration>.Failure(
             DataServiceResultCodes.ByName("DataSetNotFound"),
             ResultDetails.Create().With("DataSetName", name));
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<DataSetConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IDataSetImplementationConfiguration>> Get(Guid id, CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetDataSetByIdEntry(_logger, id);
 
@@ -194,17 +196,17 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.DataSetByIdNotFound(_logger, id);
-        return GenericResult<DataSetConfiguration>.Failure(
+        return GenericResult<IDataSetImplementationConfiguration>.Failure(
             DataServiceResultCodes.ByName("DataSetNotFound"),
             ResultDetails.Create().With("DataSetId", id));
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<DataSetConfiguration>>> Get(CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> Get(CancellationToken cancellationToken = default)
     {
         DataSetProviderLog.TraceGetAllDataSetsEntry(_logger);
 
-        var dataSets = new List<DataSetConfiguration>();
+        var dataSets = new List<IDataSetImplementationConfiguration>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (_configurationProvider != null)
@@ -225,7 +227,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         }
 
         DataSetProviderLog.AllDataSetsRetrieved(_logger, dataSets.Count);
-        return GenericResult<IReadOnlyList<DataSetConfiguration>>.Success(dataSets.AsReadOnly());
+        return GenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>.Success(dataSets.AsReadOnly());
     }
 
     // ============================================================
@@ -237,7 +239,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     /// </summary>
     /// <param name="configuration">The configuration to validate.</param>
     /// <returns>Success if valid; failure with a structured message otherwise.</returns>
-    public IGenericResult ValidateDataSet(DataSetConfiguration configuration)
+    public IGenericResult ValidateDataSet(IDataSetImplementationConfiguration configuration)
     {
         var propertiesResult = ValidateDataSetProperties(configuration);
         if (!propertiesResult.IsSuccess)
@@ -250,7 +252,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         return ValidateDataSetSources(configuration);
     }
 
-    private IGenericResult ValidateDataSetProperties(DataSetConfiguration configuration)
+    private IGenericResult ValidateDataSetProperties(IDataSetImplementationConfiguration configuration)
     {
         if (configuration == null)
         {
@@ -279,10 +281,10 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
         return GenericResult.Success();
     }
 
-    private static IGenericResult ValidateKeyFieldsExist(DataSetConfiguration configuration)
+    private static IGenericResult ValidateKeyFieldsExist(IDataSetImplementationConfiguration configuration)
         => GenericResult.Success();
 
-    private static IGenericResult ValidateDataSetSources(DataSetConfiguration configuration)
+    private static IGenericResult ValidateDataSetSources(IDataSetImplementationConfiguration configuration)
     {
         foreach (var source in configuration.Sources)
         {

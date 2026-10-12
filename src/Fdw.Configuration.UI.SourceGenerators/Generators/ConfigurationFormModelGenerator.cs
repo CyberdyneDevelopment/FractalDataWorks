@@ -112,10 +112,7 @@ public static class ConfigurationFormModelGenerator
         builder.AppendLine();
     }
 
-    // MA0051: Method length acceptable - procedural code generation with switch on component types
-#pragma warning disable MA0051 // Method is too long
     private static void GenerateComponentInitialization(StringBuilder builder, PropertyModel property, ConfigurationModel model)
-#pragma warning restore MA0051
     {
         var label = EscapeString(property.Label ?? property.PropertyName);
         var helpText = property.HelpText != null ? $"\"{EscapeString(property.HelpText)}\"" : "null";

@@ -11,7 +11,6 @@ public sealed class RunIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="RunIcon"/>.</summary>
     public RunIcon()
         : base(
-            12,
             "Run",
             "0 0 24 24",
             "none",

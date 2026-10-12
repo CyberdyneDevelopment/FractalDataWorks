@@ -15,7 +15,6 @@ public sealed class NotNullRuleType : QualityRuleTypeBase
     /// </summary>
     public NotNullRuleType()
         : base(
-            id: 1,
             name: "NotNull",
             requiresField: true,
             supportsMultipleFields: false,

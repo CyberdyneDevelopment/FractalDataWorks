@@ -1,17 +1,15 @@
 # API Clients Reference
 
-Each FDW domain ships a `*.Clients` package that provides typed HTTP access to the matching `*.Endpoints` package. These clients are the HTTP layer in the [headless UI architecture](13-01-Headless-UI-Pattern.md), consumed by the headless logic providers in each `*.Components` package and available for any .NET consumer that needs programmatic access to FDW APIs.
+Each FDW domain ships a `*.Clients` package that provides typed HTTP access to the matching `*.Endpoints` package. They serve .NET consumers that need programmatic access to FDW APIs: the terminal UI (`Fdw.TUI.Management`) and hosts that call another host's API. The web console (`reference-react-ui`) does not use them; it calls the API over HTTP directly.
 
 ## Architecture Overview
 
 ```
-Consumer (UI / app)
+Consumer (.NET app / TUI)
   │
-  └── Headless logic providers (*.Components packages)
+  └── Per-domain *.Clients packages (typed HTTP clients)
         │
-        └── Per-domain *.Clients packages (typed HTTP clients)
-              │
-              └── Fdw.Web.Clients (namespace Fdw.Web.Clients.Abstractions)
+        └── Fdw.Web.Clients (namespace Fdw.Web.Clients.Abstractions)
                     ApiClientBase   — HTTP plumbing (GET/POST/PUT/PATCH/DELETE) + RequestUri helper
                     ClientLog       — Structured logging (EventIds 11000-11002, 71000-71002, 91000-91003)
         └── Fdw.Web.Clients.Abstractions
@@ -23,7 +21,7 @@ Every typed API client:
 
 1. **Inherits from `ApiClientBase`** — shared HTTP methods with JSON serialization, structured error handling, and logging.
 2. **Returns `IGenericResult<T>`** — railway-oriented results that carry either a value or a structured error message. Never throws for business-logic failures.
-3. **Registers via `ApiClientTypes`** — each client package contains a `[ServiceTypeOption(typeof(ApiClientTypes), "...")]` class inheriting `ApiClientTypeBase<TClient>` that is registered automatically by `Registration.SourceGenerators`.
+3. **Registers via `ApiClientTypes`** — each client package contains a `[Implementation(typeof(ApiClientTypes), "...")]` class inheriting `ApiClientTypeBase<TClient>` that is registered automatically by `Registration.SourceGenerators`.
 
 ## ApiClientBase
 
@@ -41,7 +39,7 @@ Client packages register through the `ApiClientTypes` TypeCollection:
 
 ```csharp
 // In Services.Connections.Clients package:
-[ServiceTypeOption(typeof(ApiClientTypes), "ConnectionClient")]
+[Implementation(typeof(ApiClientTypes), "ConnectionClient")]
 public sealed class ConnectionClientType : ApiClientTypeBase<ConnectionApiClient>
 {
     // ...
@@ -66,13 +64,12 @@ The full client-package inventory is large (30+ packages) and changes over time.
 
 Every client follows the same shape:
 - `XxxApiClient : ApiClientBase` — typed methods returning `IGenericResult<T>`
-- `XxxClientType : ApiClientTypeBase<XxxApiClient>` — `[ServiceTypeOption(typeof(ApiClientTypes), "...")]`
+- `XxxClientType : ApiClientTypeBase<XxxApiClient>` — `[Implementation(typeof(ApiClientTypes), "...")]`
 - DTOs / requests / responses live in the matching `Abstractions` package
 
-For the canonical wiring of clients into an app, see `reference-ui/public/Program.cs` and `reference-aui/public/src/Reference.Aui.Host/Program.cs`.
+For the canonical wiring of clients into an app, see `src/Fdw.TUI.Management/Program.cs` in this repo.
 
 ## See Also
 
-- [13-01 Headless UI Pattern](13-01-Headless-UI-Pattern.md) — provider/context/log triple consumed by clients
-- [13-06 UI Skin Assembly Discovery](13-06-UI-Skin-Assembly-Discovery.md) — how skins discover client packages via `PageTypes`/`ApiClientTypes`
+- [13-05 UI Layer Anatomy](13-05-UI-Layer-Anatomy.md) — where the clients sit between the API and the UIs
 - [12-07 API Endpoints](12-07-API-Endpoints.md) — the server-side counterpart of these clients

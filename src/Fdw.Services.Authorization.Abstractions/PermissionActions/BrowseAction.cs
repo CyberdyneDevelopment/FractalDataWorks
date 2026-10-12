@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class BrowseAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for browse action.
+    /// Material Symbols icon name for browse action.
     /// </summary>
-    public const string BrowseIcon = "folder_open"; // Icons.Material.Filled.FolderOpen
+    public const string BrowseIcon = "folder_open";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BrowseAction"/> class.
     /// </summary>
     public BrowseAction()
         : base(
-            id: 7,
             name: "Browse",
             icon: BrowseIcon,
             color: "Info",

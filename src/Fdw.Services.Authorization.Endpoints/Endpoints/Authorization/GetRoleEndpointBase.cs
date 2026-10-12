@@ -1,4 +1,5 @@
 ﻿using System;
+using Fdw.Results;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,9 @@ namespace Fdw.Services.Authorization.Endpoints;
 public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="GetRoleEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
+    private readonly IPermissionConfigurationProvider _permissionProvider;
+    private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -23,17 +26,18 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="GetRoleEndpointBase"/> class.</summary>
-    protected GetRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
+    protected GetRoleEndpointBase(
+        ILogger logger,
+        IRoleConfigurationProvider roleProvider,
+        IPermissionConfigurationProvider permissionProvider,
+        IRolePermissionConfigurationProvider rolePermissionProvider)
     {
         EndpointLogger = logger;
         _roleProvider = roleProvider;
+        _permissionProvider = permissionProvider;
+        _rolePermissionProvider = rolePermissionProvider;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
@@ -43,7 +47,9 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     /// <inheritdoc />
     public override void Configure()
     {
-        Get("/roles/{Name}");
+        // A read of one record is a POST: a GET is a plain paged list and nothing else. The body carries the
+        // role's name or its id, as the route did.
+        Post("/roles/get");
         Policies(ReadPolicy);
         ConfigureEndpoint();
     }
@@ -56,31 +62,68 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
     /// <inheritdoc />
     public override async Task HandleAsync(GetRoleRequest req, CancellationToken ct)
     {
-        
-        RoleConfiguration? role = Guid.TryParse(req.Name, out var id)
-            ? await _roleProvider.GetRole(id, ct).ConfigureAwait(false)
-            : await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
+        AuthorizationEndpointLog.GettingRole(EndpointLogger, req.Name);
 
-        if (role is null)
+        var roleResult = Guid.TryParse(req.Name, out var id)
+            ? await _roleProvider.Get(id, ct).ConfigureAwait(false)
+            : await _roleProvider.Get(req.Name, ct).ConfigureAwait(false);
+
+        if (!roleResult.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 404;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { errorCode = "NotFound", messages = new[] { $"roles '{req.Name}' was not found." } }, ct).ConfigureAwait(false);
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name,
+                roleResult.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
             return;
         }
 
-        var response = await MapToDetail(role, ct).ConfigureAwait(false);
-        await Send.OkAsync(response, ct).ConfigureAwait(false);
+        if (roleResult.Value is null)
+        {
+            AuthorizationEndpointLog.RoleNotFound(EndpointLogger, req.Name);
+            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"roles '{req.Name}' was not found." } }, statusCode: 404)).ConfigureAwait(false);
+            return;
+        }
+
+        AuthorizationEndpointLog.RoleResolved(EndpointLogger, req.Name, roleResult.Value.Id);
+
+        var response = await MapToDetail(roleResult.Value, ct).ConfigureAwait(false);
+        if (response.IsFailure || response.Value is null)
+        {
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+
+        AuthorizationEndpointLog.RoleRetrieved(EndpointLogger, req.Name, response.Value.Permissions.Count);
+
+        await Send.OkAsync(response.Value, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Maps a RoleConfiguration to a detail DTO. Override for custom mapping.
+    /// Maps a role implementation configuration to a detail DTO. Override for custom mapping.
     /// </summary>
-    protected virtual async Task<RoleDetailResponse> MapToDetail(RoleConfiguration role, CancellationToken ct)
+    /// <remarks>
+    /// Returns a result rather than writing to the response: HandleAsync owns every send, so a
+    /// mapper that failed could not also have answered the caller.
+    /// </remarks>
+    protected virtual async Task<IGenericResult<RoleDetailResponse>> MapToDetail(IRoleImplementationConfiguration role, CancellationToken ct)
     {
-        var rolePermissions = await _roleProvider.GetRolePermissions(role.Id, ct).ConfigureAwait(false);
-        var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
+        var rolePermissionsResult = await _rolePermissionProvider
+            .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
+        if (!rolePermissionsResult.IsSuccess || rolePermissionsResult.Value is null)
+        {
+            return GenericResult<RoleDetailResponse>.Failure(
+                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, role.Name,
+                    rolePermissionsResult.CurrentMessage));
+        }
+        var rolePermissions = rolePermissionsResult.Value;
+
+        var allPermissionsResult = await _permissionProvider.Get(ct).ConfigureAwait(false);
+        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
+        {
+            return GenericResult<RoleDetailResponse>.Failure(
+                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, role.Name,
+                    allPermissionsResult.CurrentMessage));
+        }
+        var allPermissions = allPermissionsResult.Value;
 
         var permissions = allPermissions
             .Where(p => rolePermissions.Any(rp => rp.PermissionId == p.Id))
@@ -97,16 +140,15 @@ public abstract class GetRoleEndpointBase : Endpoint<GetRoleRequest, RoleDetailR
             })
             .ToList();
 
-        return new RoleDetailResponse
+        return GenericResult<RoleDetailResponse>.Success(new RoleDetailResponse
         {
             Id = role.Id,
             Name = role.Name,
             DisplayName = role.DisplayName,
             Description = role.Description,
             IsTenantScoped = role.IsTenantScoped,
-            SortOrder = role.SortOrder,
             Permissions = permissions,
-            CreatedAt = role.CreateDate
-        };
+            CreatedAt = role.CreatedAt
+        });
     }
 }

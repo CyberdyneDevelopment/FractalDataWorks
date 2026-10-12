@@ -26,7 +26,7 @@ public sealed class ApolloFederationProtocol : GraphQLProtocolBase
     /// Initializes a new instance of the <see cref="ApolloFederationProtocol"/> class.
     /// </summary>
     public ApolloFederationProtocol()
-        : base(8, "ApolloFederation", "Apollo Federation compatible GraphQL protocol")
+        : base("ApolloFederation", "Apollo Federation compatible GraphQL protocol")
     {
     }
 

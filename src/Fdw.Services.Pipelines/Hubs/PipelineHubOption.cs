@@ -23,7 +23,7 @@ public sealed class PipelineHubOption : RealTimeHubOptionBase
     /// Initializes a new instance of the <see cref="PipelineHubOption"/> class.
     /// </summary>
     public PipelineHubOption()
-        : base(1, "Pipeline", "/hubs/pipelines", typeof(PipelineStatusHub), authorizationPolicy: null)
+        : base("Pipeline", "/hubs/pipelines", typeof(PipelineStatusHub), authorizationPolicy: null)
     {
     }
 

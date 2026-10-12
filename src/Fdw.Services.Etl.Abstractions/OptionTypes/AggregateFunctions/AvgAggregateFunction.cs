@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class AvgAggregateFunction : AggregateFunctionBase
 {
     /// <summary>Initializes a new instance of the <see cref="AvgAggregateFunction"/> class.</summary>
-    public AvgAggregateFunction() : base(3, "Avg")
+    public AvgAggregateFunction() : base("Avg")
     {
     }
 

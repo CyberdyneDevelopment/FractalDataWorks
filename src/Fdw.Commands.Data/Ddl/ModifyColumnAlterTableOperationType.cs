@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class ModifyColumnAlterTableOperationType : AlterTableOperationTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ModifyColumnAlterTableOperationType"/>.</summary>
-    public ModifyColumnAlterTableOperationType() : base(3, "ModifyColumn") { }
+    public ModifyColumnAlterTableOperationType() : base("ModifyColumn") { }
 }

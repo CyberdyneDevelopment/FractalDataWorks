@@ -11,7 +11,6 @@ public sealed class PasswordIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="PasswordIcon"/>.</summary>
     public PasswordIcon()
         : base(
-            31,
             "Password",
             "0 0 24 24",
             "none",

@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlTimestampConverter()
     : DataTypeConverterBase(
-        id: 29,
         name: "Timestamp",
         sourceType: "timestamp",
         targetClrType: typeof(byte[]),

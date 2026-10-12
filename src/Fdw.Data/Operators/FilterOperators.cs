@@ -32,8 +32,9 @@ namespace Fdw.Data;
 ///     Value = "Acme"
 /// };
 ///
-/// // No switch - just property access!
-/// var sqlCondition = $"[{condition.PropertyName}] {condition.Operator.SqlOperator} {condition.Operator.FormatSqlParameter(condition.PropertyName)}";
+/// // No switch - just property access! The operator states what it means (SqlOperator "LIKE",
+/// // IsPatternMatch, anything after the value); the SQL translator writes it through the dialect.
+/// var sqlOperator = condition.Operator.SqlOperator;
 /// </code>
 /// </para>
 /// </remarks>

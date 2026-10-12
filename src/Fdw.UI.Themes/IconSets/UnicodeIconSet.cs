@@ -13,7 +13,7 @@ public sealed class UnicodeIconSet : IconSetBase
     /// <summary>
     /// Creates the Unicode icon set.
     /// </summary>
-    public UnicodeIconSet() : base(1, "Unicode") { }
+    public UnicodeIconSet() : base("Unicode") { }
 
     /// <inheritdoc />
     public override string SelectedIndicator => "\u25cf";  // ●

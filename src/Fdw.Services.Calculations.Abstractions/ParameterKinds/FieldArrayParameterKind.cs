@@ -14,7 +14,7 @@ public sealed class FieldArrayParameterKind : OperationParameterKindBase
     /// Initializes a new instance of the <see cref="FieldArrayParameterKind"/> class.
     /// </summary>
     public FieldArrayParameterKind()
-        : base(id: 3, name: "FieldArray", description: "Multiple fields from a DataSet (e.g., GroupBy)")
+        : base(name: "FieldArray", description: "Multiple fields from a DataSet (e.g., GroupBy)")
     {
     }
 }

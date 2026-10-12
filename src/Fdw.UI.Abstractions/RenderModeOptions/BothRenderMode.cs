@@ -14,5 +14,5 @@ public sealed class BothRenderMode : RenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="BothRenderMode"/> class.
     /// </summary>
-    public BothRenderMode() : base(2, "Both", allowsEditing: true, showsView: true) { }
+    public BothRenderMode() : base("Both", allowsEditing: true, showsView: true) { }
 }

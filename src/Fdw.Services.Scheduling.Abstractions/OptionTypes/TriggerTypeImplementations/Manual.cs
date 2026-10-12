@@ -91,7 +91,7 @@ public sealed class Manual : TriggerTypeBase
     /// Manual triggers do not require schedule persistence since they don't auto-schedule,
     /// and they execute immediately when triggered (they are immediate execution triggers).
     /// </remarks>
-    public Manual(ILogger<Manual>? logger = null) : base(4, "Manual", requiresSchedule: false, isImmediate: true)
+    public Manual(ILogger<Manual>? logger = null) : base("Manual", requiresSchedule: false, isImmediate: true)
     {
         _logger = logger ?? NullLogger<Manual>.Instance;
     }

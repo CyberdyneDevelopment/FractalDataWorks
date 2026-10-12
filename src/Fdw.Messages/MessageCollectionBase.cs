@@ -25,7 +25,7 @@ public abstract class MessageCollectionBase<T> where T : class, IGenericMessage,
     /// <summary>
     /// Static collection of all message options. Populated by the source generator.
     /// </summary>
-#pragma warning disable CA2211, MA0069, CA1707, MA0051
+#pragma warning disable CA2211, MA0069, CA1707
     protected static ImmutableArray<T> _all = [];
 
     /// <summary>
@@ -65,7 +65,7 @@ public abstract class MessageCollectionBase<T> where T : class, IGenericMessage,
     /// </summary>
     private static ReadOnlyDictionary<int, T>? _lookupById;
 #endif
-#pragma warning restore CA2211, MA0069, CA1707, MA0051
+#pragma warning restore CA2211, MA0069, CA1707
 
     /// <summary>
     /// Ensures lookup dictionaries are initialized for fast O(1) lookups.

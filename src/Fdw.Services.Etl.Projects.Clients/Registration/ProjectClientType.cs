@@ -13,9 +13,9 @@ using Fdw.Results;
 namespace Fdw.Services.Etl.Projects.Clients.Registration;
 
 /// <summary>
-/// ServiceTypeOption for the Project API client.
+/// Implementation for the Project API client.
 /// </summary>
-[ServiceTypeOption(typeof(ApiClientTypes), "ProjectClient")]
+[Implementation(typeof(ApiClientTypes), "ProjectClient")]
 public sealed class ProjectClientType : ApiClientTypeBase<ProjectApiClient>
 {
     /// <summary>
@@ -32,9 +32,8 @@ public sealed class ProjectClientType : ApiClientTypeBase<ProjectApiClient>
         {
             builder.Services.AddScoped<ProjectApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ProjectApiClient>>() ?? NullLogger<ProjectApiClient>.Instance;
-                return new ProjectApiClient(factory.CreateClient(Name), logger);
+                return new ProjectApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

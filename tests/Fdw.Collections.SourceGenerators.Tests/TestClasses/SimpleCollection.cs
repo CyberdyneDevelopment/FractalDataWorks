@@ -6,9 +6,9 @@ namespace TestScenarios;
 /// <summary>
 /// Simple immutable TypeCollection - basic scenario.
 /// </summary>
-public abstract class StatusBase : TypeOptionBase<int, StatusBase>
+public abstract class StatusBase : TypeOptionBase<StatusBase>
 {
-    protected StatusBase(int id, string name) : base(id, name) { }
+    protected StatusBase(string name) : base(name) { }
 }
 
 [TypeCollection(typeof(StatusBase), typeof(StatusBase), typeof(Statuses))]
@@ -19,11 +19,11 @@ public partial class Statuses : TypeCollectionBase<StatusBase, StatusBase>
 [TypeOption(typeof(Statuses), "Open")]
 public class OpenStatus : StatusBase
 {
-    public OpenStatus() : base(1, "Open") { }
+    public OpenStatus() : base("Open") { }
 }
 
 [TypeOption(typeof(Statuses), "Closed")]
 public class ClosedStatus : StatusBase
 {
-    public ClosedStatus() : base(2, "Closed") { }
+    public ClosedStatus() : base("Closed") { }
 }

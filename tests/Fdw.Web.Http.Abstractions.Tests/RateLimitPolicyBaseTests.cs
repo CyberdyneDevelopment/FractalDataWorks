@@ -8,17 +8,6 @@ namespace Fdw.Web.Http.Abstractions.Tests;
 /// </summary>
 public sealed class RateLimitPolicyBaseTests
 {
-    // --- None ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void NoneHasCorrectId()
-    {
-        var sut = new None();
-
-        sut.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -98,18 +87,6 @@ public sealed class RateLimitPolicyBaseTests
         var sut = new None();
 
         sut.PolicyType.ShouldBe("None");
-    }
-
-    // --- FixedWindow ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void FixedWindowHasCorrectId()
-    {
-        var sut = new FixedWindow();
-
-        sut.Id.ShouldBe(2);
     }
 
     [Fact]
@@ -192,18 +169,6 @@ public sealed class RateLimitPolicyBaseTests
         sut.PolicyType.ShouldBe("FixedWindow");
     }
 
-    // --- SlidingWindow ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void SlidingWindowHasCorrectId()
-    {
-        var sut = new SlidingWindow();
-
-        sut.Id.ShouldBe(3);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -252,18 +217,6 @@ public sealed class RateLimitPolicyBaseTests
         var sut = new SlidingWindow();
 
         sut.DefaultTimeWindowSeconds.ShouldBe(60);
-    }
-
-    // --- TokenBucket ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void TokenBucketHasCorrectId()
-    {
-        var sut = new TokenBucket();
-
-        sut.Id.ShouldBe(4);
     }
 
     [Fact]
@@ -324,18 +277,6 @@ public sealed class RateLimitPolicyBaseTests
         var sut = new TokenBucket();
 
         sut.DefaultTimeWindowSeconds.ShouldBe(10);
-    }
-
-    // --- Concurrency ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void ConcurrencyHasCorrectId()
-    {
-        var sut = new Concurrency();
-
-        sut.Id.ShouldBe(5);
     }
 
     [Fact]

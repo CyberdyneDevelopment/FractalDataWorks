@@ -17,7 +17,7 @@ public sealed class CharType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="CharType"/> class.</summary>
     public CharType()
-        : base(id: 6, name: "Char")
+        : base(name: "Char")
     {
     }
 

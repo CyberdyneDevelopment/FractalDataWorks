@@ -6,7 +6,7 @@ namespace Fdw.Web.Http.Abstractions.Policies;
 /// Enhanced enum defining rate limiting policies for endpoint protection.
 /// Provides various strategies for controlling request frequency and preventing abuse.
 /// </summary>
-public abstract class RateLimitPolicyBase : TypeOptionBase<int, IRateLimitPolicy>, IRateLimitPolicy
+public abstract class RateLimitPolicyBase : TypeOptionBase<IRateLimitPolicy>, IRateLimitPolicy
 {
     /// <summary>
     /// Gets the maximum number of requests allowed within the time window.
@@ -48,7 +48,6 @@ public abstract class RateLimitPolicyBase : TypeOptionBase<int, IRateLimitPolicy
     /// <summary>
     /// Initializes a new instance of the <see cref="RateLimitPolicyBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this rate limit policy.</param>
     /// <param name="name">The name of the rate limit policy.</param>
     /// <param name="maxRequests">The maximum number of requests allowed within the time window.</param>
     /// <param name="windowSizeInSeconds">The time window duration in seconds for rate limiting.</param>
@@ -58,7 +57,6 @@ public abstract class RateLimitPolicyBase : TypeOptionBase<int, IRateLimitPolicy
     /// <param name="defaultTimeWindowSeconds">The default time window in seconds.</param>
     /// <param name="supportsBurstCapacity">Indicates whether this policy supports burst capacity.</param>
     protected RateLimitPolicyBase(
-        int id,
         string name,
         int maxRequests,
         int windowSizeInSeconds,
@@ -67,7 +65,7 @@ public abstract class RateLimitPolicyBase : TypeOptionBase<int, IRateLimitPolicy
         int? defaultRequestLimit,
         int? defaultTimeWindowSeconds,
         bool supportsBurstCapacity)
-        : base(id, name)
+        : base(name)
     {
         MaxRequests = maxRequests;
         WindowSizeInSeconds = windowSizeInSeconds;

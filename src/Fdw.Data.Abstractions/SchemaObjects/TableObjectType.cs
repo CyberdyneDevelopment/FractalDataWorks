@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class TableObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for tables.
+    /// Material Symbols icon name for tables.
     /// </summary>
-    public const string TableIcon = "table_chart"; // Icons.Material.Filled.TableChart
+    public const string TableIcon = "table_chart";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TableObjectType"/> class.
     /// </summary>
     public TableObjectType()
         : base(
-            id: 3,
             name: "Table",
             icon: TableIcon,
             color: "Success",

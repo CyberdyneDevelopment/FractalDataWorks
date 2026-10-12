@@ -16,7 +16,7 @@ public sealed class TableVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="TableVisualizationType"/> class.
     /// </summary>
     public TableVisualizationType()
-        : base(1, "Table", "Table", "mdi-table", Array.Empty<Type>())
+        : base("Table", "Table", "mdi-table", Array.Empty<Type>())
     {
     }
 

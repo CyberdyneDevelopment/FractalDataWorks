@@ -14,10 +14,10 @@ namespace Fdw.Results.ExecutionStatus;
 /// Each status includes visual properties (icon, color) for consistent rendering.
 /// </para>
 /// <para>
-/// Usage in Blazor:
+/// Usage:
 /// <code>
 /// var status = ExecutionStatuses.ByName("Succeeded");
-/// &lt;MudChip Color="@status.Color" Icon="@status.Icon"&gt;@status.Name&lt;/MudChip&gt;
+/// // a renderer draws status.Icon in status.Color
 /// </code>
 /// </para>
 /// </remarks>

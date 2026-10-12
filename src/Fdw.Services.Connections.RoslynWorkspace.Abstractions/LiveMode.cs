@@ -14,7 +14,7 @@ public sealed class LiveMode : RoslynWorkspaceModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="LiveMode"/> class.
     /// </summary>
-    public LiveMode() : base(1, "Live")
+    public LiveMode() : base("Live")
     {
     }
 }

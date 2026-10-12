@@ -9,12 +9,12 @@ namespace Fdw.Services.Notifications.Abstractions;
 public interface INotificationConditionType : ITypeOption<int, NotificationConditionTypeBase>
 {
     /// <summary>
-    /// Gets the MudBlazor icon name for this condition type.
+    /// Gets the Material Symbols icon name for this condition type.
     /// </summary>
     string Icon { get; }
 
     /// <summary>
-    /// Gets the MudBlazor color for this condition type.
+    /// Gets the semantic color role for this condition type (Primary, Success, Warning, Error, Info, ...).
     /// </summary>
     string Color { get; }
 

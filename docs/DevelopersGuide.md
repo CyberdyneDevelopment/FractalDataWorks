@@ -76,7 +76,7 @@ FractalDataWorks provides a layered architecture for enterprise applications:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Application Layer                        │
-│  (Your services, controllers, Blazor components)            │
+│  (Your services, endpoints, clients)                         │
 └─────────────────────────────────────────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
@@ -178,7 +178,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 { }
 ```
 
-**ServiceTypeOption:** concrete options live in the implementation assembly
+**Implementation:** concrete options live in the implementation assembly
 (e.g. `MsSqlConnectionType` in `Fdw.Services.Connections.MsSql`)
 and are registered via the `[ModuleInitializer]` emitted by
 `Fdw.Registration.SourceGenerators` in each entry-point project.
@@ -516,7 +516,7 @@ Services.{Domain}/                  # Collection, provider
 └── Logging/{Domain}Log.cs          # MessageLogging
 
 Services.{Domain}.{Impl}/           # Concrete implementations
-├── {Impl}Type.cs                   # ServiceTypeOption
+├── {Impl}Type.cs                   # Implementation
 ├── {Impl}Factory.cs                # Factory implementation
 ├── {Impl}Configuration.cs          # ManagedConfiguration
 └── Logging/{Impl}Log.cs            # Impl-specific logging
@@ -664,7 +664,7 @@ CREATE TABLE [conn].[Connection]
     [RowId] UNIQUEIDENTIFIER NOT NULL DEFAULT NEWSEQUENTIALID(),  -- Version PK
     [Id] UNIQUEIDENTIFIER NOT NULL,                               -- Logical identity (durable)
     [Name] VARCHAR(200) NOT NULL,
-    [ServiceOptionType] VARCHAR(100) NOT NULL,
+    [Implementation] VARCHAR(100) NOT NULL,
     [IsCurrent] BIT NOT NULL DEFAULT 1,
     [IsDeleted] BIT NOT NULL DEFAULT 0,
     CONSTRAINT [PK_Connection] PRIMARY KEY ([RowId])

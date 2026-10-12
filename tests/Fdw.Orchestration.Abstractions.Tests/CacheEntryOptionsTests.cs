@@ -95,45 +95,4 @@ public class CacheEntryOptionsTests
 
 public class CachePriorityTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void LowHasValueZero()
-    {
-        CachePriorities.Low.Id.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void NormalHasValueOne()
-    {
-        CachePriorities.Normal.Id.ShouldBe(1);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void HighHasValueTwo()
-    {
-        CachePriorities.High.Id.ShouldBe(2);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void NeverRemoveHasValueThree()
-    {
-        CachePriorities.NeverRemove.Id.ShouldBe(3);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void PrioritiesAreOrdered()
-    {
-        CachePriorities.Low.Id.ShouldBeLessThan(CachePriorities.Normal.Id);
-        CachePriorities.Normal.Id.ShouldBeLessThan(CachePriorities.High.Id);
-        CachePriorities.High.Id.ShouldBeLessThan(CachePriorities.NeverRemove.Id);
-    }
 }

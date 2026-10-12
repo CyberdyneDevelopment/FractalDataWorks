@@ -9,25 +9,29 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 /// Which credential service this host resolves SQL credentials through.
 /// </summary>
 /// <remarks>
-/// Was the CredentialsSql appsettings section. The selector only -- no policy -- and the service it
-/// names is itself a row, so the selection belongs on the same store rather than in a file.
+/// The Sql implementation of the credential-store domain: it names the credential service that
+/// credential operations resolve through, which is itself a row on the same store.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Credentials", ServiceType = "CredentialsSql")]
-public sealed partial class CredentialsSqlConfiguration : IGenericConfiguration
+[ManagedConfiguration(ServiceCategory = "CredentialStore", ServiceType = "Sql")]
+public sealed partial class CredentialsSqlConfiguration : ICredentialsSqlImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>Gets or sets the identifier assigned by the store.</summary>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the name of this configuration row.</summary>
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's. The domain provider joins
+    // the domain row to this one, and the join's result set is what carries it in.
     public string Name { get; set; } = string.Empty;
-
-    string IGenericConfiguration.SectionName => "Credentials";
-
-    string IGenericConfiguration.ServiceType => "Credentials";
-
-    string? IGenericConfiguration.ServiceOptionType => "CredentialsSql";
 
     /// <summary>Gets or sets the credential service credential operations resolve through.</summary>
     public string? CredentialServiceName { get; set; }

@@ -85,10 +85,7 @@ public static class SqlTypeMapper
             column.Scale = dbType.Scale.Value;
     }
 
-    // MA0051: Method length acceptable - comprehensive type mapping switch covering all C# primitives
-#pragma warning disable MA0051 // Method is too long
     private static void MapCSharpType(SqlColumnDefinition column, PropertyModel property)
-#pragma warning restore MA0051
     {
         // Normalize type name (remove nullable wrapper, namespace)
         var typeName = NormalizeTypeName(property.PropertyType);

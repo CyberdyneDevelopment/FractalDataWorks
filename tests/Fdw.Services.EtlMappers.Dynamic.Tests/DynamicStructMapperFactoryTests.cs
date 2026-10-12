@@ -112,6 +112,8 @@ public class DynamicStructMapperFactoryTests
 
     private sealed class TestEtlRowMapperConfig : EtlRowMapperConfiguration
     {
-        public TestEtlRowMapperConfig() : base("EtlMapper", null, "EtlMappers") { }
+        public TestEtlRowMapperConfig()
+    {
+    }
     }
 }

@@ -18,15 +18,11 @@ public sealed class HighContrastMenuTheme : MenuThemeBase
     /// Creates the high contrast menu theme.
     /// </summary>
     public HighContrastMenuTheme() : base(
-        id: 3,
         name: "HighContrast",
         themeFamily: "HighContrast",
-        colorPaletteId: 3,
-        borderStyleId: 3,
-        iconSetId: 2,
-        colors: ColorPalettes.ById(3),
-        borders: BorderStyles.ById(3),
-        icons: IconSets.ById(2),
+        colors: ColorPalettes.HighContrast,
+        borders: BorderStyles.Ascii,
+        icons: IconSets.Ascii,
         paddingSmall: 1,
         paddingMedium: 2,
         paddingLarge: 3) { }

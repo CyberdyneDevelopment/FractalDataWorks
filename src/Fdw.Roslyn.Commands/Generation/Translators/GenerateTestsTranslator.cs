@@ -35,7 +35,6 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear code generation: analyze class, build test file via StringBuilder
     [ConventionOverride(MaxMethodLines = 140)]
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateTestsCommand command,
@@ -241,7 +240,6 @@ public sealed class GenerateTestsTranslator : RoslynCommandTranslatorBase<Genera
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 
     private static (string testClass, string fact) GetFrameworkAttributes(string framework)
     {

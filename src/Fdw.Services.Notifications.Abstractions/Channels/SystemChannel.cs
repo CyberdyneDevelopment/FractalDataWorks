@@ -16,7 +16,6 @@ public sealed class SystemChannel : NotificationChannelBase
     /// </summary>
     public SystemChannel()
         : base(
-            id: 5,
             name: "SystemNotification",
             description: "In-system message channel that delivers notifications as tracked messages",
             supportsBatchSend: true,

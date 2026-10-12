@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
+using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.TUI.Management.Navigation;
 using Fdw.TUI.Management.Screens;
@@ -47,6 +48,19 @@ public static class Program
 
             var host = builder.Build();
 
+            // The menu theme is configuration. Check it before anything resolves the theme, so a bad
+            // name stops the console with the logged reason instead of rendering with NotFound.
+            var menuTheme = ResolveMenuTheme(
+                builder.Configuration[MenuThemeKey],
+                host.Services.GetRequiredService<ILoggerFactory>().CreateLogger<ManagementApp>());
+            if (menuTheme.IsFailure)
+            {
+                AnsiConsole.MarkupLineInterpolated(
+                    CultureInfo.CurrentCulture,
+                    $"[red]Startup failed:[/] {menuTheme.CurrentMessage}");
+                return 1;
+            }
+
             // Phase 3: eager initialize every registered domain.
             //
             var initialized = PlatformServices.Initialize(host);
@@ -68,6 +82,31 @@ public static class Program
         }
     }
 
+    /// <summary>The configuration key that names the console's menu theme.</summary>
+    private const string MenuThemeKey = "Tui:Theme";
+
+    /// <summary>
+    /// Resolves the configured menu theme by name.
+    /// </summary>
+    /// <param name="themeName">The configured theme name (<see cref="MenuThemeKey"/>).</param>
+    /// <param name="logger">The logger the failure is written to.</param>
+    /// <returns>The theme, or a failure carrying the logged message when the key is missing or names no theme.</returns>
+    private static IGenericResult<IMenuTheme> ResolveMenuTheme(string? themeName, ILogger logger)
+    {
+        if (string.IsNullOrEmpty(themeName))
+        {
+            return GenericResult<IMenuTheme>.Failure(TuiStartupLog.MenuThemeNotConfigured(logger));
+        }
+
+        var theme = MenuThemes.ByName(themeName);
+        if (ReferenceEquals(theme, MenuThemes.NotFound))
+        {
+            return GenericResult<IMenuTheme>.Failure(TuiStartupLog.MenuThemeNotFound(logger, themeName));
+        }
+
+        return GenericResult<IMenuTheme>.Success(theme);
+    }
+
     private static void ConfigureApplication(HostApplicationBuilder builder)
     {
         builder.Logging.ClearProviders();
@@ -77,6 +116,7 @@ public static class Program
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["ApiClients:BaseUrl"] = PlaceholderApiBaseUrl,
+            [MenuThemeKey] = "Dark",
         });
 
         var services = builder.Services;
@@ -91,12 +131,9 @@ public static class Program
         // Register Spectre console
         services.AddSingleton<IAnsiConsole>(AnsiConsole.Console);
 
-        // Register theme
-        services.AddSingleton<IMenuTheme>(sp =>
-        {
-            // Use the Dark theme from MenuThemes collection
-            return MenuThemes.ById(1) ?? new DarkMenuTheme();
-        });
+        // The theme is configuration (Tui:Theme), resolved by name. Main has already checked it
+        // (ResolveMenuTheme) before anything can resolve this.
+        services.AddSingleton<IMenuTheme>(sp => MenuThemes.ByName(sp.GetRequiredService<IConfiguration>()[MenuThemeKey]!));
 
         // Register render context
         services.AddSingleton<SpectreRenderContext>(sp =>
@@ -134,7 +171,7 @@ public static class Program
     /// </summary>
     /// <remarks>
     /// The clients themselves already exist — every <c>.Clients</c> package registers its own
-    /// <c>[ServiceTypeOption(typeof(ApiClientTypes), ...)]</c> with a named HttpClient and the shared
+    /// <c>[Implementation(typeof(ApiClientTypes), ...)]</c> with a named HttpClient and the shared
     /// bearer-token handler. All this app supplies is the two seams that make them instance-aware:
     /// the credential (<see cref="InstanceAccessTokenProvider"/>) and the address
     /// (<see cref="InstanceRoutingHandler"/>).

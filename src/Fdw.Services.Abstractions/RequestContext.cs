@@ -11,9 +11,9 @@ namespace Fdw.Services.Abstractions;
 public sealed class RequestContext : IRequestContext
 {
     /// <summary>
-    /// Context for unauthenticated or anonymous requests.
+    /// Context for unauthenticated or anonymous requests: no tenant, no roles, not an admin.
     /// </summary>
-    public static readonly RequestContext GuestContext = new(Guid.Empty, [], []);
+    public static readonly RequestContext GuestContext = new(tenantId: null, [], [], isPlatformAdmin: false);
 
     /// <summary>
     /// Initializes a new instance of <see cref="RequestContext"/>.
@@ -21,15 +21,17 @@ public sealed class RequestContext : IRequestContext
     /// <param name="tenantId">The tenant ID for the current request.</param>
     /// <param name="organizationIds">The organization IDs the user belongs to.</param>
     /// <param name="roles">The roles assigned to the user.</param>
-    public RequestContext(Guid tenantId, IReadOnlyList<Guid> organizationIds, IReadOnlyList<string> roles)
+    /// <param name="isPlatformAdmin">Whether the caller administers the platform.</param>
+    public RequestContext(Guid? tenantId, IReadOnlyList<Guid> organizationIds, IReadOnlyList<string> roles, bool isPlatformAdmin)
     {
         TenantId = tenantId;
         OrganizationIds = organizationIds;
         Roles = roles;
+        IsPlatformAdmin = isPlatformAdmin;
     }
 
     /// <inheritdoc />
-    public Guid TenantId { get; }
+    public Guid? TenantId { get; }
 
     /// <inheritdoc />
     public IReadOnlyList<Guid> OrganizationIds { get; }
@@ -38,5 +40,10 @@ public sealed class RequestContext : IRequestContext
     public IReadOnlyList<string> Roles { get; }
 
     /// <inheritdoc />
-    public bool IsSystemAdmin => Roles.Contains("system-admin", StringComparer.OrdinalIgnoreCase);
+    /// <remarks>
+    /// Stated by whoever builds the context rather than inferred from <see cref="Roles"/>: a role
+    /// name alone cannot say whether it is held in the global tenant. This used to test for a literal
+    /// "system-admin" role that nothing grants, so it was false for everyone.
+    /// </remarks>
+    public bool IsPlatformAdmin { get; }
 }

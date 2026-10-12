@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Definitions;
 public sealed class RestrictDdlForeignKeyAction : DdlForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="RestrictDdlForeignKeyAction"/>.</summary>
-    public RestrictDdlForeignKeyAction() : base(5, "Restrict") { }
+    public RestrictDdlForeignKeyAction() : base("Restrict") { }
 }

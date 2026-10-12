@@ -10,5 +10,5 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 public sealed class InsertWriteMode : WriteModeBase
 {
     /// <summary>Initializes a new instance of <see cref="InsertWriteMode"/>.</summary>
-    public InsertWriteMode() : base(1, "Insert") { }
+    public InsertWriteMode() : base("Insert") { }
 }

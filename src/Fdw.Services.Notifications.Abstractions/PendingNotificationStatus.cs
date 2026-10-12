@@ -9,5 +9,5 @@ namespace Fdw.Services.Notifications.Abstractions;
 public sealed class PendingNotificationStatus : NotificationStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="PendingNotificationStatus"/>.</summary>
-    public PendingNotificationStatus() : base(0, "Pending") { }
+    public PendingNotificationStatus() : base("Pending") { }
 }

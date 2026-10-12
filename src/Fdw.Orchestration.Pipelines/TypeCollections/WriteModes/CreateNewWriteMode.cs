@@ -25,7 +25,6 @@ public sealed class CreateNewWriteMode : WriteModeBase
     /// </summary>
     public CreateNewWriteMode()
         : base(
-            id: 4,
             name: "CreateNew",
             requiresExistenceCheck: true,
             preservesExistingData: true,

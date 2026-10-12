@@ -12,7 +12,6 @@ public sealed class ExitMenuTarget : MenuTargetBase
     /// Creates the exit menu target.
     /// </summary>
     public ExitMenuTarget() : base(
-        id: 5,
         name: "exit",
         label: "Exit",
         group: "System",

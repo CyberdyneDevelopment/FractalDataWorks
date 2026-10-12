@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
-using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Pipelines.Abstractions.DataDestination;
 using Fdw.Services.Pipelines.Abstractions.DataSource;
@@ -12,43 +12,38 @@ using Fdw.Services.Pipelines.Abstractions.DataSource;
 namespace Fdw.Services.Etl.Pipelines;
 
 /// <summary>
-/// Configuration for batch copy pipelines — the "BatchCopy" ENGINE typed body of
-/// <c>EtlPipelineConfiguration</c>. Persisted in <c>pipe.BatchCopyPipeline</c> as a type-specific child
-/// of <c>pipe.EtlPipeline</c>.
+/// The "BatchCopy" implementation of the EtlPipeline domain. Persisted in <c>pipe.BatchCopyPipelineConfiguration</c>,
+/// hanging from its <c>pipe.Pipeline</c> domain row by <c>PipelineRowId</c>.
 /// </summary>
 /// <remarks>
-/// Why: a standalone typed body implementing <see cref="IEtlPipelineTypedConfiguration"/> (NOT a C#
-/// subclass of EtlPipelineConfiguration) — C# header inheritance reintroduced the phantom-column mapper
-/// bug. Properties use <c>{ get; set; }</c> to satisfy IOptions binding.
+/// Why it is not a C# subclass of anything: header inheritance reintroduced the phantom-column
+/// mapper bug. Properties use <c>{ get; set; }</c> to satisfy IOptions binding.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "BatchCopy")]
-public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedConfiguration
+public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImplementationConfiguration, IDataStoreSourcedPipelineConfiguration
 {
 
     /// <inheritdoc/>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the parent EtlPipeline's logical Id (FK to pipe.EtlPipeline.Id).</summary>
-    public Guid EtlPipelineId { get; set; }
-
     /// <inheritdoc/>
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the transforms to apply at runtime. NOT a column on pipe.BatchCopyPipeline — the
-    /// transforms are persisted on the ETL-kind body (<c>pipe.PipelineOperation</c> → pipe.EtlPipeline)
-    /// and copied onto the engine body by the execution seam before the pipeline runs.
+    /// Gets or sets the transforms to apply at runtime, in ExecutionOrder. Rows live in
+    /// <c>pipe.PipelineTransform</c>, each holding this implementation row's RowId in
+    /// <c>BatchCopyPipelineConfigurationRowId</c>, the way a connection's properties hang from theirs.
     /// </summary>
     [NotMapped]
     public IList<PipelineTransformConfiguration>? Transforms { get; set; }
@@ -67,6 +62,18 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     /// Gets or sets the source data set identifier.
     /// </summary>
     public string SourceDataSet { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>pipe.BatchCopyPipelineConfiguration.SourceDataStoreName</c> (FDW-1103).</remarks>
+    public string? SourceDataStoreName { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>pipe.BatchCopyPipelineConfiguration.SourceDataStorePath</c> (FDW-1103).</remarks>
+    public string? SourceDataStorePath { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>pipe.BatchCopyPipelineConfiguration.SourceContainerName</c> (FDW-1103).</remarks>
+    public string? SourceContainerName { get; set; }
 
     /// <summary>
     /// Gets or sets the destination connection name.
@@ -112,6 +119,18 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     /// Gets or sets the logical Id of the source DataSet.
     /// </summary>
     public Guid? SourceDataSetId { get; set; }
+
+    /// <summary>Gets or sets the Id of the org that owns the pipeline.</summary>
+    public Guid? OrgId { get; set; }
+
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
 
 
     /// <summary>
@@ -159,12 +178,34 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineTypedCo
     public int MaxParallelism { get; set; } = 1;
 
     /// <summary>
-    /// Gets or sets the load mode (Append, Replace, Upsert).
+    /// Gets or sets the load mode (resolved against <c>LoadModes</c>: Append, Replace, Upsert), or <see langword="null"/>
+    /// when the pipeline states load steps instead (FDW-1108).
     /// </summary>
-    public string LoadMode { get; set; } = "Append";
+    /// <remarks>
+    /// Why no default: a pipeline states a load mode or load steps, never both, and a silent <c>"Append"</c> would hide
+    /// which. <c>PipelineLoadValidator</c> refuses a pipeline that states neither or both.
+    /// </remarks>
+    public string? LoadMode { get; set; }
 
     /// <summary>
     /// Gets or sets whether to truncate destination before load.
     /// </summary>
     public bool TruncateBeforeLoad { get; set; }
+
+    /// <summary>
+    /// Gets or sets the load rows of the pipeline (FDW-1108): when the pipeline has no load steps, the one row of its
+    /// own load (step order <see langword="null"/>) carrying the load options and the value sources of the implicit
+    /// load; otherwise its load steps, step order 1 and up, run in one unit of work. The two never coexist. Rows live
+    /// in <c>pipe.PipelineLoadStep</c>, each holding this implementation row's RowId in
+    /// <c>BatchCopyPipelineConfigurationRowId</c>, the way <see cref="Transforms"/> do.
+    /// </summary>
+    [NotMapped]
+    public IList<PipelineLoadStepConfiguration>? LoadSteps { get; set; }
+
+    /// <summary>
+    /// Gets or sets the run parameters the pipeline declares (FDW-1108): the trigger supplies a value by name and
+    /// sources and transforms reference it. Rows live in <c>pipe.PipelineRunParameter</c>.
+    /// </summary>
+    [NotMapped]
+    public IList<PipelineRunParameterConfiguration>? RunParameters { get; set; }
 }

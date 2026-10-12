@@ -18,7 +18,7 @@ public sealed class TriggerRejectedConcurrentCode : OperationsResultCodeBase
         : base(
             41000,
             "TriggerRejectedConcurrent",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Trigger rejected: concurrent execution in progress",
             isRetryable: false)
     {

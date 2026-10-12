@@ -15,7 +15,6 @@ public sealed class SankeyChartType : ChartTypeBase
     /// </summary>
     public SankeyChartType()
         : base(
-            id: 11,
             name: "Sankey",
             displayName: "Sankey",
             category: "Flow",

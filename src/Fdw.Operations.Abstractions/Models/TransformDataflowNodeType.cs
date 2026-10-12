@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class TransformDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="TransformDataflowNodeType"/>.</summary>
-    public TransformDataflowNodeType() : base(9, "Transform") { }
+    public TransformDataflowNodeType() : base("Transform") { }
 }

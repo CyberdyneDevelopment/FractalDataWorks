@@ -9,7 +9,7 @@ namespace Fdw.Calculations.Abstractions;
 /// Base class for all scalar calculation types.
 /// Accepts injected funcs for in-memory execution and SQL pushdown expression building.
 /// </summary>
-public abstract class CalculationTypeBase : TypeOptionBase<int, CalculationTypeBase>, ICalculationType
+public abstract class CalculationTypeBase : TypeOptionBase<CalculationTypeBase>, ICalculationType
 {
     private readonly Func<IReadOnlyList<IDataRow>, string, double?, decimal> _calculate;
     private readonly Func<string, double?, string> _toSql;
@@ -27,18 +27,16 @@ public abstract class CalculationTypeBase : TypeOptionBase<int, CalculationTypeB
     /// <summary>
     /// Initializes a new instance of the <see cref="CalculationTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the calculation type.</param>
     /// <param name="name">The name of the calculation type.</param>
     /// <param name="category">The category (e.g., "Aggregation").</param>
     /// <param name="calculate">In-memory execution func: (rows, columnName, parameter) → decimal.</param>
     /// <param name="toSql">SQL expression builder: (columnName, parameter) → SQL string.</param>
     protected CalculationTypeBase(
-        int id,
         string name,
         string category,
         Func<IReadOnlyList<IDataRow>, string, double?, decimal> calculate,
         Func<string, double?, string> toSql)
-        : base(id, name, category)
+        : base(name, category)
     {
         _calculate = calculate;
         _toSql = toSql;

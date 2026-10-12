@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
+using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -17,14 +19,14 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretManagerRequest, SecretManagerDetailResponse>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<UpdateSecretManagerEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateSecretManagerEndpointBase"/> class.
     /// </summary>
     protected UpdateSecretManagerEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<UpdateSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;
@@ -35,7 +37,10 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
     public override void Configure()
     {
         Patch("/secret-managers/{Name}");
-        Policies("secretmanagers:delete");
+        // Secret managers are the platform's, owned by the system tenant: only a platform administrator lists, reads
+        // or changes one. A tenant never touches a secret manager or a secret; a connection's credentials are set
+        // through the connection (FDW-1086).
+        Policies(AuthConstants.PlatformAdminPolicy);
         Summary(s =>
         {
             s.Summary = "Update secret manager";
@@ -64,10 +69,10 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
                 return;
             }
 
-            existing.Description = req.Description ?? existing.Description;
-            existing.Environment = req.Environment;
-
-            var saveResult = await _configProvider.Save(existing, ct).ConfigureAwait(false);
+            // SecretManagerType IS the implementation the domain row names. Description and
+            // Environment are columns on the sec.SecretManager domain row, which a domain read does
+            // not carry, so they are the app's to fill -- second-wave-split payload, not invented here.
+            var saveResult = await _configProvider.Save(existing, "SecretManager", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
                 SecretManagerEndpointLog.UpdateFailed(_logger, saveResult.CurrentMessage ?? "Unknown error");
@@ -82,9 +87,8 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
             {
                 Id = existing.Id,
                 Name = existing.Name,
-                SecretManagerType = existing.SecretManagerType,
-                Description = existing.Description,
-                ServiceOptionType = existing.ServiceOptionType
+                SecretManagerType = existing.Implementation,
+                Implementation = existing.Implementation
             };
 
             await Send.OkAsync(detail, ct).ConfigureAwait(false);

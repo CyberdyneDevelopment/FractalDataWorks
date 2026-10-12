@@ -25,7 +25,6 @@ public sealed class CustomStageType : StageTypeBase
     /// </summary>
     public CustomStageType()
         : base(
-            id: 5,
             name: "Custom",
             requiresSource: false,
             requiresDestination: false,

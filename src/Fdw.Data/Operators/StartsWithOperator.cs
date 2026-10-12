@@ -5,6 +5,7 @@ namespace Fdw.Data;
 
 /// <summary>
 /// StartsWith operator (LIKE 'value%', startswith).
+/// A pattern operator: anything may follow the value.
 /// </summary>
 [TypeOption(typeof(FilterOperators), "StartsWith", RestrictToCurrentCompilation = true)]
 public sealed class StartsWithOperator : FilterOperatorBase
@@ -14,26 +15,14 @@ public sealed class StartsWithOperator : FilterOperatorBase
     /// </summary>
     public StartsWithOperator()
         : base(
-            id: 4,
             name: "StartsWith",
             sqlOperator: "LIKE",
             odataOperator: "startswith",
-            requiresValue: true)
+            requiresValue: true,
+            matchesAnythingBefore: false,
+            matchesAnythingAfter: true)
     {
     }
-
-    /// <summary>
-    /// Formats SQL parameter with trailing wildcard.
-    /// </summary>
-    public override string FormatSqlParameter(string paramName) => $"@{paramName} + '%'";
-
-    /// <summary>
-    /// Escapes LIKE metacharacters so they are treated as literals.
-    /// </summary>
-    public override string PreprocessSqlValue(string value)
-        => value.Replace("[", "[[]", StringComparison.Ordinal)
-                .Replace("%", "[%]", StringComparison.Ordinal)
-                .Replace("_", "[_]", StringComparison.Ordinal);
 
     /// <inheritdoc/>
     public override string FormatODataValue(object? value)

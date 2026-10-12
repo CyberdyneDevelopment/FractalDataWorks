@@ -7,8 +7,7 @@ FDW reference applications live in their own repositories — they are not part 
 | `reference-api` | REST API server (FastEndpoints + JWT + FDW hosting) |
 | `reference-etl` | ETL pipeline server (`EtlPipelineTypes` + background executor) |
 | `reference-scheduler` | Schedule evaluation server (`SchedulerTypes` + `IPipelineJobClient`) |
-| `reference-ui` | Tailwind + InteractiveServer Blazor skin |
-| `reference-aui` | MudBlazor + InteractiveAuto Blazor skin |
+| `reference-react-ui` | Web console (React + TypeScript); calls `reference-api` over HTTP |
 
 Each repo has its own `Directory.Packages.props` with a `<FdwVersion>` centrally pinning the FDW framework version, its own `build-all.sh` / CI pipeline, and its own deploy story (typically dotnet publish + rsync to a VM, with systemd unit files for runtime).
 
@@ -45,5 +44,4 @@ The reference apps demonstrate the typed-client communication pattern (`IPipelin
 - [14-01 Building an API Server](14-01-Building-An-API-Server.md) — `reference-api` pointer
 - [14-02 Building an ETL Server](14-02-Building-An-ETL-Server.md) — `reference-etl` pointer
 - [14-03 Building a Scheduler Server](14-03-Building-A-Scheduler-Server.md) — `reference-scheduler` pointer
-- [15-01 Building a Blazor Server UI](15-01-Building-A-Blazor-Server-UI.md) — `reference-ui` pointer
-- [15-02 Building a Blazor Auto UI](15-02-Building-A-Blazor-Auto-UI.md) — `reference-aui` pointer
+- [11-01 Management UI Overview](11-01-Management-UI-Overview.md) — `reference-react-ui` and the terminal UI

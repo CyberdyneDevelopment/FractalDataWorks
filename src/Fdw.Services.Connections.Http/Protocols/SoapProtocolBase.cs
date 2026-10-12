@@ -61,12 +61,11 @@ public abstract class SoapProtocolBase : HttpProtocolBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SoapProtocolBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the protocol.</param>
     /// <param name="name">The name of the protocol.</param>
     /// <param name="description">The description of the protocol.</param>
     /// <param name="contentType">The content type for SOAP requests.</param>
-    protected SoapProtocolBase(int id, string name, string description, string contentType)
-        : base(id, name, description, contentType)
+    protected SoapProtocolBase(string name, string description, string contentType)
+        : base(name, description, contentType)
     {
     }
 

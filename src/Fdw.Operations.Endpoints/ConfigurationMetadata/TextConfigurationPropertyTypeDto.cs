@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class TextConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="TextConfigurationPropertyTypeDto"/>.</summary>
-    public TextConfigurationPropertyTypeDto() : base(1, "Text") { }
+    public TextConfigurationPropertyTypeDto() : base("Text") { }
 }

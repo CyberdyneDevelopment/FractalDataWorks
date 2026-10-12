@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,17 +23,27 @@ namespace Fdw.Services.Scheduling;
 /// cancellation during the delay does the same, which is what makes shutdown prompt instead of
 /// waiting out the interval. And any other exception is logged and swallowed: an evaluation that
 /// throws must not end the loop, or one bad schedule silently stops every schedule.
+///
+/// Every evaluation runs in the system context. A scheduler is a service acting as the platform: it
+/// reads every tenant's schedules and dispatches them, and nothing about a background loop carries a
+/// caller. Without an explicit elevation its connections open as the deny principal, which sees
+/// only shared rows -- every tenant-owned schedule silently disappears from the pass. The loop owns
+/// this, not each implementation, so no scheduler can forget it; work done FOR one tenant narrows
+/// itself (SystemAuthenticationContext(tenantId)) where it dispatches.
 /// </remarks>
 public abstract class SchedulerBackgroundServiceBase : BackgroundService
 {
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SchedulerBackgroundServiceBase"/> class.
     /// </summary>
+    /// <param name="authContextAccessor">Elevated to the system context for each evaluation.</param>
     /// <param name="logger">The logger; <see cref="NullLogger.Instance"/> when DI supplies none.</param>
-    protected SchedulerBackgroundServiceBase(ILogger? logger)
+    protected SchedulerBackgroundServiceBase(IAuthenticationContextAccessor authContextAccessor, ILogger? logger)
     {
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -83,7 +94,13 @@ public abstract class SchedulerBackgroundServiceBase : BackgroundService
 
             try
             {
-                await Evaluate(stoppingToken).ConfigureAwait(false);
+                // Per pass, not around the whole loop: the scope restores the previous context when
+                // the pass ends, so nothing outside an evaluation -- the delay, the logging -- runs
+                // elevated.
+                using (new SystemAuthenticationContextScope(_authContextAccessor))
+                {
+                    await Evaluate(stoppingToken).ConfigureAwait(false);
+                }
 
                 var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
                 SchedulerLoopLog.EvaluationCompleted(_logger, LastEvaluatedCount, elapsed);

@@ -32,7 +32,6 @@ public sealed class BuildProjectTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: get compilation, collect diagnostics, build result DTO
     public override async Task<IGenericResult<QueryResult<BuildProjectData>>> Translate(
         BuildProjectCommand command,
         Solution solution,
@@ -114,5 +113,4 @@ public sealed class BuildProjectTranslator
 
         return GenericResult<QueryResult<BuildProjectData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

@@ -1,0 +1,34 @@
+using System;
+using Fdw.Configuration;
+
+namespace Fdw.Services.Authentication.Abstractions;
+
+/// <summary>The contract every ForeignAuthority implementation carries.</summary>
+public interface IForeignAuthorityImplementationConfiguration : IImplementationConfiguration
+{
+
+
+    /// <summary>Gets or sets the ForeignAuthority Issuer.</summary>
+    string Issuer { get; set; }
+
+    /// <summary>Gets or sets the ForeignAuthority JwksUri.</summary>
+    string JwksUri { get; set; }
+
+    /// <summary>Gets or sets the ForeignAuthority ValidAudiences.</summary>
+    string ValidAudiences { get; set; }
+
+    /// <summary>Gets or sets the ForeignAuthority ValidAlgorithms.</summary>
+    string ValidAlgorithms { get; set; }
+
+    /// <summary>Gets or sets the ForeignAuthority AssertableMethods.</summary>
+    string AssertableMethods { get; set; }
+
+    /// <summary>Gets or sets the ForeignAuthority ClockSkewSeconds.</summary>
+    int ClockSkewSeconds { get; set; }
+
+    /// <summary>Gets or sets whether this is the current active version of the record.</summary>
+    bool IsCurrent { get; set; }
+
+    /// <summary>Gets or sets whether this record has been soft-deleted.</summary>
+    bool IsDeleted { get; set; }
+}

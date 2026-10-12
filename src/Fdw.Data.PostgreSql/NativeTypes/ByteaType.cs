@@ -13,7 +13,7 @@ public sealed class ByteaType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="ByteaType"/> class.</summary>
     public ByteaType()
-        : base(id: 15, name: "bytea")
+        : base(name: "bytea")
     {
     }
 

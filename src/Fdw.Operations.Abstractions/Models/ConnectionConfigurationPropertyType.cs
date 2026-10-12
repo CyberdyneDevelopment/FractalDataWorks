@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class ConnectionConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="ConnectionConfigurationPropertyType"/>.</summary>
-    public ConnectionConfigurationPropertyType() : base(7, "Connection") { }
+    public ConnectionConfigurationPropertyType() : base("Connection") { }
 }

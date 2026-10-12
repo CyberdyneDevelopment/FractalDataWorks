@@ -16,7 +16,7 @@ public class DataSetConfigurationTests
     public void DefaultValues_AreSetCorrectly()
     {
         // Arrange & Act
-        var config = new DataSetConfiguration();
+        var config = new SimpleDataSetConfiguration();
 
         // Assert
         config.Name.ShouldBe(string.Empty);
@@ -39,7 +39,7 @@ public class DataSetConfigurationTests
     public void Name_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Name = "TestDataSet" };
+        var config = new SimpleDataSetConfiguration { Name = "TestDataSet" };
 
         // Assert
         config.Name.ShouldBe("TestDataSet");
@@ -51,7 +51,7 @@ public class DataSetConfigurationTests
     public void Description_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Description = "Test Description" };
+        var config = new SimpleDataSetConfiguration { Description = "Test Description" };
 
         // Assert
         config.Description.ShouldBe("Test Description");
@@ -63,7 +63,7 @@ public class DataSetConfigurationTests
     public void Version_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Version = "2.0" };
+        var config = new SimpleDataSetConfiguration { Version = "2.0" };
 
         // Assert
         config.Version.ShouldBe("2.0");
@@ -75,7 +75,7 @@ public class DataSetConfigurationTests
     public void Category_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { Category = "Custom" };
+        var config = new SimpleDataSetConfiguration { Category = "Custom" };
 
         // Assert
         config.Category.ShouldBe("Custom");
@@ -87,7 +87,7 @@ public class DataSetConfigurationTests
     public void RecordTypeName_CanBeSet()
     {
         // Arrange
-        var config = new DataSetConfiguration { RecordTypeName = "MyNamespace.MyType" };
+        var config = new SimpleDataSetConfiguration { RecordTypeName = "MyNamespace.MyType" };
 
         // Assert
         config.RecordTypeName.ShouldBe("MyNamespace.MyType");
@@ -99,8 +99,8 @@ public class DataSetConfigurationTests
     public void Fields_CanBePopulated()
     {
         // Arrange
-        var field = new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" };
-        var config = new DataSetConfiguration();
+        var field = new DataSetFieldConfiguration { Name = "Id", TypeName = "Int32" };
+        var config = new SimpleDataSetConfiguration();
 
         // Act
         config.Fields.Add(field);
@@ -116,7 +116,7 @@ public class DataSetConfigurationTests
     public void KeyFields_CanBePopulated()
     {
         // Arrange
-        var config = new DataSetConfiguration();
+        var config = new SimpleDataSetConfiguration();
 
         // Act
         config.KeyFields.Add(new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 });
@@ -135,7 +135,7 @@ public class DataSetConfigurationTests
     {
         // Arrange
         var sourceId = Guid.NewGuid();
-        var config = new DataSetConfiguration();
+        var config = new SimpleDataSetConfiguration();
 
         // Act
         config.Sources.Add(new DataSetSourceConfiguration { Id = sourceId });
@@ -153,7 +153,7 @@ public class DataSetConfigurationTests
         // Arrange
         var sourceId1 = Guid.NewGuid();
         var sourceId2 = Guid.NewGuid();
-        var config = new DataSetConfiguration();
+        var config = new SimpleDataSetConfiguration();
 
         // Act
         config.Sources.Add(new DataSetSourceConfiguration { Id = sourceId1 });
@@ -171,10 +171,10 @@ public class DataSetConfigurationTests
     public void Aggregates_CanBePopulated()
     {
         // Arrange
-        var config = new DataSetConfiguration();
+        var config = new SimpleDataSetConfiguration();
 
         // Act
-        config.Aggregates.Add(new DataSetAggregateDefinition
+        config.Aggregates.Add(new DataSetAggregateConfiguration
         {
             AggregateColumnName = "TotalSales",
             GroupByFieldNames = "State",
@@ -189,33 +189,6 @@ public class DataSetConfigurationTests
         config.Aggregates[0].AggregateFunctionName.ShouldBe("SUM");
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public void Aggregates_ImplementIGenericConfigurationForCascade()
-    {
-        // Arrange
-        var dataSetId = Guid.NewGuid();
-        var aggregateId = Guid.NewGuid();
-
-        // Act
-        IGenericConfiguration aggregate = new DataSetAggregateDefinition
-        {
-            Id = aggregateId,
-            DataSetId = dataSetId,
-            AggregateColumnName = "TransactionCount",
-            GroupByFieldNames = "State,Region",
-            AggregateFunctionName = "COUNT",
-            InputFieldName = "Id"
-        };
-
-        // Assert
-        aggregate.Id.ShouldBe(aggregateId);
-        aggregate.ServiceType.ShouldBe("DataSet");
-        ((DataSetAggregateDefinition)aggregate).DataSetId.ShouldBe(dataSetId);
-        ((DataSetAggregateDefinition)aggregate).IsCurrent.ShouldBeTrue();
-        ((DataSetAggregateDefinition)aggregate).IsDeleted.ShouldBeFalse();
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -224,7 +197,7 @@ public class DataSetConfigurationTests
     {
         // Arrange
         var cachingConfig = new CachingConfiguration { Enabled = true, DurationMinutes = 30 };
-        var config = new DataSetConfiguration { Caching = cachingConfig };
+        var config = new SimpleDataSetConfiguration { Caching = cachingConfig };
 
         // Assert
         config.Caching.ShouldNotBeNull();
@@ -232,18 +205,6 @@ public class DataSetConfigurationTests
         config.Caching.DurationMinutes.ShouldBe(30);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Configuration")]
-    public void SectionName_HasCorrectStaticValue()
-    {
-        // Arrange
-        var config = new DataSetConfiguration { Name = "Users" };
-
-        // Act & Assert - SectionName is static for IOptions binding, Name is set separately
-        config.SectionName.ShouldBe("DataSets");
-        config.Name.ShouldBe("Users");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -251,7 +212,7 @@ public class DataSetConfigurationTests
     public void AllProperties_CanBeSetTogether()
     {
         // Arrange
-        var config = new DataSetConfiguration
+        var config = new SimpleDataSetConfiguration
         {
             Name = "Users",
             Description = "User dataset",
@@ -261,7 +222,7 @@ public class DataSetConfigurationTests
             Caching = new CachingConfiguration { Enabled = true }
         };
 
-        config.Fields.Add(new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" });
+        config.Fields.Add(new DataSetFieldConfiguration { Name = "Id", TypeName = "Int32" });
         config.KeyFields.Add(new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 });
         config.Sources.Add(new DataSetSourceConfiguration { Id = Guid.NewGuid() });
 

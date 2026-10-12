@@ -26,7 +26,7 @@ public static partial class IdentityLog
     /// <summary>Logs that a token acquisition is starting.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="configurationName">The identity configuration being used.</param>
-    /// <param name="mechanism">The identity mechanism (the ServiceOptionType).</param>
+    /// <param name="mechanism">The identity mechanism (the Implementation).</param>
     /// <param name="audience">The audience the token is being requested for.</param>
     /// <returns>The structured message.</returns>
     [MessageLogging(EventId = 11000, Level = LogLevel.Debug, Message = "Acquiring identity token: configuration '{configurationName}' via {mechanism} for audience '{audience}'")]
@@ -170,7 +170,7 @@ public static partial class IdentityLog
     /// <summary>Logs that a header row's typed body did not load.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="configurationName">The identity configuration.</param>
-    /// <param name="mechanism">The ServiceOptionType the header declared.</param>
+    /// <param name="mechanism">The Implementation the header declared.</param>
     /// <returns>The structured message.</returns>
     [MessageLogging(EventId = 61002, Level = LogLevel.Critical, Message = "Identity configuration '{configurationName}' declares mechanism '{mechanism}' but its typed configuration body did not load")]
     public static partial IGenericMessage TypedBodyMissing(ILogger logger, string configurationName, string mechanism);

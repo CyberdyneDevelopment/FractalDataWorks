@@ -6,7 +6,7 @@ namespace Fdw.UI.Components.Services;
 
 /// <summary>
 /// TypeCollection for semantic status variants. Every badge the UI draws takes its colour from a
-/// variant registered here and is rendered through <see cref="Primitives.Badge"/>; no page carries a
+/// variant registered here, whichever renderer draws the badge; no page carries a
 /// badge class literal.
 /// </summary>
 /// <remarks>

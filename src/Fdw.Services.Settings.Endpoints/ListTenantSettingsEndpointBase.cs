@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -16,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<TenantSettingSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<TenantSettingConfiguration> _provider;
+    private readonly ITenantSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListTenantSettingsEndpointBase(ILogger<ListTenantSettingsEndpointBase> logger, IServiceConfigurationProvider<TenantSettingConfiguration> provider) : base(logger)
+    protected ListTenantSettingsEndpointBase(ILogger<ListTenantSettingsEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -44,7 +45,7 @@ public abstract class ListTenantSettingsEndpointBase : CrudListEndpointBase<Tena
             return allResult.ToNewResult<List<TenantSettingSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<TenantSettingConfiguration>)[])
+        var items = (allResult.Value ?? (IReadOnlyList<TenantSettingImplementationConfiguration>)[])
             .Select(s => new TenantSettingSummaryDto
             {
                 Id = s.Id,

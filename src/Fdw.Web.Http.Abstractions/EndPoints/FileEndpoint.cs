@@ -14,7 +14,6 @@ public sealed class FileEndpoint : EndpointTypeBase
     /// Initializes a new instance of the <see cref="FileEndpoint"/> class.
     /// </summary>
     public FileEndpoint() : base(
-        id: 5,
         name: "FileEndpoint",
         description: "File upload, download, and manipulation operations",
         defaultHttpMethods: ["GET", "POST", "PUT", "DELETE"],

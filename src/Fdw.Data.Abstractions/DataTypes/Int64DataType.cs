@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class Int64DataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="Int64DataType"/> class.</summary>
     public Int64DataType()
-        : base(id: 1, name: "Int64")
+        : base(name: "Int64")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(long);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.WholeNumber(text, long.MinValue, long.MaxValue);
 }

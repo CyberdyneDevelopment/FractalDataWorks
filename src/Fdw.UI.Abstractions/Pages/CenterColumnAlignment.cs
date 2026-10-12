@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class CenterColumnAlignment : ColumnAlignmentBase
 {
     /// <summary>Initializes a new instance of <see cref="CenterColumnAlignment"/>.</summary>
-    public CenterColumnAlignment() : base(2, "Center") { }
+    public CenterColumnAlignment() : base("Center") { }
 }

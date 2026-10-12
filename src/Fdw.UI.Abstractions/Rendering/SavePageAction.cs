@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Rendering;
 public sealed class SavePageAction : PageActionBase
 {
     /// <summary>Initializes a new instance of <see cref="SavePageAction"/>.</summary>
-    public SavePageAction() : base(1, "Save") { }
+    public SavePageAction() : base("Save") { }
 }

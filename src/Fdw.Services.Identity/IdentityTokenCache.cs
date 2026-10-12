@@ -26,17 +26,6 @@ namespace Fdw.Services.Identity;
 /// </remarks>
 public sealed class IdentityTokenCache : IIdentityTokenCache
 {
-    /// <summary>
-    /// How long before actual expiry a token stops being served from cache.
-    /// </summary>
-    /// <remarks>
-    /// Why a constant of the mechanism rather than a configuration value: this is headroom for the
-    /// in-flight request, not a policy anyone tunes per identity. It must exceed the round trip to
-    /// the peer, and 60 seconds covers that with room for clock skew between FDW and the issuer.
-    /// It is passed explicitly at the single construction site so nothing is silently assumed.
-    /// </remarks>
-    public static readonly TimeSpan DefaultRefreshSkew = TimeSpan.FromSeconds(60);
-
     private readonly ILogger<IdentityTokenCache> _logger;
     private readonly TimeSpan _refreshSkew;
     private readonly ConcurrentDictionary<string, IssuedIdentityToken> _tokens = new(StringComparer.Ordinal);

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Fdw.Results;
+using Fdw.Web.Clients.Abstractions.Registration;
 
 namespace Fdw.Services.SessionState.Clients.Registration;
 
@@ -18,7 +19,7 @@ namespace Fdw.Services.SessionState.Clients.Registration;
 /// configured with bearer token authentication.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(SessionStateTypes), "Http")]
+[Implementation(typeof(SessionStateTypes), "Http")]
 public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IGenericService, ISessionStateServiceFactory>
 {
     internal const string HttpClientName = "SessionStateApi";
@@ -31,7 +32,7 @@ public sealed class HttpSessionStateServiceType : SessionStateServiceTypeBase<IG
             "Http",
             "SessionState:Http",
             "HTTP Session State Client",
-            "HTTP-backed session state client for Blazor UI applications")
+            "HTTP-backed session state client for UI applications")
     {
         Configuration(builder =>
         {

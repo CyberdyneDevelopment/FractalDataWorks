@@ -182,6 +182,11 @@ public interface IFrameworkAuthorizationService
     /// The permission resolution process considers all sources of permissions
     /// including direct assignment, role-based inheritance, and group membership.
     /// </para>
+    /// <para>
+    /// A held permission covers <paramref name="permission"/> by the rule in
+    /// <see cref="PermissionCoverage"/>: the exact name, <c>{resource}:*</c>, and for a per-resource
+    /// permission the resource-wide forms. <c>*:*</c> covers nothing.
+    /// </para>
     /// </remarks>
     /// <exception cref="System.ArgumentNullException">
     /// Thrown when <paramref name="context"/> or <paramref name="permission"/> is null.

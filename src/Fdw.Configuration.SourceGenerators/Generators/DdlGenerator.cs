@@ -14,10 +14,7 @@ public static class DdlGenerator
     /// <summary>
     /// Generates the source code for a configuration's DDL provider implementation.
     /// </summary>
-    // MA0051: Method length acceptable - comprehensive DDL generation with parent/child relationships and audit columns
-#pragma warning disable MA0051 // Method is too long
     public static string Generate(ConfigurationModel model, ParentChildGraph graph)
-#pragma warning restore MA0051
     {
         var sb = new StringBuilder();
         var tableName = model.GetEffectiveTableName();
@@ -251,10 +248,7 @@ public static class DdlGenerator
         sb.AppendLine("                },");
     }
 
-    // MA0051: Method length acceptable - procedural generation of filtered unique indexes and performance indexes for version tracking
-#pragma warning disable MA0051 // Method is too long
     private static void GenerateIndexes(StringBuilder sb, ConfigurationModel model, string tableName, bool hasParent, string? parentFkColumn)
-#pragma warning restore MA0051
     {
         sb.AppendLine("                Indexes = new List<IndexDefinition>");
         sb.AppendLine("                {");

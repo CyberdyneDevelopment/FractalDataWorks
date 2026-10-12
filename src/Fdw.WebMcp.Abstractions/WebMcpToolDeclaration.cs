@@ -8,7 +8,7 @@ namespace Fdw.WebMcp.Abstractions;
 /// </summary>
 /// <remarks>
 /// The half of a tool that is decided at declaration time. The other half — route and verb — comes
-/// from the router at <c>MapWebMcp</c>, which is why this is a separate type from the descriptor
+/// from the router at the WebMcp registrant's Initialize, which is why this is a separate type from the descriptor
 /// that is finally served rather than one type with the route left null in between.
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -17,4 +17,6 @@ public sealed record WebMcpToolDeclaration(
     string Name,
     string Description,
     bool ReadOnly,
-    string? HttpMethodOverride);
+    string? HttpMethodOverride,
+    string? PresetFieldName = null,
+    Type? PresetOptionType = null);

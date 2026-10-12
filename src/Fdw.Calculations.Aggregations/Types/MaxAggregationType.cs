@@ -14,6 +14,6 @@ public sealed class MaxAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MaxAggregationType"/> class.
     /// </summary>
-    public MaxAggregationType() : base(5, "Max", values => values.Count == 0 ? 0m : values.Max())
+    public MaxAggregationType() : base("Max", values => values.Count == 0 ? 0m : values.Max())
     { }
 }

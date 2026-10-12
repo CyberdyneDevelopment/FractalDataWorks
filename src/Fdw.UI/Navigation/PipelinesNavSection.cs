@@ -12,5 +12,5 @@ public sealed class PipelinesNavSection : NavSectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PipelinesNavSection"/> class.
     /// </summary>
-    public PipelinesNavSection() : base(3, "Pipelines", "Pipelines", 30) { }
+    public PipelinesNavSection() : base("Pipelines", "Pipelines", 30) { }
 }

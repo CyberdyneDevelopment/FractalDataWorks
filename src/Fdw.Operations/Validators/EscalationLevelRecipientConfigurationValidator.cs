@@ -18,10 +18,6 @@ public sealed class EscalationLevelRecipientConfigurationValidator : FdwConfigur
             .NotEmpty()
             .WithMessage("Name is required");
 
-        RuleFor(x => x.EscalationLevelId)
-            .NotEqual(System.Guid.Empty)
-            .WithMessage("EscalationLevelId is required");
-
         RuleFor(x => x.Recipient)
             .NotEmpty()
             .WithMessage("Recipient is required");

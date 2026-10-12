@@ -9,17 +9,6 @@ namespace Fdw.Services.Resiliency.Abstractions.Tests;
 /// </summary>
 public class CriticalResiliencyPolicyTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorSetsIdCorrectly()
-    {
-        // Act
-        var policy = new CriticalResiliencyPolicy();
-
-        // Assert
-        policy.Id.ShouldBe(3);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -184,19 +173,6 @@ public class CriticalResiliencyPolicyTests
 
         // Assert
         policy.Name.ShouldBe("Critical");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void IdIsConsistentAcrossInstances()
-    {
-        // Arrange
-        var policy1 = new CriticalResiliencyPolicy();
-        var policy2 = new CriticalResiliencyPolicy();
-
-        // Assert
-        policy1.Id.ShouldBe(policy2.Id);
     }
 
     [Fact]

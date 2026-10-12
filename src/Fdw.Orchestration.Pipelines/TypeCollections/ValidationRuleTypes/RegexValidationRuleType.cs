@@ -24,7 +24,6 @@ public sealed class RegexValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public RegexValidationRuleType()
         : base(
-            id: 3,
             name: "Regex",
             requiresFields: true,
             supportsMultipleFields: true,

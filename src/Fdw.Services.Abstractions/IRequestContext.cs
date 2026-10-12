@@ -10,9 +10,11 @@ namespace Fdw.Services.Abstractions;
 public interface IRequestContext
 {
     /// <summary>
-    /// Gets the tenant ID for the current request.
+    /// Gets the tenant the caller is acting in — the tenant their token was issued for — or
+    /// <see langword="null"/> when the request acts in none (anonymous, or a token that names no
+    /// tenant). Never <see cref="Guid.Empty"/> standing in for that absence (FDW-825).
     /// </summary>
-    Guid TenantId { get; }
+    Guid? TenantId { get; }
 
     /// <summary>
     /// Gets the organization IDs the current user is a member of.
@@ -25,7 +27,9 @@ public interface IRequestContext
     IReadOnlyList<string> Roles { get; }
 
     /// <summary>
-    /// Gets whether the current user has the system-admin role.
+    /// Gets whether the caller administers the PLATFORM — the admin role held while acting in the
+    /// global tenant, the same rule as <c>ISystemRoleConfiguration.IsPlatformAdmin</c>. An admin of
+    /// any other tenant is not (FDW-825).
     /// </summary>
-    bool IsSystemAdmin { get; }
+    bool IsPlatformAdmin { get; }
 }

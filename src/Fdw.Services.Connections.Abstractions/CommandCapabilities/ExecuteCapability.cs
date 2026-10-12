@@ -23,7 +23,6 @@ public sealed class ExecuteCapability : CommandCapabilityTypeBase
     /// </summary>
     public ExecuteCapability()
         : base(
-            id: 3,
             name: "Execute",
             displayName: "Execute",
             configurationFields:

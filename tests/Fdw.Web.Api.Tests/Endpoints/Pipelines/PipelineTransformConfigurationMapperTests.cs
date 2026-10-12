@@ -33,7 +33,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" });
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -42,7 +42,6 @@ public sealed class PipelineTransformConfigurationMapperTests
         result.Value[0].FieldMappings.Count.ShouldBe(1);
         result.Value[0].FieldMappings[0].SourceField.ShouldBe("A");
         result.Value[0].FieldMappings[0].DestinationField.ShouldBe("B");
-        result.Value[0].FieldMappings[0].PipelineTransformId.ShouldBe(result.Value[0].Id);
     }
 
     [Fact]
@@ -54,11 +53,13 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Map1", OperationType = "Map" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11053");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Map1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Map 'Map1' has no field mappings");
     }
 
     // ── Aggregate dispatch ───────────────────────────────────────────────────────────────
@@ -81,7 +82,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -103,11 +104,13 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Agg1", OperationType = "Aggregate" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11045");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Agg1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Aggregate 'Agg1' has no group-by fields and/or aggregations");
     }
 
     // ── Lookup dispatch ──────────────────────────────────────────────────────────────────
@@ -134,7 +137,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -155,11 +158,13 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11046");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Lookup1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Lookup 'Lookup1' missing connection/dataset/keys or lookup columns");
     }
 
     [Fact]
@@ -184,11 +189,13 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11054");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Lookup1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Unknown lookup join type 'FullOuter' on 'Lookup1'");
     }
 
     // ── Calculate dispatch ───────────────────────────────────────────────────────────────
@@ -210,7 +217,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -229,11 +236,13 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Calc1", OperationType = "Calculate" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11047");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Calc1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Calculate 'Calc1' has no computed columns");
     }
 
     // ── Filter dispatch ──────────────────────────────────────────────────────────────────
@@ -247,7 +256,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter", FilterExpression = "Age >= 18" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -263,11 +272,13 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11048");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Filter1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Filter 'Filter1' has no filter expression");
     }
 
     // ── Unknown operation type / multi-step ─────────────────────────────────────────────
@@ -281,11 +292,26 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Weird1", OperationType = "Median" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11049");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Weird1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Unknown transform type 'Median'");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void ARefusedStepShowsItsCallerWhichStepAndWhy()
+    {
+        var request = new CreatePipelineTransformRequest { Name = "Weird1", OperationType = "Median" };
+
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+
+        result.Code!.FormatClientMessage(result.Details)
+            .ShouldBe("Pipeline step 'Weird1' is invalid: Unknown transform type 'Median'");
     }
 
     [Fact]
@@ -301,7 +327,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map(requests, NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", requests, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -325,10 +351,47 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map(requests, NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", requests, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
-        result.Messages[^1].Code.ShouldBe("ETL-11045");
+        result.Code!.Id.ShouldBe(20001);
+        result.Details!.GetValue<string>("StepName").ShouldBe("Agg1");
+        result.Details!.GetValue<string>("Reason").ShouldBe("Aggregate 'Agg1' has no group-by fields and/or aggregations");
+    }
+
+    // ── IsEnabled ────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void MapCarriesAStepThatIsDisabledInsteadOfEnablingIt()
+    {
+        // Arrange
+        var request = MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" });
+        request.IsEnabled = false;
+
+        // Act
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value![0].IsEnabled.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void MapEnablesAStepThatDoesNotSay()
+    {
+        // Arrange
+        var request = MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" });
+
+        // Act
+        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value![0].IsEnabled.ShouldBeTrue();
     }
 }

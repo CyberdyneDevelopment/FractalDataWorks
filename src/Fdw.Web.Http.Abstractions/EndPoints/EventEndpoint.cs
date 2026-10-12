@@ -14,7 +14,6 @@ public sealed class EventEndpoint : EndpointTypeBase
     /// Initializes a new instance of the <see cref="EventEndpoint"/> class.
     /// </summary>
     public EventEndpoint() : base(
-        id: 4,
         name: "EventEndpoint",
         description: "Event publishing and subscription operations",
         defaultHttpMethods: ["POST", "GET"],

@@ -10,9 +10,8 @@ namespace Fdw.Services.Connections.MsSql.Limits;
 /// Maps to <c>conn.MsSqlMaxResultSize</c>. is <c>conn.MsSqlConnectionLimit</c>.
 ///
 /// Caps the result set returned by a single query. MaxRows caps the Paging.Take
-/// parameter on the command. MaxBytes caps the estimated byte footprint of the
-/// result (rows × average row size). If a command requests more than the cap,
-/// FDW enforces the cap and logs a warning; it does NOT reject the command.
+/// parameter on the command. If a command requests more than the cap, the gateway
+/// refuses it with a MaxResultSizeExceeded failure.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
@@ -29,10 +28,4 @@ public sealed partial class MsSqlMaxResultSizeConfiguration
     /// When null, no row cap is enforced.
     /// </summary>
     public int? MaxRows { get; set; }
-
-    /// <summary>
-    /// Gets or sets the maximum estimated byte size of the result set.
-    /// When null, no byte cap is enforced.
-    /// </summary>
-    public long? MaxBytes { get; set; }
 }

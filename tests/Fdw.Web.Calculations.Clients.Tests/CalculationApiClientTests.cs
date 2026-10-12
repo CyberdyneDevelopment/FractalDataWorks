@@ -155,21 +155,24 @@ public sealed class CalculationApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task GetCalculationSendsCorrectRequest()
+    public async Task GetCalculationSendsPostRequestWithIdInBody()
     {
         var id = Guid.NewGuid();
         var expected = new CalculationDetailPayload { Id = id, Name = "Revenue", Formula = "SUM(Amount)" };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
-            Content = JsonContent.Create(expected)
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(expected) };
         });
         var sut = CreateClient(handler);
 
         var result = await sut.GetCalculation(id, TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe($"/calculation-entities/{id}");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/calculation-entities/get");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        body.ShouldBe($"{{\"id\":\"{id}\"}}");
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("Revenue");

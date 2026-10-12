@@ -13,7 +13,7 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 public sealed class FixedWindowRateLimitAlgorithm : RateLimitAlgorithmBase
 {
     /// <summary>Initializes a new instance of <see cref="FixedWindowRateLimitAlgorithm"/>.</summary>
-    public FixedWindowRateLimitAlgorithm() : base(1, "FixedWindow") { }
+    public FixedWindowRateLimitAlgorithm() : base("FixedWindow") { }
 
     /// <inheritdoc />
     public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>

@@ -7,6 +7,6 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// holding that implementation's own configuration.
 /// </summary>
 public interface INotificationConfiguration
-    : IPlatformServiceConfiguration<INotificationImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

@@ -12,8 +12,6 @@ namespace Fdw.Services.Etl.Projects.Policy;
 /// </remarks>
 public sealed class ServerPolicyDefaultsOptions
 {
-    /// <summary>Section name in appsettings.</summary>
-    public const string SectionName = "ProjectServerDefaults";
 
     /// <summary>
     /// Default step failure policy. Valid values: "HaltStage", "ContinueStage".

@@ -6,7 +6,7 @@ namespace Fdw.Services.Authorization.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the Permission configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "Permission")]
-public sealed class PermissionConfigurationCommand : ConfigurationCommandBase<PermissionConfiguration>
+public sealed class PermissionConfigurationCommand : ConfigurationCommandBase<PermissionImplementationConfiguration>
 {
     /// <inheritdoc/>
     public PermissionConfigurationCommand() : base("Permission") { }

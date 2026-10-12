@@ -13,7 +13,10 @@ namespace Fdw.Results;
 /// </summary>
 public class GenericResult : IGenericResult
 {
-    private readonly List<IGenericMessage> _messages = [];
+    // Why lazy: most results carry no message (every plain Success and every value-only
+    // Success<T>), and every service, gateway, translator and provider call returns one, so an
+    // eagerly allocated empty list was a second heap object on each of them.
+    private List<IGenericMessage>? _messages;
 
     /// <summary>
     /// Constructor for GenericResult
@@ -26,7 +29,7 @@ public class GenericResult : IGenericResult
         Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
         if (!string.IsNullOrEmpty(message))
         {
-            _messages.Add(new GenericMessage(message!));
+            EnsureMessages().Add(new GenericMessage(message!));
         }
     }
 
@@ -41,7 +44,7 @@ public class GenericResult : IGenericResult
         Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
         if (message != null && !string.IsNullOrEmpty(message.Message))
         {
-            _messages.Add(message);
+            EnsureMessages().Add(message);
         }
     }
 
@@ -56,7 +59,7 @@ public class GenericResult : IGenericResult
         Status = isSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
         if (messages != null)
         {
-            _messages.AddRange(messages);
+            AppendMessages(messages);
         }
     }
 
@@ -71,7 +74,7 @@ public class GenericResult : IGenericResult
         IsSuccess = status.IsSuccess;
         if (messages != null)
         {
-            _messages.AddRange(messages);
+            AppendMessages(messages);
         }
     }
 
@@ -88,7 +91,7 @@ public class GenericResult : IGenericResult
         Status = code.Severity.IsSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
 
         var formattedMessage = code.FormatMessage(details);
-        _messages.Add(new GenericMessage(
+        EnsureMessages().Add(new GenericMessage(
             code.Severity.IsSuccess ? MessageSeverity.Information : MessageSeverity.Error,
             formattedMessage,
             code.Code,
@@ -110,7 +113,8 @@ public class GenericResult : IGenericResult
         Status = code.Severity.IsSuccess ? ResultStatuses.ByName("Success") : ResultStatuses.ByName("Failure");
 
         var formattedMessage = code.FormatMessage(details);
-        _messages.Add(new GenericMessage(
+        var messages = EnsureMessages();
+        messages.Add(new GenericMessage(
             code.Severity.IsSuccess ? MessageSeverity.Information : MessageSeverity.Error,
             formattedMessage,
             code.Code,
@@ -119,7 +123,7 @@ public class GenericResult : IGenericResult
         // Copy messages from inner result for visibility
         if (innerResult.Messages.Count > 0)
         {
-            _messages.AddRange(innerResult.Messages);
+            messages.AddRange(innerResult.Messages);
         }
     }
 
@@ -137,7 +141,7 @@ public class GenericResult : IGenericResult
         Details = source.Details;
         if (source.Messages.Count > 0)
         {
-            _messages.AddRange(source.Messages);
+            EnsureMessages().AddRange(source.Messages);
         }
     }
 
@@ -156,17 +160,17 @@ public class GenericResult : IGenericResult
     /// <summary>
     /// Returns a value indicating whether there is a message;
     /// </summary>
-    public virtual bool IsEmpty => _messages.Count == 0;
+    public virtual bool IsEmpty => _messages is not { Count: > 0 };
 
     /// <summary>
     /// Provides collection of messages associated with the result
     /// </summary>
-    public IReadOnlyList<IGenericMessage> Messages => _messages.AsReadOnly();
+    public IReadOnlyList<IGenericMessage> Messages => _messages is { Count: > 0 } ? _messages.AsReadOnly() : Array.Empty<IGenericMessage>();
 
     /// <summary>
     /// Gets the most recent message (LIFO - Last In, First Out)
     /// </summary>
-    public string? CurrentMessage => _messages.LastOrDefault()?.Message;
+    public string? CurrentMessage => _messages?.LastOrDefault()?.Message;
 
 
     /// <summary>
@@ -237,7 +241,7 @@ public class GenericResult : IGenericResult
     [ExcludeFromCodeCoverage]
     protected void AddMessage(IGenericMessage message)
     {
-        _messages.Add(message);
+        EnsureMessages().Add(message);
     }
 
     /// <summary>
@@ -248,7 +252,18 @@ public class GenericResult : IGenericResult
     [ExcludeFromCodeCoverage]
     protected void AddMessages(IEnumerable<IGenericMessage> messages)
     {
-        _messages.AddRange(messages);
+        AppendMessages(messages);
+    }
+
+    private List<IGenericMessage> EnsureMessages() => _messages ??= [];
+
+    // An empty collection adds nothing, so it must not be the thing that allocates the list.
+    private void AppendMessages(IEnumerable<IGenericMessage> messages)
+    {
+        if (messages is ICollection<IGenericMessage> { Count: 0 })
+            return;
+
+        EnsureMessages().AddRange(messages);
     }
 
     /// <summary>
@@ -399,8 +414,23 @@ public class GenericResult : IGenericResult
     /// <inheritdoc/>
     public IGenericResult<TNew> ToNewResult<TNew>()
     {
+        // A success reaching here is a real state, not a misuse of the API. Every caller writes
+        // `x.IsSuccess && x.Value is not null ? Success(x.Value) : x.ToNewResult<TNew>()`, meaning
+        // "propagate the failure" -- and a read that SUCCEEDS and finds nothing takes the else
+        // branch. Throwing there reported the caller's syntax while saying nothing about the event,
+        // which is a provider returning success with no value; and because several of those callers
+        // sit inside endpoint construction and DI factories, the exception escaped as a 500 or took
+        // endpoint mapping down with it. A search found 37 sites able to reach this.
+        //
+        // So it converts rather than throws: the absent value is reported as a failure naming both
+        // types. Nothing is invented -- there is no value to invent -- and the absence stays loud,
+        // which is the whole point of not returning a bare default here.
         if (IsSuccess)
-            throw new InvalidOperationException("Cannot convert a successful result without providing a value. Use ToNewResult<TNew>(TNew value) instead.");
+        {
+            return GenericResult<TNew>.Failure(new GenericMessage(
+                $"A successful {GetType().Name} carried no value, so it cannot be converted to "
+                + $"{typeof(TNew).Name}. The operation reported success and returned nothing."));
+        }
 
         return GenericResult<TNew>.FromResult(this);
     }

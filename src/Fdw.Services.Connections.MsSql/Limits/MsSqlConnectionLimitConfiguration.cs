@@ -30,7 +30,6 @@ public sealed partial class MsSqlConnectionLimitConfiguration : ConnectionLimitC
     /// Default constructor for IOptions binding.
     /// </summary>
     public MsSqlConnectionLimitConfiguration()
-        : base("Connection", "MsSql", "Connections")
     {
     }
 
@@ -101,7 +100,4 @@ public sealed partial class MsSqlConnectionLimitConfiguration : ConnectionLimitC
 
     /// <inheritdoc/>
     public override int? EnforceMaxQueriesPerDay => DailyBudget?.MaxQueriesPerDay;
-
-    /// <inheritdoc/>
-    public override long? EnforceMaxBytesPerDay => DailyBudget?.MaxBytesPerDay;
 }

@@ -13,5 +13,5 @@ public sealed class BothMismatchKind : MismatchKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="BothMismatchKind"/> class.
     /// </summary>
-    public BothMismatchKind() : base(3, "Both") { }
+    public BothMismatchKind() : base("Both") { }
 }

@@ -13,5 +13,5 @@ public sealed class DropdownComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DropdownComponentType"/> class.
     /// </summary>
-    public DropdownComponentType() : base(7, "Dropdown", "Dropdown", "Selection", "Single selection dropdown") { }
+    public DropdownComponentType() : base("Dropdown", "Dropdown", "Selection", "Single selection dropdown") { }
 }

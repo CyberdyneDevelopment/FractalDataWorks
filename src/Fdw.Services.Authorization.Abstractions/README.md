@@ -8,7 +8,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `IEffectivePermissionResolver` | interface | Resolves the effective permission set for a user by applying the 3-tier union: global-tenant ∪… |
+| `IUserPermissions` | interface | Resolves the effective permission set for a user by applying the 3-tier union: global-tenant ∪… |
 | `IPathAuthorizationDecision` | interface | The recorded outcome of evaluating an against a resolved canonical address. Carried back through the… |
 | `IPathAuthorizationPolicy` | interface | Evaluates whether an is authorized to access a resolved canonical address. Stateless; produces an . |
 | `IPermissionAction` | interface | Interface for permission action types with UI rendering properties. |

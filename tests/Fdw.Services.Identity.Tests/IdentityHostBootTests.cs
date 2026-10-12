@@ -1,6 +1,9 @@
+using Fdw.Services.Identity.ClientCredentials;
+using Fdw.Configuration;
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -52,7 +55,7 @@ public sealed class IdentityHostBootTests
     [Theory]
     [InlineData("ClientCredentials")]
     [InlineData("JwtAssertion")]
-    public void EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
+    public async Task EachMechanismRegistersItsFactoryWithTheDomainProvider(string mechanism)
     {
         // This is the assertion that proves the option attached AND its Register body ran: the
         // provider's factory registry is populated per mechanism only by that option's own
@@ -61,7 +64,7 @@ public sealed class IdentityHostBootTests
         //
         // The failure this guards against is the one the framework calls out by name: an option whose
         // Register body never put its factory in the registry resolves to "No registered service type
-        // matches ServiceOptionType" at the first request, which reads like a configuration fault and
+        // matches Implementation" at the first request, which reads like a configuration fault and
         // is not one.
         var builder = Builder();
         IdentityServiceTypes.Configure(builder, NullLoggerFactory.Instance, Force);
@@ -75,9 +78,16 @@ public sealed class IdentityHostBootTests
 
         // A configuration naming a registered mechanism must not fail with "no factory registered".
         // It fails for want of a typed body instead, which is the next gate and a different message.
-        var built = provider.Get(
-            new IdentityServiceConfiguration { Name = "probe", ServiceOptionType = mechanism },
-            TestContext.Current.CancellationToken).GetAwaiter().GetResult();
+        // The probe is the mechanism's own implementation record, because the factory is chosen by
+        // the configuration's type now, not by a name on a header row.
+        IGenericConfiguration probe = mechanism switch
+        {
+            "ClientCredentials" => new ClientCredentialsConfiguration { Name = "probe" },
+            "JwtAssertion" => new JwtAssertionConfiguration { Name = "probe" },
+            _ => throw new ArgumentOutOfRangeException(nameof(mechanism), mechanism, "unknown mechanism"),
+        };
+
+        var built = await provider.Get(probe, TestContext.Current.CancellationToken);
 
         built.IsFailure.ShouldBeTrue();
         built.CurrentMessage!.ShouldNotContain("NoFactoryRegistered");

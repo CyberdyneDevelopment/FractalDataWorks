@@ -21,7 +21,6 @@ public sealed class TimezoneFieldTransformer : FieldTransformationBase
     /// </summary>
     public TimezoneFieldTransformer()
         : base(
-            id: 100,
             name: "Timezone",
             displayName: "Timezone",
             description: "Applies a named timezone offset to a DateTime, DateTimeOffset, or parseable string value.",
@@ -88,7 +87,7 @@ public sealed class TimezoneFieldTransformer : FieldTransformationBase
         }
 
         var zoneType = TimeZoneTypes.ByName(zone);
-        if (string.Equals(zoneType.Name, "_Empty", StringComparison.Ordinal))
+        if (string.Equals(zoneType.Name, "NotFound", StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Unknown timezone '{zone}'. Use TimeZoneTypes.All() for available options.");

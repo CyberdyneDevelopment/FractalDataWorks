@@ -12,8 +12,6 @@ public class FakeRoslynCommand : IRoslynCommand
 {
     public int Id { get; init; } = 1;
 
-    object ITypeOption.Id => Id;
-
     public string Name { get; init; } = "FakeCommand";
 
     public string Category => "Fake";

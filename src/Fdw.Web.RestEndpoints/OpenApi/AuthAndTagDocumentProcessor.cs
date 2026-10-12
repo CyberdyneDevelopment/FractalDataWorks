@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using NJsonSchema;
 using NSwag;
 using NSwag.Generation.Processors;
@@ -17,9 +15,8 @@ namespace Fdw.Web.RestEndpoints.OpenApi;
 /// <remarks>
 /// Why: tags were inconsistent ("Auth" vs "Authentication", double-tagging, and the generic
 /// security base classes emit a null EndpointTag → untagged operations that Scalar buries).
-/// /connect/token had no tag and no body, so there was no way to log in from Scalar. This runs
-/// after PermissionFilterDocumentProcessor, so it only touches operations that survived the
-/// per-user permission filter.
+/// /connect/token had no tag and no body, so there was no way to log in from Scalar. It runs at
+/// generation, before any caller is known; an API reference cuts the result per caller afterwards.
 /// </remarks>
 public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
 {
@@ -41,8 +38,6 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
         _clientId = clientId ?? throw new ArgumentNullException(nameof(clientId));
         _scope = scope ?? throw new ArgumentNullException(nameof(scope));
     }
-
-    private const string AuthenticationTag = "Authentication";
 
     private (string Name, string? Default)[] TokenFormFields =>
     [
@@ -70,47 +65,14 @@ public sealed class AuthAndTagDocumentProcessor : IDocumentProcessor
         }
     }
 
+    // Why the shared rule and not this processor's own: a document gets its groups from one place, whichever
+    // processor a host attaches (FDW-1100).
     private static void NormalizeTags(OpenApiOperation operation, string path)
     {
-        var normalized = operation.Tags
-            .Where(t => !string.IsNullOrWhiteSpace(t))
-            .Select(t => string.Equals(t, "Auth", StringComparison.OrdinalIgnoreCase)
-                ? AuthenticationTag
-                : t)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (normalized.Count == 0)
-        {
-            normalized.Add(DeriveTag(path));
-        }
-
+        var tag = OperationTags.For(path, [.. operation.Tags]);
         operation.Tags.Clear();
-        foreach (var tag in normalized)
-        {
+        if (tag is not null)
             operation.Tags.Add(tag);
-        }
-    }
-
-    private static string DeriveTag(string path)
-    {
-        if (path.Contains("/connect/", StringComparison.OrdinalIgnoreCase))
-        {
-            return AuthenticationTag;
-        }
-
-        var segment = path
-            .Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault(s =>
-                !string.Equals(s, "api", StringComparison.OrdinalIgnoreCase)
-                && !(s.Length == 2 && (s[0] == 'v' || s[0] == 'V') && char.IsDigit(s[1])));
-
-        if (string.IsNullOrEmpty(segment))
-        {
-            return "General";
-        }
-
-        return char.ToUpperInvariant(segment[0]) + segment[1..];
     }
 
     private void AugmentTokenEndpoint(OpenApiOperation operation)

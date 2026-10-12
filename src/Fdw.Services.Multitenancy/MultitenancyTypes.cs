@@ -1,3 +1,5 @@
+using Fdw.Services.Data.Abstractions;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -48,13 +50,30 @@ namespace Fdw.Services.Multitenancy;
     ServiceCategory = "Multitenancy")]
 public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyTypeBase<IMultitenancyFactory>, IMultitenancyType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    public static string ConfigurationConnection => PlatformConnection.Name;
+
 #pragma warning disable CA2255 // The 'ModuleInitializer' attribute should not be used in libraries
     [System.Runtime.CompilerServices.ModuleInitializer]
     internal static void RegisterOverrides()
     {
         Configuration(SelectAndConfigureSingleOption);
-        Registration(static (builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder));
-        Initialization(static (host, _) => GenericResult<IHost>.Success(host));
+        Registration(static (builder, _) =>
+        {
+            builder.Services.AddSingleton<IMultitenancyConfigurationProvider, MultitenancyConfigurationProvider>(sp => new MultitenancyConfigurationProvider(sp.GetRequiredService<ILogger<MultitenancyConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MultitenancyTypes.ConfigurationConnection, "settings", "Multitenancy"));
+            return GenericResult<IHostApplicationBuilder>.Success(builder);
+        });
+        // Forward to the option Configure selected. This collection drives its one option's Configure
+        // and Register by hand, so the generated collect that would have run the option's Initialize
+        // never does -- a bare Success here meant SqlMultitenancyType's Initialize body never ran, its
+        // implementation was never registered with the domain provider, and every tenant read failed
+        // at request time with "no implementation configuration provider registered for 'Sql'".
+        // GetRequiredService, not GetService: Configure registered exactly one IMultitenancyType or
+        // failed the host before this phase, so its absence here is a fault, not an option to skip.
+        Initialization(static (host, loggerFactory) =>
+            host.Services.GetRequiredService<IMultitenancyType>().Initialize(host, loggerFactory));
     }
 #pragma warning restore CA2255
 
@@ -68,7 +87,7 @@ public partial class MultitenancyTypes : ServiceTypeCollectionBase<MultitenancyT
     /// <param name="loggerFactory">Optional logger factory for startup diagnostics.</param>
     /// <returns>
     /// The builder on success. A failure when the host's <see cref="ConfigurationSchema.Multitenancy"/>
-    /// choice is missing, or names a ServiceOptionType that does not match any registered option
+    /// choice is missing, or names a Implementation that does not match any registered option
     /// (NO FALLBACKS — never a silent default).
     /// </returns>
     private static IGenericResult<IHostApplicationBuilder> SelectAndConfigureSingleOption(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory)

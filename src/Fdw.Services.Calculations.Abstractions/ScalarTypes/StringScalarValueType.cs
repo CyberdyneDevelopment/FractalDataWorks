@@ -14,7 +14,7 @@ public sealed class StringScalarValueType : ScalarValueTypeBase
     /// Initializes a new instance of the <see cref="StringScalarValueType"/> class.
     /// </summary>
     public StringScalarValueType()
-        : base(id: 4, name: "String")
+        : base(name: "String")
     {
     }
 }

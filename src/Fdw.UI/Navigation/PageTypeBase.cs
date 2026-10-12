@@ -9,18 +9,17 @@ namespace Fdw.UI.Navigation;
 /// <summary>
 /// Base class for a group of pages contributed to <see cref="PageTypes"/> by one package.
 /// </summary>
-public abstract class PageTypeBase : TypeOptionBase<int, PageTypeBase>, IPageType
+public abstract class PageTypeBase : TypeOptionBase<PageTypeBase>, IPageType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PageTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The option id, unique within <see cref="PageTypes"/>.</param>
     /// <param name="name">The option name.</param>
     /// <param name="pages">The pages this group contributes.</param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="pages"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="pages"/> is empty, or two pages share a name.</exception>
-    protected PageTypeBase(int id, string name, IReadOnlyList<IPage> pages)
-        : base(id, name)
+    protected PageTypeBase(string name, IReadOnlyList<IPage> pages)
+        : base(name)
     {
         if (pages is null)
             throw new ArgumentNullException(nameof(pages));
@@ -42,7 +41,7 @@ public abstract class PageTypeBase : TypeOptionBase<int, PageTypeBase>, IPageTyp
     /// Why the empty-pages rule does not apply here: TypeCollectionGenerator builds an Empty/NotFound
     /// sentinel for every collection and prefers a protected parameterless constructor when one exists.
     /// Without this it fell through to the validating constructor with an empty list and threw
-    /// "Page type '_Empty' declares no pages" from the static initializer of PageTypes — inside a module
+    /// "Page type 'NotFound' declares no pages" from the static initializer of PageTypes — inside a module
     /// initializer, so EVERY app that registers UI page types died at startup before Main ran. The
     /// validation itself is right: a declared page group contributing nothing IS a mistake. The sentinel
     /// is not a declared group — it is the collection's "no such page type" answer, and contributing

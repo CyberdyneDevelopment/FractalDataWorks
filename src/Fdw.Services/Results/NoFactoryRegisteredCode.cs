@@ -17,7 +17,7 @@ public sealed class NoFactoryRegisteredCode : ServicesResultCodeBase
     public NoFactoryRegisteredCode()
         : base(61002, "NoFactoryRegistered",
             ResultSeverities.ByName("Error"),
-            "No factory registered for service option type '{ServiceOptionType}'",
+            "No factory registered for service option type '{Implementation}'",
             isRetryable: false)
     {
     }

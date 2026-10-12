@@ -10,6 +10,8 @@ using Fdw.Operations.Abstractions.TypeCollections.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Web.Endpoints;
 using Fdw.Web.Endpoints.Contracts;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -61,8 +63,16 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
     /// <inheritdoc/>
     public override async Task HandleAsync(ListExecutionsRequest req, CancellationToken ct)
     {
-        
-        OnListingExecutions(req.ValidatedPage, req.ValidatedPageSize);
+        var paging = PaginationQuery.ResolvePage(HttpContext, EndpointLogger, req.Page, req.PageSize);
+        if (paging.IsFailure)
+        {
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(paging, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        var page = paging.Value!;
+        OnListingExecutions(req.Page, page.Take);
 
         // If correlation ID is provided, use the specialized query
         if (!string.IsNullOrWhiteSpace(req.CorrelationId))
@@ -74,9 +84,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             {
                 var errorMessage = correlationResult.CurrentMessage ?? "Unknown error";
                 OnExecutionQueryFailed(errorMessage);
-                HttpContext.Response.StatusCode = 500;
-                await HttpContext.Response.WriteAsJsonAsync(
-                    new { Error = "Failed to query executions", Details = errorMessage }, ct).ConfigureAwait(false);
+                await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query executions", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
                 return;
             }
 
@@ -84,8 +92,8 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             var filteredItems = ApplyFilters(correlationItems, req);
             var pagedItems = filteredItems
                 .OrderByDescending(x => x.CreatedAt)
-                .Skip(req.Skip)
-                .Take(req.ValidatedPageSize)
+                .Skip(page.Skip)
+                .Take(page.Take)
                 .Select(MapToSummaryDto)
                 .ToList();
 
@@ -94,8 +102,8 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             await Send.OkAsync(new PaginatedResponse<ExecutionSummaryResponse>
             {
                 Items = pagedItems,
-                Page = req.ValidatedPage,
-                PageSize = req.ValidatedPageSize,
+                Page = req.Page,
+                PageSize = page.Take,
                 TotalCount = filteredItems.Count
             }, ct).ConfigureAwait(false);
             return;
@@ -118,16 +126,14 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
         }
 
         var listResult = await _tracker.ListExecutions(
-            req.ValidatedPage, req.ValidatedPageSize,
+            req.Page, page.Take,
             itemTypeFilter, stateFilter, req.CorrelationId, ct).ConfigureAwait(false);
 
         if (!listResult.IsSuccess || listResult.Value == null)
         {
             var errorMessage = listResult.CurrentMessage ?? "Unknown error";
             OnExecutionQueryFailed(errorMessage);
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to query executions", Details = errorMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query executions", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

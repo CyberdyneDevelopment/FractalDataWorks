@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Fdw.Services.Etl.Abstractions.Execution;
 
 /// <summary>
@@ -39,6 +42,18 @@ public sealed record PipelineExecutionOptions
     /// (terminal) broadcast is always sent regardless of cadence. Resolved from appsettings.
     /// </summary>
     public int BroadcastHz { get; init; } = 5;
+
+    /// <summary>
+    /// Gets the run parameters of this execution, by name, typed as the pipeline declares them. Null when none were supplied.
+    /// {{name}} references in filter expressions read them, and a supplied LastSuccessfulRun overrides the stored watermark.
+    /// </summary>
+    public IReadOnlyDictionary<string, object?>? Parameters { get; init; }
+
+    /// <summary>
+    /// Gets the tenant the run belongs to. The last-successful watermark is kept per pipeline per tenant, so a run with no
+    /// tenant neither reads nor writes one.
+    /// </summary>
+    public Guid? TenantId { get; init; }
 
     /// <summary>
     /// Gets the production-mode defaults (no test mode, no sample retention).

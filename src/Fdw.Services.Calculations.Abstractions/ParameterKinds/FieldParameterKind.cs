@@ -14,7 +14,7 @@ public sealed class FieldParameterKind : OperationParameterKindBase
     /// Initializes a new instance of the <see cref="FieldParameterKind"/> class.
     /// </summary>
     public FieldParameterKind()
-        : base(id: 2, name: "Field", description: "A single field from a DataSet")
+        : base(name: "Field", description: "A single field from a DataSet")
     {
     }
 }

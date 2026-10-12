@@ -9,6 +9,7 @@ namespace Fdw.Services.Abstractions;
 /// a deferred phase and no-ops a completed one. That distinction is the whole point — it lets a host
 /// take one domain out of the collect, let the collect finish, and then run that domain itself.
 /// </remarks>
+#pragma warning disable FDW017 // deliberate plain enum, not converting to a TypeCollection
 public enum PhaseState
 {
     /// <summary>The phase has not run. A collect or an explicit call will run it.</summary>
@@ -30,3 +31,4 @@ public enum PhaseState
     /// </remarks>
     Ran = 2,
 }
+#pragma warning restore FDW017

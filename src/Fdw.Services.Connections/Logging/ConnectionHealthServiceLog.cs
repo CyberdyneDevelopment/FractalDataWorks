@@ -7,7 +7,7 @@ namespace Fdw.Services.Connections.Logging;
 
 /// <summary>
 /// MessageLogging for <see cref="ConnectionHealthService"/> operations.
-/// EventId range: 12100-12110.
+/// EventId range: 12100-12112.
 /// </summary>
 [MessageLoggingTypeCode("CONNECTIONS")]
 public static partial class ConnectionHealthServiceLog
@@ -47,4 +47,20 @@ public static partial class ConnectionHealthServiceLog
     /// <summary>Logs that the health-history query command returned a failure result. The command's own messages travel on the chained result, so no error text is duplicated here.</summary>
     [MessageLogging(EventId = 12107, Level = LogLevel.Error, Message = "Failed to query health check history for connection {connectionId}")]
     public static partial IGenericMessage QueryHistoryCommandFailed(ILogger logger, Guid connectionId);
+
+    /// <summary>Logs that every connection's current health status is about to be queried.</summary>
+    [MessageLogging(EventId = 12109, Level = LogLevel.Trace, Message = "Querying current health status for all connections")]
+    public static partial IGenericMessage QueryingAllCurrent(ILogger logger);
+
+    /// <summary>Logs that every connection's current health status was retrieved successfully.</summary>
+    [MessageLogging(EventId = 12110, Level = LogLevel.Debug, Message = "Retrieved current health status for {resultCount} connection(s)")]
+    public static partial IGenericMessage AllCurrentRetrieved(ILogger logger, int resultCount);
+
+    /// <summary>Logs that the all-connections current-health query command returned a failure result. The command's own messages travel on the chained result, so no error text is duplicated here.</summary>
+    [MessageLogging(EventId = 12111, Level = LogLevel.Error, Message = "Failed to query current health status for all connections")]
+    public static partial IGenericMessage QueryAllCurrentCommandFailed(ILogger logger);
+
+    /// <summary>Logs that querying every connection's current health status threw.</summary>
+    [MessageLogging(EventId = 12112, Level = LogLevel.Error, Message = "Failed to query current health status for all connections: {error}")]
+    public static partial IGenericMessage QueryAllCurrentFailed(ILogger logger, string error);
 }

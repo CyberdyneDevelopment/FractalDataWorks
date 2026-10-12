@@ -58,7 +58,7 @@ inside discovery*.
 1. `XxxTypes.Configure(builder, loggerFactory)` — binds `IOptions<List<TConfiguration>>` from the database-backed configuration source so each service type's settings are available through DI.
 2. `XxxTypes.Register(builder.Services, loggerFactory)` — registers the factories, providers, and DI services each type needs.
 
-Ordering within Phase 1 matters: `DataGatewayTypes` first so subsequent providers can receive `Lazy<IDataGateway>`; `SecretManagerTypes` next because connections need them to resolve passwords; `ConnectionTypes` before any consumer of connections; `AuthenticationServiceTypes` before `AuthorizationTypes` so RBAC policies can reference the auth scheme.
+Ordering within Phase 1 matters: `DataGatewayTypes` first because every other domain's provider reads its configuration through a gateway; `SecretManagerTypes` next because connections need them to resolve passwords; `ConnectionTypes` before any consumer of connections; `AuthenticationServiceTypes` before `AuthorizationTypes` so RBAC policies can reference the auth scheme.
 
 **Phase 2 (Build)** is the standard `builder.Build()` call that freezes the DI container and produces the `WebApplication` instance. No service registrations can happen after this point.
 
@@ -74,9 +74,6 @@ carrying `[PlatformServiceProvider]` (e.g. `DataSetProvider`, `ConfigurationGate
 `RealTimeHubs`).
 
 ```csharp
-// Lazy<IDataGateway> must be in DI before any provider is registered.
-builder.Services.AddSingleton(sp =>
-    new Lazy<IDataGateway>(() => sp.GetRequiredService<IDataGateway>()));
 
 // Phase 1: Configure + Register (before Build) — ONE sweep, all domains.
 PlatformServices.Configure(builder, loggerFactory);

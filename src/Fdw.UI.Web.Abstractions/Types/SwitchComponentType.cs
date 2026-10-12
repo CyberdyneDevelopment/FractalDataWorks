@@ -13,5 +13,5 @@ public sealed class SwitchComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SwitchComponentType"/> class.
     /// </summary>
-    public SwitchComponentType() : base(4, "Switch", "Switch", "Input", "Boolean toggle switch") { }
+    public SwitchComponentType() : base("Switch", "Switch", "Input", "Boolean toggle switch") { }
 }

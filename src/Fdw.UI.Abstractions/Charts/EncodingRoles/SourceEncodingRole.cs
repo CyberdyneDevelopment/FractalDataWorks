@@ -14,7 +14,7 @@ public sealed class SourceEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="SourceEncodingRole"/> class.
     /// </summary>
     public SourceEncodingRole()
-        : base(10, "Source", "Source", isSpatial: false)
+        : base("Source", "Source", isSpatial: false)
     {
     }
 }

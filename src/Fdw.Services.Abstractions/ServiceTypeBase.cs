@@ -27,44 +27,13 @@ namespace Fdw.ServiceTypes;
 /// registry, so an option never needs a typed provider parameter to hand one to.
 /// </remarks>
 public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
-    : TypeOptionBase<Guid, IServiceType<Guid>>,
+    : GuidTypeOptionBase<IServiceType<Guid>>,
       IServiceType<Guid, TService, TFactory, TConfiguration>,
       IServiceType
     where TService : IGenericService
     where TConfiguration : class, IGenericConfiguration
     where TFactory : IServiceFactory<TService, TConfiguration>
 {
-    /// <summary>
-    /// Derives this service type's identifier from its name.
-    /// </summary>
-    /// <param name="name">The option's name — its discriminator within the collection.</param>
-    /// <returns>A stable identifier for an option of that name.</returns>
-    /// <remarks>
-    /// <para>
-    /// Identity comes from the option, not from the option's generic arguments. The arguments do not
-    /// identify anything: a domain's options routinely close this base identically — every option in
-    /// <c>SessionStateTypes</c> is a
-    /// <c>ServiceTypeBase&lt;IGenericService, ISessionStateServiceFactory, IServiceConfiguration&gt;</c> —
-    /// and an id computed from them is one value shared by the whole domain. Because the id is what
-    /// <c>ServiceTypeCollectionBase.RegisterMember</c> keys membership on, every option after the first
-    /// then looked like a duplicate and was dropped without a word.
-    /// </para>
-    /// <para>
-    /// The name is the right source because it is already the thing that distinguishes options within a
-    /// collection: it is what <c>[ServiceTypeOption(..., "MsSql")]</c> declares, what <c>ByName</c>
-    /// resolves, and what the generated metadata already hashes. Two options in one collection cannot
-    /// share a name without colliding in that lookup first.
-    /// </para>
-    /// </remarks>
-#pragma warning disable CA5351, SCS0006, CA1850
-    protected static Guid DeriveId(string name) => OptionId.Derive(name);
-
-    private Guid? _id;
-
-    /// <inheritdoc />
-    public override Guid Id => _id ??= OptionId.Derive(GetType().FullName ?? Name);
-#pragma warning restore CA5351, SCS0006, CA1850
-
     /// <summary>Gets the name of this service type — its discriminator within the collection.</summary>
     [TypeLookup("ByName")]
     public new string Name => base.Name;
@@ -79,16 +48,16 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <summary>Gets the configuration type this service reads.</summary>
     public Type ConfigurationType => typeof(TConfiguration);
 
-    /// <summary>Gets the configuration section name for appsettings.json.</summary>
-    public string SectionName => ConfigurationKey;
-
     /// <summary>The connection this type's configuration is read from.</summary>
     /// <remarks>
-    /// Defaults to the type's <c>defaultDataStoreName</c>, which every base sets to
-    /// <c>PlatformConfiguration</c>. Settable so a host that names that connection differently can
-    /// say so once, rather than each option carrying the name as a literal.
+    /// Read from the host's declaration each time it is asked for, not captured when the option is built: an option is
+    /// constructed by a module initializer, before any host has read its <c>configurationSchema.json</c>, so there is no
+    /// name to capture yet. Each base passes the holder it reads (<c>PlatformConnection</c>, <c>ServerConnection</c>,
+    /// <c>AuthConnection</c>); a type that passes none has no connection of its own and this is empty.
     /// </remarks>
-    public string DataStore { get; set; }
+    public string DataStore => _dataStore is null ? string.Empty : _dataStore();
+
+    private readonly Func<string>? _dataStore;
 
     /// <inheritdoc />
     /// <remarks>
@@ -139,7 +108,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Sets the body this service type runs during Configure — the phase that binds settings from configuration, before any service is registered.
     /// </summary>
     /// <remarks>
-    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// This is the call a <c>[Implementation]</c> or <c>[ServiceTypeCollection]</c> class makes, and
     /// the only one it should need. A phase holds one body and the class declaring the phase owns that
     /// body outright, so setting it states what this service type contributes rather than overwriting
     /// somebody's work. Reach for <see cref="AppendConfiguration"/> or <see cref="PrependConfiguration"/> only from
@@ -220,7 +189,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Sets the body this service type runs during Register — the phase that puts services into the container, before the host is built.
     /// </summary>
     /// <remarks>
-    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// This is the call a <c>[Implementation]</c> or <c>[ServiceTypeCollection]</c> class makes, and
     /// the only one it should need. A phase holds one body and the class declaring the phase owns that
     /// body outright, so setting it states what this service type contributes rather than overwriting
     /// somebody's work. Reach for <see cref="AppendRegistration"/> or <see cref="PrependRegistration"/> only from
@@ -329,7 +298,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// Sets the body this service type runs during Initialize — the phase that runs against the built host, where the container can be resolved from.
     /// </summary>
     /// <remarks>
-    /// This is the call a <c>[ServiceTypeOption]</c> or <c>[ServiceTypeCollection]</c> class makes, and
+    /// This is the call a <c>[Implementation]</c> or <c>[ServiceTypeCollection]</c> class makes, and
     /// the only one it should need. A phase holds one body and the class declaring the phase owns that
     /// body outright, so setting it states what this service type contributes rather than overwriting
     /// somebody's work. Reach for <see cref="AppendInitialization"/> or <see cref="PrependInitialization"/> only from
@@ -641,7 +610,7 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
     /// <param name="displayName">The display name for this service type.</param>
     /// <param name="description">The description of what this service type provides.</param>
     /// <param name="category">The category of the service type.</param>
-    /// <param name="defaultDataStoreName">The default DataStore name for this type's configuration provider.</param>
+    /// <param name="defaultDataStoreName">Reads the DataStore name for this type's configuration provider from the host's declaration, when it is asked for; <see langword="null"/> when the type has no connection of its own.</param>
     /// <param name="defaultPathName">The default path (schema) name for this type's configuration provider.</param>
     /// <param name="defaultContainerName">The default container (table) name for this type's configuration command.</param>
     protected ServiceTypeBase(
@@ -650,12 +619,12 @@ public abstract class ServiceTypeBase<TService, TFactory, TConfiguration>
         string displayName,
         string description,
         string? category = null,
-        string defaultDataStoreName = "",
+        Func<string>? defaultDataStoreName = null,
         string defaultPathName = "",
         string defaultContainerName = "")
-        : base(DeriveId(name), name, sectionName, displayName, description, category)
+        : base(name, sectionName, displayName, description, category)
     {
-        DataStore = defaultDataStoreName;
+        _dataStore = defaultDataStoreName;
         PathName = defaultPathName;
         Container = defaultContainerName;
     }

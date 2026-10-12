@@ -21,7 +21,11 @@ public static class CachePolicy
     /// <summary>Metadata key signaling that caching is enabled (bool).</summary>
     public const string CacheEnabledKey = "CacheEnabled";
 
-    private static readonly TimeSpan DefaultDuration = TimeSpan.FromMinutes(5);
+    /// <summary>
+    /// How long a cached command result is kept when the command requests no duration of its own.
+    /// A deployment sets this before the host starts.
+    /// </summary>
+    public static TimeSpan DefaultDuration { get; set; } = TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Returns true if the command has opted into caching via Metadata.
@@ -33,14 +37,15 @@ public static class CachePolicy
     }
 
     /// <summary>
-    /// Gets the cache duration from command Metadata, or the provided default.
+    /// Gets the cache duration from command Metadata, or <see cref="DefaultDuration"/> when the
+    /// command requests none.
     /// </summary>
-    public static TimeSpan GetDuration(IDataCommand command, TimeSpan? defaultDuration = null)
+    public static TimeSpan GetDuration(IDataCommand command)
     {
         if (command.Metadata.TryGetValue(CacheDurationKey, out var val) && val is TimeSpan ts)
             return ts;
 
-        return defaultDuration ?? DefaultDuration;
+        return DefaultDuration;
     }
 
     /// <summary>
@@ -59,11 +64,10 @@ public static class CachePolicy
     /// </para>
     /// </remarks>
     /// <param name="command">The command whose Metadata may request a duration.</param>
-    /// <param name="defaultDuration">Duration to use when the command requests none.</param>
     /// <param name="ceiling">The longest the storage layer permits this result to be replayed.</param>
-    public static TimeSpan GetDuration(IDataCommand command, TimeSpan defaultDuration, TimeSpan ceiling)
+    public static TimeSpan GetDuration(IDataCommand command, TimeSpan ceiling)
     {
-        var requested = GetDuration(command, defaultDuration);
+        var requested = GetDuration(command);
         return requested < ceiling ? requested : ceiling;
     }
 }

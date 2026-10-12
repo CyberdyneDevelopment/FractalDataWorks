@@ -27,7 +27,7 @@ public sealed class AverageOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="AverageOperation"/> class.
     /// </summary>
     public AverageOperation()
-        : base(id: 11, name: "Average", category: "Aggregate", description: "Computes the average of a set of values")
+        : base(name: "Average", category: "Aggregate", description: "Computes the average of a set of values")
     {
         _logger = NullLogger<AverageOperation>.Instance;
         Parameters =

@@ -22,7 +22,6 @@ public sealed class PooledDictionaryMapperType
     public PooledDictionaryMapperType()
         : base(
             name: "Pooled",
-            sectionName: "EtlMappers:Pooled",
             displayName: "Pooled Dictionary Mapper",
             description: "Zero-allocation mapper using dictionary pooling")
     {

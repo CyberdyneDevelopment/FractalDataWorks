@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ namespace Fdw.Web.RestEndpoints.Security;
 /// <list type="bullet">
 ///   <item><description>Reads the required permission from the policy name.</description></item>
 ///   <item><description>
-///     Checks the token's <c>perm</c> claims (incl. <c>resource:*</c> wildcard).
+///     Checks the token's <c>perm</c> claims by the rule in <see cref="PermissionCoverage"/>.
 ///   </description></item>
 ///   <item><description>Returns 403 if the required permission is absent.</description></item>
 /// </list>
@@ -53,9 +54,9 @@ public sealed class PermissionClaimsPreProcessor : IGlobalPreProcessor
 
         var requiredPermission = $"{resource}:{action}";
 
-        var hasPermission =
-            permClaims.Any(c => string.Equals(c.Value, requiredPermission, StringComparison.OrdinalIgnoreCase)) ||
-            permClaims.Any(c => string.Equals(c.Value, $"{resource}:*", StringComparison.OrdinalIgnoreCase));
+        // The same rule every other check uses, so no grant is refused here and admitted by the policy handler,
+        // or the other way round.
+        var hasPermission = PermissionCoverage.Covers(permClaims.Select(c => c.Value), requiredPermission);
 
         if (!hasPermission)
         {
@@ -65,8 +66,9 @@ public sealed class PermissionClaimsPreProcessor : IGlobalPreProcessor
             var logger = context.HttpContext.RequestServices.GetService(typeof(ILogger<PermissionClaimsPreProcessor>)) as ILogger
                       ?? NullLogger.Instance;
             EndpointLogger.PermissionDeniedByPreProcessor(logger, userId, requiredPermission);
-            context.HttpContext.Response.StatusCode = 403;
-            return context.HttpContext.Response.WriteAsync("Forbidden", ct);
+            // Through FastEndpoints' sender: that is what marks the response as sent, and a
+            // pre-processor's sent response is what stops the handler from running at all.
+            return context.HttpContext.Response.SendForbiddenAsync(ct);
         }
 
         return Task.CompletedTask;
@@ -91,6 +93,12 @@ public sealed class PermissionClaimsPreProcessor : IGlobalPreProcessor
         action = string.Empty;
 
         if (policyName.StartsWith("epPolicy:", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // The platform-admin policy is shaped like a permission but is not one: no token carries it as a perm
+        // claim, so treating it as one would refuse every caller. The policy provider answers it from the
+        // Admin role and the global-tenant claim.
+        if (string.Equals(policyName, AuthConstants.PlatformAdminPolicy, StringComparison.Ordinal))
             return false;
 
         var colonIdx = policyName.IndexOf(':', StringComparison.Ordinal);

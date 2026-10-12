@@ -17,8 +17,7 @@ public sealed class ProcessConfigurationInvalidMessage : ExecutionMessage, IServ
         : base(2001, "ProcessConfigurationInvalid", MessageSeverity.Error,
                "Process configuration is invalid",
                "EXEC_CONFIG_INVALID",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class ProcessConfigurationInvalidMessage : ExecutionMessage, IServ
         : base(2001, "ProcessConfigurationInvalid", MessageSeverity.Error,
                string.Format(CultureInfo.InvariantCulture, "Configuration is invalid for process type: {0}", processType),
                "EXEC_CONFIG_INVALID",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class ProcessConfigurationInvalidMessage : ExecutionMessage, IServ
                string.Format(CultureInfo.InvariantCulture, "Configuration is invalid for process type: {0}, details: {1}",
                            processType, validationDetails),
                "EXEC_CONFIG_INVALID",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class ProcessConfigurationInvalidMessage : ExecutionMessage, IServ
                string.Format(CultureInfo.InvariantCulture, "Configuration is invalid for process: {0} (type: {1}), details: {2}",
                            processId, processType, validationDetails),
                "EXEC_CONFIG_INVALID",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 }

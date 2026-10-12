@@ -52,10 +52,7 @@ public abstract class GetThemeEndpointBase<TDetail> : Endpoint<ThemeNameRequest,
         var theme = FindTheme(req.Name);
         if (theme == null)
         {
-            HttpContext.Response.StatusCode = 404;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { errorCode = "NotFound", messages = new[] { $"themes '{req.Name}' was not found." } }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"themes '{req.Name}' was not found." } }, statusCode: 404)).ConfigureAwait(false);
             return;
         }
 

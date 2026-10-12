@@ -11,7 +11,6 @@ public sealed class DocumentIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="DocumentIcon"/>.</summary>
     public DocumentIcon()
         : base(
-            40,
             "Document",
             "0 0 24 24",
             "none",

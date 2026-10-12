@@ -27,7 +27,7 @@ public sealed class GreaterThanOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="GreaterThanOperation"/> class.
     /// </summary>
     public GreaterThanOperation()
-        : base(id: 20, name: "GreaterThan", category: "Comparison", description: "Returns true if the left value is greater than the right value")
+        : base(name: "GreaterThan", category: "Comparison", description: "Returns true if the left value is greater than the right value")
     {
         _logger = NullLogger<GreaterThanOperation>.Instance;
         Parameters =

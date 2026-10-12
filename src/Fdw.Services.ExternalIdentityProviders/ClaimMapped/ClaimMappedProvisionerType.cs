@@ -1,6 +1,9 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.Collections;
 using Fdw.Results;
+using Fdw.Services;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authorization;
 using Fdw.Services.Data.Abstractions;
@@ -19,13 +22,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
 /// <summary>
-/// ClaimMapped <see cref="ExternalIdentityProvisionerTypes"/> ServiceTypeOption. Registers the header
+/// ClaimMapped <see cref="ExternalIdentityProvisionerTypes"/> Implementation. Registers the header
 /// + typed-body gateway-backed configuration providers and the
 /// <see cref="ClaimMappedProvisionerFactory"/> that builds <see cref="ClaimMappedProvisioner"/>
-/// instances. Mirrors <see cref="Chained.ChainedExternalIdentityProvisionerType"/> structurally.
+/// instances.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ExternalIdentityProvisionerTypes), "ClaimMapped")]
+[Implementation(typeof(ExternalIdentityProvisionerTypes), "ClaimMapped")]
 public sealed class ClaimMappedProvisionerType
     : ExternalIdentityProvisionerTypeBase<
         IExternalIdentityProvisioner,
@@ -33,46 +36,51 @@ public sealed class ClaimMappedProvisionerType
         IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>
 {
     /// <summary>Initializes a new instance of <see cref="ClaimMappedProvisionerType"/>.</summary>
-    public ClaimMappedProvisionerType() : base(name: "ClaimMapped", defaultContainerName: "ExternalIdentityProvisioner")
+    public ClaimMappedProvisionerType() : base(name: "ClaimMapped", defaultContainerName: "ClaimMappedExternalIdentityProvisionerConfiguration")
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<ClaimMappedExternalIdentityProvisionerConfigurationProvider>(sp =>
-                new ClaimMappedExternalIdentityProvisionerConfigurationProvider(
-                    sp.GetService<ILogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    DataStore,
-                    PathName));
+            builder.Services.AddSingleton<IClaimMappedExternalIdentityProvisionerConfigurationProvider, ClaimMappedExternalIdentityProvisionerConfigurationProvider>(sp => new ClaimMappedExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ClaimMappedExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection, PathName, Container));
 
-            builder.Services.TryAddScoped<ClaimMappedProvisionerFactory>();
-            builder.Services.TryAddScoped<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(
-                sp => sp.GetRequiredService<ClaimMappedProvisionerFactory>());
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IClaimMappedProvisionerFactory), typeof(ClaimMappedProvisionerFactory), ServiceLifetime.Scoped));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IClaimMappedProvisionerProvider), typeof(ClaimMappedProvisionerProvider), ServiceLifetime.Scoped));
+
+            // Decorate the domain's own AddScoped<IDomainServiceProvider<...>> registration --
+            // already in builder.Services by the time this runs, since ExternalIdentityProvisionerTypes'
+            // own Registration body sets it up before running the option loop.
+            var existing = builder.Services.Single(d =>
+                d.ServiceType == typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
+            {
+                var provider = (IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IClaimMappedProvisionerProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        sp.GetService<ILoggerFactory>()?.CreateLogger<ClaimMappedProvisionerType>() ?? NullLogger<ClaimMappedProvisionerType>.Instance,
+                        nameof(ClaimMappedProvisionerType), Name, nameof(IClaimMappedProvisionerProvider), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-        Initialization((host, hostLoggerFactory) =>
+        // IExternalIdentityProvisionerConfigurationProvider is Singleton, so root's Initialize call
+        // reaches the same instance every later resolution sees -- unlike the domain SERVICE
+        // provider above, this one is safe to populate once, here, unmodified.
+        Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>();
-
-            var loggerFactory = services.GetService<ILoggerFactory>() ?? NullLoggerFactory.Instance;
-            var logger = loggerFactory.CreateLogger<ClaimMappedProvisionerType>();
-
-            var factory = services.GetRequiredService<IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>();
-            var domainProvider = services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>();
-            var typedProvider = services.GetRequiredService<ClaimMappedExternalIdentityProvisionerConfigurationProvider>();
-
-            domainProvider.Register("ClaimMapped", typedProvider);
-
-            var factoryResult = provider.Register("ClaimMapped", factory);
-            if (!factoryResult.IsSuccess) return factoryResult.ToNewResult<IHost>();
-
-            ServiceTypeLog.OptionFactoryRegistered(
-                logger, nameof(ClaimMappedProvisionerType), Name, factory.GetType().Name);
-
-            ExternalIdentityProvisionerLog.ProviderRegistered(logger, "ClaimMapped");
-
+            services.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<IClaimMappedExternalIdentityProvisionerConfigurationProvider>());
+            ExternalIdentityProvisionerLog.ProviderRegistered(
+                loggerFactory?.CreateLogger<ClaimMappedProvisionerType>() ?? NullLogger<ClaimMappedProvisionerType>.Instance, Name);
             return GenericResult<IHost>.Success(host);
         });
     }

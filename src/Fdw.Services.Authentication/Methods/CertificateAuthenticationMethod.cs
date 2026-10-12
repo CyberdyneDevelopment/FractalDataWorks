@@ -16,7 +16,6 @@ public sealed class CertificateAuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="CertificateAuthenticationMethod"/> class.
     /// </summary>
     public CertificateAuthenticationMethod() : base(
-        id: 5,
         name: "Certificate",
         requiresUserInteraction: false,
         supportsTokenRefresh: false,

@@ -25,7 +25,6 @@ public sealed class InListValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public InListValidationRuleType()
         : base(
-            id: 6,
             name: "InList",
             requiresFields: true,
             supportsMultipleFields: true,

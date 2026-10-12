@@ -14,7 +14,6 @@ public sealed class ConcurrencyLimitType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="ConcurrencyLimitType"/>.</summary>
     public ConcurrencyLimitType()
         : base(
-            4,
             "Concurrency",
             "Concurrency Limit",
             "Limits the number of simultaneous queries against this connection.",

@@ -11,7 +11,6 @@ public sealed class BookOpenIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="BookOpenIcon"/>.</summary>
     public BookOpenIcon()
         : base(
-            33,
             "BookOpen",
             "0 0 24 24",
             "none",

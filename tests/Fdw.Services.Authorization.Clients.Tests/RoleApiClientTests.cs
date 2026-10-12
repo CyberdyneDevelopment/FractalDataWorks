@@ -58,20 +58,23 @@ public sealed class RoleApiClientTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public async Task GetRoleSendsGetRequestWithNameInPath()
+    public async Task GetRoleSendsPostRequestWithNameInBody()
     {
         var expected = new RoleDetailPayload { Id = Guid.NewGuid(), Name = "Admin" };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
-            Content = JsonContent.Create(expected)
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(expected) };
         });
 
         var sut = CreateClient(handler);
         var result = await sut.GetRole("Admin", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/roles/Admin");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/roles/get");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        body.ShouldBe("{\"name\":\"Admin\"}");
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("Admin");
@@ -421,18 +424,21 @@ public sealed class RoleApiClientTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public async Task GetRoleWithSpecialCharactersInNameEncodesPath()
+    public async Task GetRoleWithSpecialCharactersInNameKeepsPathFixedAndSendsNameInBody()
     {
         var expected = new RoleDetailPayload { Name = "my role" };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
-            Content = JsonContent.Create(expected)
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(expected) };
         });
         var sut = CreateClient(handler);
 
-        await sut.GetRole("my role", TestContext.Current.CancellationToken);
+        await sut.GetRole("my role/../x", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldContain("roles/my%20role");
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/roles/get");
+        body.ShouldBe("{\"name\":\"my role/../x\"}");
     }
 }

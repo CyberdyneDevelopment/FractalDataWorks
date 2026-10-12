@@ -14,7 +14,7 @@ public sealed class CountAggregationFunction : AggregationFunctionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CountAggregationFunction"/> class.
     /// </summary>
-    public CountAggregationFunction() : base(id: 5, name: "Count")
+    public CountAggregationFunction() : base(name: "Count")
     {
     }
 

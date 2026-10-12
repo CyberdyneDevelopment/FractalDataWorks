@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class EnumConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="EnumConfigurationPropertyType"/>.</summary>
-    public EnumConfigurationPropertyType() : base(6, "Enum") { }
+    public EnumConfigurationPropertyType() : base("Enum") { }
 }

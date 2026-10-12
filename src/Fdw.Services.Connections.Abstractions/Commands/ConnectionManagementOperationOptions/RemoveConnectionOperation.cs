@@ -14,5 +14,5 @@ public sealed class RemoveConnectionOperation : ConnectionManagementOperationBas
     /// <summary>
     /// Initializes a new instance of the <see cref="RemoveConnectionOperation"/> class.
     /// </summary>
-    public RemoveConnectionOperation() : base(1, "RemoveConnection", modifiesState: true, requiresExistingConnection: true) { }
+    public RemoveConnectionOperation() : base("RemoveConnection", modifiesState: true, requiresExistingConnection: true) { }
 }

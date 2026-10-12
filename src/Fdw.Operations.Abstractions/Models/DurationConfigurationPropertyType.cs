@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class DurationConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="DurationConfigurationPropertyType"/>.</summary>
-    public DurationConfigurationPropertyType() : base(9, "Duration") { }
+    public DurationConfigurationPropertyType() : base("Duration") { }
 }

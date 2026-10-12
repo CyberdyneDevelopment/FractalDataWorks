@@ -7,7 +7,10 @@ using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
@@ -86,60 +89,59 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     /// <summary>
     /// Handles the request by validating input and executing the data preview.
     /// </summary>
+    /// <remarks>
+    /// The response is written exactly once (FDW-1162). A preview the gateway refuses or cannot read answers with that
+    /// failure's own status through <see cref="ResultHttpStatusMapper"/>; nothing is written before the outcome is known,
+    /// and no rows are reported for a preview that was not read.
+    /// </remarks>
     public override async Task HandleAsync(DataPreviewRequest req, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(req.DataSetName) && string.IsNullOrEmpty(req.ContainerName))
+        RequireTarget(req);
+
+        var maxRows = Math.Min(Math.Max(req.MaxRows, 1), MaxRowsLimit);
+        var byDataSet = !string.IsNullOrEmpty(req.DataSetName);
+        var source = byDataSet ? req.DataSetName! : req.ContainerName!;
+        SchemaEndpointLog.PreviewingData(_logger, source, maxRows);
+
+        var preview = byDataSet
+            ? await PreviewFromDataSet(req.DataSetName!, maxRows, req.Columns, ct).ConfigureAwait(false)
+            : await PreviewFromContainer(req.DataStoreName!, req.PathName!, req.ContainerName!, maxRows, req.Columns, ct).ConfigureAwait(false);
+
+        if (preview.IsFailure || preview.Value is not { } response)
         {
-            SchemaEndpointLog.PreviewValidationFailed(_logger, "Either DataSetName or ContainerName must be provided");
-            ThrowError("Either DataSetName or ContainerName must be provided", 400);
+            SchemaEndpointLog.PreviewNotAnswered(_logger, source);
+            var (statusCode, problem) = ResultHttpStatusMapper.Map(preview, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
             return;
         }
 
-        var maxRows = Math.Min(Math.Max(req.MaxRows, 1), MaxRowsLimit);
-        var source = !string.IsNullOrEmpty(req.DataSetName) ? req.DataSetName : req.ContainerName!;
-        SchemaEndpointLog.PreviewingData(_logger, source, maxRows);
+        SchemaEndpointLog.DataPreviewed(_logger, response.Source, response.RowCount);
+        await Send.OkAsync(response, ct).ConfigureAwait(false);
+    }
 
-        try
+    // Refuses, before anything is read, a request that names neither a data set nor a whole container address
+    // (data store, path and container). Each refusal is a 400 that says which part is missing.
+    private void RequireTarget(DataPreviewRequest req)
+    {
+        if (!string.IsNullOrEmpty(req.DataSetName))
+            return;
+
+        if (string.IsNullOrEmpty(req.ContainerName))
         {
-            DataPreviewResponse response;
-
-            if (!string.IsNullOrEmpty(req.DataSetName))
-            {
-                response = await PreviewFromDataSet(req.DataSetName, maxRows, req.Columns, ct).ConfigureAwait(false);
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(req.DataStoreName))
-                {
-                    SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "DataStoreName");
-                    ThrowError("DataStoreName is required when ContainerName is provided", 400);
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(req.PathName))
-                {
-                    SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "PathName");
-                    ThrowError("PathName is required when ContainerName is provided", 400);
-                    return;
-                }
-
-                response = await PreviewFromContainer(
-                    req.DataStoreName,
-                    req.PathName,
-                    req.ContainerName!,
-                    maxRows,
-                    req.Columns,
-                    ct).ConfigureAwait(false);
-            }
-
-            SchemaEndpointLog.DataPreviewed(_logger, response.Source, response.RowCount);
-            await Send.OkAsync(response, ct).ConfigureAwait(false);
+            SchemaEndpointLog.PreviewValidationFailed(_logger, "Either DataSetName or ContainerName must be provided");
+            ThrowError("Either DataSetName or ContainerName must be provided", 400);
         }
-        catch (Exception ex)
+
+        if (string.IsNullOrEmpty(req.DataStoreName))
         {
-            SchemaEndpointLog.SchemaOperationFailed(_logger, ex, "preview", source);
-            AddError("Data preview failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "DataStoreName");
+            ThrowError("DataStoreName is required when ContainerName is provided", 400);
+        }
+
+        if (string.IsNullOrEmpty(req.PathName))
+        {
+            SchemaEndpointLog.PreviewContainerAddressMissing(_logger, "PathName");
+            ThrowError("PathName is required when ContainerName is provided", 400);
         }
     }
 
@@ -151,42 +153,23 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     /// <param name="maxRows">Maximum rows to return.</param>
     /// <param name="columns">Optional columns to include.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The data preview response.</returns>
-    protected virtual async Task<DataPreviewResponse> PreviewFromDataSet(
+    /// <returns>The preview, or the gateway's own failure when the data set was refused or could not be read.</returns>
+    protected virtual async Task<IGenericResult<DataPreviewResponse>> PreviewFromDataSet(
         string dataSetName,
         int maxRows,
         IList<string>? columns,
         CancellationToken ct)
     {
-        ProjectionExpression? projection = BuildProjection(columns);
-
         var command = new QueryCommand<Dictionary<string, object?>>
         {
             Paging = new PagingExpression { Skip = 0, Take = maxRows },
-            Projection = projection
+            Projection = BuildProjection(columns)
         };
 
-        var result = await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(dataSetName), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            SchemaEndpointLog.SchemaOperationFailed(_logger, new InvalidOperationException(result.CurrentMessage ?? "Gateway returned failure"), "preview", dataSetName);
-            AddError(result.CurrentMessage ?? "DataSet query failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
-            return new DataPreviewResponse { Source = $"DataSet: {dataSetName}", Columns = [], Rows = [], RowCount = 0, HasMoreRows = false };
-        }
-
-        var rows = result.Value?.ToList() ?? [];
-
-        var columnDtos = InferColumnsFromRows(rows);
-
-        return new DataPreviewResponse
-        {
-            Source = $"DataSet: {dataSetName}",
-            Columns = columnDtos,
-            Rows = rows,
-            RowCount = rows.Count,
-            HasMoreRows = rows.Count >= maxRows
-        };
+        return Previewed(
+            await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataSetTarget(dataSetName), ct).ConfigureAwait(false),
+            $"DataSet: {dataSetName}",
+            maxRows);
     }
 
     /// <summary>
@@ -199,8 +182,8 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
     /// <param name="maxRows">Maximum rows to return.</param>
     /// <param name="columns">Optional columns to include.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>The data preview response.</returns>
-    protected virtual async Task<DataPreviewResponse> PreviewFromContainer(
+    /// <returns>The preview, or the gateway's own failure when the container was refused or could not be read.</returns>
+    protected virtual async Task<IGenericResult<DataPreviewResponse>> PreviewFromContainer(
         string dataStoreName,
         string pathName,
         string containerName,
@@ -208,36 +191,35 @@ public abstract class DataPreviewEndpointBase : Endpoint<DataPreviewRequest, Dat
         IList<string>? columns,
         CancellationToken ct)
     {
-        ProjectionExpression? projection = BuildProjection(columns);
-
         var command = new QueryCommand<Dictionary<string, object?>>
         {
             Paging = new PagingExpression { Skip = 0, Take = maxRows },
-            Projection = projection
+            Projection = BuildProjection(columns)
         };
-        var containerIdentifier = $"{dataStoreName}/{pathName}/{containerName}";
 
-        var result = await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataStoreTarget(dataStoreName, pathName, containerName), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
+        return Previewed(
+            await DataGateway.Execute<IEnumerable<Dictionary<string, object?>>>(command, new DataStoreTarget(dataStoreName, pathName, containerName), ct).ConfigureAwait(false),
+            $"Container: {dataStoreName}/{pathName}/{containerName}",
+            maxRows);
+    }
+
+    // Why the gateway's own result travels on: its code is what decides the status and, for a refusal, the reason the
+    // caller is shown. A read that failed carries no rows, so it is never turned into an empty preview.
+    private static IGenericResult<DataPreviewResponse> Previewed(
+        IGenericResult<IEnumerable<Dictionary<string, object?>>> read, string source, int maxRows)
+    {
+        if (read.IsFailure || read.Value is not { } found)
+            return read.ToNewResult<DataPreviewResponse>();
+
+        var rows = found.ToList();
+        return GenericResult<DataPreviewResponse>.Success(new DataPreviewResponse
         {
-            SchemaEndpointLog.SchemaOperationFailed(_logger, new InvalidOperationException(result.CurrentMessage ?? "Gateway returned failure"), "preview", containerIdentifier);
-            AddError(result.CurrentMessage ?? "Container query failed");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
-            return new DataPreviewResponse { Source = $"Container: {containerIdentifier}", Columns = [], Rows = [], RowCount = 0, HasMoreRows = false };
-        }
-
-        var rows = result.Value?.ToList() ?? [];
-
-        var columnDtos = InferColumnsFromRows(rows);
-
-        return new DataPreviewResponse
-        {
-            Source = $"Container: {containerIdentifier}",
-            Columns = columnDtos,
+            Source = source,
+            Columns = InferColumnsFromRows(rows),
             Rows = rows,
             RowCount = rows.Count,
             HasMoreRows = rows.Count >= maxRows
-        };
+        });
     }
 
     /// <summary>

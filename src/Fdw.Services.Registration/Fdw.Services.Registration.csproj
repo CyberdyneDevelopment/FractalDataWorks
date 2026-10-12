@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

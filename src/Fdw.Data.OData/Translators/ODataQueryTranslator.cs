@@ -52,14 +52,11 @@ public sealed class ODataQueryTranslator : ODataCommandTranslatorBase
     /// <param name="container">The container with schema metadata.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result containing the HttpRequestMessage.</returns>
-    // MA0051: Method length acceptable - sequential translation algorithm (extract metadata, build query params, assemble HTTP request)
-#pragma warning disable MA0051 // Method is too long
     [ConventionOverride(MaxCyclomaticComplexity = 35)]  // Why 35: was 25; one log call per failure path took it to 28.
     public override Task<IGenericResult<HttpRequestMessage>> Translate(
         IDataCommand command,
         IStorageContainer container,
         CancellationToken cancellationToken = default)
-#pragma warning restore MA0051
     {
         ODataQueryTranslatorLog.Translating(
             NullLogger<ODataQueryTranslator>.Instance, container?.Name ?? "<null>");

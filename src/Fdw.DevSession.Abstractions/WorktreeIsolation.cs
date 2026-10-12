@@ -19,7 +19,7 @@ public sealed class WorktreeIsolation : IsolationLevelBase
     /// Initializes a new instance of the <see cref="WorktreeIsolation"/> class.
     /// </summary>
     public WorktreeIsolation()
-        : base(id: 1, name: "Worktree", sharesObjectStore: true)
+        : base(name: "Worktree", sharesObjectStore: true)
     {
     }
 

@@ -382,6 +382,47 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage UnhandledSqlError(ILogger logger, Exception ex, string commandText, int errorNumber, string errorMessage);
 
     /// <summary>
+    /// Logs when a unique index or unique constraint refused a row (errors 2601, 2627): the row already exists.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The SQL exception.</param>
+    /// <param name="commandText">The SQL command text that failed.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(EventId = 40001, Level = LogLevel.Error, Message = "SQL unique constraint violated on '{commandText}'")]
+    public static partial IGenericMessage SqlUniqueViolation(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
+    /// Logs when a foreign key constraint refused a statement (error 547): a referenced row is missing, or the row is still referenced.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The SQL exception.</param>
+    /// <param name="commandText">The SQL command text that failed.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(EventId = 40000, Level = LogLevel.Error, Message = "SQL foreign key constraint violated on '{commandText}'")]
+    public static partial IGenericMessage SqlReferenceViolation(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
+    /// Logs when the server refused a statement because of how the application built it (a NULL for a column that
+    /// requires a value, a request over the parameter limit): the same statement fails again, so it is not retryable.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The SQL exception.</param>
+    /// <param name="commandText">The SQL command text that failed.</param>
+    /// <param name="errorNumber">The SQL error number.</param>
+    /// <param name="errorMessage">The server's own message.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(EventId = 90000, Level = LogLevel.Error, Message = "SQL Server refused the statement with error {errorNumber} on '{commandText}': {errorMessage}")]
+    public static partial IGenericMessage SqlStatementRefused(ILogger logger, Exception ex, string commandText, int errorNumber, string errorMessage);
+
+    /// <summary>
+    /// Logs when the target database is unavailable to this login (errors 4060, 4064) --
+    /// the database does not exist, was dropped and recreated, or the login has no user
+    /// mapped in it (distinct from error 18456, a server-level authentication failure).
+    /// </summary>
+    [MessageLogging(EventId = 71022, Level = LogLevel.Error, Message = "SQL database unavailable to this login on '{commandText}'")]
+    public static partial IGenericMessage SqlDatabaseUnavailable(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
     /// Logs when a connection is stale (disposed) and needs to be recreated from the provider.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
@@ -395,9 +436,11 @@ public static partial class MsSqlConnectionLogger
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Traces entry into the MsSqlConnection.Execute method.
+    /// Logs the translated SQL before the connection is opened. Parameter values are not included.
     /// </summary>
-    [MessageLogging(EventId = 11020, Level = LogLevel.Trace, Message = "Entering MsSqlConnection.Execute for '{commandText}'")]
+    // Why Trace, not Information: this fires once per query and ExecutingSqlCommand logs the same
+    // CommandText at Debug a few lines later, so Information only duplicated every statement into production.
+    [MessageLogging(EventId = 11020, Level = LogLevel.Trace, Message = "SQL command built: {commandText}")]
     public static partial IGenericMessage TraceExecuteEntry(ILogger logger, string commandText);
 
     /// <summary>
@@ -432,21 +475,35 @@ public static partial class MsSqlConnectionLogger
     public static partial IGenericMessage TraceTenantContextSet(ILogger logger, string tenantId);
 
     /// <summary>
-    /// Traces when a pooled connection is used under an explicit system-elevation context — NO
-    /// SESSION_CONTEXT keys are set at all (the resulting NULL UserId is what
-    /// security.fn_TenantFilter's Mode 1 bypass checks for; there is no dedicated SystemContext key).
+    /// Traces when a pooled connection is opened under an explicit system elevation that belongs to
+    /// no tenant: SESSION_CONTEXT('System') = '1' and nothing else.
     /// </summary>
-    [MessageLogging(EventId = 11034, Level = LogLevel.Trace, Message = "System-elevated connection used — no SESSION_CONTEXT keys set on pooled connection")]
-    public static partial IGenericMessage TraceSystemBypassConnectionUsed(ILogger logger);
+    [MessageLogging(EventId = 11034, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT System='1' on pooled connection")]
+    public static partial IGenericMessage TraceSystemContextSet(ILogger logger);
 
     /// <summary>
-    /// Traces when SESSION_CONTEXT('UserId') is set to the reserved deny-everywhere
-    /// NoAccessPrincipalId — no established, Guid-identified, or system-elevated context was
-    /// available for this connection, so it is denied tenant-scoped visibility (sees only
-    /// shared/system rows).
+    /// Traces when a pooled connection is opened under an explicit system elevation working for a
+    /// tenant — a background run — so rows it writes default to that tenant.
     /// </summary>
-    [MessageLogging(EventId = 11067, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT UserId to the reserved NoAccessPrincipalId (deny-everywhere) on pooled connection")]
-    public static partial IGenericMessage TraceNoAccessPrincipalContextSet(ILogger logger);
+    [MessageLogging(EventId = 11026, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT System='1' TenantId='{tenantId}' on pooled connection")]
+    public static partial IGenericMessage TraceSystemContextSetForTenant(ILogger logger, string tenantId);
+
+    /// <summary>
+    /// Reports that this connection opened with SESSION_CONTEXT('UserId') set to the reserved
+    /// NoAccessPrincipalId, because no system-elevated or Guid-identified context was available.
+    /// </summary>
+    /// <remarks>
+    /// Why Warning: this is the one connection state that fails silently. The deny principal reaches
+    /// only <c>fn_TenantFilter</c>'s shared-row branch, so every read on it succeeds and
+    /// returns a PARTIAL result — every tenant-scoped and every restricted row silently absent. A
+    /// caller cannot tell that from "those rows do not exist", which sends the next person hunting a
+    /// seed or mapper bug. Either something forgot to elevate, or a genuinely anonymous caller is
+    /// reading; both are worth seeing, and neither is visible at Trace, which production filters out.
+    /// <c>dataSource</c>/<c>database</c> name which server/database this happened on — there is no
+    /// request/correlation id threaded into the connection layer to name the triggering call.
+    /// </remarks>
+    [MessageLogging(EventId = 11067, Level = LogLevel.Warning, Message = "Connection to '{dataSource}'/'{database}' opened as the deny principal ({reason}): reads on it return only shared rows, with tenant-scoped and restricted rows silently absent")]
+    public static partial IGenericMessage NoAccessPrincipalContextSet(ILogger logger, string dataSource, string database, string reason);
 
     /// <summary>
     /// Logs when setting tenant SESSION_CONTEXT fails.
@@ -454,18 +511,6 @@ public static partial class MsSqlConnectionLogger
     [MessageLogging(EventId = 71018, Level = LogLevel.Error, Message = "Failed to set tenant SESSION_CONTEXT: {errorMessage}")]
     public static partial IGenericMessage TenantContextSetFailed(ILogger logger, string errorMessage);
 
-    /// <summary>
-    /// Traces when cross-tenant SESSION_CONTEXT is set on a pooled connection (CrossTenant='1').
-    /// </summary>
-    [MessageLogging(EventId = 11026, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT CrossTenant='1' for userId='{userId}' on pooled connection")]
-    public static partial IGenericMessage TraceCrossTenantContextSet(ILogger logger, string userId);
-
-    /// <summary>
-    /// Traces when SESSION_CONTEXT CanReadSecrets='1' is set because the token carries
-    /// the <c>connections:read-secrets</c> permission. Never logs the permission list.
-    /// </summary>
-    [MessageLogging(EventId = 11027, Level = LogLevel.Trace, Message = "Set SESSION_CONTEXT CanReadSecrets='1' on pooled connection")]
-    public static partial IGenericMessage TraceCanReadSecretsContextSet(ILogger logger);
 
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -531,4 +576,13 @@ public static partial class MsSqlConnectionLogger
     /// </summary>
     [MessageLogging(EventId = 11033, Level = LogLevel.Debug, Message = "Health probe succeeded for connection '{connectionName}'")]
     public static partial IGenericMessage ProbeSucceeded(ILogger logger, string connectionName);
+
+    /// <summary>
+    /// Logs when a command cannot carry the session context in its own batch: it uses the parameter-name
+    /// prefix reserved for the context, or it is not a plain-text command.
+    /// </summary>
+    // Why 20001: the catalog's InvalidInput. The command handed to the connection is the bad input; this
+    // is not a database failure, and nothing was sent.
+    [MessageLogging(EventId = 20001, Level = LogLevel.Error, Message = "Input '{name}' is invalid: {reason}")]
+    public static partial IGenericMessage SessionContextInputInvalid(ILogger logger, string name, string reason);
 }

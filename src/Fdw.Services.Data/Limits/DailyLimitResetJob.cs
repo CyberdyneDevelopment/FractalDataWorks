@@ -19,7 +19,7 @@ namespace Fdw.Services.Data.Limits;
 /// The DB flush of counter values is handled separately by the configuration
 /// persistence path; this job only clears the in-memory state for the new day.
 /// </summary>
-internal sealed class DailyLimitResetJob : BackgroundService
+public sealed class DailyLimitResetJob : BackgroundService
 {
     private readonly ConnectionLimitCounterStore _counters;
     private readonly ILogger<DailyLimitResetJob> _logger;

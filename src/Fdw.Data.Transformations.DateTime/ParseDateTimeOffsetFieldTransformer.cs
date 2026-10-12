@@ -22,7 +22,6 @@ public sealed class ParseDateTimeOffsetFieldTransformer : FieldTransformationBas
     /// </summary>
     public ParseDateTimeOffsetFieldTransformer()
         : base(
-            id: 101,
             name: "ParseDateTimeOffset",
             displayName: "Parse DateTimeOffset",
             description: "Parses a string value to DateTimeOffset using AssumeUniversal. Returns null on parse failure.",

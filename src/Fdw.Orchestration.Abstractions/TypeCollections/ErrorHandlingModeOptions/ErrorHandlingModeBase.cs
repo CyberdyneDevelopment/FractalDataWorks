@@ -13,23 +13,21 @@ namespace Fdw.Orchestration.Abstractions.TypeCollections.ErrorHandlingModeOption
 /// Provides common functionality for error handling modes used in orchestration steps.
 /// Derived classes implement specific error handling behaviors.
 /// </remarks>
-public abstract class ErrorHandlingModeBase : TypeOptionBase<int, ErrorHandlingModeBase>, IErrorHandlingMode
+public abstract class ErrorHandlingModeBase : TypeOptionBase<ErrorHandlingModeBase>, IErrorHandlingMode
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ErrorHandlingModeBase"/> class.
     /// </summary>
-    /// <param name="id">Unique numeric identifier.</param>
     /// <param name="name">Human-readable name.</param>
     /// <param name="continuesExecution">Whether execution continues after error.</param>
     /// <param name="supportsRetry">Whether this mode supports retry attempts.</param>
     /// <param name="triggersCompensation">Whether this mode triggers compensation logic.</param>
     protected ErrorHandlingModeBase(
-        int id,
         string name,
         bool continuesExecution,
         bool supportsRetry,
         bool triggersCompensation)
-        : base(id, name, $"ErrorHandlingModes:{name}", name, $"{name} error handling", "Orchestration")
+        : base(name, $"ErrorHandlingModes:{name}", name, $"{name} error handling", "Orchestration")
     {
         ContinuesExecution = continuesExecution;
         SupportsRetry = supportsRetry;

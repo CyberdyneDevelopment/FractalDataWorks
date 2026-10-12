@@ -14,5 +14,5 @@ public sealed class ConnectionNodeType : LineageNodeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionNodeType"/> class.
     /// </summary>
-    public ConnectionNodeType() : base(3, "Connection") { }
+    public ConnectionNodeType() : base("Connection") { }
 }

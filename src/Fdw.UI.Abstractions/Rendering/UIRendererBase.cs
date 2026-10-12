@@ -8,17 +8,16 @@ namespace Fdw.UI.Abstractions.Rendering;
 /// <remarks>
 /// Inherit from this class and apply [TypeOption] attribute to create custom renderer types.
 /// </remarks>
-public abstract class UIRendererBase : TypeOptionBase<int, UIRendererBase>, IUIRendererType
+public abstract class UIRendererBase : TypeOptionBase<UIRendererBase>, IUIRendererType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="UIRendererBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The name of this renderer type.</param>
     /// <param name="displayName">The display name.</param>
     /// <param name="description">The description.</param>
-    protected UIRendererBase(int id, string name, string displayName, string description)
-        : base(id, name)
+    protected UIRendererBase(string name, string displayName, string description)
+        : base(name)
     {
         DisplayName = displayName;
         Description = description;

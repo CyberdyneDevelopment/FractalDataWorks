@@ -39,7 +39,8 @@ public static class RecordRowMatcher
         string leftField,
         string rightField,
         string parentContainerName,
-        IFilterNode? filter)
+        IFilterNode? filter,
+        string? primaryContainerName = null)
     {
         if (!childRow.TryGetValue(leftField, out var leftValue) || leftValue is null)
             return false;
@@ -50,7 +51,7 @@ public static class RecordRowMatcher
             if (!parentRow.TryGetValue(rightField, out var rightValue) || !ValuesEqual(leftValue, rightValue))
                 continue;
 
-            if (Matches(childRow, parentRow, parentContainerName, filter))
+            if (Matches(childRow, parentRow, parentContainerName, filter, primaryContainerName))
                 return true;
         }
 
@@ -61,13 +62,29 @@ public static class RecordRowMatcher
     /// Evaluates <paramref name="node"/> (a <see cref="FilterCondition"/> leaf or a
     /// <see cref="FilterGroup"/> composite) against <paramref name="childRow"/> and the optional
     /// joined <paramref name="parentRow"/>. A bare column name resolves against the child row; a
-    /// dotted <c>"{parentContainerName}.Col"</c> qualifier resolves against the parent row.
+    /// dotted <c>"{parentContainerName}.Col"</c> qualifier resolves against the parent row, and a
+    /// <c>"{primaryContainerName}.Col"</c> qualifier resolves against the child row — the form SQL
+    /// accepts for the queried container itself.
     /// </summary>
     public static bool Matches(
         IReadOnlyDictionary<string, object?> childRow,
         IReadOnlyDictionary<string, object?>? parentRow,
         string? parentContainerName,
-        IFilterNode? node)
+        IFilterNode? node,
+        string? primaryContainerName = null)
+        => Matches(childRow, JoinedRowsOf(parentRow, parentContainerName), node, primaryContainerName);
+
+    /// <summary>
+    /// Evaluates <paramref name="node"/> against <paramref name="childRow"/> and the rows every join
+    /// brought in, keyed by the container each came from. A bare column resolves against the child
+    /// row; a <c>"{container}.Col"</c> qualifier resolves against that container's joined row, and a
+    /// <c>"{primaryContainerName}.Col"</c> qualifier against the child row.
+    /// </summary>
+    public static bool Matches(
+        IReadOnlyDictionary<string, object?> childRow,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> joinedRows,
+        IFilterNode? node,
+        string? primaryContainerName)
     {
         switch (node)
         {
@@ -75,10 +92,10 @@ public static class RecordRowMatcher
                 return true;
 
             case FilterCondition condition:
-                return EvaluateCondition(childRow, parentRow, parentContainerName, condition);
+                return EvaluateCondition(childRow, joinedRows, condition, primaryContainerName);
 
             case FilterGroup group:
-                return EvaluateGroup(childRow, parentRow, parentContainerName, group);
+                return EvaluateGroup(childRow, joinedRows, group, primaryContainerName);
 
             default:
                 throw new InvalidOperationException(
@@ -86,17 +103,26 @@ public static class RecordRowMatcher
         }
     }
 
+    private static Dictionary<string, IReadOnlyDictionary<string, object?>> JoinedRowsOf(
+        IReadOnlyDictionary<string, object?>? parentRow, string? parentContainerName)
+    {
+        var joined = new Dictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.Ordinal);
+        if (parentRow is not null && parentContainerName is not null)
+            joined[parentContainerName] = parentRow;
+        return joined;
+    }
+
     private static bool EvaluateGroup(
         IReadOnlyDictionary<string, object?> childRow,
-        IReadOnlyDictionary<string, object?>? parentRow,
-        string? parentContainerName,
-        FilterGroup group)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> joinedRows,
+        FilterGroup group,
+        string? primaryContainerName)
     {
         if (ReferenceEquals(group.Operator, LogicalOperator.Or))
         {
             foreach (var child in group.Nodes)
             {
-                if (Matches(childRow, parentRow, parentContainerName, child))
+                if (Matches(childRow, joinedRows, child, primaryContainerName))
                     return true;
             }
             return false;
@@ -104,7 +130,7 @@ public static class RecordRowMatcher
 
         foreach (var child in group.Nodes)
         {
-            if (!Matches(childRow, parentRow, parentContainerName, child))
+            if (!Matches(childRow, joinedRows, child, primaryContainerName))
                 return false;
         }
         return true;
@@ -112,11 +138,11 @@ public static class RecordRowMatcher
 
     private static bool EvaluateCondition(
         IReadOnlyDictionary<string, object?> childRow,
-        IReadOnlyDictionary<string, object?>? parentRow,
-        string? parentContainerName,
-        FilterCondition condition)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> joinedRows,
+        FilterCondition condition,
+        string? primaryContainerName)
     {
-        var (row, columnName) = ResolveTarget(childRow, parentRow, parentContainerName, condition.PropertyName);
+        var (row, columnName) = ResolveTarget(childRow, joinedRows, condition.PropertyName, primaryContainerName);
         if (row is null)
             return false;
 
@@ -133,17 +159,19 @@ public static class RecordRowMatcher
 
     private static (IReadOnlyDictionary<string, object?>? Row, string Column) ResolveTarget(
         IReadOnlyDictionary<string, object?> childRow,
-        IReadOnlyDictionary<string, object?>? parentRow,
-        string? parentContainerName,
-        string propertyName)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, object?>> joinedRows,
+        string propertyName,
+        string? primaryContainerName)
     {
         var (qualifier, column) = QualifiedColumn.Split(propertyName);
         if (qualifier is null)
             return (childRow, column);
 
-        return parentContainerName is not null && string.Equals(qualifier, parentContainerName, StringComparison.Ordinal)
-            ? (parentRow, column)
-            : (null, column);
+        // The queried container may be named explicitly, as it may in SQL.
+        if (primaryContainerName is not null && string.Equals(qualifier, primaryContainerName, StringComparison.Ordinal))
+            return (childRow, column);
+
+        return joinedRows.TryGetValue(qualifier, out var joined) ? (joined, column) : (null, column);
     }
 
     internal static bool ValuesEqual(object? left, object? right)

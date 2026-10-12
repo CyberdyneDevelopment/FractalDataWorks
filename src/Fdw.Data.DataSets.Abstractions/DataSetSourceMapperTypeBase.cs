@@ -11,23 +11,21 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Mappers extract raw records from structured payloads and return dictionaries of string? values.
 /// Type coercion is handled by the downstream transform chain, not the mapper.
 /// </summary>
-public abstract class DataSetSourceMapperTypeBase : TypeOptionBase<int, DataSetSourceMapperTypeBase>, IDataSetSourceMapperType
+public abstract class DataSetSourceMapperTypeBase : TypeOptionBase<DataSetSourceMapperTypeBase>, IDataSetSourceMapperType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetSourceMapperTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this mapper type.</param>
     /// <param name="name">The name of this mapper type.</param>
     /// <param name="displayName">The display name for this mapper type.</param>
     /// <param name="description">A description of what this mapper does.</param>
     /// <param name="category">The category for this mapper type (defaults to "Mapper").</param>
     protected DataSetSourceMapperTypeBase(
-        int id,
         string name,
         string displayName,
         string description,
         string? category = null)
-        : base(id, name, $"Mappers:{name}", displayName, description, category ?? "Mapper")
+        : base(name, $"Mappers:{name}", displayName, description, category ?? "Mapper")
     {
     }
 

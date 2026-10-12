@@ -14,7 +14,6 @@ public sealed class NotEqualOperator : FilterOperatorBase
     /// </summary>
     public NotEqualOperator()
         : base(
-            id: 2,
             name: "NotEqual",
             sqlOperator: "<>",
             odataOperator: "ne",

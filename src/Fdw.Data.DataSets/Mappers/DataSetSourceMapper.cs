@@ -24,7 +24,6 @@ public sealed class DataSetSourceMapper : DataSetSourceMapperTypeBase
     /// </summary>
     public DataSetSourceMapper()
         : base(
-            id: 2,
             name: "DataSet",
             displayName: "DataSet",
             description: "Resolves rows from another DataSet within the same compound/federated composition.",

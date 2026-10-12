@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlSingleConverter()
     : DataTypeConverterBase(
-        id: 5,
         name: "Single",
         sourceType: "float4",
         targetClrType: typeof(float),

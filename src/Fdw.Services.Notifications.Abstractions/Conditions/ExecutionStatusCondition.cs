@@ -16,7 +16,7 @@ public sealed class ExecutionStatusCondition : NotificationConditionTypeBase
     /// Initializes a new instance of the <see cref="ExecutionStatusCondition"/> class.
     /// </summary>
     public ExecutionStatusCondition()
-        : base(4, "ExecutionStatus", "flag", "Info")
+        : base("ExecutionStatus", "flag", "Info")
     {
     }
 

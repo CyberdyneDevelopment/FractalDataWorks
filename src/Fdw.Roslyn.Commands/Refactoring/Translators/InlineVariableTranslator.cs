@@ -31,7 +31,6 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve variable, find references, replace with initializer
     public override async Task<IGenericResult<MutationResult>> Translate(
         InlineVariableCommand command,
         Solution solution,
@@ -153,5 +152,4 @@ public sealed class InlineVariableTranslator : RoslynCommandTranslatorBase<Inlin
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 }

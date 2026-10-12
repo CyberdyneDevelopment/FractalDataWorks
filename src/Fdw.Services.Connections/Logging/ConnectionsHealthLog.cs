@@ -1,3 +1,4 @@
+using System;
 using Fdw.MessageLogging;
 using Fdw.Messages;
 using Microsoft.Extensions.Logging;
@@ -63,4 +64,11 @@ public static partial class ConnectionsHealthLog
     /// </summary>
     [MessageLogging(EventId = 12006, Level = LogLevel.Warning, Message = "Connection '{connectionName}' has health checks enabled but its connection type does not support health probing")]
     public static partial IGenericMessage NoProbeCapability(ILogger logger, string connectionName);
+
+    /// <summary>
+    /// Logs that probing a connection threw instead of answering; it is reported unhealthy and the
+    /// remaining connections are still checked.
+    /// </summary>
+    [MessageLogging(EventId = 12008, Level = LogLevel.Error, Message = "Health probe for connection '{connectionName}' threw instead of answering; reported unhealthy, the check continues: {reason}")]
+    public static partial IGenericMessage ProbeThrew(ILogger logger, Exception ex, string connectionName, string reason);
 }

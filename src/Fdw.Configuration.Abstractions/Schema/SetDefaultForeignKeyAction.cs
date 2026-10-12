@@ -9,5 +9,5 @@ namespace Fdw.Configuration.Persistence.Schema;
 public sealed class SetDefaultForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="SetDefaultForeignKeyAction"/>.</summary>
-    public SetDefaultForeignKeyAction() : base(4, "SetDefault") { }
+    public SetDefaultForeignKeyAction() : base("SetDefault") { }
 }

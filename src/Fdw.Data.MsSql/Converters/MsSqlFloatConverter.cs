@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlFloatConverter()
     : DataTypeConverterBase(
-        id: 8,
         name: "Float",
         sourceType: "float",
         targetClrType: typeof(double),

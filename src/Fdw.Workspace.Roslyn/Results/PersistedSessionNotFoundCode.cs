@@ -16,7 +16,7 @@ public sealed class PersistedSessionNotFoundCode : WorkspaceResultCodeBase
     /// </summary>
     public PersistedSessionNotFoundCode()
         : base(30000, "PersistedSessionNotFound",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Persisted session {SessionId} not found in system store",
             isRetryable: false)
     {

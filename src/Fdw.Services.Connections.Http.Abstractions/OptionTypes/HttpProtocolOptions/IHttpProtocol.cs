@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 using Fdw.Collections;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using System.Collections.Generic;
+using System.IO;
+using Fdw.Data.RowSources.Abstractions;
+using Microsoft.Extensions.Logging;
 using Fdw.Results;
 
 namespace Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
@@ -68,4 +72,24 @@ public interface IHttpProtocol : ITypeOption<int, HttpProtocolBase>
         Type resultType,
         HttpProtocolContext context,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Opens a streaming record source over response content for the container's format, or returns
+    /// null when no reader exists for it.
+    /// </summary>
+    /// <param name="container">The container carrying the format + row-extraction metadata.</param>
+    /// <param name="content">The response content stream, read lazily by the returned source.</param>
+    /// <param name="fields">The container's fields, used to build the record schema once.</param>
+    /// <param name="logger">Optional logger threaded to the created source.</param>
+    /// <returns>A record source over the content, or null when the format has no reader here.</returns>
+    /// <remarks>
+    /// On the contract rather than only on the base class because the protocol is what knows its
+    /// format: a connection holds an <see cref="IHttpProtocol"/> and must be able to ask for a
+    /// streaming read without testing the concrete protocol type first.
+    /// </remarks>
+    IRecordSource<DataRecord>? TryOpenRecordSource(
+        IStorageContainer container,
+        Stream content,
+        IReadOnlyList<IDataField> fields,
+        ILogger? logger = null);
 }

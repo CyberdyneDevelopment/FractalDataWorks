@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlDateConverter()
     : DataTypeConverterBase(
-        id: 14,
         name: "Date",
         sourceType: "date",
         targetClrType: typeof(DateOnly),

@@ -34,7 +34,13 @@ public abstract class DataCommandTranslatorBase<TCommand> : IDataCommandTranslat
     /// <param name="domainName">Domain name this translator targets.</param>
     protected DataCommandTranslatorBase(string name, string domainName)
     {
-        Id = GenerateIdFromName(name);
+        if (string.IsNullOrEmpty(name))
+        {
+            DataCommandTranslatorBaseLog.TranslatorNameMissing(NullLogger<DataCommandTranslatorBase<TCommand>>.Instance);
+            throw new ArgumentNullException(nameof(name));
+        }
+
+        Id = OptionId.DeriveInt(GetType().FullName!);
         Name = name;
         DomainName = domainName;
 
@@ -43,40 +49,9 @@ public abstract class DataCommandTranslatorBase<TCommand> : IDataCommandTranslat
     }
 
     /// <summary>
-    /// Generates a deterministic ID from a translator name using FNV-1a hash.
-    /// </summary>
-    private static int GenerateIdFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
-            DataCommandTranslatorBaseLog.TranslatorNameMissing(NullLogger<DataCommandTranslatorBase<TCommand>>.Instance);
-            throw new ArgumentNullException(nameof(name));
-        }
-
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-            return hash & 0x7FFFFFFF;
-        }
-    }
-
-    /// <summary>
     /// Gets the unique identifier for this translator type.
     /// </summary>
     public int Id { get; }
-
-    /// <summary>
-    /// Gets the unique identifier as object for ITypeOption compatibility.
-    /// </summary>
-    object ITypeOption.Id => Id;
 
     /// <summary>
     /// Gets the name of this translator type.

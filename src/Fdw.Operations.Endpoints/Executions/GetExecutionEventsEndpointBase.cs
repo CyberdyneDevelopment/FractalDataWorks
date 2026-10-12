@@ -74,9 +74,7 @@ public abstract class GetExecutionEventsEndpointBase : Endpoint<ExecutionIdReque
         {
             var errorMessage = eventsResult.CurrentMessage ?? "Unknown error";
             OnEventsFetchFailed(req.Id, errorMessage);
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch events", Details = errorMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch events", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

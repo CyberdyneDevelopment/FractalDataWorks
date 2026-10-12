@@ -14,7 +14,7 @@ namespace Fdw.SignalR.Tests;
 /// Tests that a hub option maps itself with the authorization it declares.
 /// </summary>
 /// <remarks>
-/// This file used to also cover MapRealTimeHubs — the sweep that called every hub's Map. That sweep
+/// This file used to also cover MapRealTimeHubs — the pass that called every hub's Map. That pass
 /// now runs inside the host's Initialize phase, where exercising it means standing up a host rather
 /// than calling one method, so those four tests went with the extension. What survives is the part
 /// that is still a unit: an option, asked to map itself, carries its policy onto the route.

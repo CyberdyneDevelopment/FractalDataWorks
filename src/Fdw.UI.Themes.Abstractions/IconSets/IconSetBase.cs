@@ -6,14 +6,13 @@ namespace Fdw.UI.Themes;
 /// Abstract base class for icon sets.
 /// Inherit from this class and apply [TypeOption] attribute to create custom icon sets.
 /// </summary>
-public abstract class IconSetBase : TypeOptionBase<int, IconSetBase>, IIconSet
+public abstract class IconSetBase : TypeOptionBase<IconSetBase>, IIconSet
 {
     /// <summary>
     /// Creates a new icon set.
     /// </summary>
-    /// <param name="id">Unique identifier.</param>
     /// <param name="name">Display name.</param>
-    protected IconSetBase(int id, string name) : base(id, name) { }
+    protected IconSetBase(string name) : base(name) { }
 
     /// <inheritdoc />
     public abstract string SelectedIndicator { get; }

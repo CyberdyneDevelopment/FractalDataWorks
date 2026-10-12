@@ -13,7 +13,6 @@ public sealed class ConnectMenuTarget : MenuTargetBase
     /// Creates the connect menu target.
     /// </summary>
     public ConnectMenuTarget() : base(
-        id: 1,
         name: "connect",
         label: "Connect to Instance",
         group: "Main",

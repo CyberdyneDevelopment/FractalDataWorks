@@ -12,21 +12,19 @@ namespace Fdw.Configuration.Abstractions;
 /// <para>
 /// This base class provides:
 /// <list type="bullet">
-/// <item><description>Identity (Id, Name, SectionName)</description></item>
+/// <item><description>Identity (Id, Name)</description></item>
 /// <item><description>Audit timestamps (CreatedAt, ModifiedAt)</description></item>
 /// <item><description>Immutability via init-only properties</description></item>
 /// </list>
 /// </para>
 /// <para>
 /// Configuration discriminators are defined on domain-specific interfaces
-/// (e.g., ConnectionConfiguration.ConnectionType).
+/// (e.g., IConnectionImplementationConfiguration.ConnectionType).
 /// </para>
 /// <example>
 /// <code>
 /// public class EmailSettings : ConfigurationBase&lt;EmailSettings&gt;
 /// {
-///     public override string SectionName => "Email";
-///
 ///     public string SmtpHost { get; init; } = "smtp.gmail.com";
 ///     public int SmtpPort { get; init; } = 587;
 /// }
@@ -46,12 +44,6 @@ public abstract class ConfigurationBase<T> : IGenericConfiguration<T>
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name for this configuration in appsettings or database.
-    /// Must be overridden by derived classes.
-    /// </summary>
-    /// <example>"Email", "Database", "Notification"</example>
-    public abstract string SectionName { get; }
 
     /// <summary>
     /// Gets the service type (domain) for this configuration.
@@ -64,7 +56,7 @@ public abstract class ConfigurationBase<T> : IGenericConfiguration<T>
     /// Gets the service option type (implementation variant) for this configuration.
     /// </summary>
     /// <example>"MsSql", "Jwt", "Email"</example>
-    public virtual string? ServiceOptionType { get; set; }
+    public virtual string? Implementation { get; set; }
 
     /// <summary>
     /// Gets the timestamp when this configuration instance was created.

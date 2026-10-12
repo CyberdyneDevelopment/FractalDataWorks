@@ -12,11 +12,6 @@ namespace Fdw.Services.Pipelines.Abstractions;
 public interface IPipeline : IDisposable, IGenericService
 {
     /// <summary>
-    /// Gets the unique identifier for this pipeline instance.
-    /// </summary>
-    new Guid Id { get; }
-
-    /// <summary>
     /// Gets the name of this pipeline.
     /// </summary>
     string Name { get; }

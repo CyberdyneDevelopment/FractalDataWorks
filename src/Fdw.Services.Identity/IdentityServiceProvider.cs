@@ -10,7 +10,7 @@ namespace Fdw.Services.Identity;
 /// Resolves identity services by configuration name or id.
 /// </summary>
 public sealed class IdentityServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IIdentityService,
           IIdentityServiceImplementationConfiguration,
           IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>,
@@ -20,12 +20,10 @@ public sealed class IdentityServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="IdentityServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance.</param>
     public IdentityServiceProvider(
-        IServiceProvider services,
         ILogger<IdentityServiceProvider> logger)
-        : base(services, logger ?? NullLogger<IdentityServiceProvider>.Instance)
+        : base(logger ?? NullLogger<IdentityServiceProvider>.Instance)
     {
     }
 }

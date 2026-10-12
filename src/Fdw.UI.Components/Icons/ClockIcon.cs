@@ -11,7 +11,6 @@ public sealed class ClockIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ClockIcon"/>.</summary>
     public ClockIcon()
         : base(
-            50,
             "Clock",
             "0 0 24 24",
             "none",

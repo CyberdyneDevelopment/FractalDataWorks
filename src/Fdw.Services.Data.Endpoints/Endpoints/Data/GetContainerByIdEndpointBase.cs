@@ -14,8 +14,16 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Base endpoint for retrieving a specific container by its identifier.
 /// </summary>
+/// <remarks>
+/// With only the container's id there is no store to start from, so every store is read down to its
+/// containers to find it, and then only that container's fields (FDW-951). No other container's
+/// fields are read.
+/// </remarks>
 public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<ContainerIdRequest, DataStoreContainerDetailDto>
 {
+    // A store's paths are one level under it and their containers two.
+    private const int ThroughContainers = 2;
+
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
@@ -30,38 +38,34 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
     /// <summary>Returns the container identifier.</summary>
     protected override string GetResourceIdentifier(ContainerIdRequest request) => request.Id.ToString();
 
-    /// <summary>Finds a container by its identifier.</summary>
+    /// <summary>Finds a container by its identifier, with its fields; one that does not exist answers 404.</summary>
     protected override async Task<IGenericResult<DataStoreContainerDetailDto?>> FindByIdentifier(ContainerIdRequest request, CancellationToken ct)
     {
-        var allResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
+        var stores = await _dataStoreProvider.Get(ThroughContainers, ct).ConfigureAwait(false);
+        if (stores.IsFailure)
+        {
+            return stores.ToNewResult<DataStoreContainerDetailDto?>();
+        }
+
+        var found = stores.Value!
+            .SelectMany(store => store.Paths.SelectMany(path => path.Containers.Select(container => (store, container))))
+            .FirstOrDefault(pair => pair.container.Id == request.Id);
+        if (found.container is null)
         {
             return GenericResult<DataStoreContainerDetailDto?>.Success(null);
         }
 
-        var allConfigs = allResult.Value ?? (IReadOnlyList<DataStoreConfiguration>)[];
-
-        DataContainerConfiguration? container = null;
-
-        foreach (var dataStore in allConfigs)
-        {
-            foreach (var path in dataStore.Paths ?? [])
-            {
-                container = (path.Containers ?? []).FirstOrDefault(c => c.Id == request.Id);
-                if (container != null)
-                    break;
-            }
-
-            if (container != null)
-                break;
-        }
-
-        DataStoreContainerDetailDto? detail = container != null ? MapToDetail(container) : null;
-        return GenericResult<DataStoreContainerDetailDto?>.Success(detail);
+        var fields = await ContainerFields.Get(_dataStoreProvider, found.store.Name, found.container.Id, ct).ConfigureAwait(false);
+        return fields.IsFailure
+            ? fields.ToNewResult<DataStoreContainerDetailDto?>()
+            : GenericResult<DataStoreContainerDetailDto?>.Success(MapToDetail(found.container, fields.Value!));
     }
 
-    /// <summary>Maps a container configuration to a detail DTO with fields.</summary>
-    protected virtual DataStoreContainerDetailDto MapToDetail(DataContainerConfiguration container)
+    /// <summary>Maps a container configuration and its fields to a detail DTO.</summary>
+    /// <param name="container">The container, read as a record.</param>
+    /// <param name="fields">The container's fields.</param>
+    /// <returns>The detail DTO.</returns>
+    protected virtual DataStoreContainerDetailDto MapToDetail(DataContainerConfiguration container, IList<DataStoreFieldResponse> fields)
     {
         return new DataStoreContainerDetailDto
         {
@@ -69,23 +73,8 @@ public abstract class GetContainerByIdEndpointBase : CrudGetEndpointBase<Contain
             Name = container.Name,
             ContainerType = container.TypeId ?? string.Empty,
             Description = container.Description,
-            Fields = (container.Fields ?? []).Select(MapField).ToList()
-        };
-    }
-
-    /// <summary>Maps a field configuration to a field DTO.</summary>
-    protected virtual DataStoreFieldResponse MapField(DataContainerFieldConfiguration field)
-    {
-        return new DataStoreFieldResponse
-        {
-            Id = field.Id,
-            Name = field.Name,
-            NativeDataType = field.DataType,
-            FrameworkDataType = field.DataType,
-            IsNullable = false,
-            IsKey = false,
-            Ordinal = 0,
-            Description = field.Description
+            ClassificationId = container.ClassificationId,
+            Fields = fields
         };
     }
 }

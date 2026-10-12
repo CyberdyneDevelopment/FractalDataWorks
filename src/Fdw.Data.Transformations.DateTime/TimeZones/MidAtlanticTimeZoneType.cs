@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "MidAtlantic")]
 public sealed class MidAtlanticTimeZoneType : TimeZoneTypeBase
 {
-    public MidAtlanticTimeZoneType() : base(47, "MidAtlantic", "Mid-Atlantic Standard Time") { }
+    public MidAtlanticTimeZoneType() : base("MidAtlantic", "Mid-Atlantic Standard Time") { }
 }

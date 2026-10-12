@@ -11,16 +11,12 @@ public sealed class CommandCategoryBaseTests
     {
         // Arrange & Act
         var category = new TestCommandCategory(
-            id: 1,
             name: "Query",
             requiresTransaction: false,
             supportsStreaming: true,
             isCacheable: true,
             isMutation: false,
             executionPriority: 100);
-
-        // Assert
-        category.Id.ShouldBe(1);
         category.Name.ShouldBe("Query");
         category.RequiresTransaction.ShouldBeFalse();
         category.SupportsStreaming.ShouldBeTrue();
@@ -36,7 +32,6 @@ public sealed class CommandCategoryBaseTests
     {
         // Arrange & Act
         var category = new TestCommandCategory(
-            id: 2,
             name: "Mutation",
             requiresTransaction: true,
             supportsStreaming: false,
@@ -54,7 +49,6 @@ public sealed class CommandCategoryBaseTests
     {
         // Arrange & Act
         var category = new TestCommandCategory(
-            id: 3,
             name: "Full",
             requiresTransaction: true,
             supportsStreaming: true,
@@ -76,7 +70,6 @@ public sealed class CommandCategoryBaseTests
     {
         // Arrange & Act
         var category = new TestCommandCategory(
-            id: 4,
             name: "None",
             requiresTransaction: false,
             supportsStreaming: false,
@@ -98,7 +91,6 @@ public sealed class CommandCategoryBaseTests
     {
         // Arrange & Act
         var category = new TestCommandCategory(
-            id: 5,
             name: "LowPriority",
             requiresTransaction: false,
             supportsStreaming: false,
@@ -117,7 +109,6 @@ public sealed class CommandCategoryBaseTests
     {
         // Arrange & Act
         var category = new TestCommandCategory(
-            id: 6,
             name: "HighPriority",
             requiresTransaction: false,
             supportsStreaming: false,
@@ -133,14 +124,13 @@ public sealed class CommandCategoryBaseTests
     private sealed class TestCommandCategory : CommandCategoryBase
     {
         public TestCommandCategory(
-            int id,
             string name,
             bool requiresTransaction,
             bool supportsStreaming,
             bool isCacheable,
             bool isMutation,
             int executionPriority = 50)
-            : base(id, name, requiresTransaction, supportsStreaming, isCacheable, isMutation, executionPriority)
+            : base(name, requiresTransaction, supportsStreaming, isCacheable, isMutation, executionPriority)
         {
         }
     }

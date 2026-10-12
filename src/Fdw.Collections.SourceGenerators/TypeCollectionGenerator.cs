@@ -89,7 +89,8 @@ public class TypeCollectionGenerator : IIncrementalGenerator
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
             ParentCollectionMatchKey: parentCollection != null ? TypeOptionDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
-            BaseConstructorParameters: baseConstructorParams
+            BaseConstructorParameters: baseConstructorParams,
+            SentinelHoldsZeroId: CodeGeneration.HasOverridableIntId(baseType)
         );
     }
 
@@ -303,7 +304,6 @@ public class TypeCollectionGenerator : IIncrementalGenerator
         }
     }
 
-#pragma warning disable MA0051 // Source generator emits complete TypeCollection class — splitting scatters the template
     [ConventionOverride(MaxCyclomaticComplexity = 40, MaxMethodLines = 351)]  // Code generation template for TypeCollection — sequential string building
     private static string GenerateCode(
         TypeCollectionModel collection,
@@ -462,8 +462,12 @@ public class TypeCollectionGenerator : IIncrementalGenerator
             bodySb.AppendLine("            get");
             bodySb.AppendLine("            {");
             bodySb.AppendLine("                EnsureFrozen();");
-            // Use linear search by Name - Id values are runtime-determined
-            bodySb.AppendLine($"                return {fieldName} ??= ({option.FullTypeName})_all!.First(x => x.Name == \"{option.OptionName}\");");
+            // Match by concrete type rather than by Name: Id/Name are runtime-determined (set by the
+            // TypeOption's own constructor) and the collection's TGeneric interface is not guaranteed to
+            // declare Name at all (e.g. IDataCommand does not) - OfType<T>() is valid for every collection
+            // regardless of what TGeneric exposes, and is unambiguous since compile-time discovery already
+            // rejects duplicate option types.
+            bodySb.AppendLine($"                return {fieldName} ??= _all!.OfType<{option.FullTypeName}>().First();");
             bodySb.AppendLine("            }");
             bodySb.AppendLine("        }");
             bodySb.AppendLine();

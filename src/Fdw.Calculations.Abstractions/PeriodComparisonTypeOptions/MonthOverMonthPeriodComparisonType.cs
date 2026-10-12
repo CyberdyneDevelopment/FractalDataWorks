@@ -15,7 +15,7 @@ public sealed class MonthOverMonthPeriodComparisonType : PeriodComparisonTypeBas
     /// <summary>
     /// Initializes a new instance of the <see cref="MonthOverMonthPeriodComparisonType"/> class.
     /// </summary>
-    public MonthOverMonthPeriodComparisonType() : base(2, "MonthOverMonth", isCumulative: false) { }
+    public MonthOverMonthPeriodComparisonType() : base("MonthOverMonth", isCumulative: false) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => TimeSpan.FromDays(-30);

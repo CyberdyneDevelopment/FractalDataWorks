@@ -15,7 +15,6 @@ public sealed class CompletedStatusType : PromotionStatusTypeBase
     /// </summary>
     public CompletedStatusType()
         : base(
-            id: 5,
             name: "Completed",
             isTerminal: true,
             isSuccess: true,

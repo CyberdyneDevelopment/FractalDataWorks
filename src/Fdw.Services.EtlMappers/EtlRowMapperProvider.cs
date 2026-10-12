@@ -29,15 +29,15 @@ public sealed class EtlRowMapperProvider : IEtlRowMapperProvider
     public string DefaultMapperType => "Pooled";
 
     /// <inheritdoc />
-    public void Register(string serviceOptionType, IEtlRowMapperFactory factory)
+    public void Register(string implementation, IEtlRowMapperFactory factory)
     {
-        if (string.IsNullOrWhiteSpace(serviceOptionType))
-            throw new ArgumentNullException(nameof(serviceOptionType));
+        if (string.IsNullOrWhiteSpace(implementation))
+            throw new ArgumentNullException(nameof(implementation));
         if (factory == null)
             throw new ArgumentNullException(nameof(factory));
 
-        _factories[serviceOptionType] = factory;
-        EtlRowMapperLog.MapperTypeRegistered(_logger, serviceOptionType, factory.GetType().Name);
+        _factories[implementation] = factory;
+        EtlRowMapperLog.MapperTypeRegistered(_logger, implementation, factory.GetType().Name);
     }
 
     /// <inheritdoc />

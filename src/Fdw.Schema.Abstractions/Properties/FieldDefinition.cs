@@ -12,7 +12,7 @@ namespace Fdw.Schema.Properties;
 public sealed class FieldDefinition : IFieldDefinition
 {
     public required string Name { get; init; }
-    public required IPropertyRole Role { get; init; }
+    public required IDatumType Role { get; init; }
     public bool IsRequired { get; init; }
     public string? Description { get; init; }
     public IReadOnlyDictionary<string, object>? Metadata { get; init; }

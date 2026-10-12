@@ -17,7 +17,7 @@ public sealed class FullJoinExecutor : JoinExecutorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FullJoinExecutor"/> class.
     /// </summary>
-    public FullJoinExecutor() : base(4, "Full") { }
+    public FullJoinExecutor() : base("Full") { }
 
     /// <inheritdoc />
     public override IEnumerable<TResult> Execute<TLeft, TRight, TResult>(

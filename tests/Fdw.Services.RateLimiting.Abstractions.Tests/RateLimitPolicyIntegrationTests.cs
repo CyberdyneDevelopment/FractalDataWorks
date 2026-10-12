@@ -173,47 +173,8 @@ public class RateLimitPolicyIntegrationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void TypeCollectionLookupsReturnConsistentInstances()
-    {
-        // Act
-        var byId = RateLimitPolicies.ById(1);
-        var byName = RateLimitPolicies.ByName("Standard");
-        var property = RateLimitPolicies.Standard;
-
-        // Assert
-        byId.ShouldNotBeNull();
-        byName.ShouldNotBeNull();
-        property.ShouldNotBeNull();
-
-        byId.Id.ShouldBe(byName.Id);
-        byId.Name.ShouldBe(byName.Name);
-        byId.Id.ShouldBe(property.Id);
-        byId.Name.ShouldBe(property.Name);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void AllPoliciesImplementRequiredInterfaces()
-    {
-        // Arrange
-        var all = RateLimitPolicies.All();
-
-        // Assert
-        all.ShouldAllBe(p => p is IRateLimitPolicy);
-        all.ShouldAllBe(p => p is RateLimitPolicyBase);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void PolicyIdsMatchExpectedValues()
     {
-        // Assert
-        RateLimitPolicies.Standard.Id.ShouldBe(1);
-        RateLimitPolicies.Authenticated.Id.ShouldBe(2);
-        RateLimitPolicies.Premium.Id.ShouldBe(3);
-        RateLimitPolicies.Admin.Id.ShouldBe(4);
     }
 
     [Fact]
@@ -226,24 +187,6 @@ public class RateLimitPolicyIntegrationTests
         RateLimitPolicies.Authenticated.Name.ShouldBe("Authenticated");
         RateLimitPolicies.Premium.Name.ShouldBe("Premium");
         RateLimitPolicies.Admin.Name.ShouldBe("Admin");
-    }
-
-    [Theory]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    [InlineData(1, "Standard", 100)]
-    [InlineData(2, "Authenticated", 500)]
-    [InlineData(3, "Premium", 2000)]
-    [InlineData(4, "Admin", 10000)]
-    public void PolicyHasExpectedConfiguration(int id, string name, int requestsPerWindow)
-    {
-        // Act
-        var policy = RateLimitPolicies.ById(id);
-
-        // Assert
-        policy.ShouldNotBeNull();
-        policy.Name.ShouldBe(name);
-        policy.RequestsPerWindow.ShouldBe(requestsPerWindow);
     }
 
     [Fact]

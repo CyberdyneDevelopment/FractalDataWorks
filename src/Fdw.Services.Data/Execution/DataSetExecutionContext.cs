@@ -2,6 +2,7 @@ using Fdw.Configuration;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Transformations;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Execution;
@@ -24,14 +25,17 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
     /// <param name="connectionProvider">Resolves named <see cref="IDataConnection"/> instances.</param>
     /// <param name="dataStoreProvider">Resolves containers via the DataStore → Path → Container tree.</param>
     /// <param name="pushdown">Translates logical filters to physical for predicate pushdown.</param>
+    /// <param name="fieldTransformations">Resolves the transformation chains attached to a source's field mappings.</param>
     /// <param name="logger">Logger for execution diagnostics.</param>
     public DataSetExecutionContext(
-        DataSetConfiguration config,
+        IDataSetImplementationConfiguration config,
         IDataConnectionProvider connectionProvider,
         IDataStoreProvider dataStoreProvider,
         PredicatePushdownAnalyzer pushdown,
+        FieldMappingTransformationResolver fieldTransformations,
         ILogger logger)
     {
+        FieldTransformations = fieldTransformations;
         Config = config;
         ConnectionProvider = connectionProvider;
         DataStoreProvider = dataStoreProvider;
@@ -43,7 +47,7 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
     IGenericConfiguration IDataSetExecutionContext.Configuration => Config;
 
     /// <summary>Gets the resolved (composed) dataset configuration this execution runs against.</summary>
-    public DataSetConfiguration Config { get; }
+    public IDataSetImplementationConfiguration Config { get; }
 
     /// <summary>Gets the provider that resolves named connections.</summary>
     public IDataConnectionProvider ConnectionProvider { get; }
@@ -53,6 +57,9 @@ public sealed class DataSetExecutionContext : IDataSetExecutionContext
 
     /// <summary>Gets the predicate-pushdown analyzer for logical→physical filter translation.</summary>
     public PredicatePushdownAnalyzer Pushdown { get; }
+
+    /// <summary>Gets the resolver for the transformation chains attached to a source's field mappings.</summary>
+    public FieldMappingTransformationResolver FieldTransformations { get; }
 
     /// <summary>Gets the execution logger.</summary>
     public ILogger Logger { get; }

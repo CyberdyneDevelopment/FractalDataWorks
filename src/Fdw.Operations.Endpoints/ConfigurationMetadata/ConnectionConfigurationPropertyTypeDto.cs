@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class ConnectionConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="ConnectionConfigurationPropertyTypeDto"/>.</summary>
-    public ConnectionConfigurationPropertyTypeDto() : base(7, "Connection") { }
+    public ConnectionConfigurationPropertyTypeDto() : base("Connection") { }
 }

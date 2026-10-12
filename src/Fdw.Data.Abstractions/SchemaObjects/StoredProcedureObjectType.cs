@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class StoredProcedureObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for stored procedures.
+    /// Material Symbols icon name for stored procedures.
     /// </summary>
-    public const string ProcedureIcon = "code"; // Icons.Material.Filled.Code
+    public const string ProcedureIcon = "code";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StoredProcedureObjectType"/> class.
     /// </summary>
     public StoredProcedureObjectType()
         : base(
-            id: 5,
             name: "StoredProcedure",
             icon: ProcedureIcon,
             color: "Warning",

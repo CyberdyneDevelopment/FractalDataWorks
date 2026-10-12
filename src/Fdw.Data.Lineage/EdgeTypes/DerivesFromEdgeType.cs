@@ -13,5 +13,5 @@ namespace Fdw.Data.Lineage.EdgeTypes;
 public sealed class DerivesFromEdgeType : LineageEdgeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DerivesFromEdgeType"/> class.</summary>
-    public DerivesFromEdgeType() : base(10, "DerivesFrom") { }
+    public DerivesFromEdgeType() : base("DerivesFrom") { }
 }

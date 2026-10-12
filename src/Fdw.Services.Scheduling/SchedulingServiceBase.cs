@@ -23,7 +23,7 @@ namespace Fdw.Services.Scheduling;
 public abstract class SchedulingServiceBase<TCommand, TConfiguration, TService>
     : ServiceBase<TCommand, TConfiguration, TService>
     where TCommand : ISchedulingCommand
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : class, IImplementationConfiguration
     where TService : class
 {
     /// <summary>

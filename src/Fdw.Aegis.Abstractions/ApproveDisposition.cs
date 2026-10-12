@@ -15,7 +15,7 @@ public sealed class ApproveDisposition : VerdictDispositionBase
     /// Initializes a new instance of the <see cref="ApproveDisposition"/> class.
     /// </summary>
     public ApproveDisposition()
-        : base(id: 1, name: "Approve", isTerminal: true, allowsInjection: true)
+        : base(name: "Approve", isTerminal: true, allowsInjection: true)
     {
     }
 }

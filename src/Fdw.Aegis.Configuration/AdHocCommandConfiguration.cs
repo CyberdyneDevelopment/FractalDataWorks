@@ -22,29 +22,35 @@ namespace Fdw.Aegis.Configuration;
 [ManagedConfiguration(ServiceCategory = "AegisCommand", ServiceType = "AdHoc")]
 public partial class AdHocCommandConfiguration : IApprovalPolicyConfiguration
 {
+    /// <summary>Gets or sets the name, set by the domain provider from the domain row.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
-    // IGenericConfiguration — typed body identity
+    // IGenericConfiguration — implementation identity
     // ========================================
 
     /// <summary>
-    /// Gets or sets the unique identifier for this typed body row.
+    /// Gets or sets the unique identifier for this implementation row.
     /// </summary>
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent <c>AegisCommandConfiguration.Id</c>.
+    /// Gets or sets the domain record's durable id.
     /// </summary>
     public Guid AegisCommandId { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by AegisCommandId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Commands";
-    string IGenericConfiguration.ServiceType => "AegisCommand";
-    string? IGenericConfiguration.ServiceOptionType => "AdHoc";
+    /// <summary>
+    /// Gets or sets the declared connection this command runs against.
+    /// </summary>
+    public string ConnectionName { get; set; } = string.Empty;
 
     // ========================================
     // Approval-policy properties

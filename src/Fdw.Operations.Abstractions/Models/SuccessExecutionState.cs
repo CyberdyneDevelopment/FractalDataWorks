@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class SuccessExecutionState : ExecutionStateBase
 {
     /// <summary>Initializes a new instance of <see cref="SuccessExecutionState"/>.</summary>
-    public SuccessExecutionState() : base(4, "Success") { }
+    public SuccessExecutionState() : base("Success") { }
 }

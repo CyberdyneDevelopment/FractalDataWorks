@@ -9,5 +9,5 @@ namespace Fdw.TUI.Management.Navigation;
 public sealed class PushNavigationAction : NavigationActionBase
 {
     /// <summary>Initializes a new instance of <see cref="PushNavigationAction"/>.</summary>
-    public PushNavigationAction() : base(2, "Push") { }
+    public PushNavigationAction() : base("Push") { }
 }

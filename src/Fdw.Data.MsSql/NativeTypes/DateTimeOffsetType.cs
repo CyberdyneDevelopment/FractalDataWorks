@@ -14,7 +14,6 @@ public sealed class DateTimeOffsetType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="DateTimeOffsetType"/> class.</summary>
     public DateTimeOffsetType()
         : base(
-            id: 12,
             name: "datetimeoffset",
             description: "Date and time with a timezone offset.",
             abstractType: DataTypes.DateTimeOffset,

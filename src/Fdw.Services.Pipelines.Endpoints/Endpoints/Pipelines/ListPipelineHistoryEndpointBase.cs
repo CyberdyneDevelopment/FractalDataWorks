@@ -9,6 +9,8 @@ using Fdw.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Web.Endpoints.Contracts;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -60,18 +62,25 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
     /// <inheritdoc/>
     public override async Task HandleAsync(ListPipelineHistoryRequest req, CancellationToken ct)
     {
-        
+        var paging = PaginationQuery.ResolvePage(HttpContext, EndpointLogger, req.Page, req.PageSize);
+        if (paging.IsFailure)
+        {
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(paging, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        var page = paging.Value!;
+
         // Fails here as well as in the Registration phase: registration proves it for a real host,
         // and this proves it for anything that reaches the endpoint without having run registration.
         if (string.IsNullOrWhiteSpace(PipelineServiceTypes.OperationalConnection))
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new
+            await Send.ResultAsync(TypedResults.Json(new
                 {
                     Error = "The Pipelines operational connection is not configured",
                     Details = "The host must set PipelineServiceTypes.OperationalConnection before this endpoint can read execution history."
-                }, ct).ConfigureAwait(false);
+                }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -130,9 +139,7 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
         if (!result.IsSuccess)
         {
             OnExecutionHistoryFetchFailed(result.CurrentMessage ?? "Unknown error");
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch execution history", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution history", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -142,16 +149,16 @@ public abstract class ListPipelineHistoryEndpointBase : Endpoint<ListPipelineHis
         // Apply sorting and pagination in-memory
         var sorted = allRecords.OrderByDescending(r => r.StartedAt);
         var items = sorted
-            .Skip(req.Skip)
-            .Take(req.ValidatedPageSize)
+            .Skip(page.Skip)
+            .Take(page.Take)
             .Select(MapToExecutionRecord)
             .ToList();
 
         await Send.OkAsync(new PaginatedResponse<PipelineExecutionRecord>
         {
             Items = items,
-            Page = req.ValidatedPage,
-            PageSize = req.ValidatedPageSize,
+            Page = req.Page,
+            PageSize = page.Take,
             TotalCount = totalCount
         }, ct).ConfigureAwait(false);
     }

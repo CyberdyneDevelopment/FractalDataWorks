@@ -13,7 +13,7 @@ public sealed class RefactoringCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="RefactoringCommandCategory"/> class.
     /// </summary>
     public RefactoringCommandCategory()
-        : base(7, "Refactoring", "Code refactoring commands for renaming, extracting methods, and restructuring code")
+        : base("Refactoring", "Code refactoring commands for renaming, extracting methods, and restructuring code")
     {
     }
 }

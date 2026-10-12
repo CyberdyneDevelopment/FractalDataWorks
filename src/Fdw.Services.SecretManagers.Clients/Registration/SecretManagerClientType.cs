@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.SecretManagers.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Secret Manager API client.
+/// Implementation for the Secret Manager API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "SecretManagerClient")]
+[Implementation(typeof(ApiClientTypes), "SecretManagerClient")]
 public sealed class SecretManagerClientType : ApiClientTypeBase<SecretManagerApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class SecretManagerClientType : ApiClientTypeBase<SecretManagerApi
         {
             builder.Services.AddScoped<SecretManagerApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SecretManagerApiClient>>() ?? NullLogger<SecretManagerApiClient>.Instance;
-                return new SecretManagerApiClient(factory.CreateClient(Name), logger);
+                return new SecretManagerApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

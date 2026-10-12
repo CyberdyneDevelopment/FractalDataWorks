@@ -5,8 +5,7 @@ namespace Fdw.Services.Quality.Clients.Models;
 /// </summary>
 public sealed class CreateQualityRulePayload
 {
-    /// <summary>Gets or sets the rule name.</summary>
-    public string Name { get; set; } = string.Empty;
+    // No Name: quality.QualityRule has no Name column and the server contract takes none (FDW-734).
 
     /// <summary>Gets or sets the rule description.</summary>
     public string Description { get; set; } = string.Empty;

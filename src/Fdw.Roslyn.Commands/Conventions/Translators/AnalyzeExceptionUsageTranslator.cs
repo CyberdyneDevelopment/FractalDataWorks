@@ -31,7 +31,6 @@ public sealed class AnalyzeExceptionUsageTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: find throw statements and try-catch blocks, build analysis
     public override async Task<IGenericResult<QueryResult<ExceptionUsageAnalysisData>>> Translate(
         AnalyzeExceptionUsageCommand command,
         Solution solution,
@@ -134,7 +133,6 @@ public sealed class AnalyzeExceptionUsageTranslator
 
         return GenericResult<QueryResult<ExceptionUsageAnalysisData>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static string CategorizeException(string exceptionType)
     {

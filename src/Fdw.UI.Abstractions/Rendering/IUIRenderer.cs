@@ -11,7 +11,7 @@ namespace Fdw.UI.Abstractions.Rendering;
 /// <remarks>
 /// <para>
 /// Implementations translate component models to framework-specific renderables.
-/// The same IPageModel can be rendered by Spectre.Console, RazorConsole, Blazor, etc.
+/// The same IPageModel can be rendered by Spectre.Console, RazorConsole, etc.
 /// </para>
 /// <para>
 /// Renderers are registered as TypeOptions in the UIRenderers collection,

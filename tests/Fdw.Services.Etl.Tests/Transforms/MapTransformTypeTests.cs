@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fdw.Configuration;
+using Fdw.Data.Transformations;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Transforms;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -19,7 +20,7 @@ public sealed class MapTransformTypeTests
     private readonly MapTransformType _sut = new();
 
     private static TransformContext CreateContext() =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>());
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>());
 
     private static PipelineTransformConfiguration CreateConfig(params PipelineTransformFieldMappingConfiguration[] mappings) =>
         new() { Id = Guid.NewGuid(), Name = "Map1", OperationType = "Map", FieldMappings = [.. mappings] };
@@ -587,7 +588,6 @@ public sealed class MapTransformTypeTests
         target.FieldMappings[0].SourceField.ShouldBe("A");
         target.FieldMappings[0].DestinationField.ShouldBe("B");
         target.FieldMappings[0].TargetType.ShouldBe("int");
-        target.FieldMappings[0].PipelineTransformId.ShouldBe(target.Id);
     }
 
     [Fact]
@@ -627,5 +627,32 @@ public sealed class MapTransformTypeTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("ETL-11052");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TransformAppliesTheChainTheRunResolvedForTheMappingById()
+    {
+        // Arrange: the mapping states no expression; the run resolved a one-step chain for its id
+        _ = new ToUpperFieldTransformer();
+        var mapping = CreateMapping("A", "B");
+        var chains = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>
+        {
+            [mapping.Id] = [new ChainStep("ToUpper", 1)],
+        };
+        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: chains);
+
+        // Act
+        var result = await _sut.Transform(new Dictionary<string, object?> { ["A"] = "abc" }, CreateConfig(mapping), context, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!["B"].ShouldBe("ABC");
+    }
+
+    private sealed record ChainStep(string TransformType, int Ordinal) : IFieldMappingTransform
+    {
+        public IReadOnlyDictionary<string, string> Parameters { get; } = new Dictionary<string, string>();
     }
 }

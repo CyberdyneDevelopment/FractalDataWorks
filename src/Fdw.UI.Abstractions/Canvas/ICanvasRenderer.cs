@@ -10,7 +10,7 @@ namespace Fdw.UI.Abstractions.Canvas;
 /// <remarks>
 /// <para>
 /// Implementations translate an <see cref="ICanvasModel"/> into a framework-specific visual canvas
-/// (e.g. a Blazor Diagram component, a React Flow widget via JS interop, an SVG export).
+/// (e.g. a React Flow widget via JS interop, an SVG export).
 /// The same <see cref="ICanvasModel"/> can be rendered by any registered implementation — the
 /// model has no knowledge of the renderer.
 /// </para>
@@ -20,7 +20,7 @@ namespace Fdw.UI.Abstractions.Canvas;
 /// caller can inspect capability flags without holding a separate type reference.
 /// </para>
 /// <para>
-/// No Blazor or ASP.NET types appear in this interface — the canvas contract layer is
+/// No UI-framework or ASP.NET types appear in this interface — the canvas contract layer is
 /// render-agnostic.
 /// </para>
 /// </remarks>

@@ -15,7 +15,6 @@ public sealed class RunningStatus : ExecutionStatusBase
     /// </summary>
     public RunningStatus()
         : base(
-            id: 2,
             name: "Running",
             isTerminal: false,
             isSuccess: false,

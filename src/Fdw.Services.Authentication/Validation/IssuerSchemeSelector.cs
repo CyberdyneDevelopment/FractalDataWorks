@@ -53,15 +53,22 @@ public static class IssuerSchemeSelector
         var logger = context.RequestServices.GetService<ILoggerFactory>()?.CreateLogger(typeof(IssuerSchemeSelector))
             ?? (ILogger)NullLogger.Instance;
 
-        var authorization = context.Request.Headers.Authorization.ToString();
+        var authorization = BearerTokenReader.ReadHeaderOrQueryFallback(context);
 
-        // An opaque credential is recognised by its prefix, because there is nothing in it to read.
-        // It routes under a well-known issuer through the SAME binding lookup as every other scheme,
-        // rather than short-circuiting to a scheme name: a second routing path would have to be kept
+        // No Authorization header: the credential, if any, is a session cookie (FDW-903). The header
+        // is checked first and wins when both are present -- a caller that states a bearer token is
+        // routed by it, never by an ambient cookie it may not know it carries.
+        if (string.IsNullOrEmpty(authorization))
+            return SelectByCookie(context, logger);
+
+        // An opaque credential is recognised as a bearer value that is not a JWT, because there is
+        // nothing in it to read -- not by its prefix, which is the credential service's configuration
+        // (FDW-939) and not something this router knows. It routes under a well-known issuer through
+        // the SAME binding lookup as every other scheme, rather than short-circuiting to a scheme
+        // name: a second routing path would have to be kept
         // in step with this one, and a host that has not declared the ApiKey entry should fall
         // through to the unmatched handler exactly as it would for an undeclared issuer.
-        var issuer = authorization.StartsWith(
-            ApiKeyAuthenticationType.CredentialPrefix, StringComparison.OrdinalIgnoreCase)
+        var issuer = ApiKeyAuthenticationType.IsOpaqueCredential(authorization)
                 ? OpaqueCredentialIssuerFor(context, logger)
                 : ReadIssuer(authorization, context.Request.Path.ToString(), logger);
 
@@ -76,8 +83,7 @@ public static class IssuerSchemeSelector
         // be service registrations made while it was still being described.
         var bindings = context.RequestServices.GetRequiredService<AuthenticationSchemeBindings>().All;
 
-        var match = bindings.FirstOrDefault(
-            b => string.Equals(b.Issuer, issuer, StringComparison.Ordinal));
+        var match = bindings.FirstOrDefault(b => IssuerName.Matches(b.Issuer, issuer));
 
         if (match is null)
         {
@@ -88,6 +94,34 @@ public static class IssuerSchemeSelector
 
         AuthenticationValidationLog.IssuerRouted(logger, issuer, match.SchemeName, match.ServiceName);
         return match.SchemeName;
+    }
+
+    // A session id is random and names no issuer, so it is routed by WHICH declared cookie carries it,
+    // through the same bindings every other scheme is routed by. Exactly one declared cookie must be
+    // present: none means the request carries no credential, and more than one is refused rather than
+    // resolved by picking one -- which service the caller meant is not something to guess.
+    private static string SelectByCookie(HttpContext context, ILogger logger)
+    {
+        var path = context.Request.Path.ToString();
+        var carried = context.RequestServices.GetRequiredService<AuthenticationSchemeBindings>().All
+            .Where(b => b.CookieName is { } cookie && context.Request.Cookies.ContainsKey(cookie))
+            .ToList();
+
+        if (carried.Count == 0)
+        {
+            AuthenticationValidationLog.NoReadableBearerToken(logger, path);
+            return UnmatchedIssuerHandler.SchemeName;
+        }
+
+        if (carried.Count > 1)
+        {
+            AuthenticationValidationLog.SessionCookiesAmbiguous(
+                logger, path, string.Join(", ", carried.Select(b => b.CookieName)));
+            return UnmatchedIssuerHandler.SchemeName;
+        }
+
+        AuthenticationValidationLog.SessionCookieRouted(logger, carried[0].CookieName!, carried[0].SchemeName, path);
+        return carried[0].SchemeName;
     }
 
     private static string OpaqueCredentialIssuerFor(HttpContext context, ILogger logger)

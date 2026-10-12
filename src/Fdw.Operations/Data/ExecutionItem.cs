@@ -165,4 +165,13 @@ public sealed class ExecutionItem
     /// Provides context for the ResultCode. May include error details or success summary.
     /// </remarks>
     public string? ResultMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tenant the execution belongs to.
+    /// </summary>
+    /// <remarks>
+    /// Stated by whoever creates the item: a root from the tenant the run is for, a child from its parent.
+    /// OpsDb has no row-level security, so this column is what scopes every read and control of the item.
+    /// </remarks>
+    public Guid TenantId { get; set; }
 }

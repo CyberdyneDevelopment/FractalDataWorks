@@ -21,8 +21,8 @@ public static partial class MsSqlBulkInsertTranslatorLog
     [MessageLogging(
         EventId = 12031,
         Level = LogLevel.Information,
-        Message = "MsSqlBulkInsertTranslator built SqlBulkCopy wrapper for container '{container}' with {rowCount} row(s)")]
-    public static partial IGenericMessage Translated(
+        Message = "MsSqlBulkInsertTranslator planned a SqlBulkCopy for container '{container}' with {rowCount} row(s)")]
+    public static partial IGenericMessage Planned(
         ILogger logger,
         string container,
         int rowCount);

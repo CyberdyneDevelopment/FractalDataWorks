@@ -14,7 +14,6 @@ public sealed class BinaryType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="BinaryType"/> class.</summary>
     public BinaryType()
         : base(
-            id: 21,
             name: "binary",
             description: "Fixed-length binary data.",
             abstractType: DataTypes.Binary,

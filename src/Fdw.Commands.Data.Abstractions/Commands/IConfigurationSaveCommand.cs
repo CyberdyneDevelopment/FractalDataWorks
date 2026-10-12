@@ -4,26 +4,29 @@ using System.Collections.Generic;
 namespace Fdw.Commands.Data.Abstractions;
 
 /// <summary>
-/// Marker interface for ConfigurationSaveCommand&lt;T&gt;.
-/// Used by the DataGateway cascade handler to identify configuration save commands
-/// without requiring per-type knowledge. Cascade detection via this interface avoids
-/// a generic-type constraint on the Execute path and keeps the check O(1).
+/// A version-on-write save of one configuration row: the current version the container's Logical key
+/// matches is retired and the new version is inserted, and the key values of both are returned.
 /// </summary>
 /// <remarks>
-/// Why: IDataCommand is not a good hook — all commands implement it. A dedicated marker
-/// lets the gateway intercept only saves without branching on CommandType string comparison.
-/// Extends IDataCommandWithInput so the cascade handler can access the raw data object for
-/// per-level ConfigurationSaveCommand construction without reflection or generics.
+/// The row is the record's mapped properties plus <see cref="FieldValues"/>, intersected with the fields
+/// its container declares. Nothing is looked up: a Foreign key field -- to the row's owner or to a row it
+/// cites -- is written from the value it arrives with, like any other field.
 /// </remarks>
 public interface IConfigurationSaveCommand : IDataCommand, IDataCommandWithInput
 {
-    /// <summary>
-    /// Gets the CLR type of the configuration entity being saved.
-    /// Used by the DataGateway to identify the configuration record type without a generic type parameter.
-    /// </summary>
+    /// <summary>Gets the CLR type of the configuration record being saved.</summary>
     Type ConfigurationType { get; }
 
-    /// <summary>Extra column=value pairs merged into the INSERT beyond the POCO's mapped columns
-    /// (e.g. a KVP child's logical owner FK). Empty for ordinary saves.</summary>
-    IReadOnlyDictionary<string, object?> AdditionalColumnValues { get; }
+    /// <summary>
+    /// Gets field values written beyond the record's mapped properties, keyed by field name -- the
+    /// Foreign key fields an owner fills with its own key values. Empty when there are none.
+    /// </summary>
+    IReadOnlyDictionary<string, object?> FieldValues { get; }
+
+    /// <summary>
+    /// Gets whether the save replaces a current version of the row -- retiring it before the insert -- or
+    /// only inserts. A child row is only inserted: it is written under its owner's new row, from which
+    /// nothing current hangs yet, and the children of the version replaced stay with that version.
+    /// </summary>
+    bool ReplacesCurrent { get; }
 }

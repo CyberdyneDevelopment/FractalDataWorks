@@ -33,7 +33,6 @@ public sealed class ValidateSyntaxTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: parse syntax tree, collect diagnostics and errors
     public override async Task<IGenericResult<QueryResult<ValidateSyntaxData>>> Translate(
         ValidateSyntaxCommand command,
         Solution solution,
@@ -124,5 +123,4 @@ public sealed class ValidateSyntaxTranslator
 
         return GenericResult<QueryResult<ValidateSyntaxData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

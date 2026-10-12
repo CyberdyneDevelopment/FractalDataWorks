@@ -21,19 +21,24 @@ namespace Fdw.Services.Agents;
 [ExcludeFromCodeCoverage]
 public sealed class AgentActionService : IAgentActionService
 {
-    private readonly IDataGatewayProvider _dataGateways;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private static string PlatformConfigurationConnection => PlatformConnection.Name;
+
+    // The platform's own rows are read through the configuration gateway onto that store, never the request-facing
+    // Main gateway (FDW-1068): Main runs whatever data store a request names, and these rows are not a request's to name.
+    private IDataGateway Gateway => _configurationGateways.Get(PlatformConfigurationConnection) is { IsSuccess: true, Value: { } gateway }
+        ? gateway
+        : throw new InvalidOperationException(
+            $"No configuration gateway is available for connection '{PlatformConfigurationConnection}'. It must be declared in the host's configurationSchema.json.");
     private readonly ILogger<AgentActionService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentActionService"/> class.
     /// </summary>
-    public AgentActionService(IDataGatewayProvider dataGateways, ILogger<AgentActionService>? logger)
+    public AgentActionService(IConfigurationGatewayProvider configurationGateways, ILogger<AgentActionService>? logger)
     {
-        _dataGateways = dataGateways;
+        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _logger = logger ?? NullLogger<AgentActionService>.Instance;
     }
 
@@ -44,7 +49,7 @@ public sealed class AgentActionService : IAgentActionService
     {
         AgentActionLog.ListingAgentActions(_logger, status ?? "all");
 
-        var builder = DataQuery.From<AgentActionRecord>("PlatformConfiguration", "agent", "AgentAction");
+        var builder = DataQuery.From<AgentActionRecord>(PlatformConfigurationConnection, "agent", "AgentAction");
 
         if (!string.IsNullOrWhiteSpace(status))
         {
@@ -73,7 +78,7 @@ public sealed class AgentActionService : IAgentActionService
     {
         AgentActionLog.FetchingAgentAction(_logger, actionId);
 
-        var command = DataQuery.From<AgentActionRecord>("PlatformConfiguration", "agent", "AgentAction")
+        var command = DataQuery.From<AgentActionRecord>(PlatformConfigurationConnection, "agent", "AgentAction")
             .Where("Id", actionId)
             .Build();
 
@@ -142,7 +147,7 @@ public sealed class AgentActionService : IAgentActionService
         existing.ReviewedBy = reviewedBy;
 
         var updateCommand = new UpdateCommandBuilder<AgentActionRecord>("AgentAction")
-            .DataStore("PlatformConfiguration")
+            .DataStore(PlatformConfigurationConnection)
             .Path("agent")
             .Where("Id", actionId)
             .Value(existing);

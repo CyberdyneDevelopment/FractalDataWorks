@@ -35,7 +35,6 @@ namespace Fdw.MessageLogging.Generators
             /// <summary>
             /// Gets the set of logging classes containing methods to output.
             /// </summary>
-#pragma warning disable MA0051 // Parser validates attributes, parameters, return types, and diagnostics — must stay as one cohesive pass
             [ConventionOverride(MaxCyclomaticComplexity = 147, MaxMethodLines = 357)]  // Parser entry point — validates attributes, parameters, return types across all log classes
             public IReadOnlyList<LoggerClass> GetLogClasses(IEnumerable<ClassDeclarationSyntax> classes)
             {
@@ -680,7 +679,6 @@ namespace Fdw.MessageLogging.Generators
                 return typeDeclaration.Identifier.ToString() + typeDeclaration.TypeParameterList;
             }
 
-#pragma warning disable MA0051 // Walks class hierarchy to find logger fields — must inspect all members cohesively
             [ConventionOverride(MaxCyclomaticComplexity = 19)]  // Roslyn symbol inspection walking inheritance chain — nested member traversal
             private (string? loggerField, bool multipleLoggerFields) FindLoggerField(SemanticModel sm, TypeDeclarationSyntax classDec, ITypeSymbol loggerSymbol)
             {

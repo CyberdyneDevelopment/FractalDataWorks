@@ -19,7 +19,7 @@ public sealed class FixedWidthRowSourceType : RecordSourceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FixedWidthRowSourceType"/> class.
     /// </summary>
-    public FixedWidthRowSourceType() : base(7, "FixedWidth")
+    public FixedWidthRowSourceType() : base("FixedWidth")
     {
     }
 

@@ -16,7 +16,6 @@ public sealed class InteractiveFlow : AuthenticationFlowBase
     /// Initializes a new instance of the <see cref="InteractiveFlow"/> class.
     /// </summary>
     public InteractiveFlow() : base(
-        id: 3,
         name: "Interactive",
         requiresUserInteraction: true,
         supportsRefreshTokens: true,

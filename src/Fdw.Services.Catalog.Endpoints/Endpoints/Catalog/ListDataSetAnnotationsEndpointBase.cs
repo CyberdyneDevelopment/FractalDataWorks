@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,18 +15,18 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that lists annotations for a DataSet.</summary>
 public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnotationRequest, List<DataSetAnnotationPayload>>
 {
-    private readonly QualityConfigurationProvider _provider;
-    private readonly DataSetConfigurationProvider? _dataSetProvider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
+    private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <summary>Initializes a new instance of the <see cref="ListDataSetAnnotationsEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    /// <param name="dataSetProvider">Optional. Used to confirm the named DataSet exists.</param>
+    /// <param name="dataSets">Used to confirm the named DataSet exists.</param>
     protected ListDataSetAnnotationsEndpointBase(
-        QualityConfigurationProvider provider,
-        DataSetConfigurationProvider? dataSetProvider = null)
+        IDataSetAnnotationConfigurationProvider provider,
+        IDataSetConfigurationProvider dataSets)
     {
         _provider = provider;
-        _dataSetProvider = dataSetProvider;
+        _dataSets = dataSets;
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -46,30 +47,29 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
     /// <summary>Retrieves all annotations for the specified DataSet.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        var dataSetProvider = _dataSetProvider;
-        if (dataSetProvider is not null && !string.IsNullOrEmpty(req.DataSetName))
+        // Whether the data set exists is what the read says, not whether a provider was injected.
+        var exists = await _dataSets.Get(req.DataSetName, ct).ConfigureAwait(false);
+        if (!exists.IsSuccess)
         {
-            var existsResult = await dataSetProvider.Get(req.DataSetName, ct).ConfigureAwait(false);
-            if (!existsResult.IsSuccess || existsResult.Value is null)
-            {
-                HttpContext.Response.StatusCode = 404;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(new
-                {
-                    errorCode = "NotFound",
-                    messages = new[] { $"DataSet '{req.DataSetName}' was not found." }
-                }, ct).ConfigureAwait(false);
-                return;
-            }
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to read the data set", Details = exists.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            return;
         }
 
-        var result = await _provider.GetAllAnnotations(ct).ConfigureAwait(false);
+        if (exists.Value is null)
+        {
+            await Send.ResultAsync(TypedResults.Json(new
+            {
+                errorCode = "NotFound",
+                messages = new[] { $"DataSet '{req.DataSetName}' was not found." }
+            }, statusCode: 404)).ConfigureAwait(false);
+            return;
+        }
+
+        var result = await _provider.Get(ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to list annotations", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to list annotations", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -81,8 +81,8 @@ public abstract class ListDataSetAnnotationsEndpointBase : Endpoint<DataSetAnnot
         await Send.OkAsync(annotations, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a DataSetAnnotationConfiguration to its corresponding DTO.</summary>
-    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationConfiguration config)
+    /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
         return new DataSetAnnotationPayload
         {

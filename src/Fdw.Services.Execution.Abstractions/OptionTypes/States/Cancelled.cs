@@ -13,7 +13,7 @@ public sealed class Cancelled : ProcessStateBase
     /// <summary>
     /// Initializes a new instance of the Cancelled state.
     /// </summary>
-    public Cancelled() : base(5, "Cancelled", isTerminal: true, isError: false, isActive: false, isInitial: false)
+    public Cancelled() : base("Cancelled", isTerminal: true, isError: false, isActive: false, isInitial: false)
     {
     }
 }

@@ -7,7 +7,7 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public sealed class NotificationNameRequest
 {
-    /// <summary>Gets or sets the notification name (from route).</summary>
+    /// <summary>Gets or sets the notification name: the <c>name</c> field of the body of a read, like every other read of one record (FDW-1013).</summary>
     [Required]
-    public string NotificationName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 }

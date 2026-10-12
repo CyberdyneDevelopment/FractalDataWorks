@@ -244,15 +244,15 @@ public static partial class OrchestrationNodeConfigurationLog
         ILogger logger,
         Guid nodeId);
 
-    /// <summary>A non-root node was saved without a ParentRowId.</summary>
+    /// <summary>A non-root node was saved without a ParentId.</summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="nodeName">The name of the non-root node that is missing a ParentRowId.</param>
-    /// <param name="nodeTypeName">The type name of the node (CanBeRoot=false) that requires a non-null ParentRowId.</param>
+    /// <param name="nodeName">The name of the non-root node that is missing a ParentId.</param>
+    /// <param name="nodeTypeName">The type name of the node (CanBeRoot=false) that requires a non-null ParentId.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(
         EventId = 21001,
         Level = LogLevel.Error,
-        Message = "Node '{nodeName}' with type '{nodeTypeName}' (CanBeRoot=false) must have a non-null ParentRowId")]
+        Message = "Node '{nodeName}' with type '{nodeTypeName}' (CanBeRoot=false) must have a non-null ParentId")]
     public static partial IGenericMessage NonRootNodeMissingParent(
         ILogger logger,
         string nodeName,

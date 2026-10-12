@@ -17,7 +17,6 @@ public sealed class SpectreUIRendererType : UIRendererBase
     /// </summary>
     public SpectreUIRendererType()
         : base(
-            id: 1,
             name: "Spectre",
             displayName: "Spectre.Console",
             description: "Terminal UI rendering using Spectre.Console with prompts, tables, and panels")

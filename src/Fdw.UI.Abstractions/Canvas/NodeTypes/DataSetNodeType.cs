@@ -14,7 +14,7 @@ public sealed class DataSetNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="DataSetNodeType"/> class.
     /// </summary>
     public DataSetNodeType()
-        : base(3, "DataSet", "Data Set", "Data", "table")
+        : base("DataSet", "Data Set", "Data", "table")
     {
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class FloatDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="FloatDataType"/> class.</summary>
     public FloatDataType()
-        : base(id: 7, name: "Float")
+        : base(name: "Float")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(float);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Double(text) is { } held && Math.Abs(held) <= float.MaxValue ? (float)held : null;
 }

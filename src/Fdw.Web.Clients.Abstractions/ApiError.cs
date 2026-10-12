@@ -48,29 +48,35 @@ public sealed class ApiError
     public string? Code { get; init; }
 
     /// <summary>
-    /// Well-known error type URIs.
+    /// Well-known error type URIs, each <see cref="BaseUri"/> plus a fixed slug.
     /// </summary>
     public static class Types
     {
+        /// <summary>
+        /// The URI every error type below starts with. A deployment that documents its errors
+        /// under its own domain sets this before the first error is built.
+        /// </summary>
+        public static string BaseUri { get; set; } = "https://fdw.dev/errors/";
+
         /// <summary>Validation error.</summary>
-        public const string Validation = "https://fdw.dev/errors/validation";
+        public static string Validation => BaseUri + "validation";
 
         /// <summary>Resource not found.</summary>
-        public const string NotFound = "https://fdw.dev/errors/not-found";
+        public static string NotFound => BaseUri + "not-found";
 
         /// <summary>Resource conflict (e.g., concurrent modification).</summary>
-        public const string Conflict = "https://fdw.dev/errors/conflict";
+        public static string Conflict => BaseUri + "conflict";
 
         /// <summary>Authentication required.</summary>
-        public const string Unauthorized = "https://fdw.dev/errors/unauthorized";
+        public static string Unauthorized => BaseUri + "unauthorized";
 
         /// <summary>Access denied.</summary>
-        public const string Forbidden = "https://fdw.dev/errors/forbidden";
+        public static string Forbidden => BaseUri + "forbidden";
 
         /// <summary>Rate limit exceeded.</summary>
-        public const string RateLimited = "https://fdw.dev/errors/rate-limited";
+        public static string RateLimited => BaseUri + "rate-limited";
 
         /// <summary>Internal server error.</summary>
-        public const string ServerError = "https://fdw.dev/errors/server-error";
+        public static string ServerError => BaseUri + "server-error";
     }
 }

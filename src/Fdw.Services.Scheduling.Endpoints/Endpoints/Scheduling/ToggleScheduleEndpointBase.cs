@@ -12,7 +12,7 @@ namespace Fdw.Services.Scheduling.Endpoints;
 /// </summary>
 /// <typeparam name="TConfig">The concrete schedule configuration type.</typeparam>
 public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleScheduleRequest, ScheduleDetailDto>
-    where TConfig : ScheduleConfiguration
+    where TConfig : class, IScheduleImplementationConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="ToggleScheduleEndpointBase{TConfig}"/> class.</summary>
         private readonly ScheduleConfigurationProvider _provider;
@@ -62,13 +62,14 @@ public abstract class ToggleScheduleEndpointBase<TConfig> : Endpoint<ToggleSched
             return;
         }
 
-        var updated = UpdateEnabledStatus((TConfig)existingResult.Value, req.IsEnabled);
+        // Flips what is stored. The request used to carry the desired value, and the client posts an empty
+        // body, so every "toggle" set it to false. Setting an explicit value is the update endpoint's job.
+        var updated = UpdateEnabledStatus((TConfig)existingResult.Value, !existingResult.Value.IsEnabled);
 
-        var saveResult = await _provider.Save(updated, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(updated, "Schedule", updated.Implementation, updated.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
-            HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await HttpContext.Response.WriteAsJsonAsync(new { Error = "Failed to save schedule" }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to save schedule" }, statusCode: StatusCodes.Status500InternalServerError)).ConfigureAwait(false);
             return;
         }
 

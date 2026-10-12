@@ -15,7 +15,7 @@ public class UpdateDataStoreRequest
     /// <summary>Gets or sets the data store name (identifier).</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the updated store type (e.g., "MsSql"). Maps to ServiceOptionType on the configuration.</summary>
+    /// <summary>Gets or sets the updated store type (e.g., "MsSql"). Maps to Implementation on the configuration.</summary>
     public string? StoreType { get; set; }
 
     /// <summary>Gets or sets the updated connection name. Resolved to ConnectionId by the endpoint.</summary>
@@ -23,6 +23,12 @@ public class UpdateDataStoreRequest
 
     /// <summary>Gets or sets the updated description.</summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data store's data classification level (see
+    /// <c>GET /data-classifications</c>). An id that is not a level is refused. Left out, the current classification stays.
+    /// </summary>
+    public int? ClassificationId { get; set; }
 
     /// <summary>Gets or sets the updated write mode for ETL target operations.</summary>
     public string? WriteMode { get; set; }

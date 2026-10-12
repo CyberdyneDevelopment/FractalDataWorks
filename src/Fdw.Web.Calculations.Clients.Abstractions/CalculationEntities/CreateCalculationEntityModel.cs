@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace Fdw.Web.Calculations.Clients.CalculationEntities;
 
@@ -42,4 +43,10 @@ public sealed class CreateCalculationEntityModel
     /// Gets or sets the data type name for the result (e.g. "Decimal", "Int32").
     /// </summary>
     public string ResultDataTypeName { get; set; } = "Decimal";
+
+    /// <summary>
+    /// Gets or sets the calculation type's own settings, as a JSON object (for Formula,
+    /// <c>FormulaLanguage</c>, <c>FormulaBody</c> and <c>TimeoutSeconds</c>).
+    /// </summary>
+    public JsonElement? Configuration { get; set; }
 }

@@ -17,22 +17,31 @@ namespace Fdw.Data;
 /// without instantiation.
 /// </para>
 /// </remarks>
-public abstract class FilterOperatorBase : TypeOptionBase<int, FilterOperatorBase>, IFilterOperator
+public abstract class FilterOperatorBase : TypeOptionBase<FilterOperatorBase>, IFilterOperator
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FilterOperatorBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this operator.</param>
     /// <param name="name">Name of the operator (must match TypeOption attribute).</param>
     /// <param name="sqlOperator">SQL representation (e.g., "=", "&lt;&gt;", "LIKE").</param>
     /// <param name="odataOperator">OData representation (e.g., "eq", "ne", "contains").</param>
     /// <param name="requiresValue">Whether this operator requires a value parameter.</param>
-    protected FilterOperatorBase(int id, string name, string sqlOperator, string odataOperator, bool requiresValue)
-        : base(id, name)
+    /// <param name="matchesAnythingBefore">Whether the operator matches text that precedes its value (a pattern operator states this).</param>
+    /// <param name="matchesAnythingAfter">Whether the operator matches text that follows its value (a pattern operator states this).</param>
+    protected FilterOperatorBase(
+        string name,
+        string sqlOperator,
+        string odataOperator,
+        bool requiresValue,
+        bool matchesAnythingBefore = false,
+        bool matchesAnythingAfter = false)
+        : base(name)
     {
         SqlOperator = sqlOperator;
         ODataOperator = odataOperator;
         RequiresValue = requiresValue;
+        MatchesAnythingBefore = matchesAnythingBefore;
+        MatchesAnythingAfter = matchesAnythingAfter;
     }
 
     /// <summary>
@@ -55,21 +64,14 @@ public abstract class FilterOperatorBase : TypeOptionBase<int, FilterOperatorBas
     /// </summary>
     public bool RequiresValue { get; }
 
-    /// <summary>
-    /// Formats the parameter placeholder for SQL.
-    /// Subclasses can override for special behavior (e.g., LIKE wildcards).
-    /// </summary>
-    /// <param name="paramName">The parameter name.</param>
-    /// <returns>The formatted parameter placeholder.</returns>
-    public virtual string FormatSqlParameter(string paramName) => $"@{paramName}";
+    /// <inheritdoc/>
+    public bool IsPatternMatch => MatchesAnythingBefore || MatchesAnythingAfter;
 
-    /// <summary>
-    /// Preprocesses a string value before it is added as a SQL parameter.
-    /// Override in subclasses to escape operator-specific metacharacters (e.g., LIKE metacharacters).
-    /// </summary>
-    /// <param name="value">The raw string value from the filter condition.</param>
-    /// <returns>The preprocessed value ready for parameterization.</returns>
-    public virtual string PreprocessSqlValue(string value) => value;
+    /// <inheritdoc/>
+    public bool MatchesAnythingBefore { get; }
+
+    /// <inheritdoc/>
+    public bool MatchesAnythingAfter { get; }
 
     /// <summary>
     /// Formats the value for OData query strings.

@@ -308,7 +308,7 @@ public sealed class UnusedTypeAnalyzer : DiagnosticAnalyzer
 
             // TypeCollection/ServiceType attributes — these types are discovered by generators
             if (attrName.StartsWith("TypeOption", StringComparison.Ordinal)
-                || attrName.StartsWith("ServiceTypeOption", StringComparison.Ordinal)
+                || attrName.StartsWith("Implementation", StringComparison.Ordinal)
                 || attrName.StartsWith("TypeCollection", StringComparison.Ordinal)
                 || attrName.StartsWith("ServiceTypeCollection", StringComparison.Ordinal)
                 || attrName.StartsWith("MutableTypeCollection", StringComparison.Ordinal)

@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlInt16Converter()
     : DataTypeConverterBase(
-        id: 2,
         name: "Int16",
         sourceType: "int2",
         targetClrType: typeof(short),

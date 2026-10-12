@@ -4,7 +4,7 @@ The data contracts: `IDataGateway`, `IConfigurationGateway`, `DataStoreTarget`, 
 
 Implementations live in the sibling packages; this one holds the interfaces, base types and models they agree on, so a consumer can depend on the contract without taking the implementation.
 
-## Interfaces (23)
+## Interfaces (22)
 
 | Type | Kind | Purpose |
 |---|---|---|
@@ -25,7 +25,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IDiscoveredField` | interface | A field/column on an . |
 | `ISchemaDiscoverer` | interface | Connection-type-agnostic schema discovery — given a connected , list the tables/views (and optionally… |
 
-## Base types (7)
+## Base types (5)
 
 | Type | Kind | Purpose |
 |---|---|---|
@@ -33,8 +33,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `DataGatewayMessageCollectionBase` | class | Collection base for data gateway messages. Generates static factory methods in DataGatewayMessages class. |
 | `DataStoreTypeBase<TConfiguration>` | class | Base class for data store type definitions. Provides configuration binding, builder supply, and provider… |
 | `DataStoreTypes` | class | Registry of data store types. Pure type collection with no DI orchestration. DI registration is handled… |
-| `SchemaDiscoveryTypeBase` | class | Abstract base class for schema discovery type definitions. Uses CRTP pattern consistent with other… |
-| `SchemaDiscoveryTypes` | class | Registry of schema discovery types. Each type represents a store-specific schema discoverer (MsSql,… |
 | `VisualizationTypeBase` | class | Base class for visualization type TypeOptions using CRTP pattern. |
 
 ## Models and supporting types (31)

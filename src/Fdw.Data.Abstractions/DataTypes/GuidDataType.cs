@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class GuidDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="GuidDataType"/> class.</summary>
     public GuidDataType()
-        : base(id: 15, name: "Guid")
+        : base(name: "Guid")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(Guid);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Identifier(text);
 }

@@ -16,7 +16,6 @@ public sealed class BackwardMode : SchemaCompatibilityModeBase
     /// </summary>
     public BackwardMode()
         : base(
-            id: 2,
             name: "Backward",
             requiresExactTypes: true,
             allowsSourceExtras: true,

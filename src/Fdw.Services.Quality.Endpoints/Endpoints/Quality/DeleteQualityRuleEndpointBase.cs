@@ -10,17 +10,17 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that deletes an existing quality rule.</summary>
 public abstract class DeleteQualityRuleEndpointBase : Endpoint<QualityRuleIdRequest>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="DeleteQualityRuleEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected DeleteQualityRuleEndpointBase(QualityConfigurationProvider provider)
+    protected DeleteQualityRuleEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
 
-    /// <summary>Gets the authorization policy required for write operations.</summary>
-    protected virtual string ReadPolicy => "datasets:read";
+    /// <summary>Gets the authorization policy required to delete a quality rule.</summary>
+    protected virtual string DeletePolicy => "quality/rules:delete";
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -29,7 +29,7 @@ public abstract class DeleteQualityRuleEndpointBase : Endpoint<QualityRuleIdRequ
 #if DEVELOP
         AllowAnonymous();
 #else
-        Policies(ReadPolicy);
+        Policies(DeletePolicy);
 #endif
         Summary(s => s.Summary = "Delete a quality rule");
     }
@@ -37,13 +37,11 @@ public abstract class DeleteQualityRuleEndpointBase : Endpoint<QualityRuleIdRequ
     /// <summary>Deletes the quality rule identified by the request ID and returns 204 No Content on success.</summary>
     public override async Task HandleAsync(QualityRuleIdRequest req, CancellationToken ct)
     {
-        var result = await _provider.DeleteQualityRule(req.Id, ct).ConfigureAwait(false);
+        var result = await _provider.Delete(req.Id, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to delete quality rule", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to delete quality rule", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

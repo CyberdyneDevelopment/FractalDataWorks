@@ -12,54 +12,77 @@ namespace Fdw.Services.Connections.MsSql;
 
 /// <summary>
 /// Configuration for Microsoft SQL Server connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>.
-/// Persisted to <c>conn.MsSqlConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
+/// The MsSql implementation of the Connection domain (<see cref="IConnectionImplementationConfiguration"/>).
+/// Persisted to <c>conn.MsSqlConnectionConfiguration</c> hanging from its <c>conn.Connection</c> domain row via <c>ConnectionRowId</c>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Configuration patterns: <b>Pattern A</b> (typed columns: Server, Database, Port, etc.) +
-/// <b>Pattern B</b> (typed-body specialization: conn.MsSqlConnection.ConnectionId FK to conn.Connection.Id) +
+/// <b>Pattern B</b> (the implementation row: conn.MsSqlConnection.ConnectionId FK to conn.Connection.Id) +
 /// <b>Pattern C</b> (PropertyCollection: <c>AdditionalProperties</c> dict bound via DataContainerKey seed row
 /// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.MsSqlAuthentication).
 /// </para>
 /// <para>
-/// The endpoint creates a <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>
-/// first (writing conn.Connection), then creates this record with <see cref="ConnectionId"/> pointing to
-/// the parent's <see cref="Fdw.Configuration.IGenericConfiguration.Id"/>.
+/// Saving through the Connection domain writes the <c>conn.Connection</c> domain row first, then this
+/// row with <c>ConnectionRowId</c> set to the domain row's <c>RowId</c>.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "MsSql")]
-public partial class MsSqlConnectionConfiguration : IConnectionImplementationConfiguration
+public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfiguration
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    [ValuesFrom(typeof(SchemaDiscoveryTypes))]
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
-    // IGenericConfiguration — typed body identity
+    // IGenericConfiguration — identity
     // ========================================
 
     /// <summary>
-    /// Gets or sets the unique identifier for this typed body row (conn.MsSqlConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
-    /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
+    /// Gets or sets the identifier (conn.MsSqlConnection.Id). The Connection domain stamps its domain row's Id here
+    /// when it saves the pair.
     /// </summary>
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the parent header row).
-    /// Set by the endpoint before calling Save on this provider.
-    /// </summary>
-    public Guid ConnectionId { get; set; }
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
 
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by ConnectionId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-    string IGenericConfiguration.ServiceType => "Connection";
-    string? IGenericConfiguration.ServiceOptionType => "MsSql";
 
     #region SQL Server Specific Properties
 
@@ -113,6 +136,9 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     /// </summary>
     public int CommandTimeoutSeconds { get; set; } = 30;
 
+    /// <inheritdoc/>
+    public int MaxSerialInsert { get; set; }
+
     /// <summary>
     /// Gets or sets the connection timeout in seconds.
     /// </summary>
@@ -164,9 +190,17 @@ public partial class MsSqlConnectionConfiguration : IConnectionImplementationCon
     public bool AutoDiscoverSchema { get; set; }
 
     /// <summary>
-    /// Gets or sets the ID of the DataStore created from schema discovery on this connection.
+    /// Gets or sets the named default-value policy this connection resolves through
+    /// <c>DefaultValues.ByName("MsSql").ByName(...)</c>.
     /// </summary>
-    public Guid? AssociatedDataStoreId { get; set; }
+    /// <remarks>
+    /// Null means "use the framework-shipped <c>\"Default\"</c> policy" — an explicit, approved
+    /// fallback resolved at the call site (<c>DefaultValuePolicy ?? "Default"</c>), never baked in
+    /// here. An organization names its own policy (shipped from its own assembly against
+    /// <c>MsSqlDefaults</c>) to override how this connection decides, per field, whether to omit a
+    /// column on write or send an explicit value.
+    /// </remarks>
+    public string? DefaultValuePolicy { get; set; }
 
     /// <summary>
     /// Gets or sets when schema was last imported for this connection.

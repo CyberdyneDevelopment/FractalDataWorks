@@ -46,7 +46,7 @@ public sealed class WsSecurityProcessor : SoapSecurityProcessorBase
     /// Initializes a new instance of the <see cref="WsSecurityProcessor"/> class.
     /// </summary>
     public WsSecurityProcessor()
-        : base(2, "WsSecurity", "WS-Security with X.509 certificate signing")
+        : base("WsSecurity", "WS-Security with X.509 certificate signing")
     {
     }
 

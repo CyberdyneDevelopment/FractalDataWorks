@@ -18,7 +18,6 @@ public sealed class DatabasePathType : PathTypeBase
 
     private DatabasePathType()
         : base(
-            id: 1,
             name: "DatabasePath",
             displayName: "Database Path",
             description: "Navigates to SQL Server database objects using Database.Schema.Object format",

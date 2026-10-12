@@ -103,8 +103,13 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
                         ResultDetails.Create("CommandType", "UpdateCommand")));
             }
 
+            // A soft-deleting update also flags the matching rows deleted (FDW-1107).
+            var soft = MsSqlSoftDeleteSql.For(command, container, dbPath.Dialect, allowAbsentSet: false);
+            if (soft.Problem is not null)
+                return Task.FromResult(MsSqlSoftDeleteSql.Refusal(soft));
+
             // Build UPDATE statement with strongly-typed Filter property (no reflection!)
-            var sqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter);
+            var sqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter, soft);
 
             return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
@@ -125,17 +130,32 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
     }
 
     /// <summary>
+    /// The DDL convention's Modify* audit columns and the expressions their column defaults use.
+    /// </summary>
+    /// <remarks>
+    /// Why: the audit block is DB-filled and never app-set (system-provided), so an INSERT leaves it to
+    /// the column defaults. An in-place UPDATE fires no default, so without a restamp ModifyDate/ModifyBy
+    /// keep their insert-time values forever. Restamping with the same expressions an INSERT would use
+    /// keeps the columns honest. The configuration translators already stamp ModifyDate this way on their
+    /// own UPDATEs. The set is the convention's closed list, matched by name.
+    /// </remarks>
+    private static readonly (string Column, string Expression)[] ModifyAuditColumns =
+    [
+        ("ModifyDate", "SYSDATETIMEOFFSET()"),
+        ("ModifyBy", "SUSER_SNAME()"),
+        ("ModifyOnBehalfOf", "SUSER_SNAME()"),
+    ];
+
+    /// <summary>
     /// Builds a complete T-SQL UPDATE statement.
     /// </summary>
-    // MA0051: Method length acceptable - sequential SQL UPDATE generation (fields, SET clause, parameters, WHERE clause)
-#pragma warning disable MA0051 // Method is too long
     [ConventionOverride(MaxCyclomaticComplexity = 15)]  // SQL UPDATE builder with field filtering, reflection, and conditional WHERE clause (filter vs primary key)
     private static SqlCommand BuildUpdateStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         object data,
-        IFilterExpression? filter)
-#pragma warning restore MA0051
+        IFilterExpression? filter,
+        MsSqlSoftDeleteFragments soft)
     {
         var dialect = dbPath.Dialect;
 
@@ -162,6 +182,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         var dataType = data.GetType();
         var fieldNames = updateFields.Select(f => f.Name)
             .Where(f => dataType.GetProperty(f) != null)
+            .Where(f => !ModifyAuditColumns.Any(a => string.Equals(a.Column, f, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         if (fieldNames.Count == 0)
@@ -172,23 +193,24 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
 
         // Build SET clause
         var prefix = dialect.ParameterPrefix;
-        var setClause = string.Join(", ", fieldNames.Select(f => $"{dialect.QuoteIdentifier(f)} = {prefix}set_{f}"));
+        var auditStamps = ModifyAuditColumns
+            .Where(a => container.Schema.Fields.Any(f => string.Equals(f.Name, a.Column, StringComparison.OrdinalIgnoreCase)))
+            .Select(a => $"{dialect.QuoteIdentifier(a.Column)} = {a.Expression}");
+        var setClause = string.Join(", ", fieldNames.Select(f => $"{dialect.QuoteIdentifier(f)} = {prefix}set_{f}").Concat(auditStamps).Concat(soft.SetClauses(null, onlyWhenMarked: true)));
 
         // Build initial UPDATE statement
         var sql = $"UPDATE {BuildQualifiedTableName(dbPath)} SET {setClause}";
 
         // Get SqlCommand
         var command = CreateCommand(sql);
+        command.Parameters.AddRange(soft.Parameters.ToArray());
 
         // Add SET parameters from data object
         foreach (var fieldName in fieldNames)
         {
             var property = dataType.GetProperty(fieldName);
             if (property != null)
-            {
-                var value = property.GetValue(data);
-                AddParameter(command, $"set_{fieldName}", value);
-            }
+                AddParameter(command, $"set_{fieldName}", property.GetValue(data), property.PropertyType);
         }
 
         // Build WHERE clause

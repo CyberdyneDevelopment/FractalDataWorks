@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Fdw.Services.Connections.Clients.Models;
 
 /// <summary>
@@ -40,4 +42,19 @@ public sealed class CreateConnectionClientRequest
     public System.Collections.Generic.IDictionary<string, string?>? Security { get; set; }
     /// <summary>Gets or sets whether to use mutual TLS (client certificate).</summary>
     public bool UseMtls { get; set; }
+
+    /// <summary>Gets or sets the name of the schema discovery option the connection uses; <c>None</c> when it does not discover.</summary>
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets this connection type's own settings: a JSON object shaped like the type's configuration
+    /// class, which OpenAPI publishes as one schema per connection type, chosen by <c>ServiceType</c>. Absent
+    /// members take the configuration's defaults.
+    /// </summary>
+    /// <remarks>
+    /// Preferred over the flat fields on this request (Server, Port, Database, Authentication, BaseUrl, ...),
+    /// which are deprecated and still accepted: they are read as aliases for the type's configuration
+    /// properties, and a member sent here wins over its flat equivalent. They will be removed.
+    /// </remarks>
+    public JsonElement? Configuration { get; set; }
 }

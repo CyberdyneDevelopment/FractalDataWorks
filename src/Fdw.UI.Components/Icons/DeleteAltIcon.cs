@@ -11,7 +11,6 @@ public sealed class DeleteAltIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="DeleteAltIcon"/>.</summary>
     public DeleteAltIcon()
         : base(
-            17,
             "DeleteAlt",
             "0 0 24 24",
             "none",

@@ -11,7 +11,7 @@ namespace Fdw.Services.Calculations;
 public sealed record WindowedCalculationPartitionFieldRow(
     Guid RowId,
     Guid Id,
-    Guid WindowedCalculationId,
+    Guid WindowedCalculationConfigurationId,
     string FieldName,
     int Ordinal,
     bool IsCurrent,

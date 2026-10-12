@@ -14,7 +14,7 @@ namespace Fdw.Services.Authorization.Abstractions.Paths;
 public sealed class DenyAllPolicy : PathAuthorizationPolicyBase
 {
     /// <summary>Initializes the DenyAll policy.</summary>
-    public DenyAllPolicy() : base(4, "DenyAll") { }
+    public DenyAllPolicy() : base("DenyAll") { }
 
     /// <inheritdoc />
     public override IGenericResult<IPathAuthorizationDecision> Evaluate(string canonicalAddress, IRequestContext context)

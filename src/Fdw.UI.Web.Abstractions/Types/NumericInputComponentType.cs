@@ -13,5 +13,5 @@ public sealed class NumericInputComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NumericInputComponentType"/> class.
     /// </summary>
-    public NumericInputComponentType() : base(2, "NumericInput", "Numeric Input", "Input", "Numeric value input") { }
+    public NumericInputComponentType() : base("NumericInput", "Numeric Input", "Input", "Numeric value input") { }
 }

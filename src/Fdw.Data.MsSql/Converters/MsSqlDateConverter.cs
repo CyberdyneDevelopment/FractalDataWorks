@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlDateConverter()
     : DataTypeConverterBase(
-        id: 12,
         name: "Date",
         sourceType: "date",
         targetClrType: typeof(DateOnly),

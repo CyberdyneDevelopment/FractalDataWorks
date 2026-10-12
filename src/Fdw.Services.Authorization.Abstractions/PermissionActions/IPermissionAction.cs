@@ -17,12 +17,12 @@ namespace Fdw.Services.Authorization.Abstractions;
 public interface IPermissionAction : ITypeOption<int, PermissionActionBase>
 {
     /// <summary>
-    /// Gets the MudBlazor icon name for this action.
+    /// Gets the Material Symbols icon name for this action.
     /// </summary>
     string Icon { get; }
 
     /// <summary>
-    /// Gets the MudBlazor color for this action.
+    /// Gets the semantic color role for this action (Primary, Success, Warning, Error, Info, ...).
     /// </summary>
     /// <example>Primary, Success, Info, Warning, Error</example>
     string Color { get; }

@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlMacAddrConverter()
     : DataTypeConverterBase(
-        id: 27,
         name: "MacAddr",
         sourceType: "macaddr",
         targetClrType: typeof(PhysicalAddress),

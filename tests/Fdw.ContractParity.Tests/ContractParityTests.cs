@@ -23,6 +23,11 @@ public class ContractParityTests
             // Client discriminator field name vs server's; both carry the scheduler type.
             ignoreClient: new[] { "Name" });
 
+        // FDW-1170: schedule update — the client carried the time zone the server request lacked, so a stated zone was dropped.
+        yield return Pair(
+            typeof(Fdw.Services.Scheduling.Clients.Abstractions.UpdateScheduleClientRequest),
+            typeof(Fdw.Services.Scheduling.Endpoints.UpdateScheduleRequest));
+
         yield return Pair(
             typeof(Fdw.Services.Data.Clients.Models.CreateDataSetPayload),
             typeof(Fdw.Services.Data.Endpoints.CreateDataSetRequest));
@@ -40,8 +45,8 @@ public class ContractParityTests
             typeof(Fdw.Services.Connections.Endpoints.UpdateConnectionRequest),
             ignoreClient: new[] { "ServiceType" });
 
-        // Wave-2: DataStore create — Paths are child records added via a separate endpoint after
-        // the parent DataStore is persisted; they are not part of the initial create contract.
+        // Wave-2: DataStore create — Paths differ in shape: the server's carry each path's containers,
+        // fields and keys (FDW-920); the client's carry the path only.
         yield return Pair(
             typeof(Fdw.Services.Data.Clients.Models.CreateDataStoreWithPathsRequest),
             typeof(Fdw.Services.Data.Endpoints.CreateDataStoreRequest),
@@ -77,7 +82,7 @@ public class ContractParityTests
     private static object[] Pair(Type client, Type server, string[]? ignoreClient = null)
         => new object[] { client, server, ignoreClient ?? Array.Empty<string>() };
 
-    private static IReadOnlyList<(string PropertyName, string JsonName)> JsonNames(Type type)
+    private static List<(string PropertyName, string JsonName)> JsonNames(Type type)
         => type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.CanWrite)
             .Select(p => (

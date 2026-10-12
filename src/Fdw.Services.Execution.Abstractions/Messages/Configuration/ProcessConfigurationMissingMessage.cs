@@ -17,8 +17,7 @@ public sealed class ProcessConfigurationMissingMessage : ExecutionMessage, IServ
         : base(2002, "ProcessConfigurationMissing", MessageSeverity.Error,
                "Required process configuration is missing",
                "EXEC_CONFIG_MISSING",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class ProcessConfigurationMissingMessage : ExecutionMessage, IServ
         : base(2002, "ProcessConfigurationMissing", MessageSeverity.Error,
                string.Format(CultureInfo.InvariantCulture, "Required configuration is missing for process type: {0}", processType),
                "EXEC_CONFIG_MISSING",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class ProcessConfigurationMissingMessage : ExecutionMessage, IServ
                string.Format(CultureInfo.InvariantCulture, "Required configuration is missing for process type: {0}, missing: {1}",
                            processType, missingConfigDetails),
                "EXEC_CONFIG_MISSING",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class ProcessConfigurationMissingMessage : ExecutionMessage, IServ
                string.Format(CultureInfo.InvariantCulture, "Required configuration is missing for process: {0} (type: {1}), missing: {2}",
                            processId, processType, missingConfigDetails),
                "EXEC_CONFIG_MISSING",
-               "Configuration",
-               "https://docs.Fdw.io/execution/configuration")
+               "Configuration")
     { }
 }

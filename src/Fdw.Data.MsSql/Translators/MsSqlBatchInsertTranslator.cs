@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
@@ -55,7 +56,6 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
 {
     private const int MaxRowsPerInsert = 1000; // SQL Server hard limit
     private const int MaxParametersPerStatement = 2100; // SQL Server hard limit
-    private const int DefaultBatchSize = 500; // Conservative default
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlBatchInsertTranslator"/> class.
@@ -133,25 +133,71 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
     }
 
     /// <summary>
+    /// The columns an insert writes: all but the ones the database provides (IDENTITY, COMPUTED, DEFAULT-filled like
+    /// NEWSEQUENTIALID()).
+    /// </summary>
+    /// <remarks>
+    /// IsSystemProvided is the superset (same rule as MsSqlInsertTranslator); mapping a system-provided column here sends DBNull
+    /// and the copy fails "Column 'X' does not allow DBNull.Value".
+    /// </remarks>
+    /// <param name="container">The container the rows are inserted into.</param>
+    /// <returns>The insertable fields, in schema order.</returns>
+    internal static List<IField> InsertableFields(IStorageContainer container)
+        => container.Schema.Fields
+            .Where(f => !f.IsIdentity && !f.IsComputed && !f.IsSystemProvided)
+            .ToList();
+
+    /// <summary>
+    /// The most rows of <paramref name="container"/> that one SQL Server request can insert, which is as many as keep the
+    /// request within the 2100 parameters it accepts (one parameter per value).
+    /// </summary>
+    /// <remarks>
+    /// The connection chooses between the serial route and the bulk copy with this, as well as with its configured
+    /// <c>MaxSerialInsert</c>: a bulk insert of more rows than a request can carry goes to the bulk copy, which has no such
+    /// limit. A container with no insertable column has no request to size, so its limit is unbounded here and the translator
+    /// refuses it with its own coded failure.
+    /// </remarks>
+    /// <param name="container">The container the rows are inserted into.</param>
+    /// <returns>The row limit of one request.</returns>
+    public static int RowsPerRequest(IStorageContainer container)
+    {
+        var columns = InsertableFields(container).Count;
+        return columns == 0 ? int.MaxValue : MaxParametersPerStatement / columns;
+    }
+
+    // One request carries at most MaxParametersPerStatement parameters however many statements it holds, so rows beyond that
+    // cannot be sent as one command. They are refused here with the reason; the connection routes a bulk insert of more rows than
+    // a request carries to its bulk copy before it translates (RowsPerRequest), so only an insert with no such route reaches this.
+    private static void EnsureWithinParameterLimit(IStorageContainer container, int rowCount, int columnCount)
+    {
+        var parameterCount = rowCount * columnCount;
+        if (parameterCount <= MaxParametersPerStatement)
+            return;
+
+        MsSqlBatchInsertTranslatorLog.TooManyParameters(
+            NullLogger<MsSqlBatchInsertTranslator>.Instance,
+            container.Name, rowCount, columnCount, parameterCount, MaxParametersPerStatement);
+        throw new InvalidOperationException(
+            $"{rowCount} rows of {columnCount} columns need {parameterCount} parameters; one SQL Server request carries at most "
+            + $"{MaxParametersPerStatement}, which is {RowsPerRequest(container)} rows of this container");
+    }
+
+    // The type that gives a null its SQL type (FDW-918): the entity property's, or the column's for a dictionary row, which
+    // declares none. A column the row lacks is a null with no type to give it, and a value needs none.
+    private static Type? NullBindingType(IField field, bool found, object? value, Type? declaredType)
+        => declaredType ?? (found && value is null ? field.FieldType.ClrType : null);
+
+    /// <summary>
     /// Builds batched multi-row INSERT statements.
     /// </summary>
-    // MA0051: Method length acceptable - batched INSERT generation with parameter management (calculate batch size, build batches, combine SQL)
-#pragma warning disable MA0051 // Method is too long
-    private static SqlCommand BuildBatchedInsertStatements(
+    internal static SqlCommand BuildBatchedInsertStatements(
         IStorageContainer container,
         IDatabasePath dbPath,
         IEnumerable collection)
-#pragma warning restore MA0051
     {
         var dialect = dbPath.Dialect;
 
-        // Exclude system-provided columns (IDENTITY, COMPUTED, DEFAULT-filled like NEWSEQUENTIALID()).
-        // IsSystemProvided is the superset (same rule as MsSqlInsertTranslator); mapping a
-        // system-provided column here sends DBNull and the copy fails
-        // "Column 'X' does not allow DBNull.Value".
-        var fields = container.Schema.Fields
-            .Where(f => !f.IsIdentity && !f.IsComputed && !f.IsSystemProvided)
-            .ToList();
+        var fields = InsertableFields(container);
 
         if (fields.Count == 0)
         {
@@ -185,9 +231,11 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
             throw new InvalidOperationException("Cannot insert empty collection");
         }
 
+        EnsureWithinParameterLimit(container, entities.Count, columnsPerRow);
+
         // Build multi-statement SQL for all batches
         var sqlBatches = new List<string>();
-        var allParameters = new List<SqlParameter>();
+        var bindings = new List<Action<SqlCommand>>();
         var parameterIndex = 0;
 
         for (int i = 0; i < entities.Count; i += maxRowsPerBatch)
@@ -198,14 +246,20 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
             foreach (var entity in batch)
             {
                 var paramNames = new List<string>();
-                foreach (var fieldName in fieldNames)
+                foreach (var field in fields)
                 {
-                    var paramName = $"{p}p{parameterIndex++}";
-                    paramNames.Add(paramName);
+                    var paramName = $"p{parameterIndex++}";
+                    paramNames.Add($"{p}{paramName}");
 
-                    // Extract value and create parameter
-                    var value = entity.GetType().GetProperty(fieldName)?.GetValue(entity);
-                    allParameters.Add(new SqlParameter(paramName, value ?? DBNull.Value));
+                    // The row is read the one way every bulk route reads it (RowValues), so a dictionary row, which is what a
+                    // pipeline load carries, binds its values as an entity row does. Bound through the shared binder, so a
+                    // batch row binds exactly as a single insert does: byte[] as binary, a collection as JSON, a null typed
+                    // by its declared type (FDW-918).
+                    var found = RowValues.TryRead(entity, field.Name, out var value, out var declaredType);
+                    var bindingType = NullBindingType(field, found, value, declaredType);
+                    bindings.Add(bindingType is null
+                        ? target => AddParameter(target, paramName, value)
+                        : target => AddParameter(target, paramName, value, bindingType));
                 }
 
                 valuesClauses.Add($"({string.Join(", ", paramNames)})");
@@ -220,9 +274,9 @@ public sealed class MsSqlBatchInsertTranslator : MsSqlDataCommandTranslatorBase
 
         // Get command with all parameters
         var command = CreateCommand(fullSql);
-        foreach (var param in allParameters)
+        foreach (var bind in bindings)
         {
-            command.Parameters.Add(param);
+            bind(command);
         }
 
         MsSqlBatchInsertTranslatorLog.Translated(

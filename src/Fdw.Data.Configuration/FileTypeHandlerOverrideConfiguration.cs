@@ -40,12 +40,6 @@ public partial class FileTypeHandlerOverrideConfiguration : IGenericConfiguratio
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the parent DataPath's logical Id (FK to data.DataPath.Id). The physical DataPathRowId
-    /// is DB-managed and invisible — the save translator resolves it from this Id on insert.
-    /// </summary>
-    public Guid DataPathId { get; set; }
-
-    /// <summary>
     /// Gets or sets the display name for this override entry.
     /// </summary>
     /// <remarks>
@@ -56,21 +50,6 @@ public partial class FileTypeHandlerOverrideConfiguration : IGenericConfiguratio
     [NotMapped]
     public string Name { get; set; } = string.Empty;
 
-
-    /// <summary>
-    /// Gets the section name for IOptions binding.
-    /// </summary>
-    public string SectionName => "FileTypeHandlerOverrides";
-
-    /// <summary>
-    /// Gets the service type — always "DataStore" for child config of DataPath.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type — always "FileTypeHandlerOverride".
-    /// </summary>
-    public string? ServiceOptionType => "FileTypeHandlerOverride";
 
 
     /// <summary>

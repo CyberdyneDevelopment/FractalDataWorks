@@ -32,7 +32,7 @@ namespace Fdw.Conventions.Analyzers;
 /// <para>
 /// What is being mapped is deliberately NOT consulted. Statuses are the most common case and have
 /// an existing home in <c>StatusVariants</c>/<c>StatusColors</c>, but roles, HTTP verbs and node
-/// types get the same treatment in <c>Fdw.UI.Pages</c> today; keying on a status vocabulary made the
+/// types get the same treatment; keying on a status vocabulary made the
 /// rule fire on some of those and miss others for no principled reason.
 /// </para>
 /// </remarks>
@@ -46,7 +46,7 @@ public sealed class LocalStatusClassMapperAnalyzer : DiagnosticAnalyzer
 
     private const string Title = "Value is mapped to CSS classes by a component-local helper";
     private const string MessageFormat = "Method '{0}' maps a value to CSS class strings in the component; move the mapping to a shared component or helper (for status/severity/state/health, the Fdw.UI.Components StatusVariants/StatusColors TypeCollection already exists)";
-    private const string Description = "Fdw convention: presentation mapping belongs in one shared place, not re-derived per component. A private switch over CSS class literals forks that mapping and drifts -- Fdw.UI.Pages carries 17 such helpers under five different names, mapping statuses, roles, HTTP verbs and node types. Where the value is a status, severity, state or health, the StatusVariants/StatusColors TypeCollection is the existing home; otherwise extract a shared component or helper.";
+    private const string Description = "Fdw convention: presentation mapping belongs in one shared place, not re-derived per component. A private switch over CSS class literals forks that mapping and drifts. Where the value is a status, severity, state or health, the StatusVariants/StatusColors TypeCollection is the existing home; otherwise extract a shared component or helper.";
     private const string Category = "Design";
 
     /// <summary>

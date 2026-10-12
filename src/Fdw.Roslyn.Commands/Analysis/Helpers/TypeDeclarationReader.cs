@@ -18,8 +18,8 @@ public static class TypeDeclarationReader
     {
         "TypeOption",
         "TypeOptionAttribute",
-        "ServiceTypeOption",
-        "ServiceTypeOptionAttribute",
+        "Implementation",
+        "ImplementationAttribute",
     };
 
     /// <summary>

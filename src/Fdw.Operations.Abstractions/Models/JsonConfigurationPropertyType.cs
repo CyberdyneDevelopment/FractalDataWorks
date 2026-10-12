@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class JsonConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="JsonConfigurationPropertyType"/>.</summary>
-    public JsonConfigurationPropertyType() : base(10, "Json") { }
+    public JsonConfigurationPropertyType() : base("Json") { }
 }

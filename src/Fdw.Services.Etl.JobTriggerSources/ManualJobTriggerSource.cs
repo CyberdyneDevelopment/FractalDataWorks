@@ -9,5 +9,5 @@ namespace Fdw.Services.Etl.JobTriggerSources;
 public sealed class ManualJobTriggerSource : JobTriggerSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="ManualJobTriggerSource"/> class.</summary>
-    public ManualJobTriggerSource() : base(1, "Manual") { }
+    public ManualJobTriggerSource() : base("Manual") { }
 }

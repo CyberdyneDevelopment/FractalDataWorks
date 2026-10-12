@@ -17,7 +17,7 @@ public sealed class BoolType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="BoolType"/> class.</summary>
     public BoolType()
-        : base(id: 14, name: "Bool")
+        : base(name: "Bool")
     {
     }
 

@@ -37,7 +37,7 @@ public sealed class WebMcpToolDeclarationTests
     private sealed class SkippedOption(Type endpointType, string name)
         : EndpointTypeOptionBase(name, endpointType, $"The {name} endpoint.", "Test");
 
-    private static IHostApplicationBuilder NewBuilder() => Host.CreateApplicationBuilder();
+    private static HostApplicationBuilder NewBuilder() => Host.CreateApplicationBuilder();
 
     private static WebMcpToolDeclaration? DeclarationFor(Type endpointType)
         => DeclaredWebMcpTools.Declarations.FirstOrDefault(d => d.EndpointType == endpointType);

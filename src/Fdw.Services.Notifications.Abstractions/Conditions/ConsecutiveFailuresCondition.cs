@@ -15,7 +15,7 @@ public sealed class ConsecutiveFailuresCondition : NotificationConditionTypeBase
     /// Initializes a new instance of the <see cref="ConsecutiveFailuresCondition"/> class.
     /// </summary>
     public ConsecutiveFailuresCondition()
-        : base(2, "ConsecutiveFailures", "error_outline", "Error")
+        : base("ConsecutiveFailures", "error_outline", "Error")
     {
     }
 

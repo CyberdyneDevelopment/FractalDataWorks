@@ -17,7 +17,7 @@ public sealed class SourceMissingHttpEndpointCode : HttpResultCodeBase
     /// </summary>
     public SourceMissingHttpEndpointCode()
         : base(
-            60000,
+            61001,
             "SourceMissingHttpEndpoint",
             ResultSeverities.ByName("Error"),
             "DataSet source configuration is missing HttpEndpoint. Cannot resolve HTTP source without an endpoint.")

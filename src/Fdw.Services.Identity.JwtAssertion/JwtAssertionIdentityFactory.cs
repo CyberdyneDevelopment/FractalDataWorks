@@ -12,7 +12,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 
 /// <summary>
 /// Builds <see cref="JwtAssertionIdentityService"/> instances from a resolved
-/// <see cref="IdentityServiceConfiguration"/> header whose <c>Configuration</c> property carries the
+/// <c>IIdentityServiceImplementationConfiguration</c> header whose <c>Configuration</c> property carries the
 /// composed <see cref="JwtAssertionConfiguration"/> typed body.
 /// </summary>
 /// <remarks>
@@ -21,7 +21,7 @@ namespace Fdw.Services.Identity.JwtAssertion;
 /// <c>ClientCredentialsIdentityFactory</c>.
 /// </remarks>
 internal sealed class JwtAssertionIdentityFactory
-    : IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>
+    : IJwtAssertionIdentityFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<JwtAssertionIdentityFactory> _logger;
@@ -46,7 +46,7 @@ internal sealed class JwtAssertionIdentityFactory
 
         if (configuration is not JwtAssertionConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration.Name, "JwtAssertion"));
+                IdentityLog.TypedBodyMissing(_logger, configuration.GetType().Name, "JwtAssertion"));
 
         return GenericResult<IIdentityService>.Success(
             new JwtAssertionIdentityService(
@@ -60,7 +60,7 @@ internal sealed class JwtAssertionIdentityFactory
         => configuration is IIdentityServiceImplementationConfiguration implementation
             ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "JwtAssertion"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? "(null)", "JwtAssertion"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

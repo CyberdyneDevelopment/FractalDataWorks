@@ -7,7 +7,6 @@ public class ExecutionStatusBaseTests
     private sealed class TestExecutionStatus : ExecutionStatusBase
     {
         public TestExecutionStatus(
-            int id,
             string name,
             bool isTerminal,
             bool isSuccess,
@@ -16,7 +15,7 @@ public class ExecutionStatusBaseTests
             bool allowsResume = false,
             bool isInProgress = false,
             bool hasWarnings = false)
-            : base(id, name, isTerminal, isSuccess, isFailure, allowsRetry, allowsResume, isInProgress, hasWarnings)
+            : base(name, isTerminal, isSuccess, isFailure, allowsRetry, allowsResume, isInProgress, hasWarnings)
         {
         }
     }
@@ -27,7 +26,7 @@ public class ExecutionStatusBaseTests
     public void ConstructorSetsAllPropertiesCorrectly()
     {
         var status = new TestExecutionStatus(
-            1, "Running",
+"Running",
             isTerminal: false,
             isSuccess: false,
             isFailure: false,
@@ -35,8 +34,6 @@ public class ExecutionStatusBaseTests
             allowsResume: false,
             isInProgress: true,
             hasWarnings: false);
-
-        status.Id.ShouldBe(1);
         status.Name.ShouldBe("Running");
         status.IsTerminal.ShouldBeFalse();
         status.IsSuccess.ShouldBeFalse();
@@ -53,7 +50,7 @@ public class ExecutionStatusBaseTests
     public void TerminalSuccessStatus()
     {
         var status = new TestExecutionStatus(
-            2, "Succeeded",
+"Succeeded",
             isTerminal: true,
             isSuccess: true);
 
@@ -69,7 +66,7 @@ public class ExecutionStatusBaseTests
     public void TerminalFailureStatusAllowsRetry()
     {
         var status = new TestExecutionStatus(
-            3, "Failed",
+"Failed",
             isTerminal: true,
             isSuccess: false,
             isFailure: true,
@@ -88,7 +85,7 @@ public class ExecutionStatusBaseTests
     public void StatusWithWarnings()
     {
         var status = new TestExecutionStatus(
-            4, "CompletedWithWarnings",
+"CompletedWithWarnings",
             isTerminal: true,
             isSuccess: true,
             hasWarnings: true);
@@ -103,7 +100,7 @@ public class ExecutionStatusBaseTests
     public void PausedStatusAllowsResume()
     {
         var status = new TestExecutionStatus(
-            5, "Paused",
+"Paused",
             isTerminal: false,
             isSuccess: false,
             allowsResume: true);
@@ -118,7 +115,7 @@ public class ExecutionStatusBaseTests
     public void DefaultOptionalParametersAreFalse()
     {
         var status = new TestExecutionStatus(
-            6, "Pending",
+"Pending",
             isTerminal: false,
             isSuccess: false);
 

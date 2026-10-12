@@ -1,5 +1,5 @@
 using Fdw.Collections;
-using Fdw.Services.Authentication.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Abstractions.Scoping;
 

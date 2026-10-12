@@ -12,7 +12,7 @@ public sealed class DeniedAgentActionStatus : AgentActionStatusTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DeniedAgentActionStatus"/> class.
     /// </summary>
-    public DeniedAgentActionStatus() : base(3, "Denied", isTerminal: true, isApproved: false)
+    public DeniedAgentActionStatus() : base("Denied", isTerminal: true, isApproved: false)
     {
     }
 }

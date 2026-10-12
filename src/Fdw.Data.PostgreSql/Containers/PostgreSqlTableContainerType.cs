@@ -16,7 +16,6 @@ public sealed class PostgreSqlTableContainerType : ContainerTypeBase
     /// </summary>
     public PostgreSqlTableContainerType()
         : base(
-            id: 10,
             name: "PostgreSqlTable",
             displayName: "PostgreSQL Table",
             description: "PostgreSQL table container with schema discovery support",

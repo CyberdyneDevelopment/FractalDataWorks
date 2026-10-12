@@ -11,7 +11,6 @@ public sealed class EditAltIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="EditAltIcon"/>.</summary>
     public EditAltIcon()
         : base(
-            30,
             "EditAlt",
             "0 0 24 24",
             "none",

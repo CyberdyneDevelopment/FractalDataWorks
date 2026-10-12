@@ -82,10 +82,7 @@ public sealed class ListPageRenderer
         console.WriteLine();
     }
 
-    // MA0051: Method length acceptable - procedural table rendering with column alignment, selection checkboxes, and formatting
-#pragma warning disable MA0051 // Method is too long
     private static void RenderTable(IListPageModel page, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         var table = new Table()
             .Border(theme.Borders.Table)
@@ -220,10 +217,7 @@ public sealed class ListPageRenderer
         console.WriteLine();
     }
 
-    // MA0051: Method length acceptable - procedural action menu with list/row actions, multi-select, pagination, and switch-based dispatch
-#pragma warning disable MA0051 // Method is too long
     private static ListPageResult PromptAction(IListPageModel page, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         var choices = new List<(string Id, string Label)>();
 

@@ -11,5 +11,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class AbandonedStrandState : StrandStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="AbandonedStrandState"/> class.</summary>
-    public AbandonedStrandState() : base(4, "Abandoned", isTerminal: true) { }
+    public AbandonedStrandState() : base("Abandoned", isTerminal: true) { }
 }

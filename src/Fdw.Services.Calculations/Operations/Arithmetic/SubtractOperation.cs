@@ -26,7 +26,7 @@ public sealed class SubtractOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="SubtractOperation"/> class.
     /// </summary>
     public SubtractOperation()
-        : base(id: 2, name: "Subtract", category: "Arithmetic", description: "Subtracts the right value from the left (left - right)")
+        : base(name: "Subtract", category: "Arithmetic", description: "Subtracts the right value from the left (left - right)")
     {
         _logger = NullLogger<SubtractOperation>.Instance;
         Parameters =

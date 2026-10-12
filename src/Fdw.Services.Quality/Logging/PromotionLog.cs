@@ -108,4 +108,9 @@ public static partial class PromotionLog
     [MessageLogging(EventId = 21000, Level = LogLevel.Error,
         Message = "Cannot promote to same environment: {environmentName}")]
     public static partial IGenericMessage SameEnvironmentError(ILogger logger, string environmentName);
+
+    /// <summary>Logs a successful environment read that carried no list.</summary>
+    [MessageLogging(EventId = 41003, Level = LogLevel.Warning,
+        Message = "The environment read succeeded but carried no list")]
+    public static partial IGenericMessage EnvironmentsUnreadable(ILogger logger);
 }

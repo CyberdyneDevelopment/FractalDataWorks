@@ -27,7 +27,7 @@ public class Soap11Protocol : SoapProtocolBase
     /// Initializes a new instance of the <see cref="Soap11Protocol"/> class.
     /// </summary>
     public Soap11Protocol()
-        : base(2, "Soap11", "SOAP 1.1 protocol", SoapVersion.Soap11.ContentType)
+        : base("Soap11", "SOAP 1.1 protocol", SoapVersion.Soap11.ContentType)
     {
     }
 

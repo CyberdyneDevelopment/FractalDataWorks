@@ -24,7 +24,7 @@ public sealed class StandardRateLimitPolicy : RateLimitPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="StandardRateLimitPolicy"/> class.
     /// </summary>
-    public StandardRateLimitPolicy() : base(1, "Standard")
+    public StandardRateLimitPolicy() : base("Standard")
     {
     }
 

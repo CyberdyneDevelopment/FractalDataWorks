@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlByteArrayConverter()
     : DataTypeConverterBase(
-        id: 12,
         name: "ByteArray",
         sourceType: "bytea",
         targetClrType: typeof(byte[]),

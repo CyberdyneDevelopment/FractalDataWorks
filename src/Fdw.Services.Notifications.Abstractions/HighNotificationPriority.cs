@@ -9,5 +9,5 @@ namespace Fdw.Services.Notifications.Abstractions;
 public sealed class HighNotificationPriority : NotificationPriorityBase
 {
     /// <summary>Initializes a new instance of <see cref="HighNotificationPriority"/>.</summary>
-    public HighNotificationPriority() : base(2, "High") { }
+    public HighNotificationPriority() : base("High") { }
 }

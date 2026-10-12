@@ -14,5 +14,5 @@ public sealed class OrphanedSubtypeIssueType : ConfigurationIssueTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OrphanedSubtypeIssueType"/> class.
     /// </summary>
-    public OrphanedSubtypeIssueType() : base(1, "OrphanedSubtype", isHealable: true) { }
+    public OrphanedSubtypeIssueType() : base("OrphanedSubtype", isHealable: true) { }
 }

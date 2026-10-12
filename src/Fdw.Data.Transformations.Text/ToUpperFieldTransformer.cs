@@ -20,7 +20,6 @@ public sealed class ToUpperFieldTransformer : FieldTransformationBase
     /// </summary>
     public ToUpperFieldTransformer()
         : base(
-            id: 302,
             name: "ToUpper",
             displayName: "To Upper",
             description: "Converts a string value to uppercase using invariant culture.",

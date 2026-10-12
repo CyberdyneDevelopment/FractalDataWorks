@@ -11,7 +11,7 @@ namespace Fdw.Data.DataSets;
 /// <remarks>
 /// Why: replaces the free-text <c>node.Configuration["AggregateSpec"]</c> pattern
 /// with a strongly-typed POCO that serialises to/from JSON without custom converters.
-/// The <see cref="Measures"/> list maps directly to B2's DataSetAggregateDefinition
+/// The <see cref="Measures"/> list maps directly to B2's DataSetAggregateConfiguration
 /// persistence model: each measure carries a source field, aggregate function, and
 /// output column name.
 /// </remarks>

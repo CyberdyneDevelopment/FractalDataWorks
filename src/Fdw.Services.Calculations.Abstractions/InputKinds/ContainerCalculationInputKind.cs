@@ -14,7 +14,7 @@ public sealed class ContainerCalculationInputKind : CalculationInputKindBase
     /// Initializes a new instance of the <see cref="ContainerCalculationInputKind"/> class.
     /// </summary>
     public ContainerCalculationInputKind()
-        : base(id: 2, name: "Container")
+        : base(name: "Container")
     {
     }
 }

@@ -3,26 +3,27 @@ using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Authorization;
 
-/// <summary>
-/// Reads the permissions this platform defines.
-/// </summary>
-public class PermissionConfigurationProvider
-    : ImplementationConfigurationProviderBase<PermissionConfiguration, PermissionConfigurationCommand>,
+/// <summary>Supplies the Permission configuration.</summary>
+public sealed class PermissionConfigurationProvider
+    : DomainConfigurationProviderBase<IPermissionImplementationConfiguration, PermissionDomainConfiguration>,
       IPermissionConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="PermissionConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public PermissionConfigurationProvider(
-        ILogger<PermissionConfigurationProvider>? logger,
+        ILogger<PermissionConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "authz")
-        : base(logger ?? NullLogger<PermissionConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
 }

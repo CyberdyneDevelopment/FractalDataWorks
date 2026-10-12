@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataSingleConverter()
     : DataTypeConverterBase(
-        id: 9,
         name: "Single",
         sourceType: "Single",
         targetClrType: typeof(float),

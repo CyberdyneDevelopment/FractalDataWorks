@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class PipelineFailedActivityType : ActivityTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="PipelineFailedActivityType"/>.</summary>
-    public PipelineFailedActivityType() : base(3, "PipelineFailed") { }
+    public PipelineFailedActivityType() : base("PipelineFailed") { }
 }

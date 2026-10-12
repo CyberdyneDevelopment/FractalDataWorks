@@ -1,17 +1,17 @@
 # 12-06 Validation
 
-This guide covers the FDW validation strategy. Validation is applied at three layers: client-side (DataAnnotations), API endpoints (FluentValidation), and configuration startup (IValidateOptions).
+This guide covers the FDW validation strategy. Validation is applied at two FDW layers: API endpoints (FluentValidation) and configuration startup (IValidateOptions). A client may also check input before it sends a request, but the API is the authority.
 
 ## Architecture
 
 ```
-Client (Blazor)                 API Endpoint                  Configuration (Startup)
-     |                               |                               |
-DataAnnotationsValidator        Validator<T>                  FdwConfigurationValidator<T>
-     |                               |                               |
-EditForm validation             FastEndpoints auto-discovery  IValidateOptions<T>
-     |                               |                               |
-Immediate UI feedback           400 ProblemDetails response   Fail-fast on app.Run()
+API Endpoint                  Configuration (Startup)
+     |                               |
+Validator<T>                  FdwConfigurationValidator<T>
+     |                               |
+FastEndpoints auto-discovery  IValidateOptions<T>
+     |                               |
+400 ProblemDetails response   Fail-fast on app.Run()
 ```
 
 ## Packages
@@ -140,51 +140,19 @@ services.AddOptions<MsSqlConnectionConfiguration>()
 
 `ValidateWithFdw` registers the validator as an `IValidateOptions<T>`. Combined with `ValidateOnStart()`, the application will throw on startup if configuration is invalid.
 
-## Layer 3: Client-Side Validation (DataAnnotations)
+## Client-Side Checks
 
-Blazor forms use DataAnnotations for immediate client-side feedback. Add attributes to request DTOs:
-
-```csharp
-using System.ComponentModel.DataAnnotations;
-
-public sealed class CreateUserRequest
-{
-    [Required, StringLength(100, MinimumLength = 3)]
-    public string Username { get; set; } = "";
-
-    [Required, MinLength(8)]
-    public string Password { get; set; } = "";
-
-    [EmailAddress]
-    public string? Email { get; set; }
-
-    public List<string> Roles { get; set; } = [];
-}
-```
-
-In the Blazor component:
-
-```razor
-<EditForm Model="@_request" OnValidSubmit="@HandleSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-    <!-- form fields -->
-</EditForm>
-```
+FDW ships no client-side validation layer. The web console (`reference-react-ui`) may check fields before it submits, for faster feedback, but it must still handle the API's 400 response: the endpoint validator is the only check that is enforced.
 
 ## Validation Error Flow
 
 ```
-1. Client submits form
-   → DataAnnotationsValidator catches missing/invalid fields
-   → User sees inline validation errors immediately
-
-2. Valid form POSTs to API
+1. Client sends the request
    → FastEndpoints runs Validator<TRequest> before handler
    → Invalid: returns 400 with ProblemDetails JSON
    → Valid: handler executes
 
-3. ProblemDetails response example:
+2. ProblemDetails response example:
    {
      "statusCode": 400,
      "message": "One or more errors occurred!",
@@ -194,7 +162,7 @@ In the Blazor component:
      }
    }
 
-4. UI ApiClient receives 400
+3. Client receives 400
    → Displays error messages from response body
 ```
 

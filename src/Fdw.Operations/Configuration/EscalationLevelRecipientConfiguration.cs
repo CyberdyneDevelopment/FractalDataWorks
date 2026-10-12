@@ -30,26 +30,12 @@ namespace Fdw.Operations.Configuration;
 [ManagedConfiguration( ServiceCategory = "Operations")]
 public sealed partial class EscalationLevelRecipientConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "Operationss";
-
-    /// <inheritdoc />
-    public string ServiceType => "Operations";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
 
     /// <summary>
     /// Gets or sets the unique identifier.
     /// </summary>
     public Guid Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the escalation level this recipient belongs to.
-    /// Foreign key to workflow.EscalationLevel(Id).
-    /// </summary>
-    public Guid EscalationLevelId { get; set; }
 
     /// <summary>
     /// Gets or sets the name for display/binding purposes.

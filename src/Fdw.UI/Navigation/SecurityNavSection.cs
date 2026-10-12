@@ -12,5 +12,5 @@ public sealed class SecurityNavSection : NavSectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurityNavSection"/> class.
     /// </summary>
-    public SecurityNavSection() : base(8, "Security", "Security", 80) { }
+    public SecurityNavSection() : base("Security", "Security", 80) { }
 }

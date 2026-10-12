@@ -11,7 +11,6 @@ public sealed class ArrowRightAltIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ArrowRightAltIcon"/>.</summary>
     public ArrowRightAltIcon()
         : base(
-            39,
             "ArrowRightAlt",
             "0 0 24 24",
             "none",

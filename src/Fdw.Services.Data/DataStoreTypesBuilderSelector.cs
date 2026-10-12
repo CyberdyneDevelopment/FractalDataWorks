@@ -22,17 +22,17 @@ namespace Fdw.Services.Data;
 public sealed class DataStoreTypesBuilderSelector : IDataStoreBuilderSelector
 {
     /// <inheritdoc/>
-    public IGenericResult<IDataStoreBuilder> Select(DataStoreConfiguration configuration, ILogger? logger = null)
+    public IGenericResult<IDataStoreBuilder> Select(IDataStoreImplementationConfiguration configuration, ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        var option = DataStoreTypes.ByName(configuration.ServiceOptionType);
+        var option = DataStoreTypes.ByName(configuration.Implementation);
         if (option == DataStoreTypes.NotFound)
         {
             return GenericResult<IDataStoreBuilder>.Failure(
                 DataStoreProviderLog.NoDataStoreTypeFoundAtStartup(
                     logger ?? NullLogger.Instance,
-                    configuration.ServiceOptionType ?? "(null)",
+                    configuration.Implementation ?? "(null)",
                     configuration.Name));
         }
 

@@ -13,7 +13,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaArrayConverter()
     : DataTypeConverterBase(
-        id: 12,
         name: "Array",
         sourceType: "array",
         targetClrType: typeof(string),

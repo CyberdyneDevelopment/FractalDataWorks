@@ -16,7 +16,6 @@ public sealed class OAuth2Protocol : AuthenticationProtocolBase
     /// Initializes a new instance of the <see cref="OAuth2Protocol"/> class.
     /// </summary>
     public OAuth2Protocol() : base(
-        id: 1,
         name: "OAuth2",
         version: "2.0",
         requiresSecureTransport: true,

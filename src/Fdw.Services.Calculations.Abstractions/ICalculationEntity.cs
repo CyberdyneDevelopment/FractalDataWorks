@@ -34,10 +34,10 @@ public interface ICalculationEntity
     /// Gets the calculation steps (each carrying its Fields + Operands), composed from the aggregate.
     /// </summary>
     /// <remarks>
-    /// Why: typed as <see cref="IGenericConfiguration"/> because the concrete step config
-    /// (CalculationStepConfiguration) lives in the implementation package and cannot be referenced from
-    /// this abstraction. At runtime each element is a CalculationStepConfiguration. A strongly-typed
-    /// runtime step model can land with the step-execution feature.
+    /// Why: typed as <see cref="IGenericConfiguration"/> because the step contract
+    /// (ICalculationStepConfiguration) lives in the implementation package and cannot be referenced from
+    /// this abstraction. At runtime each element is the owning implementation's step type, which
+    /// implements ICalculationStepConfiguration.
     /// </remarks>
     IReadOnlyList<IGenericConfiguration> Steps { get; }
 

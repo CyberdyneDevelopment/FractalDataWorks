@@ -30,7 +30,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
 
         if (roleName != null)
         {
-            var role = new Mock<IPropertyRole>();
+            var role = new Mock<IDatumType>();
             role.Setup(r => r.Name).Returns(roleName);
             prop.Setup(p => p.Role).Returns(role.Object);
         }
@@ -322,7 +322,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void GenerateCommandsDetectsSurrogateKeyRoleAsPrimaryKey()
+    public void GenerateCommandsDetectsDbKeyDatumTypeAsPrimaryKey()
     {
         var prop = CreateProperty("RowId", roleName: "SurrogateKey", metadata: new Dictionary<string, object>
         {
@@ -342,7 +342,7 @@ public sealed class MsSqlDdlGeneratorGenerateCommandsTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void GenerateCommandsDetectsNaturalKeyRoleAsPrimaryKey()
+    public void GenerateCommandsDetectsIdentifierDatumTypeAsPrimaryKey()
     {
         var prop = CreateProperty("Code", roleName: "NaturalKey", metadata: new Dictionary<string, object>
         {

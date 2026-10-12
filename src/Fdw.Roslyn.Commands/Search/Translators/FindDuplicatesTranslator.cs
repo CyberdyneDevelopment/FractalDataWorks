@@ -32,7 +32,6 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: iterate projects/documents, hash method bodies, group duplicates
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<DuplicateGroup>>>> Translate(
         FindDuplicatesCommand command,
         Solution solution,
@@ -104,7 +103,6 @@ public sealed class FindDuplicatesTranslator : RoslynCommandTranslatorBase<FindD
 
         return GenericResult<QueryResult<IReadOnlyList<DuplicateGroup>>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static string NormalizeCode(string code)
     {

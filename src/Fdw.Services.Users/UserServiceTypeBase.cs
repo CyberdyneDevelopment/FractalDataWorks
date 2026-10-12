@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Users;
 
@@ -24,7 +25,7 @@ public abstract class UserServiceTypeBase : ServiceTypeBase<IGenericService, IUs
         string description,
         string? category = null)
         : base(name, sectionName, displayName, description, category ?? "User",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "usr")
     {
     }

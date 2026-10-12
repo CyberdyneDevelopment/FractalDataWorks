@@ -31,7 +31,6 @@ public sealed class TabularLayout : DataLayoutBase
     /// </summary>
     public TabularLayout()
         : base(
-            id: 1,
             name: "Tabular",
             description: "Flat rows and columns (SQL table, CSV, Excel)",
             supportsNesting: false,

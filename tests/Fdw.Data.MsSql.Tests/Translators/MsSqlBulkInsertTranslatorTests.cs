@@ -45,7 +45,7 @@ public sealed class MsSqlBulkInsertTranslatorTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -85,7 +85,7 @@ public sealed class MsSqlBulkInsertTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);
@@ -135,7 +135,7 @@ public sealed class MsSqlBulkInsertTranslatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertGeneratesMarkerCommand()
+    public async Task TranslateBulkInsertGeneratesBatchedInsertSql()
     {
         var fields = new[]
         {
@@ -157,11 +157,12 @@ public sealed class MsSqlBulkInsertTranslatorTests
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
+        // A real SQL command (FDW-1152): no marker, no stored procedure, the rows bound as parameters.
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.CommandText.ShouldContain("BULK INSERT MARKER");
-        result.Value.CommandText.ShouldContain("[dbo].[Customers]");
-        // Should have metadata parameters
-        result.Value.Parameters.Count.ShouldBeGreaterThan(0);
+        result.Value!.CommandType.ShouldBe(System.Data.CommandType.Text);
+        result.Value.CommandText.ShouldContain("INSERT INTO [dbo].[Customers]");
+        result.Value.CommandText.ShouldNotContain("MARKER");
+        result.Value.Parameters.Count.ShouldBe(4);
     }
 
     [Fact]
@@ -186,8 +187,45 @@ public sealed class MsSqlBulkInsertTranslatorTests
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        // Column mappings parameter should only contain Name
-        var mappingsParam = result.Value!.Parameters["@__BulkCopy_ColumnMappings"];
-        mappingsParam.Value!.ToString().ShouldBe("Name");
+        result.Value!.CommandText.ShouldContain("[Name]");
+        result.Value.CommandText.ShouldNotContain("[Id]");
+        result.Value.CommandText.ShouldNotContain("[Computed]");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void PlanMapsTheInsertableColumnsToTheSchemaQualifiedTable()
+    {
+        var fields = new[]
+        {
+            CreateField("Id", isIdentity: true).Object,
+            CreateField("Name").Object,
+            CreateField("Computed", isComputed: true).Object
+        };
+        var container = CreateContainer(fields: fields);
+
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(new List<object> { new { Name = "Test" }, new { Name = "Other" } });
+
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Destination.ShouldBe("[dbo].[Customers]");
+        result.Value.Columns.ShouldBe(["Name"]);
+        result.Value.Rows.Rows.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void PlanReturnsFailureWhenTheCommandCarriesNoRows()
+    {
+        var container = CreateContainer(fields: [CreateField("Name").Object]);
+
+        var result = MsSqlBulkInsertTranslator.Plan(new Mock<IDataCommand>().Object, container.Object);
+
+        result.IsSuccess.ShouldBeFalse();
     }
 }

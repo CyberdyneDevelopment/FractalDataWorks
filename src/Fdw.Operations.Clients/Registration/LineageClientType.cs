@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Operations.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Lineage API client.
+/// Implementation for the Lineage API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "LineageClient")]
+[Implementation(typeof(ApiClientTypes), "LineageClient")]
 public sealed class LineageClientType : ApiClientTypeBase<LineageApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class LineageClientType : ApiClientTypeBase<LineageApiClient>
         {
             builder.Services.AddScoped<LineageApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<LineageApiClient>>() ?? NullLogger<LineageApiClient>.Instance;
-                return new LineageApiClient(factory.CreateClient(Name), logger);
+                return new LineageApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

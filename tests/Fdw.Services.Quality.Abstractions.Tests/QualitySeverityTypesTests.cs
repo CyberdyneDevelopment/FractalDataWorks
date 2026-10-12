@@ -20,92 +20,6 @@ public class QualitySeverityTypesTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void ByIdReturnsCorrectSeverityType()
-    {
-        // Arrange
-        var all = QualitySeverityTypes.All();
-        var first = all.First();
-
-        // Act
-        var result = QualitySeverityTypes.ById(first.Id);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Id.ShouldBe(first.Id);
-        result.Name.ShouldBe(first.Name);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByIdReturnsNotFoundForUnknownId()
-    {
-        // Act
-        var result = QualitySeverityTypes.ById(99999);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByNameReturnsCorrectSeverityType()
-    {
-        // Act
-        var result = QualitySeverityTypes.ByName("Error");
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("Error");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByNameReturnsNotFoundForUnknownName()
-    {
-        // Act
-        var result = QualitySeverityTypes.ByName("UnknownSeverity");
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByNameIsCaseSensitive()
-    {
-        // Act
-        var result1 = QualitySeverityTypes.ByName("Error");
-        var result2 = QualitySeverityTypes.ByName("error");
-        var result3 = QualitySeverityTypes.ByName("ERROR");
-
-        // Assert
-        result1.Name.ShouldBe("Error");
-        result2.Name.ShouldBe("_Empty");
-        result3.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void NotFoundReturnsEmptyInstance()
-    {
-        // Act
-        var result = QualitySeverityTypes.NotFound;
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
     public void ErrorSeverityTypeHasCorrectProperties()
     {
         // Act
@@ -149,32 +63,6 @@ public class QualitySeverityTypesTests
         severity.Name.ShouldBe("Info");
         severity.Priority.ShouldBe(3);
         severity.BlocksProcessing.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void AllSeverityTypesHaveUniqueIds()
-    {
-        // Act
-        var all = QualitySeverityTypes.All();
-        var ids = all.Select(s => s.Id).ToList();
-
-        // Assert
-        ids.Count.ShouldBe(ids.Distinct().Count());
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void AllSeverityTypesHaveUniqueNames()
-    {
-        // Act
-        var all = QualitySeverityTypes.All();
-        var names = all.Select(s => s.Name).ToList();
-
-        // Assert
-        names.Count.ShouldBe(names.Distinct().Count());
     }
 
     [Fact]

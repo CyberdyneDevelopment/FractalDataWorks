@@ -36,14 +36,16 @@ public sealed class EtlPipelineExecutionRecord
     public string? ScheduleName { get; set; }
 
     /// <summary>
-    /// Gets or sets the execution status (Running, Succeeded, Failed, Cancelled).
+    /// Gets or sets the execution status. The writer states it: the tracker item's state when the
+    /// run is queued, Running when it starts, the outcome when it completes.
     /// </summary>
-    public string Status { get; set; } = "Running";
+    public string Status { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets when the pipeline execution started.
+    /// Gets or sets when the pipeline execution started. Null while the run is queued; the executor
+    /// sets it when the run moves to Running. The row's CreateDate is metadata and never stands in for it.
     /// </summary>
-    public DateTime StartedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
 
     /// <summary>
     /// Gets or sets when the pipeline execution completed. Null if still running.

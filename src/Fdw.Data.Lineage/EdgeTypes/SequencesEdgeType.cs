@@ -13,5 +13,5 @@ namespace Fdw.Data.Lineage.EdgeTypes;
 public sealed class SequencesEdgeType : LineageEdgeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="SequencesEdgeType"/> class.</summary>
-    public SequencesEdgeType() : base(8, "Sequences") { }
+    public SequencesEdgeType() : base("Sequences") { }
 }

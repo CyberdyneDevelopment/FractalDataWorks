@@ -34,13 +34,13 @@ public class DataStoreApiClient : ApiClientBase
         => GetList<DataStoreSummaryPayload>("datastores", ct);
 
     /// <summary>
-    /// Gets a specific DataStore by name.
+    /// Gets a specific DataStore by name: <c>POST datastores/get</c>.
     /// </summary>
     /// <param name="name">The DataStore name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the DataStore details.</returns>
     public virtual Task<IGenericResult<DataStoreDetailPayload>> GetDataStore(string name, CancellationToken ct = default)
-        => Get<DataStoreDetailPayload>($"datastores/{name}", ct);
+        => Post<GetDataStorePayload, DataStoreDetailPayload>("datastores/get", new GetDataStorePayload { Name = name }, ct);
 
     /// <summary>
     /// Creates a new DataStore.

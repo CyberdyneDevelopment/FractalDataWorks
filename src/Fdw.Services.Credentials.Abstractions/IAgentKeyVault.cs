@@ -26,10 +26,11 @@ public interface IAgentKeyVault : IDataVault
     /// <param name="userId">The user the agent acts on behalf of.</param>
     /// <param name="userName">The display name of the owning user.</param>
     /// <param name="rawKey">The freshly-minted raw key, peppered and stored by the vault.</param>
+    /// <param name="prefix">The key's visible head, stored so a listing can identify it. Not secret.</param>
     /// <param name="label">A human-readable label to identify the key.</param>
     /// <param name="expiresAt">Optional UTC expiration; <c>null</c> for non-expiring.</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult<Guid>> Create(Guid userId, string userName, string rawKey, string label, DateTime? expiresAt, CancellationToken cancellationToken = default);
+    Task<IGenericResult<Guid>> Create(Guid userId, string userName, string rawKey, string prefix, string label, DateTime? expiresAt, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Validates a presented raw key against the stored peppered hash in constant time, honouring

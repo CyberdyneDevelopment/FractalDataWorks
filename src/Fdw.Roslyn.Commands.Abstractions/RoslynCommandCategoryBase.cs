@@ -11,11 +11,10 @@ public abstract class RoslynCommandCategoryBase : DevelopmentCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="RoslynCommandCategoryBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The name of the category.</param>
     /// <param name="description">The description of the category.</param>
-    protected RoslynCommandCategoryBase(int id, string name, string description)
-        : base(id, name, description)
+    protected RoslynCommandCategoryBase(string name, string description)
+        : base(name, description)
     {
     }
 }

@@ -5,9 +5,9 @@ using Fdw.Services.Calculations.Configuration;
 namespace Fdw.Services.Calculations.Validators;
 
 /// <summary>
-/// Validator for <see cref="CalculationStepConfiguration"/>.
+/// Validator for every implementation's calculation step (<see cref="CalculationStepConfigurationBase"/>).
 /// </summary>
-public sealed class CalculationStepConfigurationValidator : FdwConfigurationValidator<CalculationStepConfiguration>
+public sealed class CalculationStepConfigurationValidator : FdwConfigurationValidator<CalculationStepConfigurationBase>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CalculationStepConfigurationValidator"/> class.

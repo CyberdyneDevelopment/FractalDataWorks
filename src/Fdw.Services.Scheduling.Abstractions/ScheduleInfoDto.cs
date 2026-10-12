@@ -1,3 +1,5 @@
+using Fdw.Services.Pipelines.Clients.Abstractions;
+using System.Collections.Generic;
 using System;
 
 namespace Fdw.Services.Scheduling.Clients.Abstractions;
@@ -13,9 +15,14 @@ public class ScheduleInfoDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the pipeline name associated with this schedule.
+    /// Gets or sets the pipeline's name as it was when the schedule was saved, for display.
     /// </summary>
     public string PipelineName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the logical id of the pipeline the schedule runs (FDW-1088).
+    /// </summary>
+    public Guid PipelineId { get; set; }
 
     /// <summary>
     /// Gets or sets the scheduler type (e.g., Cron, Interval).
@@ -51,4 +58,13 @@ public class ScheduleInfoDto
     /// Gets or sets the next scheduled execution time.
     /// </summary>
     public DateTimeOffset? NextRunTime { get; set; }
+
+    /// <summary>
+    /// Gets or sets the run parameter values the scheduler passes to the pipeline on each run (contract v2 item 9),
+    /// validated against the pipeline's declared parameters exactly like a trigger.
+    /// </summary>
+    public IList<PipelineParameterValue>? Parameters { get; set; }
+
+    /// <summary>Gets or sets the names of the roles the schedule's runs act with (FDW-1161).</summary>
+    public IList<string>? RunRoles { get; set; }
 }

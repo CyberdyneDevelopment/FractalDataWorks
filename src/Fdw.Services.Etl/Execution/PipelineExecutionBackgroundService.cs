@@ -7,6 +7,7 @@ using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
@@ -20,6 +21,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using Fdw.Services.Pipelines.Abstractions;
 
 namespace Fdw.Services.Etl.Execution;
 
@@ -80,7 +83,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             EtlLog.ExecutionScopeCreated(_logger, request.ExecutionId);
 
-            EstablishWorkAuthenticationContext(scope.ServiceProvider, request);
+            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
 
             var executionTracker = scope.ServiceProvider.GetRequiredService<IExecutionTracker>();
             var pipelineProvider = scope.ServiceProvider
@@ -92,8 +95,8 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
 
             try
             {
-                await TransitionToRunning(executionTracker, broadcaster, request, orgId, _logger, stoppingToken).ConfigureAwait(false);
-                await RunPipeline(executionTracker, pipelineProvider, dataGateways, broadcaster, request, orgId, stoppingToken).ConfigureAwait(false);
+                await TransitionToRunning(executionTracker, dataGateways, broadcaster, request, orgId, _logger, stoppingToken).ConfigureAwait(false);
+                await RunPipeline(scope.ServiceProvider, executionTracker, pipelineProvider, dataGateways, broadcaster, request, orgId, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
@@ -110,21 +113,28 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
     }
 
-    internal void EstablishWorkAuthenticationContext(IServiceProvider services, PipelineExecutionRequest request)
+    // Why SYSTEM here: this is the run's BOOKKEEPING context -- execution records, metrics, status and
+    // the configuration reads that build the pipeline. The pipeline's own work never runs under it: it
+    // runs as its tenant run, the pipeline's tenant plus the roles the tenant recorded for it (FDW-1087),
+    // which RunPipeline establishes around Execute.
+    //
+    // Why the run's tenant rides on the system context: it never narrows what the run sees; it
+    // decides the tenant the rows the run writes default to, through every tenant column's
+    // DEFAULT. Without it a tenant's execution records and outputs would land in the default
+    // tenant, readable by every tenant. A request with no tenant is work that belongs to none, and
+    // its rows land in the default tenant -- the column default, not a choice made here.
+    internal void EstablishSystemAuthenticationContext(IServiceProvider services, PipelineExecutionRequest request)
     {
-        if (!request.TenantId.HasValue)
-        {
-            return;
-        }
-
         var accessor = services.GetService<IAuthenticationContextAccessor>();
         if (accessor is null || accessor.Current is not null)
         {
             return;
         }
 
-        accessor.Current = new WorkAuthenticationContext(request.TenantId.Value);
-        EtlLog.WorkAuthenticationContextEstablished(_logger, request.ExecutionId, request.TenantId.Value);
+        accessor.Current = request.TenantId is { } tenantId
+            ? new SystemAuthenticationContext(tenantId)
+            : new SystemAuthenticationContext();
+        EtlLog.ExecutionElevatedToSystemContext(_logger, request.ExecutionId, request.TenantId);
     }
 
     private static async Task<Guid?> ResolveOwningOrg(
@@ -132,13 +142,13 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         PipelineExecutionRequest request,
         CancellationToken ct)
     {
-        var configProvider = services.GetRequiredService<IServiceConfigurationProvider<PipelineConfiguration>>();
-        var configResult = await configProvider.Get(request.PipelineName, ct).ConfigureAwait(false);
+        var configResult = await services.GetRequiredService<IPipelineConfigurationProvider>().Get(request.PipelineId, ct).ConfigureAwait(false);
         return configResult.IsSuccess && configResult.Value is not null ? configResult.Value.OrgId : null;
     }
 
     private static async Task TransitionToRunning(
         IExecutionTracker executionTracker,
+        IDataGatewayProvider dataGateways,
         IPipelineStatusBroadcaster broadcaster,
         PipelineExecutionRequest request,
         Guid? orgId,
@@ -169,7 +179,11 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
                     "Pipeline execution started",
                     actor: "EtlServer",
                     stoppingToken).ConfigureAwait(false);
-                if (!toRunning.IsSuccess)
+                if (toRunning.IsSuccess)
+                {
+                    await StampStarted(dataGateways, logger, request.ExecutionId, stoppingToken).ConfigureAwait(false);
+                }
+                else
                 {
                     EtlLog.StateTransitionStepFailed(logger, request.ExecutionId, "Running", toRunning.CurrentMessage);
                 }
@@ -188,7 +202,44 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             request.PipelineName, request.ExecutionId, "Running", orgId: orgId).ConfigureAwait(false);
     }
 
+    // Why here and not at enqueue: the metrics row is written when the run is queued, and a queued run
+    // has not started. StartedAt is the moment the run reached Running; the row's CreateDate is metadata.
+    private static async Task StampStarted(
+        IDataGatewayProvider dataGateways,
+        ILogger logger,
+        Guid executionId,
+        CancellationToken stoppingToken)
+    {
+        // Reported the same way a failed update is, because the metrics row is non-fatal enrichment.
+        var etlDataStore = EtlPipelineTypes.OperationalConnection;
+        if (string.IsNullOrWhiteSpace(etlDataStore))
+        {
+            EtlLog.MetricsUpdateFailed(
+                logger,
+                executionId,
+                $"{nameof(EtlPipelineTypes)}.{nameof(EtlPipelineTypes.OperationalConnection)} is not set; the host must name the operational store.");
+            return;
+        }
+
+        var updateCommand = Update.In<ExecutionStartRecord>(EtlContainerName)
+            .DataStore(etlDataStore)
+            .Path(EtlSchemaPath)
+            .Where("Id", executionId)
+            .Value(new ExecutionStartRecord
+            {
+                Status = ExecutionStateTypes.Running.Name,
+                StartedAt = DateTimeOffset.UtcNow
+            });
+
+        var updateResult = await dataGateways.ByName("Main").Execute<int>(updateCommand, stoppingToken).ConfigureAwait(false);
+        if (!updateResult.IsSuccess)
+        {
+            EtlLog.MetricsUpdateFailed(logger, executionId, updateResult.CurrentMessage);
+        }
+    }
+
     private async Task RunPipeline(
+        IServiceProvider services,
         IExecutionTracker executionTracker,
         IEtlPipelineProvider pipelineProvider,
         IDataGatewayProvider dataGateways,
@@ -197,8 +248,17 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         Guid? orgId,
         CancellationToken stoppingToken)
     {
-        // Resolve pipeline from provider
-        var pipelineResult = await pipelineProvider.Get(request.PipelineName, stoppingToken).ConfigureAwait(false);
+        var runAs = await ResolveTenantRun(services, request, _logger, stoppingToken).ConfigureAwait(false);
+        if (!runAs.IsSuccess || runAs.Value is null)
+        {
+            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
+                request.ExecutionId, request.PipelineName, orgId,
+                false, "RunIdentityRefused", runAs.CurrentMessage, 0, 0, 0, 0).ConfigureAwait(false);
+            return;
+        }
+
+        // By id: the pipeline the trigger resolved in its caller's view. A name is unique only per tenant.
+        var pipelineResult = await pipelineProvider.Get(request.PipelineId, stoppingToken).ConfigureAwait(false);
         if (!pipelineResult.IsSuccess || pipelineResult.Value is null)
         {
             var errorMsg = pipelineResult.CurrentMessage ?? $"Pipeline '{request.PipelineName}' not found";
@@ -210,12 +270,11 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
 
         using var pipeline = pipelineResult.Value;
-        var executeResult = await pipeline.Execute(stoppingToken).ConfigureAwait(false);
 
+        var executeResult = await ExecuteAs(services, runAs.Value, pipeline, request, stoppingToken).ConfigureAwait(false);
         if (executeResult.IsSuccess)
         {
             var metrics = executeResult.Value!;
-
             await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                 request.ExecutionId, request.PipelineName, orgId,
                 true, "Success", null,
@@ -227,7 +286,6 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         else
         {
             var errorMsg = executeResult.CurrentMessage ?? "Pipeline execution failed";
-
             EtlLog.ExecutionFailedInBackground(_logger, request.PipelineName, request.ExecutionId, errorMsg);
 
             // Metrics may be partially populated even on failure; treat as 0 when absent.
@@ -235,6 +293,63 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
                 request.ExecutionId, request.PipelineName, orgId,
                 false, "ExecutionFailed", errorMsg, 0, 0, 0, 0).ConfigureAwait(false);
         }
+    }
+
+    // The pipeline's work acts as its tenant run; everything around it stays bookkeeping, and the
+    // bookkeeping context comes back whatever the work does.
+    private static async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteAs(
+        IServiceProvider services,
+        TenantRunAuthenticationContext runAs,
+        IEtlPipeline pipeline,
+        PipelineExecutionRequest request,
+        CancellationToken stoppingToken)
+    {
+        var accessor = services.GetRequiredService<IAuthenticationContextAccessor>();
+        var bookkeeping = accessor.Current;
+        accessor.Current = runAs;
+        try
+        {
+            // The run carries the parameters the trigger or schedule supplied and the tenant it acts for: the watermark is
+            // kept per pipeline per tenant (FDW-1109).
+            var options = PipelineExecutionOptions.Production with { Parameters = request.Parameters, TenantId = request.TenantId };
+            return await pipeline.Execute(options, stoppingToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            accessor.Current = bookkeeping;
+        }
+    }
+
+    // The identity a run's work acts as (FDW-1087): the pipeline's tenant and the roles that tenant recorded
+    // for the pipeline, resolved now so a role change applies to the next run. A run with no tenant, a
+    // pipeline with no roles in it, or a recorded role that no longer exists is refused -- never run as
+    // the system, never as someone else.
+    internal static async Task<IGenericResult<TenantRunAuthenticationContext>> ResolveTenantRun(
+        IServiceProvider services,
+        PipelineExecutionRequest request,
+        ILogger logger,
+        CancellationToken stoppingToken)
+    {
+        if (request.TenantId is not { } tenantId)
+        {
+            return GenericResult<TenantRunAuthenticationContext>.Failure(
+                EtlLog.ExecutionRefusedNoTenant(logger, request.ExecutionId, request.PipelineName));
+        }
+
+        // The roles are the run's own (FDW-1161): expanded now, so a role changed since the run was accepted applies to this run,
+        // and a role that no longer exists refuses it.
+        var granted = await services.GetRequiredService<IRoleGrants>()
+            .Get(request.RunRoles, stoppingToken).ConfigureAwait(false);
+        if (!granted.IsSuccess || granted.Value is null)
+        {
+            return GenericResult<TenantRunAuthenticationContext>.Failure(
+                EtlLog.ExecutionRefusedRunRoles(logger, request.ExecutionId, request.PipelineName, granted.CurrentMessage));
+        }
+
+        EtlLog.ExecutionActingAsTenantRun(logger, request.ExecutionId, request.PipelineId, tenantId,
+            string.Join(", ", request.RunRoles));
+        return GenericResult<TenantRunAuthenticationContext>.Success(new TenantRunAuthenticationContext(
+            request.PipelineId, request.PipelineName, tenantId, request.RunRoles, [.. granted.Value]));
     }
 
     private static async Task HandleCancellation(

@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class DropTableDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="DropTableDdlCommandType"/>.</summary>
-    public DropTableDdlCommandType() : base(3, "DropTable") { }
+    public DropTableDdlCommandType() : base("DropTable") { }
 }

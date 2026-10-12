@@ -24,13 +24,12 @@ public class DataSetTypeBaseTests
     private sealed class TestDataSetType : DataSetTypeBase
     {
         public TestDataSetType(
-            int id,
             string name,
             string description,
             Type recordType,
             IReadOnlyCollection<IDataField> fields,
             string? category = null)
-            : base(id, name, description, recordType, fields, category)
+            : base(name, description, recordType, fields, category)
         {
         }
 
@@ -44,7 +43,7 @@ public class DataSetTypeBaseTests
             => Task.FromResult(GenericResult<T>.Success(default!));
     }
 
-    private static IReadOnlyCollection<IDataField> CreateTestFields()
+    private static List<IDataField> CreateTestFields()
     {
         return new List<IDataField>
         {
@@ -63,10 +62,7 @@ public class DataSetTypeBaseTests
         var fields = CreateTestFields();
 
         // Act
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
-
-        // Assert
-        sut.Id.ShouldBe(1);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
         sut.Name.ShouldBe("TestDataSet");
         sut.Description.ShouldBe("Test description");
         sut.RecordType.ShouldBe(typeof(TestRecord));
@@ -85,7 +81,7 @@ public class DataSetTypeBaseTests
         var fields = CreateTestFields();
 
         // Act
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields, "CustomCategory");
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields, "CustomCategory");
 
         // Assert
         sut.Category.ShouldBe("CustomCategory");
@@ -97,7 +93,7 @@ public class DataSetTypeBaseTests
     public void ConstructorWithNullFieldsUsesEmptyCollection()
     {
         // Arrange & Act
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), null!);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), null!);
 
         // Assert
         sut.Fields.ShouldNotBeNull();
@@ -111,7 +107,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var keyFields = sut.KeyFields;
@@ -128,7 +124,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var field = sut.Get("Name");
@@ -146,7 +142,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var field = sut.Get("name");
@@ -163,7 +159,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act & Assert
         var ex = Should.Throw<ArgumentException>(() => sut.Get("NonExistent"));
@@ -178,7 +174,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var result = sut.HasField("Name");
@@ -194,7 +190,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var result = sut.HasField("NonExistent");
@@ -210,7 +206,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var result = sut.HasField("name");
@@ -226,7 +222,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var result = sut.HasField(null!);
@@ -242,7 +238,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var intFields = sut.Get(typeof(int)).ToList();
@@ -260,7 +256,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var decimalFields = sut.Get(typeof(decimal)).ToList();
@@ -276,7 +272,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act & Assert
         Should.Throw<ArgumentNullException>(() => sut.Get((Type)null!));
@@ -289,7 +285,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var keyFieldDefs = sut.GetKeyFieldDefinitions().ToList();
@@ -310,7 +306,7 @@ public class DataSetTypeBaseTests
         {
             new DataField("Name", typeof(string), isKey: false, isNullable: false)
         };
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var keyFieldDefs = sut.GetKeyFieldDefinitions().ToList();
@@ -326,7 +322,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var query = sut.CreateQuery<TestRecord>();
@@ -344,7 +340,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var query = sut.CreateQuery();
@@ -361,7 +357,7 @@ public class DataSetTypeBaseTests
     {
         // Arrange
         var fields = CreateTestFields();
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), fields);
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), fields);
 
         // Act
         var result = sut.ToString();
@@ -376,7 +372,7 @@ public class DataSetTypeBaseTests
     public void ToStringShowsZeroFieldsWhenEmpty()
     {
         // Arrange
-        var sut = new TestDataSetType(1, "TestDataSet", "Test description", typeof(TestRecord), Array.Empty<IDataField>());
+        var sut = new TestDataSetType("TestDataSet", "Test description", typeof(TestRecord), Array.Empty<IDataField>());
 
         // Act
         var result = sut.ToString();

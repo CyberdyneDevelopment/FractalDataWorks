@@ -21,12 +21,26 @@ namespace Fdw.Services.Authentication.Validation;
 [ManagedConfiguration(ServiceCategory = "AuthenticationService")]
 public partial class LocalKeyAuthenticationConfiguration : ILocalKeyAuthenticationConfiguration
 {
+    /// <inheritdoc/>
+    public bool Enabled { get; set; }
+
+    /// <inheritdoc/>
+    public string? Authority { get; set; }
+
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationConfiguration"/> class.</summary>
     public LocalKeyAuthenticationConfiguration()
     {
-        ServiceType = "AuthenticationService";
-        ServiceOptionType = "LocalKey";
-        SectionName = "AuthenticationServices";
     }
 
     /// <inheritdoc />
@@ -34,18 +48,6 @@ public partial class LocalKeyAuthenticationConfiguration : ILocalKeyAuthenticati
 
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
-
-    /// <inheritdoc />
-    public string SectionName { get; set; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; set; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; set; }
-
-    /// <inheritdoc />
-    public Guid AuthenticationServiceId { get; set; }
 
     /// <summary>Gets or sets the audience a token must name.</summary>
     public string Audience { get; set; } = string.Empty;

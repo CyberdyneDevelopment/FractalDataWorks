@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class AggregationDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="AggregationDataflowNodeType"/>.</summary>
-    public AggregationDataflowNodeType() : base(6, "Aggregation") { }
+    public AggregationDataflowNodeType() : base("Aggregation") { }
 }

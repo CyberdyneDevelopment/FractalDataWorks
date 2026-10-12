@@ -22,7 +22,7 @@ public sealed class MessageHubOption : RealTimeHubOptionBase
     /// Initializes a new instance of the <see cref="MessageHubOption"/> class.
     /// </summary>
     public MessageHubOption()
-        : base(4, "Message", "/hubs/messages", typeof(MessageHub), authorizationPolicy: null)
+        : base("Message", "/hubs/messages", typeof(MessageHub), authorizationPolicy: null)
     {
     }
 

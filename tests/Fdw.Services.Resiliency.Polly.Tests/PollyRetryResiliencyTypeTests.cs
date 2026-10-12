@@ -26,9 +26,6 @@ public sealed class PollyRetryResiliencyTypeTests
     {
         // Arrange & Act
         var type = new PollyRetryResiliencyType();
-
-        // Assert
-        type.Id.ShouldBe(2);
         type.Name.ShouldBe("PollyRetry");
         type.DisplayName.ShouldBe("Polly Retry");
         type.Description.ShouldNotBeNullOrEmpty();

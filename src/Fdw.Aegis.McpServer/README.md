@@ -1,6 +1,6 @@
 # Fdw.Aegis.McpServer
 
-The Aegis MCP server host.
+The Aegis Gateway's MCP tool surface and host wiring. The executable that hosts it (`aegis-mcp`) lives in reference-servicetypes, which owns the schema, the declared connections and the configuration rows (FDW-1119).
 
 This package declares 1 service/provider type(s).
 
@@ -10,12 +10,11 @@ This package declares 1 service/provider type(s).
 |---|---|---|
 | `AegisToolService` | class | Exposes the Aegis Gateway's Phase 1 approval + injection pipeline as three MCP tools: list_connections,… |
 
-## Types (2)
+## Types (1)
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `AegisHostRegistration` | class | Shared DI wiring for the Aegis Gateway MCP host. Extracted from so the non-exposure test suite can… |
-| `Program` | class | Entry point for the Aegis Gateway stdio MCP server (Phase 1: PreApproved commands only,… |
+| `AegisHostRegistration` | class | Shared DI wiring for the Aegis Gateway MCP host. Phases for the entry point and the non-exposure test suite… |
 
 ## Installation
 
@@ -26,8 +25,6 @@ dotnet add package Fdw.Aegis.McpServer --prerelease
 ## Dependencies
 
 `Fdw.Aegis` · `Fdw.Aegis.Abstractions` · `Fdw.Aegis.Configuration` · `Fdw.Services.Connections.Http` · `Fdw.Services.Data` · `Fdw.Services.SecretManagers`
-
-Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Registration.SourceGenerators`
 
 ---
 

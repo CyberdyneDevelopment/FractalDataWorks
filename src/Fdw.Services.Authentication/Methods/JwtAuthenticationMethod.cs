@@ -16,7 +16,6 @@ public sealed class JwtAuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="JwtAuthenticationMethod"/> class.
     /// </summary>
     public JwtAuthenticationMethod() : base(
-        id: 2,
         name: "JWT",
         requiresUserInteraction: false,
         supportsTokenRefresh: false,

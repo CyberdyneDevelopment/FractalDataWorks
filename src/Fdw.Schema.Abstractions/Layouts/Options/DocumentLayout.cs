@@ -31,7 +31,6 @@ public sealed class DocumentLayout : DataLayoutBase
     /// </summary>
     public DocumentLayout()
         : base(
-            id: 3,
             name: "Document",
             description: "Single complex object (MongoDB document, config)",
             supportsNesting: true,

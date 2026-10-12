@@ -12,5 +12,5 @@ public sealed class DateTimeOffsetPropertyType : ConfigurationPropertyTypeBaseRe
     /// <summary>
     /// Initializes a new instance of the <see cref="DateTimeOffsetPropertyType"/> class.
     /// </summary>
-    public DateTimeOffsetPropertyType() : base(10, "DateTimeOffset", typeof(DateTimeOffset), ConfigurationPropertyTypeDtos.DateTime) { }
+    public DateTimeOffsetPropertyType() : base("DateTimeOffset", typeof(DateTimeOffset), ConfigurationPropertyTypeDtos.DateTime) { }
 }

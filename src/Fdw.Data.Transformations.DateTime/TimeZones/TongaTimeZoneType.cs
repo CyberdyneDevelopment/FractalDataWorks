@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Tonga")]
 public sealed class TongaTimeZoneType : TimeZoneTypeBase
 {
-    public TongaTimeZoneType() : base(44, "Tonga", "Tonga Standard Time") { }
+    public TongaTimeZoneType() : base("Tonga", "Tonga Standard Time") { }
 }

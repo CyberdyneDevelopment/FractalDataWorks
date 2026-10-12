@@ -330,4 +330,58 @@ class Test
 }";
         await VerifyNoDiagnostics(source);
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public async Task ValueAccessAfterIsFailureGuardYieldBreakNoDiagnostics()
+    {
+        var source = GenericResultStubs + @"
+class Test
+{
+    System.Collections.Generic.IEnumerable<string> M()
+    {
+        var result = GenericResult<string>.Success(""hello"");
+        if (result.IsFailure)
+        {
+            Console.WriteLine(""failed"");
+            yield break;
+        }
+
+        yield return result.Value;
+    }
+}";
+        await VerifyNoDiagnostics(source);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public async Task ValueAccessAfterIsFailureGuardYieldReturnDiagnostic()
+    {
+        var source = GenericResultStubs + @"
+class Test
+{
+    System.Collections.Generic.IEnumerable<string> M()
+    {
+        var result = GenericResult<string>.Success(""hello"");
+        if (result.IsFailure)
+        {
+            yield return string.Empty;
+        }
+
+        yield return {|#0:result.Value|};
+    }
+}";
+
+        var test = new CSharpAnalyzerTest<UncheckedResultValueAccessAnalyzer, DefaultVerifier>
+        {
+            TestCode = source,
+            ReferenceAssemblies = ReferenceAssemblies.Net.Net90,
+        };
+        test.ExpectedDiagnostics.Add(
+            new DiagnosticResult(UncheckedResultValueAccessAnalyzer.DiagnosticId, DiagnosticSeverity.Warning)
+                .WithLocation(0));
+        await test.RunAsync(TestContext.Current.CancellationToken);
+    }
 }

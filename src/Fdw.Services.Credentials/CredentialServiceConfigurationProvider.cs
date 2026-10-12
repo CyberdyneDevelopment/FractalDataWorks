@@ -1,55 +1,30 @@
-using System;
-using System.Collections.Generic;
 using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Credentials.Abstractions;
 using Fdw.Services.Data.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Credentials;
 
-/// <summary>
-/// Domain-specific configuration provider for credential services.
-/// The polymorphic typed-body read (dispatch on <c>ServiceOptionType</c> to load the typed body row and
-/// attach it to <see cref="CredentialServiceConfiguration.Configuration"/>) is composed uniformly by
-/// <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>; typed providers are registered via the
-/// inherited <c>Register</c>.
-/// </summary>
-public class CredentialServiceConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          CredentialServiceConfiguration,
-          ICredentialServiceImplementationConfiguration,
-          CredentialServiceConfigurationCommand>,
+/// <summary>Supplies the CredentialService configuration.</summary>
+public sealed class CredentialServiceConfigurationProvider
+    : DomainConfigurationProviderBase<ICredentialServiceImplementationConfiguration>,
       ICredentialServiceConfigurationProvider
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CredentialServiceConfigurationProvider"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="CredentialServiceConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public CredentialServiceConfigurationProvider(
         ILogger<CredentialServiceConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "sec")
-        : base(logger ?? NullLogger<CredentialServiceConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
-
-    /// <inheritdoc />
-    protected override CredentialServiceConfiguration Compose<T>(
-        string serviceOptionType,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            ServiceOptionType = serviceOptionType,
-            Configuration = implementationConfiguration,
-        };
 }

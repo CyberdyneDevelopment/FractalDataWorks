@@ -33,13 +33,10 @@ public sealed class CompareToBaselineTranslator
     }
 
     /// <inheritdoc/>
-    // MA0051: Method length acceptable - sequential comparison algorithm (build dictionaries, compare modified/added/removed, build result)
-#pragma warning disable MA0051 // Method is too long
     public override async Task<IGenericResult<QueryResult<ComparisonData>>> Translate(
         CompareToBaselineCommand command,
         Solution solution,
         CancellationToken cancellationToken = default)
-#pragma warning restore MA0051
     {
         CompareToBaselineTranslatorLog.Comparing(Logger);
 

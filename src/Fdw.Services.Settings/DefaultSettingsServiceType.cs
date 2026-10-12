@@ -20,11 +20,11 @@ using Fdw.Results;
 namespace Fdw.Services.Settings;
 
 /// <summary>
-/// Default settings service type. Registers the gateway-backed SettingsConfigurationProvider
+/// Default settings service type. Registers the gateway-backed ServerSetting, TenantSetting and RoleSetting providers
 /// (server/tenant/role settings) and the layered IEffectiveSettingsProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(SettingsServiceTypes), "Default")]
+[Implementation(typeof(SettingsServiceTypes), "Default")]
 public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
 {
     /// <summary>
@@ -40,20 +40,50 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
         Configuration(builder =>
         {
 
-            builder.Services.Configure<List<ServerSettingConfiguration>>(builder.Configuration.GetSection("Settings:ServerSetting"));
-            builder.Services.Configure<List<TenantSettingConfiguration>>(builder.Configuration.GetSection("Settings:TenantSetting"));
-            builder.Services.Configure<List<RoleSettingConfiguration>>(builder.Configuration.GetSection("Settings:RoleSetting"));
+            builder.Services.Configure<List<ServerSettingImplementationConfiguration>>(builder.Configuration.GetSection("Settings:ServerSetting"));
+            builder.Services.Configure<List<TenantSettingImplementationConfiguration>>(builder.Configuration.GetSection("Settings:TenantSetting"));
+            builder.Services.Configure<List<RoleSettingImplementationConfiguration>>(builder.Configuration.GetSection("Settings:RoleSetting"));
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.AddSingleton<IRoleSettingImplementationConfigurationProvider, RoleSettingImplementationConfigurationProvider>(sp => new RoleSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<RoleSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "RoleSettingConfiguration"));
+            builder.Services.TryAddSingleton<RoleSettingConfigurationProvider>(sp =>
+            {
+                var domain = new RoleSettingConfigurationProvider(
+                    sp.GetRequiredService<ILogger<RoleSettingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "RoleSetting");
+                domain.Register("RoleSetting", sp.GetRequiredService<IRoleSettingImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IRoleSettingConfigurationProvider>(sp => sp.GetRequiredService<RoleSettingConfigurationProvider>());
 
-            RegisterSettingProvider<ServerSettingConfiguration, ServerSettingConfigurationCommand>(builder.Services);
-            RegisterSettingProvider<TenantSettingConfiguration, TenantSettingConfigurationCommand>(builder.Services);
-            RegisterSettingProvider<RoleSettingConfiguration, RoleSettingConfigurationCommand>(builder.Services);
-            builder.Services.TryAddSingleton<SettingsConfigurationProvider>();
+            builder.Services.AddSingleton<ITenantSettingImplementationConfigurationProvider, TenantSettingImplementationConfigurationProvider>(sp => new TenantSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<TenantSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "TenantSettingConfiguration"));
+            builder.Services.TryAddSingleton<TenantSettingConfigurationProvider>(sp =>
+            {
+                var domain = new TenantSettingConfigurationProvider(
+                    sp.GetRequiredService<ILogger<TenantSettingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "TenantSetting");
+                domain.Register("TenantSetting", sp.GetRequiredService<ITenantSettingImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<ITenantSettingConfigurationProvider>(sp => sp.GetRequiredService<TenantSettingConfigurationProvider>());
+
+
+            builder.Services.AddSingleton<IServerSettingImplementationConfigurationProvider, ServerSettingImplementationConfigurationProvider>(sp => new ServerSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "ServerSettingConfiguration"));
+            // The domain is built with its one implementation registered into it, as RoleMapping is:
+            // a domain provider with nothing registered answers every read with NoImplementationProvider.
+            builder.Services.TryAddSingleton<ServerSettingConfigurationProvider>(sp =>
+            {
+                var domain = new ServerSettingConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ServerSettingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "ServerSetting");
+                domain.Register("ServerSetting", sp.GetRequiredService<IServerSettingImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IServerSettingConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -61,18 +91,4 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
 
     }
 
-    private static void RegisterSettingProvider<TConfig, TCommand>(IServiceCollection services)
-        where TConfig : class, IGenericConfiguration
-        where TCommand : ConfigurationCommandBase<TConfig>
-    {
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, TCommand>>(sp =>
-            new ImplementationConfigurationProviderBase<TConfig, TCommand>(
-                sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>()
-                    ?? NullLogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>.Instance,
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                "PlatformConfiguration",
-                "settings"));
-        services.TryAddSingleton<IServiceConfigurationProvider<TConfig>>(sp =>
-            sp.GetRequiredService<ImplementationConfigurationProviderBase<TConfig, TCommand>>());
-    }
 }

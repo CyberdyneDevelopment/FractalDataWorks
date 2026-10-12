@@ -14,7 +14,6 @@ public sealed class NTextType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="NTextType"/> class.</summary>
     public NTextType()
         : base(
-            id: 10,
             name: "ntext",
             description: "Variable-length Unicode data. Superseded by nvarchar(max).",
             abstractType: DataTypes.String,

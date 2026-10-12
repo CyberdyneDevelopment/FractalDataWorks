@@ -13,7 +13,7 @@ namespace Fdw.UI.Abstractions.Components;
 /// </para>
 /// <para>
 /// The page structure is independent of the rendering framework.
-/// The same IPageModel can be rendered by Spectre.Console, RazorConsole, or Blazor.
+/// The same IPageModel can be rendered by Spectre.Console, RazorConsole, or another renderer.
 /// </para>
 /// </remarks>
 public interface IPageModel

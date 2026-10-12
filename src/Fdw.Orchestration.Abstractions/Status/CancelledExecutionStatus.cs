@@ -14,5 +14,5 @@ public sealed class CancelledExecutionStatus : WorkflowExecutionStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CancelledExecutionStatus"/> class.
     /// </summary>
-    public CancelledExecutionStatus() : base(6, "Cancelled", isTerminal: true, isSuccess: false, isFailure: false) { }
+    public CancelledExecutionStatus() : base("Cancelled", isTerminal: true, isSuccess: false, isFailure: false) { }
 }

@@ -11,16 +11,15 @@ namespace Fdw.Results.ExecutionStatus;
 public sealed class FailedStatus : ExecutionStatusBase
 {
     /// <summary>
-    /// MudBlazor icon for failed status.
+    /// Material Symbols icon name for failed status.
     /// </summary>
-    public const string FailedIcon = "error"; // Icons.Material.Filled.Error
+    public const string FailedIcon = "error";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FailedStatus"/> class.
     /// </summary>
     public FailedStatus()
         : base(
-            id: 4,
             name: "Failed",
             icon: FailedIcon,
             color: "Error",

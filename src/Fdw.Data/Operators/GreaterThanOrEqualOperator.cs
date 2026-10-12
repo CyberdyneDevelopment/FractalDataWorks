@@ -14,7 +14,6 @@ public sealed class GreaterThanOrEqualOperator : FilterOperatorBase
     /// </summary>
     public GreaterThanOrEqualOperator()
         : base(
-            id: 7,
             name: "GreaterThanOrEqual",
             sqlOperator: ">=",
             odataOperator: "ge",

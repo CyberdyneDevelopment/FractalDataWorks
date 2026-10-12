@@ -16,7 +16,7 @@ public sealed class RequestCancelledCode : HttpResultCodeBase
     /// </summary>
     public RequestCancelledCode()
         : base(10010, "RequestCancelled",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Request was cancelled",
             isRetryable: false)
     {

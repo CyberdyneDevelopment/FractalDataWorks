@@ -53,12 +53,30 @@ public static partial class OperationsLog
     public static partial IGenericMessage ExecutionItemNameRequired(ILogger logger);
 
     /// <summary>
+    /// Logs when a root execution item is created without the tenant it runs for.
+    /// </summary>
+    [MessageLogging(EventId = 21004, Level = LogLevel.Error, Message = "Execution item '{name}' was not given the tenant it runs for")]
+    public static partial IGenericMessage ExecutionTenantRequired(ILogger logger, string name);
+
+    /// <summary>
+    /// Logs when a child execution item states a tenant other than its parent's.
+    /// </summary>
+    [MessageLogging(EventId = 21005, Level = LogLevel.Error, Message = "Execution item '{name}' states tenant '{tenantId}' but its parent '{parentId}' belongs to tenant '{parentTenantId}'")]
+    public static partial IGenericMessage ExecutionTenantDiffersFromParent(ILogger logger, string name, Guid tenantId, Guid parentId, Guid parentTenantId);
+
+    /// <summary>
+    /// Logs when a caller creates an execution item for a tenant it does not act in.
+    /// </summary>
+    [MessageLogging(EventId = 21006, Level = LogLevel.Error, Message = "Execution item '{name}' states tenant '{tenantId}', which is not a tenant the caller acts in")]
+    public static partial IGenericMessage ExecutionTenantNotCallers(ILogger logger, string name, Guid tenantId);
+
+    /// <summary>
     /// Logs that the store the execution tracker reads and writes was never named by the host.
     /// </summary>
     /// <remarks>
     /// Category 6 rather than 9: nothing has gone wrong internally, the host simply never named an
     /// operational store. Reported per call rather than at registration, because every host registers
-    /// the Operations option as part of the platform sweep whether or not it ever tracks an execution
+    /// the Operations option as part of the platform bootstrap whether or not it ever tracks an execution
     /// - refusing to start those hosts is what this event exists to avoid.
     /// </remarks>
     [MessageLogging(EventId = 61000, Level = LogLevel.Error, Message = "OperationsServiceTypes.OperationalConnection is not set; the host must name the store the execution tracker reads and writes before executions can be tracked")]

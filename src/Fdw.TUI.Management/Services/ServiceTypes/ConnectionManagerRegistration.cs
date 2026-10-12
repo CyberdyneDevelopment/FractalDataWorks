@@ -13,7 +13,6 @@ public sealed class ConnectionManagerRegistration : ManagementServiceRegistratio
     /// Creates the connection manager registration.
     /// </summary>
     public ConnectionManagerRegistration() : base(
-        id: 1,
         name: "ConnectionManager",
         serviceDescription: "Manages connections to Fdw instances",
         lifetime: ServiceLifetime.Singleton)

@@ -9,14 +9,13 @@ namespace Fdw.Data.RowSources.Abstractions;
 /// container's configuration. (Renamed from <c>RowSourceTypeBase</c>: it builds RECORD sources — items
 /// or rows.)
 /// </summary>
-public abstract class RecordSourceTypeBase : TypeOptionBase<int, RecordSourceTypeBase>, IRecordSourceType
+public abstract class RecordSourceTypeBase : TypeOptionBase<RecordSourceTypeBase>, IRecordSourceType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RecordSourceTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this type.</param>
     /// <param name="name">The name of this type.</param>
-    protected RecordSourceTypeBase(int id, string name) : base(id, name)
+    protected RecordSourceTypeBase(string name) : base(name)
     {
     }
 

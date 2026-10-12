@@ -12,7 +12,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// Ids do NOT need to be globally unique — only unique within one TypeCollection.
 /// </summary>
 public abstract class ConnectionLimitTypeBase
-    : TypeOptionBase<int, ConnectionLimitTypeBase>, IConnectionLimitType
+    : TypeOptionBase<ConnectionLimitTypeBase>, IConnectionLimitType
 {
     /// <summary>
     /// Constructor for the source-generated Empty/NotFound sentinel.
@@ -26,18 +26,16 @@ public abstract class ConnectionLimitTypeBase
     /// <summary>
     /// Constructor for concrete TypeOptions.
     /// </summary>
-    /// <param name="id">Unique numeric identifier within the connection type's TypeCollection.</param>
     /// <param name="name">TypeCollection lookup key (e.g. "RateLimit", "QueryTimeout").</param>
     /// <param name="displayName">Human-readable label shown in the UI.</param>
     /// <param name="description">Short description rendered as UI help text.</param>
     /// <param name="configurationFields">Fields rendered by the per-limit-type editor.</param>
     protected ConnectionLimitTypeBase(
-        int id,
         string name,
         string displayName,
         string description,
         IReadOnlyList<ConfigurationFieldDescriptor> configurationFields)
-        : base(id, name, $"ConnectionLimit:{name}", displayName, description, "ConnectionLimit")
+        : base(name, $"ConnectionLimit:{name}", displayName, description, "ConnectionLimit")
     {
         ConfigurationFields = configurationFields;
     }

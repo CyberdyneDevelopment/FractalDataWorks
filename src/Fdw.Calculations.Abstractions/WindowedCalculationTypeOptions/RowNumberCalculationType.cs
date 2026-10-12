@@ -15,7 +15,6 @@ public sealed class RowNumberCalculationType : WindowedCalculationTypeBase
     /// Initializes a new instance of the <see cref="RowNumberCalculationType"/> class.
     /// </summary>
     public RowNumberCalculationType() : base(
-        id: 2,
         name: "RowNumber",
         category: "Windowed",
         calculate: (rows, col, _) =>

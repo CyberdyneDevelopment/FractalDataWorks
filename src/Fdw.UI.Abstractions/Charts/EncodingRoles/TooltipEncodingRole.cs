@@ -14,7 +14,7 @@ public sealed class TooltipEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="TooltipEncodingRole"/> class.
     /// </summary>
     public TooltipEncodingRole()
-        : base(13, "Tooltip", "Tooltip", isSpatial: false)
+        : base("Tooltip", "Tooltip", isSpatial: false)
     {
     }
 }

@@ -9,14 +9,13 @@ namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 /// on the option, so adding a new carrier is a new TypeOption in its own assembly and touches no
 /// existing code.
 /// </summary>
-public abstract class FederatedAssertionSourceBase : TypeOptionBase<int, FederatedAssertionSourceBase>, IFederatedAssertionSource
+public abstract class FederatedAssertionSourceBase : TypeOptionBase<FederatedAssertionSourceBase>, IFederatedAssertionSource
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FederatedAssertionSourceBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this source.</param>
     /// <param name="name">The name of this source.</param>
-    protected FederatedAssertionSourceBase(int id, string name) : base(id, name)
+    protected FederatedAssertionSourceBase(string name) : base(name)
     {
     }
 

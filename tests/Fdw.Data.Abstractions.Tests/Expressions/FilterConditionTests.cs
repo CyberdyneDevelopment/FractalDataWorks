@@ -247,15 +247,18 @@ public sealed class FilterConditionTests
     private sealed class TestFilterOperator : IFilterOperator
     {
         public int Id => 999;
-        object ITypeOption.Id => Id;
         public string Name => "TestOperator";
         public string Category => "Test";
         public string SqlOperator => "=";
         public string ODataOperator => "eq";
         public bool RequiresValue => true;
 
-        public string FormatSqlParameter(string paramName) => $"@{paramName}";
+        public bool IsPatternMatch => false;
+
+        public bool MatchesAnythingBefore => false;
+
+        public bool MatchesAnythingAfter => false;
+
         public string FormatODataValue(object? value) => value?.ToString() ?? "null";
-        public string PreprocessSqlValue(string value) => value;
     }
 }

@@ -9,5 +9,5 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 public sealed class NamedTypeSymbolKindScore : SymbolKindScoreBase
 {
     /// <summary>Initializes the NamedType scoring option.</summary>
-    public NamedTypeSymbolKindScore() : base(id: 3, name: "NamedType", weight: 6) { }
+    public NamedTypeSymbolKindScore() : base(name: "NamedType", weight: 6) { }
 }

@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Fdw.Services.Identity;
@@ -18,20 +17,10 @@ public static class IdentityHttpClient
     public const string Name = "Fdw.Identity.OAuth2";
 
     /// <summary>
-    /// How long a token-endpoint call may take before it is treated as unreachable.
-    /// </summary>
-    /// <remarks>
-    /// Why bounded, and why short: this call sits in front of an outbound request that has its own
-    /// deadline. An unbounded wait here turns a slow identity provider into a stalled caller, which is
-    /// harder to diagnose than a clean failure.
-    /// </remarks>
-    public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(30);
-
-    /// <summary>
     /// Registers the named client, idempotently — every identity option calls this, and a deployment
     /// running several mechanisms must not end up with competing registrations.
     /// </summary>
     /// <param name="services">The service collection to register into.</param>
     public static void Register(IServiceCollection services)
-        => services.AddHttpClient(Name, client => client.Timeout = Timeout);
+        => services.AddHttpClient(Name, client => client.Timeout = IdentityServiceTypes.TokenEndpointTimeout);
 }

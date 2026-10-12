@@ -15,7 +15,6 @@ public sealed class CustomExpressionRuleType : QualityRuleTypeBase
     /// </summary>
     public CustomExpressionRuleType()
         : base(
-            id: 6,
             name: "CustomExpression",
             requiresField: true,
             supportsMultipleFields: false,

@@ -13,5 +13,5 @@ public sealed class OAuth2 : SecurityMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OAuth2"/> class.
     /// </summary>
-    public OAuth2() : base(4, "OAuth2", requiresAuthentication: true, authenticationScheme: "Bearer", supportsTokenRefresh: true) { }
+    public OAuth2() : base("OAuth2", requiresAuthentication: true, authenticationScheme: "Bearer", supportsTokenRefresh: true) { }
 }

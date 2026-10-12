@@ -18,7 +18,7 @@ public sealed class QueryTimeoutCode : MsSqlResultCodeBase
         : base(
             110001,
             "QueryTimeout",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Query timed out on '{CommandText}'. Consider optimizing the query or increasing the timeout.",
             isRetryable: true)
     {

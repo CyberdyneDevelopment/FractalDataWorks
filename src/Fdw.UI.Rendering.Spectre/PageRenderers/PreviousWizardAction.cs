@@ -9,5 +9,5 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 public sealed class PreviousWizardAction : WizardActionBase
 {
     /// <summary>Initializes a new instance of <see cref="PreviousWizardAction"/>.</summary>
-    public PreviousWizardAction() : base(1, "Previous") { }
+    public PreviousWizardAction() : base("Previous") { }
 }

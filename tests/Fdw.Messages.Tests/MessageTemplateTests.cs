@@ -735,7 +735,7 @@ public sealed class MessageTemplateTests
     public void IEnumOption_PropertiesAccessible_ViaInterface()
     {
         // Arrange
-        ITypeOption message = new TestMessage(99, "EnumName", MessageSeverity.Critical, "Critical");
+        var message = new TestMessage(99, "EnumName", MessageSeverity.Critical, "Critical");
 
         // Assert
         message.Id.ShouldBe(99);

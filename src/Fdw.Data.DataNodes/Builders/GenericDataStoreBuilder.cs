@@ -40,11 +40,13 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
         _defaultResponseFormat = defaultResponseFormat;
     }
 
-    /// <inheritdoc />
-    protected override IDataField BuildField(DataContainerFieldConfiguration fieldCfg)
-        => new DataField(fieldCfg.Name, fieldCfg.Description, explicitType: null, fieldCfg.Ordinal, fieldCfg.IsNullable);
-
-    /// <inheritdoc />
+    /// <summary>Builds a generic <see cref="DataContainer"/> addressed by its owning path's request path.</summary>
+    /// <param name="containerCfg">The container configuration row.</param>
+    /// <param name="parent">The container's parent path node.</param>
+    /// <param name="fields">This container's already-built fields.</param>
+    /// <param name="keys">This container's already-resolved keys.</param>
+    /// <param name="referencingKeys">Other containers' keys that reference this one, or a failure.</param>
+    /// <returns>The built container.</returns>
     protected override IDataContainer BuildContainer(
         DataContainerConfiguration containerCfg,
         IDataNodePath parent,

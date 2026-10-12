@@ -8,17 +8,6 @@ namespace Fdw.Data.Abstractions.Tests.Formats;
 
 public sealed class FormatBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var format = new TestFormat(1, "TestFormat");
-
-        // Assert
-        format.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -26,7 +15,7 @@ public sealed class FormatBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
 
         // Assert
         format.Name.ShouldBe("TestFormat");
@@ -38,7 +27,7 @@ public sealed class FormatBaseTests
     public void CategoryDefaultsToFormat()
     {
         // Arrange & Act
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
 
         // Assert
         format.Category.ShouldBe("Format");
@@ -50,7 +39,7 @@ public sealed class FormatBaseTests
     public void CategoryCanBeCustomized()
     {
         // Arrange & Act
-        var format = new TestFormat(2, "CustomFormat", category: "CustomCategory");
+        var format = new TestFormat("CustomFormat", category: "CustomCategory");
 
         // Assert
         format.Category.ShouldBe("CustomCategory");
@@ -62,7 +51,7 @@ public sealed class FormatBaseTests
     public void FormatNameReturnsImplementationValue()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
 
         // Act
         var formatName = format.FormatName;
@@ -77,7 +66,7 @@ public sealed class FormatBaseTests
     public void MimeTypeReturnsImplementationValue()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
 
         // Act
         var mimeType = format.MimeType;
@@ -92,7 +81,7 @@ public sealed class FormatBaseTests
     public void IsBinaryReturnsImplementationValue()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat", isBinary: true);
+        var format = new TestFormat("TestFormat", isBinary: true);
 
         // Act
         var isBinary = format.IsBinary;
@@ -107,7 +96,7 @@ public sealed class FormatBaseTests
     public void SupportsStreamingReturnsImplementationValue()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat", supportsStreaming: true);
+        var format = new TestFormat("TestFormat", supportsStreaming: true);
 
         // Act
         var supportsStreaming = format.SupportsStreaming;
@@ -122,7 +111,7 @@ public sealed class FormatBaseTests
     public async Task SerializeWritesToStream()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
         using var output = new MemoryStream();
         var data = "test data";
         var schema = new ContainerSchema { Fields = [] };
@@ -143,7 +132,7 @@ public sealed class FormatBaseTests
     public async Task DeserializeReadsFromStream()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
         using var input = new MemoryStream(Encoding.UTF8.GetBytes("test data"));
         var schema = new ContainerSchema { Fields = [] };
 
@@ -160,7 +149,7 @@ public sealed class FormatBaseTests
     public void ImplementsIFormat()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
 
         // Act & Assert
         format.ShouldBeAssignableTo<IFormat>();
@@ -172,7 +161,7 @@ public sealed class FormatBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var format = new TestFormat(1, "TestFormat");
+        var format = new TestFormat("TestFormat");
 
         // Act & Assert
         format.ShouldBeAssignableTo<FormatBase>();
@@ -185,7 +174,6 @@ public sealed class FormatBaseTests
     {
         // Arrange & Act
         var format = new TestFormat(
-            2,
             "BinaryFormat",
             isBinary: true,
             supportsStreaming: false);
@@ -202,7 +190,6 @@ public sealed class FormatBaseTests
     {
         // Arrange & Act
         var format = new TestFormat(
-            3,
             "TextFormat",
             isBinary: false,
             supportsStreaming: true);
@@ -219,12 +206,11 @@ public sealed class FormatBaseTests
         private readonly bool _supportsStreaming;
 
         public TestFormat(
-            int id,
             string name,
             bool isBinary = false,
             bool supportsStreaming = false,
             string? category = "Format")
-            : base(id, name, category)
+            : base(name, category)
         {
             _isBinary = isBinary;
             _supportsStreaming = supportsStreaming;

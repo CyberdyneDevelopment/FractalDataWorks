@@ -13,7 +13,7 @@ public sealed class DateType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DateType"/> class.</summary>
     public DateType()
-        : base(id: 9, name: "date")
+        : base(name: "date")
     {
     }
 

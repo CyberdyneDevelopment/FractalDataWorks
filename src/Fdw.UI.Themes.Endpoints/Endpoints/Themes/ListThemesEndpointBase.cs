@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Web.RestEndpoints.Models;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.Pagination;
+using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.UI.Themes.Endpoints;
 
@@ -48,12 +51,17 @@ public abstract class ListThemesEndpointBase<TSummary> : EndpointWithoutRequest<
     }
 
     /// <summary>Returns a list of all available themes.</summary>
-    public override Task HandleAsync(CancellationToken ct)
+    public override async Task HandleAsync(CancellationToken ct)
     {
-        
-        var items = LoadThemes();
-        var list = items.ToList();
-        return Send.OkAsync(PaginatedResponse<TSummary>.Create(list, 0, list.Count, list.Count), ct);
+        var paging = PaginationQuery.Parse(HttpContext, Logger);
+        if (paging.IsFailure)
+        {
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(paging, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(paging.Value!.Apply(LoadThemes()), ct).ConfigureAwait(false);
     }
 
     /// <summary>Loads all available themes. Override to provide theme data.</summary>

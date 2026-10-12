@@ -14,7 +14,7 @@ public sealed class YEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="YEncodingRole"/> class.
     /// </summary>
     public YEncodingRole()
-        : base(2, "Y", "Y Axis", isSpatial: true)
+        : base("Y", "Y Axis", isSpatial: true)
     {
     }
 }

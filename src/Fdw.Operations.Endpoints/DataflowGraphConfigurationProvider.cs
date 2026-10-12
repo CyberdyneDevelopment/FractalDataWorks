@@ -23,25 +23,16 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 public class DataflowGraphConfigurationProvider
 {
-    /// <summary>
-    /// Registers <see cref="DataflowGraphConfigurationProvider"/> as a singleton in the DI container.
-    /// Call from Program.cs after the IConfigurationGateway is registered.
-    /// </summary>
-    public static IServiceCollection RegisterDomainConfiguration(IServiceCollection services)
-    {
-        services.TryAddSingleton<DataflowGraphConfigurationProvider>(sp =>
-            new DataflowGraphConfigurationProvider(
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                sp.GetService<ILogger<DataflowGraphConfigurationProvider>>()));
-        return services;
-    }
 
 
     private static string DataStoreName => EtlPipelineTypes.ConfigurationConnection;
     private const string DataPath = "data";
     private const string PipePath = "pipe";
+    private const int AllVariations = int.MaxValue - 1;
 
     private readonly IConfigurationGatewayProvider _gatewayProvider;
+    private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly IDataSetVariationConfigurationProvider _variations;
     private readonly ILogger<DataflowGraphConfigurationProvider> _logger;
 
     private Task<IGenericResult<IConfigurationGateway>> Gateway()
@@ -52,9 +43,13 @@ public class DataflowGraphConfigurationProvider
     /// </summary>
     public DataflowGraphConfigurationProvider(
         IConfigurationGatewayProvider gatewayProvider,
+        IDataSetConfigurationProvider dataSets,
+        IDataSetVariationConfigurationProvider variations,
         ILogger<DataflowGraphConfigurationProvider>? logger = null)
     {
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
+        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
+        _variations = variations ?? throw new ArgumentNullException(nameof(variations));
         _logger = logger ?? NullLogger<DataflowGraphConfigurationProvider>.Instance;
     }
 
@@ -95,7 +90,7 @@ public class DataflowGraphConfigurationProvider
                 DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
 
         var result = await gateway.Execute<IEnumerable<DataStoreRecord>>(
-                command, new DataStoreTarget(DataStoreName, DataPath, "DataStoreConfiguration"), cancellationToken)
+                command, new DataStoreTarget(DataStoreName, DataPath, "DataStore"), cancellationToken)
             .ConfigureAwait(false);
 
         if (!result.IsSuccess)
@@ -105,26 +100,35 @@ public class DataflowGraphConfigurationProvider
     }
 
     /// <summary>
-    /// Returns all current DataSetSource summary rows for graph edge construction.
+    /// Returns every configured data set with its sources, for graph edge construction.
     /// </summary>
-    public virtual async Task<IGenericResult<IReadOnlyList<DataSetSourceConfiguration>>> LoadSources(
+    /// <remarks>
+    /// A source row does not name its data set: it hangs from the data set by RowId. The data set
+    /// domain composes each data set with its sources, so the edge comes from that aggregate.
+    /// </remarks>
+    public virtual Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> LoadDataSetSources(
+        CancellationToken cancellationToken = default)
+        => _dataSets.Get(cancellationToken);
+
+    /// <summary>
+    /// Returns every data set variation, read as domain rows in one query. A variation is not a data
+    /// set: it is its own domain and holds no sources, so the rows alone carry what the graph draws.
+    /// </summary>
+    public virtual async Task<IGenericResult<IReadOnlyList<DataSetVariationDomainConfiguration>>> LoadVariations(
         CancellationToken cancellationToken = default)
     {
-        var command = new QueryCommand<DataSetSourceConfiguration>();
-
-        var gatewayResult = await Gateway().ConfigureAwait(false);
-        if (gatewayResult.IsFailure || gatewayResult.Value is not { } gateway)
-            return GenericResult<IReadOnlyList<DataSetSourceConfiguration>>.Failure(
-                DataflowGraphConfigurationProviderLog.GatewayUnavailable(_logger, DataStoreName));
-
-        var result = await gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-                command, new DataStoreTarget(DataStoreName, DataPath, "DataSetSource"), cancellationToken)
+        var page = await _variations.Get(new DomainQuery(null, null, 0, AllVariations, false), cancellationToken)
             .ConfigureAwait(false);
+        if (page.IsFailure)
+            return page.ToNewResult<IReadOnlyList<DataSetVariationDomainConfiguration>>();
 
-        if (!result.IsSuccess)
-            return result.ToNewResult<IReadOnlyList<DataSetSourceConfiguration>>();
+        var rows = new List<DataSetVariationDomainConfiguration>();
+        await foreach (var row in page.Value!.Items.WithCancellation(cancellationToken).ConfigureAwait(false))
+            rows.Add(row);
 
-        return GenericResult<IReadOnlyList<DataSetSourceConfiguration>>.Success(result.Value?.ToList() ?? []);
+        return page.Value.Outcome.IsFailure
+            ? page.Value.Outcome.ToNewResult<IReadOnlyList<DataSetVariationDomainConfiguration>>()
+            : GenericResult<IReadOnlyList<DataSetVariationDomainConfiguration>>.Success(rows);
     }
 
     /// <summary>

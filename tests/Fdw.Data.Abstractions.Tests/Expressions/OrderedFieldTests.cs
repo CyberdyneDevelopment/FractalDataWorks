@@ -175,7 +175,6 @@ public sealed class OrderedFieldTests
         }
 
         public int Id => IsAscending ? 1 : 2;
-        object ITypeOption.Id => Id;
         public string Name => IsAscending ? "Ascending" : "Descending";
         public string Code => IsAscending ? "ASC" : "DESC";
         public string DisplayName => Name;

@@ -8,11 +8,11 @@ namespace Fdw.Services.Authorization.Abstractions.Paths;
 /// Base class for path authorization policy TypeOptions.
 /// Concrete policies override <see cref="Evaluate"/> to return an allow/deny decision.
 /// </summary>
-public abstract class PathAuthorizationPolicyBase : TypeOptionBase<int, PathAuthorizationPolicyBase>, IPathAuthorizationPolicy
+public abstract class PathAuthorizationPolicyBase : TypeOptionBase<PathAuthorizationPolicyBase>, IPathAuthorizationPolicy
 {
     /// <summary>Initializes a new policy with the given id and name.</summary>
-    protected PathAuthorizationPolicyBase(int id, string name)
-        : base(id, name)
+    protected PathAuthorizationPolicyBase(string name)
+        : base(name)
     {
     }
 

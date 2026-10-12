@@ -21,7 +21,6 @@ public sealed class BoolToStringFieldTransformer : FieldTransformationBase
     /// </summary>
     public BoolToStringFieldTransformer()
         : base(
-            id: 401,
             name: "BoolToString",
             displayName: "Bool to String",
             description: "Maps a boolean value to one of two configured string labels.",

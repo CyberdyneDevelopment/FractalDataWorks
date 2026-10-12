@@ -194,13 +194,13 @@ public static partial class DataStoreLoaderLog
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// Logs that the DataStoreBuilder Configure call received an unexpected configuration type instead of a DataStoreConfiguration.
+    /// Logs that the DataStoreBuilder Configure call received an unexpected configuration type instead of a DataStoreImplementationConfiguration.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="actualType">The actual configuration type that was received.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 91016, Level = LogLevel.Error,
-        Message = "[DataStoreBuilder] Configure received unexpected configuration type '{actualType}' (expected DataStoreConfiguration)")]
+        Message = "[DataStoreBuilder] Configure received unexpected configuration type '{actualType}' (expected DataStoreImplementationConfiguration)")]
     public static partial IGenericMessage BuilderConfigureWrongType(ILogger logger, string actualType);
 
     /// <summary>
@@ -353,7 +353,7 @@ public static partial class DataStoreLoaderLog
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="containerName">The name of the container whose format is not file-addressable.</param>
-    /// <param name="formatName">The resolved format name (e.g. "Tabular", or "_Empty" when unresolved).</param>
+    /// <param name="formatName">The resolved format name (e.g. "Tabular", or "NotFound" when unresolved).</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 71099, Level = LogLevel.Error,
         Message = "[DataStoreBuilder] Container '{containerName}' format '{formatName}' is not file-addressable (no canonical file extension) — a FileSystem store cannot resolve a file path for it")]

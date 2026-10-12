@@ -17,7 +17,6 @@ public sealed class ParallelStrategy : FederationStrategyBase
     /// </summary>
     public ParallelStrategy()
         : base(
-            id: 1,
             name: "Parallel",
             description: "Executes all source queries concurrently for maximum performance",
             isParallel: true,

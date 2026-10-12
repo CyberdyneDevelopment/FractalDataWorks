@@ -33,8 +33,8 @@ public abstract partial class DataStoreTypes : TypeCollectionBase<
     /// The connection the datastore and dataset configuration rows are read from and written to.
     /// </summary>
     /// <remarks>
-    /// Settable for the same reason every service domain's is: a host can move these rows to another
-    /// store, and the choice cannot be fixed when the container is built.
+    /// The host's <c>ConnectionRoles.Platform</c> declaration: a host can keep these rows in a store of its own
+    /// naming, and the choice cannot be fixed when the container is built.
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 }

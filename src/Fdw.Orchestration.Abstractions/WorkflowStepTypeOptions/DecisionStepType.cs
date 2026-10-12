@@ -14,5 +14,5 @@ public sealed class DecisionStepType : WorkflowStepTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DecisionStepType"/> class.
     /// </summary>
-    public DecisionStepType() : base(1, "Decision", executesPipeline: false, supportsParallelism: false) { }
+    public DecisionStepType() : base("Decision", executesPipeline: false, supportsParallelism: false) { }
 }

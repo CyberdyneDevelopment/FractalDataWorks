@@ -100,6 +100,9 @@ public sealed class ExecutionItemRecord : IExecutionItem
     /// <inheritdoc />
     public string? ResultMessage => _data.ResultMessage;
 
+    /// <inheritdoc />
+    public Guid TenantId => _data.TenantId;
+
     /// <summary>
     /// Gets the underlying POCO data.
     /// </summary>
@@ -113,6 +116,7 @@ public sealed class ExecutionItemRecord : IExecutionItem
         string name,
         Guid? parentId,
         Guid rootId,
+        Guid tenantId,
         string? correlationId,
         string? triggerSource,
         IReadOnlyDictionary<string, object?>? parameters)
@@ -134,7 +138,8 @@ public sealed class ExecutionItemRecord : IExecutionItem
             CorrelationId = correlationId,
             TriggerSource = triggerSource,
             Parameters = parametersJson,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            TenantId = tenantId
         };
     }
 }

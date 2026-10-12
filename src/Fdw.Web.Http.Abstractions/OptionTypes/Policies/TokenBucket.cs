@@ -13,7 +13,6 @@ public sealed class TokenBucket : RateLimitPolicyBase
     /// Initializes a new instance of the <see cref="TokenBucket"/> class.
     /// </summary>
     public TokenBucket() : base(
-        id: 4,
         name: "TokenBucket",
         maxRequests: 50,
         windowSizeInSeconds: 10,

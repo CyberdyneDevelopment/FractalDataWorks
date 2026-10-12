@@ -20,7 +20,7 @@ namespace Fdw.Services.Pipelines.Hubs;
 /// <c>org:{orgId}:pipeline-updates</c>, read from the authenticated principal's <c>org_id</c> claim, so
 /// an "all my pipelines" view receives only its own org's pipeline lifecycle events. The broadcaster
 /// targets the same group using the pipeline's owning <c>OrgId</c>
-/// (<see cref="PipelineConfiguration.OrgId"/>). There is <b>no</b> global (cross-org) firehose: a
+/// (the pipe.Pipeline row's OrgId). There is <b>no</b> global (cross-org) firehose: a
 /// connection with no <c>org_id</c> claim joins no firehose (logged; no placeholder org), and a
 /// pipeline with no owning org is broadcast to no firehose. Clients can additionally opt in to
 /// <c>pipeline:{name}</c> / <c>execution:{id}</c> via <see cref="SubscribeToPipeline"/> /

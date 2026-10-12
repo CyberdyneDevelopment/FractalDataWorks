@@ -15,7 +15,6 @@ public sealed class DonutChartType : ChartTypeBase
     /// </summary>
     public DonutChartType()
         : base(
-            id: 5,
             name: "Donut",
             displayName: "Donut Chart",
             category: "Part-to-Whole",

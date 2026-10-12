@@ -26,4 +26,14 @@ public interface IAggregationExpression
     /// Example: { "TotalSales": "SUM(Amount)", "CustomerCount": "COUNT(*)" }
     /// </value>
     IReadOnlyDictionary<string, string> Aggregations { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the result also carries how many groups the query forms in all, in a
+    /// column named <c>FdwGroupCount</c> on every row.
+    /// </summary>
+    /// <value>
+    /// <see langword="true"/> to ask for it. It is the count of groups before any paging, so a caller reading
+    /// the top groups can say how many there are.
+    /// </value>
+    bool IncludeGroupCount { get; }
 }

@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Korea")]
 public sealed class KoreaTimeZoneType : TimeZoneTypeBase
 {
-    public KoreaTimeZoneType() : base(38, "Korea", "Korea Standard Time") { }
+    public KoreaTimeZoneType() : base("Korea", "Korea Standard Time") { }
 }

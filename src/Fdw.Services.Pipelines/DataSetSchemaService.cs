@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Data.Abstractions;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Logging;
@@ -44,17 +46,29 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
     {
         DataSetSchemaLog.GetSchemaStarted(_logger, dataSetId);
 
-        var result = await _provider.GetFields(dataSetId, cancellationToken).ConfigureAwait(false);
-
-        if (!result.IsSuccess)
+        // A dataset's fields are its own child rows, so they arrive with the dataset -- there is no
+        // separate field read to make.
+        var loaded = await _provider.Get(dataSetId, cancellationToken).ConfigureAwait(false);
+        if (!loaded.IsSuccess || loaded.Value is null)
         {
             return GenericResult<IReadOnlyList<DataSetFieldDefinition>>.Failure(
                 DataSetSchemaLog.GetSchemaFailed(_logger, dataSetId,
-                    result.CurrentMessage ?? "Provider returned failure"));
+                    loaded.CurrentMessage ?? "Provider returned failure"));
         }
 
-        DataSetSchemaLog.GetSchemaSucceeded(_logger, dataSetId, result.Value!.Count);
-        return result;
+        IReadOnlyList<DataSetFieldDefinition> fields =
+            [.. loaded.Value.Fields.Select(f => new DataSetFieldDefinition
+            {
+                DataSetId = dataSetId,
+                FieldName = f.Name,
+                ScalarTypeName = f.TypeName,
+                IsNullable = f.IsNullable,
+                Ordinal = f.Ordinal,
+                Description = f.Description,
+            })];
+
+        DataSetSchemaLog.GetSchemaSucceeded(_logger, dataSetId, fields.Count);
+        return GenericResult<IReadOnlyList<DataSetFieldDefinition>>.Success(fields);
     }
 
     /// <inheritdoc />
@@ -65,7 +79,33 @@ public sealed class DataSetSchemaService : IDataSetSchemaService
     {
         DataSetSchemaLog.SaveSchemaStarted(_logger, dataSetId, fields.Count);
 
-        var result = await _provider.SaveFields(dataSetId, fields, cancellationToken).ConfigureAwait(false);
+        // A field's data type is a DataTypes option name (FDW-1159); a field that states none is not typed yet.
+        var typed = DataTypeValidator.Validate(
+            fields.Select(f => f.ScalarTypeName).Where(name => !string.IsNullOrEmpty(name)), _logger);
+        if (typed.IsFailure) return typed;
+
+        // The fields hang from the dataset, so the write is a save of the dataset carrying them.
+        var loaded = await _provider.Get(dataSetId, cancellationToken).ConfigureAwait(false);
+        if (!loaded.IsSuccess || loaded.Value is null)
+        {
+            return GenericResult.Failure(
+                DataSetSchemaLog.SaveSchemaFailed(_logger, dataSetId,
+                    loaded.CurrentMessage ?? "Provider returned failure"));
+        }
+
+        var dataSet = loaded.Value;
+        dataSet.Fields = [.. fields.Select(f => new DataSetFieldConfiguration
+        {
+            Name = f.FieldName,
+            TypeName = f.ScalarTypeName,
+            IsNullable = f.IsNullable,
+            Ordinal = f.Ordinal,
+            Description = f.Description,
+        })];
+
+        var result = await _provider
+            .Save(dataSet, dataSet.Domain, dataSet.Implementation, dataSet.Name, cancellationToken)
+            .ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

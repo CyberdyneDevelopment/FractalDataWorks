@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class CalculationDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="CalculationDataflowNodeType"/>.</summary>
-    public CalculationDataflowNodeType() : base(4, "Calculation") { }
+    public CalculationDataflowNodeType() : base("Calculation") { }
 }

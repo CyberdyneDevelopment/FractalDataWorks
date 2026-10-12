@@ -11,14 +11,6 @@ public sealed class StartsWithOperatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsIdToFour()
-    {
-        _sut.Id.ShouldBe(4);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ConstructorSetsNameToStartsWith()
     {
         _sut.Name.ShouldBe("StartsWith");
@@ -43,14 +35,6 @@ public sealed class StartsWithOperatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void FormatSqlParameterAddsTrailingWildcard()
-    {
-        _sut.FormatSqlParameter("Name").ShouldBe("@Name + '%'");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void FormatODataValueWrapsStringInSingleQuotes()
     {
         _sut.FormatODataValue("Acm").ShouldBe("'Acm'");
@@ -70,5 +54,15 @@ public sealed class StartsWithOperatorTests
     public void FormatODataValueHandlesNull()
     {
         _sut.FormatODataValue(null).ShouldBe("''");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void StatesItsPatternShapeOnce()
+    {
+        _sut.IsPatternMatch.ShouldBeTrue();
+        _sut.MatchesAnythingBefore.ShouldBe(false);
+        _sut.MatchesAnythingAfter.ShouldBe(true);
     }
 }

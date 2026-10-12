@@ -13,5 +13,5 @@ public sealed class ViewWebRenderMode : WebRenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ViewWebRenderMode"/> class.
     /// </summary>
-    public ViewWebRenderMode() : base(1, "View", "View Mode", "Read-only display") { }
+    public ViewWebRenderMode() : base("View", "View Mode", "Read-only display") { }
 }

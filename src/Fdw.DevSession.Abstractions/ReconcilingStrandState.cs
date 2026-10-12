@@ -12,5 +12,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class ReconcilingStrandState : StrandStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="ReconcilingStrandState"/> class.</summary>
-    public ReconcilingStrandState() : base(2, "Reconciling", isTerminal: false) { }
+    public ReconcilingStrandState() : base("Reconciling", isTerminal: false) { }
 }

@@ -14,7 +14,6 @@ public sealed class IntType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="IntType"/> class.</summary>
     public IntType()
         : base(
-            id: 2,
             name: "Int",
             description: "32-bit signed integer.",
             abstractType: DataTypes.Int32,

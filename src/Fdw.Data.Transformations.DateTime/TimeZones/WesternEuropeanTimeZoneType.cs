@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "WesternEuropean")]
 public sealed class WesternEuropeanTimeZoneType : TimeZoneTypeBase
 {
-    public WesternEuropeanTimeZoneType() : base(24, "WesternEuropean", "W. Europe Standard Time") { }
+    public WesternEuropeanTimeZoneType() : base("WesternEuropean", "W. Europe Standard Time") { }
 }

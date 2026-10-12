@@ -23,13 +23,13 @@ public sealed class DataStoreBackReferenceTests
 {
     private const string StoreName = "TestStore";
 
-    private static DataStoreConfiguration CreateStoreConfig()
+    private static DataStoreImplementationConfiguration CreateStoreConfig()
     {
         var storeId = Guid.NewGuid();
         var connPathId = Guid.NewGuid();
         var dataPathId = Guid.NewGuid();
 
-        return new DataStoreConfiguration
+        return new DataStoreImplementationConfiguration
         {
             Id = storeId,
             Name = StoreName,
@@ -39,14 +39,12 @@ public sealed class DataStoreBackReferenceTests
                 {
                     Id = connPathId,
                     Name = "conn",
-                    DataStoreId = storeId,
                     Containers =
                     [
                         new DataContainerConfiguration
                         {
                             Id = Guid.NewGuid(),
                             Name = "Connection",
-                            DataPathId = connPathId,
                             Fields = [],
                         },
                     ],
@@ -55,14 +53,12 @@ public sealed class DataStoreBackReferenceTests
                 {
                     Id = dataPathId,
                     Name = "data",
-                    DataStoreId = storeId,
                     Containers =
                     [
                         new DataContainerConfiguration
                         {
                             Id = Guid.NewGuid(),
                             Name = "DataStore",
-                            DataPathId = dataPathId,
                             Fields = [],
                         },
                     ],
@@ -144,7 +140,7 @@ public sealed class DataStoreBackReferenceTests
     public void SetPathsRejectsASecondCall()
     {
         // Arrange — set-once, mirroring DataPath.SetContainers: a second call is a wiring defect.
-        var store = new DataStore(StoreName, Guid.NewGuid(), []);
+        var store = new DataStore(StoreName, Guid.NewGuid(), [], declaredByHost: false);
         store.SetPaths([]);
 
         // Act / Assert

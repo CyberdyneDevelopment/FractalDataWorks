@@ -25,35 +25,35 @@ public class NodeApiClient : ApiClientBase, INodeApiClient
     }
 
     /// <inheritdoc/>
-    public virtual Task<IGenericResult<IReadOnlyList<OrchestrationNodeConfiguration>>> ListRootNodes(
+    public virtual Task<IGenericResult<IReadOnlyList<OrchestrationNodeImplementationConfiguration>>> ListRootNodes(
         CancellationToken cancellationToken = default)
-        => Get<IReadOnlyList<OrchestrationNodeConfiguration>>("nodes", cancellationToken);
+        => Get<IReadOnlyList<OrchestrationNodeImplementationConfiguration>>("nodes", cancellationToken);
 
     /// <inheritdoc/>
-    public virtual Task<IGenericResult<OrchestrationNodeConfiguration>> GetNode(
+    public virtual Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> GetNode(
         Guid nodeId,
         CancellationToken cancellationToken = default)
-        => Get<OrchestrationNodeConfiguration>($"nodes/{nodeId}", cancellationToken);
+        => Get<OrchestrationNodeImplementationConfiguration>($"nodes/{nodeId}", cancellationToken);
 
     /// <inheritdoc/>
-    public virtual Task<IGenericResult<OrchestrationNodeConfiguration>> GetNodeDeep(
+    public virtual Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> GetNodeDeep(
         Guid nodeId,
         int depth,
         CancellationToken cancellationToken = default)
-        => Get<OrchestrationNodeConfiguration>($"nodes/{nodeId}?depth={depth}", cancellationToken);
+        => Get<OrchestrationNodeImplementationConfiguration>($"nodes/{nodeId}?depth={depth}", cancellationToken);
 
     /// <inheritdoc/>
-    public virtual Task<IGenericResult<OrchestrationNodeConfiguration>> CreateNode(
-        OrchestrationNodeConfiguration request,
+    public virtual Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> CreateNode(
+        OrchestrationNodeImplementationConfiguration request,
         CancellationToken cancellationToken = default)
-        => Post<OrchestrationNodeConfiguration, OrchestrationNodeConfiguration>("nodes", request, cancellationToken);
+        => Post<OrchestrationNodeImplementationConfiguration, OrchestrationNodeImplementationConfiguration>("nodes", request, cancellationToken);
 
     /// <inheritdoc/>
-    public virtual Task<IGenericResult<OrchestrationNodeConfiguration>> UpdateNode(
+    public virtual Task<IGenericResult<OrchestrationNodeImplementationConfiguration>> UpdateNode(
         Guid nodeId,
-        OrchestrationNodeConfiguration request,
+        OrchestrationNodeImplementationConfiguration request,
         CancellationToken cancellationToken = default)
-        => Patch<OrchestrationNodeConfiguration, OrchestrationNodeConfiguration>($"nodes/{nodeId}", request, cancellationToken);
+        => Patch<OrchestrationNodeImplementationConfiguration, OrchestrationNodeImplementationConfiguration>($"nodes/{nodeId}", request, cancellationToken);
 
     /// <inheritdoc/>
     public virtual Task<IGenericResult> DeleteNode(

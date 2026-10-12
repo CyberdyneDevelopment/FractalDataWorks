@@ -32,7 +32,7 @@ public partial class DataSetCategoryConfiguration
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets an optional icon identifier (e.g., a MudBlazor icon constant name).
+    /// Gets or sets an optional icon identifier (e.g., a Material Symbols icon name).
     /// </summary>
     public string? Icon { get; set; }
 

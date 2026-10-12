@@ -9,5 +9,5 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 public sealed class PropertySymbolKindScore : SymbolKindScoreBase
 {
     /// <summary>Initializes the Property scoring option.</summary>
-    public PropertySymbolKindScore() : base(id: 2, name: "Property", weight: 4) { }
+    public PropertySymbolKindScore() : base(name: "Property", weight: 4) { }
 }

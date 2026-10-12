@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Commands;
 public sealed class DropViewDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="DropViewDdlCommandType"/>.</summary>
-    public DropViewDdlCommandType() : base(8, "DropView") { }
+    public DropViewDdlCommandType() : base("DropView") { }
 }

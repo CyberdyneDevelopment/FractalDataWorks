@@ -19,7 +19,7 @@ public sealed class HttpRowSourceType : RecordSourceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpRowSourceType"/> class.
     /// </summary>
-    public HttpRowSourceType() : base(5, "Http")
+    public HttpRowSourceType() : base("Http")
     {
     }
 

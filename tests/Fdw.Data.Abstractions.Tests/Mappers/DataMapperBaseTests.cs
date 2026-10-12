@@ -8,8 +8,8 @@ namespace Fdw.Data.Abstractions.Tests.Mappers;
 
 public sealed class DataMapperBaseTests
 {
-    private readonly TestDataTypeConverter _sourceConverter = new(1, "Source");
-    private readonly TestDataTypeConverter _targetConverter = new(2, "Target");
+    private readonly TestDataTypeConverter _sourceConverter = new("Source");
+    private readonly TestDataTypeConverter _targetConverter = new("Target");
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -162,8 +162,8 @@ public sealed class DataMapperBaseTests
     [ExcludeFromCodeCoverage]
     private sealed class TestDataTypeConverter : DataTypeConverterBase
     {
-        public TestDataTypeConverter(int id, string name)
-            : base(id, name, "test", typeof(string), DbType.String)
+        public TestDataTypeConverter(string name)
+            : base(name, "test", typeof(string), DbType.String)
         {
         }
 

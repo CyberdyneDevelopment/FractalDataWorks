@@ -15,29 +15,21 @@ namespace Fdw.Services.Resiliency;
 /// </remarks>
 public class ResiliencyConfiguration : IResiliencyConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+
     /// <inheritdoc/>
     public Guid Id { get; set; } = Guid.CreateVersion7();
 
     /// <inheritdoc/>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc/>
-    public virtual string SectionName => "Resiliency";
 
     /// <inheritdoc/>
-    public string ServiceType => "Resiliency";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
-    /// <summary>
-    /// Gets the strategy type identifier used to select the corresponding <see cref="ResiliencyTypeBase"/> instance.
-    /// </summary>
-    /// <remarks>
-    /// Why: StrategyType is the discriminator that maps this config to the
-    /// <see cref="ResiliencyTypeBase"/> instance via <see cref="ResiliencyTypes.ByName"/>.
-    /// </remarks>
-    public virtual string StrategyType => string.Empty;
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the optional description.

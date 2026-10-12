@@ -14,7 +14,7 @@ public sealed class Int32ScalarValueType : ScalarValueTypeBase
     /// Initializes a new instance of the <see cref="Int32ScalarValueType"/> class.
     /// </summary>
     public Int32ScalarValueType()
-        : base(id: 1, name: "Int32")
+        : base(name: "Int32")
     {
     }
 }

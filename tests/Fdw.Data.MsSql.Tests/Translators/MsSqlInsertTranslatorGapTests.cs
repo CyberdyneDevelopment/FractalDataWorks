@@ -38,7 +38,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -138,7 +138,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var containerSchema = new Mock<IContainerSchema>();
         var fields = new[] { CreateField("ProductName").Object };
         containerSchema.Setup(s => s.Fields).Returns(fields);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns("Orders");
@@ -212,5 +212,33 @@ public sealed class MsSqlInsertTranslatorGapTests
         // Assert - should succeed, MissingProp is just not added as parameter
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Parameters.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateInsertBindsNullByteArrayAsVarBinary()
+    {
+        // Arrange - a new auth.Session row carries a null CsrfTokenHash; untyped, the NULL reached a
+        // BINARY column as NVARCHAR and SQL Server refused it (SQL 257, FDW-918)
+        var fields = new[]
+        {
+            CreateField("Name").Object,
+            CreateField("TokenHash").Object
+        };
+        var container = CreateContainer(fields: fields);
+
+        var entity = new { Name = "Test", TokenHash = (byte[]?)null };
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(entity);
+
+        // Act
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters["@TokenHash"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarBinary);
+        result.Value.Parameters["@TokenHash"].Value.ShouldBe(DBNull.Value);
     }
 }

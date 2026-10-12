@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Arizona")]
 public sealed class ArizonaTimeZoneType : TimeZoneTypeBase
 {
-    public ArizonaTimeZoneType() : base(23, "Arizona", "US Mountain Standard Time") { }
+    public ArizonaTimeZoneType() : base("Arizona", "US Mountain Standard Time") { }
 }

@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -96,15 +98,27 @@ public abstract class LogoutEndpointBase : EndpointWithoutRequest
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Answers 204 only when the logout actually happened. It used to answer 204 whatever
+    /// <see cref="PerformLogout"/> found, so a failed revocation told the client it was logged out
+    /// while its token stayed valid (FDW-875). A failure now answers the status its result code maps to.
+    /// The username is only for the log and is null when the principal carries none.
+    /// </remarks>
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var username = User.Identity?.Name ?? "Unknown";
+        var username = User.Identity?.Name;
 
         AuthenticationEndpointLog.LoggingOut(_logger, username);
 
         try
         {
-            await PerformLogout(username, ct).ConfigureAwait(false);
+            var result = await PerformLogout(username, ct).ConfigureAwait(false);
+            if (result.IsFailure)
+            {
+                var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
+                await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+                return;
+            }
 
             AuthenticationEndpointLog.LogoutCompleted(_logger, username);
             await Send.NoContentAsync(ct).ConfigureAwait(false);
@@ -120,7 +134,8 @@ public abstract class LogoutEndpointBase : EndpointWithoutRequest
     /// Performs the logout operation. Implementers must override this to handle
     /// token revocation, session cleanup, etc.
     /// </summary>
-    /// <param name="username">The username of the user being logged out.</param>
+    /// <param name="username">The username of the user being logged out, for logging; null when absent.</param>
     /// <param name="ct">Cancellation token.</param>
-    protected abstract Task PerformLogout(string username, CancellationToken ct);
+    /// <returns>Success when the session is ended; a failure otherwise, which the caller is told.</returns>
+    protected abstract Task<IGenericResult> PerformLogout(string? username, CancellationToken ct);
 }

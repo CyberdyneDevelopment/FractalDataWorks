@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "India")]
 public sealed class IndiaTimeZoneType : TimeZoneTypeBase
 {
-    public IndiaTimeZoneType() : base(11, "India", "India Standard Time") { }
+    public IndiaTimeZoneType() : base("India", "India Standard Time") { }
 }

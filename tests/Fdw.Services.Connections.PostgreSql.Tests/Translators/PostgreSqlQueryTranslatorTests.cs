@@ -26,7 +26,7 @@ public sealed class PostgreSqlQueryTranslatorTests
         var dbPath = new PostgreSqlDatabasePath(database, schema, name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? new[] { CreateField("id").Object });
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? new[] { CreateField("id").Object });
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? new[] { CreateField("id").Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -402,7 +402,7 @@ public sealed class PostgreSqlQueryTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);

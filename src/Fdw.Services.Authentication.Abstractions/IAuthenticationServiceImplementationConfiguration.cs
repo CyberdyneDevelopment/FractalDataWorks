@@ -18,11 +18,13 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// </remarks>
 public interface IAuthenticationServiceImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets or sets the id of the authentication service this configuration belongs to.</summary>
-    /// <remarks>
-    /// The owner's logical id, which is what the configuration system resolves by. The database also
-    /// carries the owner's RowId and declares the foreign key on it; that identity stays in the
-    /// container's keys and never reaches this model.
-    /// </remarks>
-    Guid AuthenticationServiceId { get; set; }
+
+    /// <summary>Gets or sets whether this authentication service is in force.</summary>
+    bool Enabled { get; set; }
+
+    /// <summary>Gets or sets the issuer this service validates against.</summary>
+    string? Authority { get; set; }
+
+    /// <summary>Gets or sets the human-readable description.</summary>
+    string? Description { get; set; }
 }

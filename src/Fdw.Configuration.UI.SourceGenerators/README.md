@@ -8,9 +8,8 @@ This package is a Roslyn incremental source generator. It is referenced with `Ou
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BlazorComponentGenerator` | class | Generates Blazor-specific components with RenderTreeBuilder. |
 | `ConfigurationFormModelGenerator` | class | Generates ConfigurationFormModel derived classes for [ManagedConfiguration] classes. Creates… |
-| `ConfigurationUISourceGenerator` | class | Incremental source generator that creates Web, Blazor, and TUI components for classes annotated with… |
+| `ConfigurationUISourceGenerator` | class | Incremental source generator that creates Web and TUI components for classes annotated with… |
 | `TUIComponentGenerator` | class | Generates Terminal UI components with Spectre.Console. |
 | `WebComponentGenerator` | class | Generates framework-agnostic web components with metadata. |
 

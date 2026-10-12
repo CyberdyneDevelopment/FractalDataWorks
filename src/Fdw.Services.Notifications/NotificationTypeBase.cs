@@ -1,8 +1,6 @@
-using System;
 using Fdw.ServiceTypes;
 using Fdw.Services.Notifications.Abstractions;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Notifications;
 
@@ -47,11 +45,10 @@ public abstract class NotificationTypeBase<TService, TFactory, TConfiguration>
             displayName,
             description,
             "Notifications",
-            defaultDataStoreName: "PlatformConfiguration",
+            defaultDataStoreName: () => PlatformConnection.Name,
             defaultPathName: "notify",
             defaultContainerName: defaultContainerName)
     {
         _channelName = channelName;
     }
-
 }

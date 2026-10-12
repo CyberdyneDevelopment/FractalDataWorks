@@ -18,8 +18,9 @@ namespace Fdw.VsCodeShell.Tests;
 /// <para>
 /// What collides changed. <c>ServiceTypeBase.Id</c> was <c>MD5($"{TService.FullName}:{TFactory.FullName}")</c>
 /// — computed from the GENERIC ARGUMENTS — so two commands closing the same handler type were one id and the
-/// second was dropped. It is now <c>DeriveId(name)</c>, hashing the option's own name, so that collision is
-/// gone and the surviving hazard is two options sharing a NAME. These tests assert both halves.
+/// second was dropped. It is now derived from the option's own fully qualified type name
+/// (<c>GuidTypeOptionBase</c>), so neither a shared handler type nor a shared NAME makes two options one
+/// id. These tests assert both halves.
 /// </para>
 /// </remarks>
 public class VsCodeCommandIdentityTests
@@ -52,7 +53,7 @@ public class VsCodeCommandIdentityTests
         public DuplicateOfAlphaCommand() : base("DuplicateOfAlpha", "test.duplicate", "Duplicate") { }
     }
 
-    /// <summary>A second option reusing another's NAME — the shape that gets dropped now.</summary>
+    /// <summary>A second option reusing another's NAME; its id still differs, because the id comes from its type.</summary>
     private sealed class SameNameAsAlphaCommand : VsCodeCommandTypeBase<BetaHandler>
     {
         public SameNameAsAlphaCommand() : base("Alpha", "test.samename", "Same name as Alpha") { }

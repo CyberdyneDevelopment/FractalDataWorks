@@ -14,5 +14,5 @@ public sealed class AppendWriteMode : ContainerWriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendWriteMode"/> class.
     /// </summary>
-    public AppendWriteMode() : base(1, "Append", preservesExistingData: true, requiresExistingContainer: false, failsIfExists: false) { }
+    public AppendWriteMode() : base("Append", preservesExistingData: true, requiresExistingContainer: false, failsIfExists: false) { }
 }

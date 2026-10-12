@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Collections.Attributes;
 using Microsoft.Extensions.Configuration;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.Http.Security.Types;
 
@@ -15,8 +16,8 @@ public sealed class WsSecurityConfiguration : HttpAuthenticationConfiguration
 
     /// <summary>Initializes a new instance of the <see cref="WsSecurityConfiguration"/> class.</summary>
     public WsSecurityConfiguration()
-        : base(2, "WsSecurity", "WS-Security", "WS-Security with X.509 certificate signing",
-               ExpectedList, RequiredList)
+        : base("WsSecurity", "WS-Security", "WS-Security with X.509 certificate signing",
+               ExpectedList, RequiredList, requiresSecret: true)
     {
     }
 
@@ -67,4 +68,11 @@ public sealed class WsSecurityConfiguration : HttpAuthenticationConfiguration
             new(nameof(TimestampTtlSeconds), TimestampTtlSeconds),
         ];
     }
+
+    /// <inheritdoc />
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("CertificateSecretName", "Client certificate", secret: true)];
+
+    /// <inheritdoc/>
+    /// <remarks>The connection carries its own WS-Security credential.</remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;
 }

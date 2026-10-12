@@ -9,5 +9,5 @@ namespace Fdw.Mcp.Bus;
 public sealed class InProcKind : McpToolSourceKindBase
 {
     /// <summary>Initializes the InProc kind.</summary>
-    public InProcKind() : base(1, "InProc") { }
+    public InProcKind() : base("InProc") { }
 }

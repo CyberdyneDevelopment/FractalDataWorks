@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "SoutheastAsia")]
 public sealed class SoutheastAsiaTimeZoneType : TimeZoneTypeBase
 {
-    public SoutheastAsiaTimeZoneType() : base(36, "SoutheastAsia", "SE Asia Standard Time") { }
+    public SoutheastAsiaTimeZoneType() : base("SoutheastAsia", "SE Asia Standard Time") { }
 }

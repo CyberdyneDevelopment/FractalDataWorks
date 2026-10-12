@@ -1,57 +1,28 @@
-using System;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
-using Fdw.Services.Connections.Commands;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Connections;
 
-/// <summary>
-/// The connection domain's configuration provider.
-/// </summary>
-/// <remarks>
-/// It reads <c>conn.Connection</c> to find a configured connection by name or id, takes the
-/// <c>ServiceOptionType</c> that row names, and hands the request to the implementation provider
-/// registered under it — <c>MsSql</c> to <c>conn.MsSqlConnection</c>, <c>Sqlite</c> to
-/// <c>conn.SqliteConnection</c>. What comes back is that implementation's own configuration.
-/// </remarks>
-public class ConnectionConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          ConnectionConfiguration,
-          IConnectionImplementationConfiguration,
-          ConnectionConfigurationCommand>,
+/// <summary>Supplies the Connection configuration.</summary>
+public sealed class ConnectionConfigurationProvider
+    : DomainConfigurationProviderBase<IConnectionImplementationConfiguration>,
       IConnectionConfigurationProvider
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.
-    /// </summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
-    /// <param name="dataStoreName">The connection the domain's rows live in.</param>
-    /// <param name="pathName">The schema the domain's rows live in.</param>
+    /// <summary>Initializes a new instance of the <see cref="ConnectionConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public ConnectionConfigurationProvider(
         ILogger<ConnectionConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "conn")
-        : base(logger ?? NullLogger<ConnectionConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
-
-    /// <inheritdoc />
-    protected override ConnectionConfiguration Compose<T>(
-        string serviceOptionType,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            ServiceOptionType = serviceOptionType,
-            Configuration = implementationConfiguration,
-        };
 }

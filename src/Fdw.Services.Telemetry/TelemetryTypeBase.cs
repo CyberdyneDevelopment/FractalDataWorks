@@ -3,6 +3,7 @@ using Fdw.Configuration;
 using Fdw.Services.Telemetry.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Telemetry;
 
@@ -37,7 +38,7 @@ public abstract class TelemetryTypeBase<TService, TConfiguration, TFactory>
                // store resolves its row against nothing while looking configured.
                // The container is the domain's, not the option's -- every telemetry
                // implementation writes host.Telemetry, so it is not derived from the name.
-               defaultDataStoreName: "ServerConfiguration",
+               defaultDataStoreName: () => ServerConnection.Name,
                defaultPathName: "hst",
                defaultContainerName: "Telemetry")
     {

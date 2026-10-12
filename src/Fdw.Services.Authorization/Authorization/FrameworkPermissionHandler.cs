@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization.Logging;
 
 namespace Fdw.Services.Authorization.Authorization;
 
@@ -37,8 +38,12 @@ public sealed class FrameworkPermissionHandler : AuthorizationHandler<FdwPermiss
     {
         if (context.User.Identity?.IsAuthenticated != true)
         {
+            FrameworkAuthorizationLog.RequirementSkippedUnauthenticated(
+                _logger, requirement.Resource, requirement.Action);
             return;
         }
+
+        FrameworkAuthorizationLog.CheckingRequirement(_logger, requirement.Resource, requirement.Action);
 
         // Adapt ClaimsPrincipal to IAuthenticationContext
         var authContext = new ClaimsPrincipalAuthenticationContext(context.User);
@@ -48,8 +53,16 @@ public sealed class FrameworkPermissionHandler : AuthorizationHandler<FdwPermiss
             requirement.Resource,
             requirement.Action).ConfigureAwait(false);
 
-        if (result.IsSuccess && result.Value)
+        if (result.IsFailure)
         {
+            FrameworkAuthorizationLog.RequirementCheckFailed(
+                _logger, requirement.Resource, requirement.Action, result.CurrentMessage);
+            return;
+        }
+
+        if (result.Value)
+        {
+            FrameworkAuthorizationLog.RequirementSatisfied(_logger, requirement.Resource, requirement.Action);
             context.Succeed(requirement);
         }
     }

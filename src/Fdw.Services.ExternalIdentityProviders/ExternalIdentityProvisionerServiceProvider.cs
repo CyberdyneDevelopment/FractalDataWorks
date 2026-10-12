@@ -15,12 +15,12 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// look up sibling provisioners by name at <c>Provision</c> time.
 /// </summary>
 /// <remarks>
-/// A chained provisioner needs the provider to resolve its sibling steps at Provision time. It is
-/// given that provider when its factory is constructed, so nothing resolves it from the container at
-/// create time — which is what recursed without bound when it did (FDW-615).
+/// A provisioner that needs to resolve another provisioner by name (composing over more than one
+/// candidate) is given this provider when its factory is constructed, so nothing resolves it from the
+/// container at create time — which is what recursed without bound when it did (FDW-615).
 /// </remarks>
 public class ExternalIdentityProvisionerServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         IExternalIdentityProvisioner,
         IExternalIdentityProvisionerImplementationConfiguration,
         IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
@@ -30,16 +30,14 @@ public class ExternalIdentityProvisionerServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="ExternalIdentityProvisionerServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">Logger instance.</param>
     public ExternalIdentityProvisionerServiceProvider(
-        IServiceProvider services,
-        ILogger<PlatformServiceProviderBase<
+        ILogger<DomainServiceProviderBase<
             IExternalIdentityProvisioner,
             IExternalIdentityProvisionerImplementationConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,
             IExternalIdentityProvisionerConfigurationProvider>> logger)
-        : base(services, logger ?? NullLogger<PlatformServiceProviderBase<
+        : base(logger ?? NullLogger<DomainServiceProviderBase<
             IExternalIdentityProvisioner,
             IExternalIdentityProvisionerImplementationConfiguration,
             IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>,

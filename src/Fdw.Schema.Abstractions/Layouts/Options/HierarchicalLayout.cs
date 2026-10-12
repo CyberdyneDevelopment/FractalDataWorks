@@ -31,7 +31,6 @@ public sealed class HierarchicalLayout : DataLayoutBase
     /// </summary>
     public HierarchicalLayout()
         : base(
-            id: 2,
             name: "Hierarchical",
             description: "Nested parent-child structure (JSON, XML)",
             supportsNesting: true,

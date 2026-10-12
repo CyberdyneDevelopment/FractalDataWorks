@@ -12,7 +12,7 @@ public class ErrorHandlingModeBaseTests
     private sealed class StopOnErrorMode : ErrorHandlingModeBase
     {
         public StopOnErrorMode()
-            : base(1, "StopOnError",
+            : base("StopOnError",
                 continuesExecution: false,
                 supportsRetry: false,
                 triggersCompensation: false)
@@ -31,7 +31,7 @@ public class ErrorHandlingModeBaseTests
     private sealed class RetryOnErrorMode : ErrorHandlingModeBase
     {
         public RetryOnErrorMode()
-            : base(2, "RetryOnError",
+            : base("RetryOnError",
                 continuesExecution: true,
                 supportsRetry: true,
                 triggersCompensation: false)
@@ -50,7 +50,7 @@ public class ErrorHandlingModeBaseTests
     private sealed class CompensateOnErrorMode : ErrorHandlingModeBase
     {
         public CompensateOnErrorMode()
-            : base(3, "CompensateOnError",
+            : base("CompensateOnError",
                 continuesExecution: false,
                 supportsRetry: false,
                 triggersCompensation: true)
@@ -72,8 +72,6 @@ public class ErrorHandlingModeBaseTests
     public void StopOnErrorSetsPropertiesCorrectly()
     {
         var mode = new StopOnErrorMode();
-
-        mode.Id.ShouldBe(1);
         mode.Name.ShouldBe("StopOnError");
         mode.ContinuesExecution.ShouldBeFalse();
         mode.SupportsRetry.ShouldBeFalse();

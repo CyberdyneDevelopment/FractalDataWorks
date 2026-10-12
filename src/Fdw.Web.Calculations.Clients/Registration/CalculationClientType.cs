@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Web.Calculations.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Calculation API client.
+/// Implementation for the Calculation API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "CalculationClient")]
+[Implementation(typeof(ApiClientTypes), "CalculationClient")]
 public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClient>
 {
     /// <summary>
@@ -35,9 +35,8 @@ public sealed class CalculationClientType : ApiClientTypeBase<CalculationApiClie
 
             builder.Services.AddScoped<CalculationApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<CalculationApiClient>>() ?? NullLogger<CalculationApiClient>.Instance;
-                return new CalculationApiClient(factory.CreateClient(Name), logger);
+                return new CalculationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             builder.Services.AddScoped<ICalculationApiClient>(sp => sp.GetRequiredService<CalculationApiClient>());
             return GenericResult<IHostApplicationBuilder>.Success(builder);

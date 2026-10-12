@@ -16,7 +16,6 @@ public sealed class OpenIDConnectProtocol : AuthenticationProtocolBase
     /// Initializes a new instance of the <see cref="OpenIDConnectProtocol"/> class.
     /// </summary>
     public OpenIDConnectProtocol() : base(
-        id: 2,
         name: "OpenIDConnect",
         version: "1.0",
         requiresSecureTransport: true,

@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace Fdw.Services.Authorization.Endpoints;
@@ -15,10 +14,10 @@ public class SetRolePermissionsRequest
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the permission names to assign. Bound from the JSON body's
-    /// <c>permissions</c> property.
+    /// Gets or sets the permission names to assign, replacing the role's current set. Bound from the
+    /// JSON body's <c>permissions</c> property. Omitted (null) leaves the role's permissions
+    /// untouched; an empty list is a real request to strip every permission from the role.
     /// </summary>
-    [Required]
     [JsonPropertyName("permissions")]
-    public IList<string> PermissionNames { get; set; } = [];
+    public IList<string>? PermissionNames { get; set; }
 }

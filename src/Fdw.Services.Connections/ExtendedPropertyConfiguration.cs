@@ -38,21 +38,6 @@ public partial class ExtendedPropertyConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "ExtendedProperties";
-
-    /// <summary>
-    /// Gets the service type - always "DataStore" for extended properties.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for extended properties.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the ID of the target object (DataStore, DataPath, DataContainer, or DataContainerField).
     /// </summary>
     public Guid TargetId { get; set; }

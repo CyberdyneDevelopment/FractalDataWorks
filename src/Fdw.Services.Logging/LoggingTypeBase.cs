@@ -3,6 +3,7 @@ using Fdw.Configuration;
 using Fdw.Services.Logging.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Logging;
 
@@ -38,7 +39,7 @@ public abstract class LoggingTypeBase<TService, TConfiguration, TFactory>
                displayName,
                description,
                category: "Logging",
-               defaultDataStoreName: "ServerConfiguration",
+               defaultDataStoreName: () => ServerConnection.Name,
                defaultPathName: "log",
                defaultContainerName: name)
     {

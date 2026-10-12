@@ -22,7 +22,6 @@ public sealed class ProjectItemType : ExecutionItemTypeBase
     /// </summary>
     public ProjectItemType()
         : base(
-            id: 6,
             name: "Project",
             displayName: "Project",
             hierarchyLevel: 0,

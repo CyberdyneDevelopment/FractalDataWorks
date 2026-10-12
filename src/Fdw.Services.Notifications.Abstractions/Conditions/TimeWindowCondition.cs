@@ -16,7 +16,7 @@ public sealed class TimeWindowCondition : NotificationConditionTypeBase
     /// Initializes a new instance of the <see cref="TimeWindowCondition"/> class.
     /// </summary>
     public TimeWindowCondition()
-        : base(6, "TimeWindow", "schedule", "Info")
+        : base("TimeWindow", "schedule", "Info")
     {
     }
 

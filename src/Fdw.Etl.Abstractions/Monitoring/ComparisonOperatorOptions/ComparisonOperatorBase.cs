@@ -8,16 +8,15 @@ namespace Fdw.Etl.Abstractions.Monitoring.ComparisonOperatorOptions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class ComparisonOperatorBase : TypeOptionBase<int, ComparisonOperatorBase>, IComparisonOperator
+public abstract class ComparisonOperatorBase : TypeOptionBase<ComparisonOperatorBase>, IComparisonOperator
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ComparisonOperatorBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this comparison operator.</param>
     /// <param name="name">The name of this comparison operator.</param>
     /// <param name="sqlOperator">The SQL operator symbol.</param>
-    protected ComparisonOperatorBase(int id, string name, string sqlOperator)
-        : base(id, name)
+    protected ComparisonOperatorBase(string name, string sqlOperator)
+        : base(name)
     {
         SqlOperator = sqlOperator;
     }

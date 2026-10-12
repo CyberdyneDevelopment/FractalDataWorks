@@ -11,7 +11,6 @@ public sealed class ExternalLinkIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ExternalLinkIcon"/>.</summary>
     public ExternalLinkIcon()
         : base(
-            41,
             "ExternalLink",
             "0 0 24 24",
             "none",

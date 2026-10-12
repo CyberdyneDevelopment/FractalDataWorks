@@ -44,8 +44,12 @@ internal sealed class DataStore : IDataStore
         return PathNotFoundResult<IDataNode>(name);
     }
 
-    internal DataStore(string name, Guid connectionId, IReadOnlyList<IDataNodePath> paths, string? description = null, ILogger? logger = null)
+    /// <inheritdoc />
+    public bool DeclaredByHost { get; }
+
+    internal DataStore(string name, Guid connectionId, IReadOnlyList<IDataNodePath> paths, bool declaredByHost, string? description = null, ILogger? logger = null)
     {
+        DeclaredByHost = declaredByHost;
         Name = name;
         ConnectionId = connectionId;
         Paths = paths;

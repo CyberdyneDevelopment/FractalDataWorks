@@ -53,7 +53,9 @@ public class GenericResultTests
     public void Success_WithIGenericMessage_CreatesSuccessResultWithMessage()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Success message");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult.Success(message);
@@ -223,6 +225,24 @@ public class GenericResultTests
         result.Messages.ShouldBeEmpty();
     }
 
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public void ToNewResult_FromResultWithoutMessages_CarriesNoMessages()
+    {
+        // Arrange
+        var source = GenericResult.Success();
+
+        // Act
+        var converted = source.ToNewResult(42);
+
+        // Assert
+        converted.IsSuccess.ShouldBeTrue();
+        converted.Value.ShouldBe(42);
+        converted.CurrentMessage.ShouldBeNull();
+        converted.Messages.ShouldBeEmpty();
+    }
+
     #endregion
 
     #region Failure Tests
@@ -253,7 +273,9 @@ public class GenericResultTests
     public void Failure_WithIGenericMessage_CreatesFailureResultWithMessage()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Failure message");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult.Failure(message);
@@ -446,7 +468,9 @@ public class GenericResultTests
     {
         // Arrange
         const double value = 3.14;
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Pi calculated");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult<double>.Success(value, message);
@@ -561,7 +585,9 @@ public class GenericResultTests
     public void GenericOfT_Failure_WithIGenericMessage_CreatesFailureResult()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage("Error occurred");
+#pragma warning restore CA1859
 
         // Act
         var result = GenericResult<string>.Failure(message);

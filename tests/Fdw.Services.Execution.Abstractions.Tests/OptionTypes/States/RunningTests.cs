@@ -13,9 +13,6 @@ public class RunningTests
     {
         // Arrange & Act
         var running = new Running();
-
-        // Assert
-        running.Id.ShouldBe(2);
         running.Name.ShouldBe("Running");
         running.IsTerminal.ShouldBeFalse();
         running.IsError.ShouldBeFalse();

@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Pacific")]
 public sealed class PacificTimeZoneType : TimeZoneTypeBase
 {
-    public PacificTimeZoneType() : base(4, "Pacific", "Pacific Standard Time") { }
+    public PacificTimeZoneType() : base("Pacific", "Pacific Standard Time") { }
 }

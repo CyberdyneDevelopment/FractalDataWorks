@@ -1,5 +1,4 @@
 using Fdw.Web.Http.Abstractions.EndPoints;
-using Fdw.Web.RestEndpoints.Configuration;
 
 namespace Fdw.Web.RestEndpoints.Tests.Configuration;
 
@@ -106,25 +105,5 @@ public class EndpointTypeDefaultsTests
         sut.MaxBodySize.ShouldBe(10485760);
         sut.RequiresAuthentication.ShouldBeTrue();
         sut.AllowedRoles.ShouldBe(new[] { "System", "Admin" });
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void GetDefaultsForTypeReturnsSettingsFromEndpointType()
-    {
-        // Arrange
-        var endpointType = new CrudEndpoint();
-
-        // Act
-        var settings = EndpointDefaults.GetDefaultsForType(endpointType);
-
-        // Assert
-        settings.SecurityMethodName.ShouldBe(endpointType.SecurityMethodName);
-        settings.RateLimitPolicyName.ShouldBe(endpointType.RateLimitPolicyName);
-        settings.TimeoutMs.ShouldBe(endpointType.TimeoutMs);
-        settings.MaxBodySize.ShouldBe(endpointType.MaxBodySize);
-        settings.RequireAuthentication.ShouldBe(endpointType.RequiresAuthentication);
-        settings.AllowedRoles.ShouldBe(endpointType.AllowedRoles);
     }
 }

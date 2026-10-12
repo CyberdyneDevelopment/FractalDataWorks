@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
+using Fdw.Services.Calculations.Abstractions.Runtime;
 using Fdw.Services.Etl.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -260,6 +261,12 @@ public class ITransformContextTests
         public object? CalculationEngine { get; set; }
         public object? ConnectionProvider { get; set; }
         public object? DataGateway { get; set; }
+        public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>> FieldTransformChains { get; set; } =
+            new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>();
+        public IReadOnlyDictionary<Guid, ICompiledCalculation> BuiltCalculations { get; set; } =
+            new Dictionary<Guid, ICompiledCalculation>();
+        public IReadOnlyDictionary<Guid, ICompiledCalculationSet> BuiltSets { get; set; } =
+            new Dictionary<Guid, ICompiledCalculationSet>();
 
         public List<string> Errors { get; } = new();
         public List<IDictionary<string, object?>?> Records { get; } = new();
@@ -272,5 +279,7 @@ public class ITransformContextTests
                 Records.Add(record);
             }
         }
+
+        public void Reject(string stage, string reason, IDictionary<string, object?> record) => ReportError(reason, record);
     }
 }

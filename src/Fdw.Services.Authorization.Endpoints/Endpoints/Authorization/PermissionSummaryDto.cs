@@ -51,9 +51,4 @@ public class PermissionSummaryDto
     /// Gets or sets the category for grouping.
     /// </summary>
     public string? Category { get; set; }
-
-    /// <summary>
-    /// Gets or sets the display sort order for grouping in the UI.
-    /// </summary>
-    public int SortOrder { get; set; }
 }

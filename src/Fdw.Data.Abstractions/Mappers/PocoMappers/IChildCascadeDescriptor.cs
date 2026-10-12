@@ -41,15 +41,6 @@ public interface IChildCascadeDescriptor
     bool IsPropertyCollection { get; }
 
     /// <summary>
-    /// The physical foreign-key column on the CHILD table that points at this owner's <c>RowId</c>
-    /// (the <c>{Owner}RowId</c> convention — e.g. <c>DataStoreRowId</c>, <c>DataPathRowId</c>,
-    /// <c>MsSqlConnectionRowId</c>). The read cascade filters child rows by
-    /// <c>WHERE [ChildForeignKeyColumn] = owner.RowId</c> — version-pinned to the current owner row,
-    /// with no schema/container metadata lookup.
-    /// </summary>
-    string ChildForeignKeyColumn { get; }
-
-    /// <summary>
     /// The child container (table) name for a property-collection (KVP) child, declared via
     /// <c>[ConfigurationChildTable]</c> (the property→table mapping is not derivable from the
     /// property/owner type). Empty for typed-list children, whose container is resolved at runtime

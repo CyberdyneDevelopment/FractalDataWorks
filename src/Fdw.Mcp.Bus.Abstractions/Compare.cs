@@ -9,5 +9,5 @@ namespace Fdw.Mcp.Bus;
 public sealed class Compare : ViewIntentBase
 {
     /// <summary>Initializes the Compare view intent.</summary>
-    public Compare() : base(3, "Compare") { }
+    public Compare() : base("Compare") { }
 }

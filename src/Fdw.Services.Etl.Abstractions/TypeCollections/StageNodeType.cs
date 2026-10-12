@@ -14,7 +14,6 @@ public sealed class StageNodeType : OrchestrationNodeTypeBase
     /// <summary>Initializes a new instance of <see cref="StageNodeType"/>.</summary>
     public StageNodeType()
         : base(
-            id: 2,
             name: "Stage",
             displayName: "Stage",
             typicalDepth: 1,

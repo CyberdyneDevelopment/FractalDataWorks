@@ -14,5 +14,5 @@ namespace Fdw.Services.Credentials.Sql.Outcomes;
 public sealed class MustChangeOutcome : CredentialOutcomeBase
 {
     /// <summary>Initializes a new instance of the <see cref="MustChangeOutcome"/> class.</summary>
-    public MustChangeOutcome() : base(5, "MustChange", grantsAccess: false) { }
+    public MustChangeOutcome() : base("MustChange", grantsAccess: false, provesSecret: true) { }
 }

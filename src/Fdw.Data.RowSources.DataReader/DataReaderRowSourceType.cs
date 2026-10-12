@@ -19,7 +19,7 @@ public sealed class DataReaderRowSourceType : RecordSourceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DataReaderRowSourceType"/> class.
     /// </summary>
-    public DataReaderRowSourceType() : base(1, "DataReader")
+    public DataReaderRowSourceType() : base("DataReader")
     {
     }
 

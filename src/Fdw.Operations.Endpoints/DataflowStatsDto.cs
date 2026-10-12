@@ -11,6 +11,12 @@ public class DataflowStatsDto
     public int DataSetCount { get; set; }
     /// <summary>Gets or sets the number of DataStore nodes.</summary>
     public int DataStoreCount { get; set; }
+    /// <summary>Gets or sets the number of Container nodes.</summary>
+    public int ContainerCount { get; set; }
+    /// <summary>Gets or sets the number of data set variation nodes.</summary>
+    public int VariationCount { get; set; }
+    /// <summary>Gets or sets the number of Pipeline nodes.</summary>
+    public int PipelineCount { get; set; }
     /// <summary>Gets or sets the number of Connection nodes.</summary>
     public int ConnectionCount { get; set; }
     /// <summary>Gets or sets the number of Source nodes.</summary>

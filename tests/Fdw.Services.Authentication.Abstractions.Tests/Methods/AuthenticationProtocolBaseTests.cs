@@ -15,14 +15,10 @@ public class AuthenticationProtocolBaseTests
     {
         // Arrange & Act
         var protocol = new TestAuthenticationProtocol(
-            id: 1,
             name: "OAuth2",
             version: "2.0",
             requiresSecureTransport: true,
             supportsTokens: true);
-
-        // Assert
-        protocol.Id.ShouldBe(1);
         protocol.Name.ShouldBe("OAuth2");
         protocol.Version.ShouldBe("2.0");
         protocol.RequiresSecureTransport.ShouldBeTrue();
@@ -36,7 +32,6 @@ public class AuthenticationProtocolBaseTests
     {
         // Arrange & Act
         var protocol = new TestAuthenticationProtocol(
-            id: 2,
             name: "Basic",
             version: "1.0",
             requiresSecureTransport: false,
@@ -53,7 +48,7 @@ public class AuthenticationProtocolBaseTests
     public void PropertiesAreReadOnly()
     {
         // Arrange
-        var protocol = new TestAuthenticationProtocol(1, "Test", "1.0", true, true);
+        var protocol = new TestAuthenticationProtocol("Test", "1.0", true, true);
 
         // Assert - Properties should only have getters
         var type = typeof(IAuthenticationProtocol);
@@ -68,7 +63,7 @@ public class AuthenticationProtocolBaseTests
     public void ProtocolImplementsIAuthenticationProtocol()
     {
         // Arrange
-        var protocol = new TestAuthenticationProtocol(1, "Test", "1.0", true, true);
+        var protocol = new TestAuthenticationProtocol("Test", "1.0", true, true);
 
         // Assert
         protocol.ShouldBeAssignableTo<IAuthenticationProtocol>();
@@ -81,12 +76,11 @@ public class AuthenticationProtocolBaseTests
     private sealed class TestAuthenticationProtocol : AuthenticationProtocolBase
     {
         public TestAuthenticationProtocol(
-            int id,
             string name,
             string version,
             bool requiresSecureTransport,
             bool supportsTokens)
-            : base(id, name, version, requiresSecureTransport, supportsTokens)
+            : base(name, version, requiresSecureTransport, supportsTokens)
         {
         }
     }

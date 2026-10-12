@@ -7,6 +7,7 @@ using Fdw.Configuration;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
+using Fdw.Schema;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.DataNodes;
@@ -19,7 +20,7 @@ namespace Fdw.Services.Data.Builders;
 /// <summary>
 /// Shared base for the per-transport <see cref="IDataStoreBuilder"/>s. Owns the transport-agnostic
 /// assembly of the uniform <see cref="IDataStore"/> tree (store → paths → containers → fields → keys)
-/// from a nested <see cref="DataStoreConfiguration"/>, including the FK-direct key resolution
+/// from a nested <see cref="IDataStoreImplementationConfiguration"/>, including the FK-direct key resolution
 /// (Addendum-B). Transport subclasses override only the two genuinely transport-specific steps:
 /// <see cref="BuildField"/> and <see cref="BuildContainer"/>.
 /// </summary>
@@ -49,7 +50,8 @@ namespace Fdw.Services.Data.Builders;
 public abstract class DataStoreBuilderBase : IDataStoreBuilder
 {
     private readonly ILogger _logger;
-    private DataStoreConfiguration? _config;
+    private IDataStoreImplementationConfiguration? _config;
+    private bool _declaredByHost;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DataStoreBuilderBase"/> class.
@@ -64,11 +66,14 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     protected ILogger Logger => _logger;
 
     /// <inheritdoc />
+    public void DeclareByHost() => _declaredByHost = true;
+
+    /// <inheritdoc />
     public IGenericResult Configure(IGenericConfiguration storeConfig)
     {
         ArgumentNullException.ThrowIfNull(storeConfig);
 
-        if (storeConfig is not DataStoreConfiguration cfg)
+        if (storeConfig is not IDataStoreImplementationConfiguration cfg)
         {
             return GenericResult.Failure(
                 DataStoreLoaderLog.BuilderConfigureWrongType(_logger, storeConfig.GetType().Name));
@@ -104,7 +109,7 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
                 built[containerCfg.Name] = new BuiltContainer(containerCfg, pathCfg, BuildFields(containerCfg));
         }
 
-        var store = new DataStore(cfg.Name, cfg.ConnectionId, [], cfg.Description, _logger);
+        var store = new DataStore(cfg.Name, cfg.ConnectionId, [], _declaredByHost, cfg.Description, _logger);
 
         // Wave A: build bare container nodes (no keys, no referencing) so cross-references resolve to
         // a real node instance regardless of declaration order.
@@ -173,14 +178,22 @@ public abstract class DataStoreBuilderBase : IDataStoreBuilder
     /// </summary>
     /// <param name="config">The store configuration seeded via <see cref="Configure"/>.</param>
     /// <returns>Success to proceed with the build; a failure to reject it (Build returns that failure).</returns>
-    protected virtual IGenericResult ValidateConfiguration(DataStoreConfiguration config) => GenericResult.Success();
+    protected virtual IGenericResult ValidateConfiguration(IDataStoreImplementationConfiguration config) => GenericResult.Success();
 
     /// <summary>
     /// Builds one field node for this transport from its configuration.
     /// </summary>
     /// <param name="fieldCfg">The field configuration row.</param>
     /// <returns>The transport-specific <see cref="IDataField"/> child node.</returns>
-    protected abstract IDataField BuildField(DataContainerFieldConfiguration fieldCfg);
+    /// <remarks>
+    /// Default builds a transport-agnostic <see cref="DataField"/>, which also implements
+    /// <see cref="IField"/> so <c>container.Schema</c> works uniformly across every transport.
+    /// Override only when the transport has a real native-type system to resolve, the way
+    /// MsSqlDataStoreBuilder does (precision/scale/collation, identity/computed detection).
+    /// </remarks>
+    protected virtual IDataField BuildField(DataContainerFieldConfiguration fieldCfg)
+        => new DataField(fieldCfg.Name, fieldCfg.Description, explicitType: null, fieldCfg.Ordinal, fieldCfg.IsNullable,
+            DatumTypes.ById(fieldCfg.DatumTypeId), fieldCfg.DataType);
 
     /// <summary>
     /// Builds one container node for this transport from its configuration, with its fields, keys,

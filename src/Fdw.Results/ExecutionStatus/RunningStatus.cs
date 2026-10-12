@@ -11,16 +11,15 @@ namespace Fdw.Results.ExecutionStatus;
 public sealed class RunningStatus : ExecutionStatusBase
 {
     /// <summary>
-    /// MudBlazor icon for running status.
+    /// Material Symbols icon name for running status.
     /// </summary>
-    public const string RunningIcon = "play_circle"; // Icons.Material.Filled.PlayCircle
+    public const string RunningIcon = "play_circle";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RunningStatus"/> class.
     /// </summary>
     public RunningStatus()
         : base(
-            id: 2,
             name: "Running",
             icon: RunningIcon,
             color: "Info",

@@ -15,7 +15,6 @@ public sealed class StageItemType : ExecutionItemTypeBase
     /// </summary>
     public StageItemType()
         : base(
-            id: 3,
             name: "Stage",
             displayName: "Stage",
             hierarchyLevel: 2,

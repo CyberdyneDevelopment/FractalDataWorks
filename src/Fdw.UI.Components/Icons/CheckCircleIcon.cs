@@ -11,7 +11,6 @@ public sealed class CheckCircleIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="CheckCircleIcon"/>.</summary>
     public CheckCircleIcon()
         : base(
-            21,
             "CheckCircle",
             "0 0 24 24",
             "none",

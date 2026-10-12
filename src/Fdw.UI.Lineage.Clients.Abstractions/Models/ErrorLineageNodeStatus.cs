@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class ErrorLineageNodeStatus : LineageNodeStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="ErrorLineageNodeStatus"/>.</summary>
-    public ErrorLineageNodeStatus() : base(4, "Error") { }
+    public ErrorLineageNodeStatus() : base("Error") { }
 }

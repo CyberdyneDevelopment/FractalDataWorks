@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
+using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -17,14 +19,14 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRequest, SecretManagerDetailResponse>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<GetSecretManagerEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetSecretManagerEndpointBase"/> class.
     /// </summary>
     protected GetSecretManagerEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<GetSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;
@@ -35,7 +37,10 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
     public override void Configure()
     {
         Get("/secret-managers/{Name}");
-        Policies("secretmanagers:read");
+        // Secret managers are the platform's, owned by the system tenant: only a platform administrator lists, reads
+        // or changes one. A tenant never touches a secret manager or a secret; a connection's credentials are set
+        // through the connection (FDW-1086).
+        Policies(AuthConstants.PlatformAdminPolicy);
         Summary(s =>
         {
             s.Summary = "Get secret manager";
@@ -62,13 +67,15 @@ public abstract class GetSecretManagerEndpointBase : Endpoint<GetSecretManagerRe
             return;
         }
 
+        // SecretManagerType IS the implementation the domain row names. Description and
+        // Environment are columns on the sec.SecretManager domain row, which a domain read does
+        // not carry, so they are the app's to fill -- second-wave-split payload, not invented here.
         var detail = new SecretManagerDetailResponse
         {
             Id = config.Id,
             Name = config.Name,
-            SecretManagerType = config.SecretManagerType,
-            Description = config.Description,
-            ServiceOptionType = config.ServiceOptionType
+            SecretManagerType = config.Implementation,
+            Implementation = config.Implementation
         };
 
         await Send.OkAsync(detail, ct).ConfigureAwait(false);

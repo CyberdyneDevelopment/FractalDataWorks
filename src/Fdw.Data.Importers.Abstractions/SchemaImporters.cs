@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
@@ -14,4 +15,15 @@ namespace Fdw.Data.SchemaImporters.Abstractions;
 [TypeCollection(typeof(ISchemaImporter), typeof(ISchemaImporter), typeof(SchemaImporters))]
 public abstract partial class SchemaImporters : TypeCollectionBase<ISchemaImporter>
 {
+    /// <summary>
+    /// How long an importer waits when it only checks that a remote source answers. A deployment
+    /// sets this before the host starts.
+    /// </summary>
+    public static TimeSpan SourceCheckTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// How long an importer waits for a remote schema document to download. A deployment sets this
+    /// before the host starts.
+    /// </summary>
+    public static TimeSpan SourceFetchTimeout { get; set; } = TimeSpan.FromSeconds(30);
 }

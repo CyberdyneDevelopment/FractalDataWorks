@@ -21,7 +21,6 @@ public sealed class SplitFieldTransformer : FieldTransformationBase
     /// </summary>
     public SplitFieldTransformer()
         : base(
-            id: 304,
             name: "Split",
             displayName: "Split",
             description: "Splits a string by a delimiter and returns the element at a specified index.",

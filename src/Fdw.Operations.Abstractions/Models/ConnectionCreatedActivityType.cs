@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class ConnectionCreatedActivityType : ActivityTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ConnectionCreatedActivityType"/>.</summary>
-    public ConnectionCreatedActivityType() : base(4, "ConnectionCreated") { }
+    public ConnectionCreatedActivityType() : base("ConnectionCreated") { }
 }

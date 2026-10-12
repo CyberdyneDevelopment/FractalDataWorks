@@ -14,7 +14,7 @@ namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 public sealed class EnvironmentVariableAssertionSource : FederatedAssertionSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="EnvironmentVariableAssertionSource"/> class.</summary>
-    public EnvironmentVariableAssertionSource() : base(1, "EnvironmentVariable")
+    public EnvironmentVariableAssertionSource() : base("EnvironmentVariable")
     {
     }
 

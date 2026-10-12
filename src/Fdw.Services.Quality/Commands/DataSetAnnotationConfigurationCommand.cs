@@ -6,7 +6,7 @@ namespace Fdw.Services.Quality.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the DataSetAnnotation configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "DataSetAnnotation")]
-public sealed class DataSetAnnotationConfigurationCommand : ConfigurationCommandBase<DataSetAnnotationConfiguration>
+public sealed class DataSetAnnotationConfigurationCommand : ConfigurationCommandBase<DataSetAnnotationImplementationConfiguration>
 {
     /// <inheritdoc/>
     public DataSetAnnotationConfigurationCommand() : base("DataSetAnnotation") { }

@@ -16,7 +16,7 @@ public sealed class RoleSettingConfigurationValidatorTests
     public void ValidConfigurationPassesValidation()
     {
         // Arrange
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             RoleName = "Admin",
@@ -37,7 +37,7 @@ public sealed class RoleSettingConfigurationValidatorTests
     public void EmptyTenantIdFailsValidation()
     {
         // Arrange
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
             TenantId = Guid.Empty,
             RoleName = "Admin",
@@ -58,7 +58,7 @@ public sealed class RoleSettingConfigurationValidatorTests
     public void EmptyRoleNameFailsValidation()
     {
         // Arrange
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             RoleName = string.Empty,
@@ -79,7 +79,7 @@ public sealed class RoleSettingConfigurationValidatorTests
     public void EmptySettingNameFailsValidation()
     {
         // Arrange
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             RoleName = "Admin",
@@ -100,7 +100,7 @@ public sealed class RoleSettingConfigurationValidatorTests
     public void EmptySettingValueFailsValidation()
     {
         // Arrange
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
             TenantId = Guid.NewGuid(),
             RoleName = "Admin",

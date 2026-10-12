@@ -47,9 +47,6 @@ public sealed class ODataSchemaImporterTests
     {
         // Act
         var importer = CreateImporter();
-
-        // Assert
-        importer.Id.ShouldBe(3);
         importer.Name.ShouldBe("OData");
         importer.Description.ShouldBe("Imports schema from OData $metadata endpoints");
         importer.DataStoreType.ShouldBe("Rest");

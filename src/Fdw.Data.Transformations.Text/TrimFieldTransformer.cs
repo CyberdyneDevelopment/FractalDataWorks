@@ -20,7 +20,6 @@ public sealed class TrimFieldTransformer : FieldTransformationBase
     /// </summary>
     public TrimFieldTransformer()
         : base(
-            id: 300,
             name: "Trim",
             displayName: "Trim",
             description: "Trims whitespace or specified characters from both ends of a string value.",

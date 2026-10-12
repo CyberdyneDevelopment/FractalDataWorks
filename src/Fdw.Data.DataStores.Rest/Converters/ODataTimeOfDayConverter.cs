@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataTimeOfDayConverter()
     : DataTypeConverterBase(
-        id: 14,
         name: "TimeOfDay",
         sourceType: "TimeOfDay",
         targetClrType: typeof(TimeSpan),

@@ -5,10 +5,10 @@ namespace Fdw.Orchestration.Abstractions.Caching;
 /// <summary>
 /// Base class for cache entry priority levels.
 /// </summary>
-public abstract class CachePriorityBase : TypeOptionBase<int, CachePriorityBase>, ICachePriority
+public abstract class CachePriorityBase : TypeOptionBase<CachePriorityBase>, ICachePriority
 {
     /// <summary>
     /// Initializes a new instance of <see cref="CachePriorityBase"/>.
     /// </summary>
-    protected CachePriorityBase(int id, string name) : base(id, name) { }
+    protected CachePriorityBase(string name) : base(name) { }
 }

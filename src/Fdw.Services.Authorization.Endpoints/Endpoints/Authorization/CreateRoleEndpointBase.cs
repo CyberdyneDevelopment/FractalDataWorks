@@ -12,8 +12,14 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleSummaryResponse>
 {
+    // The domain and implementation a role row is written under. These are values the seed already
+    // writes (authz.Role Domain/Implementation = 'Role'), not names this endpoint gets to choose:
+    // a save under any other pair produces a row nothing composes on the next read.
+    private const string RoleDomain = "Role";
+    private const string RoleImplementation = "Role";
+
     /// <summary>Initializes a new instance of the <see cref="CreateRoleEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -21,7 +27,7 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="CreateRoleEndpointBase"/> class.</summary>
-    protected CreateRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
+    protected CreateRoleEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider)
     {
         EndpointLogger = logger;
         _roleProvider = roleProvider;
@@ -31,7 +37,7 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IRoleConfigurationProvider RoleProvider => _roleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:write".
@@ -57,55 +63,43 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
         
         OnCreatingRole(req.Name);
 
-        Guid? parentRoleId = null;
-        if (!string.IsNullOrEmpty(req.ParentRoleName))
-        {
-            var parent = await _roleProvider.GetRole(req.ParentRoleName, ct).ConfigureAwait(false);
-            if (parent is null)
-            {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
-                return;
-            }
+        var config = BuildConfiguration(req);
 
-            parentRoleId = parent.Id;
-        }
-
-        var config = BuildConfiguration(req, parentRoleId);
-
-        var result = await _roleProvider.Save(config, ct).ConfigureAwait(false);
+        var result = await _roleProvider.Save(config, RoleDomain, RoleImplementation, req.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             await Send.ResponseAsync(new RoleSummaryResponse { Name = req.Name }, 400, ct).ConfigureAwait(false);
             return;
         }
 
-        var saved = result.Value!;
-        OnRoleCreated(saved.Name, saved.Id);
+        // Save stamps the record it was handed -- name, domain, implementation and the domain row's
+        // durable Id -- and returns no value of its own, so the record IS what was written.
+        OnRoleCreated(config.Name, config.Id);
 
-        await Send.ResponseAsync(MapToSummary(saved), 201, ct).ConfigureAwait(false);
+        await Send.ResponseAsync(MapToSummary(config), 201, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Builds the RoleConfiguration from the create request.
+    /// Builds the RoleImplementationConfiguration from the create request.
     /// Override to customize configuration creation.
     /// </summary>
-    protected virtual RoleConfiguration BuildConfiguration(CreateRoleRequest request, Guid? parentRoleId)
+    protected virtual RoleImplementationConfiguration BuildConfiguration(CreateRoleRequest request)
     {
-        return new RoleConfiguration
+        return new RoleImplementationConfiguration
         {
             Name = request.Name,
             DisplayName = request.DisplayName,
             Description = request.Description,
             IsTenantScoped = request.IsTenantScoped,
-            ParentRoleId = parentRoleId
+            CreatedAt = DateTimeOffset.UtcNow,
         };
     }
 
     /// <summary>
-    /// Maps a RoleConfiguration to a summary DTO.
+    /// Maps a RoleImplementationConfiguration to a summary DTO.
     /// Override to customize the mapping.
     /// </summary>
-    protected virtual RoleSummaryResponse MapToSummary(RoleConfiguration role)
+    protected virtual RoleSummaryResponse MapToSummary(RoleImplementationConfiguration role)
     {
         return new RoleSummaryResponse
         {
@@ -114,8 +108,7 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
             DisplayName = role.DisplayName,
             Description = role.Description,
             IsTenantScoped = role.IsTenantScoped,
-            SortOrder = role.SortOrder,
-            CreatedAt = role.CreateDate
+            CreatedAt = role.CreatedAt
         };
     }
 

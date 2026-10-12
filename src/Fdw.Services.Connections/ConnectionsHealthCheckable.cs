@@ -8,7 +8,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Abstractions.Health;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Logging;
 
@@ -16,7 +18,7 @@ namespace Fdw.Services.Connections;
 
 /// <summary>
 /// Domain-level <see cref="IHealthCheckable"/> for the Connections domain. At check time, enumerates
-/// every <c>conn.Connection</c> row with <see cref="ConnectionConfiguration.HealthCheckEnabled"/> set,
+/// every <c>conn.Connection</c> row with <see cref="IConnectionImplementationConfiguration.HealthCheckEnabled"/> set,
 /// resolves each through <see cref="IConnectionProvider"/>, and probes it via
 /// <see cref="ISupportsHealthProbe"/> when the resolved connection implements that capability.
 /// </summary>
@@ -35,6 +37,20 @@ namespace Fdw.Services.Connections;
 /// from the <c>serviceProvider</c> parameter <see cref="CheckHealth"/> receives — the
 /// scope the health monitor domain hands to every checkable it invokes. This is the contract's
 /// intended use, not a service-locator workaround.
+/// </para>
+/// <para>
+/// Why the check runs under a system elevation (FDW-1098): which connections exist and whether they
+/// answer is a fact about the platform, not about whoever asked. The caller is usually an anonymous
+/// probe (<c>GET /health/system</c>), so without it every read and every probe opened its connection
+/// as the deny principal -- a warning (11067) per connection on every probe, and a check that silently
+/// skipped every tenant-owned connection. <see cref="ConnectionHealthMonitorWorker"/> does the same
+/// reads under the same elevation (FDW-767).
+/// </para>
+/// <para>
+/// Why the description gives counts and no names: the health monitor keeps it as history that
+/// <c>GET /health/services/{name}/history</c> serves anonymously. Under the elevation it covers every
+/// connection, tenant-owned ones included, so naming them (or quoting a probe's error) would show an
+/// anonymous caller what it could never read itself. Each failure is logged with its connection's name.
 /// </para>
 /// </remarks>
 public sealed class ConnectionsHealthCheckable : IHealthCheckable
@@ -62,13 +78,27 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken = default)
     {
+        // Scoped to this check alone: the accessor is an AsyncLocal, so the elevation covers the reads and
+        // probes awaited below and ends with this call, never reaching the caller's own request.
+        using var elevation = new SystemAuthenticationContextScope(
+            serviceProvider.GetRequiredService<IAuthenticationContextAccessor>());
+
+        return await Check(serviceProvider, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<IHealthCheckResult>> Check(
+        IServiceProvider serviceProvider,
+        CancellationToken cancellationToken)
+    {
         ConnectionsHealthLog.CheckStarting(_logger);
         var stopwatch = Stopwatch.StartNew();
 
-        var configProvider = serviceProvider.GetRequiredService<ConnectionConfigurationProvider>();
         var connectionProvider = serviceProvider.GetRequiredService<IConnectionProvider>();
 
-        var allResult = await configProvider.Get(cancellationToken).ConfigureAwait(false);
+        // The rows alone: which connections are checked is decided by fields of each row, and ProbeOne
+        // resolves each checked one by name, which reads it whole (FDW-970).
+        var allResult = await serviceProvider.GetRequiredService<IConnectionConfigurationProvider>()
+            .Get(ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!allResult.IsSuccess)
         {
             var reason = allResult.CurrentMessage ?? "Unknown error";
@@ -90,13 +120,13 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         }
 
         var worstStatus = HealthyState;
-        var detailLines = new List<string>();
+        var statuses = new List<IHealthState>();
 
         foreach (var connection in checkedConnections)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var (status, detail) = await ProbeOne(connection, connectionProvider, cancellationToken).ConfigureAwait(false);
-            detailLines.Add(FormatDetail(connection.Name, status, detail));
+            var status = await ProbeOne(connection, connectionProvider, cancellationToken).ConfigureAwait(false);
+            statuses.Add(status);
             worstStatus = WorseOf(worstStatus, status);
         }
 
@@ -110,43 +140,54 @@ public sealed class ConnectionsHealthCheckable : IHealthCheckable
         return GenericResult<IHealthCheckResult>.Success(new HealthCheckResult
         {
             Status = worstStatus,
-            Description = string.Join("; ", detailLines),
+            Description = Describe(statuses),
             Duration = stopwatch.Elapsed
         });
     }
 
-    private async Task<(IHealthState Status, string Detail)> ProbeOne(
-        ConnectionConfiguration connection,
+    private async Task<IHealthState> ProbeOne(
+        IConnectionImplementationConfiguration connection,
         IConnectionProvider connectionProvider,
         CancellationToken cancellationToken)
     {
-        var getResult = await connectionProvider.Get(connection.Name, cancellationToken).ConfigureAwait(false);
-        if (!getResult.IsSuccess || getResult.Value is null)
+        // Why one connection that throws cannot sink the rest: this checks every enabled connection in
+        // turn, and an exception used to fail the whole Connections check -- so one misconfigured
+        // connection hid the state of all the others. It is reported unhealthy, and what it threw is logged.
+        try
         {
-            var reason = getResult.CurrentMessage ?? "Connection could not be resolved";
-            ConnectionsHealthLog.ConnectionResolutionFailed(_logger, connection.Name, reason);
-            return (UnhealthyState, reason);
-        }
+            var getResult = await connectionProvider.Get(connection.Name, cancellationToken).ConfigureAwait(false);
+            if (!getResult.IsSuccess || getResult.Value is null)
+            {
+                ConnectionsHealthLog.ConnectionResolutionFailed(
+                    _logger, connection.Name, getResult.CurrentMessage ?? "Connection could not be resolved");
+                return UnhealthyState;
+            }
 
-        if (getResult.Value is not ISupportsHealthProbe probe)
+            if (getResult.Value is not ISupportsHealthProbe probe)
+            {
+                ConnectionsHealthLog.NoProbeCapability(_logger, connection.Name);
+                return DegradedState;
+            }
+
+            var probeResult = await probe.Probe(cancellationToken).ConfigureAwait(false);
+            if (!probeResult.IsSuccess)
+            {
+                ConnectionsHealthLog.ProbeFailed(_logger, connection.Name, probeResult.CurrentMessage ?? "Probe failed");
+                return UnhealthyState;
+            }
+
+            return HealthyState;
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            ConnectionsHealthLog.NoProbeCapability(_logger, connection.Name);
-            return (DegradedState, "connection type does not support health probing");
+            ConnectionsHealthLog.ProbeThrew(_logger, ex, connection.Name, ex.Message);
+            return UnhealthyState;
         }
-
-        var probeResult = await probe.Probe(cancellationToken).ConfigureAwait(false);
-        if (!probeResult.IsSuccess)
-        {
-            var reason = probeResult.CurrentMessage ?? "Probe failed";
-            ConnectionsHealthLog.ProbeFailed(_logger, connection.Name, reason);
-            return (UnhealthyState, reason);
-        }
-
-        return (HealthyState, "OK");
     }
 
-    private static string FormatDetail(string name, IHealthState status, string detail)
-        => $"connection:{name}: {status.Name} ({detail})";
+    private static string Describe(List<IHealthState> statuses)
+        => $"{statuses.Count} connection(s) checked: {statuses.Count(s => s.Id == HealthyState.Id)} healthy, "
+           + $"{statuses.Count(s => s.Id == DegradedState.Id)} degraded, {statuses.Count(s => s.Id == UnhealthyState.Id)} unhealthy";
 
     private static IHealthState WorseOf(IHealthState current, IHealthState candidate)
     {

@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Protocols.Tds\Fdw.Protocols.Tds.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Messages\Fdw.Messages.csproj" />
+    <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication\Fdw.Services.Authentication.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Web.RestEndpoints\Fdw.Web.RestEndpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Results.Abstractions\Fdw.Results.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Tds.Endpoints</RootNamespace>
+    <AssemblyName>Fdw.Tds.Endpoints</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <!-- Suppress XML documentation warnings for source-generated members -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

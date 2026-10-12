@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class EnumConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="EnumConfigurationPropertyTypeDto"/>.</summary>
-    public EnumConfigurationPropertyTypeDto() : base(6, "Enum") { }
+    public EnumConfigurationPropertyTypeDto() : base("Enum") { }
 }

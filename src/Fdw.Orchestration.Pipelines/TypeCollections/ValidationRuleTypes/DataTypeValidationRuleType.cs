@@ -23,7 +23,6 @@ public sealed class DataTypeValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public DataTypeValidationRuleType()
         : base(
-            id: 5,
             name: "DataType",
             requiresFields: true,
             supportsMultipleFields: true,

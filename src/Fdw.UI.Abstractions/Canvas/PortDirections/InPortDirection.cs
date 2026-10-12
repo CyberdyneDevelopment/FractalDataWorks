@@ -13,7 +13,7 @@ public sealed class InPortDirection : PortDirectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="InPortDirection"/> class.
     /// </summary>
-    public InPortDirection() : base(1, "In")
+    public InPortDirection() : base("In")
     {
     }
 }

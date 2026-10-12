@@ -11,14 +11,6 @@ public sealed class EqualOperatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsIdToOne()
-    {
-        _sut.Id.ShouldBe(1);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
     public void ConstructorSetsNameToEqual()
     {
         _sut.Name.ShouldBe("Equal");
@@ -46,14 +38,6 @@ public sealed class EqualOperatorTests
     public void RequiresValueIsTrue()
     {
         _sut.RequiresValue.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void FormatSqlParameterAddsAtPrefix()
-    {
-        _sut.FormatSqlParameter("Name").ShouldBe("@Name");
     }
 
     [Fact]

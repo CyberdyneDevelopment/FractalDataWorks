@@ -18,27 +18,10 @@ namespace Fdw.Services.Data.Abstractions;
 /// </summary>
 /// <typeparam name="TConfiguration">The configuration type for the data store.</typeparam>
 public abstract class DataStoreTypeBase<TConfiguration> :
-    TypeOptionBase<Guid, IDataStoreType>,
+    GuidTypeOptionBase<IDataStoreType>,
     IDataStoreType<TConfiguration>
     where TConfiguration : class, IGenericConfiguration
 {
-    /// <summary>
-    /// Generates a deterministic Guid from a name string.
-    /// </summary>
-#pragma warning disable CA5351, SCS0006, CA1850 // MD5 used for deterministic ID generation, not cryptographic security
-    private static Guid GenerateId(string name)
-    {
-        using var md5 = System.Security.Cryptography.MD5.Create();
-        var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes($"DataStoreType:{name}"));
-        return new Guid(hash);
-    }
-#pragma warning restore CA5351, SCS0006, CA1850
-
-    /// <summary>
-    /// Gets the configuration section name.
-    /// </summary>
-    public string SectionName { get; }
-
     /// <summary>
     /// Gets the configuration type.
     /// </summary>
@@ -49,31 +32,11 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     /// </summary>
     protected DataStoreTypeBase(
         string name,
-        string sectionName,
         string displayName,
         string description,
         string? category = null)
-        : base(GenerateId(name), name, sectionName, displayName, description, category ?? "DataStore")
+        : base(name, displayName, description, category ?? "DataStore")
     {
-        SectionName = sectionName;
-    }
-
-    /// <summary>
-    /// Configures IOptions binding for this data store type.
-    /// Binds List&lt;TConfiguration&gt; from the configuration section.
-    /// </summary>
-    public virtual void Configure(IServiceCollection services, IConfiguration configuration)
-    {
-        var section = configuration.GetSection(SectionName);
-        services.Configure<List<TConfiguration>>(section);
-    }
-
-    /// <summary>
-    /// Configures IOptions binding with logging support.
-    /// </summary>
-    public virtual void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory)
-    {
-        Configure(services, configuration);
     }
 
     /// <summary>

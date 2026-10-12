@@ -14,5 +14,5 @@ public sealed class OrphanedRolePermissionIssueType : ConfigurationIssueTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OrphanedRolePermissionIssueType"/> class.
     /// </summary>
-    public OrphanedRolePermissionIssueType() : base(4, "OrphanedRolePermission", isHealable: true) { }
+    public OrphanedRolePermissionIssueType() : base("OrphanedRolePermission", isHealable: true) { }
 }

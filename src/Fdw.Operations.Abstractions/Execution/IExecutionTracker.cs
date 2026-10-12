@@ -12,6 +12,12 @@ namespace Fdw.Operations.Abstractions.Execution;
 /// <summary>
 /// Service for tracking execution of workflows, jobs, and other hierarchical items.
 /// </summary>
+/// <remarks>
+/// Every item belongs to one tenant, and every read and control is scoped to the caller: a system
+/// context reaches every item, a caller acting in the global tenant reaches every item, a caller acting
+/// in a tenant reaches that tenant's items only, and a caller with no tenant reaches none. An item the
+/// caller may not reach answers exactly as an item that does not exist.
+/// </remarks>
 public interface IExecutionTracker
 {
     /// <summary>
@@ -19,6 +25,12 @@ public interface IExecutionTracker
     /// </summary>
     /// <param name="itemType">The type of execution item.</param>
     /// <param name="name">The name of the execution item.</param>
+    /// <param name="tenantId">
+    /// The tenant the execution belongs to. Required for a root item: an item without a tenant is refused,
+    /// never stored as everybody's. A child always belongs to its parent's tenant, so for a child this is
+    /// either null or that same tenant; a different tenant is refused. A caller acting in one tenant may
+    /// only create items for that tenant.
+    /// </param>
     /// <param name="parentId">The parent execution item ID, if any.</param>
     /// <param name="correlationId">The correlation ID for distributed tracing.</param>
     /// <param name="triggerSource">The source that triggered this execution.</param>
@@ -28,6 +40,7 @@ public interface IExecutionTracker
     Task<IGenericResult<IExecutionItem>> CreateItem(
         IExecutionItemType itemType,
         string name,
+        Guid? tenantId,
         Guid? parentId = null,
         string? correlationId = null,
         string? triggerSource = null,

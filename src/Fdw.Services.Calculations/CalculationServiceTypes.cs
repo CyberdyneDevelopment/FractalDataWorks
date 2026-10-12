@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Calculations;
 
@@ -18,6 +19,6 @@ public partial class CalculationServiceTypes : ServiceTypeCollectionBase<Calcula
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
 }

@@ -1,5 +1,5 @@
+using Fdw.Services.Users.Clients.Models;
 using System;
-using System.Collections.Generic;
 using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Services.Users.Endpoints;
@@ -25,11 +25,6 @@ public class UserResponse : ResourceDetail
     public bool IsActive { get; set; }
 
     /// <summary>
-    /// Gets or sets the user's roles.
-    /// </summary>
-    public IList<string> Roles { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets when the user was created.
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; }
@@ -48,4 +43,10 @@ public class UserResponse : ResourceDetail
     /// Gets or sets the principal that created the user record (audit trail).
     /// </summary>
     public string? CreatedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the API key minted with the account, when the request asked for one.
+    /// The raw key is present only in this response.
+    /// </summary>
+    public ApiKeyIssued? ApiKey { get; set; }
 }

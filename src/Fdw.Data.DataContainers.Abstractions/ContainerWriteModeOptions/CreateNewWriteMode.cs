@@ -14,5 +14,5 @@ public sealed class CreateNewWriteMode : ContainerWriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateNewWriteMode"/> class.
     /// </summary>
-    public CreateNewWriteMode() : base(2, "CreateNew", preservesExistingData: false, requiresExistingContainer: false, failsIfExists: true) { }
+    public CreateNewWriteMode() : base("CreateNew", preservesExistingData: false, requiresExistingContainer: false, failsIfExists: true) { }
 }

@@ -32,7 +32,6 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve type, build interface members, add to document
     public override async Task<IGenericResult<MutationResult>> Translate(
         ExtractInterfaceCommand command,
         Solution solution,
@@ -165,7 +164,6 @@ public sealed class ExtractInterfaceTranslator : RoslynCommandTranslatorBase<Ext
                 symbolChanges,
                 Array.Empty<PathChange>()));
     }
-#pragma warning restore MA0051
 
     private static MethodDeclarationSyntax? BuildInterfaceMethod(IMethodSymbol method)
     {

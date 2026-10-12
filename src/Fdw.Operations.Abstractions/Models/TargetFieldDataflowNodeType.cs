@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class TargetFieldDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="TargetFieldDataflowNodeType"/>.</summary>
-    public TargetFieldDataflowNodeType() : base(3, "TargetField") { }
+    public TargetFieldDataflowNodeType() : base("TargetField") { }
 }

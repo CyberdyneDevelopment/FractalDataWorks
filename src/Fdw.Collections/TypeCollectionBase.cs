@@ -1,4 +1,3 @@
-using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Fdw.Collections;
@@ -11,7 +10,7 @@ namespace Fdw.Collections;
 /// <typeparam name="TBase">The type option that collection items must derive from</typeparam>
 /// <remarks>
 /// <para>
-/// TypeCollections are themselves TypeOptions with int Ids (hash of collection name).
+/// TypeCollections are themselves TypeOptions with int Ids (FNV-1a of the collection's fully-qualified type name).
 /// This allows collections to be nested (parent-child via MemberOf).
 /// </para>
 /// <para>
@@ -20,27 +19,21 @@ namespace Fdw.Collections;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public abstract class TypeCollectionBase<TBase> : TypeOptionBase<int, TypeCollectionBase<TBase>>
+public abstract class TypeCollectionBase<TBase> : TypeOptionBase<TypeCollectionBase<TBase>>
     where TBase : class
 {
     /// <summary>
-    /// Initializes a new instance of TypeCollectionBase with auto-generated Id and Name.
+    /// Initializes a new instance of the collection.
     /// </summary>
-    protected TypeCollectionBase() : base(GenerateIdFromTypeName(), GenerateNameFromTypeName())
+    /// <remarks>
+    /// The Id is the FNV-1a hash of this collection's own fully-qualified type name, derived by
+    /// <see cref="TypeOptionBase{TBase}"/> the way every TypeOption's is. The name is that of the member
+    /// base it collects. Both used to come from the open generic's name, which is the same for every
+    /// collection, hashed with the per-process randomized string hash - so every collection that is
+    /// itself an option reported the same Id and Name (FDW-919).
+    /// </remarks>
+    protected TypeCollectionBase() : base(typeof(TBase).Name)
     {
-    }
-
-    private static int GenerateIdFromTypeName()
-    {
-        // Hash of type name for unique Id
-        return StringComparer.Ordinal.GetHashCode(typeof(TypeCollectionBase<TBase>).Name);
-    }
-
-    private static string GenerateNameFromTypeName()
-    {
-        // Extract name from generic type
-        var typeName = typeof(TypeCollectionBase<TBase>).Name;
-        return typeName;
     }
 }
 
@@ -53,7 +46,7 @@ public abstract class TypeCollectionBase<TBase> : TypeOptionBase<int, TypeCollec
 /// <typeparam name="TGeneric">The return type for all collection methods (must be base of TBase)</typeparam>
 /// <remarks>
 /// <para>
-/// TypeCollections are themselves TypeOptions with int Ids (hash of collection name).
+/// TypeCollections are themselves TypeOptions with int Ids (FNV-1a of the collection's fully-qualified type name).
 /// This allows collections to be nested (parent-child via MemberOf).
 /// </para>
 /// <para>
@@ -61,27 +54,21 @@ public abstract class TypeCollectionBase<TBase> : TypeOptionBase<int, TypeCollec
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public abstract class TypeCollectionBase<TBase, TGeneric> : TypeOptionBase<int, TypeCollectionBase<TBase, TGeneric>>
+public abstract class TypeCollectionBase<TBase, TGeneric> : TypeOptionBase<TypeCollectionBase<TBase, TGeneric>>
     where TBase : class, TGeneric
     where TGeneric : class
 {
     /// <summary>
-    /// Initializes a new instance of TypeCollectionBase with auto-generated Id and Name.
+    /// Initializes a new instance of the collection.
     /// </summary>
-    protected TypeCollectionBase() : base(GenerateIdFromTypeName(), GenerateNameFromTypeName())
+    /// <remarks>
+    /// The Id is the FNV-1a hash of this collection's own fully-qualified type name, derived by
+    /// <see cref="TypeOptionBase{TBase}"/> the way every TypeOption's is. The name is that of the member
+    /// base it collects. Both used to come from the open generic's name, which is the same for every
+    /// collection, hashed with the per-process randomized string hash - so every collection that is
+    /// itself an option reported the same Id and Name (FDW-919).
+    /// </remarks>
+    protected TypeCollectionBase() : base(typeof(TBase).Name)
     {
-    }
-
-    private static int GenerateIdFromTypeName()
-    {
-        // Hash of type name for unique Id
-        return StringComparer.Ordinal.GetHashCode(typeof(TypeCollectionBase<TBase, TGeneric>).Name);
-    }
-
-    private static string GenerateNameFromTypeName()
-    {
-        // Extract name from generic type
-        var typeName = typeof(TypeCollectionBase<TBase, TGeneric>).Name;
-        return typeName;
     }
 }

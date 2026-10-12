@@ -16,7 +16,6 @@ public sealed class ApiKeyAuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="ApiKeyAuthenticationMethod"/> class.
     /// </summary>
     public ApiKeyAuthenticationMethod() : base(
-        id: 4,
         name: "ApiKey",
         requiresUserInteraction: false,
         supportsTokenRefresh: false,

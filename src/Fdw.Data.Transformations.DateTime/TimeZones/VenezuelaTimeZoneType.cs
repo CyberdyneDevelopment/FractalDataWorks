@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Venezuela")]
 public sealed class VenezuelaTimeZoneType : TimeZoneTypeBase
 {
-    public VenezuelaTimeZoneType() : base(20, "Venezuela", "Venezuela Standard Time") { }
+    public VenezuelaTimeZoneType() : base("Venezuela", "Venezuela Standard Time") { }
 }

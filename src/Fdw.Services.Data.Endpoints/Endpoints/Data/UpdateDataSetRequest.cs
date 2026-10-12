@@ -15,6 +15,12 @@ public class UpdateDataSetRequest
     /// <summary>Gets or sets the data set description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data set's data classification level (see
+    /// <c>GET /data-classifications</c>). An id that is not a level is refused. Left out, the current classification stays.
+    /// </summary>
+    public int? ClassificationId { get; set; }
+
     /// <summary>Gets or sets the data set category.</summary>
     public string? Category { get; set; }
 
@@ -31,15 +37,15 @@ public class UpdateDataSetRequest
     public IList<DataSetFilterConditionPayload>? Filters { get; set; }
 
     /// <summary>
-    /// Gets or sets the dataset discriminator. Bound from the wizard's <c>serviceOptionType</c> field.
+    /// Gets or sets the dataset discriminator. Bound from the wizard's <c>implementation</c> field.
     /// </summary>
-    [JsonPropertyName("serviceOptionType")]
-    public string? ServiceOptionType { get; set; }
+    [JsonPropertyName("implementation")]
+    public string? Implementation { get; set; }
 
     /// <summary>
     /// Gets or sets the federation strategy used to combine sources for a Federated dataset (e.g.
     /// "Sequential", "Parallel", "Optimized" — a registered <c>FederationStrategies</c> member).
-    /// Required when <see cref="ServiceOptionType"/> is "Federated"; must be null otherwise.
+    /// Required when <see cref="Implementation"/> is "Federated"; must be null otherwise.
     /// </summary>
     public string? FederationStrategy { get; set; }
 

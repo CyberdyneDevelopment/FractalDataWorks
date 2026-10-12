@@ -16,7 +16,7 @@ public sealed class CrossJoinExecutor : JoinExecutorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CrossJoinExecutor"/> class.
     /// </summary>
-    public CrossJoinExecutor() : base(5, "Cross") { }
+    public CrossJoinExecutor() : base("Cross") { }
 
     /// <inheritdoc />
     public override IEnumerable<TResult> Execute<TLeft, TRight, TResult>(

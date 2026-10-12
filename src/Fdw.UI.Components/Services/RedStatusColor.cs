@@ -9,5 +9,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class RedStatusColor : StatusColorBase
 {
     /// <summary>Initializes a new instance of <see cref="RedStatusColor"/>.</summary>
-    public RedStatusColor() : base(2, "Red", "dot-red", "var(--signal)", "var(--signal)") { }
+    public RedStatusColor() : base("Red", "dot-red", "var(--signal)", "var(--signal)") { }
 }

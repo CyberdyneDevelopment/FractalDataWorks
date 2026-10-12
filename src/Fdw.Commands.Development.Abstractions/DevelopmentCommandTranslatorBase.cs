@@ -9,7 +9,7 @@ namespace Fdw.Commands.Development.Abstractions;
 /// <summary>
 /// Base class for development command translators.
 /// </summary>
-public abstract class DevelopmentCommandTranslatorBase : TypeOptionBase<int, DevelopmentCommandTranslatorBase>, IDevelopmentCommandTranslator
+public abstract class DevelopmentCommandTranslatorBase : TypeOptionBase<DevelopmentCommandTranslatorBase>, IDevelopmentCommandTranslator
 {
     /// <summary>
     /// Gets the type of command this translator handles.
@@ -22,31 +22,8 @@ public abstract class DevelopmentCommandTranslatorBase : TypeOptionBase<int, Dev
     /// <param name="name">The name of the translator.</param>
     /// <param name="description">The description of the translator.</param>
     protected DevelopmentCommandTranslatorBase(string name, string description)
-        : base(GenerateIdFromName(name), name, name, name, description, "DevelopmentCommandTranslator")
+        : base(name, name, name, description, "DevelopmentCommandTranslator")
     {
-    }
-
-    /// <summary>
-    /// Generates a deterministic ID from a translator name using FNV-1a hash.
-    /// </summary>
-    private static int GenerateIdFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentNullException(nameof(name));
-
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-            return hash & 0x7FFFFFFF;
-        }
     }
 }
 

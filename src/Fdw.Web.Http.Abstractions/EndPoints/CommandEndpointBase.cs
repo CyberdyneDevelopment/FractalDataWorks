@@ -14,7 +14,6 @@ public sealed class CommandEndpointBase : EndpointTypeBase
     /// Initializes a new instance of the <see cref="CommandEndpointBase"/> class.
     /// </summary>
     public CommandEndpointBase() : base(
-        id: 3,
         name: "CommandEndpointBase",
         description: "State-changing business operations and actions",
         defaultHttpMethods: ["POST", "PUT", "PATCH"],

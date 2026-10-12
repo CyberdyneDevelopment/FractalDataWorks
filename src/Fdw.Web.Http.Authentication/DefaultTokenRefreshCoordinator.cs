@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// In Blazor WASM (single-threaded), async interleaving still causes race conditions:
+/// Even on a single thread, async interleaving causes race conditions:
 /// multiple <c>await</c> chains can each see <c>IsTokenExpiring=true</c> and trigger
 /// concurrent refresh calls. The semaphore serializes them, and the timestamp guard
 /// handles the case where the second caller acquires the gate after the first already refreshed.

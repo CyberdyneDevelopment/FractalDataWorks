@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Agents.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Agent Action API client.
+/// Implementation for the Agent Action API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "AgentActionClient")]
+[Implementation(typeof(ApiClientTypes), "AgentActionClient")]
 public sealed class AgentActionClientType : ApiClientTypeBase<AgentActionClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class AgentActionClientType : ApiClientTypeBase<AgentActionClient>
         {
             builder.Services.AddScoped<AgentActionClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<AgentActionClient>>() ?? NullLogger<AgentActionClient>.Instance;
-                return new AgentActionClient(factory.CreateClient(Name), logger);
+                return new AgentActionClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

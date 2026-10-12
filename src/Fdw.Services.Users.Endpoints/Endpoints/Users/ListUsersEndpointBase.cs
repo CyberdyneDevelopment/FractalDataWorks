@@ -6,72 +6,56 @@ using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
 using Fdw.Services.Users.Models;
 using Fdw.Web.RestEndpoints.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.Pagination;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using System;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Web.RestEndpoints.Crud;
 
 namespace Fdw.Services.Users.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing all users.
+/// Base endpoint for listing users, one page at a time in name order (FDW-951).
 /// </summary>
-public abstract class ListUsersEndpointBase : EndpointWithoutRequest<PaginatedResponse<UserResponse>>
+/// <remarks>
+/// A page is one read of the users domain table: the fields a list shows live on the domain row, so no
+/// user's account is read to answer it. A user store that cannot be read fails the request with its
+/// own status rather than answering an empty page: "the store could not be read" and "there are no
+/// users" are opposite facts, and an empty 200 would say the second when only the first is true.
+/// </remarks>
+public abstract class ListUsersEndpointBase : CrudPageEndpointBase<UserDomainConfiguration, UserResponse>
 {
-    /// <summary>Initializes a new instance of the <see cref="ListUsersEndpointBase"/> class.</summary>
-        private readonly UserConfigurationProvider _userProvider;
-
-    /// <summary>
-    /// Gets the logger instance.
-    /// </summary>
-    protected ILogger EndpointLogger { get; }
+    private readonly UserConfigurationProvider _userProvider;
 
     /// <summary>Initializes a new instance of the <see cref="ListUsersEndpointBase"/> class.</summary>
-    protected ListUsersEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    /// <param name="logger">The logger.</param>
+    /// <param name="userProvider">Reads the page of users.</param>
+    protected ListUsersEndpointBase(ILogger logger, UserConfigurationProvider userProvider) : base(logger)
     {
-        EndpointLogger = logger;
-        _userProvider = userProvider;
+        _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
     }
 
-
-    /// <summary>
-    /// Gets the user provider.
-    /// </summary>
+    /// <summary>Gets the user provider.</summary>
     protected UserConfigurationProvider UserProvider => _userProvider;
 
-    /// <summary>
-    /// Gets the RBAC policy required by this endpoint. Defaults to "users:read".
-    /// </summary>
-    protected virtual string ReadPolicy => "users:read";
+    /// <summary>Gets the resource name used for the route and the default policy: <c>/users</c>, <c>users:read</c>.</summary>
+    protected override string ResourceName => "users";
 
     /// <inheritdoc />
-    public override void Configure()
-    {
-        Get("/users");
-        Policies(ReadPolicy);
-        ConfigureEndpoint();
-    }
-
-    /// <summary>
-    /// Override to configure endpoint-specific settings (auth, summary, etc.).
-    /// </summary>
-    protected abstract void ConfigureEndpoint();
+    protected override Task<IGenericResult<ConfigurationPage<UserDomainConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
+        => _userProvider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct);
 
     /// <inheritdoc />
-    public override async Task HandleAsync(CancellationToken ct)
-    {
-        
-        var result = await _userProvider.GetAllUsers(ct).ConfigureAwait(false);
+    protected override Task<IGenericResult<UserResponse>> ToSummary(UserDomainConfiguration item, CancellationToken ct)
+        => Task.FromResult(GenericResult<UserResponse>.Success(MapToResponse(item)));
 
-        if (!result.IsSuccess || result.Value is null)
-        {
-            await Send.OkAsync(PaginatedResponse<UserResponse>.Create([], 0, 0, 0), ct).ConfigureAwait(false);
-            return;
-        }
-
-        var users = result.Value.Select(MapToResponse).ToList();
-        await Send.OkAsync(PaginatedResponse<UserResponse>.Create(users, 0, users.Count, users.Count), ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Maps a user entity to a response DTO. Override for custom mapping.
-    /// </summary>
-    protected abstract UserResponse MapToResponse(IUser user);
+    /// <summary>Maps a user, as the users domain table holds it, to its response.</summary>
+    /// <param name="user">The user's domain record.</param>
+    /// <returns>The response.</returns>
+    protected abstract UserResponse MapToResponse(UserDomainConfiguration user);
 }

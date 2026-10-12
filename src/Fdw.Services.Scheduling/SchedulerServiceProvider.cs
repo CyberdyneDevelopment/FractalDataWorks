@@ -11,7 +11,7 @@ namespace Fdw.Services.Scheduling;
 /// </summary>
 /// <remarks>
 /// Inherits the whole resolution path from
-/// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
+/// <see cref="DomainServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
 /// and overrides nothing — schedulers resolve exactly the way the platform does. A domain that needs
 /// different behaviour overrides the virtual member here rather than reaching into the base.
 /// <para>
@@ -21,7 +21,7 @@ namespace Fdw.Services.Scheduling;
 /// </para>
 /// </remarks>
 public sealed class SchedulerServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         IFrameworkSchedulingService,
         ISchedulerImplementationConfiguration,
         ISchedulingFactory<IFrameworkSchedulingService, ISchedulerImplementationConfiguration>,
@@ -31,10 +31,9 @@ public sealed class SchedulerServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="SchedulerServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves its factories from.</param>
     /// <param name="logger">The logger for this provider.</param>
-    public SchedulerServiceProvider(IServiceProvider services, ILogger<SchedulerServiceProvider> logger)
-        : base(services, logger ?? NullLogger<SchedulerServiceProvider>.Instance)
+    public SchedulerServiceProvider(ILogger<SchedulerServiceProvider> logger)
+        : base(logger ?? NullLogger<SchedulerServiceProvider>.Instance)
     {
     }
 }

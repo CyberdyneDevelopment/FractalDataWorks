@@ -45,9 +45,8 @@ public sealed class TestConfiguration : IImplementationConfiguration
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "test-config";
-    public string SectionName => "TestSection";
-    public string ServiceType => "Test";
-    public string? ServiceOptionType { get; set; } = "Default";
+    public string Domain { get; set; } = string.Empty;
+    public string Implementation { get; set; } = "Default";
     public string? Description { get; init; }
 }
 

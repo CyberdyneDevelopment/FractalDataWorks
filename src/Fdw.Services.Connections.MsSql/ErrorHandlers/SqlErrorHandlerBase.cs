@@ -11,7 +11,7 @@ namespace Fdw.Services.Connections.MsSql.ErrorHandlers;
 /// Base class for SQL error handlers using the CRTP pattern.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class SqlErrorHandlerBase : TypeOptionBase<int, SqlErrorHandlerBase>, ISqlErrorHandler
+public abstract class SqlErrorHandlerBase : TypeOptionBase<SqlErrorHandlerBase>, ISqlErrorHandler
 {
     /// <summary>
     /// Initializes a new instance for the generated NotFound sentinel.
@@ -23,9 +23,8 @@ public abstract class SqlErrorHandlerBase : TypeOptionBase<int, SqlErrorHandlerB
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlErrorHandlerBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this handler.</param>
     /// <param name="name">The name of this handler.</param>
-    protected SqlErrorHandlerBase(int id, string name) : base(id, name)
+    protected SqlErrorHandlerBase(string name) : base(name)
     {
     }
 
@@ -37,4 +36,9 @@ public abstract class SqlErrorHandlerBase : TypeOptionBase<int, SqlErrorHandlerB
 
     /// <inheritdoc />
     public abstract IGenericMessage CreateFailureMessage(ILogger logger, Exception ex, string commandText);
+
+    /// <inheritdoc />
+    /// <remarks>A handler that maps its error says all there is to say in its one message.</remarks>
+    public virtual IReadOnlyList<IGenericMessage> CreateFailureMessages(ILogger logger, Exception ex, string commandText)
+        => [CreateFailureMessage(logger, ex, commandText)];
 }

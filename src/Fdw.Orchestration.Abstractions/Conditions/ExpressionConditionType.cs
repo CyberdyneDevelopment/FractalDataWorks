@@ -14,5 +14,5 @@ public sealed class ExpressionConditionType : WorkflowConditionTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ExpressionConditionType"/> class.
     /// </summary>
-    public ExpressionConditionType() : base(3, "Expression", alwaysTrue: false, requiresExpression: true) { }
+    public ExpressionConditionType() : base("Expression", alwaysTrue: false, requiresExpression: true) { }
 }

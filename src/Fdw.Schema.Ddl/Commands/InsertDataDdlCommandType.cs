@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Commands;
 public sealed class InsertDataDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="InsertDataDdlCommandType"/>.</summary>
-    public InsertDataDdlCommandType() : base(10, "InsertData") { }
+    public InsertDataDdlCommandType() : base("InsertData") { }
 }

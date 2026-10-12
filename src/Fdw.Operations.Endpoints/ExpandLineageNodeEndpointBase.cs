@@ -100,9 +100,9 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
         var chainsTask = QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", "transform", ChainDefinitionTags, ct);
         var stepsTask = QueryAll<ChainStepLineageRecord>("ChainStep", "transform", ChainStepTags, ct);
         var stepFieldsTask = QueryAll<ChainStepSourceFieldRecord>("ChainStepSourceField", "transform", ChainStepSourceFieldTags, ct);
-        var fieldMappingsTask = QueryAll<DataSetFieldMappingRecord>("DataSetFieldMapping", "data", DataSetFieldMappingTags, ct);
+        var fieldDataSetsTask = _lineageProvider.FieldDataSets(ct);
 
-        await Task.WhenAll(dataSetsTask, pipelinesTask, sourcesTask, chainsTask, stepsTask, stepFieldsTask, fieldMappingsTask).ConfigureAwait(false);
+        await Task.WhenAll(dataSetsTask, pipelinesTask, sourcesTask, chainsTask, stepsTask, stepFieldsTask, fieldDataSetsTask).ConfigureAwait(false);
 
         return GetLineageGraphEndpointBase.BuildGraphFromRecords(
             await dataSetsTask.ConfigureAwait(false),
@@ -111,18 +111,15 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
             await chainsTask.ConfigureAwait(false),
             await stepsTask.ConfigureAwait(false),
             await stepFieldsTask.ConfigureAwait(false),
-            await fieldMappingsTask.ConfigureAwait(false),
+            await fieldDataSetsTask.ConfigureAwait(false),
             _logger);
     }
-
-    private static readonly TimeSpan LineageCacheDuration = TimeSpan.FromMinutes(5);
 
     private static readonly string[] DataSetTags = ["data.DataSet"];
     private static readonly string[] DataSetSourceTags = ["data.DataSetSource"];
     private static readonly string[] ChainDefinitionTags = ["transform.ChainDefinition"];
     private static readonly string[] ChainStepTags = ["transform.ChainStep"];
     private static readonly string[] ChainStepSourceFieldTags = ["transform.ChainStepSourceField"];
-    private static readonly string[] DataSetFieldMappingTags = ["data.DataSetFieldMapping"];
 
     private async Task<IReadOnlyList<T>> QueryAll<T>(string containerName, string pathName, string[] invalidationTags, CancellationToken ct) where T : class
     {
@@ -131,7 +128,7 @@ public abstract class ExpandLineageNodeEndpointBase : Endpoint<ExpandLineageNode
             Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
                 [CachePolicy.CacheEnabledKey] = true,
-                [CachePolicy.CacheDurationKey] = LineageCacheDuration,
+                [CachePolicy.CacheDurationKey] = CachePolicy.DefaultDuration,
                 [CachePolicy.CacheInvalidationTagsKey] = invalidationTags
             }
         };

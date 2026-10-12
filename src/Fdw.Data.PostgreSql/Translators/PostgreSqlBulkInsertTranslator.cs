@@ -17,33 +17,26 @@ using Npgsql;
 namespace Fdw.Data.PostgreSql;
 
 /// <summary>
-/// Translates BulkInsertCommand to PostgreSQL COPY FROM STDIN operation for maximum performance.
+/// Translates BulkInsertCommand to batched multi-row INSERT statements, and plans the COPY the connection runs when the command
+/// is rerouted to bulk (FDW-1152).
 /// </summary>
 /// <remarks>
-/// <para>
-/// Uses PostgreSQL COPY FROM STDIN BINARY for high-performance bulk insert operations.
-/// This is the PostgreSQL equivalent of SQL Server's SqlBulkCopy.
-/// </para>
+/// A bulk insert runs one of two ways, chosen by the connection before it translates: up to the connection's configured
+/// <c>MaxSerialInsert</c> rows it runs serially, translated to the same batched INSERT statements a batch insert gets; above that
+/// the command answers <see cref="IDatabaseConnectionCommand.ReroutesToBulk"/> and the connection takes the bulk route with
+/// <see cref="Plan"/>, which builds the COPY statement, the column order and the rows. No SQL is faked: the translator never
+/// returns a command that is not SQL.
 /// </remarks>
 [TypeOption(typeof(PostgreSqlDataCommandTranslators), "BulkInsert", RestrictToCurrentCompilation = true)]
 public sealed class PostgreSqlBulkInsertTranslator : PostgreSqlDataCommandTranslatorBase
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PostgreSqlBulkInsertTranslator"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="PostgreSqlBulkInsertTranslator"/> class.</summary>
     public PostgreSqlBulkInsertTranslator()
         : base("BulkInsert")
     {
     }
 
-    /// <summary>
-    /// Translates a BulkInsertCommand to a PostgreSQL COPY FROM STDIN operation.
-    /// </summary>
-    /// <remarks>
-    /// NOTE: This translator returns a "wrapper" NpgsqlCommand that encapsulates
-    /// COPY metadata. The actual COPY operation is executed by PostgreSqlConnection
-    /// when it detects this special command type via the StoredProcedure marker.
-    /// </remarks>
+    /// <summary>Translates a BulkInsertCommand to batched INSERT statements, the serial route.</summary>
     public override Task<IGenericResult<NpgsqlCommand>> Translate(
         IDataCommand command,
         IStorageContainer container,
@@ -51,94 +44,79 @@ public sealed class PostgreSqlBulkInsertTranslator : PostgreSqlDataCommandTransl
     {
         try
         {
-            if (container == null)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("ContainerNull")));
-            }
+            var source = Source(command, container);
+            if (source.IsFailure)
+                return Task.FromResult(source.ToNewResult<NpgsqlCommand>());
 
-            if (container.Path is not IDatabasePath dbPath)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
-            }
-
-            var dataObj = GetCommandData(command);
-            if (dataObj == null)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(
-                        PostgreSqlDataResultCodes.ByName("MissingInputData"),
-                        ResultDetails.Create("CommandType", "BulkInsertCommand")));
-            }
-
-            if (dataObj is not IEnumerable collection)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(
-                        PostgreSqlDataResultCodes.ByName("InvalidDataType"),
-                        ResultDetails.Create("TranslatorName", "PostgreSqlBulkInsertTranslator", "ActualType", dataObj.GetType().Name)));
-            }
-
-            var npgsqlCommand = BuildCopyCommand(container, dbPath, collection);
-
-            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
+            var (dbPath, collection) = source.Value!;
+            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(
+                PostgreSqlBatchInsertTranslator.BuildBatchedInsertStatements(container, dbPath, collection)));
         }
         catch (Exception ex)
         {
-            return Task.FromResult(
-                GenericResult<NpgsqlCommand>.Failure(
-                    PostgreSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
-                    ResultDetails.Create("ErrorMessage", ex.Message)));
+            return Task.FromResult(GenericResult<NpgsqlCommand>.Failure(
+                PostgreSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
+                ResultDetails.Create("ErrorMessage", ex.Message)));
         }
     }
 
-    /// <summary>
-    /// Builds a special NpgsqlCommand that wraps COPY FROM STDIN metadata.
-    /// PostgreSqlConnection will detect this and use NpgsqlBinaryImporter instead of ExecuteNonQuery.
-    /// </summary>
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]
-    private static NpgsqlCommand BuildCopyCommand(
-        IStorageContainer container,
-        IDatabasePath dbPath,
-        IEnumerable collection)
+    /// <summary>Plans the COPY of a BulkInsertCommand: the statement, the column order and the rows.</summary>
+    /// <param name="command">The bulk insert command, carrying its rows as input data.</param>
+    /// <param name="container">The container the rows are copied into.</param>
+    /// <returns>The plan, or the coded failure that stopped it.</returns>
+    public static IGenericResult<PostgreSqlBulkCopyPlan> Plan(IDataCommand command, IStorageContainer container)
     {
-        var dialect = dbPath.Dialect;
-
-        // Get insertable fields
-        var fields = container.Schema.Fields
-            .Where(f => !f.IsIdentity && !f.IsComputed)
-            .ToList();
-
-        if (fields.Count == 0)
+        try
         {
-            throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
+            var source = Source(command, container);
+            if (source.IsFailure)
+                return source.ToNewResult<PostgreSqlBulkCopyPlan>();
+
+            var (dbPath, collection) = source.Value!;
+            var dialect = dbPath.Dialect;
+            var fields = PostgreSqlBatchInsertTranslator.InsertableFields(container);
+            if (fields.Count == 0)
+                throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
+
+            // COPY "schema"."table" ("col1", "col2") FROM STDIN BINARY
+            var columnList = string.Join(", ", fields.Select(f => dialect.QuoteIdentifier(f.Name)));
+            var copySql = $"COPY {BuildQualifiedTableName(dbPath)} ({columnList}) FROM STDIN BINARY";
+            return GenericResult<PostgreSqlBulkCopyPlan>.Success(
+                new PostgreSqlBulkCopyPlan(copySql, [.. fields.Select(f => f.Name)], [.. collection.Cast<object>()]));
         }
-
-        // Build COPY SQL: COPY "schema"."table" ("col1", "col2") FROM STDIN BINARY
-        var columnList = string.Join(", ", fields.Select(f => dialect.QuoteIdentifier(f.Name)));
-        var qualifiedTableName = BuildQualifiedTableName(dbPath);
-        var copySql = $"COPY {qualifiedTableName} ({columnList}) FROM STDIN BINARY";
-
-        // Store as marker command for PostgreSqlConnection to detect
-        var command = CreateCommand($"-- BULK INSERT MARKER: {qualifiedTableName}");
-        command.CommandType = System.Data.CommandType.StoredProcedure; // Marker for bulk operation
-
-        // Store metadata in Parameters for PostgreSqlConnection to use
-        command.Parameters.Add(new NpgsqlParameter("__BulkCopy_CopySql", copySql));
-        command.Parameters.Add(new NpgsqlParameter("__BulkCopy_Destination", BuildSchemaQualifiedTableName(dbPath)));
-        command.Parameters.Add(new NpgsqlParameter("__BulkCopy_ColumnMappings",
-            string.Join(",", fields.Select(f => f.Name))));
-
-        // Serialize entity data into parameter for PostgreSqlConnection
-        var entities = new List<object>();
-        foreach (var entity in collection)
+        catch (Exception ex)
         {
-            entities.Add(entity);
+            return GenericResult<PostgreSqlBulkCopyPlan>.Failure(
+                PostgreSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
+                ResultDetails.Create("ErrorMessage", ex.Message));
         }
-
-        command.Parameters.Add(new NpgsqlParameter("__BulkCopy_Entities", entities));
-
-        return command;
     }
+
+    // What both routes need first: the database path of the container and the rows the command carries, each refused with its
+    // own coded failure when it is missing or not what a bulk insert takes.
+    private static IGenericResult<BulkSource> Source(IDataCommand command, IStorageContainer? container)
+    {
+        if (container == null)
+            return GenericResult<BulkSource>.Failure(PostgreSqlDataResultCodes.ByName("ContainerNull"));
+
+        if (container.Path is not IDatabasePath dbPath)
+            return GenericResult<BulkSource>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath"));
+
+        var dataObj = GetCommandData(command);
+        if (dataObj == null)
+        {
+            return GenericResult<BulkSource>.Failure(
+                PostgreSqlDataResultCodes.ByName("MissingInputData"),
+                ResultDetails.Create("CommandType", "BulkInsertCommand"));
+        }
+
+        return dataObj is IEnumerable collection
+            ? GenericResult<BulkSource>.Success(new BulkSource(dbPath, collection))
+            : GenericResult<BulkSource>.Failure(
+                PostgreSqlDataResultCodes.ByName("InvalidDataType"),
+                ResultDetails.Create("TranslatorName", "PostgreSqlBulkInsertTranslator", "ActualType", dataObj.GetType().Name));
+    }
+
+    // The container's database path and the rows the command carries.
+    private sealed record BulkSource(IDatabasePath Path, IEnumerable Collection);
 }

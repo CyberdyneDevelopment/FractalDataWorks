@@ -1,11 +1,13 @@
-﻿using System;
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Endpoints.Logging;
-using Fdw.Services.Data;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Connections.Clients.Models;
@@ -14,31 +16,36 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for creating a new connection configuration.
-/// Composes the whole aggregate — the <see cref="ConnectionConfiguration"/> header plus its typed body —
-/// and saves it through the connection provider in ONE call.
+/// Generic base endpoint for creating a new connection configuration, for any connection type.
+/// Builds the implementation configuration and saves it through the connection provider in ONE call.
 /// </summary>
-/// <typeparam name="TConfig">The concrete typed body configuration type this endpoint builds.</typeparam>
 /// <remarks>
-/// Why one save: the header provider owns the dispatch. It reads <c>ServiceOptionType</c>, resolves the
-/// registered typed provider for it, and hands that provider the body to write along with the body's own
-/// subtree. The endpoint therefore never holds a typed provider — the connection type stays invisible to
-/// the machinery, which is the point of the composed-header pattern. The previous two-save shape let the
-/// header and the body disagree: a request with ServiceType "Http" wrote an MsSql body under an Http header,
-/// because only the endpoint's own generic argument decided what got written.
+/// There is no second record to compose. The domain row is four columns the provider writes itself from
+/// Save's domain/implementation/name arguments, so the implementation configuration this endpoint builds is
+/// the whole of what an endpoint has to supply. The provider reads <c>Implementation</c>, resolves the
+/// provider registered for it, and that provider writes the row and everything under it — so the endpoint
+/// never holds an implementation provider, and the connection type stays invisible to the machinery.
+///
+/// Which connection type is being created comes from <see cref="CreateConnectionRequest.ServiceType"/>,
+/// resolved via <c>ConnectionTypes.ByName(...)</c> — the same registry every other connection
+/// capability comes from — whose <see cref="IConnectionType.EndpointBehavior"/> binds the body into the
+/// type's own configuration. Never a cast and never a switch on the type name, so a type with no endpoint
+/// code of its own can still be created. One concrete subclass per host is enough; it exists only to give FastEndpoints a
+/// route via <c>ConfigureEndpoint</c>, since nothing else here varies by connection type any more.
 /// </remarks>
-public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
-    where TConfig : class, IConnectionImplementationConfiguration
+public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<CreateConnectionRequest, ConnectionDetailDto>
 {
     private readonly ConnectionConfigurationProvider _connectionProvider;
-    private readonly ISchemaInformationService? _schemaInformationService;
 
     /// <inheritdoc />
-    protected CreateConnectionEndpointBase(ILogger<CreateConnectionEndpointBase<TConfig>> logger, ConnectionConfigurationProvider connectionProvider,
-        ISchemaInformationService? schemaInformationService = null) : base(logger)
+    /// <remarks>
+    /// Creating a connection discovers nothing. It used to run the connection's schema discovery straight
+    /// away when a schema service was supplied (no reference host supplied one) and dropped any failure;
+    /// discovery is now something a person asks for, when they create or refresh a data store.
+    /// </remarks>
+    protected CreateConnectionEndpointBase(ILogger<CreateConnectionEndpointBase> logger, ConnectionConfigurationProvider connectionProvider) : base(logger)
     {
         _connectionProvider = connectionProvider;
-        _schemaInformationService = schemaInformationService;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -54,12 +61,48 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
         return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value != null);
     }
 
-    /// <summary>Creates both the parent connection and typed body, then persists each to its own provider.</summary>
+    /// <summary>Builds the connection's implementation configuration and saves it through the provider.</summary>
     protected override async Task<IGenericResult<ConnectionDetailDto>> Create(CreateConnectionRequest request, CancellationToken ct)
     {
-        var connectionId = Guid.CreateVersion7();
+        // Whoever creates the connection states its discovery option, and it must be one the connection
+        // type offers; nothing defaults it. Checked here rather than in a validator so every host that
+        // uses this endpoint enforces it.
+        var connectionType = ConnectionTypes.ByName(request.ServiceType);
+        if (ReferenceEquals(connectionType, ConnectionTypes.NotFound))
+        {
+            return GenericResult<ConnectionDetailDto>.Failure(ConnectionEndpointLog.ConnectionTypeNotFound(Logger, request.ServiceType));
+        }
 
-        var connection = CreateConnectionRecord(request, connectionId);
+        var offered = connectionType.SupportedDiscoveryTypes;
+        if (!offered.Any(option => string.Equals(option.Name, request.SchemaDiscovery, StringComparison.Ordinal)))
+        {
+            return SchemaDiscoveryRefusal.NotOffered<ConnectionDetailDto>(
+                Logger, request.Name, request.SchemaDiscovery, request.ServiceType, offered.Select(option => option.Name));
+        }
+
+        var bound = connectionType.EndpointBehavior.Bind(ConnectionRequestBody.ForCreate(request), Logger);
+        if (bound.IsFailure)
+        {
+            return bound.ToNewResult<ConnectionDetailDto>();
+        }
+
+        var connection = bound.Value!;
+        connection.SchemaDiscovery = request.SchemaDiscovery;
+
+        // A connection that acts as the host reaches what the host reaches; only a platform administrator may make one.
+        var admitted = HostIdentityGate.Admit(
+            connectionType, connection, Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User), Logger);
+        if (admitted.IsFailure)
+        {
+            return admitted.ToNewResult<ConnectionDetailDto>();
+        }
+
+        // Health checking is common to every connection type, so it is set here rather than in each
+        // type's CreateConfiguration -- the same place the update endpoint sets it. No type mapped it,
+        // so every created connection saved as unchecked and the trigger validation below never fired.
+        connection.HealthCheckEnabled = request.HealthCheckEnabled;
+        connection.HealthCheckOnStartup = request.HealthCheckOnStartup;
+        connection.HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds;
 
         if (connection.HealthCheckEnabled && !connection.HealthCheckOnStartup && connection.HealthCheckIntervalSeconds is null)
         {
@@ -67,76 +110,40 @@ public abstract class CreateConnectionEndpointBase<TConfig> : CrudCreateEndpoint
                 ConnectionEndpointLog.HealthCheckEnabledWithoutTrigger(Logger, request.Name));
         }
 
-        var typedBody = CreateTypedBody(request, connectionId);
-        connection.Configuration = typedBody;
+        // Where a connection's credentials are stored is the server's choice, and their values arrive write-only: refuse
+        // a request that names a secret, then store the values it sent and point the connection at them (FDW-1086).
+        // Last before the save, so no refusal after it can leave stored secrets behind.
+        var credentials = await ConnectionCredentialStore.Prepare(
+            connectionType, before: null, connection, request.Credentials, HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);
+        if (credentials.IsFailure)
+        {
+            return credentials.ToNewResult<ConnectionDetailDto>();
+        }
 
-        // One save for the whole aggregate: the provider writes the header, then dispatches on
-        // ServiceOptionType so the registered typed provider writes the body and everything under it.
-        var connectionSave = await _connectionProvider.Save(connection, ct).ConfigureAwait(false);
+        // Name, Domain and Implementation are not set on the record: Save stamps them from its own
+        // arguments, and the implementation row does not persist them -- they belong to the domain row,
+        // whose Id Save stamps back onto this instance.
+        var connectionSave = await _connectionProvider.Save(connection, "Connection", request.ServiceType, request.Name, ct).ConfigureAwait(false);
         if (connectionSave.IsFailure)
         {
+            // The connection was not saved, so nothing names the secrets just written.
+            await ConnectionCredentialStore.Retire(
+                credentials.Value!.Written, request.Name, HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);
             return connectionSave.ToNewResult<ConnectionDetailDto>();
         }
 
-        var detail = MapToDetail(connection, typedBody, connectionId);
-
-        // Fire schema discovery if ISchemaInformationService is registered (optional dependency).
-        var schemaService = _schemaInformationService;
-        if (schemaService != null)
+        var detail = ConnectionDetailMapper.Map(connectionType, connection, Logger);
+        if (detail.IsFailure)
         {
-            var schemaResult = await schemaService.GetSchema(request.Name, ct).ConfigureAwait(false);
-
-            if (schemaResult.IsSuccess && schemaResult.Value is { } schemaInfo)
-            {
-                detail.SetupSummary = new ConnectionSetupSummaryPayload
-                {
-                    DiscoveryId = schemaInfo.DataStore.Id.ToString(),
-                    ConnectionTestPassed = true,
-                    DataStoreName = schemaInfo.DataStore.Name
-                };
-            }
-            else
-            {
-                // Discovery failed or produced no result — connection was still created but schema setup did not complete.
-                detail.SetupSummary = null;
-            }
+            return detail;
         }
 
-        return GenericResult<ConnectionDetailDto>.Success(detail);
+        var created = detail.Value!;
+        created.CreatedAt = DateTimeOffset.UtcNow;
+        created.UpdatedAt = DateTimeOffset.UtcNow;
+        created.SchemaDiscovery = SchemaDiscoveryTypeInfo.Of(connection.SchemaDiscovery);
+        return GenericResult<ConnectionDetailDto>.Success(created);
     }
-
-    /// <summary>
-    /// Builds the parent <see cref="ConnectionConfiguration"/> from the create request.
-    /// The default implementation sets Name, ServiceOptionType from <see cref="CreateConnectionRequest.ServiceType"/>,
-    /// and Id from <paramref name="connectionId"/>.
-    /// Override to customize header fields (Description, Environment, etc.).
-    /// </summary>
-    protected virtual ConnectionConfiguration CreateConnectionRecord(CreateConnectionRequest request, Guid connectionId)
-    {
-        return new ConnectionConfiguration
-        {
-            Id = connectionId,
-            Name = request.Name,
-            ServiceOptionType = request.ServiceType,
-            HealthCheckEnabled = request.HealthCheckEnabled,
-            HealthCheckOnStartup = request.HealthCheckOnStartup,
-            HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds,
-        };
-    }
-
-    /// <summary>
-    /// Builds the typed body configuration from the create request.
-    /// The typed body's own <c>Id</c> should be left as <see cref="Guid.Empty"/> — the provider
-    /// mints it via <see cref="Guid.CreateVersion7()"/> before INSERT. The typed body's
-    /// <c>ConnectionId</c> must be set to <paramref name="connectionId"/>.
-    /// </summary>
-    protected abstract TConfig CreateTypedBody(CreateConnectionRequest request, Guid connectionId);
-
-    /// <summary>
-    /// Maps the saved parent connection and typed body to a detail DTO.
-    /// Override to add type-specific fields to the response.
-    /// </summary>
-    protected abstract ConnectionDetailDto MapToDetail(ConnectionConfiguration connection, TConfig typedBody, Guid connectionId);
 
     /// <summary>Sends a 201 Created response with the connection detail.</summary>
     protected override Task SendCreatedResponse(ConnectionDetailDto detail, CancellationToken ct)

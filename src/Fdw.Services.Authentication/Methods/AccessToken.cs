@@ -16,7 +16,6 @@ public sealed class AccessToken : TokenTypeBase
     /// Initializes a new instance of the <see cref="AccessToken"/> class.
     /// </summary>
     public AccessToken() : base(
-        id: 1,
         name: "AccessToken",
         format: "JWT",
         canBeRefreshed: false,

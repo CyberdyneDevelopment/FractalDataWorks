@@ -19,7 +19,6 @@ public sealed class PipelineItemType : ExecutionItemTypeBase
     /// <summary>Initializes a new instance of the <see cref="PipelineItemType"/> class.</summary>
     public PipelineItemType()
         : base(
-            id: 10,
             name: "Pipeline",
             displayName: "Pipeline",
             hierarchyLevel: 4,

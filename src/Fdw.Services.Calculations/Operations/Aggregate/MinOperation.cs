@@ -27,7 +27,7 @@ public sealed class MinOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="MinOperation"/> class.
     /// </summary>
     public MinOperation()
-        : base(id: 12, name: "Min", category: "Aggregate", description: "Computes the minimum value from a set of values")
+        : base(name: "Min", category: "Aggregate", description: "Computes the minimum value from a set of values")
     {
         _logger = NullLogger<MinOperation>.Instance;
         Parameters =

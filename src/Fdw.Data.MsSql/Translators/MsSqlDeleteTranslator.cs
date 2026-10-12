@@ -91,6 +91,13 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
                     GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
+            // A soft delete flags rows instead of removing them (FDW-1107).
+            var soft = MsSqlSoftDeleteSql.For(command, container, dbPath.Dialect, allowAbsentSet: true);
+            if (soft.Applies || soft.Problem is not null)
+            {
+                return Task.FromResult(SoftDelete(command, dbPath, soft));
+            }
+
             // Get filter from strongly-typed interface (no reflection!)
             var filter = command.Filter;
             if (filter == null || filter.Root == null)
@@ -111,6 +118,31 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
                     MsSqlDataResultCodes.ByName("DeleteTranslationFailed"),
                     ResultDetails.Create("ErrorMessage", ex.Message)));
         }
+    }
+
+    /// <summary>
+    /// Translates a delete that carries soft-delete options: the rows the filter matches and the mode selects (the marker
+    /// matches, or the keys are absent from the source set) are flagged deleted instead of removed.
+    /// </summary>
+    private static IGenericResult<SqlCommand> SoftDelete(IFilterableCommand command, IDatabasePath dbPath, MsSqlSoftDeleteFragments soft)
+    {
+        if (soft.Problem is not null)
+            return MsSqlSoftDeleteSql.Refusal(soft);
+
+        // The soft-delete mode is itself the row selector (a marker or an absent-key set), so no filter is required.
+        var filter = command.Filter?.Root is null ? null : command.Filter;
+        var dialect = dbPath.Dialect;
+        var built = MsSqlSoftDeleteSql.BuildDelete(
+            BuildQualifiedTableName(dbPath),
+            dialect,
+            soft,
+            statement => filter is null ? null : BuildWhereClause(filter, dialect, (n, v) => AddParameter(statement, n, v), "t"),
+            out var problem);
+        return built is null
+            ? GenericResult<SqlCommand>.Failure(
+                MsSqlDataResultCodes.ByName("InvalidSoftDeleteOptions"),
+                ResultDetails.Create("Reason", problem))
+            : GenericResult<SqlCommand>.Success(built);
     }
 
     /// <summary>

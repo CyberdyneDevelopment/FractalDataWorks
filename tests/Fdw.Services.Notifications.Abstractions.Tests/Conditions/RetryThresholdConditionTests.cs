@@ -120,9 +120,6 @@ public class RetryThresholdConditionTests
     {
         // Arrange & Act
         var condition = new RetryThresholdCondition();
-
-        // Assert
-        condition.Id.ShouldBe(1);
         condition.Name.ShouldBe("RetryThreshold");
         condition.Icon.ShouldBe("replay");
         condition.Color.ShouldBe("Warning");

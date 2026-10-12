@@ -25,7 +25,7 @@ public sealed class DatabaseResiliencyPolicy : ResiliencyPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DatabaseResiliencyPolicy"/> class.
     /// </summary>
-    public DatabaseResiliencyPolicy() : base(1, "Database")
+    public DatabaseResiliencyPolicy() : base("Database")
     {
     }
 

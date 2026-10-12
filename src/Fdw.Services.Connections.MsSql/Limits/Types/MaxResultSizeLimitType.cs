@@ -14,20 +14,14 @@ public sealed class MaxResultSizeLimitType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="MaxResultSizeLimitType"/>.</summary>
     public MaxResultSizeLimitType()
         : base(
-            3,
             "MaxResultSize",
             "Max Result Size",
-            "Caps the number of rows or bytes returned by a single query.",
+            "Caps the number of rows returned by a single query.",
             [
                 new ConfigurationFieldDescriptor(
                     "MaxRows",
                     "Max Rows",
                     "e.g. 10000 (optional)",
-                    ConfigurationFieldKinds.Numeric),
-                new ConfigurationFieldDescriptor(
-                    "MaxBytes",
-                    "Max Bytes",
-                    "e.g. 52428800 (optional, 50 MB)",
                     ConfigurationFieldKinds.Numeric),
             ])
     {

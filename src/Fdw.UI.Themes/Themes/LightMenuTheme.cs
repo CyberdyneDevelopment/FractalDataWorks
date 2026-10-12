@@ -14,13 +14,9 @@ public sealed class LightMenuTheme : MenuThemeBase
     /// Creates the light menu theme.
     /// </summary>
     public LightMenuTheme() : base(
-        id: 2,
         name: "Light",
         themeFamily: "Light",
-        colorPaletteId: 2,
-        borderStyleId: 1,
-        iconSetId: 1,
-        colors: ColorPalettes.ById(2),
-        borders: BorderStyles.ById(1),
-        icons: IconSets.ById(1)) { }
+        colors: ColorPalettes.Light,
+        borders: BorderStyles.Rounded,
+        icons: IconSets.Unicode) { }
 }

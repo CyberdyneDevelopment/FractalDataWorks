@@ -14,5 +14,5 @@ public sealed class NoFieldsIssueType : ConfigurationIssueTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NoFieldsIssueType"/> class.
     /// </summary>
-    public NoFieldsIssueType() : base(5, "NoFields", isHealable: true) { }
+    public NoFieldsIssueType() : base("NoFields", isHealable: true) { }
 }

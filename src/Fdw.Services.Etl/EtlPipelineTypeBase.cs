@@ -1,10 +1,7 @@
-using System;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.Etl.Abstractions;
-using Fdw.Services.Pipelines;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Etl;
 
@@ -46,7 +43,7 @@ public abstract class EtlPipelineTypeBase<TPipeline, TFactory, TConfiguration> :
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Pipeline",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "pipe",
                defaultContainerName: defaultContainerName)
     {

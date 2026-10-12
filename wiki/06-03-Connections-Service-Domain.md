@@ -32,7 +32,7 @@ The MsSql connection implementation demonstrates the processor pattern for exten
 
 ```
 Services.Connections.MsSql/
-├── MsSqlConnectionType.cs              # ServiceTypeOption registration
+├── MsSqlConnectionType.cs              # Implementation registration
 ├── MsSqlConnectionFactory.cs           # Factory implementation
 ├── MsSqlConnectionConfiguration.cs     # Configuration class
 ├── Processors/
@@ -316,7 +316,7 @@ Connection configurations are runtime rows in ConfigurationDb's `conn` schema, r
 conn.Connection
   Id: GUID
   Name: 'OrdersDb'
-  ServiceOptionType: 'MsSql'
+  Implementation: 'MsSql'
 
 -- Typed body (every field the factory reads at runtime)
 conn.MsSqlConnection
@@ -327,7 +327,7 @@ conn.MsSqlConnection
 
 -- KVP child table (authentication key-value pairs)
 conn.MsSqlConnectionAuthentication
-  MsSqlConnectionRowId     -- FK to conn.MsSqlConnection.RowId
+  MsSqlConnectionConfigurationRowId     -- FK to conn.MsSqlConnection.RowId
   Name: 'Username'         -- Property name
   Value: 'app_user'        -- Property value
 ```

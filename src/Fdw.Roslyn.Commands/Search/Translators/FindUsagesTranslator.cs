@@ -30,7 +30,6 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve symbol, find references, build usage results
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<UsageInfo>>>> Translate(
         FindUsagesCommand command,
         Solution solution,
@@ -136,5 +135,4 @@ public sealed class FindUsagesTranslator : RoslynCommandTranslatorBase<FindUsage
 
         return GenericResult<QueryResult<IReadOnlyList<UsageInfo>>>.Success(result, summary);
     }
-#pragma warning restore MA0051
 }

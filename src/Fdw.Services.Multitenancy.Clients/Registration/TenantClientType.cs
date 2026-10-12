@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Multitenancy.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Tenant API client.
+/// Implementation for the Tenant API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "TenantClient")]
+[Implementation(typeof(ApiClientTypes), "TenantClient")]
 public sealed class TenantClientType : ApiClientTypeBase<TenantApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class TenantClientType : ApiClientTypeBase<TenantApiClient>
         {
             builder.Services.AddScoped<TenantApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<TenantApiClient>>() ?? NullLogger<TenantApiClient>.Instance;
-                return new TenantApiClient(factory.CreateClient(Name), logger);
+                return new TenantApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

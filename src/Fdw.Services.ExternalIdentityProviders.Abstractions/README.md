@@ -15,7 +15,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IExternalIdentityProviderType` | interface | Non-generic interface for external identity provider service types. |
 | `IExternalIdentityProviderType<TService, TConfiguration, TFactory>` | interface | Interface for external identity provider service types. Mirrors ITokenManagerType's generic/non-generic… |
 | `IExternalIdentityProvisioner` | interface | Just-in-time provisioning mechanism consulted by the external-identity issuance path when an… |
-| `IExternalIdentityProvisionerConfiguration` | interface | Marker interface for typed external-identity-provisioner body configurations (e.g. the Chained… |
+| `IExternalIdentityProvisionerConfiguration` | interface | Marker interface for typed external-identity-provisioner body configurations (e.g. ClaimMapped's… |
 | `IExternalIdentityProvisionerFactory` | interface | Marker interface for external identity provisioner factories. Mirrors IExternalIdentityProviderFactory:… |
 | `IExternalIdentityProvisionerFactory<TService, TConfiguration>` | interface | Generic interface for external identity provisioner factories with typed configuration. |
 | `IExternalIdentityProvisionerType` | interface | Non-generic interface for external identity provisioner service types. |
@@ -42,5 +42,8 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 ---
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
+
+<!-- hand-patched on 2026-09-14 (FDW-797) to drop the dangling Chained example reference deleted in 91126c961 -->
+
 
 <!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->

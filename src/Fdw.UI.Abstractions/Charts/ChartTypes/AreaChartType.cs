@@ -15,7 +15,6 @@ public sealed class AreaChartType : ChartTypeBase
     /// </summary>
     public AreaChartType()
         : base(
-            id: 3,
             name: "Area",
             displayName: "Area Chart",
             category: "Trend",

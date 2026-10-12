@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlDecimalConverter()
     : DataTypeConverterBase(
-        id: 7,
         name: "Decimal",
         sourceType: "decimal",
         targetClrType: typeof(decimal),

@@ -10,7 +10,7 @@ public sealed class HttpConnectionAuthKvp
 {
 
     /// <summary>Gets or sets the parent FK.</summary>
-    public Guid HttpConnectionId { get; set; }
+    public Guid HttpConnectionConfigurationId { get; set; }
 
     /// <summary>Gets or sets the key name.</summary>
     public string Name { get; set; } = string.Empty;

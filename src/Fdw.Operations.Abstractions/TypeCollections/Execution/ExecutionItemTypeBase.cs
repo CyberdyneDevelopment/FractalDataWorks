@@ -13,7 +13,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.Execution;
 /// hierarchy as needed.
 /// </para>
 /// </remarks>
-public abstract class ExecutionItemTypeBase : TypeOptionBase<int, ExecutionItemTypeBase>, IExecutionItemType
+public abstract class ExecutionItemTypeBase : TypeOptionBase<ExecutionItemTypeBase>, IExecutionItemType
 {
     /// <summary>
     /// Initializes a new instance for the Empty sentinel.
@@ -29,20 +29,18 @@ public abstract class ExecutionItemTypeBase : TypeOptionBase<int, ExecutionItemT
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionItemTypeBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this type.</param>
     /// <param name="name">Name of the type (must match TypeOption attribute).</param>
     /// <param name="displayName">Display name for UI presentation.</param>
     /// <param name="hierarchyLevel">Level in the hierarchy (0 = root).</param>
     /// <param name="canHaveChildren">Whether this type can have children.</param>
     /// <param name="canHaveParent">Whether this type can have a parent.</param>
     protected ExecutionItemTypeBase(
-        int id,
         string name,
         string displayName,
         int hierarchyLevel,
         bool canHaveChildren,
         bool canHaveParent)
-        : base(id, name, $"TypeOptions:{name}", displayName, $"Execution item type: {name}", null)
+        : base(name, $"TypeOptions:{name}", displayName, $"Execution item type: {name}", null)
     {
         HierarchyLevel = hierarchyLevel;
         CanHaveChildren = canHaveChildren;

@@ -8,14 +8,13 @@ namespace Fdw.Services.Resiliency.Abstractions;
 /// Provides the common structure for all resiliency policies including
 /// retry, backoff, and circuit breaker configuration.
 /// </summary>
-public abstract class ResiliencyPolicyBase : TypeOptionBase<int, IResiliencyPolicy>, ITypeOption<int, ResiliencyPolicyBase>, IResiliencyPolicy
+public abstract class ResiliencyPolicyBase : TypeOptionBase<IResiliencyPolicy>, ITypeOption<int, ResiliencyPolicyBase>, IResiliencyPolicy
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ResiliencyPolicyBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this policy.</param>
     /// <param name="name">Name of the policy.</param>
-    protected ResiliencyPolicyBase(int id, string name) : base(id, name)
+    protected ResiliencyPolicyBase(string name) : base(name)
     {
     }
 

@@ -16,7 +16,6 @@ public sealed class AverageCalculationType : CalculationTypeBase
     /// Initializes a new instance of the <see cref="AverageCalculationType"/> class.
     /// </summary>
     public AverageCalculationType() : base(
-        id: 2,
         name: "Average",
         category: "Aggregation",
         calculate: (rows, col, _) =>

@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class HealthyLineageNodeStatus : LineageNodeStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="HealthyLineageNodeStatus"/>.</summary>
-    public HealthyLineageNodeStatus() : base(2, "Healthy") { }
+    public HealthyLineageNodeStatus() : base("Healthy") { }
 }

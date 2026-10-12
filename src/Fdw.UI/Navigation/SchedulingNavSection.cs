@@ -12,5 +12,5 @@ public sealed class SchedulingNavSection : NavSectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SchedulingNavSection"/> class.
     /// </summary>
-    public SchedulingNavSection() : base(4, "Scheduling", "Scheduling", 40) { }
+    public SchedulingNavSection() : base("Scheduling", "Scheduling", 40) { }
 }

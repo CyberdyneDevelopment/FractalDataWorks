@@ -14,7 +14,7 @@ public sealed class AsciiBorderStyle : BorderStyleBase
     /// <summary>
     /// Creates the ASCII border style.
     /// </summary>
-    public AsciiBorderStyle() : base(3, "Ascii") { }
+    public AsciiBorderStyle() : base("Ascii") { }
 
     /// <inheritdoc />
     public override BoxBorder Panel => BoxBorder.Ascii;

@@ -74,9 +74,7 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
         {
             var errorMessage = childrenResult.CurrentMessage ?? "Unknown error";
             OnChildrenFetchFailed(req.Id, errorMessage);
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch children", Details = errorMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch children", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

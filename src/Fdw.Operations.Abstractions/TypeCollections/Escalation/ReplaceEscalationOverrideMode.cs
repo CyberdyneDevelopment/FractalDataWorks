@@ -14,7 +14,7 @@ public sealed class ReplaceEscalationOverrideMode : EscalationOverrideModeBase
     /// Initializes a new instance of the <see cref="ReplaceEscalationOverrideMode"/> class.
     /// </summary>
     public ReplaceEscalationOverrideMode()
-        : base(id: 1, name: "Replace")
+        : base(name: "Replace")
     {
     }
 }

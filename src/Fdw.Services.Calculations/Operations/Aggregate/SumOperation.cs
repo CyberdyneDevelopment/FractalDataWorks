@@ -27,7 +27,7 @@ public sealed class SumOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="SumOperation"/> class.
     /// </summary>
     public SumOperation()
-        : base(id: 10, name: "Sum", category: "Aggregate", description: "Computes the sum of a set of values")
+        : base(name: "Sum", category: "Aggregate", description: "Computes the sum of a set of values")
     {
         _logger = NullLogger<SumOperation>.Instance;
         Parameters =

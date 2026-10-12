@@ -14,5 +14,5 @@ public sealed class ConnectionDestinationKind : DataDestinationKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionDestinationKind"/> class.
     /// </summary>
-    public ConnectionDestinationKind() : base(1, "Connection") { }
+    public ConnectionDestinationKind() : base("Connection") { }
 }

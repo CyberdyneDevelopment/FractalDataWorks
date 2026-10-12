@@ -30,7 +30,6 @@ public sealed class GetDiagnosticsTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve target, get diagnostics, filter by severity
     public override async Task<IGenericResult<QueryResult<DiagnosticsData>>> Translate(
         GetDiagnosticsCommand command,
         Solution solution,
@@ -117,7 +116,6 @@ public sealed class GetDiagnosticsTranslator
 
         return GenericResult<QueryResult<DiagnosticsData>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static DiagnosticInfo CreateDiagnosticInfo(Diagnostic diagnostic)
     {

@@ -12,7 +12,7 @@ public sealed class RefactoringCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="RefactoringCommandCategory"/> class.
     /// </summary>
-    public RefactoringCommandCategory() : base(8, "Refactoring", "Code refactoring operations")
+    public RefactoringCommandCategory() : base("Refactoring", "Code refactoring operations")
     {
     }
 }

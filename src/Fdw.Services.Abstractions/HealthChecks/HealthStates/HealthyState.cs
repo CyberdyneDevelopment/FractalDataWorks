@@ -13,7 +13,7 @@ public sealed class HealthyState : HealthStateBase
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthyState"/> class.
     /// </summary>
-    public HealthyState() : base(1, "Healthy", isHealthy: true)
+    public HealthyState() : base("Healthy", isHealthy: true)
     {
     }
 }

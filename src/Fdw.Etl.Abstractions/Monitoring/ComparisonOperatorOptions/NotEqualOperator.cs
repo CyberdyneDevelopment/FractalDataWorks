@@ -14,7 +14,7 @@ public sealed class NotEqualOperator : ComparisonOperatorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NotEqualOperator"/> class.
     /// </summary>
-    public NotEqualOperator() : base(1, "NotEqual", "!=") { }
+    public NotEqualOperator() : base("NotEqual", "!=") { }
 
     /// <inheritdoc />
     public override bool Evaluate(double left, double right) => left != right;

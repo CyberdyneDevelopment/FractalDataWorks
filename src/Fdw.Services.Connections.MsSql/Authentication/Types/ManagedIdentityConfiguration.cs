@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Collections.Attributes;
 using Fdw.Results;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.MsSql.Authentication.Types;
 
@@ -13,10 +14,10 @@ public sealed class ManagedIdentityConfiguration : MsSqlAuthenticationConfigurat
 {
     /// <summary>Initializes a new instance of the <see cref="ManagedIdentityConfiguration"/> class.</summary>
     public ManagedIdentityConfiguration()
-        : base(4, "ManagedIdentity",
+        : base("ManagedIdentity",
                "Managed Identity",
                "Authenticate using Azure Managed Identity",
-               [], [], [])
+               [], [], [], requiresSecret: false)
     {
     }
 
@@ -26,4 +27,12 @@ public sealed class ManagedIdentityConfiguration : MsSqlAuthenticationConfigurat
     /// <inheritdoc/>
     public override IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword)
         => GenericResult<string>.Success("Authentication=Active Directory Default;");
+
+    /// <inheritdoc />
+    /// <remarks>Carries no stored credential.</remarks>
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [];
+
+    /// <inheritdoc/>
+    /// <remarks>The managed identity is the one assigned to the host, not to the connection.</remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => true;
 }

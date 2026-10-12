@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlArrayConverter()
     : DataTypeConverterBase(
-        id: 29,
         name: "Array",
         sourceType: "array",
         targetClrType: typeof(Array),

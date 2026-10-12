@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class UpdateAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for update action.
+    /// Material Symbols icon name for update action.
     /// </summary>
-    public const string UpdateIcon = "edit"; // Icons.Material.Filled.Edit
+    public const string UpdateIcon = "edit";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateAction"/> class.
     /// </summary>
     public UpdateAction()
         : base(
-            id: 4,
             name: "Update",
             icon: UpdateIcon,
             color: "Success",

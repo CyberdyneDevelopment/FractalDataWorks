@@ -25,7 +25,7 @@ public class CalculationStepLineageTests
     private static CalculationStepExecutor CreateExecutor() =>
         new(NullLogger<CalculationStepExecutor>.Instance);
 
-    private static CalculationStepOperandConfiguration Operand(
+    private static FormulaCalculationStepOperandConfiguration Operand(
         string name, string operandType, string? inputAlias = null, string? stepAlias = null,
         string? literalValue = null, string? fieldName = null) =>
         new()
@@ -38,9 +38,9 @@ public class CalculationStepLineageTests
             FieldName = fieldName,
         };
 
-    private static CalculationStepConfiguration Step(
+    private static FormulaCalculationStepConfiguration Step(
         string name, string operationType, string outputAlias, int ordinal,
-        params CalculationStepOperandConfiguration[] operands) =>
+        params FormulaCalculationStepOperandConfiguration[] operands) =>
         new()
         {
             Name = name,

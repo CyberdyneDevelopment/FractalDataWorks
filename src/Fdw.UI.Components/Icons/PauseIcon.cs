@@ -11,7 +11,6 @@ public sealed class PauseIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="PauseIcon"/>.</summary>
     public PauseIcon()
         : base(
-            25,
             "Pause",
             "0 0 24 24",
             "currentColor",

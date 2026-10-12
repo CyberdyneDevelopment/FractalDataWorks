@@ -13,5 +13,5 @@ public sealed class MultiSelectComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MultiSelectComponentType"/> class.
     /// </summary>
-    public MultiSelectComponentType() : base(8, "MultiSelect", "Multi-Select", "Selection", "Multiple selection") { }
+    public MultiSelectComponentType() : base("MultiSelect", "Multi-Select", "Selection", "Multiple selection") { }
 }

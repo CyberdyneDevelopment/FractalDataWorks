@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class WholeNumberConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="WholeNumberConfigurationPropertyTypeDto"/>.</summary>
-    public WholeNumberConfigurationPropertyTypeDto() : base(2, "WholeNumber") { }
+    public WholeNumberConfigurationPropertyTypeDto() : base("WholeNumber") { }
 }

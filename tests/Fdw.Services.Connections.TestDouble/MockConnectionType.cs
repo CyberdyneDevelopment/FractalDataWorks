@@ -1,17 +1,18 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
+using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections.TestDouble;
 
 /// <summary>
-/// The <c>MockConnection</c> <c>[ServiceTypeOption]</c> this assembly supplies to
+/// The <c>MockConnection</c> <c>[Implementation]</c> this assembly supplies to
 /// <see cref="ConnectionTypes"/>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Why an option rather than a bare configuration class: a schema declaring
-/// <c>"ServiceOptionType": "MockConnection"</c> is resolved by
+/// <c>"Implementation": "MockConnection"</c> is resolved by
 /// <c>ConnectionTypes.ByName</c>, and a configuration type alone registers nothing. The
 /// configuration used to carry only <c>[ManagedConfiguration]</c> and live in the test assembly, where
 /// no module initializer could ever reach it — the generator scans referenced assemblies, never the
@@ -26,7 +27,7 @@ namespace Fdw.Services.Connections.TestDouble;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ConnectionTypes), OptionName)]
+[Implementation(typeof(ConnectionTypes), OptionName)]
 public sealed class MockConnectionType
     : ConnectionTypeBase<IGenericConnection, IMockConnectionFactory, MockConnectionConfiguration>
 {
@@ -43,4 +44,18 @@ public sealed class MockConnectionType
             category: "Test")
     {
     }
+
+    /// <inheritdoc/>
+    /// <remarks>A test double reaches nothing, so it presents no identity at all.</remarks>
+    protected override IGenericResult<bool> DecideHostIdentity(MockConnectionConfiguration configuration)
+        => GenericResult<bool>.Success(false);
+
+    protected override Fdw.Results.IGenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots> DescribeCredentials(MockConnectionConfiguration configuration)
+        => Fdw.Results.GenericResult<Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots>.Success(Fdw.Services.Connections.Abstractions.Authentication.ConnectionCredentialSlots.None);
+
+    protected override Fdw.Results.IGenericResult BindCredentialReferences(
+        MockConnectionConfiguration configuration,
+        string secretManagerName,
+        System.Collections.Generic.IReadOnlyDictionary<string, string> secretKeyByField)
+        => Fdw.Results.GenericResult.Success();
 }

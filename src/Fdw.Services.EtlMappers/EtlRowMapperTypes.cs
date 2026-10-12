@@ -24,18 +24,6 @@ public partial class EtlRowMapperTypes : TypeCollectionBase<
     IEtlRowMapperType>
 {
     /// <summary>
-    /// Phase 1a: Configures IOptions bindings for all mapper types.
-    /// Call before Build().
-    /// </summary>
-    public static void Configure(IServiceCollection services, IConfiguration configuration, ILoggerFactory? loggerFactory = null)
-    {
-        foreach (var type in All())
-        {
-            type.Configure(services, configuration, loggerFactory);
-        }
-    }
-
-    /// <summary>
     /// Phase 1b: Registers required services (factories) for all mapper types.
     /// Call before Build().
     /// </summary>

@@ -12,7 +12,7 @@ public sealed class FormattingCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FormattingCommandCategory"/> class.
     /// </summary>
-    public FormattingCommandCategory() : base(4, "Formatting", "Code formatting operations")
+    public FormattingCommandCategory() : base("Formatting", "Code formatting operations")
     {
     }
 }

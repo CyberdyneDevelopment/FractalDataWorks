@@ -12,7 +12,7 @@ public sealed class NavigationCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NavigationCommandCategory"/> class.
     /// </summary>
-    public NavigationCommandCategory() : base(6, "Navigation", "Code navigation operations")
+    public NavigationCommandCategory() : base("Navigation", "Code navigation operations")
     {
     }
 }

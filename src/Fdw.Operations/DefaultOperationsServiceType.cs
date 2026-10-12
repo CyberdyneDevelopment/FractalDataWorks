@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
@@ -9,6 +9,7 @@ using Fdw.Operations.Configuration;
 using Fdw.Operations.Escalation;
 using Fdw.Operations.Execution;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Notifications;
@@ -33,7 +34,7 @@ namespace Fdw.Operations;
 /// escalation (IEscalationService), and the gateway-backed EscalationConfigurationProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(OperationsServiceTypes), "Default")]
+[Implementation(typeof(OperationsServiceTypes), "Default")]
 public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
 {
     /// <summary>
@@ -48,30 +49,32 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
     {
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.AddSingleton<IEscalationPolicyImplementationConfigurationProvider, EscalationPolicyImplementationConfigurationProvider>(sp => new EscalationPolicyImplementationConfigurationProvider(sp.GetRequiredService<ILogger<EscalationPolicyImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "EscalationPolicyConfiguration"));
             builder.Services.TryAddSingleton<EscalationConfigurationProvider>(sp =>
-                new EscalationConfigurationProvider(
-                    sp.GetService<ILogger<EscalationConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        OperationsServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EscalationPolicyConfiguration, EscalationPolicyConfigurationCommand>>(
-                sp => sp.GetRequiredService<EscalationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<EscalationPolicyConfiguration>>(
-                sp => sp.GetRequiredService<EscalationConfigurationProvider>());
+            {
+                var domain = new EscalationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<EscalationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), OperationsServiceTypes.ConfigurationConnection, "workflow", "EscalationPolicy");
+                domain.Register("EscalationPolicy", sp.GetRequiredService<IEscalationPolicyImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IEscalationConfigurationProvider>(sp => sp.GetRequiredService<EscalationConfigurationProvider>());
+
 
             builder.Services.TryAddScoped<IExecutionTracker>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                var gatewayProvider = sp.GetRequiredService<IDataGatewayProvider>();
                 var notificationProvider = sp.GetService<INotificationServiceProvider>();
-                var ruleProvider = sp.GetService<IServiceConfigurationProvider<NotificationRuleConfiguration>>();
-                return new ExecutionTrackingService(gatewayProvider, lf, OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
+                var ruleProvider = sp.GetService<INotificationRuleConfigurationProvider>();
+                return new ExecutionTrackingService(
+                    sp.GetRequiredService<IDataGatewayProvider>(), lf, sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                    OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>
             {
                 var lf = sp.GetRequiredService<ILoggerFactory>();
-                var provider = sp.GetRequiredService<EscalationConfigurationProvider>();
-                return new EscalationService(provider, lf);
+                return new EscalationService(sp.GetRequiredService<IEscalationConfigurationProvider>(), lf);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

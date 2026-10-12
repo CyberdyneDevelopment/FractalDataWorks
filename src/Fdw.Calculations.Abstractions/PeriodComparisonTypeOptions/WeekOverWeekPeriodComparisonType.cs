@@ -15,7 +15,7 @@ public sealed class WeekOverWeekPeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="WeekOverWeekPeriodComparisonType"/> class.
     /// </summary>
-    public WeekOverWeekPeriodComparisonType() : base(4, "WeekOverWeek", isCumulative: false) { }
+    public WeekOverWeekPeriodComparisonType() : base("WeekOverWeek", isCumulative: false) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => TimeSpan.FromDays(-7);

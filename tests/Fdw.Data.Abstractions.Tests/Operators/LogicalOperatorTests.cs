@@ -13,9 +13,6 @@ public sealed class LogicalOperatorTests
     {
         // Arrange & Act
         var andOp = LogicalOperator.And;
-
-        // Assert
-        andOp.Id.ShouldBe(1);
         andOp.Name.ShouldBe("And");
         andOp.SqlOperator.ShouldBe("AND");
         andOp.ODataOperator.ShouldBe("and");
@@ -28,9 +25,6 @@ public sealed class LogicalOperatorTests
     {
         // Arrange & Act
         var orOp = LogicalOperator.Or;
-
-        // Assert
-        orOp.Id.ShouldBe(2);
         orOp.Name.ShouldBe("Or");
         orOp.SqlOperator.ShouldBe("OR");
         orOp.ODataOperator.ShouldBe("or");

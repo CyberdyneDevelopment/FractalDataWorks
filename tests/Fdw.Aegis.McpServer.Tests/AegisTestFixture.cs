@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Aegis.Abstractions;
 using Fdw.Aegis.Configuration;
-using Fdw.Services.Connections;
+using Fdw.Results;
 using Fdw.Services.Connections.Http;
 using Fdw.Services.Data.Configuration;
-using Fdw.Services.SecretManagers;
+using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.TestDouble;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -26,6 +30,21 @@ namespace Fdw.Aegis.McpServer.Tests;
 /// tool per call in production. Every adversarial case (hostile downstream, header-invalid secret) is
 /// therefore expressed as an extra declared connection/command/secret on this one host, not a second
 /// host.
+/// <para>
+/// The declared commands are the AegisCommand domain, read through
+/// <see cref="IAegisCommandConfigurationProvider"/>; the fixture registers one that answers from
+/// memory before the host registers its own, which TryAdd then leaves in place.
+/// </para>
+/// <para>
+/// The secret managers are the SecretManager domain, read through
+/// <see cref="ISecretManagerConfigurationProvider"/>; the fixture registers one that answers from memory
+/// AFTER the host's own registration (the domain registers its provider with <c>AddSingleton</c>, so the last
+/// registration is the one resolved). It declares <c>EnvSecrets</c> as the test-owned <c>Synthetic</c> secret
+/// manager, which reads environment variables under <c>FDW_SECRET_</c>. This is a test double for a
+/// configuration SOURCE only: the injector, the policy evaluator, the HTTP target and the tool service are the
+/// real ones. The production Aegis host reads its rows through the configuration gateway over a declared
+/// connection (FDW-1119); this fixture runs no gateway, so it cannot use the domain's own providers.
+/// </para>
 /// </remarks>
 public sealed class AegisTestFixture : IAsyncLifetime
 {
@@ -74,8 +93,11 @@ public sealed class AegisTestFixture : IAsyncLifetime
         builder.Logging.AddProvider(LogCollector);
         builder.Logging.SetMinimumLevel(LogLevel.Trace);
 
+        builder.Services.AddSingleton(CommandProvider());
+
         AegisHostRegistration.Configure(builder, loggerFactory: null);
         AegisHostRegistration.Register(builder, schema, loggerFactory: null);
+        builder.Services.AddSingleton(SecretManagerSource());
 
         Host = builder.Build();
 
@@ -93,94 +115,71 @@ public sealed class AegisTestFixture : IAsyncLifetime
         await HostileStub.DisposeAsync().ConfigureAwait(false);
     }
 
-    private static ConfigurationSchema BuildSchema(string stubAddress, string hostileAddress)
+    private static ConfigurationSchema BuildSchema(string stubAddress, string hostileAddress) => new()
     {
-        var syntheticConnection = new ConnectionConfiguration
-        {
-            Name = "synthetic-echo",
-            ServiceOptionType = "Http",
-            Configuration = new HttpConnectionConfiguration { BaseUrl = stubAddress },
-        };
+        Connections =
+        [
+            new HttpConnectionConfiguration { Name = "synthetic-echo", Implementation = "Http", BaseUrl = stubAddress },
+            new HttpConnectionConfiguration { Name = "hostile-echo", Implementation = "Http", BaseUrl = hostileAddress },
+        ],
+    };
 
-        var hostileConnection = new ConnectionConfiguration
-        {
-            Name = "hostile-echo",
-            ServiceOptionType = "Http",
-            Configuration = new HttpConnectionConfiguration { BaseUrl = hostileAddress },
-        };
-
-        var secretManager = new SecretManagerConfiguration
-        {
-            Name = "EnvSecrets",
-            ServiceOptionType = SyntheticSecretManagerType.OptionName,
-            Configuration = new SyntheticSecretManagerConfiguration { Prefix = "FDW_SECRET_" },
-        };
-
-        var preApproved = new AegisCommandConfiguration
-        {
-            Name = "echo_credential",
-            ConnectionName = "synthetic-echo",
-            ServiceOptionType = "PreApproved",
-            Configuration = new PreApprovedCommandConfiguration
+    private static IAegisCommandConfigurationProvider CommandProvider()
+    {
+        IReadOnlyList<IApprovalPolicyConfiguration> commands =
+        [
+            PreApproved("echo_credential", "synthetic-echo", "AEGIS_SYNTHETIC_TOKEN"),
+            new AdHocCommandConfiguration
             {
-                SecretManagerName = "EnvSecrets",
-                SecretKeyName = "AEGIS_SYNTHETIC_TOKEN",
-                ParameterAllowList =
-                [
-                    new ParameterAllowEntry { ParameterName = "mode", PermittedValues = ["echo"], Required = true },
-                ],
-            },
-        };
-
-        var adHoc = new AegisCommandConfiguration
-        {
-            Name = "echo_adhoc",
-            ConnectionName = "synthetic-echo",
-            ServiceOptionType = "AdHoc",
-            Configuration = new AdHocCommandConfiguration
-            {
+                Name = "echo_adhoc",
+                Domain = "AegisCommand",
+                Implementation = "AdHoc",
+                ConnectionName = "synthetic-echo",
                 SecretManagerName = "EnvSecrets",
                 SecretKeyName = "AEGIS_SYNTHETIC_TOKEN",
             },
-        };
+            PreApproved("echo_hostile", "hostile-echo", "AEGIS_SYNTHETIC_TOKEN"),
+            PreApproved("echo_badchar", "synthetic-echo", "AEGIS_BADCHAR_TOKEN"),
+        ];
 
-        var hostile = new AegisCommandConfiguration
-        {
-            Name = "echo_hostile",
-            ConnectionName = "hostile-echo",
-            ServiceOptionType = "PreApproved",
-            Configuration = new PreApprovedCommandConfiguration
-            {
-                SecretManagerName = "EnvSecrets",
-                SecretKeyName = "AEGIS_SYNTHETIC_TOKEN",
-                ParameterAllowList =
-                [
-                    new ParameterAllowEntry { ParameterName = "mode", PermittedValues = ["echo"], Required = true },
-                ],
-            },
-        };
-
-        var badChar = new AegisCommandConfiguration
-        {
-            Name = "echo_badchar",
-            ConnectionName = "synthetic-echo",
-            ServiceOptionType = "PreApproved",
-            Configuration = new PreApprovedCommandConfiguration
-            {
-                SecretManagerName = "EnvSecrets",
-                SecretKeyName = "AEGIS_BADCHAR_TOKEN",
-                ParameterAllowList =
-                [
-                    new ParameterAllowEntry { ParameterName = "mode", PermittedValues = ["echo"], Required = true },
-                ],
-            },
-        };
-
-        return new ConfigurationSchema
-        {
-            Connections = [syntheticConnection, hostileConnection],
-            SecretManagers = [secretManager],
-            Commands = [preApproved, adHoc, hostile, badChar],
-        };
+        var provider = new Mock<IAegisCommandConfigurationProvider>();
+        provider.Setup(p => p.Get(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<IApprovalPolicyConfiguration>>.Success(commands));
+        return provider.Object;
     }
+
+    private static ISecretManagerConfigurationProvider SecretManagerSource()
+    {
+        var provider = new Mock<ISecretManagerConfigurationProvider>();
+        provider.Setup(p => p.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string name, CancellationToken _) => name == "EnvSecrets"
+                ? GenericResult<ISecretManagerImplementationConfiguration>.Success(new SyntheticSecretManagerConfiguration
+                {
+                    Name = "EnvSecrets",
+                    Domain = "SecretManager",
+                    Implementation = SyntheticSecretManagerType.OptionName,
+                    Prefix = "FDW_SECRET_",
+                })
+                : throw new InvalidOperationException($"The fixture declares no secret manager named '{name}'."));
+        return provider.Object;
+    }
+
+    private static PreApprovedCommandConfiguration PreApproved(string name, string connectionName, string secretKeyName) => new()
+    {
+        Name = name,
+        Domain = "AegisCommand",
+        Implementation = "PreApproved",
+        ConnectionName = connectionName,
+        SecretManagerName = "EnvSecrets",
+        SecretKeyName = secretKeyName,
+        ParameterAllowList =
+        [
+            new ParameterAllowEntryConfiguration
+            {
+                ParameterName = "mode",
+                Required = true,
+                PermittedValues = [new PermittedValueConfiguration { Value = "echo" }],
+            },
+        ],
+    };
 }

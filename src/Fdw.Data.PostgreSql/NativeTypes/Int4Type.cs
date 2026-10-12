@@ -13,7 +13,7 @@ public sealed class Int4Type : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="Int4Type"/> class.</summary>
     public Int4Type()
-        : base(id: 2, name: "int4")
+        : base(name: "int4")
     {
     }
 

@@ -26,7 +26,7 @@ namespace Fdw.Data.Abstractions;
 /// </para>
 /// </remarks>
 public abstract class DataTypeOptionBase
-    : TypeOptionBase<int, DataTypeOptionBase>,
+    : TypeOptionBase<DataTypeOptionBase>,
       IGenericDataType,
       IMsSqlDataType,
       IPostgreSqlDataType,
@@ -35,7 +35,6 @@ public abstract class DataTypeOptionBase
       IDelimitedDataType
 {
     /// <summary>Initializes a new instance of the <see cref="DataTypeOptionBase"/> class.</summary>
-    /// <param name="id">Identifier within the owning collection.</param>
     /// <param name="name">The type's name in its own vocabulary (e.g. "varchar", "Edm.String").</param>
     /// <param name="description">What this type holds.</param>
     /// <param name="displayName">The user-facing name, or null to use <paramref name="name"/>.</param>
@@ -58,7 +57,6 @@ public abstract class DataTypeOptionBase
     /// <param name="nativeName">The literal token to emit, when it differs from <paramref name="name"/>.</param>
     /// <param name="format">The wire format qualifier, where the vocabulary has one (JSON Schema "date-time").</param>
     protected DataTypeOptionBase(
-        int id,
         string name,
         string description,
         IDataType abstractType,
@@ -80,7 +78,7 @@ public abstract class DataTypeOptionBase
         bool isDeprecated = false,
         string? nativeName = null,
         string? format = null)
-        : base(id, name, $"TypeOptions:{name}", displayName ?? name, description, category: null)
+        : base(name, $"TypeOptions:{name}", displayName ?? name, description, category: null)
     {
         AbstractType = abstractType;
         IsNumeric = isNumeric;

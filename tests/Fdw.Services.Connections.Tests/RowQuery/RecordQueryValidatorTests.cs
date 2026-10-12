@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Connections.Tests.RowQuery;
 
 /// <summary>
-/// Unit coverage for <see cref="RecordQueryValidator"/> — the AND-of-equality, at-most-one-INNER-join
+/// Unit coverage for <see cref="RecordQueryValidator"/> — the AND-of-equality-or-IN, at-most-one-INNER-join
 /// query-shape guard <see cref="RecordQueryEvaluator"/> runs before <see cref="RecordRowMatcher"/>
 /// evaluates a command. Anything outside that grammar must fail loud, never silently match/miss rows.
 /// </summary>
@@ -61,6 +61,17 @@ public sealed class RecordQueryValidatorTests
     public void ValidateShapeSucceedsForASingleEqualityCondition()
     {
         var condition = new FilterCondition { PropertyName = "Name", Operator = new EqualOperator(), Value = "EnvSecrets" };
+
+        var result = RecordQueryValidator.ValidateShape(condition, [], NullLogger.Instance);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Category", "RowQuery")]
+    public void ValidateShapeSucceedsForASingleInCondition()
+    {
+        var condition = new FilterCondition { PropertyName = "Id", Operator = new InOperator(), Value = new[] { "a", "b" } };
 
         var result = RecordQueryValidator.ValidateShape(condition, [], NullLogger.Instance);
 
@@ -141,12 +152,27 @@ public sealed class RecordQueryValidatorTests
     [Fact]
     [Trait("Category", "RowQuery")]
     [Trait("Category", "SingleJoin")]
-    public void ValidateShapeRejectsMultipleJoins()
+    public void ValidateShapeAcceptsAJoinThatContinuesFromAnEarlierJoin()
     {
         var joins = new List<IJoinExpression>
         {
-            new JoinExpression { TargetContainerName = "SecretManager", JoinType = "INNER", JoinConditions = [("SecretManagerRowId", "RowId")] },
-            new JoinExpression { TargetContainerName = "Other", JoinType = "INNER", JoinConditions = [("OtherRowId", "RowId")] }
+            new JoinExpression { TargetContainerName = "SecretManagerConfiguration", JoinType = "INNER", JoinConditions = [("SecretManagerConfigurationRowId", "RowId")] },
+            new JoinExpression { SourceContainerName = "SecretManagerConfiguration", TargetContainerName = "SecretManager", JoinType = "INNER", JoinConditions = [("SecretManagerRowId", "RowId")] }
+        };
+
+        var result = RecordQueryValidator.ValidateShape(null, joins, NullLogger.Instance);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Category", "RowQuery")]
+    public void ValidateShapeRejectsAJoinFromAContainerNoEarlierJoinBroughtIn()
+    {
+        var joins = new List<IJoinExpression>
+        {
+            new JoinExpression { TargetContainerName = "SecretManagerConfiguration", JoinType = "INNER", JoinConditions = [("SecretManagerConfigurationRowId", "RowId")] },
+            new JoinExpression { SourceContainerName = "Other", TargetContainerName = "SecretManager", JoinType = "INNER", JoinConditions = [("SecretManagerRowId", "RowId")] }
         };
 
         var result = RecordQueryValidator.ValidateShape(null, joins, NullLogger.Instance);

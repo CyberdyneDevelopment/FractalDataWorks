@@ -9,5 +9,5 @@ namespace Fdw.Data.RowSources.Http.Abstractions;
 public sealed class CursorRestPaginationStyle : RestPaginationStyleBase
 {
     /// <summary>Initializes a new instance of <see cref="CursorRestPaginationStyle"/>.</summary>
-    public CursorRestPaginationStyle() : base(3, "Cursor") { }
+    public CursorRestPaginationStyle() : base("Cursor") { }
 }

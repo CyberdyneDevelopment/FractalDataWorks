@@ -9,5 +9,5 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 public sealed class EventSymbolKindScore : SymbolKindScoreBase
 {
     /// <summary>Initializes the Event scoring option.</summary>
-    public EventSymbolKindScore() : base(id: 5, name: "Event", weight: 3) { }
+    public EventSymbolKindScore() : base(name: "Event", weight: 3) { }
 }

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
@@ -71,7 +72,7 @@ public abstract class GetCurrentTenantEndpointBase : EndpointWithoutRequest<Tena
             return;
         }
 
-        var isAdmin = _systemRoleConfiguration.IsInRole(User, _systemRoleConfiguration.AdminRoleName);
+        var isAdmin = _systemRoleConfiguration.IsPlatformAdmin(User);
         var tenant = tenantResult.Value;
         var dto = MapTenant(tenant, isAdmin);
 

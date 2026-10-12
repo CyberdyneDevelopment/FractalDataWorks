@@ -9,7 +9,7 @@ namespace Fdw.Services.Etl.Projects.Commands;
 /// Targets the pipe.OrchestrationNode table.
 /// </summary>
 [TypeOption(typeof(ConfigurationCommands), "OrchestrationNode")]
-public sealed class OrchestrationNodeConfigurationCommand : ConfigurationCommandBase<OrchestrationNodeConfiguration>
+public sealed class OrchestrationNodeConfigurationCommand : ConfigurationCommandBase<OrchestrationNodeImplementationConfiguration>
 {
     /// <inheritdoc/>
     public OrchestrationNodeConfigurationCommand() : base("OrchestrationNode") { }

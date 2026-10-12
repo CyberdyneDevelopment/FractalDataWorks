@@ -45,6 +45,18 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
     protected virtual string DeletePolicy => $"{ResourceName}:delete";
 
     /// <summary>
+    /// Gets whether the resource this endpoint acts on decides who may use it, instead of a platform permission.
+    /// </summary>
+    /// <remarks>
+    /// When true the endpoint requires only a signed-in caller, and the endpoint itself asks the
+    /// resource's own access policy. A workspace is the case this exists for: ownership, an
+    /// in-effect membership or a platform permission can each grant access to one, so the platform
+    /// permission cannot be the gate in front of it (FDW-936). False keeps the platform permission
+    /// as the gate, which is what every other resource does.
+    /// </remarks>
+    protected virtual bool ResourceDecidesAccess => false;
+
+    /// <summary>
     /// Gets the route for this endpoint. Defaults to "/{ResourceName}/{Name}".
     /// </summary>
     protected virtual string Route => $"/{ResourceName}/{{Name}}";
@@ -71,7 +83,8 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
 #if DEVELOP
         AllowAnonymous();
 #else
-        Policies(DeletePolicy);
+        if (!ResourceDecidesAccess)
+            Policies(DeletePolicy);
 #endif
         Summary(s =>
         {
@@ -101,15 +114,13 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
 
             if (CrudResourceIdentifier.NamesNothing(identifier))
             {
-                HttpContext.Response.StatusCode = 400;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                await Send.ResultAsync(TypedResults.Json(new Microsoft.AspNetCore.Mvc.ProblemDetails
                 {
                     Status = 400,
                     Title = "Missing identifier",
                     Detail = $"No {ResourceName} identifier was supplied.",
                     Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
-                }, ct).ConfigureAwait(false);
+                }, statusCode: 400)).ConfigureAwait(false);
                 return;
             }
             OnBeforeDelete(identifier);
@@ -125,9 +136,7 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
             if (!existsResult.Value)
             {
                 OnNotFound(identifier);
-                HttpContext.Response.StatusCode = 404;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(NotFoundProblem($"{ResourceName} '{identifier}' was not found."), ct).ConfigureAwait(false);
+                await Send.ResultAsync(TypedResults.Json(NotFoundProblem($"{ResourceName} '{identifier}' was not found."), statusCode: 404)).ConfigureAwait(false);
                 return;
             }
 
@@ -153,16 +162,14 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
         catch (Exception ex)
         {
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new FdwErrorResponse
+            await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
                 Code = msg.Code ?? "INTERNAL_ERROR",
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
                 Action = "Contact your administrator"
-            }, ct).ConfigureAwait(false);
+            }, statusCode: 500)).ConfigureAwait(false);
         }
     }
 
@@ -215,8 +222,7 @@ public abstract class CrudDeleteEndpointBase<TRequest> : Endpoint<TRequest, obje
     protected virtual Task SendErrorResponse(IGenericResult result, string operation, CancellationToken ct)
     {
         var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
-        HttpContext.Response.StatusCode = statusCode;
-        return HttpContext.Response.WriteAsJsonAsync(errorResponse, ct);
+        return Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode));
     }
 
     /// <summary>Builds the RFC 7807 body for a resource that does not exist.</summary>

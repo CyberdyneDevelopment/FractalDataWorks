@@ -14,7 +14,6 @@ public sealed class DecimalType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="DecimalType"/> class.</summary>
     public DecimalType()
         : base(
-            id: 15,
             name: "Decimal",
             description: "Fixed-precision decimal number.",
             abstractType: DataTypes.Decimal,

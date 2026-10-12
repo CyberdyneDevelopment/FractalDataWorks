@@ -6,7 +6,7 @@ using Fdw.Data;
 namespace Fdw.Services.Authentication.Flow;
 
 /// <summary>
-/// A row of <c>auth.AuthenticationFlowStep</c> — one step of one flow, and its settings.
+/// A row of <c>auth.AuthenticationFlowStepConfiguration</c> — one step of one flow, and its settings.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
@@ -20,17 +20,6 @@ public partial class AuthenticationFlowStepConfiguration : IGenericConfiguration
     /// <remarks>The step's registered name, which is also what addresses this row.</remarks>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "AuthenticationFlowSteps";
-
-    /// <inheritdoc />
-    public string ServiceType => "AuthenticationFlowStep";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
-
-    /// <summary>Gets or sets the flow this step belongs to.</summary>
-    public Guid AuthenticationFlowId { get; set; }
 
     /// <summary>Gets or sets where in the flow this step runs.</summary>
     public int StepOrder { get; set; }

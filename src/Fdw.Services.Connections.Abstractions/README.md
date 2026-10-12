@@ -4,7 +4,7 @@ The connection contracts — `IConnection`, `IConnectionFactory`, connection sta
 
 Implementations live in the sibling packages; this one holds the interfaces, base types and models they agree on, so a consumer can depend on the contract without taking the implementation.
 
-## Interfaces (34)
+## Interfaces (35)
 
 | Type | Kind | Purpose |
 |---|---|---|
@@ -25,7 +25,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IConnectionState` | interface | Interface for connection states. |
 | `IConnectionType` | interface | Non-generic interface for connection service types. |
 
-## Base types (10)
+## Base types (11)
 
 | Type | Kind | Purpose |
 |---|---|---|
@@ -39,8 +39,9 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `ConnectionStateBase` | class | Base class for connection states in the Fdw framework. |
 | `ConnectionStates` | class | Collection of connection states. |
 | `CredentialArtifactBase` | class | Base class for credential artifact implementations. |
+| `SchemaDiscoveryTypeBase` | class | Base class for schema discovery options: names a strategy (or `None`) a connection type declares and a connection chooses. |
 
-## Models and supporting types (64)
+## Models and supporting types (66)
 
 | Type | Kind | Purpose |
 |---|---|---|

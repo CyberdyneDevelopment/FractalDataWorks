@@ -19,7 +19,7 @@ public sealed class RecordRowMatcherTests
     {
     }
 
-    private static IReadOnlyDictionary<string, object?> Row(params (string Key, object? Value)[] fields)
+    private static Dictionary<string, object?> Row(params (string Key, object? Value)[] fields)
     {
         var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, value) in fields)
@@ -115,7 +115,8 @@ public sealed class RecordRowMatcherTests
     {
         var row = Row(("Name", "EnvSecrets"));
 
-        RecordRowMatcher.Matches(row, null, null, null).ShouldBeTrue();
+        // The null filter IS the case under test; the parameter is not declared nullable.
+        RecordRowMatcher.Matches(row, null!, null, null).ShouldBeTrue();
     }
 
     [Fact]

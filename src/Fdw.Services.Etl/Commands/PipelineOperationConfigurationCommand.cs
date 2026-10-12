@@ -13,9 +13,9 @@ namespace Fdw.Services.Etl.Commands;
 /// <see cref="PipelineTransformConfiguration"/> item via <c>ConfigurationCommands.All()</c>; without
 /// this TypeOption the cascade would fail loud (NoChildCommandForType) when persisting an operation.
 /// </remarks>
-[TypeOption(typeof(ConfigurationCommands), "PipelineOperation")]
+[TypeOption(typeof(ConfigurationCommands), "PipelineTransform")]
 public sealed class PipelineOperationConfigurationCommand : ConfigurationCommandBase<PipelineTransformConfiguration>
 {
     /// <summary>Initializes the command targeting the PipelineOperation table.</summary>
-    public PipelineOperationConfigurationCommand() : base("PipelineOperation") { }
+    public PipelineOperationConfigurationCommand() : base("PipelineTransform") { }
 }

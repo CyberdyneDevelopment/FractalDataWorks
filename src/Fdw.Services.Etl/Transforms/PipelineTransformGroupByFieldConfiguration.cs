@@ -31,24 +31,6 @@ public sealed partial class PipelineTransformGroupByFieldConfiguration : IGeneri
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent transform (column pipe.AggregationGroupByField.PipelineTransformId).
-    /// </summary>
-    /// <remarks>
-    /// Why: set by the configuration cascade-save to the parent transform's logical Id; the configuration
-    /// save translator resolves the physical PipelineTransformRowId via FK subquery on insert.
-    /// </remarks>
-    public Guid PipelineTransformId { get; set; }
-
-    /// <inheritdoc/>
-    public string SectionName => string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType => "Pipeline";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the field name to group by.
     /// </summary>
     public string FieldName { get; set; } = string.Empty;

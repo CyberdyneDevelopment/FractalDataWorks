@@ -15,7 +15,6 @@ public sealed class InReferenceSetRuleType : QualityRuleTypeBase
     /// </summary>
     public InReferenceSetRuleType()
         : base(
-            id: 5,
             name: "InReferenceSet",
             requiresField: true,
             supportsMultipleFields: false,

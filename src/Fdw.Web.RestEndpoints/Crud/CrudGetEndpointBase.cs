@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Fdw.Web.RestEndpoints.Pagination;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -52,10 +55,34 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
     protected virtual string ReadPolicy => $"{ResourceName}:read";
 
     /// <summary>
-    /// Gets the route for this endpoint. Defaults to "/{ResourceName}/{Name}".
-    /// Override for ID-based or custom route patterns.
+    /// Gets whether the resource this endpoint acts on decides who may use it, instead of a platform permission.
     /// </summary>
-    protected virtual string Route => $"/{ResourceName}/{{Name}}";
+    /// <remarks>
+    /// When true the endpoint requires only a signed-in caller, and the endpoint itself asks the
+    /// resource's own access policy. A workspace is the case this exists for: ownership, an
+    /// in-effect membership or a platform permission can each grant access to one, so the platform
+    /// permission cannot be the gate in front of it (FDW-936). False keeps the platform permission
+    /// as the gate, which is what every other resource does.
+    /// </remarks>
+    protected virtual bool ResourceDecidesAccess => false;
+
+    /// <summary>
+    /// Gets whether one record is read by <c>POST /{ResourceName}/get</c>, its identifier in the body, instead
+    /// of by a GET that names it in the route.
+    /// </summary>
+    /// <remarks>
+    /// A GET is a plain paged list and nothing else: a read of one record is a POST whose body names it
+    /// (FDW-978). The request type is the same either way -- its identifier is bound from the body here and
+    /// from the route there -- so an endpoint converts by overriding this alone. False keeps the GET route for
+    /// the endpoints not yet converted.
+    /// </remarks>
+    protected virtual bool ReadByBody => false;
+
+    /// <summary>
+    /// Gets the route for this endpoint. Defaults to "/{ResourceName}/{Name}", or "/{ResourceName}/get" when
+    /// <see cref="ReadByBody"/>. Override for ID-based or custom route patterns.
+    /// </summary>
+    protected virtual string Route => ReadByBody ? $"/{ResourceName}/get" : $"/{ResourceName}/{{Name}}";
 
     /// <summary>
     /// Gets the endpoint summary for OpenAPI documentation.
@@ -95,11 +122,15 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
     /// <inheritdoc/>
     public override void Configure()
     {
-        Get(Route);
+        if (ReadByBody)
+            Post(Route);
+        else
+            Get(Route);
 #if DEVELOP
         AllowAnonymous();
 #else
-        Policies(ReadPolicy);
+        if (!ResourceDecidesAccess)
+            Policies(ReadPolicy);
 #endif
         Summary(s =>
         {
@@ -139,7 +170,7 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
                         if (string.Equals(etag, ifNoneMatch, StringComparison.Ordinal))
                         {
                             ETagLogger.ETagComputed(Logger, ETagContainerName, etag);
-                            HttpContext.Response.StatusCode = 304;
+                            await Send.NotModifiedAsync(ct).ConfigureAwait(false);
                             return;
                         }
 
@@ -153,15 +184,13 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
 
             if (CrudResourceIdentifier.NamesNothing(resourceName))
             {
-                HttpContext.Response.StatusCode = 400;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                await Send.ResultAsync(TypedResults.Json(new Microsoft.AspNetCore.Mvc.ProblemDetails
                 {
                     Status = 400,
                     Title = "Missing identifier",
                     Detail = $"No {ResourceName} identifier was supplied.",
                     Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
-                }, ct).ConfigureAwait(false);
+                }, statusCode: 400)).ConfigureAwait(false);
                 return;
             }
             OnBeforeGet(resourceName);
@@ -177,28 +206,24 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
             if (result.Value is null)
             {
                 OnNotFound(resourceName);
-                HttpContext.Response.StatusCode = 404;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(NotFoundProblem($"{ResourceName} '{resourceName}' was not found."), ct).ConfigureAwait(false);
+                await Send.ResultAsync(TypedResults.Json(NotFoundProblem($"{ResourceName} '{resourceName}' was not found."), statusCode: 404)).ConfigureAwait(false);
                 return;
             }
 
             OnAfterGet(resourceName);
-            await Send.OkAsync(result.Value, ct).ConfigureAwait(false);
+            await SendFound(result.Value!, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new FdwErrorResponse
+            await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
                 Code = msg.Code ?? "INTERNAL_ERROR",
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
                 Action = "Contact your administrator"
-            }, ct).ConfigureAwait(false);
+            }, statusCode: 500)).ConfigureAwait(false);
         }
     }
 
@@ -233,14 +258,68 @@ public abstract class CrudGetEndpointBase<TRequest, TDetail> : Endpoint<TRequest
     {
     }
 
+    /// <summary>Sends the resource that was found.</summary>
+    /// <param name="found">The resource, as <see cref="FindByIdentifier"/> returned it.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>A task representing the send.</returns>
+    /// <remarks>
+    /// The resource as found, with status 200. An endpoint that answers some requests in another shape -- a page of the
+    /// list it found, when the caller opts in -- overrides this alone, so a missing resource, a failed read and the
+    /// conditional GET are answered exactly as they are for every other request (FDW-1194).
+    /// </remarks>
+    protected virtual Task SendFound(TDetail found, CancellationToken ct) => Send.OkAsync(found, ct);
+
+    /// <summary>
+    /// Sends the list the resource is as one page, when the caller asked for it with <c>?paged=true</c>.
+    /// </summary>
+    /// <typeparam name="TItem">The list's item type.</typeparam>
+    /// <param name="items">The whole list the resource is, in the order a page follows.</param>
+    /// <param name="selects">Says whether the search (<c>?q=</c>, <c>?match=</c>) selects an item.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>True when the request was answered here, with a page or with the refusal of its paging or search; false when the caller did not ask for a page and the list is to be sent whole.</returns>
+    /// <remarks>
+    /// The page is cut in memory from the list the endpoint already read, in the envelope every list answers in, and a
+    /// total (<c>?total=true</c>) counts the items the search selects. Without <c>paged</c> nothing here runs, so the
+    /// endpoint answers exactly as it did before this existed (FDW-1194).
+    /// </remarks>
+    protected async Task<bool> SendPageWhenAsked<TItem>(IReadOnlyList<TItem> items, Func<TItem, ListSearch, bool> selects, CancellationToken ct)
+    {
+        var paged = QueryFlag.Read(HttpContext, "paged", Logger);
+        if (paged.IsFailure)
+        {
+            await SendErrorResponse(paged, ct).ConfigureAwait(false);
+            return true;
+        }
+
+        if (!paged.Value)
+            return false;
+
+        var paging = PaginationQuery.Parse(HttpContext, Logger);
+        if (paging.IsFailure)
+        {
+            await SendErrorResponse(paging, ct).ConfigureAwait(false);
+            return true;
+        }
+
+        var search = ListSearch.Parse(HttpContext, Logger);
+        if (search.IsFailure)
+        {
+            await SendErrorResponse(search, ct).ConfigureAwait(false);
+            return true;
+        }
+
+        var selected = items.Where(item => selects(item, search.Value!)).ToList();
+        await Send.ResultAsync(TypedResults.Json(ListWindow.Of(selected, paging.Value!, search.Value!.IncludeTotal))).ConfigureAwait(false);
+        return true;
+    }
+
     /// <summary>
     /// Sends an error response when FindByIdentifier fails.
     /// </summary>
     protected virtual Task SendErrorResponse(IGenericResult result, CancellationToken ct)
     {
         var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
-        HttpContext.Response.StatusCode = statusCode;
-        return HttpContext.Response.WriteAsJsonAsync(errorResponse, ct);
+        return Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode));
     }
 
     /// <summary>Builds the RFC 7807 body for a resource that does not exist.</summary>

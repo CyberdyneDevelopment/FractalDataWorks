@@ -18,7 +18,7 @@ using Fdw.Services.Results;
 namespace Fdw.Services.Tests;
 
 /// <summary>
-/// Comprehensive tests for PlatformServiceProviderBase demonstrating service lifetime behaviors.
+/// Comprehensive tests for DomainServiceProviderBase demonstrating service lifetime behaviors.
 /// These tests verify that singleton providers, scoped configurations, and factory registrations
 /// behave correctly across DI scopes.
 /// </summary>
@@ -34,9 +34,8 @@ public class ServiceProviderLifetimeTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestServices";
-        public string ServiceType => "TestService";
-        public string? ServiceOptionType { get; set; }
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
     }
 
@@ -81,6 +80,23 @@ public class ServiceProviderLifetimeTests
     /// <summary>
     /// Test factory that creates TestService instances.
     /// </summary>
+    /// <summary>
+    /// Wraps the counting factory so the domain provider has an implementation provider to dispatch
+    /// to. The factory it holds is still what the lifetime assertions read.
+    /// </summary>
+    public class TestServiceImplementationProvider
+        : ImplementationServiceProviderBase<ITestService, TestServiceConfiguration>
+    {
+        public TestServiceImplementationProvider(TestServiceFactory factory) => Factory = factory;
+
+        public TestServiceFactory Factory { get; }
+
+        public override Task<IGenericResult<ITestService>> Create(
+            TestServiceConfiguration configuration,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(Factory.Create(configuration));
+    }
+
     public class TestServiceFactory : IServiceFactory<ITestService>
     {
         public int CreateCallCount { get; private set; }
@@ -118,30 +134,22 @@ public class ServiceProviderLifetimeTests
     }
 
     /// <summary>
-    /// Concrete test provider for testing PlatformServiceProviderBase behavior.
+    /// Concrete test provider for testing DomainServiceProviderBase behavior.
     /// </summary>
-    public class TestServiceProvider : PlatformServiceProviderBase<
+    public class TestServiceProvider : DomainServiceProviderBase<
         ITestService,
         TestServiceConfiguration,
         IServiceFactory<ITestService>,
         IDomainConfigurationProvider<TestServiceConfiguration>>
     {
-        public TestServiceProvider(IServiceProvider services, ILogger<TestServiceProvider> logger)
-            : base(services, logger)
+        public TestServiceProvider(ILogger<TestServiceProvider> logger)
+            : base(logger)
         {
         }
-
-        public new void Register(string serviceOptionType, IServiceFactory<ITestService> factory)
-            => base.Register(serviceOptionType, factory);
-
-        public new IGenericResult Register(IDomainConfigurationProvider<TestServiceConfiguration> domainConfigurationProvider)
-            => base.Register(domainConfigurationProvider);
     }
 
-    /// <summary>
-    /// Simple test configuration provider for testing.
-    /// </summary>
-    public class TestServiceConfigurationProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
+    /// <summary>The configurations this store holds, keyed the way the provider reads them.</summary>
+    public class TestServiceConfigurationProvider : IDomainConfigurationProvider<TestServiceConfiguration>
     {
         private readonly List<TestServiceConfiguration> _configs;
 
@@ -151,28 +159,45 @@ public class ServiceProviderLifetimeTests
         }
 
         public Task<IGenericResult<TestServiceConfiguration>> Get(string name, CancellationToken ct = default)
-        {
-            var match = _configs.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
-            return Task.FromResult<IGenericResult<TestServiceConfiguration>>(
-                match is not null
-                    ? GenericResult<TestServiceConfiguration>.Success(match)
-                    : GenericResult<TestServiceConfiguration>.Success(default!));
-        }
+            => Task.FromResult(GenericResult<TestServiceConfiguration>.Success(
+                _configs.FirstOrDefault(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase))!));
 
         public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, CancellationToken ct = default)
-        {
-            var match = _configs.FirstOrDefault(c => c.Id == id);
-            return Task.FromResult<IGenericResult<TestServiceConfiguration>>(
-                match is not null
-                    ? GenericResult<TestServiceConfiguration>.Success(match)
-                    : GenericResult<TestServiceConfiguration>.Success(default!));
-        }
+            => Task.FromResult(GenericResult<TestServiceConfiguration>.Success(
+                _configs.FirstOrDefault(c => c.Id == id)!));
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+            => Get(id, ct);
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, CancellationToken ct = default)
+            => Get(name, ct);
+
+        public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(int levels, CancellationToken ct = default)
+            => Get(ct);
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, int levels, CancellationToken ct = default)
+            => Get(id, ct);
+
+        public Task<IGenericResult<ConfigurationPage<TestServiceConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support paged reads.");
+
+        public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TChild>(string name, int levels, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support child reads.");
+
+        public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TOwner, TChild>(string name, Guid ownerId, int levels, CancellationToken ct = default)
+            => throw new NotSupportedException("Test provider does not support child reads.");
 
         public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(CancellationToken ct = default)
-            => Task.FromResult<IGenericResult<IReadOnlyList<TestServiceConfiguration>>>(
-                GenericResult<IReadOnlyList<TestServiceConfiguration>>.Success(_configs));
+            => Task.FromResult(GenericResult<IReadOnlyList<TestServiceConfiguration>>.Success(_configs));
 
-        public Task<IGenericResult<TestServiceConfiguration>> Save(TestServiceConfiguration record, CancellationToken ct = default)
+        public Task<IGenericResult<IReadOnlyList<T>>> Find<T>(Func<T, bool> predicate, CancellationToken ct = default)
+            where T : TestServiceConfiguration
+            => Task.FromResult(GenericResult<IReadOnlyList<T>>.Success(
+                (IReadOnlyList<T>)_configs.OfType<T>().Where(predicate).ToList()));
+
+        public Task<IGenericResult> Save<T>(
+            T implementationConfiguration, string domain, string implementationName, string name, CancellationToken ct = default)
+            where T : TestServiceConfiguration
             => throw new NotSupportedException("Test provider does not support Save.");
 
         public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
@@ -181,96 +206,93 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 
-    
-        // Type-erased surface — delegates to the typed members.
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
-        {
-            var result = await Get(id, ct).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
-                : result.ToNewResult<IGenericConfiguration>();
-        }
+        public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
+            => GenericResult.Success();
 
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
-        {
-            var result = await Get(name, ct).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
-                : result.ToNewResult<IGenericConfiguration>();
-        }
-
-        async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
-            => record is TestServiceConfiguration typed
-                ? await Save(typed, ct).ConfigureAwait(false)
-                : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
-
-
-        // ── IDomainConfigurationProvider ────────────────────────────────────
-        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
-            string name, CancellationToken ct) => Get(name, ct);
-
-        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
-            Guid id, CancellationToken ct) => Get(id, ct);
-
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
-            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
-            string name, T implementationConfigurationProvider) => GenericResult.Success();
-}
+        public IGenericResult<IImplementationConfigurationProvider<TestServiceConfiguration>> Implementation(string implementationName)
+            => throw new NotSupportedException("Test provider does not support Implementation.");
+    }
 
     /// <summary>
-    /// Aggregates multiple config providers into one for parent provider registration.
+    /// Aggregates several stores into the one a provider reads, so a single provider can be driven
+    /// with configurations that arrive from more than one place.
     /// </summary>
-    public class AggregateConfigProvider : IServiceConfigurationProvider<TestServiceConfiguration>, IServiceConfigurationProvider, IDomainConfigurationProvider<TestServiceConfiguration>
+    public class AggregateConfigProvider : IDomainConfigurationProvider<TestServiceConfiguration>
     {
-        private readonly IServiceConfigurationProvider<TestServiceConfiguration>[] _providers;
+        private readonly IDomainConfigurationProvider<TestServiceConfiguration>[] _providers;
 
-        public AggregateConfigProvider(params IServiceConfigurationProvider<TestServiceConfiguration>[] providers)
+        public AggregateConfigProvider(params IDomainConfigurationProvider<TestServiceConfiguration>[] providers)
         {
             _providers = providers;
         }
 
         public async Task<IGenericResult<TestServiceConfiguration>> Get(string name, CancellationToken ct = default)
         {
-            foreach (var p in _providers)
+            foreach (var provider in _providers)
             {
-                var result = await p.Get(name, ct).ConfigureAwait(false);
+                var result = await provider.Get(name, ct).ConfigureAwait(false);
                 if (result.IsSuccess && result.Value is not null) return result;
             }
+
             return GenericResult<TestServiceConfiguration>.Success(default!);
         }
 
         public async Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, CancellationToken ct = default)
         {
-            foreach (var p in _providers)
+            foreach (var provider in _providers)
             {
-                var result = await p.Get(id, ct).ConfigureAwait(false);
+                var result = await provider.Get(id, ct).ConfigureAwait(false);
                 if (result.IsSuccess && result.Value is not null) return result;
             }
+
             return GenericResult<TestServiceConfiguration>.Success(default!);
         }
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, DateTimeOffset asOf, CancellationToken ct = default)
+            => Get(id, ct);
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(string name, int levels, CancellationToken ct = default)
+            => Get(name, ct);
+
+        public Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(int levels, CancellationToken ct = default)
+            => Get(ct);
+
+        public Task<IGenericResult<TestServiceConfiguration>> Get(Guid id, int levels, CancellationToken ct = default)
+            => Get(id, ct);
+
+        public Task<IGenericResult<ConfigurationPage<TestServiceConfiguration>>> Get(int skip, int take, int levels, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support paged reads.");
+
+        public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TChild>(string name, int levels, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support child reads.");
+
+        public Task<IGenericResult<IReadOnlyList<TChild>>> Get<TOwner, TChild>(string name, Guid ownerId, int levels, CancellationToken ct = default)
+            => throw new NotSupportedException("Aggregate test provider does not support child reads.");
 
         public async Task<IGenericResult<IReadOnlyList<TestServiceConfiguration>>> Get(CancellationToken ct = default)
         {
             var all = new List<TestServiceConfiguration>();
-            foreach (var p in _providers)
+            foreach (var provider in _providers)
             {
-                var result = await p.Get(ct).ConfigureAwait(false);
-                if (result.IsSuccess && result.Value is not null)
-                    all.AddRange(result.Value);
+                var result = await provider.Get(ct).ConfigureAwait(false);
+                if (result.IsSuccess && result.Value is not null) all.AddRange(result.Value);
             }
+
             return GenericResult<IReadOnlyList<TestServiceConfiguration>>.Success(all);
         }
 
-        public Task<IGenericResult<TestServiceConfiguration>> Save(TestServiceConfiguration record, CancellationToken ct = default)
+        public async Task<IGenericResult<IReadOnlyList<T>>> Find<T>(Func<T, bool> predicate, CancellationToken ct = default)
+            where T : TestServiceConfiguration
+        {
+            var all = await Get(ct).ConfigureAwait(false);
+            return all.IsSuccess
+                ? GenericResult<IReadOnlyList<T>>.Success((IReadOnlyList<T>)all.Value!.OfType<T>().Where(predicate).ToList())
+                : all.ToNewResult<IReadOnlyList<T>>();
+        }
+
+        public Task<IGenericResult> Save<T>(
+            T implementationConfiguration, string domain, string implementationName, string name, CancellationToken ct = default)
+            where T : TestServiceConfiguration
             => throw new NotSupportedException("Aggregate test provider does not support Save.");
 
         public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
@@ -279,50 +301,12 @@ public class ServiceProviderLifetimeTests
         public Task<IGenericResult> Delete(string name, CancellationToken ct = default)
             => throw new NotSupportedException("Aggregate test provider does not support Delete.");
 
-    
-        // Type-erased surface — delegates to the typed members.
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(Guid id, CancellationToken ct)
-        {
-            var result = await Get(id, ct).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
-                : result.ToNewResult<IGenericConfiguration>();
-        }
+        public IGenericResult Register<T>(string name, T implementationConfigurationProvider)
+            => GenericResult.Success();
 
-        async Task<IGenericResult<IGenericConfiguration>> IServiceConfigurationProvider.Get(string name, CancellationToken ct)
-        {
-            var result = await Get(name, ct).ConfigureAwait(false);
-            return result.IsSuccess
-                ? result.ToNewResult<IGenericConfiguration>(result.Value!)
-                : result.ToNewResult<IGenericConfiguration>();
-        }
-
-        async Task<IGenericResult> IServiceConfigurationProvider.Save(IGenericConfiguration record, CancellationToken ct)
-            => record is TestServiceConfiguration typed
-                ? await Save(typed, ct).ConfigureAwait(false)
-                : GenericResult.Failure(ServicesResultCodes.ByName("ServiceCastFailed"));
-
-
-        // ── IDomainConfigurationProvider ────────────────────────────────────
-        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
-            string name, CancellationToken ct) => Get(name, ct);
-
-        Task<IGenericResult<TestServiceConfiguration>> IDomainConfigurationProvider<TestServiceConfiguration>.Get(
-            Guid id, CancellationToken ct) => Get(id, ct);
-
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Save<T>(
-            string serviceOptionType, string name, T implementationConfiguration, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(Guid id, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        Task<IGenericResult> IDomainConfigurationProvider<TestServiceConfiguration>.Delete(string name, CancellationToken ct)
-            => Task.FromResult<IGenericResult>(GenericResult.Success());
-
-        IGenericResult IDomainConfigurationProvider<TestServiceConfiguration>.Register<T>(
-            string name, T implementationConfigurationProvider) => GenericResult.Success();
-}
+        public IGenericResult<IImplementationConfigurationProvider<TestServiceConfiguration>> Implementation(string implementationName)
+            => throw new NotSupportedException("Test provider does not support Implementation.");
+    }
 
     #endregion
 
@@ -373,7 +357,7 @@ public class ServiceProviderLifetimeTests
 
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
         services.AddSingleton<TestServiceProvider>();
@@ -388,7 +372,7 @@ public class ServiceProviderLifetimeTests
             var factory = new TestServiceFactory();
             provider.Register(configProvider);
             provider.Register(configProvider);
-            provider.Register("TypeA", factory);
+            provider.Register("TypeA", () => new TestServiceImplementationProvider(factory));
         }
 
         // Act - Get service in different scope
@@ -413,17 +397,17 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "V1" },
-            new() { Name = "Service2", ServiceOptionType = "TypeA", Value = "V2" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "V1" },
+            new() { Name = "Service2", Implementation = "TypeA", Value = "V2" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", factory);
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(factory));
 
         // Act - Get multiple services
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -446,16 +430,16 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Initial" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Initial" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory = new TestServiceFactory();
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", factory);
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(factory));
 
         // Act - Get service twice
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -474,15 +458,15 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Initial" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Initial" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get("NonExistentService", TestContext.Current.CancellationToken);
@@ -499,15 +483,15 @@ public class ServiceProviderLifetimeTests
         // Arrange - start with one config
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Service1 exists
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -518,7 +502,7 @@ public class ServiceProviderLifetimeTests
         result2.IsSuccess.ShouldBeFalse();
 
         // Add Service2 dynamically
-        configs.Add(new() { Name = "Service2", ServiceOptionType = "TypeA", Value = "Value2" });
+        configs.Add(new() { Name = "Service2", Implementation = "TypeA", Value = "Value2" });
 
         // Now Service2 exists
         var result3 = await provider.Get("Service2", TestContext.Current.CancellationToken);
@@ -534,16 +518,16 @@ public class ServiceProviderLifetimeTests
         // Arrange - start with two configs
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" },
-            new() { Name = "Service2", ServiceOptionType = "TypeA", Value = "Value2" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" },
+            new() { Name = "Service2", Implementation = "TypeA", Value = "Value2" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Both services exist
         var result1 = await provider.Get("Service1", TestContext.Current.CancellationToken);
@@ -573,20 +557,20 @@ public class ServiceProviderLifetimeTests
         // Arrange - two service types with separate config providers
         var typeAConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceA1", ServiceOptionType = "TypeA", Value = "ValueA1" },
-            new() { Name = "ServiceA2", ServiceOptionType = "TypeA", Value = "ValueA2" }
+            new() { Name = "ServiceA1", Implementation = "TypeA", Value = "ValueA1" },
+            new() { Name = "ServiceA2", Implementation = "TypeA", Value = "ValueA2" }
         };
         var typeBConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceB1", ServiceOptionType = "TypeB", Value = "ValueB1" }
+            new() { Name = "ServiceB1", Implementation = "TypeB", Value = "ValueB1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProviderA = new TestServiceConfigurationProvider(typeAConfigs);
         var configProviderB = new TestServiceConfigurationProvider(typeBConfigs);
-        provider.Register("TypeA", new TestServiceFactory());
-        provider.Register("TypeB", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
+        provider.Register("TypeB", () => new TestServiceImplementationProvider(new TestServiceFactory()));
         provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         // All services exist
@@ -603,7 +587,7 @@ public class ServiceProviderLifetimeTests
         (await provider.Get("ServiceB1", TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
 
         // Add new service to TypeB
-        typeBConfigs.Add(new() { Name = "ServiceB2", ServiceOptionType = "TypeB", Value = "ValueB2" });
+        typeBConfigs.Add(new() { Name = "ServiceB2", Implementation = "TypeB", Value = "ValueB2" });
 
         // New service is now available
         var result = await provider.Get("ServiceB2", TestContext.Current.CancellationToken);
@@ -623,14 +607,14 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configsA = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceA", ServiceOptionType = "TypeA", Value = "ValueA" }
+            new() { Name = "ServiceA", Implementation = "TypeA", Value = "ValueA" }
         };
         var configsB = new List<TestServiceConfiguration>
         {
-            new() { Name = "ServiceB", ServiceOptionType = "TypeB", Value = "ValueB" }
+            new() { Name = "ServiceB", Implementation = "TypeB", Value = "ValueB" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var factoryA = new TestServiceFactory();
         var factoryB = new TestServiceFactory();
@@ -638,8 +622,8 @@ public class ServiceProviderLifetimeTests
         // Act
         var configProviderA = new TestServiceConfigurationProvider(configsA);
         var configProviderB = new TestServiceConfigurationProvider(configsB);
-        provider.Register("TypeA", factoryA);
-        provider.Register("TypeB", factoryB);
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(factoryA));
+        provider.Register("TypeB", () => new TestServiceImplementationProvider(factoryB));
         provider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         var resultA = await provider.Get("ServiceA", TestContext.Current.CancellationToken);
@@ -660,10 +644,10 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         var factory1 = new TestServiceFactory();
@@ -672,8 +656,8 @@ public class ServiceProviderLifetimeTests
         // Act
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", factory1);
-        provider.Register("TypeA", factory2); // Overwrite
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(factory1));
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(factory2)); // Overwrite
 
         var result = await provider.Get("Service1", TestContext.Current.CancellationToken);
 
@@ -694,14 +678,14 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var msSqlConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "DatabaseConnection", ServiceOptionType = "MsSql", Value = "Server=localhost" }
+            new() { Name = "DatabaseConnection", Implementation = "MsSql", Value = "Server=localhost" }
         };
         var restConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "ApiConnection", ServiceOptionType = "Rest", Value = "https://api.example.com" }
+            new() { Name = "ApiConnection", Implementation = "Rest", Value = "https://api.example.com" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var msSqlFactory = new TestServiceFactory();
         var restFactory = new TestServiceFactory();
@@ -709,9 +693,9 @@ public class ServiceProviderLifetimeTests
         var msSqlConfigProvider = new TestServiceConfigurationProvider(msSqlConfigs);
         var restConfigProvider = new TestServiceConfigurationProvider(restConfigs);
         provider.Register(msSqlConfigProvider);
-        provider.Register("MsSql", msSqlFactory);
+        provider.Register("MsSql", () => new TestServiceImplementationProvider(msSqlFactory));
         provider.Register(restConfigProvider);
-        provider.Register("Rest", restFactory);
+        provider.Register("Rest", () => new TestServiceImplementationProvider(restFactory));
         provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
         // Act
@@ -737,15 +721,15 @@ public class ServiceProviderLifetimeTests
         var serviceId = Guid.NewGuid();
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Id = serviceId, Name = "Service1", ServiceOptionType = "TypeA", Value = "TestValue" }
+            new() { Id = serviceId, Name = "Service1", Implementation = "TypeA", Value = "TestValue" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get(serviceId, TestContext.Current.CancellationToken);
@@ -764,17 +748,17 @@ public class ServiceProviderLifetimeTests
         var customConfig = new TestServiceConfiguration
         {
             Name = "CustomService",
-            ServiceOptionType = "TypeA",
+            Implementation = "TypeA",
             Value = "CustomValue"
         };
 
         var configs = new List<TestServiceConfiguration> { customConfig };
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act - Look up by name since Get(configuration) was removed
         var result = await provider.Get("CustomService", TestContext.Current.CancellationToken);
@@ -792,14 +776,14 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = "TypeA", Value = "Value1" }
+            new() { Name = "Service1", Implementation = "TypeA", Value = "Value1" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get((string)null!, TestContext.Current.CancellationToken);
@@ -811,23 +795,23 @@ public class ServiceProviderLifetimeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public async Task CreateWithMissingServiceOptionTypeReturnsFailure()
+    public async Task CreateWithMissingImplementationReturnsFailure()
     {
         var configs = new List<TestServiceConfiguration>
         {
-            new() { Name = "Service1", ServiceOptionType = null, Value = "Value" }
+            new() { Name = "Service1", Implementation = string.Empty, Value = "Value" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act
         var result = await provider.Get("Service1", TestContext.Current.CancellationToken);
 
-        // Assert - Fails because ServiceOptionType is null and parent can't dispatch
+        // Assert - Fails because Implementation is null and parent can't dispatch
         result.IsSuccess.ShouldBeFalse();
     }
 
@@ -845,17 +829,17 @@ public class ServiceProviderLifetimeTests
             .Select(i => new TestServiceConfiguration
             {
                 Name = $"Service{i}",
-                ServiceOptionType = "TypeA",
+                Implementation = "TypeA",
                 Value = $"Value{i}"
             })
             .ToList();
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var configProvider = new TestServiceConfigurationProvider(configs);
         provider.Register(configProvider);
         provider.Register(configProvider);
-        provider.Register("TypeA", new TestServiceFactory());
+        provider.Register("TypeA", () => new TestServiceImplementationProvider(new TestServiceFactory()));
 
         // Act - Get services concurrently using Parallel.For
         var results = new IGenericResult<ITestService>[configs.Count];
@@ -883,11 +867,11 @@ public class ServiceProviderLifetimeTests
         // Arrange
         var typeAConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "PrimaryService", ServiceOptionType = "TypeA", Value = "PrimaryValue" }
+            new() { Name = "PrimaryService", Implementation = "TypeA", Value = "PrimaryValue" }
         };
         var typeBConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "SecondaryService", ServiceOptionType = "TypeB", Value = "SecondaryValue" }
+            new() { Name = "SecondaryService", Implementation = "TypeB", Value = "SecondaryValue" }
         };
 
         var services = new ServiceCollection();
@@ -902,8 +886,8 @@ public class ServiceProviderLifetimeTests
         var factory = rootProvider.GetRequiredService<TestServiceFactory>();
         var configProviderA = new TestServiceConfigurationProvider(typeAConfigs);
         var configProviderB = new TestServiceConfigurationProvider(typeBConfigs);
-        testProvider.Register("TypeA", factory);
-        testProvider.Register("TypeB", factory);
+        testProvider.Register("TypeA", () => new TestServiceImplementationProvider(factory));
+        testProvider.Register("TypeB", () => new TestServiceImplementationProvider(factory));
         testProvider.Register(new AggregateConfigProvider(configProviderA, configProviderB));
 
         // Act
@@ -921,21 +905,21 @@ public class ServiceProviderLifetimeTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public async Task ProviderCorrectlyRoutesToFactoryBasedOnServiceOptionType()
+    public async Task ProviderCorrectlyRoutesToFactoryBasedOnImplementation()
     {
         // Arrange - simulate polymorphic configuration (MsSql vs Rest)
         var msSqlConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "OrdersDb", ServiceOptionType = "MsSql", Value = "Server=orders-db" },
-            new() { Name = "InventoryDb", ServiceOptionType = "MsSql", Value = "Server=inventory-db" }
+            new() { Name = "OrdersDb", Implementation = "MsSql", Value = "Server=orders-db" },
+            new() { Name = "InventoryDb", Implementation = "MsSql", Value = "Server=inventory-db" }
         };
         var restConfigs = new List<TestServiceConfiguration>
         {
-            new() { Name = "PaymentApi", ServiceOptionType = "Rest", Value = "https://payment.api" },
-            new() { Name = "ShippingApi", ServiceOptionType = "Rest", Value = "https://shipping.api" }
+            new() { Name = "PaymentApi", Implementation = "Rest", Value = "https://payment.api" },
+            new() { Name = "ShippingApi", Implementation = "Rest", Value = "https://shipping.api" }
         };
 
-        var provider = new TestServiceProvider(new ServiceCollection().BuildServiceProvider(), NullLogger<TestServiceProvider>.Instance);
+        var provider = new TestServiceProvider(NullLogger<TestServiceProvider>.Instance);
 
         var msSqlFactory = new TestServiceFactory();
         var restFactory = new TestServiceFactory();
@@ -943,9 +927,9 @@ public class ServiceProviderLifetimeTests
         var msSqlConfigProvider = new TestServiceConfigurationProvider(msSqlConfigs);
         var restConfigProvider = new TestServiceConfigurationProvider(restConfigs);
         provider.Register(msSqlConfigProvider);
-        provider.Register("MsSql", msSqlFactory);
+        provider.Register("MsSql", () => new TestServiceImplementationProvider(msSqlFactory));
         provider.Register(restConfigProvider);
-        provider.Register("Rest", restFactory);
+        provider.Register("Rest", () => new TestServiceImplementationProvider(restFactory));
         provider.Register(new AggregateConfigProvider(msSqlConfigProvider, restConfigProvider));
 
         // Act

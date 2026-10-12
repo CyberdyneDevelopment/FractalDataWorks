@@ -23,6 +23,16 @@ namespace Fdw.Services.Connections.Abstractions;
 public interface IDataConnection : IGenericConnection
 {
     /// <summary>
+    /// Gets a value indicating whether this connection carries a query's grouping and aggregates into the
+    /// store (a GROUP BY the database runs), rather than ignoring them.
+    /// </summary>
+    /// <value>
+    /// <see langword="false"/> unless the connection says otherwise. A caller that sends an aggregation to a
+    /// connection that does not ask for this would get back ungrouped rows, so it refuses first.
+    /// </value>
+    bool AggregatesInStore { get; }
+
+    /// <summary>
     /// Executes a data command against the unified container.
     /// </summary>
     /// <typeparam name="T">The expected return type.</typeparam>

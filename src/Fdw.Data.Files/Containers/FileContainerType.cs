@@ -18,7 +18,6 @@ public sealed class FileContainerType : ContainerTypeBase
 
     private FileContainerType()
         : base(
-            id: 20,
             name: "File",
             displayName: "File",
             description: "File-based data container supporting CSV, JSON, XML, Parquet, and other formats",

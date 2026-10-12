@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Samoa")]
 public sealed class SamoaTimeZoneType : TimeZoneTypeBase
 {
-    public SamoaTimeZoneType() : base(43, "Samoa", "Samoa Standard Time") { }
+    public SamoaTimeZoneType() : base("Samoa", "Samoa Standard Time") { }
 }

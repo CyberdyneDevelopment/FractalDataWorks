@@ -14,7 +14,7 @@ public sealed class DataStoreNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="DataStoreNodeType"/> class.
     /// </summary>
     public DataStoreNodeType()
-        : base(2, "DataStore", "Data Store", "Infrastructure", "database")
+        : base("DataStore", "Data Store", "Infrastructure", "database")
     {
     }
 }

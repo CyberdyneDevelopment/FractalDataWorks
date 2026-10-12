@@ -40,7 +40,7 @@ public sealed class MsSqlUpdateTranslatorGapTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
         var metadata = new Dictionary<string, object>();
         if (primaryKeyFieldName != null)
@@ -200,7 +200,7 @@ public sealed class MsSqlUpdateTranslatorGapTests
             CreateField("Value").Object
         };
         containerSchema.Setup(s => s.Fields).Returns(fields);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields);
 
         var metadata = new Dictionary<string, object> { ["SurrogateKeyField"] = "Id" };
         var container = new Mock<IStorageContainer>();

@@ -14,5 +14,5 @@ public sealed class OverwriteWriteMode : ContainerWriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OverwriteWriteMode"/> class.
     /// </summary>
-    public OverwriteWriteMode() : base(0, "Overwrite", preservesExistingData: false, requiresExistingContainer: false, failsIfExists: false) { }
+    public OverwriteWriteMode() : base("Overwrite", preservesExistingData: false, requiresExistingContainer: false, failsIfExists: false) { }
 }

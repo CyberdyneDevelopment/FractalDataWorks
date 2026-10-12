@@ -147,8 +147,7 @@ Authentication is **mandatory** — there is no anonymous FDW real-time hub:
 - Narrower per-verb rules compose on top with `[Authorize(Policy = "system:admin")]` on a specific
   hub method (e.g. an admin-only "subscribe to all" verb).
 
-**Clients** must send the caller's access token. A .NET SignalR client (including the one a Blazor
-Server circuit creates) sets `options.AccessTokenProvider` so the token rides as an
+**Clients** must send the caller's access token. A .NET SignalR client sets `options.AccessTokenProvider` so the token rides as an
 `Authorization: Bearer` header on negotiate/connect; the hub host validates it. No token ⇒ 401.
 
 **Per-org firehose.** The old global `pipeline-updates` group was an unconditional cross-org leak; it

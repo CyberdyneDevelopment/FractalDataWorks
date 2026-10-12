@@ -17,7 +17,7 @@ public sealed class RightJoinExecutor : JoinExecutorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="RightJoinExecutor"/> class.
     /// </summary>
-    public RightJoinExecutor() : base(3, "Right") { }
+    public RightJoinExecutor() : base("Right") { }
 
     /// <inheritdoc />
     public override IEnumerable<TResult> Execute<TLeft, TRight, TResult>(

@@ -11,5 +11,5 @@ public sealed class BoolPropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="BoolPropertyType"/> class.
     /// </summary>
-    public BoolPropertyType() : base(1, "Bool", typeof(bool), ConfigurationPropertyTypeDtos.Bool) { }
+    public BoolPropertyType() : base("Bool", typeof(bool), ConfigurationPropertyTypeDtos.Bool) { }
 }

@@ -94,22 +94,4 @@ public static partial class SessionStateLog
     /// <summary>Trace entry for CleanExpiredAsync.</summary>
     [MessageLogging(EventId = 11020, Level = LogLevel.Trace, Message = "Entering CleanExpiredAsync")]
     public static partial IGenericMessage TraceCleanExpiredEntry(ILogger logger);
-
-    /// <summary>Trace entry for circuit opened.</summary>
-    [MessageLogging(EventId = 11021, Level = LogLevel.Trace, Message = "Entering OnConnectionUpAsync")]
-    public static partial IGenericMessage TraceCircuitOpenedEntry(ILogger logger);
-
-    /// <summary>Trace entry for circuit closed.</summary>
-    [MessageLogging(EventId = 11022, Level = LogLevel.Trace, Message = "Entering OnCircuitClosedAsync")]
-    public static partial IGenericMessage TraceCircuitClosedEntry(ILogger logger);
-
-    // ── Circuit Handler Operations (8890-8899) ──────────────────────────────
-
-    /// <summary>Logs state loaded on circuit open.</summary>
-    [MessageLogging(EventId = 11023, Level = LogLevel.Debug, Message = "Circuit state loaded for user {userId}: {count} keys")]
-    public static partial IGenericMessage CircuitStateLoaded(ILogger logger, string userId, int count);
-
-    /// <summary>Logs dirty state persisted on circuit close.</summary>
-    [MessageLogging(EventId = 11024, Level = LogLevel.Debug, Message = "Circuit state persisted for user {userId}: {count} dirty keys")]
-    public static partial IGenericMessage CircuitStatePersisted(ILogger logger, string userId, int count);
 }

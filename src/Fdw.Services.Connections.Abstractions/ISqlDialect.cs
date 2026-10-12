@@ -53,6 +53,40 @@ public interface ISqlDialect
     string AlwaysFalsePredicate { get; }
 
     /// <summary>
+    /// Gets the character this dialect's LIKE is told (through an <c>ESCAPE</c> clause) to treat as the
+    /// escape for a pattern metacharacter in the text being matched.
+    /// </summary>
+    /// <remarks>
+    /// Stated by each dialect rather than assumed: some engines have a default escape, some have none, and
+    /// an <c>ESCAPE</c> clause written the same way in every statement means the pattern text is read the
+    /// same way in every engine. It must not be the single quote, which a SQL literal cannot hold bare.
+    /// </remarks>
+    char LikeEscapeCharacter { get; }
+
+    /// <summary>
+    /// Gets the characters, other than <see cref="LikeEscapeCharacter"/>, that this dialect's LIKE reads as
+    /// pattern syntax and that therefore have to be escaped to match themselves.
+    /// </summary>
+    /// <remarks>
+    /// T-SQL: <c>%</c>, <c>_</c> and <c>[</c> (a bracket opens a character set). PostgreSQL and SQLite:
+    /// <c>%</c> and <c>_</c>. The wildcard a pattern operator adds around the escaped text is <c>%</c> in
+    /// every one of them.
+    /// </remarks>
+    string LikeMetaCharacters { get; }
+
+    /// <summary>
+    /// Gets the operator this dialect's engine uses to match a pattern the way the filter operators'
+    /// in-memory <c>Matches</c> does: ignoring case.
+    /// </summary>
+    /// <remarks>
+    /// One meaning on every connection kind, so each engine says which of its operators has it. T-SQL and
+    /// SQLite: <c>LIKE</c>, which ignores case under SQL Server's default collation and for SQLite's ASCII
+    /// text. PostgreSQL: <c>ILIKE</c>, because its <c>LIKE</c> is case-sensitive. A database whose collation
+    /// is case-sensitive is a fact about that database, not something this member can state.
+    /// </remarks>
+    string PatternMatchOperator { get; }
+
+    /// <summary>
     /// Builds the dialect-specific paging clause from a paging expression.
     /// T-SQL: <c>OFFSET n ROWS FETCH NEXT m ROWS ONLY</c>;
     /// PostgreSQL/SQLite: <c>LIMIT m OFFSET n</c>.

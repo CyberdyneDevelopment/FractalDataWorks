@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlInt32Converter()
     : DataTypeConverterBase(
-        id: 1,
         name: "Int32",
         sourceType: "int",
         targetClrType: typeof(int),

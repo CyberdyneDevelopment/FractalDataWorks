@@ -55,7 +55,7 @@ public interface ICanvasRendererType : ITypeOption<int, CanvasRendererTypeBase>
     /// implements <see cref="ICanvasRenderer"/> directly).
     /// </summary>
     /// <remarks>
-    /// This is a plain <see cref="Type"/> (framework-neutral). A Blazor renderer package sets it to
+    /// This is a plain <see cref="Type"/> (framework-neutral). A renderer package sets it to
     /// its component type so a host can resolve the renderer from the enumerable
     /// <see cref="CanvasRendererTypes"/> registry without a separate map — no reflection, no module
     /// initializer. The contract layer does not load or instantiate the type.

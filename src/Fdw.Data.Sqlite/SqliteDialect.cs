@@ -42,6 +42,18 @@ public sealed class SqliteDialect : ISqlDialect
     public string ParameterPrefix => "@";
 
     /// <inheritdoc/>
+    public char LikeEscapeCharacter => '!';
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// SQLite reads <c>%</c> and <c>_</c> as wildcards.
+    /// </remarks>
+    public string LikeMetaCharacters => "%_";
+
+    /// <inheritdoc/>
+    public string PatternMatchOperator => "LIKE";
+
+    /// <inheritdoc/>
     /// <remarks>
     /// SQLite: <c>FALSE</c> (SQLite 3.23.0+, 2018).
     /// </remarks>

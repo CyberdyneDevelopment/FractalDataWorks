@@ -1,7 +1,10 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Data.Abstractions;
 using Fdw.Data;
+using Fdw.Schema;
 using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections;
@@ -42,32 +45,20 @@ public partial class DataContainerFieldConfiguration : IGenericConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "DataContainerFields";
 
     /// <summary>
-    /// Gets the service type - always "DataStore" for field configuration.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for base field configuration.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
-    /// Gets or sets the DataContainer ID this field belongs to.
-    /// </summary>
-    public Guid DataContainerId { get; set; }
-
-
-    /// <summary>
-    /// Gets or sets the field's SQL data type (e.g., "String", "Int32", "Decimal").
-    /// Maps to <c>data.DataContainerField.DataType</c>.
+    /// Gets or sets the store's own type name for the field, as the store reports it (e.g. <c>nvarchar</c>,
+    /// <c>bigint</c>, a JSON Schema <c>string</c>). Maps to <c>data.DataContainerField.DataType</c>.
     /// </summary>
     public string? DataType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the portable type the field normalizes to: the name of a <c>DataTypes</c> option
+    /// (<c>String</c>, <c>Int32</c>, <c>Decimal</c>, <c>DateTimeOffset</c> ...), the same vocabulary a data
+    /// set field's type uses (FDW-1103). <see langword="null"/> means nobody has stated it yet; discovery
+    /// records only what the store reports. Maps to <c>data.DataContainerField.FrameworkDataType</c>.
+    /// </summary>
+    public string? FrameworkDataType { get; set; }
 
     /// <summary>
     /// Gets or sets whether this column is system-provided (IDENTITY, COMPUTED, or DEFAULT-filled
@@ -77,17 +68,39 @@ public partial class DataContainerFieldConfiguration : IGenericConfiguration
     public bool IsSystemProvided { get; set; }
 
     /// <summary>
-    /// Gets or sets the FieldVisibilities option name for this column. <c>NotVisible</c> marks a
-    /// DB-only column the app never sees — the physical RowId PK and every <c>{Parent}RowId</c> FK. It
-    /// stays in the column metadata so the key metadata can reference it for the in-DB join, but it is
-    /// excluded from POCOs/DTOs and app-facing projections. Maps to <c>data.DataContainerField.VisibilityId</c>. <c>Visible</c>.
+    /// Gets or sets whether the store declares a DEFAULT constraint on this column.
+    /// JSON-bound from <c>configurationSchema.json</c> — not stored on the base DB table (there is
+    /// no <c>data.DataContainerField.HasDefault</c> column; <see cref="DefaultValue"/> is the
+    /// persisted equivalent, holding the expression text where discovery captured one).
     /// </summary>
-    public string VisibilityId { get; set; } = "Visible";
+    /// <remarks>
+    /// Purely descriptive — an app-settable column can carry a DEFAULT and still accept an
+    /// explicit value (e.g. <c>Status</c>, <c>RequestedAt</c>). <see cref="IsSystemProvided"/> is
+    /// the only flag translators consult to exclude a column from INSERT/UPDATE; this property
+    /// drives no write-path behavior.
+    /// </remarks>
+    [NotMapped]
+    public bool HasDefault { get; set; }
+
+    /// <summary>
+    /// Gets or sets what this column's data is: the <c>DatumTypeId</c> of a <c>DatumTypes</c> option
+    /// (FDW-988). <c>NotYetTyped</c> until someone types it; never empty. The datum type decides whether
+    /// a query returns the column by default: the physical RowId and every <c>{Parent}RowId</c> are
+    /// <c>DbKey</c>, declared so the key metadata can name them and returned only to server-side reads
+    /// that include keys. Maps to <c>data.DataContainerField.DatumTypeId</c>.
+    /// </summary>
+    public int DatumTypeId { get; set; } = DatumTypes.NotYetTyped.Id;
 
     /// <summary>
     /// Gets or sets the optional description for this field.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets how sensitive this data is: the <c>ClassificationId</c> of a <c>DataClassifications</c>
+    /// level. <c>NotYetClassified</c> until someone picks one; never empty. Maps to <c>ClassificationId</c> (FDW-938).
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
     /// <summary>
     /// Gets or sets whether this field allows null values.

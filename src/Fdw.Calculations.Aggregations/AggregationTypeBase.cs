@@ -21,12 +21,10 @@ public abstract class AggregationTypeBase : CalculationTypeBase, IAggregationTyp
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregationTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this aggregation type.</param>
     /// <param name="name">The name of this aggregation type.</param>
     /// <param name="calculate">Decimal-list aggregation func used for in-memory execution.</param>
-    protected AggregationTypeBase(int id, string name, Func<IReadOnlyList<decimal>, decimal> calculate)
+    protected AggregationTypeBase(string name, Func<IReadOnlyList<decimal>, decimal> calculate)
         : base(
-            id: id,
             name: name,
             category: "Aggregation",
             calculate: (rows, col, _) => calculate(ExtractValues(rows, col)),

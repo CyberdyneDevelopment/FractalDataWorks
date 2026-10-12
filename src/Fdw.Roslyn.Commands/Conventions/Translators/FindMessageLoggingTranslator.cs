@@ -32,7 +32,6 @@ public sealed class FindMessageLoggingTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: iterate projects, find MessageLogging attributes, extract event IDs
     public override async Task<IGenericResult<QueryResult<MessageLoggingData>>> Translate(
         FindMessageLoggingCommand command,
         Solution solution,
@@ -141,5 +140,4 @@ public sealed class FindMessageLoggingTranslator
 
         return GenericResult<QueryResult<MessageLoggingData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

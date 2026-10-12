@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Newfoundland")]
 public sealed class NewfoundlandTimeZoneType : TimeZoneTypeBase
 {
-    public NewfoundlandTimeZoneType() : base(17, "Newfoundland", "Newfoundland Standard Time") { }
+    public NewfoundlandTimeZoneType() : base("Newfoundland", "Newfoundland Standard Time") { }
 }

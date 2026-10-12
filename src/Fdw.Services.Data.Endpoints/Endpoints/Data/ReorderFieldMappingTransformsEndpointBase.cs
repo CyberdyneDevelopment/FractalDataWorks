@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,49 +15,40 @@ using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+using Fdw.Data.Abstractions;
+using Fdw.Services.Data.Transformations;
+
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for reordering transforms in a field mapping's transform chain.
-/// Accepts the new ordering as a list of transform identifiers and updates ordinals accordingly.
+/// Reorders the transformations attached to a field mapping (FDW-846):
+/// <c>POST /field-mappings/{FieldMappingId}/transforms/reorder</c>.
 /// </summary>
 /// <remarks>
-/// Why: FieldMappingTransform is a child record that does not implement IGenericConfiguration,
-/// so ordinal updates go through ConfigurationSaveCommand via IDataGateway. The configuration
-/// connection name and path are sourced from DataSetConfigurationProvider rather than
-/// IConfigurationConnectionNameProvider (which is the anti-pattern being eliminated).
+/// Attachments are child configuration rows (<c>transform.FieldMappingTransformation</c>), so each
+/// position change is a <c>ConfigurationSaveCommand</c> through the data gateway, addressed by the
+/// attachment's Id. Where they live comes from the Transformation domain provider's registration.
 /// </remarks>
 public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<ReorderFieldMappingTransformsRequest>
 {
-    /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformsEndpointBase"/> class.</summary>
-        /// <summary>Gets the data gateway for executing queries and commands.</summary>
-    protected IDataGateway DataGateway { get; }
+    private readonly TransformationConfigurationProvider _transformations;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    private readonly DataSetConfigurationProvider _dataSetProvider;
-
-    /// <summary>Gets the logger instance. Resolved during HandleAsync.</summary>
+    /// <summary>Gets the logger instance.</summary>
     protected new ILogger Logger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformsEndpointBase"/> class.</summary>
-    protected ReorderFieldMappingTransformsEndpointBase(ILogger logger, IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider)
+    /// <remarks>
+    /// The attachments are configuration rows in the transformation store the host declared, so they are read and
+    /// written through that store's configuration gateway: the main gateway refuses a request over a host-declared store.
+    /// </remarks>
+    protected ReorderFieldMappingTransformsEndpointBase(ILogger logger, IConfigurationGatewayProvider configurationGateways,
+        TransformationConfigurationProvider transformations)
     {
         Logger = logger;
-        DataGateway = dataGateways.ByName("Main");
-        _dataSetProvider = dataSetProvider;
+        _configurationGateways = configurationGateways;
+        _transformations = transformations;
     }
-
-
-    /// <summary>Gets the connection name for configuration database queries.</summary>
-    protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;
-
-    /// <summary>
-    /// Gets the configuration path that holds the transform containers.
-    /// </summary>
-    protected virtual string TransformPathName => "transform";
-
-    /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
-    protected virtual string TransformContainerName => "FieldMappingTransform";
 
     /// <inheritdoc/>
     public override void Configure()
@@ -70,8 +61,8 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
 #endif
         Summary(s =>
         {
-            s.Summary = "Reorder field mapping transforms";
-            s.Description = "Updates the ordinal positions of transforms in a field mapping's transform chain.";
+            s.Summary = "Reorder a field mapping's transformations";
+            s.Description = "Sets the order a field mapping's attached transformations run in. Name every attached transformation exactly once.";
         });
 
         ConfigureEndpoint();
@@ -88,80 +79,104 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// <inheritdoc/>
     public override async Task HandleAsync(ReorderFieldMappingTransformsRequest req, CancellationToken ct)
     {
-        
         try
         {
-            var result = await ReorderTransforms(req.FieldMappingId, req.TransformIds, ct).ConfigureAwait(false);
+            var result = await ReorderTransforms(req.FieldMappingId, req.TransformationNames, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
                 var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
-                HttpContext.Response.StatusCode = statusCode;
-                await HttpContext.Response.WriteAsJsonAsync(errorResponse, ct).ConfigureAwait(false);
+                await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
                 return;
             }
 
-            HttpContext.Response.StatusCode = StatusCodes.Status204NoContent;
+            await Send.NoContentAsync(ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
+            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
         }
     }
 
     /// <summary>
-    /// Reorders transforms by updating their ordinal values to match the position in the provided list.
-    /// Default implementation loads each transform and updates its ordinal via ConfigurationSaveCommand.
-    /// Override for custom behavior.
+    /// Re-saves each attachment whose position changed. The request must name every attached
+    /// transformation exactly once, so a reorder can never silently drop or duplicate one.
     /// </summary>
-    protected virtual async Task<IGenericResult> ReorderTransforms(Guid fieldMappingId, IList<Guid> transformIds, CancellationToken ct)
+    protected virtual async Task<IGenericResult> ReorderTransforms(
+        Guid fieldMappingId, IList<string> transformationNames, CancellationToken ct)
     {
         FieldMappingTransformEndpointLog.ReorderingTransforms(Logger, fieldMappingId);
 
-        // Load all current transforms for this field mapping.
-        var queryCommand = new QueryCommand<FieldMappingTransformConfiguration>
-        {
-            Filter = DataSetQueryHelper.ByParentIdFilter(nameof(FieldMappingTransformConfiguration.DataSetFieldMappingId), fieldMappingId)
-        };
-        var loadResult = await DataGateway
-            .Execute<IEnumerable<FieldMappingTransformConfiguration>>(
-                queryCommand, new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName), ct)
+        var gateway = _configurationGateways.Get(_transformations.DataStoreName);
+        if (gateway.IsFailure)
+            return gateway;
+
+        var attached = await FieldMappingTransformations
+            .ForFieldMapping(gateway.Value!, _transformations.DataStoreName, fieldMappingId, ct)
             .ConfigureAwait(false);
-        if (loadResult.IsFailure)
+        if (attached.IsFailure)
         {
             FieldMappingTransformEndpointLog.ReorderTransformsFailed(Logger, fieldMappingId);
-            return loadResult;
+            return attached;
         }
 
-        var transforms = loadResult.Value?.ToDictionary(t => t.Id) ?? new Dictionary<Guid, FieldMappingTransformConfiguration>();
+        var all = await _transformations.Get(ct).ConfigureAwait(false);
+        if (all.IsFailure)
+            return all;
+        var nameById = all.Value!.ToDictionary(t => t.Id, t => t.Name);
 
-        // Update ordinals based on the requested order
-        for (var i = 0; i < transformIds.Count; i++)
+        var byName = new Dictionary<string, FieldMappingTransformationConfiguration>(StringComparer.Ordinal);
+        foreach (var attachment in attached.Value!)
         {
-            var transformId = transformIds[i];
-            if (!transforms.TryGetValue(transformId, out var transform))
-            {
-                FieldMappingTransformEndpointLog.TransformNotFound(Logger, transformId);
-                continue;
-            }
-
-            transform.Ordinal = i;
-
-            var saveResult = await DataGateway
-                .Execute<int>(
-                    new ConfigurationSaveCommand<FieldMappingTransformConfiguration>(transform),
-                    new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName),
-                    ct)
-                .ConfigureAwait(false);
-            if (saveResult.IsFailure)
-            {
-                FieldMappingTransformEndpointLog.ReorderTransformsFailed(Logger, fieldMappingId);
-                return saveResult;
-            }
+            if (nameById.TryGetValue(attachment.TransformationId, out var name))
+                byName[name] = attachment;
         }
+
+        var requested = transformationNames.ToHashSet(StringComparer.Ordinal);
+        if (requested.Count != transformationNames.Count
+            || requested.Count != byName.Count
+            || !requested.SetEquals(byName.Keys))
+            return GenericResult.Failure(FieldMappingTransformEndpointLog.ReorderSetMismatch(Logger, fieldMappingId));
+
+        var written = await WriteOrdinals(gateway.Value!, byName, transformationNames, fieldMappingId, ct).ConfigureAwait(false);
+        if (written.IsFailure)
+            return written;
 
         FieldMappingTransformEndpointLog.ReorderedTransforms(Logger, fieldMappingId);
+        return GenericResult.Success();
+    }
+
+    // Saves each attachment whose position in the requested order differs from the one it holds.
+    private async Task<IGenericResult> WriteOrdinals(
+        IConfigurationGateway gateway,
+        Dictionary<string, FieldMappingTransformationConfiguration> byName,
+        IList<string> transformationNames,
+        Guid fieldMappingId,
+        CancellationToken ct)
+    {
+        for (var i = 0; i < transformationNames.Count; i++)
+        {
+            var attachment = byName[transformationNames[i]];
+            if (attachment.Ordinal == i)
+                continue;
+
+            var saved = await FieldMappingTransformations
+                .Save(gateway, _transformations.DataStoreName, new FieldMappingTransformationConfiguration
+                {
+                    Id = attachment.Id,
+                    DataSetFieldMappingId = attachment.DataSetFieldMappingId,
+                    TransformationId = attachment.TransformationId,
+                    Ordinal = i
+                }, ct)
+                .ConfigureAwait(false);
+            if (saved.IsFailure)
+            {
+                FieldMappingTransformEndpointLog.ReorderTransformsFailed(Logger, fieldMappingId);
+                return saved;
+            }
+        }
+
         return GenericResult.Success();
     }
 }

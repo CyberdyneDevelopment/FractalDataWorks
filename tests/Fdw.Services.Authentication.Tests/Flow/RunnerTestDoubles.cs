@@ -8,6 +8,7 @@ using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Execution;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Flow;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Results;
 using Fdw.Services.TokenManagers.Abstractions;
 
@@ -26,7 +27,8 @@ internal sealed class HostileStep : IAuthenticationStep
 
     public Func<AuthenticationContext, StepOutcome> Behaviour { get; init; } = _ => new StepOutcome.NotApplicable("nothing configured");
 
-    public Task<IGenericResult<StepOutcome>> Execute(AuthenticationContext context, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<StepOutcome>> Execute(
+        AuthenticationContext context, ITenantProvider tenants, CancellationToken cancellationToken = default)
         => Task.FromResult(GenericResult<StepOutcome>.Success(Behaviour(context)));
 }
 
@@ -50,6 +52,13 @@ internal sealed class NamedSteps
         => _steps.TryGetValue(stepName, out var s) ? s : null;
 }
 
+/// <summary>Builds a flow's step list from names, each carrying no settings.</summary>
+internal static class FlowSteps
+{
+    public static IReadOnlyList<AuthenticationFlowStep> Named(params string[] names)
+        => [.. Array.ConvertAll(names, n => new AuthenticationFlowStep { Name = n, Configuration = null })];
+}
+
 /// <summary>Counts methods. Two or more is "strong", one is "weak", none is null.</summary>
 internal sealed class CountingAcrPolicy : IAcrPolicy
 {
@@ -60,11 +69,31 @@ internal sealed class CountingAcrPolicy : IAcrPolicy
         _ => "strong",
     };
 
-    public bool Meets(string? achieved, string? required)
-        => required is null
-        || (required == "weak" && achieved is "weak" or "strong")
-        || (required == "strong" && achieved == "strong");
+    public IGenericResult<bool> Meets(string? achieved, string? required)
+        => GenericResult<bool>.Success(required is null
+            || (required == "weak" && achieved is "weak" or "strong")
+            || (required == "strong" && achieved == "strong"));
 }
+
+/// <summary>The assurance levels these tests declare, as a deployment's package would: one factor kind, and two.</summary>
+internal static class TestAssuranceLevels
+{
+    public static readonly IAssuranceLevel SingleFactor = new TestSingleFactorLevel();
+
+    public static readonly IAssuranceLevel MultiFactor = new TestMultiFactorLevel();
+
+    public static readonly IReadOnlyCollection<IAssuranceLevel> All = [SingleFactor, MultiFactor];
+
+    public static StandardAcrPolicy Policy() => new(All, null);
+}
+
+/// <summary>One kind of factor.</summary>
+internal sealed class TestSingleFactorLevel()
+    : AssuranceLevelBase("SingleFactor", "urn:test:acr:single-factor", 1, "Declared by the authentication tests.");
+
+/// <summary>Two distinct kinds of factor.</summary>
+internal sealed class TestMultiFactorLevel()
+    : AssuranceLevelBase("MultiFactor", "urn:test:acr:multi-factor", 2, "Declared by the authentication tests.");
 
 /// <summary>Records what it was asked to mint, so a test can inspect it.</summary>
 internal sealed class RecordingIssuer : ITokenIssuer
@@ -97,6 +126,9 @@ internal sealed class StaticFlowProvider : IAuthenticationFlowProvider
         => Task.FromResult(string.Equals(flowName, _flow.Name, StringComparison.Ordinal)
             ? GenericResult<AuthenticationFlow>.Success(_flow)
             : GenericResult<AuthenticationFlow>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound")));
+
+    public Task<IGenericResult<IReadOnlyList<AuthenticationFlow>>> Get(CancellationToken cancellationToken = default)
+        => Task.FromResult(GenericResult<IReadOnlyList<AuthenticationFlow>>.Success([_flow]));
 
     public Task<IGenericResult> LoadAndValidate(CancellationToken cancellationToken = default)
         => Task.FromResult<IGenericResult>(GenericResult.Success());

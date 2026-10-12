@@ -93,7 +93,7 @@ public class ServiceTypeCollectionPhaseMethodsAnalyzerTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
-    public async Task PlatformServiceProvider_MissingAllPhases_ReportsThreeDiagnostics()
+    public async Task PlatformServiceProviderMissingAllPhasesReportsThreeDiagnostics()
     {
         var test = $$"""
             {{Scaffold}}

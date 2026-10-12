@@ -18,7 +18,6 @@ public sealed class WorkspaceGraphCapability : CommandCapabilityTypeBase
     /// </summary>
     public WorkspaceGraphCapability()
         : base(
-            id: 8,
             name: "WorkspaceGraph",
             displayName: "Workspace Graph",
             configurationFields: [])

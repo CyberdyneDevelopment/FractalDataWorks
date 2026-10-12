@@ -14,7 +14,6 @@ public sealed class MaxRequestRateType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="MaxRequestRateType"/>.</summary>
     public MaxRequestRateType()
         : base(
-            1,
             "MaxRequestRate",
             "Max Request Rate",
             "Limits the number of outbound HTTP requests per second via a token bucket.",

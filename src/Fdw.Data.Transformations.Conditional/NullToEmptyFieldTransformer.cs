@@ -19,7 +19,6 @@ public sealed class NullToEmptyFieldTransformer : FieldTransformationBase
     /// </summary>
     public NullToEmptyFieldTransformer()
         : base(
-            id: 601,
             name: "NullToEmpty",
             displayName: "Null to Empty",
             description: "When the input is null, returns an empty string.",

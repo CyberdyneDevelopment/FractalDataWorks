@@ -28,7 +28,7 @@ public sealed class LeadOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="LeadOperation"/> class.
     /// </summary>
     public LeadOperation()
-        : base(id: 33, name: "Lead", category: "Window", description: "Accesses a field value from a subsequent row within a partition")
+        : base(name: "Lead", category: "Window", description: "Accesses a field value from a subsequent row within a partition")
     {
         _logger = NullLogger<LeadOperation>.Instance;
         Parameters =

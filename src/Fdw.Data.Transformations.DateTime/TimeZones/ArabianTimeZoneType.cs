@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Arabian")]
 public sealed class ArabianTimeZoneType : TimeZoneTypeBase
 {
-    public ArabianTimeZoneType() : base(32, "Arabian", "Arabian Standard Time") { }
+    public ArabianTimeZoneType() : base("Arabian", "Arabian Standard Time") { }
 }

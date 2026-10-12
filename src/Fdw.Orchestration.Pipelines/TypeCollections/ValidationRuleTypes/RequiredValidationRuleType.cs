@@ -20,7 +20,6 @@ public sealed class RequiredValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public RequiredValidationRuleType()
         : base(
-            id: 1,
             name: "Required",
             requiresFields: true,
             supportsMultipleFields: true,

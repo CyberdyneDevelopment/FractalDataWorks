@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class CreateViewDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="CreateViewDdlCommandType"/>.</summary>
-    public CreateViewDdlCommandType() : base(6, "CreateView") { }
+    public CreateViewDdlCommandType() : base("CreateView") { }
 }

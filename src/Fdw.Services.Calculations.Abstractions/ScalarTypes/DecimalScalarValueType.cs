@@ -14,7 +14,7 @@ public sealed class DecimalScalarValueType : ScalarValueTypeBase
     /// Initializes a new instance of the <see cref="DecimalScalarValueType"/> class.
     /// </summary>
     public DecimalScalarValueType()
-        : base(id: 2, name: "Decimal")
+        : base(name: "Decimal")
     {
     }
 }

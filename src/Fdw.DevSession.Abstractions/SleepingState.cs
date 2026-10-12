@@ -12,5 +12,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class SleepingState : SessionStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="SleepingState"/> class.</summary>
-    public SleepingState() : base(2, "Sleeping", isTerminal: false, isReclaimable: true) { }
+    public SleepingState() : base("Sleeping", isTerminal: false, isReclaimable: true) { }
 }

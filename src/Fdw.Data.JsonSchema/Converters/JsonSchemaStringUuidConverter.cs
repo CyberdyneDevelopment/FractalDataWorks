@@ -13,7 +13,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaStringUuidConverter()
     : DataTypeConverterBase(
-        id: 9,
         name: "StringUuid",
         sourceType: "string+uuid",
         targetClrType: typeof(Guid),

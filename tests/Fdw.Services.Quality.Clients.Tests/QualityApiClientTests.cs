@@ -96,7 +96,7 @@ public sealed class QualityApiClientTests
     {
         var request = new CreateQualityRulePayload
         {
-            Name = "NewRule", Description = "New rule desc",
+            Description = "New rule desc",
             RuleType = "Completeness", Expression = "count > 0"
         };
         var expected = new QualityRuleDetailPayload

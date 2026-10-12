@@ -29,7 +29,6 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve symbol, find implementations via SymbolFinder, build results
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>> Translate(
         FindImplementationsCommand command,
         Solution solution,
@@ -133,5 +132,4 @@ public sealed class FindImplementationsTranslator : RoslynCommandTranslatorBase<
 
         return GenericResult<QueryResult<IReadOnlyList<ImplementationInfo>>>.Success(result, summary);
     }
-#pragma warning restore MA0051
 }

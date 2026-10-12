@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Globalization;
 using System.Collections.Generic;
@@ -60,18 +61,21 @@ public static class RecordQueryEvaluator
         if (!primaryRowsValid.IsSuccess)
             return primaryRowsValid.ToNewResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>();
 
-        var joinResult = await ResolveJoin(joins, primaryContainer, loadJoinedRows, logger, cancellationToken).ConfigureAwait(false);
+        var joinResult = await ResolveJoins(joins, primaryContainer, loadJoinedRows, logger, cancellationToken).ConfigureAwait(false);
         if (!joinResult.IsSuccess)
             return joinResult.ToNewResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>();
 
-        var join = joinResult.Value;
+        var resolved = joinResult.Value!;
+        var joinedContainers = new Dictionary<string, IDataContainer>(StringComparer.Ordinal);
+        foreach (var join in resolved)
+            joinedContainers[join.ParentContainerName] = join.Container;
 
         var filterColumnsValid = RecordColumnValidator.ValidateFilterColumns(
-            filter?.Root, primaryContainer, join?.Container, join?.ParentContainerName, logger);
+            filter?.Root, primaryContainer, joinedContainers, logger);
         if (!filterColumnsValid.IsSuccess)
             return filterColumnsValid.ToNewResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>();
 
-        var matched = MatchRows(rows, join, filter);
+        var matched = MatchRows(rows, resolved, filter, primaryContainer.Name);
 
         var ordered = ApplyOrdering(matched, ordering);
         var paged = ApplyPaging(ordered, paging);
@@ -80,59 +84,96 @@ public static class RecordQueryEvaluator
         return GenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>.Success(paged);
     }
 
-    private static async Task<IGenericResult<JoinResolution?>> ResolveJoin(
+    private static async Task<IGenericResult<List<JoinResolution>>> ResolveJoins(
         IReadOnlyList<IJoinExpression> joins,
         IDataContainer primaryContainer,
         JoinedRowsLoader loadJoinedRows,
         ILogger logger,
         CancellationToken cancellationToken)
     {
-        if (joins.Count == 0)
-            return GenericResult<JoinResolution?>.Success(null);
+        var resolved = new List<JoinResolution>(joins.Count);
+        foreach (var join in joins)
+        {
+            var (leftField, rightField) = join.JoinConditions[0];
 
-        var join = joins[0];
-        var (leftField, rightField) = join.JoinConditions[0];
+            var joinedResult = await loadJoinedRows(join.TargetContainerName, cancellationToken).ConfigureAwait(false);
+            if (!joinedResult.IsSuccess)
+                return joinedResult.ToNewResult<List<JoinResolution>>();
 
-        var joinedResult = await loadJoinedRows(join.TargetContainerName, cancellationToken).ConfigureAwait(false);
-        if (!joinedResult.IsSuccess)
-            return joinedResult.ToNewResult<JoinResolution?>();
+            var joinedContainer = joinedResult.Value!.Container;
+            var parentRows = joinedResult.Value!.Rows;
+            RecordQueryLog.JoinTargetResolved(logger, joinedContainer.Name, parentRows.Count);
 
-        var joinedContainer = joinedResult.Value!.Container;
-        var parentRows = joinedResult.Value!.Rows;
-        RecordQueryLog.JoinTargetResolved(logger, joinedContainer.Name, parentRows.Count);
+            var joinedRowsValid = RecordRowValidator.Validate(parentRows, joinedContainer, logger);
+            if (!joinedRowsValid.IsSuccess)
+                return joinedRowsValid.ToNewResult<List<JoinResolution>>();
 
-        var joinedRowsValid = RecordRowValidator.Validate(parentRows, joinedContainer, logger);
-        if (!joinedRowsValid.IsSuccess)
-            return joinedRowsValid.ToNewResult<JoinResolution?>();
+            // The left column belongs to the container the join starts from: the queried container,
+            // or an earlier join's target (RecordQueryValidator has checked it is one of those).
+            var sourceContainer = primaryContainer;
+            if (join.SourceContainerName is { } source)
+            {
+                sourceContainer = resolved.First(r => string.Equals(r.ParentContainerName, source, StringComparison.Ordinal)).Container;
+                RecordQueryLog.JoinContinuesFrom(logger, join.TargetContainerName, source, leftField, rightField);
+            }
 
-        var joinColumnsValid = RecordColumnValidator.ValidateJoinColumns(leftField, rightField, primaryContainer, joinedContainer, logger);
-        if (!joinColumnsValid.IsSuccess)
-            return joinColumnsValid.ToNewResult<JoinResolution?>();
+            var joinColumnsValid = RecordColumnValidator.ValidateJoinColumns(leftField, rightField, sourceContainer, joinedContainer, logger);
+            if (!joinColumnsValid.IsSuccess)
+                return joinColumnsValid.ToNewResult<List<JoinResolution>>();
 
-        return GenericResult<JoinResolution?>.Success(
-            new JoinResolution(joinedContainer, parentRows, leftField, rightField, join.TargetContainerName));
+            resolved.Add(new JoinResolution(joinedContainer, parentRows, leftField, rightField, join.TargetContainerName, join.SourceContainerName));
+        }
+
+        return GenericResult<List<JoinResolution>>.Success(resolved);
     }
 
     private static List<IReadOnlyDictionary<string, object?>> MatchRows(
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
-        JoinResolution? join,
-        IFilterExpression? filter)
+        IReadOnlyList<JoinResolution> joins,
+        IFilterExpression? filter,
+        string primaryContainerName)
     {
         var matched = new List<IReadOnlyDictionary<string, object?>>();
         foreach (var row in rows)
         {
-            if (join is not null)
-            {
-                if (RecordRowMatcher.MatchesJoinedRow(row, join.Rows, join.LeftField, join.RightField, join.ParentContainerName, filter?.Root))
-                    matched.Add(row);
-                continue;
-            }
-
-            if (RecordRowMatcher.Matches(row, null, null, filter?.Root))
+            var context = new Dictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.Ordinal);
+            if (AnyPairing(row, joins, 0, context, filter, primaryContainerName))
                 matched.Add(row);
         }
 
         return matched;
+    }
+
+    // Real INNER JOIN semantics across the whole chain: the row survives when ANY combination of joined
+    // rows -- one per join, each matching the row it continues from -- satisfies the filter.
+    private static bool AnyPairing(
+        IReadOnlyDictionary<string, object?> row,
+        IReadOnlyList<JoinResolution> joins,
+        int index,
+        Dictionary<string, IReadOnlyDictionary<string, object?>> context,
+        IFilterExpression? filter,
+        string primaryContainerName)
+    {
+        if (index == joins.Count)
+            return RecordRowMatcher.Matches(row, context, filter?.Root, primaryContainerName);
+
+        var join = joins[index];
+        var sourceRow = join.SourceContainerName is { } source ? context[source] : row;
+        if (!sourceRow.TryGetValue(join.LeftField, out var leftValue) || leftValue is null)
+            return false;
+
+        foreach (var parentRow in join.Rows)
+        {
+            if (!parentRow.TryGetValue(join.RightField, out var rightValue) || !RecordRowMatcher.ValuesEqual(leftValue, rightValue))
+                continue;
+
+            context[join.ParentContainerName] = parentRow;
+            if (AnyPairing(row, joins, index + 1, context, filter, primaryContainerName))
+                return true;
+        }
+
+        context.Remove(join.ParentContainerName);
+        return false;
     }
 
     private sealed class JoinResolution
@@ -142,13 +183,15 @@ public static class RecordQueryEvaluator
             IReadOnlyList<IReadOnlyDictionary<string, object?>> rows,
             string leftField,
             string rightField,
-            string parentContainerName)
+            string parentContainerName,
+            string? sourceContainerName)
         {
             Container = container;
             Rows = rows;
             LeftField = leftField;
             RightField = rightField;
             ParentContainerName = parentContainerName;
+            SourceContainerName = sourceContainerName;
         }
 
         public IDataContainer Container { get; }
@@ -160,6 +203,8 @@ public static class RecordQueryEvaluator
         public string RightField { get; }
 
         public string ParentContainerName { get; }
+
+        public string? SourceContainerName { get; }
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<string, object?>> ApplyOrdering(

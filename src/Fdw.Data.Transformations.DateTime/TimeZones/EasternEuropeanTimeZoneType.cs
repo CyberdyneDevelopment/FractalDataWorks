@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "EasternEuropean")]
 public sealed class EasternEuropeanTimeZoneType : TimeZoneTypeBase
 {
-    public EasternEuropeanTimeZoneType() : base(10, "EasternEuropean", "E. Europe Standard Time") { }
+    public EasternEuropeanTimeZoneType() : base("EasternEuropean", "E. Europe Standard Time") { }
 }

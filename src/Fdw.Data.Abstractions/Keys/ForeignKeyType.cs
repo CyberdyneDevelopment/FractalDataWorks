@@ -22,7 +22,6 @@ public sealed class ForeignKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="ForeignKeyType"/> class.</summary>
     public ForeignKeyType()
         : base(
-            id: 3,
             name: "Foreign",
             isPrimaryKey: false,
             hasConstraint: true,

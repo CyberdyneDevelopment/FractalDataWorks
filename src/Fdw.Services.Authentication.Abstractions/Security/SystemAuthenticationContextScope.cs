@@ -69,6 +69,27 @@ public sealed class SystemAuthenticationContextScope : IDisposable
     }
 
     /// <summary>
+    /// Enters the scope working for <paramref name="tenantId"/>: saves <paramref name="accessor"/>'s current
+    /// value and sets <see cref="IAuthenticationContextAccessor.Current"/> to a
+    /// <see cref="SystemAuthenticationContext"/> that carries the tenant, so the rows written inside the scope
+    /// are owned by that tenant.
+    /// </summary>
+    /// <remarks>
+    /// For a write the caller has already been authorized to make on a tenant's behalf, whose rows must be
+    /// owned by that tenant rather than by the tenant the caller is acting in -- a role's grants are owned by
+    /// the role's tenant whoever writes them. The caller decides who may make the write; the scope only says
+    /// whose rows they are.
+    /// </remarks>
+    /// <param name="accessor">The ambient accessor to elevate for the duration of this scope.</param>
+    /// <param name="tenantId">The tenant the rows written inside the scope belong to.</param>
+    public SystemAuthenticationContextScope(IAuthenticationContextAccessor accessor, Guid tenantId)
+    {
+        _accessor = accessor ?? throw new ArgumentNullException(nameof(accessor));
+        _previous = accessor.Current;
+        accessor.Current = new SystemAuthenticationContext(tenantId);
+    }
+
+    /// <summary>
     /// Ends the system elevation, restoring the accessor's value from before this scope was entered.
     /// </summary>
     public void Dispose()

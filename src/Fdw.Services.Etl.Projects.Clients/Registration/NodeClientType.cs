@@ -13,9 +13,9 @@ using Fdw.Results;
 namespace Fdw.Services.Etl.Projects.Clients.Registration;
 
 /// <summary>
-/// ServiceTypeOption for the Node API client.
+/// Implementation for the Node API client.
 /// </summary>
-[ServiceTypeOption(typeof(ApiClientTypes), "NodeClient")]
+[Implementation(typeof(ApiClientTypes), "NodeClient")]
 public sealed class NodeClientType : ApiClientTypeBase<NodeApiClient>
 {
     /// <summary>
@@ -32,9 +32,8 @@ public sealed class NodeClientType : ApiClientTypeBase<NodeApiClient>
         {
             builder.Services.AddScoped<NodeApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<NodeApiClient>>() ?? NullLogger<NodeApiClient>.Instance;
-                return new NodeApiClient(factory.CreateClient(Name), logger);
+                return new NodeApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

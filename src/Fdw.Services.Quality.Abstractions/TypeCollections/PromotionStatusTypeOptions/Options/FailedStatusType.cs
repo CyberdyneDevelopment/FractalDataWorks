@@ -15,7 +15,6 @@ public sealed class FailedStatusType : PromotionStatusTypeBase
     /// </summary>
     public FailedStatusType()
         : base(
-            id: 6,
             name: "Failed",
             isTerminal: true,
             isSuccess: false,

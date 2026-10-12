@@ -15,7 +15,6 @@ public sealed class WorkflowItemType : ExecutionItemTypeBase
     /// </summary>
     public WorkflowItemType()
         : base(
-            id: 1,
             name: "Workflow",
             displayName: "Workflow",
             hierarchyLevel: 0,

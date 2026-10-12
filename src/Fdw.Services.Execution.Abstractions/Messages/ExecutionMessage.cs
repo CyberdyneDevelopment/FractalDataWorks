@@ -18,8 +18,7 @@ public abstract class ExecutionMessage : MessageTemplate<MessageSeverity>, IServ
     /// <param name="message">The human-readable message text.</param>
     /// <param name="code">The message code or identifier (optional).</param>
     /// <param name="category">The category for grouping (optional).</param>
-    /// <param name="helpLink">Link to documentation (optional).</param>
     protected ExecutionMessage(int id, string name, MessageSeverity severity,
-        string message, string? code = null, string? category = null, string? helpLink = null)
+        string message, string? code = null, string? category = null)
         : base(id, name, severity, message, code, "Execution") { }
 }

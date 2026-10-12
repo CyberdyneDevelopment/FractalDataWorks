@@ -25,7 +25,7 @@ public sealed class PremiumRateLimitPolicy : RateLimitPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PremiumRateLimitPolicy"/> class.
     /// </summary>
-    public PremiumRateLimitPolicy() : base(3, "Premium")
+    public PremiumRateLimitPolicy() : base("Premium")
     {
     }
 

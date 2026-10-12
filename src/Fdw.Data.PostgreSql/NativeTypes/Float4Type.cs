@@ -13,7 +13,7 @@ public sealed class Float4Type : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="Float4Type"/> class.</summary>
     public Float4Type()
-        : base(id: 12, name: "float4")
+        : base(name: "float4")
     {
     }
 

@@ -14,7 +14,6 @@ public sealed class RateLimitType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="RateLimitType"/>.</summary>
     public RateLimitType()
         : base(
-            1,
             "RateLimit",
             "Rate Limit",
             "Limits the number of queries per second (and optionally per minute) via a token bucket.",

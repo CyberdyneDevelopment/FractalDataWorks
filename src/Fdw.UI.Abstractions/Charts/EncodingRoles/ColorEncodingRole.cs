@@ -14,7 +14,7 @@ public sealed class ColorEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="ColorEncodingRole"/> class.
     /// </summary>
     public ColorEncodingRole()
-        : base(4, "Color", "Color", isSpatial: false)
+        : base("Color", "Color", isSpatial: false)
     {
     }
 }

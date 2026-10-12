@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataBooleanConverter()
     : DataTypeConverterBase(
-        id: 6,
         name: "Boolean",
         sourceType: "Boolean",
         targetClrType: typeof(bool),

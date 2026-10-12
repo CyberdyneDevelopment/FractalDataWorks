@@ -17,37 +17,6 @@ There are 6 TypeCollection variants organized in two families:
 
 ---
 
-## Headless Logic Providers (Protocols)
-
-While the components above handle type-safe discovery and DI, **Logic Providers** (Protocols) manage the runtime state and API orchestration for the UI.
-
-### The Headless Pattern
-
-Logic Providers are non-rendering Blazor components that serve as the "brain" for a page or feature. They wrap visual components (the "Skin") and provide them with data, loading states, and action methods.
-
-| Feature | Provider (Protocol) | Visual Skin (Reference) |
-|---------|---------------------|--------------------------|
-| **Responsibility** | API calls, state, validation | Rendering, CSS, Layout |
-| **Logic Location** | Core Framework | Reference Project |
-| **Reuse** | 100% Shared | Project Specific |
-
-### Example: ConnectionProvider
-
-```razor
-<ConnectionProvider @ref="_provider">
-    <ChildContent Context="logic">
-        @if (logic.IsLoading) { <MudProgressLinear Indeterminate="true" /> }
-        else {
-            <MudTable Items="logic.Connections">
-                <!-- Rendering details here -->
-            </MudTable>
-        }
-    </ChildContent>
-</ConnectionProvider>
-```
-
----
-
 ## 1. TypeCollection (Immutable)
 
 ### Required Components
@@ -418,7 +387,7 @@ ServiceTypeCollections extend TypeCollections with dependency injection support 
 |  - Uses Guid keys (UUID v5 derived from the type)                   |
 |  - Base class has RegisterServices() and RegisterFactory() methods  |
 |  - Collection has RegisterAll() and InitializeFactories() methods   |
-|  - Uses [TypeOption] attribute (NOT [ServiceTypeOption])            |
+|  - Uses [TypeOption] attribute (NOT [Implementation])            |
 |  - Three-phase registration pattern for proper DI lifecycle         |
 +---------------------------------------------------------------------+
 ```

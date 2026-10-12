@@ -19,7 +19,7 @@ public sealed class XmlRowSourceType : RecordSourceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="XmlRowSourceType"/> class.
     /// </summary>
-    public XmlRowSourceType() : base(2, "Xml")
+    public XmlRowSourceType() : base("Xml")
     {
     }
 

@@ -20,7 +20,7 @@ namespace Fdw.Services.Connections.Http.Abstractions.Tests;
 internal sealed class TestHttpProtocol : HttpProtocolBase
 {
     public TestHttpProtocol()
-        : base(999, "TestProtocol", "Test protocol for unit tests", "application/json")
+        : base("TestProtocol", "Test protocol for unit tests", "application/json")
     {
     }
 
@@ -75,14 +75,6 @@ public class HttpProtocolBaseTests
             null,
             null,
             null);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void ConstructorSetsId()
-    {
-        _protocol.Id.ShouldBe(999);
     }
 
     [Fact]

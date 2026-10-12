@@ -11,16 +11,15 @@ namespace Fdw.Results.ExecutionStatus;
 public sealed class CancelledStatus : ExecutionStatusBase
 {
     /// <summary>
-    /// MudBlazor icon for cancelled status.
+    /// Material Symbols icon name for cancelled status.
     /// </summary>
-    public const string CancelledIcon = "cancel"; // Icons.Material.Filled.Cancel
+    public const string CancelledIcon = "cancel";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CancelledStatus"/> class.
     /// </summary>
     public CancelledStatus()
         : base(
-            id: 5,
             name: "Cancelled",
             icon: CancelledIcon,
             color: "Warning",

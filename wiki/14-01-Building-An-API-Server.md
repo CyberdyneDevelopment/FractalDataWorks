@@ -12,7 +12,7 @@ To build a new FDW API server:
 2. **Reference the FDW hosting packages:**
    - `Fdw.MessageLogging.Abstractions`
    - `Fdw.MessageLogging.SourceGenerators` (analyzer-only)
-   - `Fdw.Registration.SourceGenerators` (analyzer-only — emits ModuleInitializer to register `[ServiceTypeOption]` at assembly load)
+   - `Fdw.Registration.SourceGenerators` (analyzer-only — emits ModuleInitializer to register `[Implementation]` at assembly load)
    - `Fdw.Hosting`, `Fdw.Hosting.MsSql`
    - FastEndpoints
 3. **Add a `configurationSchema.json`** file declaring the ConfigurationDb connection (loaded at the very start of `Program.cs`).

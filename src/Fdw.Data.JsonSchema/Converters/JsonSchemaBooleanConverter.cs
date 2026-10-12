@@ -14,7 +14,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaBooleanConverter()
     : DataTypeConverterBase(
-        id: 11,
         name: "Boolean",
         sourceType: "boolean",
         targetClrType: typeof(bool),

@@ -11,7 +11,7 @@ namespace Fdw.Collections;
 /// Generated code provides:
 /// - ConcurrentDictionary-based lookups (thread-safe)
 /// - Register(TInterface) method for runtime additions
-/// - Static property accessors for compile-time ServiceTypeOptions
+/// - Static property accessors for compile-time Implementations
 /// - ById(), ByName(), All() methods
 /// - Custom lookup methods from [TypeLookup] attributes
 /// - Empty sentinel value
@@ -45,12 +45,12 @@ public sealed class MutableServiceTypeCollectionAttribute : Attribute
     }
 
     /// <summary>
-    /// The abstract base type that all ServiceTypeOptions must inherit from.
+    /// The abstract base type that all Implementations must inherit from.
     /// </summary>
     public Type BaseType { get; }
 
     /// <summary>
-    /// The interface type used for return values. All ServiceTypeOptions must implement this.
+    /// The interface type used for return values. All Implementations must implement this.
     /// </summary>
     public Type InterfaceType { get; }
 
@@ -73,7 +73,7 @@ public sealed class MutableServiceTypeCollectionAttribute : Attribute
     public string? Name { get; }
 
     /// <summary>
-    /// If true, only discovers ServiceTypeOptions in the current compilation (not referenced assemblies).
+    /// If true, only discovers Implementations in the current compilation (not referenced assemblies).
     /// Default is false (discovers across all referenced assemblies).
     /// </summary>
     public bool RestrictToCurrentCompilation { get; set; }

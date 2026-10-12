@@ -24,4 +24,20 @@ public interface IPrincipalBinding
     /// </remarks>
     Task<IGenericResult<Principal?>> Resolve(
         string issuer, string subjectId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Redeems an operator's open invitation for <paramref name="verifiedEmail"/> at this issuer: the
+    /// invitation becomes a binding to <paramref name="subjectId"/>, and its principal is returned.
+    /// </summary>
+    /// <param name="issuer">The authority that asserted the subject.</param>
+    /// <param name="subjectId">The subject identifier the issuer proved.</param>
+    /// <param name="verifiedEmail">An address the caller has established the issuer verified.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <remarks>
+    /// Success with null means no open invitation matches, which a caller treats exactly like an
+    /// unbound subject. An invitation is used once: redeemed, it names its subject and is never matched
+    /// by address again.
+    /// </remarks>
+    Task<IGenericResult<Principal?>> RedeemInvitation(
+        string issuer, string subjectId, string verifiedEmail, CancellationToken cancellationToken = default);
 }

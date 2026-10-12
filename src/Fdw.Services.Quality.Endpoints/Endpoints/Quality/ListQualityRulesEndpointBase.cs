@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -13,11 +13,11 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that lists quality rules, optionally filtered by DataSet name.</summary>
 public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryRequest, List<QualityRuleDto>>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="ListQualityRulesEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ListQualityRulesEndpointBase(QualityConfigurationProvider provider)
+    protected ListQualityRulesEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -26,7 +26,7 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
     protected virtual string ResourceName => "quality/rules";
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
-    protected virtual string ReadPolicy => "datasets:read";
+    protected virtual string ReadPolicy => "quality/rules:read";
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -47,17 +47,15 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
     /// <summary>Retrieves all quality rules, optionally filtering by DataSet name when provided.</summary>
     public override async Task HandleAsync(DataSetQueryRequest req, CancellationToken ct)
     {
-        var result = await _provider.GetAllQualityRules(ct).ConfigureAwait(false);
+        var result = await _provider.Get(ct).ConfigureAwait(false);
 
-        if (!result.IsSuccess)
+        if (!result.IsSuccess || result.Value is null)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to list quality rules", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to list quality rules", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
-        IEnumerable<QualityRuleConfiguration> rules = result.Value ?? [];
+        IEnumerable<IQualityRuleImplementationConfiguration> rules = result.Value;
 
         if (!string.IsNullOrWhiteSpace(req.DataSetName))
         {
@@ -68,8 +66,8 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
         await Send.OkAsync(rules.Select(MapToDto).ToList(), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a QualityRuleConfiguration to its corresponding DTO.</summary>
-    protected virtual QualityRuleDto MapToDto(QualityRuleConfiguration config)
+    /// <summary>Maps a QualityRuleImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual QualityRuleDto MapToDto(IQualityRuleImplementationConfiguration config)
     {
         return new QualityRuleDto
         {
@@ -83,7 +81,8 @@ public abstract class ListQualityRulesEndpointBase : Endpoint<DataSetQueryReques
             MinValue = config.MinValue,
             MaxValue = config.MaxValue,
             Pattern = config.Pattern,
-            Expression = config.Expression
+            Expression = config.Expression,
+            CreatedAt = config.CreateDate
         };
     }
 }

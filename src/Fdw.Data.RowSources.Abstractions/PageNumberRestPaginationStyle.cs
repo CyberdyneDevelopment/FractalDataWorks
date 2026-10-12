@@ -9,5 +9,5 @@ namespace Fdw.Data.RowSources.Http.Abstractions;
 public sealed class PageNumberRestPaginationStyle : RestPaginationStyleBase
 {
     /// <summary>Initializes a new instance of <see cref="PageNumberRestPaginationStyle"/>.</summary>
-    public PageNumberRestPaginationStyle() : base(2, "PageNumber") { }
+    public PageNumberRestPaginationStyle() : base("PageNumber") { }
 }

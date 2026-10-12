@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlSmallMoneyConverter()
     : DataTypeConverterBase(
-        id: 19,
         name: "SmallMoney",
         sourceType: "smallmoney",
         targetClrType: typeof(decimal),

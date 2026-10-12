@@ -22,17 +22,8 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
     /// <summary>
     /// Initializes a new instance of <see cref="ConnectionLimitConfiguration"/>.
     /// </summary>
-    /// <param name="serviceType">Domain name (e.g., "Connection").</param>
-    /// <param name="serviceOptionType">Connection option type (e.g., "MsSql", "Http").</param>
-    /// <param name="sectionName">IOptions section path.</param>
-    protected ConnectionLimitConfiguration(
-        string serviceType,
-        string serviceOptionType,
-        string sectionName)
+    protected ConnectionLimitConfiguration()
     {
-        ServiceType = serviceType;
-        ServiceOptionType = serviceOptionType;
-        SectionName = sectionName;
     }
 
     /// <inheritdoc />
@@ -40,15 +31,6 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
 
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
-
-    /// <inheritdoc />
-    public string SectionName { get; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; }
 
     /// <summary>
     /// Gets or sets the connection configuration identifier this limit applies to.
@@ -99,10 +81,4 @@ public class ConnectionLimitConfiguration : IGenericConfiguration
     /// Return null when this limit record does not configure a daily query budget.
     /// </summary>
     public virtual int? EnforceMaxQueriesPerDay => null;
-
-    /// <summary>
-    /// Gets the daily byte budget.
-    /// Return null when this limit record does not configure a daily byte budget.
-    /// </summary>
-    public virtual long? EnforceMaxBytesPerDay => null;
 }

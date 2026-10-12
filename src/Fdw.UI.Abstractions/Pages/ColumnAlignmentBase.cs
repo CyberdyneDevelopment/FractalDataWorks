@@ -7,10 +7,10 @@ namespace Fdw.UI.Abstractions.Pages;
 /// Base class for column text alignment.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class ColumnAlignmentBase : TypeOptionBase<int, ColumnAlignmentBase>, IColumnAlignment
+public abstract class ColumnAlignmentBase : TypeOptionBase<ColumnAlignmentBase>, IColumnAlignment
 {
     /// <summary>
     /// Initializes a new instance of <see cref="ColumnAlignmentBase"/>.
     /// </summary>
-    protected ColumnAlignmentBase(int id, string name) : base(id, name) { }
+    protected ColumnAlignmentBase(string name) : base(name) { }
 }

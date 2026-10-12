@@ -9,5 +9,5 @@ namespace Fdw.TUI.Management.Navigation;
 public sealed class ExitNavigationAction : NavigationActionBase
 {
     /// <summary>Initializes a new instance of <see cref="ExitNavigationAction"/>.</summary>
-    public ExitNavigationAction() : base(5, "Exit") { }
+    public ExitNavigationAction() : base("Exit") { }
 }

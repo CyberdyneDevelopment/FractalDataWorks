@@ -10,7 +10,7 @@ public sealed class PostgreSqlConnectionAuthKvp
 {
 
     /// <summary>Gets or sets the parent FK.</summary>
-    public Guid PostgreSqlConnectionId { get; set; }
+    public Guid PostgreSqlConnectionConfigurationId { get; set; }
 
     /// <summary>Gets or sets the key name.</summary>
     public string Name { get; set; } = string.Empty;

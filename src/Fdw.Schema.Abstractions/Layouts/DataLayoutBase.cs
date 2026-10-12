@@ -16,25 +16,23 @@ namespace Fdw.Schema;
 /// without instantiation.
 /// </para>
 /// </remarks>
-public abstract class DataLayoutBase : TypeOptionBase<int, DataLayoutBase>, IDataLayout
+public abstract class DataLayoutBase : TypeOptionBase<DataLayoutBase>, IDataLayout
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataLayoutBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this layout.</param>
     /// <param name="name">Name of the layout (must match TypeOption attribute).</param>
     /// <param name="description">Human-readable description of the layout.</param>
     /// <param name="supportsNesting">Whether this layout supports hierarchical nesting.</param>
     /// <param name="supportsFlattening">Whether this layout can be flattened to tabular form.</param>
     /// <param name="isTabular">Whether this layout has a native row/column structure.</param>
     protected DataLayoutBase(
-        int id,
         string name,
         string description,
         bool supportsNesting,
         bool supportsFlattening,
         bool isTabular)
-        : base(id, name, $"DataLayouts:{name}", name, description, "DataLayout")
+        : base(name, $"DataLayouts:{name}", name, description, "DataLayout")
     {
         SupportsNesting = supportsNesting;
         SupportsFlattening = supportsFlattening;

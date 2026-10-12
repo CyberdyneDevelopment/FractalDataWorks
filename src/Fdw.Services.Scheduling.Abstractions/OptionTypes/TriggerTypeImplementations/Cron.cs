@@ -76,7 +76,7 @@ public sealed class Cron : TriggerTypeBase
     /// Cron triggers require schedule persistence to track next execution times and
     /// do not execute immediately - they wait for their calculated schedule time.
     /// </remarks>
-    public Cron(ILogger<Cron>? logger = null) : base(1, "Cron", requiresSchedule: true, isImmediate: false)
+    public Cron(ILogger<Cron>? logger = null) : base("Cron", requiresSchedule: true, isImmediate: false)
     {
         _logger = logger ?? NullLogger<Cron>.Instance;
     }
@@ -121,7 +121,6 @@ public sealed class Cron : TriggerTypeBase
     /// var nextExecution = cronTrigger.CalculateNextExecution(trigger, null);
     /// </code>
     /// </example>
-#pragma warning disable MA0051 // Linear cron expression parsing with timezone conversion and DST handling
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Cron expression parsing with timezone conversion and multiple fallback paths
     public override DateTime? CalculateNextExecution(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -265,7 +264,6 @@ public sealed class Cron : TriggerTypeBase
             return false;
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Validates that the trigger configuration contains a valid cron expression and timezone.
@@ -306,7 +304,6 @@ public sealed class Cron : TriggerTypeBase
     /// // result.Error == true with timezone validation error
     /// </code>
     /// </example>
-#pragma warning disable MA0051 // Linear cron validation with expression and timezone verification
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Validation logic — cron expression parsing with timezone verification and multiple checks
     public override IGenericResult ValidateTrigger(IGenericTrigger trigger)
     {
@@ -382,7 +379,6 @@ public sealed class Cron : TriggerTypeBase
 
         return GenericResult.Success();
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Calculates the next run time for this cron trigger, returning a structured result.
@@ -393,7 +389,6 @@ public sealed class Cron : TriggerTypeBase
     /// A success result containing the next execution time in UTC, or a failure result if the
     /// cron expression is invalid or will never execute.
     /// </returns>
-#pragma warning disable MA0051 // Linear cron expression parsing with timezone conversion and DST handling
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
     public override IGenericResult<DateTimeOffset> GetNextRunTime(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -450,5 +445,4 @@ public sealed class Cron : TriggerTypeBase
             return GenericResult<DateTimeOffset>.Failure(SchedulingLogger.InvalidCronExpression(_logger, ex.Message, cronExpression));
         }
     }
-#pragma warning restore MA0051
 }

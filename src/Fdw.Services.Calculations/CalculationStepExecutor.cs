@@ -104,7 +104,7 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     /// </summary>
     private static void RecordFailedStep(
         ICalculationTraceRecorder recorder,
-        CalculationStepConfiguration step,
+        ICalculationStepConfiguration step,
         IReadOnlyList<CalculationOperandTrace> operandTrace,
         IGenericResult failure) =>
         recorder.Record(new CalculationStepTrace
@@ -122,20 +122,20 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     /// <summary>
     /// Narrows the weakly-typed step elements and orders them by ordinal.
     /// </summary>
-    private IGenericResult<List<CalculationStepConfiguration>> OrderSteps(IReadOnlyList<IGenericConfiguration> steps)
+    private IGenericResult<List<ICalculationStepConfiguration>> OrderSteps(IReadOnlyList<IGenericConfiguration> steps)
     {
         if (steps is null || steps.Count == 0)
         {
-            return GenericResult<List<CalculationStepConfiguration>>.Failure(
+            return GenericResult<List<ICalculationStepConfiguration>>.Failure(
                 CalculationStepExecutorLog.NoStepsConfigured(_logger));
         }
 
-        var typed = new List<CalculationStepConfiguration>(steps.Count);
+        var typed = new List<ICalculationStepConfiguration>(steps.Count);
         foreach (var element in steps)
         {
-            if (element is not CalculationStepConfiguration step)
+            if (element is not ICalculationStepConfiguration step)
             {
-                return GenericResult<List<CalculationStepConfiguration>>.Failure(
+                return GenericResult<List<ICalculationStepConfiguration>>.Failure(
                     CalculationStepExecutorLog.StepTypeUnexpected(
                         _logger, element?.GetType().Name ?? "null"));
             }
@@ -144,14 +144,14 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
         }
 
         typed.Sort(static (left, right) => left.Ordinal.CompareTo(right.Ordinal));
-        return GenericResult<List<CalculationStepConfiguration>>.Success(typed);
+        return GenericResult<List<ICalculationStepConfiguration>>.Success(typed);
     }
 
     /// <summary>
     /// Binds one step's operands to its operation's parameters and invokes the operation.
     /// </summary>
     private async Task<IGenericResult<object?>> ExecuteStep(
-        CalculationStepConfiguration step,
+        ICalculationStepConfiguration step,
         IReadOnlyList<ResolvedCalculationInput> inputs,
         IReadOnlyDictionary<string, object?> published,
         List<CalculationOperandTrace> operandTrace,
@@ -197,7 +197,7 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     /// Resolves every operand of a step into the operation's name-keyed parameter dictionary.
     /// </summary>
     private IGenericResult<Dictionary<string, object?>> BuildParameters(
-        CalculationStepConfiguration step,
+        ICalculationStepConfiguration step,
         IReadOnlyList<ResolvedCalculationInput> inputs,
         IReadOnlyDictionary<string, object?> published,
         List<CalculationOperandTrace> operandTrace)
@@ -237,8 +237,8 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     /// Resolves a single operand from an input alias, an earlier step's output, or a literal.
     /// </summary>
     private IGenericResult<object?> ResolveOperand(
-        CalculationStepOperandConfiguration operand,
-        CalculationStepConfiguration step,
+        CalculationStepOperandConfigurationBase operand,
+        ICalculationStepConfiguration step,
         IReadOnlyList<ResolvedCalculationInput> inputs,
         IReadOnlyDictionary<string, object?> published)
     {
@@ -266,8 +266,8 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     }
 
     private IGenericResult<object?> ResolveInputOperand(
-        CalculationStepOperandConfiguration operand,
-        CalculationStepConfiguration step,
+        CalculationStepOperandConfigurationBase operand,
+        ICalculationStepConfiguration step,
         IReadOnlyList<ResolvedCalculationInput> inputs)
     {
         foreach (var input in inputs)
@@ -284,8 +284,8 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     }
 
     private IGenericResult<object?> ResolveStepOperand(
-        CalculationStepOperandConfiguration operand,
-        CalculationStepConfiguration step,
+        CalculationStepOperandConfigurationBase operand,
+        ICalculationStepConfiguration step,
         IReadOnlyDictionary<string, object?> published)
     {
         if (operand.StepAlias is not null && published.TryGetValue(operand.StepAlias, out var value))
@@ -307,7 +307,7 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     /// the trailing empty string is unreachable rather than a default standing in for absent
     /// configuration.
     /// </remarks>
-    private static string DescribeOperandSource(CalculationStepOperandConfiguration operand)
+    private static string DescribeOperandSource(CalculationStepOperandConfigurationBase operand)
     {
         if (string.Equals(operand.OperandType, OperandTypeInput, StringComparison.Ordinal))
         {
@@ -329,8 +329,8 @@ public sealed class CalculationStepExecutor : ICalculationStepExecutor
     /// </summary>
     private IGenericResult<object?> ExtractField(
         object? value,
-        CalculationStepOperandConfiguration operand,
-        CalculationStepConfiguration step)
+        CalculationStepOperandConfigurationBase operand,
+        ICalculationStepConfiguration step)
     {
         if (string.IsNullOrEmpty(operand.FieldName))
         {

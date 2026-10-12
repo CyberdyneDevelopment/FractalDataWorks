@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using Fdw.Abstractions;
 using Fdw.Configuration;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
@@ -9,7 +10,10 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
+using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Pipelines;
+using Fdw.Services.Etl;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -22,6 +26,9 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly IDataGatewayProvider? _dataGateways;
     private readonly IConnectionProvider? _connectionProvider;
+    private readonly ITransformationConfigurationProvider? _transformations;
+    private readonly IRuleNotifier? _ruleNotifier;
+    private readonly IEffectiveSettingsProvider? _settings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StreamingPipelineFactory"/> class.
@@ -30,16 +37,25 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
     /// <param name="loggerFactory">The logger factory for creating pipeline loggers.</param>
     /// <param name="dataGateways">The data gateway for pipeline execution (optional for backward compatibility).</param>
     /// <param name="connectionProvider">The connection provider for transforms (optional), injected lazily.</param>
+    /// <param name="transformations">The Transformation provider that resolves the named Transformations a field mapping's chain applies when a run starts (optional; required to run a pipeline whose mappings state a chain).</param>
+    /// <param name="ruleNotifier">Sends a Notify stage's notification through its rule (optional; required to run a pipeline that has a Notify stage).</param>
+    /// <param name="settings">The settings provider the calculation limits of a Compute stage are read from when a run starts (optional; required to run a pipeline that has a Compute stage).</param>
     public StreamingPipelineFactory(
         ILogger<StreamingPipelineFactory> logger,
         ILoggerFactory loggerFactory,
         IDataGatewayProvider? dataGateways = null,
-        IConnectionProvider? connectionProvider = null)
+        IConnectionProvider? connectionProvider = null,
+        ITransformationConfigurationProvider? transformations = null,
+        IRuleNotifier? ruleNotifier = null,
+        IEffectiveSettingsProvider? settings = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
         _dataGateways = dataGateways;
         _connectionProvider = connectionProvider;
+        _transformations = transformations;
+        _ruleNotifier = ruleNotifier;
+        _settings = settings;
     }
 
     /// <inheritdoc />
@@ -55,7 +71,10 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
                 pipelineLogger,
                 _dataGateways,
                 calculationEngine: null,
-                _connectionProvider);
+                _connectionProvider,
+                transformations: _transformations,
+                ruleNotifier: _ruleNotifier,
+                settings: _settings);
 
             EtlLog.PipelineConfigurationLoaded(_logger, configuration.Name, "Streaming");
             return GenericResult<IEtlPipeline>.Success(pipeline);
@@ -76,8 +95,7 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
                 EtlLog.PipelineCreationFailed(_logger, "unknown", "Configuration is null"));
         }
 
-        var engine = UnwrapEngineBody(configuration);
-        if (engine is StreamingPipelineConfiguration streamingConfig)
+        if (configuration is StreamingPipelineConfiguration streamingConfig)
         {
             return Create(streamingConfig);
         }
@@ -85,29 +103,6 @@ public sealed class StreamingPipelineFactory : IStreamingPipelineFactory
         return GenericResult<IEtlPipeline>.Failure(
             EtlLog.PipelineCreationFailed(_logger, "unknown",
                 $"Invalid configuration type. Expected StreamingPipelineConfiguration, got {configuration.GetType().Name}"));
-    }
-
-    private IGenericConfiguration UnwrapEngineBody(IGenericConfiguration configuration)
-    {
-        var kind = configuration switch
-        {
-            PipelineConfiguration { Configuration: EtlPipelineConfiguration k } => k,
-            EtlPipelineConfiguration k => k,
-            _ => null
-        };
-
-        if (kind?.Configuration is not { } engine)
-            return configuration;
-
-        if (engine is StreamingPipelineConfiguration streaming
-            && (streaming.Transforms is null || streaming.Transforms.Count == 0)
-            && kind.Transforms is { Count: > 0 })
-        {
-            streaming.Transforms = kind.Transforms;
-            EtlLog.TransformsTransferredKindToEngine(_logger, streaming.Name, kind.Transforms.Count);
-        }
-
-        return engine;
     }
 
     /// <inheritdoc />

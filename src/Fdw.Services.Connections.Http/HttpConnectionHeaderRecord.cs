@@ -14,7 +14,7 @@ public sealed partial class HttpConnectionHeaderRecord
 {
 
     /// <summary>Gets or sets the parent HTTP connection identifier.</summary>
-    public Guid HttpConnectionId { get; set; }
+    public Guid HttpConnectionConfigurationId { get; set; }
 
 
     /// <summary>Gets or sets the header name.</summary>

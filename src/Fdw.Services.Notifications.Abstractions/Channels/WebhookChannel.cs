@@ -15,7 +15,6 @@ public sealed class WebhookChannel : NotificationChannelBase
     /// </summary>
     public WebhookChannel()
         : base(
-            id: 3,
             name: "Webhook",
             description: "Generic HTTP webhook notifications",
             supportsBatchSend: true,

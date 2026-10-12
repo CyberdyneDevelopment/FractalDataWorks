@@ -17,7 +17,7 @@ public sealed class ProvisionerNotFoundCode : ExternalIdentityProvisionerResultC
     /// <summary>Initializes a new instance of the <see cref="ProvisionerNotFoundCode"/> class.</summary>
     public ProvisionerNotFoundCode()
         : base(30000, "ProvisionerNotFound",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "No configured rule matches the presented subject",
             isRetryable: false)
     {

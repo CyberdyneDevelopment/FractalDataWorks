@@ -14,7 +14,6 @@ public sealed class CountCalculationType : CalculationTypeBase
     /// Initializes a new instance of the <see cref="CountCalculationType"/> class.
     /// </summary>
     public CountCalculationType() : base(
-        id: 5,
         name: "Count",
         category: "Aggregation",
         calculate: (rows, col, param) =>

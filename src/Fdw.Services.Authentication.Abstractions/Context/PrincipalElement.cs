@@ -8,7 +8,7 @@ public sealed class PrincipalElement : ContextElementBase
 {
     /// <summary>Initializes a new instance of the <see cref="PrincipalElement"/> class.</summary>
     public PrincipalElement()
-        : base(2, "Principal")
+        : base("Principal")
     {
     }
 

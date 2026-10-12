@@ -27,7 +27,6 @@ public sealed class SkipAndContinueMode : ErrorHandlingModeBase
     /// </summary>
     public SkipAndContinueMode()
         : base(
-            id: 2,
             name: "SkipAndContinue",
             continuesExecution: true,
             supportsRetry: false,

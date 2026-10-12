@@ -13,7 +13,7 @@ public sealed class ServiceInstanceKind : CollectionKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ServiceInstanceKind"/> class.
     /// </summary>
-    public ServiceInstanceKind() : base(5, "ServiceInstance")
+    public ServiceInstanceKind() : base("ServiceInstance")
     {
     }
 }

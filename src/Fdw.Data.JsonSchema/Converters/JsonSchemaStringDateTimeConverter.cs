@@ -14,7 +14,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaStringDateTimeConverter()
     : DataTypeConverterBase(
-        id: 6,
         name: "StringDateTime",
         sourceType: "string+date-time",
         targetClrType: typeof(DateTime),

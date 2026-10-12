@@ -28,26 +28,30 @@ public interface ITypeOption<TKey> : ITypeOption
     where TKey : IEquatable<TKey>
 {
     /// <summary>
-    /// Gets the strongly-typed unique identifier for this type option value.
-    /// Hides the base interface's object Id property with strongly-typed version.
+    /// Gets the unique identifier for this type option value.
     /// </summary>
-    new TKey Id { get; }
+    /// <remarks>
+    /// Declared once, here, in the key type. No interface redeclares or hides it, and no option
+    /// supplies it: an option keyed on int gets it from <c>TypeOptionBase&lt;TBase&gt;</c>, one keyed on
+    /// Guid from <c>GuidTypeOptionBase&lt;TBase&gt;</c>, and both derive it from the option's fully
+    /// qualified type name.
+    /// </remarks>
+    TKey Id { get; }
 }
 
 /// <summary>
-/// Base interface for type options with object-typed Id for reflection/non-generic code.
+/// Base interface for type options, for code that handles options of any key type.
 /// </summary>
 /// <remarks>
-/// Excluded from code coverage: Interface with no implementation code.
+/// <para>
+/// It carries no Id. An Id's type is its collection's key type, so it is declared on
+/// <see cref="ITypeOption{TKey}"/>; declaring an object-typed one here as well meant every option
+/// had two Ids, one hiding the other.
+/// </para>
+/// <para>Excluded from code coverage: Interface with no implementation code.</para>
 /// </remarks>
 public interface ITypeOption
 {
-    /// <summary>
-    /// Gets the unique identifier for this type option value (boxed as object).
-    /// Use ITypeOption&lt;TKey&gt; for strongly-typed access.
-    /// </summary>
-    object Id { get; }
-
     /// <summary>
     /// Gets the display name or string representation of this type option value.
     /// </summary>

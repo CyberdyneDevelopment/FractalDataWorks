@@ -121,7 +121,7 @@ public class ValidationConstraintParityTests
         }
     }
 
-    private static IReadOnlyList<Assembly> LoadFdwAssemblies()
+    private static List<Assembly> LoadFdwAssemblies()
     {
         var loaded = new List<Assembly>();
 

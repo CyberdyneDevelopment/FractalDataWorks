@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlInt16Converter()
     : DataTypeConverterBase(
-        id: 15,
         name: "Int16",
         sourceType: "smallint",
         targetClrType: typeof(short),

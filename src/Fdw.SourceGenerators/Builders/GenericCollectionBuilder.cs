@@ -124,7 +124,6 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
     /// Builds the complete collection class source code.
     /// </summary>
     /// <returns>The generated C# source code for the collection class.</returns>
-#pragma warning disable MA0051 // Sequential code generation orchestration calling specialized generators
     public string Build()
     {
         ValidateConfiguration();
@@ -348,12 +347,10 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
         // Build the class
         return classBuilder.Build();
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Gets the generated Empty class code.
     /// </summary>
-#pragma warning disable MA0051 // Sequential string building for generated empty class code
     public string GetEmptyClassCode()
     {
         if (_definition == null || _compilation == null)
@@ -423,7 +420,6 @@ public sealed class GenericCollectionBuilder<TId> : IGenericCollectionBuilder<TI
             _definition.Namespace,
             _compilation);
     }
-#pragma warning restore MA0051
 
     private void ValidateConfiguration()
     {

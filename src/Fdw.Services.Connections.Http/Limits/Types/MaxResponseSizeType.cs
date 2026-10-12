@@ -14,7 +14,6 @@ public sealed class MaxResponseSizeType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="MaxResponseSizeType"/>.</summary>
     public MaxResponseSizeType()
         : base(
-            2,
             "MaxResponseSize",
             "Max Response Size",
             "Caps the size of HTTP responses in megabytes.",

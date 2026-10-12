@@ -41,7 +41,7 @@ public sealed class MsSqlBatchInsertTranslatorGapTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -195,7 +195,7 @@ public sealed class MsSqlBatchInsertTranslatorGapTests
         var containerSchema = new Mock<IContainerSchema>();
         var fields = new[] { CreateField("Name").Object };
         containerSchema.Setup(s => s.Fields).Returns(fields);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns("Items");
@@ -239,5 +239,33 @@ public sealed class MsSqlBatchInsertTranslatorGapTests
         // Assert - missing property returns null -> DBNull.Value for that param
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Parameters["@p1"].Value.ShouldBe(DBNull.Value);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateBindsNullByteArrayAsVarBinary()
+    {
+        // Arrange - a batch row binds through the same binder as a single insert: a null byte[] is
+        // typed binary, not left for SqlClient to send as NVARCHAR (FDW-918)
+        var fields = new[]
+        {
+            CreateField("Name").Object,
+            CreateField("TokenHash").Object
+        };
+        var container = CreateContainer(fields: fields);
+
+        var entities = new List<object> { new { Name = "Test", TokenHash = (byte[]?)null } };
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(entities);
+
+        // Act
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters["@p1"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarBinary);
+        result.Value.Parameters["@p1"].Value.ShouldBe(DBNull.Value);
     }
 }

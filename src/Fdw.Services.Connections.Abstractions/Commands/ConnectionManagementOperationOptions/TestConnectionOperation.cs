@@ -14,5 +14,5 @@ public sealed class TestConnectionOperation : ConnectionManagementOperationBase
     /// <summary>
     /// Initializes a new instance of the <see cref="TestConnectionOperation"/> class.
     /// </summary>
-    public TestConnectionOperation() : base(4, "TestConnection", modifiesState: false, requiresExistingConnection: true) { }
+    public TestConnectionOperation() : base("TestConnection", modifiesState: false, requiresExistingConnection: true) { }
 }

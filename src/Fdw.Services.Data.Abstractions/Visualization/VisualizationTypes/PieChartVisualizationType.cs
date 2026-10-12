@@ -22,7 +22,7 @@ public sealed class PieChartVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="PieChartVisualizationType"/> class.
     /// </summary>
     public PieChartVisualizationType()
-        : base(4, "PieChart", "Pie Chart", "mdi-chart-pie", SupportedTypes)
+        : base("PieChart", "Pie Chart", "mdi-chart-pie", SupportedTypes)
     {
     }
 

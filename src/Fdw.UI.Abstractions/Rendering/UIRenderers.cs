@@ -17,8 +17,8 @@ namespace Fdw.UI.Abstractions.Rendering;
 /// // Get renderer by name
 /// var spectreRenderer = UIRenderers.ByName("Spectre");
 ///
-/// // Get renderer by id
-/// var renderer = UIRenderers.ById(1);
+/// // Get a renderer by an id read from an option
+/// var renderer = UIRenderers.ById(spectreRenderer.Id);
 ///
 /// // Get all renderers
 /// foreach (var r in UIRenderers.All()) { ... }

@@ -29,15 +29,27 @@ public sealed class AggregateTransformType : TransformTypeBase
     /// Initializes a new instance of the <see cref="AggregateTransformType"/> class.
     /// </summary>
     public AggregateTransformType() : base(
-        id: 3,
         name: "Aggregate",
         displayName: "Aggregation",
         description: "Aggregates records by grouping and applying functions like SUM, COUNT, AVG, MIN, MAX",
         category: "Aggregate",
         modifiesStructure: true,
-        canFilterRecords: true)
+        canFilterRecords: true,
+        inputPorts: ["input"],
+        outputPorts: ["output"])
     {
     }
+
+    /// <inheritdoc />
+    public override bool RequiresCompleteInput => true;
+
+    private static readonly StageMember[] OwnedMembers =
+    [
+        new("aggregation", "Aggregation", true, "Group-by fields and the aggregates computed per group")
+    ];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<StageMember> Members => OwnedMembers;
 
     /// <inheritdoc />
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
@@ -143,7 +155,6 @@ public sealed class AggregateTransformType : TransformTypeBase
         config.GroupByFields = spec.GroupByFields
             .Select((field, ordinal) => new PipelineTransformGroupByFieldConfiguration
             {
-                PipelineTransformId = config.Id,
                 Name = field,
                 FieldName = field,
                 Ordinal = ordinal
@@ -153,7 +164,6 @@ public sealed class AggregateTransformType : TransformTypeBase
         config.Aggregations = spec.Aggregations
             .Select((agg, executionOrder) => new PipelineTransformAggregationConfiguration
             {
-                PipelineTransformId = config.Id,
                 Name = agg.OutputField,
                 SourceField = agg.SourceField,
                 AggregateFunction = agg.Function,

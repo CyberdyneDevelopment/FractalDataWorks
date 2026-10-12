@@ -9,7 +9,7 @@ namespace Fdw.Commands.Abstractions;
 /// Inherit from this class to define specific command categories with
 /// their execution characteristics and requirements.
 /// </remarks>
-public abstract class CommandCategoryBase : TypeOptionBase<int, CommandCategoryBase>, IGenericCommandCategory
+public abstract class CommandCategoryBase : TypeOptionBase<CommandCategoryBase>, IGenericCommandCategory
 {
     /// <inheritdoc/>
     public bool RequiresTransaction { get; }
@@ -29,7 +29,6 @@ public abstract class CommandCategoryBase : TypeOptionBase<int, CommandCategoryB
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandCategoryBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this category.</param>
     /// <param name="name">The name of this category.</param>
     /// <param name="requiresTransaction">Whether commands in this category require transactions.</param>
     /// <param name="supportsStreaming">Whether commands in this category support streaming.</param>
@@ -37,13 +36,12 @@ public abstract class CommandCategoryBase : TypeOptionBase<int, CommandCategoryB
     /// <param name="isMutation">Whether commands modify data.</param>
     /// <param name="executionPriority">The execution priority (default 50).</param>
     protected CommandCategoryBase(
-        int id,
         string name,
         bool requiresTransaction,
         bool supportsStreaming,
         bool isCacheable,
         bool isMutation,
-        int executionPriority = 50) : base(id, name)
+        int executionPriority = 50) : base(name)
     {
         RequiresTransaction = requiresTransaction;
         SupportsStreaming = supportsStreaming;

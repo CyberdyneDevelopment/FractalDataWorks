@@ -13,8 +13,8 @@ public static partial class AuthenticationValidationLog
 {
     /// <summary>Logs an AuthenticationServices entry that names no mechanism.</summary>
     [MessageLogging(EventId = 71100, Level = LogLevel.Error,
-        Message = "Authentication service at '{sectionPath}' declares no ServiceOptionType. Set it to a REGISTERED member of AuthenticationServiceTypes - 'OpenIddict' for tokens this host issues, 'JwtBearer' for tokens a remote authority issues. A value that is not a registered member registers no scheme at all, and every request then falls through to UnmatchedIssuerHandler")]
-    public static partial IGenericMessage EntryMissingServiceOptionType(ILogger logger, string sectionPath);
+        Message = "Authentication service at '{sectionPath}' declares no Implementation. Set it to a REGISTERED member of AuthenticationServiceTypes - 'OpenIddict' for tokens this host issues, 'JwtBearer' for tokens a remote authority issues. A value that is not a registered member registers no scheme at all, and every request then falls through to UnmatchedIssuerHandler")]
+    public static partial IGenericMessage EntryMissingImplementation(ILogger logger, string sectionPath);
 
     /// <summary>Logs an enabled AuthenticationServices entry with no name.</summary>
     [MessageLogging(EventId = 71101, Level = LogLevel.Error,
@@ -43,7 +43,7 @@ public static partial class AuthenticationValidationLog
 
     /// <summary>Logs a host that registered a validation mechanism but declared no authentication services.</summary>
     [MessageLogging(EventId = 71106, Level = LogLevel.Error,
-        Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a ServiceOptionType and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
+        Message = "No enabled entries in '{sectionName}'. This host registered a token-validation mechanism and declared no issuer for it to trust, so it accepts no tokens at all. Add at least one entry naming a Implementation and an Authority, and confirm its Enabled flag is set - a declared-but-disabled entry reads as absent here")]
     public static partial IGenericMessage NoAuthenticationServicesDeclared(ILogger logger, string sectionName);
 
     /// <summary>Logs a mechanism that returned success without producing a scheme binding.</summary>
@@ -51,10 +51,10 @@ public static partial class AuthenticationValidationLog
         Message = "Authentication service '{serviceName}' ({mechanism}) reported success without producing a scheme binding")]
     public static partial IGenericMessage SchemeNotProduced(ILogger logger, string serviceName, string mechanism);
 
-    /// <summary>Logs an AuthenticationServices section that could not be read.</summary>
+    /// <summary>Logs a declared authentication service whose Implementation names no registered option.</summary>
     [MessageLogging(EventId = 71108, Level = LogLevel.Error,
-        Message = "The AuthenticationServices declarations for mechanism '{mechanism}' reported success with no entries. The section was readable and empty - check that an entry names ServiceOptionType '{mechanism}' exactly, since a mechanism name that matches no registered option is silently skipped rather than rejected")]
-    public static partial IGenericMessage SectionUnreadable(ILogger logger, string mechanism);
+        Message = "Authentication service '{serviceName}' names Implementation '{implementation}', and no option is registered under that name. The row was read and composed; what is missing is the package that declares that implementation, so either the name is misspelled or this host does not reference it")]
+    public static partial IGenericMessage NoOptionForImplementation(ILogger logger, string serviceName, string implementation);
 
     /// <summary>Logs a validated token that carried no claims identity.</summary>
     [MessageLogging(EventId = 71109, Level = LogLevel.Error,
@@ -176,9 +176,19 @@ public static partial class AuthenticationValidationLog
         Message = "Token for authentication service '{serviceName}' accepted for principal '{subject}'")]
     public static partial IGenericMessage TokenAccepted(ILogger logger, string serviceName, string subject);
 
-    /// <summary>Logged when an opaque credential is routed to the API-key scheme by its prefix.</summary>
+    /// <summary>Logged when a request with no Authorization header is routed by its session cookie (FDW-903).</summary>
+    [MessageLogging(EventId = 11500, Level = LogLevel.Debug,
+        Message = "Session cookie '{cookieName}' routed to scheme '{schemeName}' for path '{path}'")]
+    public static partial IGenericMessage SessionCookieRouted(ILogger logger, string cookieName, string schemeName, string path);
+
+    /// <summary>Logged when a request carries the cookies of more than one session service (FDW-903).</summary>
+    [MessageLogging(EventId = 51500, Level = LogLevel.Warning,
+        Message = "Request to '{path}' carries cookies for more than one session service ({cookieNames}). None is chosen: which service the caller meant cannot be told from the request, so it is refused. Each Session service must declare a distinct CookieName, and a browser should hold only one")]
+    public static partial IGenericMessage SessionCookiesAmbiguous(ILogger logger, string path, string cookieNames);
+
+    /// <summary>Logged when an opaque (non-JWT) bearer credential is routed to the API-key scheme.</summary>
     [MessageLogging(EventId = 71122, Level = LogLevel.Debug,
-        Message = "Opaque credential routed to the API key scheme for path '{path}'")]
+        Message = "Opaque (non-JWT) bearer credential routed to the API key scheme for path '{path}'")]
     public static partial IGenericMessage OpaqueCredentialRouted(ILogger logger, string path);
 
     /// <summary>Logged when an agent key authenticates.</summary>
@@ -201,8 +211,27 @@ public static partial class AuthenticationValidationLog
         Message = "{serviceName} is not registered, so a {kind} credential cannot be validated")]
     public static partial IGenericMessage CredentialServiceNotRegistered(ILogger logger, string serviceName, string kind);
 
+    /// <summary>Logged when the agent key service cannot say which kind an opaque credential is.</summary>
+    // Error: the kind is read from the credential service's configured prefix (FDW-939), so this means
+    // that configuration could not be read -- the service logs why -- and every API key is refused.
+    [MessageLogging(EventId = 71128, Level = LogLevel.Error,
+        Message = "The kind of an opaque credential could not be determined, so it is refused. The agent key service could not read its credential format")]
+    public static partial IGenericMessage CredentialKindUnresolved(ILogger logger);
+
     /// <summary>Logged when permission resolution fails for an authenticated credential.</summary>
     [MessageLogging(EventId = 71127, Level = LogLevel.Error,
         Message = "Permission resolution failed for user '{userId}': {reason}. Failing closed.")]
     public static partial IGenericMessage PermissionResolutionFailed(ILogger logger, string userId, string reason);
+
+    /// <summary>Logged when an API key's owner lacks the permission its kind requires (FDW-910).</summary>
+    // Warning, not Error: the handler refused exactly as configured -- an operator limited this kind
+    // of credential to some users, and this owner is not one of them.
+    [MessageLogging(EventId = 51501, Level = LogLevel.Warning,
+        Message = "A {kind} owned by user '{userId}' was refused: the owner does not hold '{permission}', which this API key service requires of that kind")]
+    public static partial IGenericMessage ApiKeyNotPermitted(ILogger logger, string kind, string userId, string permission);
+
+    /// <summary>Logged when the ApiKey service row a scheme was taken for cannot be read (FDW-910).</summary>
+    [MessageLogging(EventId = 61500, Level = LogLevel.Error,
+        Message = "API key service '{serviceName}' could not be read, so no key is accepted by it: {reason}")]
+    public static partial IGenericMessage ApiKeyServiceUnreadable(ILogger logger, string serviceName, string reason);
 }

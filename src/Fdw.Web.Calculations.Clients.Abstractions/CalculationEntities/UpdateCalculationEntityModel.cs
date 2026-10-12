@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace Fdw.Web.Calculations.Clients.CalculationEntities;
 
@@ -53,4 +54,10 @@ public sealed class UpdateCalculationEntityModel
     /// Gets or sets whether the entity should be enabled.
     /// </summary>
     public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the calculation type's own settings, as a JSON object. Omitted keeps the current
+    /// settings.
+    /// </summary>
+    public JsonElement? Configuration { get; set; }
 }

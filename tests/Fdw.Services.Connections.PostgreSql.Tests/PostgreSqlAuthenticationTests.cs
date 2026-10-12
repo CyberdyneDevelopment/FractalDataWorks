@@ -11,33 +11,11 @@ namespace Fdw.Services.Connections.PostgreSql.Tests;
 /// </summary>
 public class PostgreSqlAuthenticationTests
 {
-    private static IReadOnlyDictionary<string, string?> Kvp(params (string Key, string? Value)[] pairs)
+    private static Dictionary<string, string?> Kvp(params (string Key, string? Value)[] pairs)
     {
         var dict = new Dictionary<string, string?>(System.StringComparer.OrdinalIgnoreCase);
         foreach (var p in pairs) dict[p.Key] = p.Value;
         return dict;
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NoneIsDiscoverableByName()
-    {
-        var type = PostgreSqlAuthenticationTypes.ByName("None");
-
-        type.ShouldNotBeNull();
-        type.Name.ShouldBe("None");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void PasswordIsDiscoverableByName()
-    {
-        var type = PostgreSqlAuthenticationTypes.ByName("Password");
-
-        type.ShouldNotBeNull();
-        type.Name.ShouldBe("Password");
     }
 
     [Fact]

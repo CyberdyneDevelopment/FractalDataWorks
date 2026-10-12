@@ -31,7 +31,6 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: iterate symbols, check for references, collect unused members
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<UnusedMemberInfo>>>> Translate(
         FindUnusedCommand command,
         Solution solution,
@@ -134,7 +133,6 @@ public sealed class FindUnusedTranslator : RoslynCommandTranslatorBase<FindUnuse
                 $"FindReferencesAsync failed for {symbol.Name}: {ex.GetType().Name}: {ex.Message}");
         }
     }
-#pragma warning restore MA0051
 
     private static bool IsTargetSymbol(ISymbol symbol, bool includePrivate, bool includeInternal)
     {

@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlJsonbConverter()
     : DataTypeConverterBase(
-        id: 21,
         name: "Jsonb",
         sourceType: "jsonb",
         targetClrType: typeof(string),

@@ -27,7 +27,7 @@ public sealed class IfThenElseOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="IfThenElseOperation"/> class.
     /// </summary>
     public IfThenElseOperation()
-        : base(id: 40, name: "IfThenElse", category: "Conditional", description: "Returns ThenValue when condition is true, ElseValue otherwise")
+        : base(name: "IfThenElse", category: "Conditional", description: "Returns ThenValue when condition is true, ElseValue otherwise")
     {
         _logger = NullLogger<IfThenElseOperation>.Instance;
         Parameters =

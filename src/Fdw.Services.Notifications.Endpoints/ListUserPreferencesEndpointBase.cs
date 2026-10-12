@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
@@ -65,7 +66,7 @@ public abstract class ListUserPreferencesEndpointBase : Endpoint<UserPreferences
         catch (Exception ex)
         {
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
+            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
         }
     }
 

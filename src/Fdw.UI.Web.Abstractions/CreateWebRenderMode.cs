@@ -13,5 +13,5 @@ public sealed class CreateWebRenderMode : WebRenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateWebRenderMode"/> class.
     /// </summary>
-    public CreateWebRenderMode() : base(3, "Create", "Create Mode", "Create new items") { }
+    public CreateWebRenderMode() : base("Create", "Create Mode", "Create new items") { }
 }

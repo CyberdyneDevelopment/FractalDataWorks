@@ -78,14 +78,26 @@ public static partial class RecordQueryLog
     // plus the declared-schema checks (filter/join columns, required row fields).
     // ═══════════════════════════════════════════════════════════════════════════
 
+    /// <summary>Traces a join that continues from an earlier join's target rather than the queried container.</summary>
+    /// <param name="logger">The logger used to emit the log event.</param>
+    /// <param name="targetContainer">The container the join goes to.</param>
+    /// <param name="sourceContainer">The earlier join's target the join starts from.</param>
+    /// <param name="leftField">The column on the source container.</param>
+    /// <param name="rightField">The column on the target container.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 12304, Level = LogLevel.Trace, Message = "Join to '{targetContainer}' continues from '{sourceContainer}' on {leftField} = {rightField}")]
+    public static partial IGenericMessage JoinContinuesFrom(ILogger logger, string targetContainer, string sourceContainer, string leftField, string rightField);
+
     /// <summary>
-    /// Logs that the command carries more than one join — only a single INNER join is supported.
+    /// Logs that a join starts from a container that is neither the queried container nor the target
+    /// of an earlier join, so there is no row to take its left column from.
     /// </summary>
     /// <param name="logger">The logger used to emit the log event.</param>
-    /// <param name="joinCount">The number of joins the command carried.</param>
+    /// <param name="sourceContainer">The container the join says it starts from.</param>
+    /// <param name="targetContainer">The container the join goes to.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
-    [MessageLogging(EventId = 21010, Level = LogLevel.Error, Message = "Unsupported query shape: {joinCount} join(s) requested — at most one INNER join is supported")]
-    public static partial IGenericMessage UnsupportedJoinCount(ILogger logger, int joinCount);
+    [MessageLogging(EventId = 21010, Level = LogLevel.Error, Message = "Unsupported query shape: the join to '{targetContainer}' starts from '{sourceContainer}', which no earlier join brought in")]
+    public static partial IGenericMessage UnknownJoinSource(ILogger logger, string sourceContainer, string targetContainer);
 
     /// <summary>
     /// Logs that the command's single join is not a single-condition INNER join.

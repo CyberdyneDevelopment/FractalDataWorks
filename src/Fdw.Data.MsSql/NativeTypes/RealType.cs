@@ -14,7 +14,6 @@ public sealed class RealType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="RealType"/> class.</summary>
     public RealType()
         : base(
-            id: 17,
             name: "real",
             description: "Single-precision floating-point number.",
             abstractType: DataTypes.Float,

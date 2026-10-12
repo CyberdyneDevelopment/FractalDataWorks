@@ -181,7 +181,9 @@ public sealed class RoslynCommandHandlerTests
         result.Code.ShouldNotBeNull();
         result.Code.Name.ShouldBe("CommandExecutionCancelled");
 
-        result.IsSuccess.ShouldBeTrue();
+        // A cancelled command did not run to completion, so it is a failure: a success here carried no
+        // value and no sign that anything had been cancelled (FDW-914).
+        result.IsFailure.ShouldBeTrue();
     }
 
     [Fact]
@@ -617,7 +619,9 @@ public sealed class RoslynCommandHandlerTests
         result.Code.ShouldNotBeNull();
         result.Code.Name.ShouldBe("CommandExecutionCancelled");
 
-        result.IsSuccess.ShouldBeTrue();
+        // A cancelled command did not run to completion, so it is a failure: a success here carried no
+        // value and no sign that anything had been cancelled (FDW-914).
+        result.IsFailure.ShouldBeTrue();
     }
 
     [Fact]

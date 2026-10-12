@@ -16,7 +16,6 @@ public sealed class ManagedIdentityAuthenticationMethod : AuthenticationMethodBa
     /// Initializes a new instance of the <see cref="ManagedIdentityAuthenticationMethod"/> class.
     /// </summary>
     public ManagedIdentityAuthenticationMethod() : base(
-        id: 6,
         name: "ManagedIdentity",
         requiresUserInteraction: false,
         supportsTokenRefresh: true,

@@ -12,4 +12,7 @@
     <PackageReference Include="FluentValidation" />
     <ProjectReference Include="..\Fdw.Web.Clients.Abstractions\Fdw.Web.Clients.Abstractions.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Data.Abstractions\Fdw.Data.Abstractions.csproj" />
+  </ItemGroup>
 </Project>

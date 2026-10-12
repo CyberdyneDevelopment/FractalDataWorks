@@ -9,5 +9,5 @@ namespace Fdw.Roslyn.Commands.Abstractions.Results;
 public sealed class AddedFileChangeType : FileChangeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="AddedFileChangeType"/>.</summary>
-    public AddedFileChangeType() : base(1, "Added") { }
+    public AddedFileChangeType() : base("Added") { }
 }

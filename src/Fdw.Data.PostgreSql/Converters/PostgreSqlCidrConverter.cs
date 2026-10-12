@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlCidrConverter()
     : DataTypeConverterBase(
-        id: 26,
         name: "Cidr",
         sourceType: "cidr",
         targetClrType: typeof(string),

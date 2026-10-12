@@ -15,7 +15,6 @@ public sealed class HeatmapChartType : ChartTypeBase
     /// </summary>
     public HeatmapChartType()
         : base(
-            id: 9,
             name: "Heatmap",
             displayName: "Heatmap",
             category: "Distribution",

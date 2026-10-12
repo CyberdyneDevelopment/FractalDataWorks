@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class DoubleDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DoubleDataType"/> class.</summary>
     public DoubleDataType()
-        : base(id: 8, name: "Double")
+        : base(name: "Double")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(double);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Double(text);
 }

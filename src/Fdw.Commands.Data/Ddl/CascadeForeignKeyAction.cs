@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class CascadeForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="CascadeForeignKeyAction"/>.</summary>
-    public CascadeForeignKeyAction() : base(1, "Cascade") { }
+    public CascadeForeignKeyAction() : base("Cascade") { }
 }

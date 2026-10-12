@@ -16,7 +16,6 @@ public sealed class IdToken : TokenTypeBase
     /// Initializes a new instance of the <see cref="IdToken"/> class.
     /// </summary>
     public IdToken() : base(
-        id: 2,
         name: "IdToken",
         format: "JWT",
         canBeRefreshed: false,

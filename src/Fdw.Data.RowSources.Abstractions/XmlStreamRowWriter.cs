@@ -59,7 +59,7 @@ public sealed class XmlStreamRowWriter : IRecordWriter<DataRecord>
             _writer.WriteStartElement(kv.Key);
             if (kv.Value is not null)
             {
-                _writer.WriteString(Convert.ToString(kv.Value, CultureInfo.InvariantCulture));
+                _writer.WriteString(RecordValueText.IsAbsent(kv.Value) ? string.Empty : RecordValueText.Format(kv.Value!, kv.Key));
             }
 
             _writer.WriteEndElement();

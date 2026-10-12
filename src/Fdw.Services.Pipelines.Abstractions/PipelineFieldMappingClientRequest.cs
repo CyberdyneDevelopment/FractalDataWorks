@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Fdw.Services.Pipelines.Clients.Abstractions;
 
 /// <summary>
@@ -51,4 +54,15 @@ public class PipelineFieldMappingClientRequest
     /// Gets or sets whether this mapping is enabled.
     /// </summary>
     public bool IsEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the id of the mapping. A read-back states it; a request does not need to.
+    /// </summary>
+    public Guid? Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the chain of named Transformations the mapping's value goes through, in order (the wire member
+    /// <c>transforms</c>). Null or empty when the mapping states none.
+    /// </summary>
+    public IList<PipelineFieldTransformationReference>? Transforms { get; set; }
 }

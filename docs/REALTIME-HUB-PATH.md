@@ -1,5 +1,7 @@
 # Real-Time Hub Path — Feature Description
 
+> **FDW-872 (2026-09-22):** the Blazor packages this document names (`Fdw.UI.Components.Blazor`, the `*.razor` components, `Fdw.Web.Http.Authentication.Blazor`, the Blazor skins and renderers) were removed. The web console is now the separate `reference-react-ui` repository. Read the Blazor parts below as history.
+
 **Issue:** FDW-545
 **Package:** `Fdw.SignalR` (building block) + per-domain hub assemblies
 **Status:** Implemented

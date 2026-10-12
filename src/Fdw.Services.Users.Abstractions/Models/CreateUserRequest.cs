@@ -16,10 +16,14 @@ public class CreateUserRequest
     public string Username { get; set; } = "";
 
     /// <summary>
-    /// Gets or sets the password for the new user.
+    /// Gets or sets the sign-in methods to create with the account. At least one is required.
     /// </summary>
-    [Required, MinLength(8)]
-    public string Password { get; set; } = "";
+    /// <remarks>
+    /// An account may sign in with a password, through an external identity provider, with an API
+    /// key, or with any combination of the three. The methods are created in one request because a
+    /// user with no way in is not a user anyone asked for.
+    /// </remarks>
+    public SignInMethodsRequest SignInMethods { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the email address for the new user.
@@ -28,7 +32,13 @@ public class CreateUserRequest
     public string? Email { get; set; }
 
     /// <summary>
-    /// Gets or sets the initial roles to assign to the new user.
+    /// Gets or sets the roles the new user holds in its tenant. Required: an empty list states "no
+    /// roles", and an absent one is refused.
     /// </summary>
-    public IList<string> Roles { get; set; } = new List<string> { "User" };
+    /// <remarks>
+    /// It used to default to <c>User</c>, a role no seed creates, so a request that left it out failed
+    /// half-way through creating the account (FDW-910). Which roles an account starts with is the
+    /// caller's decision; there is no role every deployment has.
+    /// </remarks>
+    public IList<string>? Roles { get; set; }
 }

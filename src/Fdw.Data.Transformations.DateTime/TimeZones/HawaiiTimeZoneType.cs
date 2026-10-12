@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Hawaii")]
 public sealed class HawaiiTimeZoneType : TimeZoneTypeBase
 {
-    public HawaiiTimeZoneType() : base(7, "Hawaii", "Hawaiian Standard Time") { }
+    public HawaiiTimeZoneType() : base("Hawaii", "Hawaiian Standard Time") { }
 }

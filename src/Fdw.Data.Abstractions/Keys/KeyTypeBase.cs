@@ -15,19 +15,18 @@ namespace Fdw.Data.Abstractions;
 /// override it per the capability matrix.
 /// </para>
 /// </remarks>
-public abstract class KeyTypeBase : TypeOptionBase<int, KeyTypeBase>, IKeyType
+public abstract class KeyTypeBase : TypeOptionBase<KeyTypeBase>, IKeyType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="KeyTypeBase"/> class.
     /// </summary>
     protected KeyTypeBase(
-        int id,
         string name,
         bool isPrimaryKey,
         bool hasConstraint,
         bool isReference,
         bool isSystemGenerated)
-        : base(id, name)
+        : base(name)
     {
         IsPrimaryKey = isPrimaryKey;
         HasConstraint = hasConstraint;

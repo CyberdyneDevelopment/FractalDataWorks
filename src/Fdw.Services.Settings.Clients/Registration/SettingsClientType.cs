@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Settings.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Settings API client.
+/// Implementation for the Settings API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "SettingsClient")]
+[Implementation(typeof(ApiClientTypes), "SettingsClient")]
 public sealed class SettingsClientType : ApiClientTypeBase<SettingsApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class SettingsClientType : ApiClientTypeBase<SettingsApiClient>
         {
             builder.Services.AddScoped<SettingsApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SettingsApiClient>>() ?? NullLogger<SettingsApiClient>.Instance;
-                return new SettingsApiClient(factory.CreateClient(Name), logger);
+                return new SettingsApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

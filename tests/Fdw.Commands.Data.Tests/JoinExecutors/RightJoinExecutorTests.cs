@@ -24,16 +24,6 @@ public sealed class RightJoinExecutorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ExecuteResolvesFromTypeCollectionByName()
-    {
-        // Assert
-        _sut.ShouldNotBe(JoinExecutors.NotFound);
-        _sut.Name.ShouldBe("Right");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ExecuteReturnsMatchedRowsForBothSides()
     {
         // Arrange

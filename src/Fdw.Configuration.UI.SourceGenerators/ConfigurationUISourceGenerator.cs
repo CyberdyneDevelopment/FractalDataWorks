@@ -10,7 +10,7 @@ using Fdw.Configuration.UI.SourceGenerators.Models;
 namespace Fdw.Configuration.UI.SourceGenerators;
 
 /// <summary>
-/// Incremental source generator that creates Web, Blazor, and TUI components
+/// Incremental source generator that creates Web and TUI components
 /// for classes annotated with [ManagedConfiguration].
 /// </summary>
 [Generator(LanguageNames.CSharp)]
@@ -22,10 +22,7 @@ public sealed class ConfigurationUISourceGenerator : IIncrementalGenerator
     /// Initializes the incremental generator.
     /// </summary>
     /// <param name="context">The initialization context.</param>
-    // MA0051: Method length acceptable - generator initialization registers 4 separate outputs (Web/Blazor/TUI/FormModel)
-#pragma warning disable MA0051 // Method is too long
     public void Initialize(IncrementalGeneratorInitializationContext context)
-#pragma warning restore MA0051
     {
 #if DEBUG
         // DEBUG: Always create a debug file to show the generator is being loaded
@@ -65,36 +62,6 @@ public sealed class ConfigurationUISourceGenerator : IIncrementalGenerator
                             "CFGUI001",
                             "Web Component Generation Failed",
                             "Failed to generate Web component for {0}: {1}",
-                            "ConfigurationUI.SourceGenerator",
-                            DiagnosticSeverity.Error,
-                            isEnabledByDefault: true),
-                        Location.None,
-                        model.ClassName,
-                        ex.Message);
-                    context.ReportDiagnostic(diagnostic);
-                }
-            });
-
-        // Register Blazor component generation (only if GenerateBlazor is true)
-        context.RegisterSourceOutput(
-            configurationClasses,
-            static (context, model) =>
-            {
-                if (model == null || !model.GenerateBlazor) return;
-
-                try
-                {
-                    var source = BlazorComponentGenerator.Generate(model);
-                    context.AddSource($"{model.ClassName}.Blazor.g.cs", source);
-                }
-                catch (Exception ex)
-                {
-                    // Report diagnostic for generation errors
-                    var diagnostic = Diagnostic.Create(
-                        new DiagnosticDescriptor(
-                            "CFGUI002",
-                            "Blazor Component Generation Failed",
-                            "Failed to generate Blazor component for {0}: {1}",
                             "ConfigurationUI.SourceGenerator",
                             DiagnosticSeverity.Error,
                             isEnabledByDefault: true),

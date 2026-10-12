@@ -15,7 +15,7 @@ public sealed class SumAggregationFunction : AggregationFunctionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SumAggregationFunction"/> class.
     /// </summary>
-    public SumAggregationFunction() : base(id: 1, name: "Sum")
+    public SumAggregationFunction() : base(name: "Sum")
     {
     }
 

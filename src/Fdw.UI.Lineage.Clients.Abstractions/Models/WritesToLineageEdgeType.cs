@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class WritesToLineageEdgeType : LineageEdgeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="WritesToLineageEdgeType"/>.</summary>
-    public WritesToLineageEdgeType() : base(4, "WritesTo") { }
+    public WritesToLineageEdgeType() : base("WritesTo") { }
 }

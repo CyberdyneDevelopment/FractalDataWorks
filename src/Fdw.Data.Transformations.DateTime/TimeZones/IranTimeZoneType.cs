@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Iran")]
 public sealed class IranTimeZoneType : TimeZoneTypeBase
 {
-    public IranTimeZoneType() : base(33, "Iran", "Iran Standard Time") { }
+    public IranTimeZoneType() : base("Iran", "Iran Standard Time") { }
 }

@@ -1,3 +1,4 @@
+using Fdw.Services.Messaging.Configuration;
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,9 +50,9 @@ public sealed class MessageServiceTests
 
         var messaging = new Mock<IMessagingConfigurationProvider>(MockBehavior.Loose);
         messaging
-            .Setup(m => m.GetHeader(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IMessagingConfiguration>.Success(
-                new MessagingConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
+            .Setup(m => m.Get(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IMessagingImplementationConfiguration>.Success(
+                new MessagingImplementationConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
 
         var service = new MessageService(
             NullLogger<MessageService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, hubContext.Object);

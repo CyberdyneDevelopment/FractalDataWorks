@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class SkippedExecutionState : ExecutionStateBase
 {
     /// <summary>Initializes a new instance of <see cref="SkippedExecutionState"/>.</summary>
-    public SkippedExecutionState() : base(6, "Skipped") { }
+    public SkippedExecutionState() : base("Skipped") { }
 }

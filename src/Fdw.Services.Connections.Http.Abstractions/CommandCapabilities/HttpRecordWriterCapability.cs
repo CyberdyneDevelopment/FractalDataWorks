@@ -28,7 +28,6 @@ public sealed class HttpRecordWriterCapability : CommandCapabilityTypeBase
     /// </summary>
     public HttpRecordWriterCapability()
         : base(
-            id: 12,
             name: "HttpRecordWriter",
             displayName: "HTTP Record Writer",
             configurationFields:

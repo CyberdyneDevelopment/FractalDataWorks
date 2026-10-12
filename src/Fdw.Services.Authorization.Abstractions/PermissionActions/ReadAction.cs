@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class ReadAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for read action.
+    /// Material Symbols icon name for read action.
     /// </summary>
-    public const string ReadIcon = "visibility"; // Icons.Material.Filled.Visibility
+    public const string ReadIcon = "visibility";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadAction"/> class.
     /// </summary>
     public ReadAction()
         : base(
-            id: 1,
             name: "Read",
             icon: ReadIcon,
             color: "Info",

@@ -39,7 +39,7 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     // Configure(), Register() and Initialize() are source-generated
 
@@ -54,53 +54,34 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static DataVaultTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IDataVaultProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<DataVaultTypes>() ?? NullLogger<DataVaultTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
             // The configuration provider for this domain, registered once here rather than by every
             // caller that happens to need it.
-            builder.Services.TryAddSingleton<IDataVaultConfigurationProvider>(sp =>
-                new DataVaultConfigurationProvider(
-                    sp.GetService<ILogger<DataVaultConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<DataVaultConfigurationProvider>(
-                sp => (DataVaultConfigurationProvider)sp.GetRequiredService<IDataVaultConfigurationProvider>());
+            builder.Services.AddSingleton<IDataVaultConfigurationProvider, DataVaultConfigurationProvider>(sp => new DataVaultConfigurationProvider(sp.GetRequiredService<ILogger<DataVaultConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), DataVaultTypes.ConfigurationConnection, "sec", "DataVault"));
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataVaultImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IDataVaultConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<DataVaultConfiguration, DataVaultConfigurationCommand>>(
-                sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
-
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<DataVaultConfiguration>>(
-                sp => sp.GetRequiredService<DataVaultConfigurationProvider>());
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<IDataVaultProvider>(sp =>
             {
                 var provider = new DataVaultProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultProvider>()
                     ?? NullLogger<DataVaultProvider>.Instance);
 
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<DataVaultTypes>()
                     ?? NullLogger<DataVaultTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(DataVaultTypes), provider.GetType().Name);
+                var cfgProvider = sp.GetService<IDataVaultConfigurationProvider>();
                 try
                 {
-                    if (sp.GetService<IDataVaultConfigurationProvider>() is { } cfgProvider)
+                    if (cfgProvider is not null)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -114,7 +95,7 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(DataVaultTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<DataVaultConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<IDataVaultImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -122,8 +103,22 @@ public partial class DataVaultTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(DataVaultTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(DataVaultTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(DataVaultTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(DataVaultTypes), providerService);

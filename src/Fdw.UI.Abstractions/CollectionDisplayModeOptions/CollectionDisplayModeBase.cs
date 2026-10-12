@@ -8,17 +8,16 @@ namespace Fdw.UI.Abstractions.CollectionDisplayModeOptions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class CollectionDisplayModeBase : TypeOptionBase<int, CollectionDisplayModeBase>, ICollectionDisplayMode
+public abstract class CollectionDisplayModeBase : TypeOptionBase<CollectionDisplayModeBase>, ICollectionDisplayMode
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CollectionDisplayModeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this collection display mode.</param>
     /// <param name="name">The name of this collection display mode.</param>
     /// <param name="supportsExpandCollapse">Whether this display mode supports expand/collapse.</param>
     /// <param name="supportsGrouping">Whether this display mode supports grouping.</param>
-    protected CollectionDisplayModeBase(int id, string name, bool supportsExpandCollapse, bool supportsGrouping)
-        : base(id, name)
+    protected CollectionDisplayModeBase(string name, bool supportsExpandCollapse, bool supportsGrouping)
+        : base(name)
     {
         SupportsExpandCollapse = supportsExpandCollapse;
         SupportsGrouping = supportsGrouping;

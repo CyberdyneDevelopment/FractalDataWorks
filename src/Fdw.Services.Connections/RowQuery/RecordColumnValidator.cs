@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
@@ -58,18 +59,35 @@ public static class RecordColumnValidator
         string? parentContainerName,
         ILogger logger)
     {
+        var joined = new Dictionary<string, IDataContainer>(StringComparer.Ordinal);
+        if (joinedContainer is not null && parentContainerName is not null)
+            joined[parentContainerName] = joinedContainer;
+        return ValidateFilterColumns(node, primaryContainer, joined, logger);
+    }
+
+    /// <summary>
+    /// Validates every referenced column against the relevant container's declared fields: a bare
+    /// column against <paramref name="primaryContainer"/>, a <c>"{container}.Column"</c>-qualified one
+    /// against the joined container of that name.
+    /// </summary>
+    public static IGenericResult ValidateFilterColumns(
+        IFilterNode? node,
+        IDataContainer primaryContainer,
+        IReadOnlyDictionary<string, IDataContainer> joinedContainers,
+        ILogger logger)
+    {
         switch (node)
         {
             case null:
                 return GenericResult.Success();
 
             case FilterCondition condition:
-                return ValidateCondition(condition, primaryContainer, joinedContainer, parentContainerName, logger);
+                return ValidateCondition(condition, primaryContainer, joinedContainers, logger);
 
             case FilterGroup group:
                 foreach (var child in group.Nodes)
                 {
-                    var childResult = ValidateFilterColumns(child, primaryContainer, joinedContainer, parentContainerName, logger);
+                    var childResult = ValidateFilterColumns(child, primaryContainer, joinedContainers, logger);
                     if (!childResult.IsSuccess)
                         return childResult;
                 }
@@ -83,8 +101,7 @@ public static class RecordColumnValidator
     private static IGenericResult ValidateCondition(
         FilterCondition condition,
         IDataContainer primaryContainer,
-        IDataContainer? joinedContainer,
-        string? parentContainerName,
+        IReadOnlyDictionary<string, IDataContainer> joinedContainers,
         ILogger logger)
     {
         var (qualifier, column) = QualifiedColumn.Split(condition.PropertyName);
@@ -96,11 +113,17 @@ public static class RecordColumnValidator
                 : GenericResult.Failure(RecordQueryLog.FilterColumnNotDeclared(logger, column, primaryContainer.Name));
         }
 
-        if (parentContainerName is not null && string.Equals(qualifier, parentContainerName, StringComparison.Ordinal))
+        // A condition may qualify with the queried container's own name. SQL accepts that form, so
+        // a caller that writes it is not making a mistake.
+        if (string.Equals(qualifier, primaryContainer.Name, StringComparison.Ordinal))
         {
-            if (joinedContainer is null)
-                return GenericResult.Failure(RecordQueryLog.UnknownFilterQualifier(logger, qualifier, condition.PropertyName));
+            return ContainerFields.Declares(primaryContainer, column)
+                ? GenericResult.Success()
+                : GenericResult.Failure(RecordQueryLog.FilterColumnNotDeclared(logger, column, primaryContainer.Name));
+        }
 
+        if (joinedContainers.TryGetValue(qualifier, out var joinedContainer))
+        {
             return ContainerFields.Declares(joinedContainer, column)
                 ? GenericResult.Success()
                 : GenericResult.Failure(RecordQueryLog.FilterColumnNotDeclared(logger, column, joinedContainer.Name));

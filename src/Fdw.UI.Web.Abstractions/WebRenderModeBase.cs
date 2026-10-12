@@ -7,17 +7,16 @@ namespace Fdw.UI.Web.Abstractions;
 /// Base class for render mode types.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class WebRenderModeBase : TypeOptionBase<int, WebRenderModeBase>, IRenderMode
+public abstract class WebRenderModeBase : TypeOptionBase<WebRenderModeBase>, IRenderMode
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="WebRenderModeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the render mode.</param>
     /// <param name="name">The unique identifier for the render mode.</param>
     /// <param name="displayName">The name of the render mode.</param>
     /// <param name="description">The display name for the render mode.</param>
-    protected WebRenderModeBase(int id, string name, string displayName, string description)
-        : base(id, name, $"RenderModes:{name}", displayName, description, "RenderModes")
+    protected WebRenderModeBase(string name, string displayName, string description)
+        : base(name, $"RenderModes:{name}", displayName, description, "RenderModes")
     {
     }
 }

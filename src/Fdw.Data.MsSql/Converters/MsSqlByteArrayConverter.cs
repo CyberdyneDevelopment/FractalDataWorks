@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlByteArrayConverter()
     : DataTypeConverterBase(
-        id: 10,
         name: "ByteArray",
         sourceType: "varbinary",
         targetClrType: typeof(byte[]),

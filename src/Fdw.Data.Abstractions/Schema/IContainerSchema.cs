@@ -15,7 +15,7 @@ namespace Fdw.Data.Abstractions;
 /// <para>
 /// Key points:
 /// - Properties is aliased to Fields for backward compatibility
-/// - Get(string) resolves a field by name; Get(IPropertyRole) provides role-based filtering
+/// - Get(string) resolves a field by name; Get(IDatumType) provides role-based filtering
 /// - Identity/Attribute/Measure helpers remain for convenience
 /// </para>
 /// </remarks>
@@ -34,9 +34,12 @@ public interface IContainerSchema : ISchemaDefinition<IField>
     /// </summary>
     IReadOnlyList<IField> GetIdentityFields();
 
-    /// <summary>Gets the fields a dataset may select.</summary>
-    /// <returns>The projectable fields.</returns>
-    IReadOnlyList<IField> GetProjectableFields();
+    /// <summary>Gets the fields a command returns when it names no columns of its own (FDW-988).</summary>
+    /// <param name="includeMetadata">Whether the command includes Metadata columns.</param>
+    /// <param name="includeDescriptions">Whether the command includes Descriptive columns.</param>
+    /// <param name="includeKeys">Whether the command includes DbKey columns (server-side reads only).</param>
+    /// <returns>The fields whose datum type says they are returned.</returns>
+    IReadOnlyList<IField> GetReturnedFields(bool includeMetadata, bool includeDescriptions, bool includeKeys);
 
     /// <summary>
     /// Get fields with Attribute role (descriptive, dimensional).

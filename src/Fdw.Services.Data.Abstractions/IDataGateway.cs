@@ -88,6 +88,13 @@ public interface IDataGateway : IGenericService
     /// <see cref="IRecordSource{T}"/> OWNS the underlying reader and connection — the caller MUST dispose
     /// it (use <c>await using</c>). Connections that cannot stream a cursor fail loud with a structured
     /// non-success result; the caller falls back to the materializing <see cref="Execute{T}(IDataCommand, DataStoreTarget, CancellationToken)"/> path.
+    /// <para>
+    /// The connection's outbound limits apply exactly as they do to <c>Execute</c>: rate and result-size
+    /// checks and the daily budget are enforced before the cursor opens. The other two last as long as the
+    /// cursor does: it occupies one of the connection's concurrency slots until it is disposed, so dispose
+    /// it promptly, and the query timeout bounds its whole lifetime -- enumeration ends with a timeout
+    /// failure once it fires.
+    /// </para>
     /// </remarks>
     /// <param name="command">The read command (e.g. a <c>QueryCommand</c>).</param>
     /// <param name="target">The DataStore/Path/Container address.</param>

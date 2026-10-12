@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.Identity.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Identity;
 
@@ -13,7 +14,7 @@ namespace Fdw.Services.Identity;
 /// Lives in the concrete <c>Fdw.Services.Identity</c> package (net10.0) rather than
 /// <c>Fdw.Services.Identity.Abstractions</c> (netstandard2.0), for the same reason as
 /// <c>TokenManagerTypeBase</c>: this class closes <c>TConfiguration</c> over
-/// <see cref="IdentityServiceConfiguration"/>, whose <c>[GenerateMapper]</c> /
+/// <c>IIdentityServiceImplementationConfiguration</c>, whose <c>[GenerateMapper]</c> /
 /// <c>[ManagedConfiguration]</c> generators are net10.0-only.
 /// </remarks>
 /// <typeparam name="TService">The identity service type.</typeparam>
@@ -38,9 +39,10 @@ public abstract class IdentityServiceTypeBase<TService, TConfiguration, TFactory
         string? category = null,
         string defaultContainerName = "")
         : base(name, $"Identities:{name}", $"{name} Identity", $"Managed identity using {name}", category ?? "Identity",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {
     }
+
 }

@@ -13,5 +13,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class BlockedState : SessionStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="BlockedState"/> class.</summary>
-    public BlockedState() : base(4, "Blocked", isTerminal: false, isReclaimable: true) { }
+    public BlockedState() : base("Blocked", isTerminal: false, isReclaimable: true) { }
 }

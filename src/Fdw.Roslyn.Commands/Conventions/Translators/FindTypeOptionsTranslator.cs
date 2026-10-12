@@ -31,7 +31,6 @@ public sealed class FindTypeOptionsTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: iterate projects, find TypeOption attributes, collect results
     public override async Task<IGenericResult<QueryResult<TypeOptionsData>>> Translate(
         FindTypeOptionsCommand command,
         Solution solution,
@@ -110,5 +109,4 @@ public sealed class FindTypeOptionsTranslator
 
         return GenericResult<QueryResult<TypeOptionsData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

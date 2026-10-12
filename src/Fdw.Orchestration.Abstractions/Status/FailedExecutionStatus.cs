@@ -14,5 +14,5 @@ public sealed class FailedExecutionStatus : WorkflowExecutionStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FailedExecutionStatus"/> class.
     /// </summary>
-    public FailedExecutionStatus() : base(5, "Failed", isTerminal: true, isSuccess: false, isFailure: true) { }
+    public FailedExecutionStatus() : base("Failed", isTerminal: true, isSuccess: false, isFailure: true) { }
 }

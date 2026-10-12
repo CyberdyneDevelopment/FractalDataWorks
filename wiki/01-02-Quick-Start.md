@@ -91,7 +91,7 @@ builder.Services.AddConfigurationGateway<MsSqlConnectionFactory, EnvironmentVari
 
 // 3. ONE PlatformServices sweep — every [ServiceTypeCollection] discovered by the
 //    generated module initializer participates (ConnectionTypes among them). Each connection-kind
-//    [ServiceTypeOption] registers ConnectionConfigurationProvider itself (idempotent) — no
+//    [Implementation] registers ConnectionConfigurationProvider itself (idempotent) — no
 //    hand-written RegisterDomainServices call here.
 PlatformServices.Configure(builder, loggerFactory);
 PlatformServices.Register(builder.Services, loggerFactory);
@@ -147,7 +147,7 @@ public sealed class ListConnectionsEndpoint : EndpointWithoutRequest<List<Connec
 dotnet run --project Reference.Api
 ```
 
-Open `http://localhost:5149/scalar` for the Scalar API documentation UI.
+Open `http://localhost:5149/` for the API reference: it redirects to `/api/v1/scalar`, where you sign in, and lists the reference pages you may open. `/api/v1/reference/scalar` is the whole API, cut to what you may call (FDW-919).
 
 ### 7. API Endpoints
 

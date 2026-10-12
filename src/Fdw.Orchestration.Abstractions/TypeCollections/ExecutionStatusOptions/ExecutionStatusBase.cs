@@ -9,12 +9,11 @@ namespace Fdw.Orchestration.Abstractions.TypeCollections.ExecutionStatusOptions;
 /// Provides common functionality for execution status values that track
 /// the state of orchestration or step execution.
 /// </remarks>
-public abstract class ExecutionStatusBase : TypeOptionBase<int, ExecutionStatusBase>, IExecutionStatus
+public abstract class ExecutionStatusBase : TypeOptionBase<ExecutionStatusBase>, IExecutionStatus
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionStatusBase"/> class.
     /// </summary>
-    /// <param name="id">Unique numeric identifier.</param>
     /// <param name="name">Human-readable name.</param>
     /// <param name="isTerminal">Whether this is a terminal status (execution complete).</param>
     /// <param name="isSuccess">Whether this status represents success.</param>
@@ -24,7 +23,6 @@ public abstract class ExecutionStatusBase : TypeOptionBase<int, ExecutionStatusB
     /// <param name="isInProgress">Whether execution is currently in progress.</param>
     /// <param name="hasWarnings">Whether this status indicates warnings occurred.</param>
     protected ExecutionStatusBase(
-        int id,
         string name,
         bool isTerminal,
         bool isSuccess,
@@ -33,7 +31,7 @@ public abstract class ExecutionStatusBase : TypeOptionBase<int, ExecutionStatusB
         bool allowsResume = false,
         bool isInProgress = false,
         bool hasWarnings = false)
-        : base(id, name)
+        : base(name)
     {
         IsTerminal = isTerminal;
         IsSuccess = isSuccess;

@@ -22,5 +22,12 @@ public interface ISupportsHealthProbe
     /// </summary>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>A result indicating whether the backend responded successfully.</returns>
+    /// <remarks>
+    /// Never throws. A backend that cannot be reached, answers an error, or cannot even be addressed
+    /// is a failed result carrying why. The health monitor probes connection after connection, and a
+    /// probe that throws is treated as a failure of that one connection -- but the answer belongs
+    /// here, where the reason is known. Cancellation of <paramref name="cancellationToken"/> is not a
+    /// failure of the backend and may surface as cancellation.
+    /// </remarks>
     Task<IGenericResult> Probe(CancellationToken cancellationToken = default);
 }

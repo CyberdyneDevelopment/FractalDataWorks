@@ -14,7 +14,7 @@ public sealed class ScalarCalculationInputKind : CalculationInputKindBase
     /// Initializes a new instance of the <see cref="ScalarCalculationInputKind"/> class.
     /// </summary>
     public ScalarCalculationInputKind()
-        : base(id: 3, name: "Scalar")
+        : base(name: "Scalar")
     {
     }
 }

@@ -22,7 +22,7 @@ public sealed class SchemaDiscoveryHubOption : RealTimeHubOptionBase
     /// Initializes a new instance of the <see cref="SchemaDiscoveryHubOption"/> class.
     /// </summary>
     public SchemaDiscoveryHubOption()
-        : base(3, "SchemaDiscovery", "/hubs/schema-discovery", typeof(SchemaDiscoveryHub), authorizationPolicy: null)
+        : base("SchemaDiscovery", "/hubs/schema-discovery", typeof(SchemaDiscoveryHub), authorizationPolicy: null)
     {
     }
 

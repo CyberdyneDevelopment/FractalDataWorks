@@ -20,21 +20,26 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     private static readonly HashSet<string> SystemFields = new(StringComparer.OrdinalIgnoreCase)
         { "Id", "Name", "Type", "ServiceType", "CreatedAt", "ModifiedAt" };
 
-    private readonly IDataGatewayProvider _dataGateways;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private static string PlatformConfigurationConnection => PlatformConnection.Name;
+
+    // The platform's own rows are read through the configuration gateway onto that store, never the request-facing
+    // Main gateway (FDW-1068): Main runs whatever data store a request names, and these rows are not a request's to name.
+    private IDataGateway Gateway => _configurationGateways.Get(PlatformConfigurationConnection) is { IsSuccess: true, Value: { } gateway }
+        ? gateway
+        : throw new InvalidOperationException(
+            $"No configuration gateway is available for connection '{PlatformConfigurationConnection}'. It must be declared in the host's configurationSchema.json.");
     private readonly IConfigurationContainerLookup _containerLookup;
     private readonly ILogger<GetConfigurationInstanceEndpointBase> _logger;
 
     /// <summary>Initializes a new instance of the endpoint.</summary>
     protected GetConfigurationInstanceEndpointBase(
-        IDataGatewayProvider dataGateways,
+        IConfigurationGatewayProvider configurationGateways,
         IConfigurationContainerLookup containerLookup,
         ILogger<GetConfigurationInstanceEndpointBase> logger)
     {
-        _dataGateways = dataGateways;
+        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _containerLookup = containerLookup;
         _logger = logger;
     }
@@ -94,7 +99,7 @@ public abstract class GetConfigurationInstanceEndpointBase : Endpoint<GetConfigu
     {
         foreach (var container in containers)
         {
-            var command = DataQuery.From<Dictionary<string, object?>>("PlatformConfiguration", container.Parent.Name, container.Name)
+            var command = DataQuery.From<Dictionary<string, object?>>(PlatformConfigurationConnection, container.Parent.Name, container.Name)
                 .Where("Name", req.Name)
                 .Build();
 

@@ -20,7 +20,6 @@ public sealed class SurrogateKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="SurrogateKeyType"/> class.</summary>
     public SurrogateKeyType()
         : base(
-            id: 1,
             name: "Surrogate",
             isPrimaryKey: true,
             hasConstraint: true,

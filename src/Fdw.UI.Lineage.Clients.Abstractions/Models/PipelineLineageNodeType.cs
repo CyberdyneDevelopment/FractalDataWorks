@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class PipelineLineageNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="PipelineLineageNodeType"/>.</summary>
-    public PipelineLineageNodeType() : base(1, "Pipeline") { }
+    public PipelineLineageNodeType() : base("Pipeline") { }
 }

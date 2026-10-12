@@ -12,7 +12,7 @@ public sealed class AnalysisCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AnalysisCommandCategory"/> class.
     /// </summary>
-    public AnalysisCommandCategory() : base(1, "Analysis", "Code analysis operations")
+    public AnalysisCommandCategory() : base("Analysis", "Code analysis operations")
     {
     }
 }

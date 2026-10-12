@@ -16,7 +16,6 @@ public sealed class XmlFormatType : FormatTypeBase
     /// </summary>
     public XmlFormatType()
         : base(
-            id: 3,
             name: "Xml",
             displayName: "XML",
             description: "Extensible Markup Language data format",

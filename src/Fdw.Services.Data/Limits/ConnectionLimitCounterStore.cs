@@ -24,13 +24,11 @@ public sealed class ConnectionLimitCounterStore
     private sealed class CounterEntry
     {
         public long QueryCount;
-        public long ByteCount;
         public DateTimeOffset LastReset;
 
-        public CounterEntry(long queryCount, long byteCount, DateTimeOffset lastReset)
+        public CounterEntry(long queryCount, DateTimeOffset lastReset)
         {
             QueryCount = queryCount;
-            ByteCount = byteCount;
             LastReset = lastReset;
         }
     }
@@ -41,28 +39,18 @@ public sealed class ConnectionLimitCounterStore
     public long IncrementQueryCount(Guid connectionId)
     {
         var entry = _counters.GetOrAdd(connectionId,
-            static id => new CounterEntry(0, 0, DateTimeOffset.UtcNow));
+            static id => new CounterEntry(0, DateTimeOffset.UtcNow));
         return Interlocked.Increment(ref entry.QueryCount);
     }
 
     /// <summary>
-    /// Increments the byte counter for the given connection and returns the new total.
+    /// Reads the current query counter without modifying it; zero for a connection not yet tracked.
     /// </summary>
-    public long IncrementByteCount(Guid connectionId, long byteDelta)
-    {
-        var entry = _counters.GetOrAdd(connectionId,
-            static id => new CounterEntry(0, 0, DateTimeOffset.UtcNow));
-        return Interlocked.Add(ref entry.ByteCount, byteDelta);
-    }
-
-    /// <summary>
-    /// Reads the current counters without modifying them.
-    /// </summary>
-    public (long queries, long bytes) Read(Guid connectionId)
+    public long ReadQueryCount(Guid connectionId)
     {
         if (_counters.TryGetValue(connectionId, out var entry))
-            return (Volatile.Read(ref entry.QueryCount), Volatile.Read(ref entry.ByteCount));
-        return (0L, 0L);
+            return Volatile.Read(ref entry.QueryCount);
+        return 0L;
     }
 
     /// <summary>
@@ -70,9 +58,9 @@ public sealed class ConnectionLimitCounterStore
     /// Called at startup to restore counters consumed earlier in the current day.
     /// Skips the entry if an in-memory counter already exists (startup race guard).
     /// </summary>
-    public void Seed(Guid connectionId, long queryCount, long byteCount, DateTimeOffset lastReset)
+    public void Seed(Guid connectionId, long queryCount, DateTimeOffset lastReset)
     {
-        _counters.TryAdd(connectionId, new CounterEntry(queryCount, byteCount, lastReset));
+        _counters.TryAdd(connectionId, new CounterEntry(queryCount, lastReset));
     }
 
     /// <summary>
@@ -82,20 +70,15 @@ public sealed class ConnectionLimitCounterStore
     public void ResetAll()
     {
         foreach (var entry in _counters.Values)
-        {
             Interlocked.Exchange(ref entry.QueryCount, 0L);
-            Interlocked.Exchange(ref entry.ByteCount, 0L);
-        }
     }
 
     /// <summary>
     /// Enumerates all tracked connections and their current counters for DB flush.
     /// </summary>
-    public System.Collections.Generic.IEnumerable<(Guid connectionId, long queries, long bytes)> Snapshot()
+    public System.Collections.Generic.IEnumerable<(Guid connectionId, long queries)> Snapshot()
     {
         foreach (var kv in _counters)
-            yield return (kv.Key,
-                Volatile.Read(ref kv.Value.QueryCount),
-                Volatile.Read(ref kv.Value.ByteCount));
+            yield return (kv.Key, Volatile.Read(ref kv.Value.QueryCount));
     }
 }

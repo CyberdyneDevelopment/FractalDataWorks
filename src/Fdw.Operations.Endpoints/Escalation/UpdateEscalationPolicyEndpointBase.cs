@@ -48,7 +48,16 @@ public abstract class UpdateEscalationPolicyEndpointBase : Endpoint<UpdateEscala
 
         try
         {
-            var model = EscalationMapper.ToModel(req);
+            var existing = await _escalationService.GetPolicy(req.Id, ct).ConfigureAwait(false);
+            if (!existing.IsSuccess || existing.Value is null)
+            {
+                OperationsEndpointLog.UpdateEscalationPolicyFailed(_logger, req.Id, existing.CurrentMessage ?? "Policy not found");
+                AddError("Failed to update escalation policy");
+                await Send.ErrorsAsync(existing.IsSuccess ? 404 : 500, ct).ConfigureAwait(false);
+                return;
+            }
+
+            var model = EscalationMapper.ToModel(req, existing.Value);
             var result = await _escalationService.UpdatePolicy(req.Id, model, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)

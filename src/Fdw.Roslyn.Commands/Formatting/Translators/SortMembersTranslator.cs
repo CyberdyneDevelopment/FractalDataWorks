@@ -32,7 +32,6 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: get members, sort by kind/accessibility/name, rebuild type
     public override async Task<IGenericResult<MutationResult<SortedMembersData>>> Translate(
         SortMembersCommand command,
         Solution solution,
@@ -183,7 +182,6 @@ public sealed class SortMembersTranslator : RoslynCommandTranslatorBase<SortMemb
                 fileChanges,
                 data));
     }
-#pragma warning restore MA0051
 
     private static int GetMemberKind(MemberDeclarationSyntax member)
     {

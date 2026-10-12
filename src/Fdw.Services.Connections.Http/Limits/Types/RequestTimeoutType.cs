@@ -14,7 +14,6 @@ public sealed class RequestTimeoutType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="RequestTimeoutType"/>.</summary>
     public RequestTimeoutType()
         : base(
-            4,
             "RequestTimeout",
             "Request Timeout",
             "Cancels HTTP requests that exceed the specified duration.",

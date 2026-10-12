@@ -15,7 +15,6 @@ public sealed class StructuralMode : SchemaCompatibilityModeBase
     /// </summary>
     public StructuralMode()
         : base(
-            id: 4,
             name: "Structural",
             requiresExactTypes: true,
             allowsSourceExtras: false,

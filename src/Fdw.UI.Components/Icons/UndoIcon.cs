@@ -11,7 +11,6 @@ public sealed class UndoIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="UndoIcon"/>.</summary>
     public UndoIcon()
         : base(
-            44,
             "Undo",
             "0 0 24 24",
             "none",

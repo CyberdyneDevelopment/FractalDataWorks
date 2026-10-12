@@ -11,15 +11,14 @@ namespace Fdw.Commands.Data.Abstractions.JoinExecutors;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class JoinExecutorBase : TypeOptionBase<int, JoinExecutorBase>, IJoinExecutor
+public abstract class JoinExecutorBase : TypeOptionBase<JoinExecutorBase>, IJoinExecutor
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="JoinExecutorBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this join executor.</param>
     /// <param name="name">The name of this join executor (must match JoinType name).</param>
-    protected JoinExecutorBase(int id, string name)
-        : base(id, name) { }
+    protected JoinExecutorBase(string name)
+        : base(name) { }
 
     /// <inheritdoc />
     public abstract IEnumerable<TResult> Execute<TLeft, TRight, TResult>(

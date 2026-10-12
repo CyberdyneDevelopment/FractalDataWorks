@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class SecretConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="SecretConfigurationPropertyType"/>.</summary>
-    public SecretConfigurationPropertyType() : base(5, "Secret") { }
+    public SecretConfigurationPropertyType() : base("Secret") { }
 }

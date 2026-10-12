@@ -335,7 +335,7 @@ public class HttpProtocolBaseRowExtractionTests
 internal sealed class TestableHttpProtocol : HttpProtocolBase
 {
     public TestableHttpProtocol()
-        : base(998, "TestableProtocol", "Test-only", "application/json")
+        : base("TestableProtocol", "Test-only", "application/json")
     {
     }
 

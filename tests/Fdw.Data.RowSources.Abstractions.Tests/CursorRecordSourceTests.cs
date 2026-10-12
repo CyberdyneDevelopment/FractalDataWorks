@@ -5,7 +5,7 @@ namespace Fdw.Data.RowSources.Abstractions.Tests;
 
 public class CursorRecordSourceTests
 {
-    private static IReadOnlyList<IDataField> Fields(params string[] names)
+    private static List<IDataField> Fields(params string[] names)
     {
         var list = new List<IDataField>(names.Length);
         foreach (var name in names)

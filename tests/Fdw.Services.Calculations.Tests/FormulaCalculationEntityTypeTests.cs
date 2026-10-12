@@ -34,6 +34,19 @@ public class FormulaCalculationEntityTypeTests
             ResolvedValue = new List<Dictionary<string, object>>(rows)
         };
 
+    private static async Task<IGenericResult<string>> ExecuteAsync(FormulaCalculationEntityType type, string formulaBody, params Dictionary<string, object>[] rows)
+    {
+        var entity = new TestCalculationEntity
+        {
+            CalculationEntityType = "Formula",
+            TypedConfiguration = new FormulaCalculationConfiguration { FormulaBody = formulaBody, FormulaLanguage = "CSharp" },
+            Output = new CalculationOutputSpec { ResultFieldName = "Result" }
+        };
+        var inputs = new List<ResolvedCalculationInput> { DataSetInput("A", rows.Length == 0 ? [new Dictionary<string, object>()] : rows) };
+
+        return await type.Execute(entity, inputs, Mock.Of<ICalculationContext>(), TestContext.Current.CancellationToken);
+    }
+
     private static async Task<decimal> EvaluateAsync(FormulaCalculationEntityType type, string formulaBody, params Dictionary<string, object>[] rows)
     {
         var entity = new TestCalculationEntity
@@ -160,23 +173,57 @@ public class FormulaCalculationEntityTypeTests
     }
 
     [Fact]
-    public async Task ExecuteDivisionByZeroReturnsZeroInsteadOfFailing()
+    public async Task ExecuteDivisionByZeroFailsNamingTheFormulaAndTheRow()
     {
         var type = new FormulaCalculationEntityType();
 
-        var value = await EvaluateAsync(type, "5/0");
+        var result = await ExecuteAsync(type, "5/0");
 
-        value.ShouldBe(0m);
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain("Division by zero");
+        result.CurrentMessage.ShouldContain("TestCalculation");
+        result.CurrentMessage.ShouldContain("5/0 (row 1)");
     }
 
     [Fact]
-    public async Task ExecuteModuloByZeroReturnsZeroInsteadOfFailing()
+    public async Task ExecuteModuloByZeroFailsNamingTheFormulaAndTheRow()
     {
         var type = new FormulaCalculationEntityType();
 
-        var value = await EvaluateAsync(type, "5%0");
+        var result = await ExecuteAsync(type, "5%0");
 
-        value.ShouldBe(0m);
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain("Division by zero");
+        result.CurrentMessage.ShouldContain("5%0 (row 1)");
+    }
+
+    [Fact]
+    public async Task ExecuteDivisionByAZeroFieldFailsNamingTheFieldsAndTheRowButNotTheValues()
+    {
+        var type = new FormulaCalculationEntityType();
+
+        var result = await ExecuteAsync(
+            type,
+            "[Amount]/[Count]",
+            new Dictionary<string, object> { ["Amount"] = 7123m, ["Count"] = 2m },
+            new Dictionary<string, object> { ["Amount"] = 7123m, ["Count"] = 0m });
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain("[Amount]/[Count] (row 2)");
+        result.CurrentMessage.ShouldNotContain("7123");
+    }
+
+    [Fact]
+    public async Task ExecuteDivisionByANonZeroDivisorStillDivides()
+    {
+        var type = new FormulaCalculationEntityType();
+
+        var value = await EvaluateAsync(type, "10/4");
+
+        value.ShouldBe(2.5m);
     }
 
     [Fact]
@@ -407,28 +454,13 @@ public class FormulaCalculationEntityTypeTests
         config.ShouldBeNull();
     }
 
-    [Fact]
-    public void CreateTypedConfigurationValidInputsReturnsConfiguration()
-    {
-        var type = new FormulaCalculationEntityType();
-        var entityId = Guid.NewGuid();
-        var node = new Dictionary<string, object?> { ["FormulaBody"] = "[A]+1", ["FormulaLanguage"] = "Sql" };
-
-        var config = type.CreateTypedConfiguration(node, entityId).ShouldBeOfType<FormulaCalculationConfiguration>();
-
-        config.Id.ShouldBe(entityId);
-        config.FormulaBody.ShouldBe("[A]+1");
-        config.FormulaLanguage.ShouldBe("Sql");
-        config.ServiceType.ShouldBe("Formula");
-        config.TimeoutSeconds.ShouldBe(30);
-    }
 
     [Fact]
     public void TypedContainerNameReturnsFormulaCalculation()
     {
         var type = new FormulaCalculationEntityType();
 
-        type.TypedContainerName.ShouldBe("FormulaCalculation");
+        type.TypedContainerName.ShouldBe("FormulaCalculationConfiguration");
     }
 
     [Fact]

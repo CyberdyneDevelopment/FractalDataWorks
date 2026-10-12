@@ -28,14 +28,14 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", SourceDataSet = "DS1" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", SourceDataSet = "DS1" }
         };
         var dataSets = new List<DataSetRecord> { new() { Id = Guid.NewGuid(), Name = "DS1" } };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             dataSets, pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
             e.SourceId == "DataSet_DS1" && e.TargetId == "Pipeline_P1" && e.Type.Name == "Consumes");
@@ -46,14 +46,14 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", DestinationDataSet = "DS2" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", DestinationDataSet = "DS2" }
         };
         var dataSets = new List<DataSetRecord> { new() { Id = Guid.NewGuid(), Name = "DS2" } };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             dataSets, pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
             e.SourceId == "Pipeline_P1" && e.TargetId == "DataSet_DS2" && e.Type.Name == "ProducesDataSet");
@@ -64,13 +64,13 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", DestinationConnectionName = "Conn1" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", DestinationConnectionName = "Conn1" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             Empty<DataSetRecord>(), pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
             e.SourceId == "Pipeline_P1" && e.TargetId == "Connection_Conn1" && e.Type.Name == "WritesTo");
@@ -81,13 +81,13 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", ServiceOptionType = "Etl", SourceConnectionName = "ConnA" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", SourceConnectionName = "ConnA" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             Empty<DataSetRecord>(), pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
             e.SourceId == "Connection_ConnA" && e.TargetId == "Pipeline_P1" && e.Type.Name == "ReadsFrom");
@@ -106,7 +106,7 @@ public class PipelineLineageEdgeTests
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             dataSets, Empty<PipelineLineageRecord>(), sources, Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
             e.SourceId == "DataSet_DS_Upstream" && e.TargetId == "DataSet_DS_Owner" && e.Type.Name == "DerivesFrom");
@@ -117,13 +117,13 @@ public class PipelineLineageEdgeTests
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "Orphan", ServiceOptionType = "Etl" }
+            new() { Id = Guid.NewGuid(), Name = "Orphan", Implementation = "Etl" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             Empty<DataSetRecord>(), pipelines, Empty<DataSetSourcePayload>(), Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Nodes.ShouldContain(n => n.Id == "Pipeline_Orphan");
         graph.Edges.ShouldBeEmpty();
@@ -144,7 +144,7 @@ public class PipelineLineageEdgeTests
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             dataSets, Empty<PipelineLineageRecord>(), sources, Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Nodes.Count(n => n.Id == "Connection_SharedConn").ShouldBe(1);
     }
@@ -163,7 +163,7 @@ public class PipelineLineageEdgeTests
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
             dataSets, Empty<PipelineLineageRecord>(), sources, Empty<ChainDefinitionLineageRecord>(),
             Empty<ChainStepLineageRecord>(), Empty<ChainStepSourceFieldRecord>(),
-            Empty<DataSetFieldMappingRecord>(), _logger.Object);
+            new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.Count(e => e.Type.Name == "DerivesFrom").ShouldBe(1);
     }

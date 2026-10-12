@@ -10,7 +10,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Logging;
 
 /// <summary>
 /// MessageLogging methods for the ExternalIdentityProvisioners mechanism (<c>ExternalIdentityProvisionerTypes</c>,
-/// its factories/TypeOptions), the Chained composite provisioner, and the provisioner binding selector
+/// its factories/TypeOptions) and the provisioner binding selector
 /// (<c>ExternalIdentityProvisionerBindingConfigurationProvider</c>). Every log message is returned in the
 /// result AND logged. Fresh EventId pool — TypeCode prefix "EXTIDPROVISIONER" is distinct from the
 /// sibling ExternalIdentityProviders domain's "EXTIDPROVIDER" prefix (verified no collision by grep).
@@ -19,57 +19,6 @@ namespace Fdw.Services.ExternalIdentityProviders.Logging;
 [MessageLoggingTypeCode("EXTIDPROVISIONER")]
 public static partial class ExternalIdentityProvisionerLog
 {
-    // ── Chained provisioner ──────────────────────────────────────────────────────────
-
-    /// <summary>Logs the start of a Chained provisioner walk.</summary>
-    [MessageLogging(
-        EventId = 11000,
-        Level = LogLevel.Trace,
-        Message = "Provisioner chain started: provider='{provider}' externalSubject='{externalSubject}', {stepCount} step(s).")]
-    public static partial IGenericMessage ChainStarted(ILogger logger, string provider, string externalSubject, int stepCount);
-
-    /// <summary>Logs that the chain is attempting one step's sibling provisioner.</summary>
-    [MessageLogging(
-        EventId = 11001,
-        Level = LogLevel.Trace,
-        Message = "Chain step {executionOrder}: attempting provisioner '{provisionerName}'.")]
-    public static partial IGenericMessage StepAttempting(ILogger logger, int executionOrder, string provisionerName);
-
-    /// <summary>Logs that a chain step's sibling provisioner matched and provisioned a user.</summary>
-    [MessageLogging(
-        EventId = 11002,
-        Level = LogLevel.Information,
-        Message = "Chain step {executionOrder}: provisioner '{provisionerName}' provisioned userId={userId}.")]
-    public static partial IGenericMessage StepMatched(ILogger logger, int executionOrder, string provisionerName, Guid userId);
-
-    /// <summary>Logs that a chain step's sibling provisioner returned NotFound and the chain is falling through.</summary>
-    [MessageLogging(
-        EventId = 11003,
-        Level = LogLevel.Trace,
-        Message = "Chain step {executionOrder}: provisioner '{provisionerName}' returned NotFound — falling through to next step.")]
-    public static partial IGenericMessage StepNotFoundFallThrough(ILogger logger, int executionOrder, string provisionerName);
-
-    /// <summary>Logs that a chain step's resolved sibling is itself the Chained ServiceOptionType — rejected, no recursion.</summary>
-    [MessageLogging(
-        EventId = 61000,
-        Level = LogLevel.Error,
-        Message = "Chain step {executionOrder}: provisioner '{provisionerName}' resolves to ServiceType 'Chained' — nested Chained provisioners are not allowed; step rejected.")]
-    public static partial IGenericMessage StepNestedChainedRejected(ILogger logger, int executionOrder, string provisionerName);
-
-    /// <summary>Logs that resolving a chain step's sibling provisioner by name failed.</summary>
-    [MessageLogging(
-        EventId = 71000,
-        Level = LogLevel.Error,
-        Message = "Chain step {executionOrder}: failed to resolve provisioner '{provisionerName}': {message}")]
-    public static partial IGenericMessage StepResolutionFailed(ILogger logger, int executionOrder, string provisionerName, string message);
-
-    /// <summary>Logs that every step in the chain fell through without a match.</summary>
-    [MessageLogging(
-        EventId = 31000,
-        Level = LogLevel.Warning,
-        Message = "Provisioner chain exhausted: provider='{provider}' externalSubject='{externalSubject}' — no step matched after {stepCount} step(s).")]
-    public static partial IGenericMessage ChainExhausted(ILogger logger, string provider, string externalSubject, int stepCount);
-
     // ── IGenericService dispatch ─────────────────────────────────────────────────────
 
     /// <summary>Logs that a command was routed to <c>IGenericService.Execute</c>, which this domain never dispatches through.</summary>
@@ -88,12 +37,12 @@ public static partial class ExternalIdentityProvisionerLog
         Message = "External identity provisioner factory failed to create service for configName='{configName}': {message}")]
     public static partial IGenericMessage FactoryCreateFailed(ILogger logger, string configName, string message);
 
-    /// <summary>Logs that an external identity provisioner ServiceTypeOption completed registration.</summary>
+    /// <summary>Logs that an external identity provisioner Implementation completed registration.</summary>
     [MessageLogging(
         EventId = 11004,
         Level = LogLevel.Information,
-        Message = "External identity provisioner registered: serviceOptionType='{serviceOptionType}'.")]
-    public static partial IGenericMessage ProviderRegistered(ILogger logger, string serviceOptionType);
+        Message = "External identity provisioner registered: implementation='{implementation}'.")]
+    public static partial IGenericMessage ProviderRegistered(ILogger logger, string implementation);
 
     // ── Binding resolution ────────────────────────────────────────────────────────────
 
@@ -138,8 +87,8 @@ public static partial class ExternalIdentityProvisionerLog
     [MessageLogging(
         EventId = 91002,
         Level = LogLevel.Trace,
-        Message = "ClaimMapped provisioner: no configured rule matched a claim on the subject asserted by '{provider}'.")]
-    public static partial IGenericMessage NoRuleMatched(ILogger logger, string provider);
+        Message = "ClaimMapped provisioner: no configured rule matched a claim on the subject asserted by '{issuer}'.")]
+    public static partial IGenericMessage NoRuleMatched(ILogger logger, string issuer);
 
     /// <summary>Logs that a matched rule's UsernameClaimType is absent from the presented claims.</summary>
     [MessageLogging(
@@ -159,8 +108,8 @@ public static partial class ExternalIdentityProvisionerLog
     [MessageLogging(
         EventId = 91005,
         Level = LogLevel.Information,
-        Message = "Subject asserted by '{provider}' provisioned by rule '{ruleName}': new user {userId}.")]
-    public static partial IGenericMessage AccountProvisioned(ILogger logger, string provider, string ruleName, Guid userId);
+        Message = "Subject asserted by '{issuer}' provisioned by rule '{ruleName}': new user {userId}.")]
+    public static partial IGenericMessage AccountProvisioned(ILogger logger, string issuer, string ruleName, Guid userId);
 
     /// <summary>Logs that provisioning resumed an interrupted prior attempt instead of creating a new user.</summary>
     [MessageLogging(
@@ -168,4 +117,11 @@ public static partial class ExternalIdentityProvisionerLog
         Level = LogLevel.Warning,
         Message = "ClaimMapped rule '{ruleName}': username already exists with no identity link — resuming provisioning for existing user {userId} instead of creating a new one.")]
     public static partial IGenericMessage ResumingOrphanedUser(ILogger logger, string ruleName, Guid userId);
+
+    /// <summary>Logs a provisioned account that cannot be read back by the name it was written under.</summary>
+    [MessageLogging(
+        EventId = 91007,
+        Level = LogLevel.Error,
+        Message = "ClaimMapped rule '{ruleName}': the account '{username}' was written but is not readable by that name.")]
+    public static partial IGenericMessage ProvisionedUserUnreadable(ILogger logger, string ruleName, string username);
 }

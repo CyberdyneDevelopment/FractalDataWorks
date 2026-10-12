@@ -11,6 +11,7 @@ using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Conventions;
 using Fdw.Results;
 using Fdw.Results.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Web.Endpoints.Contracts;
 using Fdw.Web.RestEndpoints.Logging;
 using FdwErrorResponse = Fdw.Web.RestEndpoints.Models.ErrorResponse;
@@ -168,9 +169,11 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
             }
 
             // Create execution item
+            // The run belongs to the tenant the caller acts in; the tracker refuses an item with none.
             var createResult = await tracker.CreateItem(
                 ItemType,
                 req.Name,
+                new ClaimsPrincipalAuthenticationContext(HttpContext.User).ActiveTenantId,
                 parentId: null,
                 correlationId: correlationId,
                 triggerSource: triggerSource,
@@ -222,16 +225,14 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
         catch (Exception ex) when (ex is not ValidationFailureException)
         {
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new FdwErrorResponse
+            await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
                 Code = msg.Code ?? "INTERNAL_ERROR",
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
                 Action = "Contact your administrator"
-            }, ct).ConfigureAwait(false);
+            }, statusCode: 500)).ConfigureAwait(false);
         }
     }
 
@@ -261,14 +262,12 @@ public abstract class TriggerEndpointBase<TRequest> : Endpoint<TRequest, Trigger
     protected virtual Task SendResultCodeResponse(
         IResultCode resultCode, int statusCode, IResultDetails? details, CancellationToken ct)
     {
-        HttpContext.Response.StatusCode = statusCode;
-        return HttpContext.Response.WriteAsJsonAsync(
-            new
+        return Send.ResultAsync(TypedResults.Json(new
             {
                 Code = resultCode.Code,
                 Error = resultCode.MessageTemplate,
                 Details = details?.Data
-            }, ct);
+            }, statusCode: statusCode));
     }
 
     /// <summary>

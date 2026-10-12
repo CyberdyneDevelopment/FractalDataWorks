@@ -46,9 +46,15 @@ internal static partial class CalculationOperationLog
 
     // --- Arithmetic operations ---
 
-    /// <summary>Logs that a division by zero was attempted.</summary>
-    [MessageLogging(EventId = 91007, Level = LogLevel.Warning, Message = "Division by zero in operation '{operationName}'")]
-    public static partial IGenericMessage DivisionByZero(ILogger logger, string operationName);
+    /// <summary>
+    /// Logs that a division or modulo by a zero divisor was attempted. This is a failure, never an empty value or a zero result.
+    /// </summary>
+    /// <param name="logger">The logger that records the event.</param>
+    /// <param name="operationName">The operation, formula or calculation that divided by zero.</param>
+    /// <param name="operands">The operand names (parameter or field names, never their values), for example <c>Left / Right</c>.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 91007, Level = LogLevel.Error, Message = "Division by zero in operation '{operationName}': the divisor of {operands} is zero")]
+    public static partial IGenericMessage DivisionByZero(ILogger logger, string operationName, string operands);
 
     // --- Aggregate operations ---
 

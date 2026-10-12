@@ -22,7 +22,7 @@ public sealed class LineChartVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="LineChartVisualizationType"/> class.
     /// </summary>
     public LineChartVisualizationType()
-        : base(3, "LineChart", "Line Chart", "mdi-chart-line", SupportedTypes)
+        : base("LineChart", "Line Chart", "mdi-chart-line", SupportedTypes)
     {
     }
 

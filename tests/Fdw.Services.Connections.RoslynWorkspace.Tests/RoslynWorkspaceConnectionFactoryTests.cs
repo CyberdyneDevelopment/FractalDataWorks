@@ -28,6 +28,7 @@ public class RoslynWorkspaceConnectionFactoryTests
     private static RoslynWorkspaceConnectionConfiguration ValidLiveConfig() =>
         new()
         {
+            Name = "SyntheticSolution",
             SolutionPath = SyntheticSlnPath,
             ModeName = "Live"
         };
@@ -35,6 +36,7 @@ public class RoslynWorkspaceConnectionFactoryTests
     private static RoslynWorkspaceConnectionConfiguration ValidSnapshotConfig() =>
         new()
         {
+            Name = "SyntheticSolution",
             SolutionPath = SyntheticSlnPath,
             ModeName = "Snapshot"
         };
@@ -51,14 +53,15 @@ public class RoslynWorkspaceConnectionFactoryTests
 
         var config = new RoslynWorkspaceConnectionConfiguration
         {
+            Name = "SyntheticSolution",
             SolutionPath = "",
             ModeName = "Snapshot"
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(config, workspace: null);
 
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldNotBeNullOrEmpty();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("SolutionPath is required");
     }
 
     [Fact]
@@ -73,14 +76,15 @@ public class RoslynWorkspaceConnectionFactoryTests
 
         var config = new RoslynWorkspaceConnectionConfiguration
         {
+            Name = "SyntheticSolution",
             SolutionPath = "/no/such/path/missing.sln",
             ModeName = "Snapshot"
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(config, workspace: null);
 
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldNotBeNullOrEmpty();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Solution file not found");
     }
 
     [Fact]
@@ -95,14 +99,15 @@ public class RoslynWorkspaceConnectionFactoryTests
 
         var config = new RoslynWorkspaceConnectionConfiguration
         {
+            Name = "SyntheticSolution",
             SolutionPath = SyntheticSlnPath,
             ModeName = ""
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(config, workspace: null);
 
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldNotBeNullOrEmpty();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("ModeName is required");
     }
 
     [Fact]
@@ -117,14 +122,15 @@ public class RoslynWorkspaceConnectionFactoryTests
 
         var config = new RoslynWorkspaceConnectionConfiguration
         {
+            Name = "SyntheticSolution",
             SolutionPath = SyntheticSlnPath,
             ModeName = "NotAMode"
         };
 
-        var result = await factory.Create(config, (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(config, workspace: null);
 
         result.IsSuccess.ShouldBeFalse();
-        result.CurrentMessage.ShouldNotBeNullOrEmpty();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("is not a valid RoslynWorkspace mode");
     }
 
     [Fact]
@@ -139,7 +145,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidSnapshotConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(ValidSnapshotConfig(), workspace: null);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeAssignableTo<IRoslynWorkspaceConnection>();
@@ -172,7 +178,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidSnapshotConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(ValidSnapshotConfig(), workspace: null);
         result.IsSuccess.ShouldBeTrue();
 
         var conn = (IRoslynWorkspaceConnection)result.Value!;
@@ -209,7 +215,7 @@ public class RoslynWorkspaceConnectionFactoryTests
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidSnapshotConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(ValidSnapshotConfig(), workspace: null);
         result.IsSuccess.ShouldBeTrue();
 
         var conn = (IRoslynWorkspaceConnection)result.Value!;
@@ -223,23 +229,20 @@ public class RoslynWorkspaceConnectionFactoryTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "RoslynWorkspaceCore")]
-    public async Task Create_LiveMode_LoadsWorkspaceAtCreation()
+    public async Task Create_LiveMode_UsesTheWorkspaceItIsGiven()
     {
         var mockWorkspace = new Mock<IRoslynWorkspace>();
         mockWorkspace.Setup(w => w.CurrentSolution)
             .Returns(new Microsoft.CodeAnalysis.AdhocWorkspace().CurrentSolution);
 
         var workspaceFactoryMock = new Mock<IRoslynWorkspaceFactory>();
-        workspaceFactoryMock
-            .Setup(f => f.CreateFromSolution(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(mockWorkspace.Object);
 
         var factory = new RoslynWorkspaceConnectionFactory(
             workspaceFactoryMock.Object,
             NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
             NullLogger<RoslynWorkspaceConnection>.Instance);
 
-        var result = await factory.Create(ValidLiveConfig(), (ISecretManager?)null, CancellationToken.None);
+        var result = factory.Create(ValidLiveConfig(), mockWorkspace.Object);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeAssignableTo<IRoslynWorkspaceConnection>();
@@ -247,10 +250,25 @@ public class RoslynWorkspaceConnectionFactoryTests
         var conn = (IRoslynWorkspaceConnection)result.Value!;
         conn.Mode.Name.ShouldBe("Live");
 
-        // Live mode loads workspace at factory-create time, not lazily
+        // The provider opens the live workspace before calling the factory; the factory never opens one.
         workspaceFactoryMock.Verify(
             f => f.CreateFromSolution(It.IsAny<string>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+            Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "RoslynWorkspaceCore")]
+    public async Task Create_LiveMode_WithoutAWorkspace_ReturnsFailure()
+    {
+        var factory = new RoslynWorkspaceConnectionFactory(
+            new Mock<IRoslynWorkspaceFactory>().Object,
+            NullLogger<RoslynWorkspaceConnectionFactory>.Instance,
+            NullLogger<RoslynWorkspaceConnection>.Instance);
+
+        var result = factory.Create(ValidLiveConfig(), workspace: null);
+
+        result.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]

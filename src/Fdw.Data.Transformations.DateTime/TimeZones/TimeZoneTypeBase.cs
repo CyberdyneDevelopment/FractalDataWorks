@@ -6,16 +6,15 @@ namespace Fdw.Data.Transformations;
 /// <summary>
 /// Base class for named timezone type options.
 /// </summary>
-public abstract class TimeZoneTypeBase : TypeOptionBase<int, TimeZoneTypeBase>, ITimeZoneType
+public abstract class TimeZoneTypeBase : TypeOptionBase<TimeZoneTypeBase>, ITimeZoneType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeZoneTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The timezone name (e.g., "UTC", "Central").</param>
     /// <param name="timeZoneId">The system timezone identifier.</param>
-    protected TimeZoneTypeBase(int id, string name, string timeZoneId)
-        : base(id, name, "TimeZones")
+    protected TimeZoneTypeBase(string name, string timeZoneId)
+        : base(name, "TimeZones")
     {
         TimeZoneId = timeZoneId;
     }

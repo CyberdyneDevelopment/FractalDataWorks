@@ -8,17 +8,6 @@ namespace Fdw.Web.Http.Abstractions.Tests;
 /// </summary>
 public sealed class SecurityMethodBaseTests
 {
-    // --- None ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void NoneHasCorrectId()
-    {
-        var sut = new None();
-
-        sut.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -58,18 +47,6 @@ public sealed class SecurityMethodBaseTests
         var sut = new None();
 
         sut.SupportsTokenRefresh.ShouldBeFalse();
-    }
-
-    // --- JWT ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void JwtHasCorrectId()
-    {
-        var sut = new JWT();
-
-        sut.Id.ShouldBe(2);
     }
 
     [Fact]
@@ -112,18 +89,6 @@ public sealed class SecurityMethodBaseTests
         sut.SupportsTokenRefresh.ShouldBeTrue();
     }
 
-    // --- ApiKey ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void ApiKeyHasCorrectId()
-    {
-        var sut = new ApiKey();
-
-        sut.Id.ShouldBe(3);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -164,18 +129,6 @@ public sealed class SecurityMethodBaseTests
         sut.SupportsTokenRefresh.ShouldBeFalse();
     }
 
-    // --- OAuth2 ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void OAuth2HasCorrectId()
-    {
-        var sut = new OAuth2();
-
-        sut.Id.ShouldBe(4);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -214,18 +167,6 @@ public sealed class SecurityMethodBaseTests
         var sut = new OAuth2();
 
         sut.SupportsTokenRefresh.ShouldBeTrue();
-    }
-
-    // --- Certificate ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void CertificateHasCorrectId()
-    {
-        var sut = new Certificate();
-
-        sut.Id.ShouldBe(5);
     }
 
     [Fact]

@@ -1178,4 +1178,71 @@ namespace Test
     }
 
     #endregion
+
+    #region Binary Column Tests
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public void MapsByteArrayAsBinaryColumnNotCollection()
+    {
+        var source = @"
+using Fdw.Data;
+
+namespace Test;
+
+[GenerateMapper]
+public class BinaryPoco
+{
+    public int Id { get; set; }
+    public byte[] Hash { get; set; } = [];
+    public byte[]? Token { get; set; }
+    public string[] Tags { get; set; } = [];
+}
+";
+
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source);
+
+        diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "BinaryPocoPocoMapper.g.cs");
+
+        generated.ShouldNotBeNull();
+        generated.ShouldContain("Hash = GetReaderValue_Hash(reader)");
+        generated.ShouldContain("Token = GetReaderValue_Token(reader)");
+        generated.ShouldContain("[\"Hash\"] = typed.Hash");
+        generated.ShouldNotContain("GetReaderValue_Tags");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public void MapFromDictionaryKeepsNullForNullableValueTypes()
+    {
+        var source = @"
+using Fdw.Data;
+using System;
+
+namespace Test;
+
+[GenerateMapper]
+public class PlacedPoco
+{
+    public int Id { get; set; }
+    public decimal? X { get; set; }
+    public Guid? TenantId { get; set; }
+}
+";
+
+        var (compilation, diagnostics) = CompilationHelper.RunGenerator(source);
+
+        diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
+        var generated = CompilationHelper.GetGeneratedOutput(compilation, "PlacedPocoPocoMapper.g.cs");
+
+        generated.ShouldNotBeNull();
+        generated.ShouldContain("X = data.TryGetValue(\"X\", out var xVal) && xVal != null ? (decimal?)xVal : null");
+        generated.ShouldContain("Guid?)tenantidVal : null");
+        generated.ShouldContain("Id = data.TryGetValue(\"Id\", out var idVal) && idVal != null ? (int)idVal : default");
+    }
+
+    #endregion
 }

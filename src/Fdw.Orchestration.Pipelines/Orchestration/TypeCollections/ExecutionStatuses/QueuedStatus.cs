@@ -15,7 +15,6 @@ public sealed class QueuedStatus : ExecutionStatusBase
     /// </summary>
     public QueuedStatus()
         : base(
-            id: 1,
             name: "Queued",
             isTerminal: false,
             isSuccess: false,

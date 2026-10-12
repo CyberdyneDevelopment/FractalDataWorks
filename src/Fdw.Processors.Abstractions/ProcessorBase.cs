@@ -22,7 +22,7 @@ namespace Fdw.Processors;
 /// </para>
 /// </remarks>
 public abstract class ProcessorBase<TCommand, TContext, TBase>
-    : TypeOptionBase<int, TBase>, IProcessor<TCommand, TContext>
+    : TypeOptionBase<TBase>, IProcessor<TCommand, TContext>
     where TBase : ProcessorBase<TCommand, TContext, TBase>
 {
     /// <summary>
@@ -49,9 +49,7 @@ public abstract class ProcessorBase<TCommand, TContext, TBase>
         string description,
         IReadOnlyList<string> requiredProperties,
         string category = "Processor")
-        : base(
-            GenerateIdFromName(name),
-            name,
+        : base(name,
             $"Processor:{category}:{name}",
             displayName,
             description,
@@ -75,27 +73,4 @@ public abstract class ProcessorBase<TCommand, TContext, TBase>
 
     /// <inheritdoc />
     public abstract IGenericResult<TCommand> Process(TCommand command, TContext context);
-
-    /// <summary>
-    /// Generates a stable ID from the processor name using FNV-1a hash.
-    /// Matches the pattern used by TypeOptionExtensionGenerator for consistency.
-    /// </summary>
-    /// <param name="name">The processor name to hash.</param>
-    /// <returns>A positive integer ID derived from the name.</returns>
-    protected static int GenerateIdFromName(string name)
-    {
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = unchecked((int)0x811C9DC5);
-
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-            return hash & 0x7FFFFFFF;
-        }
-    }
 }

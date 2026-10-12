@@ -28,7 +28,7 @@ public sealed class Pbkdf2PasswordHashAlgorithm : PasswordHashAlgorithmBase
     /// <summary>
     /// Initializes a new instance of the <see cref="Pbkdf2PasswordHashAlgorithm"/> class.
     /// </summary>
-    public Pbkdf2PasswordHashAlgorithm() : base(1, "Pbkdf2")
+    public Pbkdf2PasswordHashAlgorithm() : base("Pbkdf2")
     {
     }
 

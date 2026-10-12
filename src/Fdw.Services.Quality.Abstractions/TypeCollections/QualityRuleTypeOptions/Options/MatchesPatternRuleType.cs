@@ -15,7 +15,6 @@ public sealed class MatchesPatternRuleType : QualityRuleTypeBase
     /// </summary>
     public MatchesPatternRuleType()
         : base(
-            id: 4,
             name: "MatchesPattern",
             requiresField: true,
             supportsMultipleFields: false,

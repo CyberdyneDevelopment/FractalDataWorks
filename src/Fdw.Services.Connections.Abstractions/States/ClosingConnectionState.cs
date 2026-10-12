@@ -8,4 +8,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConnectionStates), "Closing", RestrictToCurrentCompilation = true)]
-public sealed class ClosingConnectionState() : ConnectionStateBase(5, "Closing");
+public sealed class ClosingConnectionState() : ConnectionStateBase("Closing");

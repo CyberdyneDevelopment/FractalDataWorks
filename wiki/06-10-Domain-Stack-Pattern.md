@@ -1,17 +1,13 @@
 # 06-10 Domain Stack Pattern
 
-Every FDW service domain follows a consistent six-layer stack from database to UI. This document defines the canonical structure that all domains must implement.
+Every FDW service domain follows a consistent stack from the database to the typed API client. This document defines the canonical structure that all domains must implement.
+
+Screens are not part of the domain stack. The web console (`reference-react-ui`) calls the endpoints over HTTP, and the terminal UI calls the `*.Clients` packages. See [11-01 Management UI Overview](11-01-Management-UI-Overview.md). The Blazor `*.Components` and `*.UI.Pages` layers were removed in FDW-872.
 
 ## Stack Overview
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Page         (@page route, thin MudBlazor shell)       │  *.UI.Pages
-├─────────────────────────────────────────────────────────┤
-│  Provider     (headless, RenderFragment<Context>)       │  *.Components
-│  Context      (immutable state snapshot + callbacks)    │
-│  Model        (mutable form data, optional)             │
-├─────────────────────────────────────────────────────────┤
 │  ApiClient    (typed HTTP, defines all routes)          │  *.Clients
 ├─────────────────────────────────────────────────────────┤
 │  Closure      (sealed, Tags only, in ref-api)           │  Reference.Api
@@ -269,7 +265,7 @@ public sealed class List{Resource}Endpoint : List{Resource}EndpointBase
 
 **File:** `{Domain}ApiClient.cs`
 
-Typed HTTP client that defines all routes. Used by UI providers.
+Typed HTTP client that defines all routes. Used by .NET consumers: the terminal UI and host-to-host calls.
 
 ```csharp
 using Fdw.Results;
@@ -324,206 +320,6 @@ public class {Domain}ApiClient : ApiClientBase
 - Use `Uri.EscapeDataString()` for path parameters
 - Query string parameters for filtering
 
-## Layer 5: Provider (FDW)
-
-**Project:** `Fdw.Services.{Domain}.Components`
-
-**File:** `Components/{Feature}/{Feature}Provider.razor`
-
-Headless Blazor component. Makes API calls, manages state, exposes immutable context to consumers.
-
-```razor
-@namespace Fdw.Services.{Domain}.Components
-@using Microsoft.AspNetCore.Components
-@using Microsoft.Extensions.Logging
-@using Microsoft.Extensions.Logging.Abstractions
-
-@if (ChildContent is not null)
-{
-    @ChildContent(_context)
-}
-
-@code {
-    [Parameter] public RenderFragment<{Feature}Context>? ChildContent { get; set; }
-    [Inject] private IHttpClientFactory HttpClientFactory { get; set; } = default!;
-    [Inject] private ILoggerFactory? LoggerFactory { get; set; }
-
-    private {Domain}ApiClient? _api;
-    private ILogger<{Feature}Provider> _logger = NullLogger<{Feature}Provider>.Instance;
-    private {Feature}Context _context = new();
-    private bool _initialized;
-
-    // ── State ──────────────────────────────────────────
-    private IReadOnlyList<{Resource}SummaryDto> _items = [];
-    private bool _isLoading;
-    private string? _errorMessage;
-
-    // ── Lifecycle ──────────────────────────────────────
-    protected override void OnInitialized()
-    {
-        _api = new {Domain}ApiClient(
-            HttpClientFactory.CreateClient("{Domain}Client"),
-            LoggerFactory?.CreateLogger<{Domain}ApiClient>()!);
-        _logger = LoggerFactory?.CreateLogger<{Feature}Provider>()
-            ?? NullLogger<{Feature}Provider>.Instance;
-        RebuildContext();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && !_initialized)
-        {
-            _initialized = true;
-            await LoadItems();
-        }
-    }
-
-    // ── Private Operations ─────────────────────────────
-    private async Task LoadItems(CancellationToken ct = default)
-    {
-        _isLoading = true;
-        RebuildContext();
-        StateHasChanged();
-
-        try
-        {
-            var result = await _api!.GetAll(ct);
-            if (!result.IsSuccess)
-            {
-                _errorMessage = "{Feature}Provider: Failed to load items";
-                _items = [];
-                return;
-            }
-            _items = result.Value?.ToList() ?? [];
-        }
-        catch (OperationCanceledException) { return; }
-        catch (Exception ex)
-        {
-            _errorMessage = ex.Message;
-            _items = [];
-        }
-        finally
-        {
-            _isLoading = false;
-            RebuildContext();
-            StateHasChanged();
-        }
-    }
-
-    // ── Context Builder ────────────────────────────────
-    private void RebuildContext()
-    {
-        _context = new {Feature}Context
-        {
-            Items = _items,
-            IsLoading = _isLoading,
-            ErrorMessage = _errorMessage,
-            OnRefresh = () => LoadItems(),
-            // ... other callbacks
-        };
-    }
-}
-```
-
-### Context Object
-
-**File:** `Components/{Feature}/{Feature}Context.cs`
-
-Immutable snapshot passed to the consumer RenderFragment. Contains state and callbacks.
-
-```csharp
-namespace Fdw.Services.{Domain}.Components;
-
-/// <summary>
-/// Immutable context for the <see cref="{Feature}Provider"/>.
-/// Carries state snapshots and callback delegates.
-/// </summary>
-public sealed class {Feature}Context
-{
-    // ── Data State ──────────────────────────────
-    /// <summary>Gets the loaded items.</summary>
-    public IReadOnlyList<{Resource}SummaryDto> Items { get; init; } = [];
-
-    // ── Loading / Error State ───────────────────
-    /// <summary>Gets whether data is loading.</summary>
-    public bool IsLoading { get; init; }
-
-    /// <summary>Gets the most recent error message.</summary>
-    public string? ErrorMessage { get; init; }
-
-    // ── Callbacks ───────────────────────────────
-    /// <summary>Refreshes the item list.</summary>
-    public Func<Task> OnRefresh { get; init; } = () => Task.CompletedTask;
-}
-```
-
-### Form Model (optional, for wizards/editors)
-
-**File:** `Components/{Feature}/{Feature}Model.cs`
-
-Mutable model bound to form inputs. Separate from Context to keep Context immutable.
-
-```csharp
-namespace Fdw.Services.{Domain}.Components;
-
-/// <summary>
-/// Mutable form model for the {Feature} editor.
-/// </summary>
-public sealed class {Feature}Model
-{
-    /// <summary>Gets or sets the resource name.</summary>
-    public string Name { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the display name.</summary>
-    public string DisplayName { get; set; } = string.Empty;
-}
-```
-
-## Layer 6: Page (FDW)
-
-**Project:** `Fdw.Services.{Domain}.UI.Pages`
-
-**File:** `Pages/{Feature}.razor`
-
-Thin shell that composes a Provider with MudBlazor markup. **No logic here.**
-
-```razor
-@page "/{feature}"
-
-<PageTitle>{Feature}</PageTitle>
-
-<{Feature}Provider>
-    <ChildContent Context="ctx">
-        @if (ctx.IsLoading)
-        {
-            <MudProgressLinear Indeterminate />
-        }
-        else if (ctx.ErrorMessage is not null)
-        {
-            <MudAlert Severity="Severity.Error">@ctx.ErrorMessage</MudAlert>
-        }
-        else
-        {
-            <MudTable Items="ctx.Items" Hover Dense>
-                <HeaderContent>
-                    <MudTh>Name</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>@context.Name</MudTd>
-                </RowTemplate>
-            </MudTable>
-        }
-    </ChildContent>
-</{Feature}Provider>
-```
-
-**Rules:**
-- Pages are in separate `*.UI.Pages` projects (NuGet packages)
-- No `@code` blocks with business logic
-- No direct API client usage — only through Provider context
-- MudBlazor components only — no raw HTML where a MudBlazor component exists
-- Reference-ui composes these page packages — it doesn't define domain pages
-
 ## Project Structure Summary
 
 For a domain called `Widgets`:
@@ -547,27 +343,13 @@ FractalDataWorks/public/src/
 ├── Fdw.Services.Widgets.Clients.Abstractions/  # netstandard2.0
 │   └── Models/                                          # Shared DTO interfaces
 │
-├── Fdw.Services.Widgets.Endpoints/         # net10.0
-│   ├── ListWidgetsEndpointBase.cs
-│   ├── GetWidgetEndpointBase.cs
-│   ├── CreateWidgetEndpointBase.cs
-│   ├── UpdateWidgetEndpointBase.cs
-│   ├── DeleteWidgetEndpointBase.cs
-│   └── Logging/WidgetEndpointLog.cs
-│
-├── Fdw.Services.Widgets.Components/        # net10.0
-│   └── Components/Widgets/
-│       ├── WidgetProvider.razor
-│       ├── WidgetContext.cs
-│       ├── WidgetEditorProvider.razor
-│       ├── WidgetEditorContext.cs
-│       └── WidgetEditorModel.cs
-│
-└── Fdw.Services.Widgets.UI.Pages/          # net10.0
-    └── Pages/
-        ├── Widgets.razor                                # List page
-        ├── WidgetDetail.razor                           # Detail page
-        └── WidgetEditor.razor                           # Create/Edit page
+└── Fdw.Services.Widgets.Endpoints/         # net10.0
+    ├── ListWidgetsEndpointBase.cs
+    ├── GetWidgetEndpointBase.cs
+    ├── CreateWidgetEndpointBase.cs
+    ├── UpdateWidgetEndpointBase.cs
+    ├── DeleteWidgetEndpointBase.cs
+    └── Logging/WidgetEndpointLog.cs
 ```
 
 ## Anti-Patterns
@@ -576,10 +358,6 @@ FractalDataWorks/public/src/
 |-------|-------|
 | Business logic in endpoint closure | All logic in EndpointBase |
 | Raw `ILogger` calls in endpoints | MessageLogging companion class |
-| API client calls in Page razor | API calls only in Provider |
-| `@code` logic in Page | Logic in Provider, expose via Context |
-| Mutable Context properties | Context is immutable (`init` only), Model is mutable |
-| Multiple providers sharing state | Each Provider owns its state independently |
 | Concrete DTOs in Abstractions | Interfaces in Abstractions, concrete DTOs in Clients |
 | `Endpoint<>` in reference-app | Always extend FDW EndpointBase |
 
@@ -589,9 +367,6 @@ FractalDataWorks/public/src/
 - [ ] Service project with provider + TypeCollection
 - [ ] Clients project with ApiClient + DTOs
 - [ ] Endpoints project with abstract bases + MessageLogging
-- [ ] Components project with Provider + Context (+ Model if editor)
-- [ ] UI.Pages project with Page razor files
 - [ ] Closures in reference-app with Tags
 - [ ] Postman collection for all endpoints
-- [ ] bUnit tests for all providers
 - [ ] EventId range allocated in RESULTCODE-CATALOG.md

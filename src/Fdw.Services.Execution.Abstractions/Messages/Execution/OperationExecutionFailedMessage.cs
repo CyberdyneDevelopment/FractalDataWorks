@@ -17,8 +17,7 @@ public sealed class OperationExecutionFailedMessage : ExecutionMessage, IService
         : base(3004, "OperationExecutionFailed", MessageSeverity.Error,
                "Operation execution failed",
                "EXEC_OPERATION_FAILED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class OperationExecutionFailedMessage : ExecutionMessage, IService
         : base(3004, "OperationExecutionFailed", MessageSeverity.Error,
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' execution failed", operationName),
                "EXEC_OPERATION_FAILED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class OperationExecutionFailedMessage : ExecutionMessage, IService
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' execution failed: {1}",
                            operationName, errorDetails),
                "EXEC_OPERATION_FAILED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class OperationExecutionFailedMessage : ExecutionMessage, IService
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' execution failed for process: {1}: {2}",
                            operationName, processId, errorDetails),
                "EXEC_OPERATION_FAILED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 }

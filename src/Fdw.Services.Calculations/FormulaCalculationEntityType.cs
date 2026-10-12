@@ -43,7 +43,7 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
     }
 
     /// <inheritdoc/>
-    public override string? TypedContainerName => "FormulaCalculation";
+    public override string? TypedContainerName => "FormulaCalculationConfiguration";
 
     /// <inheritdoc/>
     public override IGenericConfiguration? CreateTypedConfiguration(
@@ -66,8 +66,6 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
         {
             Id = entityId,
             Name = string.Empty,
-            SectionName = string.Empty,
-            ServiceType = "Formula",
             FormulaLanguage = language,
             FormulaBody = formulaBody,
             TimeoutSeconds = 30
@@ -129,7 +127,18 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var evaluatedValue = EvaluateFormula(formulaBody, row, fieldRefs);
+                var (evaluatedValue, dividedByZero) = EvaluateFormula(formulaBody, row, fieldRefs);
+                if (dividedByZero)
+                {
+                    // Why: a zero divisor has no result. Returning 0 would hide it inside a row that looks computed, so the
+                    // calculation fails with the formula (field names and operators only, never row values) and the row number.
+                    return GenericResult<string>.Failure(
+                        CalculationOperationLog.DivisionByZero(
+                            _logger,
+                            entity.Name,
+                            string.Create(CultureInfo.InvariantCulture, $"{formulaBody} (row {results.Count + 1})")));
+                }
+
                 var resultRow = new Dictionary<string, object>(row, StringComparer.OrdinalIgnoreCase)
                 {
                     [entity.Output.ResultFieldName] = evaluatedValue
@@ -194,7 +203,7 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
         return rows;
     }
 
-    private static decimal EvaluateFormula(
+    private static (decimal Value, bool DividedByZero) EvaluateFormula(
         string formula,
         Dictionary<string, object> row,
         List<string> fieldRefs)
@@ -216,61 +225,70 @@ public sealed class FormulaCalculationEntityType : CalculationEntityBase<Formula
         return EvaluateArithmetic(expression);
     }
 
-    private static decimal EvaluateArithmetic(string expression)
+    private static (decimal Value, bool DividedByZero) EvaluateArithmetic(string expression)
     {
-        // Simple recursive descent parser for basic arithmetic: +, -, *, /
+        // Simple recursive descent parser for basic arithmetic: +, -, *, /, %
         var pos = 0;
-        return ParseAddSub(expression.Replace(" ", string.Empty), ref pos);
+        var dividedByZero = false;
+        var value = ParseAddSub(expression.Replace(" ", string.Empty), ref pos, ref dividedByZero);
+        return (value, dividedByZero);
     }
 
-    private static decimal ParseAddSub(string expr, ref int pos)
+    private static decimal ParseAddSub(string expr, ref int pos, ref bool dividedByZero)
     {
-        var left = ParseMulDiv(expr, ref pos);
+        var left = ParseMulDiv(expr, ref pos, ref dividedByZero);
         while (pos < expr.Length && (expr[pos] == '+' || expr[pos] == '-'))
         {
             var op = expr[pos];
             pos++;
-            var right = ParseMulDiv(expr, ref pos);
+            var right = ParseMulDiv(expr, ref pos, ref dividedByZero);
             left = op == '+' ? left + right : left - right;
         }
         return left;
     }
 
-    private static decimal ParseMulDiv(string expr, ref int pos)
+    private static decimal ParseMulDiv(string expr, ref int pos, ref bool dividedByZero)
     {
-        var left = ParseUnary(expr, ref pos);
+        var left = ParseUnary(expr, ref pos, ref dividedByZero);
         while (pos < expr.Length && (expr[pos] == '*' || expr[pos] == '/' || expr[pos] == '%'))
         {
             var op = expr[pos];
             pos++;
-            var right = ParseUnary(expr, ref pos);
+            var right = ParseUnary(expr, ref pos, ref dividedByZero);
+            if (right == 0m && (op == '/' || op == '%'))
+            {
+                // The flag carries the failure out; the value is never used once it is set.
+                dividedByZero = true;
+                continue;
+            }
+
             left = op switch
             {
                 '*' => left * right,
-                '/' => right != 0 ? left / right : 0m,
-                '%' => right != 0 ? left % right : 0m,
+                '/' => left / right,
+                '%' => left % right,
                 _ => left
             };
         }
         return left;
     }
 
-    private static decimal ParseUnary(string expr, ref int pos)
+    private static decimal ParseUnary(string expr, ref int pos, ref bool dividedByZero)
     {
         if (pos < expr.Length && expr[pos] == '-')
         {
             pos++;
-            return -ParseUnary(expr, ref pos);
+            return -ParseUnary(expr, ref pos, ref dividedByZero);
         }
-        return ParsePrimary(expr, ref pos);
+        return ParsePrimary(expr, ref pos, ref dividedByZero);
     }
 
-    private static decimal ParsePrimary(string expr, ref int pos)
+    private static decimal ParsePrimary(string expr, ref int pos, ref bool dividedByZero)
     {
         if (pos < expr.Length && expr[pos] == '(')
         {
             pos++; // skip '('
-            var result = ParseAddSub(expr, ref pos);
+            var result = ParseAddSub(expr, ref pos, ref dividedByZero);
             if (pos < expr.Length && expr[pos] == ')')
                 pos++; // skip ')'
             return result;

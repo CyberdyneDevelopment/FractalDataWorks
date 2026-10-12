@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Singapore")]
 public sealed class SingaporeTimeZoneType : TimeZoneTypeBase
 {
-    public SingaporeTimeZoneType() : base(37, "Singapore", "Singapore Standard Time") { }
+    public SingaporeTimeZoneType() : base("Singapore", "Singapore Standard Time") { }
 }

@@ -13,7 +13,7 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 public sealed class ConcurrencyRateLimitAlgorithm : RateLimitAlgorithmBase
 {
     /// <summary>Initializes a new instance of <see cref="ConcurrencyRateLimitAlgorithm"/>.</summary>
-    public ConcurrencyRateLimitAlgorithm() : base(4, "Concurrency") { }
+    public ConcurrencyRateLimitAlgorithm() : base("Concurrency") { }
 
     /// <inheritdoc />
     public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>

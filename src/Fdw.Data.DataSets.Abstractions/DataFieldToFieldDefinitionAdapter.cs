@@ -2,14 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Fdw.Conventions;
 using Fdw.Schema;
 using Fdw.Schema.Properties;
 
 namespace Fdw.Data.DataSets.Abstractions;
 
 /// <summary>
-/// Adapter that converts a <see cref="DataFieldConfiguration"/> to <see cref="IFieldDefinition"/>.
+/// Adapter that converts a <see cref="DataSetFieldConfiguration"/> to <see cref="IFieldDefinition"/>.
 /// </summary>
 /// <remarks>
 /// This adapter bridges configuration objects (used for IOptions binding) to schema interfaces
@@ -18,8 +17,8 @@ namespace Fdw.Data.DataSets.Abstractions;
 [ExcludeFromCodeCoverage]
 public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 {
-    private readonly DataFieldConfiguration _config;
-    private readonly IPropertyRole _role;
+    private readonly DataSetFieldConfiguration _config;
+    private readonly IDatumType _role;
     private readonly Type _clrType;
 
     /// <summary>
@@ -28,23 +27,25 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
     /// <param name="config">The field configuration to adapt.</param>
     /// <param name="roleProvider">Optional function to resolve role by name. If null, defaults to AttributeRole.</param>
     public DataFieldToFieldDefinitionAdapter(
-        DataFieldConfiguration config,
-        Func<string?, IPropertyRole>? roleProvider = null)
+        DataSetFieldConfiguration config,
+        Func<string?, IDatumType>? roleProvider = null)
     {
         _config = config;
 
         // Resolve role
-        _role = roleProvider?.Invoke(config.Role) ?? PropertyRoles.Attribute;
+        _role = roleProvider?.Invoke(config.Role) ?? DatumTypes.Attribute;
 
-        // Resolve CLR type from TypeName
-        _clrType = ResolveClrType(config.TypeName);
+        // The field's data type is a DataTypes option name; one that is not has no CLR type to adapt to.
+        _clrType = DataSetFieldTypes.Resolve(config.TypeName)
+            ?? throw new ArgumentException(
+                $"Field '{config.Name}' states data type '{config.TypeName}', which is not a DataTypes option.", nameof(config));
     }
 
     /// <inheritdoc/>
     public string Name => _config.Name;
 
     /// <inheritdoc/>
-    public IPropertyRole Role => _role;
+    public IDatumType Role => _role;
 
     /// <inheritdoc/>
     public bool IsRequired => _config.IsRequired;
@@ -91,7 +92,7 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 
     /// <inheritdoc/>
     /// <remarks>
-    /// DataFieldConfiguration doesn't have explicit source mapping - returns null.
+    /// DataSetFieldConfiguration doesn't have explicit source mapping - returns null.
     /// </remarks>
     public string? SourceMapping => null;
 
@@ -103,67 +104,13 @@ public sealed class DataFieldToFieldDefinitionAdapter : IFieldDefinition
 
     /// <inheritdoc/>
     /// <remarks>
-    /// DataFieldConfiguration doesn't have transformer info - returns null.
+    /// DataSetFieldConfiguration doesn't have transformer info - returns null.
     /// </remarks>
     public string? Transformer => null;
 
     /// <inheritdoc/>
     /// <remarks>
-    /// DataFieldConfiguration doesn't have format info - returns null.
+    /// DataSetFieldConfiguration doesn't have format info - returns null.
     /// </remarks>
     public string? Format => null;
-
-    /// <summary>
-    /// Resolves a CLR type from a type name string.
-    /// </summary>
-    /// <param name="typeName">The type name to resolve.</param>
-    /// <returns>The resolved Type, or typeof(string) as default.</returns>
-    [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Type name resolution with comprehensive switch for common CLR types (primitives, DateTime, Guid, arrays)
-    private static Type ResolveClrType(string typeName)
-    {
-        if (string.IsNullOrWhiteSpace(typeName))
-        {
-            return typeof(string);
-        }
-
-        // Handle common type names
-        return typeName.ToLowerInvariant() switch
-        {
-            "int" or "int32" or "system.int32" => typeof(int),
-            "long" or "int64" or "system.int64" => typeof(long),
-            "short" or "int16" or "system.int16" => typeof(short),
-            "byte" or "system.byte" => typeof(byte),
-            "bool" or "boolean" or "system.boolean" => typeof(bool),
-            "decimal" or "system.decimal" => typeof(decimal),
-            "float" or "single" or "system.single" => typeof(float),
-            "double" or "system.double" => typeof(double),
-            "datetime" or "system.datetime" => typeof(DateTime),
-            "datetimeoffset" or "system.datetimeoffset" => typeof(DateTimeOffset),
-            "guid" or "uniqueidentifier" or "system.guid" => typeof(Guid),
-            "string" or "system.string" => typeof(string),
-            "char" or "system.char" => typeof(char),
-            "byte[]" or "system.byte[]" => typeof(byte[]),
-            "timespan" or "system.timespan" => typeof(TimeSpan),
-            _ => ResolveByFullName(typeName)
-        };
-    }
-
-    /// <summary>
-    /// Attempts to resolve a type by its full name using Type.GetType.
-    /// </summary>
-    /// <param name="typeName">The full type name.</param>
-    /// <returns>The resolved Type, or typeof(string) as fallback.</returns>
-    private static Type ResolveByFullName(string typeName)
-    {
-        try
-        {
-            var type = Type.GetType(typeName, throwOnError: false);
-            return type ?? typeof(string);
-        }
-        catch (Exception ex)
-        {
-            _ = ex;
-            return typeof(string);
-        }
-    }
 }

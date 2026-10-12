@@ -7,14 +7,13 @@ namespace Fdw.UI.Themes;
 /// Abstract base class for border styles.
 /// Inherit from this class and apply [TypeOption] attribute to create custom border styles.
 /// </summary>
-public abstract class BorderStyleBase : TypeOptionBase<int, BorderStyleBase>, IBorderStyle
+public abstract class BorderStyleBase : TypeOptionBase<BorderStyleBase>, IBorderStyle
 {
     /// <summary>
     /// Creates a new border style.
     /// </summary>
-    /// <param name="id">Unique identifier.</param>
     /// <param name="name">Display name.</param>
-    protected BorderStyleBase(int id, string name) : base(id, name) { }
+    protected BorderStyleBase(string name) : base(name) { }
 
     /// <inheritdoc />
     public abstract BoxBorder Panel { get; }

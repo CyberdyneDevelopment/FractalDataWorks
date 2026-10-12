@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

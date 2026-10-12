@@ -90,7 +90,10 @@ public static class PlatformServices
         }
     }
 
-    /// <summary>Enumerates every registered entry, in dependency-safe group order.</summary>
+    /// <summary>
+    /// Enumerates every registered entry, in the order their <c>[ModuleInitializer]</c>s attached
+    /// them. No sort is applied -- see <see cref="Configure"/> for how a host expresses ordering.
+    /// </summary>
     public static IReadOnlyList<PlatformServiceEntry> Entries()
     {
         EnsureFrozen();
@@ -98,103 +101,172 @@ public static class PlatformServices
     }
 
     /// <summary>
-    /// Calls every registered domain's Configure in dependency-safe order — skipping any domain already
-    /// configured manually via its own dot-walked entry (e.g.
-    /// <c>PlatformServices.Connection?.Configure(...)</c>), since <see cref="PlatformServiceEntry.Configure"/>
-    /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Configure(builder, loggerFactory)</c> calls.
+    /// Calls every registered domain's Configure — skipping any domain already configured manually via its
+    /// own dot-walked entry (e.g. <c>PlatformServices.Connection?.Configure(...)</c>), since
+    /// <see cref="PlatformServiceEntry.Configure"/> is idempotent. Replaces the manual, per-domain
+    /// <c>XxxServiceTypes.Configure(builder, loggerFactory)</c> calls.
     /// </summary>
+    /// <remarks>
+    /// Domains run in the order their <c>[ModuleInitializer]</c>s attached them. That is not a
+    /// dependency order and is not meant to be one -- ordering domains against each other is the
+    /// host's call, and it has two ways to express it: run that domain's phase itself before this
+    /// collect, or <c>defer</c> it out of the collect and run it manually afterwards.
+    /// </remarks>
     /// <param name="builder">The host builder.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
-    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="force">
+    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>.
+    /// </param>
     public static IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
+        var _log = loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance;
+        var _failed = new List<string>();
+        IGenericResult<IHostApplicationBuilder>? _first = null;
+
         foreach (var entry in _frozenOrder)
         {
-            if (entry.ConfigureState == PhaseState.Deferred) continue;
+            if (!force && entry.ConfigureState == PhaseState.Deferred) continue;
 
-            var result = entry.Configure(builder, loggerFactory);
+            var result = entry.Configure(builder, loggerFactory, force: force);
             if (result.IsFailure)
             {
-                ServiceTypeLog.PlatformPhaseStopped(
-                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
-                    "Configure",
-                    entry.CategoryName,
-                    _frozenOrder.IndexOf(entry) + 1,
-                    _frozenOrder.Length,
-                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
-                return result;
+                // Every domain runs and every failure is named. Returning at the first one reported
+                // a single broken domain per boot and hid the rest, so a host with four independent
+                // faults needed four deploys to reveal them. The phase still fails -- it just says
+                // everything it knows first.
+                _failed.Add(entry.CategoryName);
+                _first ??= result;
+                ServiceTypeLog.PlatformPhaseDomainFailed(
+                _log, "Configure", entry.CategoryName,
+                _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
+                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                continue;
             }
 
             builder = result.Value ?? builder;
         }
 
-        return GenericResult<IHostApplicationBuilder>.Success(builder);
-    }
-
-    /// <summary>
-    /// Calls every registered domain's Register in dependency-safe order — skipping any domain already
-    /// registered manually via its own dot-walked entry (e.g.
-    /// <c>PlatformServices.Connection?.Register(...)</c>), since <see cref="PlatformServiceEntry.Register"/>
-    /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Register(services, loggerFactory)</c> calls.
-    /// </summary>
-    /// <param name="builder">The host builder.</param>
-    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
-    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
-    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
-    {
-        EnsureFrozen();
-        foreach (var entry in _frozenOrder)
+        if (_failed.Count > 0)
         {
-
-            if (entry.RegisterState == PhaseState.Deferred) continue;
-
-            var result = entry.Register(builder, loggerFactory);
-            if (result.IsFailure)
-            {
-                ServiceTypeLog.PlatformPhaseStopped(
-                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
-                    "Register",
-                    entry.CategoryName,
-                    _frozenOrder.IndexOf(entry) + 1,
-                    _frozenOrder.Length,
-                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
-                return result;
-            }
+            ServiceTypeLog.PlatformPhaseCompletedWithFailures(
+                _log, "Configure", _failed.Count, _frozenOrder.Length, string.Join(", ", _failed));
+            return _first!;
         }
 
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
-    /// Calls every registered domain's Initialize in dependency-safe order — skipping any domain
-    /// already initialized manually via its own dot-walked entry (e.g.
-    /// <c>PlatformServices.Connection?.Initialize(...)</c>), since <see cref="PlatformServiceEntry.Initialize"/>
-    /// is idempotent. Replaces the manual, per-domain <c>XxxServiceTypes.Initialize(host, loggerFactory)</c> calls.
+    /// Calls every registered domain's Register — skipping any domain already registered manually via its
+    /// own dot-walked entry (e.g. <c>PlatformServices.Connection?.Register(...)</c>), since
+    /// <see cref="PlatformServiceEntry.Register"/> is idempotent. Replaces the manual, per-domain
+    /// <c>XxxServiceTypes.Register(services, loggerFactory)</c> calls.
     /// </summary>
+    /// <remarks>
+    /// Domains run in the order their <c>[ModuleInitializer]</c>s attached them. That is not a
+    /// dependency order and is not meant to be one -- ordering domains against each other is the
+    /// host's call, and it has two ways to express it: run that domain's phase itself before this
+    /// collect, or <c>defer</c> it out of the collect and run it manually afterwards.
+    /// </remarks>
+    /// <param name="builder">The host builder.</param>
+    /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
+    /// <param name="force">
+    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>.
+    /// </param>
+    public static IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool force = false)
+    {
+        EnsureFrozen();
+        var _log = loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance;
+        var _failed = new List<string>();
+        IGenericResult<IHostApplicationBuilder>? _first = null;
+
+        foreach (var entry in _frozenOrder)
+        {
+            if (!force && entry.RegisterState == PhaseState.Deferred) continue;
+
+            var result = entry.Register(builder, loggerFactory, force: force);
+            if (result.IsFailure)
+            {
+                // Every domain runs and every failure is named. Returning at the first one reported
+                // a single broken domain per boot and hid the rest, so a host with four independent
+                // faults needed four deploys to reveal them. The phase still fails -- it just says
+                // everything it knows first.
+                _failed.Add(entry.CategoryName);
+                _first ??= result;
+                ServiceTypeLog.PlatformPhaseDomainFailed(
+                _log, "Register", entry.CategoryName,
+                _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
+                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                continue;
+            }
+
+        }
+
+        if (_failed.Count > 0)
+        {
+            ServiceTypeLog.PlatformPhaseCompletedWithFailures(
+                _log, "Register", _failed.Count, _frozenOrder.Length, string.Join(", ", _failed));
+            return _first!;
+        }
+
+        return GenericResult<IHostApplicationBuilder>.Success(builder);
+    }
+
+    /// <summary>
+    /// Calls every registered domain's Initialize — skipping any domain already initialized manually via its
+    /// own dot-walked entry (e.g. <c>PlatformServices.Connection?.Initialize(...)</c>), since
+    /// <see cref="PlatformServiceEntry.Initialize"/> is idempotent. Replaces the manual, per-domain
+    /// <c>XxxServiceTypes.Initialize(host, loggerFactory)</c> calls.
+    /// </summary>
+    /// <remarks>
+    /// Domains run in the order their <c>[ModuleInitializer]</c>s attached them. That is not a
+    /// dependency order and is not meant to be one -- ordering domains against each other is the
+    /// host's call, and it has two ways to express it: run that domain's phase itself before this
+    /// collect, or <c>defer</c> it out of the collect and run it manually afterwards.
+    /// </remarks>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">The host's logger factory, when one is available.</param>
-    /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
+    /// <param name="force">
+    /// Run every domain even if its phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>.
+    /// </param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false)
     {
         EnsureFrozen();
+        var _log = loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance;
+        var _failed = new List<string>();
+        IGenericResult<IHost>? _first = null;
+
         foreach (var entry in _frozenOrder)
         {
+            if (!force && entry.InitializeState == PhaseState.Deferred) continue;
 
-            if (entry.InitializeState == PhaseState.Deferred) continue;
-
-            var result = entry.Initialize(host, loggerFactory);
+            var result = entry.Initialize(host, loggerFactory, force: force);
             if (result.IsFailure)
             {
-                ServiceTypeLog.PlatformPhaseStopped(
-                    loggerFactory?.CreateLogger(typeof(PlatformServices).FullName!) ?? NullLogger.Instance,
-                    "Initialize",
-                    entry.CategoryName,
-                    _frozenOrder.IndexOf(entry) + 1,
-                    _frozenOrder.Length,
-                    result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
-                return result;
+                // Every domain runs and every failure is named. Returning at the first one reported
+                // a single broken domain per boot and hid the rest, so a host with four independent
+                // faults needed four deploys to reveal them. The phase still fails -- it just says
+                // everything it knows first.
+                _failed.Add(entry.CategoryName);
+                _first ??= result;
+                ServiceTypeLog.PlatformPhaseDomainFailed(
+                _log, "Initialize", entry.CategoryName,
+                _frozenOrder.IndexOf(entry) + 1, _frozenOrder.Length,
+                result.CurrentMessage?.ToString() ?? "(no message on the failure result)");
+                continue;
             }
+
+        }
+
+        if (_failed.Count > 0)
+        {
+            ServiceTypeLog.PlatformPhaseCompletedWithFailures(
+                _log, "Initialize", _failed.Count, _frozenOrder.Length, string.Join(", ", _failed));
+            return _first!;
         }
 
         return GenericResult<IHost>.Success(host);

@@ -28,9 +28,9 @@ public class MethodTooLongAnalyzerTests
         namespace Fdw.Collections.Attributes
         {
             [AttributeUsage(AttributeTargets.Class)]
-            public class ServiceTypeOptionAttribute : Attribute
+            public class ImplementationAttribute : Attribute
             {
-                public ServiceTypeOptionAttribute(string name) { }
+                public ImplementationAttribute(string name) { }
             }
         }
 
@@ -138,7 +138,7 @@ public class MethodTooLongAnalyzerTests
                 using System;
                 using Fdw.Collections.Attributes;
 
-                [ServiceTypeOption("MsSql")]
+                [Implementation("MsSql")]
                 public sealed class MsSqlConnectionType
                 {
                     public MsSqlConnectionType()

@@ -11,7 +11,6 @@ public sealed class DatabaseIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="DatabaseIcon"/>.</summary>
     public DatabaseIcon()
         : base(
-            34,
             "Database",
             "0 0 24 24",
             "none",

@@ -11,16 +11,15 @@ namespace Fdw.Results.ExecutionStatus;
 public sealed class PendingStatus : ExecutionStatusBase
 {
     /// <summary>
-    /// MudBlazor icon for pending status.
+    /// Material Symbols icon name for pending status.
     /// </summary>
-    public const string PendingIcon = "schedule"; // Icons.Material.Filled.Schedule
+    public const string PendingIcon = "schedule";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PendingStatus"/> class.
     /// </summary>
     public PendingStatus()
         : base(
-            id: 1,
             name: "Pending",
             icon: PendingIcon,
             color: "Default",

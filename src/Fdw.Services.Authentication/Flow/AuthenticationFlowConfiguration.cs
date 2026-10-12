@@ -20,15 +20,6 @@ public partial class AuthenticationFlowConfiguration : IGenericConfiguration
     /// <remarks>What a caller selects. The button pressed picks the flow.</remarks>
     public string Name { get; set; } = string.Empty;
 
-    /// <inheritdoc />
-    public string SectionName => "AuthenticationFlows";
-
-    /// <inheritdoc />
-    public string ServiceType => "AuthenticationFlow";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; set; }
-
     /// <summary>Gets or sets the audience tokens from this flow are minted for.</summary>
     public string Audience { get; set; } = string.Empty;
 

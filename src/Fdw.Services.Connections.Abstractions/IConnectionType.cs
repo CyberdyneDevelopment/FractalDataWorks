@@ -7,6 +7,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.Abstractions;
 
@@ -28,15 +29,48 @@ public interface IConnectionType<TService, TConfiguration, TFactory> : IServiceT
 /// </summary>
 public interface IConnectionType : IServiceType
 {
+
     /// <summary>
     /// Gets the command capabilities this connection supports.
     /// The pipeline builder reads this list to populate the capability picker and then renders
     /// the selected capability's <see cref="ICommandCapabilityType.ConfigurationFields"/>
-    /// (or its <see cref="ICommandCapabilityType.BuilderComponentType"/> composite widget).
+    /// (or its own editor when that list is empty).
     /// Returns an empty list for connection types that cannot act as a data source or destination
     /// (e.g., notification sinks, health-check endpoints).
     /// </summary>
     IReadOnlyList<ICommandCapabilityType> SupportedCommands { get; }
+
+    /// <summary>
+    /// Gets the schema discovery options this connection kind offers: the strategies it can discover
+    /// a store's schema with, plus <see cref="NoneSchemaDiscovery"/> when a connection of this kind may
+    /// decline. Returns only <see cref="NoneSchemaDiscovery"/> for kinds that cannot discover.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Whether a kind can discover is read off these members (a member whose
+    /// <see cref="ISchemaDiscoveryType.DiscoversSchema"/> is true), never off a separate flag beside
+    /// them. A connection names the one it uses in
+    /// <see cref="IConnectionImplementationConfiguration.SchemaDiscovery"/>, which must be one of these.
+    /// </para>
+    /// <para>
+    /// A declaration, not the discovery itself: a kind that declares a strategy performs it through
+    /// <c>ISchemaDiscovery</c>, where the services the strategy needs are resolved.
+    /// </para>
+    /// </remarks>
+    IReadOnlyList<ISchemaDiscoveryType> SupportedDiscoveryTypes { get; }
+
+    /// <summary>
+    /// Gets the names of the data store types a data store over this kind of connection may have, limited to
+    /// the data store types this deployment registered. The first is the default when a create request names
+    /// none. Empty when none of the kind's data store types is registered.
+    /// </summary>
+    /// <remarks>
+    /// A data store describes what a connection holds (tables, endpoints, files with their paths, containers
+    /// and fields), and that does not depend on how the bytes are carried, so a kind names the data store types
+    /// it can back instead of every transport needing one of its own. Names rather than the types themselves,
+    /// because <c>IDataStoreType</c> sits in a package above this one.
+    /// </remarks>
+    IReadOnlyList<string> SupportedDataStoreTypes { get; }
 
     /// <summary>
     /// Gets the default response format for containers reached through this transport when a
@@ -47,6 +81,61 @@ public interface IConnectionType : IServiceType
     IFormatType DefaultResponseFormat { get; }
 
     /// <summary>
+    /// Gets how the connection endpoints read, update and show this kind's configuration. Every kind
+    /// has one: the default binds straight into the kind's configuration class, and a kind adds only
+    /// what is genuinely its own (a legacy field alias, which dictionary entries are safe to show, a
+    /// validation rule).
+    /// </summary>
+    IConnectionEndpointBehavior<IConnectionImplementationConfiguration> EndpointBehavior { get; }
+
+    /// <summary>
+    /// Decides whether a connection of this kind, configured as <paramref name="configuration"/>, presents the
+    /// host's own identity rather than a credential the connection carries.
+    /// </summary>
+    /// <param name="configuration">The connection's configuration.</param>
+    /// <returns>
+    /// The answer, or a <c>HostIdentityUndetermined</c> failure when the configuration does not say enough to
+    /// decide -- an authentication method this kind does not know, or a configuration of another kind.
+    /// </returns>
+    /// <remarks>
+    /// Each kind answers from what it is: a kind with authentication methods asks the method its configuration
+    /// names (<c>ConnectionAuthenticationTypeBase.UsesHostIdentity</c>); a kind with none states the fact for
+    /// every connection it makes. A connection that acts as the host reaches whatever the host's identity reaches,
+    /// so the connection endpoints let only a platform administrator create or change one (FDW-1068).
+    /// </remarks>
+    IGenericResult<bool> UsesHostIdentity(IConnectionImplementationConfiguration configuration);
+
+    /// <summary>
+    /// Reads which stored credentials a connection of this kind, configured as <paramref name="configuration"/>,
+    /// uses and which of them it has.
+    /// </summary>
+    /// <param name="configuration">The connection's configuration.</param>
+    /// <returns>
+    /// The credential slots, or a <c>CredentialsUndetermined</c> failure when the configuration does not say which
+    /// authentication method it uses, or is of another kind.
+    /// </returns>
+    /// <remarks>
+    /// Names only, never values: a credential is written through the connection and never read back (FDW-1086).
+    /// </remarks>
+    IGenericResult<ConnectionCredentialSlots> CredentialSlots(IConnectionImplementationConfiguration configuration);
+
+    /// <summary>
+    /// Points a connection's credential fields at the secrets the server stored for it.
+    /// </summary>
+    /// <param name="configuration">The connection's configuration, changed in place.</param>
+    /// <param name="secretManagerName">The secret manager the credentials were stored in.</param>
+    /// <param name="secretKeyByField">The secret stored for each credential field the method uses.</param>
+    /// <returns>Success, or a <c>CredentialsUndetermined</c> failure when the configuration cannot take them.</returns>
+    /// <remarks>
+    /// Only the server calls this, after writing the values: a caller never chooses the secret manager or the
+    /// secret a connection reads (FDW-1086).
+    /// </remarks>
+    IGenericResult BindCredentials(
+        IConnectionImplementationConfiguration configuration,
+        string secretManagerName,
+        IReadOnlyDictionary<string, string> secretKeyByField);
+
+    /// <summary>
     /// Gets the session contexts this connection kind supports — the ways it can describe the
     /// calling principal to the store it opens. Returns the members of
     /// <see cref="NoSessionContextTypes"/> for kinds that have no session-context concept.
@@ -54,7 +143,7 @@ public interface IConnectionType : IServiceType
     /// <remarks>
     /// <para>
     /// A declared capability surface, at the same status as <see cref="SupportedCommands"/> and
-    /// <c>SupportedDiscoveryTypes</c>: it states what the kind can do, for validation, logging and
+    /// <see cref="SupportedDiscoveryTypes"/>: it states what the kind can do, for validation, logging and
     /// the option picker. It is not itself the runtime selection — which context governs a given
     /// call is decided by the scheme that owns these options.
     /// </para>

@@ -13,7 +13,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 {
     private readonly NotificationRuleConfigurationValidator _sut = new();
 
-    private static NotificationRuleConfiguration ValidConfig() => new()
+    private static NotificationRuleImplementationConfiguration ValidConfig() => new()
     {
         Name = "Rule1",
         NotificationServiceType = "Teams",
@@ -48,7 +48,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.Name));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.Name));
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.NotificationServiceType));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.NotificationServiceType));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.NotificationServiceName));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.NotificationServiceName));
     }
 
     [Theory]
@@ -120,7 +120,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.ConditionOperator));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.ConditionOperator));
     }
 
     [Theory]
@@ -157,7 +157,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.Severity));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.Severity));
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
         // Assert — FluentValidation reports the full member path for `x.CooldownMinutes!.Value`
         // (nullable unwrap), so the property name is "CooldownMinutes.Value", not "CooldownMinutes".
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName.StartsWith(nameof(NotificationRuleConfiguration.CooldownMinutes), StringComparison.Ordinal));
+        result.Errors.ShouldContain(e => e.PropertyName.StartsWith(nameof(NotificationRuleImplementationConfiguration.CooldownMinutes), StringComparison.Ordinal));
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.Description));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.Description));
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public sealed class NotificationRuleConfigurationValidatorTests
 
         // Assert
         result.IsValid.ShouldBeFalse();
-        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleConfiguration.Description));
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(NotificationRuleImplementationConfiguration.Description));
     }
 
     [Fact]

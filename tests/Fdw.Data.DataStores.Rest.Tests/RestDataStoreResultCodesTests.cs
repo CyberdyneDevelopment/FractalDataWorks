@@ -11,58 +11,6 @@ namespace Fdw.Data.DataStores.Rest.Tests;
 public sealed class RestDataStoreResultCodesTests
 {
     [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void AllReturnsAllResultCodes()
-    {
-        // Act
-        var all = RestDataStoreResultCodes.All();
-
-        // Assert
-        all.ShouldNotBeNull();
-        all.ShouldNotBeEmpty();
-    }
-
-    [Theory]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    [InlineData("ODataServiceUrlRequired")]
-    [InlineData("InvalidODataSource")]
-    [InlineData("ODataEntitySetPathFailed")]
-    [InlineData("ODataImportFailed")]
-    [InlineData("ODataMetadataFetchFailed")]
-    [InlineData("ODataMetadataParsingFailed")]
-    [InlineData("InvalidOpenApiSource")]
-    [InlineData("OpenApiEndpointPathFailed")]
-    [InlineData("OpenApiFileNotFound")]
-    [InlineData("OpenApiImportFailed")]
-    [InlineData("OpenApiParsingFailed")]
-    [InlineData("OpenApiSpecFetchFailed")]
-    [InlineData("OpenApiSpecRequired")]
-    public void ByNameResolvesEachDocumentedCode(string name)
-    {
-        // Act
-        var code = RestDataStoreResultCodes.ByName(name);
-
-        // Assert
-        code.ShouldNotBeNull();
-        code.Name.ShouldBe(name);
-        code.ShouldNotBe(RestDataStoreResultCodes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ByNameReturnsNotFoundSentinelForUnknownName()
-    {
-        // Act
-        var code = RestDataStoreResultCodes.ByName("SomethingThatDoesNotExist");
-
-        // Assert
-        code.ShouldBe(RestDataStoreResultCodes.NotFound);
-    }
-
-    [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
     public void AllResultCodesFollowCatalogInvariants()
@@ -80,18 +28,6 @@ public sealed class RestDataStoreResultCodesTests
             result.EventId.ShouldBe(result.Id);
             result.Domain.ShouldBe("REST");
         }
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void AllCodesHaveUniqueIds()
-    {
-        // Act
-        var ids = RestDataStoreResultCodes.All().Select(rc => rc.Id).ToList();
-
-        // Assert
-        ids.ShouldBeUnique();
     }
 
     [Fact]

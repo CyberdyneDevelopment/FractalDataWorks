@@ -11,11 +11,6 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 public interface ITenant : ITypeOption<Guid, ITenant>
 {
     /// <summary>
-    /// Gets the tenant's unique identifier.
-    /// </summary>
-    new Guid Id { get; }
-
-    /// <summary>
     /// Gets the tenant's slug/code for URLs and configuration lookups.
     /// </summary>
     string Slug { get; }
@@ -60,6 +55,13 @@ public interface ITenant : ITypeOption<Guid, ITenant>
     /// which tenant they are currently operating in.
     /// </summary>
     bool IsGlobal { get; }
+
+    /// <summary>
+    /// Gets whether a user can list or switch into this tenant. False for structural
+    /// sentinel tenants (default, system) that exist for RLS/ownership purposes only,
+    /// never as a place a user operates from.
+    /// </summary>
+    bool IsSelectable { get; }
 
     /// <summary>
     /// Gets the connection name for tenant-specific data isolation.

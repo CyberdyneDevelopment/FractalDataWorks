@@ -16,11 +16,11 @@ public class PipelineExecutionDbRecord
     /// <summary>Gets or sets the schedule name that triggered execution.</summary>
     public string? ScheduleName { get; set; }
 
-    /// <summary>Gets or sets the execution status (Running, Succeeded, Failed).</summary>
-    public string Status { get; set; } = "Running";
+    /// <summary>Gets or sets the execution status, as the writer stated it (the queued state, Running, Succeeded, Failed).</summary>
+    public string Status { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets when execution started.</summary>
-    public DateTime StartedAt { get; set; }
+    /// <summary>Gets or sets when execution started. Null while the run is queued.</summary>
+    public DateTime? StartedAt { get; set; }
 
     /// <summary>Gets or sets when execution completed.</summary>
     public DateTime? CompletedAt { get; set; }

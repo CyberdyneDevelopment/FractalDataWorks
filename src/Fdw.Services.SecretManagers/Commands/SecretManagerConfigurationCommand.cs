@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Configuration;
 
@@ -8,7 +9,7 @@ namespace Fdw.Services.SecretManagers.Commands;
 /// instances against the SecretManager configuration table using the base class defaults.
 /// </summary>
 [TypeOption(typeof(ConfigurationCommands), "SecretManager")]
-public sealed class SecretManagerConfigurationCommand : ConfigurationCommandBase<SecretManagerConfiguration>
+public sealed class SecretManagerConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
     /// <inheritdoc/>
     public SecretManagerConfigurationCommand() : base("SecretManager") { }

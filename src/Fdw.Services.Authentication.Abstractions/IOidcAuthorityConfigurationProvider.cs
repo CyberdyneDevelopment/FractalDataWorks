@@ -1,3 +1,4 @@
+using Fdw.Services.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
@@ -13,8 +14,7 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// be built with a parameterless constructor and populate what it needs during initialization.
 /// </remarks>
 public interface IOidcAuthorityConfigurationProvider
+    : IDomainConfigurationProvider<IOidcAuthorityImplementationConfiguration>
 {
-    /// <summary>Reads the declared authority.</summary>
-    /// <param name="cancellationToken">A token to cancel the read.</param>
-    Task<IGenericResult<IOidcAuthorityConfiguration>> Get(CancellationToken cancellationToken = default);
+
 }

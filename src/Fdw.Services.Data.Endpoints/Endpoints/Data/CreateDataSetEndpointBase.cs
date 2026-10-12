@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data.Abstractions.Results;
+using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.DataSets.Results;
 using Fdw.Results;
@@ -66,49 +68,41 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
     {
         DataSetEndpointLog.CreatingDataSet(Logger, request.Name);
 
-        if (string.IsNullOrWhiteSpace(request.ServiceOptionType)
-            || ReferenceEquals(DataSetTypes.ByName(request.ServiceOptionType), DataSetTypes.NotFound))
+        if (string.IsNullOrWhiteSpace(request.Implementation)
+            || ReferenceEquals(DataSetTypes.ByName(request.Implementation), DataSetTypes.NotFound))
         {
             return GenericResult<DataSetDetailResponse>.Failure(
-                DataSetsResultCodes.ServiceOptionTypeInvalid, Logger,
-                ResultDetails.Create("name", request.Name, "serviceOptionType", request.ServiceOptionType ?? string.Empty));
+                DataSetsResultCodes.ImplementationInvalid, Logger,
+                ImplementationInvalidCode.Describe(request.Name, request.Implementation));
         }
 
         var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
-            request.ServiceOptionType, request.FederationStrategy, request.Name, Logger);
+            request.Implementation, request.FederationStrategy, request.Name, Logger);
         if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
+
+        var partsValidation = DataSetQueryHelper.ValidateKindParts(
+            request.Implementation, request.Joins.Count > 0, request.Aggregates.Count > 0, request.Name, Logger);
+        if (partsValidation.IsFailure) return partsValidation.ToNewResult<DataSetDetailResponse>();
 
         var aggregatesValidation = DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
         if (aggregatesValidation.IsFailure) return aggregatesValidation.ToNewResult<DataSetDetailResponse>();
 
-        var config = new DataSetConfiguration
-        {
-            Name = request.Name,
-            Description = request.Description ?? string.Empty,
-            Category = request.Category ?? "Dataset",
-            Version = request.Version,
-            RecordTypeName = request.RecordTypeName,
-            KeyFields = request.KeyFields
-                .Select((name, i) => new DataSetKeyFieldConfiguration
-                {
-                    KeyName = name,
-                    KeyType = "Surrogate",
-                    Ordinal = i
-                })
-                .ToList(),
-            ServiceOptionType = request.ServiceOptionType,
-            FederationStrategy = request.FederationStrategy,
-            TransformExpression = request.TransformExpression,
-            SourceDataSetName = request.SourceDataSetName,
-            Fields = DataSetQueryHelper.MapFields(request.Fields),
-            // Nothing exists yet on create, so no source has a prior identity to keep.
-            Sources = DataSetQueryHelper.MapSources(request.Sources, []),
-            Joins = DataSetQueryHelper.MapJoins(request.Joins),
-            Caching = DataSetQueryHelper.MapCaching(request.Caching),
-            Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates)
-        };
+        var mappingsValidation = DataSetQueryHelper.ValidateFieldMappings(request.Sources, request.Name, Logger);
+        if (mappingsValidation.IsFailure) return mappingsValidation.ToNewResult<DataSetDetailResponse>();
 
-        var saveResult = await _dataSetProvider.Save(config, ct).ConfigureAwait(false);
+        // The data set's classification and each field's, before anything is written.
+        var classified = DataClassificationValidator.Validate(request.Fields.Select(f => f.ClassificationId).Prepend(request.ClassificationId), Logger);
+        if (classified.IsFailure) return classified.ToNewResult<DataSetDetailResponse>();
+
+        // Each field's datum type and data type.
+        var typed = DataSetQueryHelper.ValidateFieldTypes(request.Fields, Logger);
+        if (typed.IsFailure) return typed.ToNewResult<DataSetDetailResponse>();
+
+        var built = DataSetConfigurationFactory.Create(request, Logger);
+        if (built.IsFailure) return built.ToNewResult<DataSetDetailResponse>();
+
+        var config = built.Value!;
+        var saveResult = await _dataSetProvider.Save(config, "DataSet", config.Implementation, config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             DataSetEndpointLog.DataSetCreateFailed(Logger, request.Name, "Save failed");

@@ -31,9 +31,4 @@ public sealed class RoleSummaryPayload
     /// Gets or sets a value indicating whether the role is scoped to a specific tenant.
     /// </summary>
     public bool IsTenantScoped { get; set; }
-
-    /// <summary>
-    /// Gets or sets the sort order for displaying the role.
-    /// </summary>
-    public int SortOrder { get; set; }
 }

@@ -34,7 +34,6 @@ public sealed class GenerateClassTranslator : RoslynCommandTranslatorBase<Genera
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear code generation: validate inputs, build class via StringBuilder, add to solution
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateClassCommand command,
         Solution solution,
@@ -163,5 +162,4 @@ public sealed class GenerateClassTranslator : RoslynCommandTranslatorBase<Genera
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 }

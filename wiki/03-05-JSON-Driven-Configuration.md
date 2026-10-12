@@ -40,7 +40,7 @@ This mirrors the real `Reference.Api/configurationSchema.json`: two connections
     "Connections": [
       {
         "Name": "ConfigurationDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "sql.example.local",
           "Database": "ConfigurationDb",
@@ -56,7 +56,7 @@ This mirrors the real `Reference.Api/configurationSchema.json`: two connections
       },
       {
         "Name": "AuthDb",
-        "ServiceOptionType": "MsSql",
+        "Implementation": "MsSql",
         "Configuration": {
           "Server": "sql.example.local",
           "Database": "AuthDb",
@@ -74,7 +74,7 @@ This mirrors the real `Reference.Api/configurationSchema.json`: two connections
     "SecretManagers": [
       {
         "Name": "EnvSecrets",
-        "ServiceOptionType": "EnvironmentVariable",
+        "Implementation": "EnvironmentVariable",
         "Configuration": {
           "Prefix": "FDW_SECRET_"
         }
@@ -110,19 +110,16 @@ var loggerFactory = builder.AddFrameworkSerilog("Reference.Api");
 
 // 2. ConfigurationGateway — deserialises configurationSchema.json via System.Text.Json so the
 //    polymorphic ConnectionConfiguration / SecretManagerConfiguration bodies dispatch to their
-//    concrete subtypes on the ServiceOptionType discriminator. The loader is the gateway plus STJ —
+//    concrete subtypes on the Implementation discriminator. The loader is the gateway plus STJ —
 //    there is no MsSqlConfigurationSource / SqlServerConfigurationProvider on this path.
 builder.Services.AddConfigurationGateway<MsSqlConnectionFactory, EnvironmentVariableSecretManager>(
     "configurationSchema.json");
 
-// Lazy<IDataGateway> must be in DI before any domain provider is registered.
-builder.Services.AddSingleton(sp =>
-    new Lazy<IDataGateway>(() => sp.GetRequiredService<IDataGateway>()));
 
 // 3. ONE PlatformServices sweep — Configure + Register before Build.
 //    Every [ServiceTypeCollection] discovered by the generated module initializer participates
 //    (DataGateway, SecretManager, Connection, DataStore, DataSet, …). Each domain's own
-//    [ServiceTypeOption] registers the *ConfigurationProvider it depends on (idempotent
+//    [Implementation] registers the *ConfigurationProvider it depends on (idempotent
 //    TryAddSingleton), so there are no hand-written per-domain RegisterDomainServices lines here.
 PlatformServices.Configure(builder, loggerFactory);
 PlatformServices.Register(builder.Services, loggerFactory);

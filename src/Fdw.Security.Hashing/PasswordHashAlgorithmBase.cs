@@ -6,14 +6,13 @@ namespace Fdw.Security.Hashing;
 /// Base class for password hash algorithm TypeOptions.
 /// </summary>
 public abstract class PasswordHashAlgorithmBase
-    : TypeOptionBase<int, PasswordHashAlgorithmBase>, IPasswordHashAlgorithm
+    : TypeOptionBase<PasswordHashAlgorithmBase>, IPasswordHashAlgorithm
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PasswordHashAlgorithmBase"/> class.
     /// </summary>
-    /// <param name="id">The unique numeric identifier for this algorithm.</param>
     /// <param name="name">The name of this algorithm (e.g., "Pbkdf2", "Argon2").</param>
-    protected PasswordHashAlgorithmBase(int id, string name) : base(id, name)
+    protected PasswordHashAlgorithmBase(string name) : base(name)
     {
     }
 

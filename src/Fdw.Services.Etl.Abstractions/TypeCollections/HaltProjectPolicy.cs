@@ -13,7 +13,7 @@ namespace Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 public sealed class HaltProjectPolicy : StageFailurePolicyBase
 {
     /// <summary>Initializes a new instance of the <see cref="HaltProjectPolicy"/> class.</summary>
-    public HaltProjectPolicy() : base(1, "HaltProject")
+    public HaltProjectPolicy() : base("HaltProject")
     {
     }
 }

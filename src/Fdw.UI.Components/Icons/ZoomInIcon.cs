@@ -11,7 +11,6 @@ public sealed class ZoomInIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ZoomInIcon"/>.</summary>
     public ZoomInIcon()
         : base(
-            22,
             "ZoomIn",
             "0 0 24 24",
             "none",

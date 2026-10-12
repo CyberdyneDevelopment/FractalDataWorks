@@ -15,7 +15,7 @@ public sealed class PendingDisposition : VerdictDispositionBase
     /// Initializes a new instance of the <see cref="PendingDisposition"/> class.
     /// </summary>
     public PendingDisposition()
-        : base(id: 4, name: "Pending", isTerminal: false, allowsInjection: false)
+        : base(name: "Pending", isTerminal: false, allowsInjection: false)
     {
     }
 }

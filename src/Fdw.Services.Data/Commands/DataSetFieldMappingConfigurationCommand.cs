@@ -11,9 +11,8 @@ namespace Fdw.Services.Data.Commands;
 /// command registered for its container, and there was none for this one. So saving a data set
 /// walked past its mappings and wrote nothing, which read as a save that succeeded.
 ///
-/// The translator behind Create resolves the physical DataSetSourceRowId by subquery from the
-/// logical DataSetSourceId, so a caller never supplies a row key — which is the reason writing
-/// these rows directly could not work.
+/// The cascade fills DataSetSourceRowId from the key values the source row's write returned, so a
+/// caller never supplies a row key — which is the reason writing these rows directly could not work.
 /// </remarks>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConfigurationCommands), "DataSetFieldMapping")]

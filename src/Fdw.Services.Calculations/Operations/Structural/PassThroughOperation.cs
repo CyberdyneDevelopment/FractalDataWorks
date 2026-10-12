@@ -40,7 +40,7 @@ public sealed class PassThroughOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="PassThroughOperation"/> class.
     /// </summary>
     public PassThroughOperation()
-        : base(id: 60, name: "PassThrough", category: "Structural", description: "Returns the supplied value unchanged under this step's output alias")
+        : base(name: "PassThrough", category: "Structural", description: "Returns the supplied value unchanged under this step's output alias")
     {
         _logger = NullLogger<PassThroughOperation>.Instance;
         Parameters =

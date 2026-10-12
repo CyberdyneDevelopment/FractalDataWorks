@@ -40,7 +40,7 @@ out of the same DataStore tree the gateway uses for database paths.
 
 ## Hosting
 
-`ConnectorTypes` follows the standard three-phase ServiceTypeCollection pattern. Adding a connector implementation package (e.g. `Fdw.Connectors.Http`) is the registration intent — the `[ServiceTypeOption(typeof(ConnectorTypes), "...")]` is wired into DI by `Registration.SourceGenerators`.
+`ConnectorTypes` follows the standard three-phase ServiceTypeCollection pattern. Adding a connector implementation package (e.g. `Fdw.Connectors.Http`) is the registration intent — the `[Implementation(typeof(ConnectorTypes), "...")]` is wired into DI by `Registration.SourceGenerators`.
 
 ```csharp
 // Phase 1 — Configure + Register (before builder.Build())

@@ -1,3 +1,6 @@
+using Fdw.Data.Abstractions;
+using Fdw.Schema;
+
 namespace Fdw.Services.Data.Clients.Models;
 
 /// <summary>
@@ -9,7 +12,23 @@ public sealed class CreateDataSetFieldRequest
     public string Name { get; set; } = string.Empty;
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
-    /// <summary>Gets or sets the data type.</summary>
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the field's data classification level (see
+    /// <c>GET /data-classifications</c>). Left out, it is <c>NotYetClassified</c>. An id that is not a level is refused.
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
+
+    /// <summary>
+    /// Gets or sets the <c>DatumTypeId</c> of what the field's data is (see <c>GET /datum-types</c>). Left out,
+    /// it is <c>NotYetTyped</c>. An id that is not a datum type is refused (FDW-988).
+    /// </summary>
+    public int DatumTypeId { get; set; } = DatumTypes.NotYetTyped.Id;
+    /// <summary>
+    /// Gets or sets the field's data type: the name of a <c>DataTypes</c> option, such as <c>Int32</c>,
+    /// <c>String</c> or <c>DateTimeOffset</c> (see <c>GET /data-types</c>). Left out, the field is not typed yet.
+    /// A name that is not an option, a CLR type name such as <c>System.String</c> included, is refused (FDW-1159).
+    /// </summary>
     public string DataType { get; set; } = string.Empty;
     /// <summary>Gets or sets whether the field is a key.</summary>
     public bool IsKey { get; set; }
@@ -17,6 +36,11 @@ public sealed class CreateDataSetFieldRequest
     public bool IsRequired { get; set; }
     /// <summary>Gets or sets whether the field is indexed.</summary>
     public bool IsIndexed { get; set; }
+    /// <summary>
+    /// Gets or sets whether API callers may filter on the field. Required: a request that does not say is refused, because
+    /// there is no default (FDW-1102).
+    /// </summary>
+    public bool? IsFilterable { get; set; }
     /// <summary>Gets or sets the maximum length.</summary>
     public int? MaxLength { get; set; }
     /// <summary>Gets or sets the default value.</summary>

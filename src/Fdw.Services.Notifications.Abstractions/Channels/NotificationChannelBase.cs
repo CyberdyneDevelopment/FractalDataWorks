@@ -6,12 +6,11 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// Base class for notification channels.
 /// Implements the INotificationChannel interface with common functionality.
 /// </summary>
-public abstract class NotificationChannelBase : TypeOptionBase<int, NotificationChannelBase>, INotificationChannel
+public abstract class NotificationChannelBase : TypeOptionBase<NotificationChannelBase>, INotificationChannel
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationChannelBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the notification channel.</param>
     /// <param name="name">The name of the notification channel.</param>
     /// <param name="description">A description of the notification channel.</param>
     /// <param name="supportsBatchSend">Whether this channel supports batch sending.</param>
@@ -19,14 +18,13 @@ public abstract class NotificationChannelBase : TypeOptionBase<int, Notification
     /// <param name="supportsAttachments">Whether this channel supports attachments.</param>
     /// <param name="maxMessageLength">The maximum message length, or null for unlimited.</param>
     protected NotificationChannelBase(
-        int id,
         string name,
         string description,
         bool supportsBatchSend = true,
         bool supportsRichContent = true,
         bool supportsAttachments = false,
         int? maxMessageLength = null)
-        : base(id, name, $"Notifications:{name}", name, description, "Notifications")
+        : base(name, $"Notifications:{name}", name, description, "Notifications")
     {
         SupportsBatchSend = supportsBatchSend;
         SupportsRichContent = supportsRichContent;

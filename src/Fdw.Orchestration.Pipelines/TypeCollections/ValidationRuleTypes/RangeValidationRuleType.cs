@@ -23,7 +23,6 @@ public sealed class RangeValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public RangeValidationRuleType()
         : base(
-            id: 2,
             name: "Range",
             requiresFields: true,
             supportsMultipleFields: true,

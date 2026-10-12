@@ -25,4 +25,12 @@ public sealed class NullOrgAccessProvider : IOrgAccessProvider
         => Task.FromResult<IGenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>>(
             GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(
                 Array.Empty<TenantOrgAccessConfiguration>()));
+
+    /// <inheritdoc />
+    public Task<IGenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>> Get(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+        => Task.FromResult<IGenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>>(
+            GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(
+                Array.Empty<TenantOrgAccessConfiguration>()));
 }

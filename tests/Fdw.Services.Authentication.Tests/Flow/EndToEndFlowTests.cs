@@ -4,16 +4,20 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Claims.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Execution;
 using Fdw.Services.Authentication.Flow;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.TokenManagers;
 using Fdw.Services.TokenManagers.Abstractions;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Fdw.Services.Authentication.Abstractions.Sessions;
+using Moq;
 using Shouldly;
 using Xunit;
 
@@ -95,20 +99,25 @@ public sealed class EndToEndFlowTests
         var flow = new AuthenticationFlow
         {
             Name = "EntraLogin",
-            Steps = ["ForeignToken", "SecondFactor", "ResolvePrincipal", "Authorize"],
+            Steps = FlowSteps.Named("ForeignToken", "SecondFactor", "ResolvePrincipal", "Authorize"),
+            RequiredPermissions = [],
             Audience = "reference-api",
-            MinimumAcr = StandardAcrPolicy.MultiFactor,
+            MinimumAcr = TestAssuranceLevels.MultiFactor.AcrValue,
             ExecutionLifetime = TimeSpan.FromMinutes(5),
+            SecretManagerName = "TestSecrets",
+            SecretKeyName = "TEST_EXECUTION_KEY",
         };
 
         var runner = new AuthenticationRunner(
-            new StandardAcrPolicy(),
+            TestAssuranceLevels.Policy(),
             new JwtTokenIssuer(
                 new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
                 key),
+            new Mock<ISessionStore>(MockBehavior.Strict).Object,
             new InMemoryExecutionStore(),
             new StaticFlowProvider(flow),
-            steps.Lookup);
+            steps.Lookup,
+            new Mock<ITenantProvider>().Object);
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 
@@ -134,12 +143,114 @@ public sealed class EndToEndFlowTests
         // session-context builder reads another is how a request reaches the database with no
         // tenant scoping, and a literal here would let that pass
         claims[ClaimDefinitions.tenantId.Name].ShouldContain(TenantId.ToString());
-        claims["acr"].ShouldContain(StandardAcrPolicy.MultiFactor);
+        claims["acr"].ShouldContain(TestAssuranceLevels.MultiFactor.AcrValue);
         claims["amr"].ShouldBe(["pwd", "otp"], ignoreOrder: true);
 
         // the department is ours to assert; the role came from Entra and is not
         claims["department"].ShouldContain("platform");
         claims["role"].ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task TokenExpiresNoLaterThanTheEarliestDeclaredClaimsEnd()
+    {
+        // FDW-862: two steps gather claims that stop being true in 10 and 5 minutes, and the issuer's
+        // lifetime is 15. A third step reports an end even earlier without declaring it contributes
+        // claims, and the runner must ignore it (I1).
+        var fiveMinutes = DateTimeOffset.UtcNow.AddMinutes(5);
+        var steps = new NamedSteps()
+            .Add("ForeignToken", Proves("pwd"))
+            .Add("BakeLater", new HostileStep
+            {
+                Contributes = [ContextElements.Claims],
+                Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
+                {
+                    Claims = [new Claim { Type = "perm", Value = "a:read", Source = ClaimSources.Local }],
+                    ClaimsValidUntil = DateTimeOffset.UtcNow.AddMinutes(10),
+                }),
+            })
+            .Add("BakeSooner", new HostileStep
+            {
+                Contributes = [ContextElements.Claims],
+                Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
+                {
+                    Claims = [new Claim { Type = "perm", Value = "b:read", Source = ClaimSources.Local }],
+                    ClaimsValidUntil = fiveMinutes,
+                }),
+            })
+            .Add("Undeclared", new HostileStep
+            {
+                Contributes = [],
+                Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
+                {
+                    ClaimsValidUntil = DateTimeOffset.UtcNow.AddMinutes(1),
+                }),
+            })
+            .Add("ResolvePrincipal", new HostileStep
+            {
+                Requires = [ContextElements.Subject],
+                Contributes = [ContextElements.Principal],
+                Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
+                {
+                    Principal = new Principal { Id = PrincipalId, TenantId = TenantId },
+                }),
+            })
+            .Add("Authorize", new HostileStep
+            {
+                Requires = [ContextElements.Principal],
+                Contributes = [ContextElements.Decision],
+                Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
+                {
+                    Decision = new Decision { Permitted = true, Reason = "account active" },
+                }),
+            });
+
+        var flow = new AuthenticationFlow
+        {
+            Name = "CappedLogin",
+            Steps = FlowSteps.Named("ForeignToken", "BakeLater", "BakeSooner", "Undeclared", "ResolvePrincipal", "Authorize"),
+            RequiredPermissions = [],
+            Audience = "reference-api",
+            ExecutionLifetime = TimeSpan.FromMinutes(5),
+            SecretManagerName = "TestSecrets",
+            SecretKeyName = "TEST_EXECUTION_KEY",
+        };
+
+        var runner = new AuthenticationRunner(
+            TestAssuranceLevels.Policy(),
+            new JwtTokenIssuer(
+                new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
+                new FixedKey()),
+            new Mock<ISessionStore>(MockBehavior.Strict).Object,
+            new InMemoryExecutionStore(),
+            new StaticFlowProvider(flow),
+            steps.Lookup,
+            new Mock<ITenantProvider>().Object);
+
+        var result = await runner.Run(flow, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        ((FlowResult.Completed)result.Value!).Token.ExpiresAt.ShouldBe(fiveMinutes);
+    }
+
+    [Fact]
+    public async Task IssuerRefusesClaimsThatHaveAlreadyStoppedBeingTrue()
+    {
+        var issuer = new JwtTokenIssuer(
+            new JwtTokenIssuerConfiguration { Issuer = "https://fdw.test", Lifetime = TimeSpan.FromMinutes(15) },
+            new FixedKey());
+
+        var issued = await issuer.Issue(new IssuanceRequest
+        {
+            PrincipalId = PrincipalId,
+            TenantId = TenantId,
+            Audience = "reference-api",
+            Scopes = [],
+            AuthenticationMethods = ["pwd"],
+            ValidUntil = DateTimeOffset.UtcNow.AddSeconds(-1),
+        }, TestContext.Current.CancellationToken);
+
+        issued.IsFailure.ShouldBeTrue();
     }
 
     [Fact]
@@ -169,16 +280,19 @@ public sealed class EndToEndFlowTests
         var flow = new AuthenticationFlow
         {
             Name = "EntraLogin",
-            Steps = ["ForeignToken", "ResolvePrincipal", "Authorize"],
+            Steps = FlowSteps.Named("ForeignToken", "ResolvePrincipal", "Authorize"),
+            RequiredPermissions = [],
             Audience = "reference-api",
-            MinimumAcr = StandardAcrPolicy.MultiFactor,
+            MinimumAcr = TestAssuranceLevels.MultiFactor.AcrValue,
             ExecutionLifetime = TimeSpan.FromMinutes(5),
+            SecretManagerName = "TestSecrets",
+            SecretKeyName = "TEST_EXECUTION_KEY",
         };
 
         var issuer = new RecordingIssuer();
         var runner = new AuthenticationRunner(
-            new StandardAcrPolicy(), issuer, new InMemoryExecutionStore(),
-            new StaticFlowProvider(flow), steps.Lookup);
+            TestAssuranceLevels.Policy(), issuer, new Mock<ISessionStore>(MockBehavior.Strict).Object, new InMemoryExecutionStore(),
+            new StaticFlowProvider(flow), steps.Lookup, new Mock<ITenantProvider>().Object);
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 

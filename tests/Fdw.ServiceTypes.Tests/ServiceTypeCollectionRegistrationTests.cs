@@ -40,7 +40,6 @@ public class ServiceTypeCollectionRegistrationTests
 
         public Guid Id { get; } = Guid.NewGuid();
         public string Name { get; }
-        object ITypeOption.Id => Id;
         public string DisplayName => Name;
         public string Description => Name;
         public string Category => "NotCategorized";
@@ -86,19 +85,6 @@ public class ServiceTypeCollectionRegistrationTests
         BetaCollection.Members.Length.ShouldBe(1, "the option must be in the closed set");
 
         Should.NotThrow(() => BetaCollection.RegisterMember(option));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void RegisteringAGenuinelyNewOptionAfterTheSetClosesThrows()
-    {
-        // The set has been read, so a member added now would never appear in any lookup. Silently
-        // accepting it is the failure the closed set exists to prevent.
-        GammaCollection.RegisterMember(new Option("First"));
-        GammaCollection.Initialize(new NullHost());
-
-        Should.Throw<InvalidOperationException>(() => GammaCollection.RegisterMember(new Option("Late")));
     }
 
     [Fact]

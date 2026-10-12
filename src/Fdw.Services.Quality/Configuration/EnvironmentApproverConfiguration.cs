@@ -7,7 +7,7 @@ namespace Fdw.Services.Quality.Configuration;
 
 /// <summary>
 /// Configuration for an individual environment approver.
-/// Child of EnvironmentConfiguration.
+/// Child of EnvironmentImplementationConfiguration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

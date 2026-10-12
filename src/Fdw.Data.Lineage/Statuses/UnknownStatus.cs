@@ -14,5 +14,5 @@ public sealed class UnknownStatus : LineageNodeStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="UnknownStatus"/> class.
     /// </summary>
-    public UnknownStatus() : base(0, "Unknown") { }
+    public UnknownStatus() : base("Unknown") { }
 }

@@ -11,5 +11,5 @@ namespace Fdw.Data.Lineage.NodeTypes;
 public sealed class ProjectNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="ProjectNodeType"/> class.</summary>
-    public ProjectNodeType() : base(6, "Project") { }
+    public ProjectNodeType() : base("Project") { }
 }

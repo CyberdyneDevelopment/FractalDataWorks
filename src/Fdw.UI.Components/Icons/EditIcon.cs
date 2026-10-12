@@ -11,7 +11,6 @@ public sealed class EditIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="EditIcon"/>.</summary>
     public EditIcon()
         : base(
-            9,
             "Edit",
             "0 0 24 24",
             "none",

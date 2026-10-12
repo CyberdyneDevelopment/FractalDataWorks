@@ -3,8 +3,8 @@ using Fdw.Collections;
 
 namespace Fdw.Sql.Commands.Abstractions;
 
-/// <summary>Base class for every SQL command. Derives from <see cref="TypeOptionBase{TId,TBase}"/>.</summary>
-public abstract class SqlCommandBase : TypeOptionBase<int, SqlCommandBase>, ISqlCommand
+/// <summary>Base class for every SQL command. Derives from <see cref="TypeOptionBase{TBase}"/>.</summary>
+public abstract class SqlCommandBase : TypeOptionBase<SqlCommandBase>, ISqlCommand
 {
     /// <inheritdoc/>
     public ISqlCommandCategory? CommandCategory { get; }
@@ -18,22 +18,8 @@ public abstract class SqlCommandBase : TypeOptionBase<int, SqlCommandBase>, ISql
 
     /// <summary>Initializes a new command instance.</summary>
     protected SqlCommandBase(string name, ISqlCommandCategory category, string description)
-        : base(GenerateIdFromName(name), name, name, name, description, "SqlCommand")
+        : base(name, name, name, description, "SqlCommand")
     {
         CommandCategory = category ?? throw new ArgumentNullException(nameof(category));
-    }
-
-    /// <summary>Deterministic FNV-1a hash from name → command id.</summary>
-    private static int GenerateIdFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-            int hash = FnvOffsetBasis;
-            foreach (char c in name) { hash ^= c; hash *= FnvPrime; }
-            return hash & 0x7FFFFFFF; // positive
-        }
     }
 }

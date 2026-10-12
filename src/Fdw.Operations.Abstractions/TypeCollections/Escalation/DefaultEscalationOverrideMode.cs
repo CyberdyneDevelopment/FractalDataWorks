@@ -14,7 +14,7 @@ public sealed class DefaultEscalationOverrideMode : EscalationOverrideModeBase
     /// Initializes a new instance of the <see cref="DefaultEscalationOverrideMode"/> class.
     /// </summary>
     public DefaultEscalationOverrideMode()
-        : base(id: 0, name: "Default")
+        : base(name: "Default")
     {
     }
 }

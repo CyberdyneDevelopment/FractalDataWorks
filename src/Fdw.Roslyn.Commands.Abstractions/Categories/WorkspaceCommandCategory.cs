@@ -12,7 +12,7 @@ public sealed class WorkspaceCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkspaceCommandCategory"/> class.
     /// </summary>
-    public WorkspaceCommandCategory() : base(10, "Workspace", "Workspace management operations")
+    public WorkspaceCommandCategory() : base("Workspace", "Workspace management operations")
     {
     }
 }

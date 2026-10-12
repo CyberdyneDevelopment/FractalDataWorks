@@ -36,7 +36,7 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     : ServiceBase<IDataCommand, TConfiguration, TService>, IDataConnection
-    where TConfiguration : class, IGenericConfiguration
+    where TConfiguration : class, IImplementationConfiguration
     where TService : class
 {
     private IConnectionState _state;
@@ -54,11 +54,12 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
         _state = ConnectionStates.Created;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether this connection is stale and should be recreated.
-    /// Derived classes override this to check their underlying connection resource.
-    /// </summary>
-    public virtual bool IsStale => false;
+    /// <inheritdoc/>
+    /// <remarks>
+    /// False here, so a connection whose translator has no grouping never silently returns ungrouped
+    /// rows for a grouped query. A connection whose translator builds a GROUP BY overrides it.
+    /// </remarks>
+    public virtual bool AggregatesInStore => false;
 
     /// <summary>
     /// Tests connectivity to the underlying resource.
@@ -120,14 +121,14 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     /// <param name="container">The unified container (passed by DataGateway).</param>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>
     /// <returns>A result containing the typed execution outcome.</returns>
-    public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, IDataContainer container, CancellationToken cancellationToken = default)
+    public virtual async Task<IGenericResult<T>> Execute<T>(IDataCommand command, IDataContainer container, CancellationToken cancellationToken = default)
     {
         ConnectionLogger.TraceExecuteWithContainerEntry(Logger, command.CommandType);
 
         // Get translator for this command type via TypeCollection lookup
         var translator = GetTranslator(command.CommandType);
 
-        if (string.Equals(translator.Name, "_Empty", StringComparison.Ordinal))
+        if (string.Equals(translator.Name, "NotFound", StringComparison.Ordinal))
         {
             var message = ConnectionLogger.TranslatorNotFound(Logger, command.CommandType);
             return GenericResult<T>.Failure(message);
@@ -175,7 +176,7 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
         ConnectionLogger.TraceExecuteWithContainerEntry(Logger, command.CommandType);
 
         var translator = GetTranslator(command.CommandType);
-        if (string.Equals(translator.Name, "_Empty", StringComparison.Ordinal))
+        if (string.Equals(translator.Name, "NotFound", StringComparison.Ordinal))
             return GenericResult<global::System.Collections.Generic.IEnumerable<object>>.Failure(
                 ConnectionLogger.TranslatorNotFound(Logger, command.CommandType));
 

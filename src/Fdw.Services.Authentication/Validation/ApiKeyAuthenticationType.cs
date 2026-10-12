@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.Data.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,25 +33,16 @@ namespace Fdw.Services.Authentication.Validation;
 /// nothing to exchange. Validating an inbound credential per request is what this collection is.
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(AuthenticationServiceTypes), "ApiKey")]
+[Implementation(typeof(AuthenticationServiceTypes), "ApiKey")]
 public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
 {
-    /// <summary>The bearer prefix every credential of this kind carries.</summary>
-    public const string CredentialPrefix = "Bearer fdx_";
-
-    /// <summary>The bearer prefix that marks an agent key specifically.</summary>
-    /// <remarks>
-    /// Agent keys and personal access tokens are minted by the same generator; the environment
-    /// segment is what separates them, and <c>agent</c> is reserved for keys minted by
-    /// <c>IAgentKeyService</c>.
-    /// </remarks>
-    public const string AgentKeyPrefix = "Bearer fdx_agent_";
+    private const string BearerPrefix = "Bearer ";
 
     /// <summary>The issuer an opaque credential is routed by.</summary>
     /// <remarks>
     /// A bearer token names its issuer and the selector reads it. An opaque credential names
-    /// nothing — it is a lookup key — so it has no issuer to read, and the selector recognises it by
-    /// prefix and routes it under this well-known value instead.
+    /// nothing — it is a lookup key — so it has no issuer to read, and the selector recognises it as
+    /// a bearer value that is not a JWT and routes it under this well-known value instead.
     ///
     /// It is a real issuer rather than a sentinel: this host mints these credentials, so this host
     /// is who issued them. Routing them through the same binding lookup as every other scheme is
@@ -59,22 +52,52 @@ public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
     public const string OpaqueCredentialIssuer = "fdw:opaque-credential";
 
     /// <summary>The prefix every ApiKey scheme name carries.</summary>
-    public const string SchemePrefix = "Fdw.ApiKey.";
+    public const string SchemePrefix = ApiKeyAuthenticationSchemes.Prefix;
 
     /// <summary>Initializes a new instance of the <see cref="ApiKeyAuthenticationType"/> class.</summary>
     public ApiKeyAuthenticationType()
         : base("ApiKey",
                "API Key",
-               "Validates agent keys and personal access tokens this host minted")
+               "Validates agent keys and personal access tokens this host minted", defaultContainerName: "ApiKeyAuthenticationServiceConfiguration")
     {
         Registration((builder, loggerFactory) =>
         {
             // Transient for the same reason the other handlers are: the handler holds the scheme and
             // the request it was initialised for in fields, so one instance per resolution.
             builder.Services.TryAddTransient<ApiKeyAuthenticationHandler>();
+
+            builder.Services.AddSingleton<IApiKeyAuthenticationConfigurationProvider, ApiKeyAuthenticationConfigurationProvider>(sp => new ApiKeyAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<ApiKeyAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection, PathName, Container));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
+
+        // Initialize, because both providers have to be resolvable: the option is the only thing that
+        // knows which implementation it is, and the domain provider dispatches by the name registered
+        // here. Without this the domain row names a kind the registry has never heard of, and the
+        // read fails at the point a credential arrives rather than at startup -- the gap this option
+        // shipped with: every sibling kind (LocalKey, JwtBearer) registers itself here, and this one
+        // never did, so a row naming "ApiKey" could never be read.
+        Initialization((host, loggerFactory) =>
+        {
+            host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                .Register(Name, host.Services.GetRequiredService<IApiKeyAuthenticationConfigurationProvider>());
+            return GenericResult<IHost>.Success(host);
+        });
     }
+
+    /// <summary>Whether an Authorization header carries an opaque credential: a bearer value that is not a JWT.</summary>
+    /// <remarks>
+    /// Not recognised by prefix. What an agent key or personal access token begins with is the
+    /// credential service's configuration (<c>CredentialPrefix</c>, FDW-939), which the router cannot
+    /// read per request; what it can see is that the value is not a three-segment JWT, so there is
+    /// no issuer in it to route by.
+    /// </remarks>
+    /// <param name="authorization">The raw Authorization header value.</param>
+    /// <returns>True for a non-empty bearer value that is not three dot-separated segments.</returns>
+    public static bool IsOpaqueCredential(string authorization)
+        => authorization is not null
+           && authorization.StartsWith(BearerPrefix, StringComparison.OrdinalIgnoreCase)
+           && authorization[BearerPrefix.Length..].Trim() is { Length: > 0 } value
+           && value.Split('.').Length != 3;
 
     /// <summary>The scheme name this option registers for a given entry.</summary>
     /// <param name="serviceName">The declared entry's name.</param>
@@ -112,7 +135,7 @@ public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
 
     /// <inheritdoc />
     public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
-        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationServiceImplementationConfiguration configuration,
         IAuthenticationSchemeProvider schemes,
         IServiceProvider services,
         ILoggerFactory? loggerFactory)

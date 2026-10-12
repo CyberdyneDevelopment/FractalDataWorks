@@ -16,7 +16,6 @@ public sealed class ForwardMode : SchemaCompatibilityModeBase
     /// </summary>
     public ForwardMode()
         : base(
-            id: 3,
             name: "Forward",
             requiresExactTypes: true,
             allowsSourceExtras: false,

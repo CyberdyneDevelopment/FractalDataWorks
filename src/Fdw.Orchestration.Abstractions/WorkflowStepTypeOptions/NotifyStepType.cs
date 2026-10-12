@@ -14,5 +14,5 @@ public sealed class NotifyStepType : WorkflowStepTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NotifyStepType"/> class.
     /// </summary>
-    public NotifyStepType() : base(4, "Notify", executesPipeline: false, supportsParallelism: true) { }
+    public NotifyStepType() : base("Notify", executesPipeline: false, supportsParallelism: true) { }
 }

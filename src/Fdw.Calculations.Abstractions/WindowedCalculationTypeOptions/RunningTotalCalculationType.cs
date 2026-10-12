@@ -15,7 +15,6 @@ public sealed class RunningTotalCalculationType : WindowedCalculationTypeBase
     /// Initializes a new instance of the <see cref="RunningTotalCalculationType"/> class.
     /// </summary>
     public RunningTotalCalculationType() : base(
-        id: 1,
         name: "RunningTotal",
         category: "Windowed",
         calculate: (rows, col, _) =>

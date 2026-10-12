@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -9,14 +10,15 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Notifications.Endpoints;
 
 /// <summary>
-/// Base endpoint for getting a notification configuration by name.
+/// Base endpoint for getting a notification configuration by name: <c>POST /notifications/get</c>, its name in
+/// the body (FDW-978).
 /// </summary>
 public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<NotificationNameRequest, NotificationDetailDto>
 {
-    private readonly NotificationConfigurationProvider _provider;
+    private readonly INotificationConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected GetNotificationEndpointBase(ILogger<GetNotificationEndpointBase> logger, NotificationConfigurationProvider provider) : base(logger)
+    protected GetNotificationEndpointBase(ILogger<GetNotificationEndpointBase> logger, INotificationConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -24,25 +26,25 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
     /// <inheritdoc />
     protected override string ResourceName => "notifications";
 
-    /// <inheritdoc />
-    protected override string Route => "/notifications/{NotificationName}";
+    /// <summary>Gets whether the notification is read by POST with its name in the body: it is.</summary>
+    protected override bool ReadByBody => true;
 
     /// <inheritdoc />
     protected override string EndpointSummary => "Get notification by name";
 
     /// <inheritdoc />
-    protected override string GetResourceIdentifier(NotificationNameRequest request) => request.NotificationName;
+    protected override string GetResourceIdentifier(NotificationNameRequest request) => request.Name;
 
     /// <inheritdoc />
     protected override async Task<IGenericResult<NotificationDetailDto?>> FindByIdentifier(NotificationNameRequest request, CancellationToken ct)
     {
-        NotificationEndpointLog.GettingNotification(Logger, request.NotificationName);
+        NotificationEndpointLog.GettingNotification(Logger, request.Name);
 
-        var notificationResult = await _provider.Get(request.NotificationName, ct).ConfigureAwait(false);
+        var notificationResult = await _provider.Get(request.Name, ct).ConfigureAwait(false);
 
         if (!notificationResult.IsSuccess || notificationResult.Value is null)
         {
-            NotificationEndpointLog.NotificationNotFound(Logger, request.NotificationName);
+            NotificationEndpointLog.NotificationNotFound(Logger, request.Name);
             return GenericResult<NotificationDetailDto?>.Success(null);
         }
 
@@ -51,8 +53,7 @@ public abstract class GetNotificationEndpointBase : CrudGetEndpointBase<Notifica
         {
             Id = notification.Id,
             Name = notification.Name,
-            ServiceOptionType = notification.ServiceOptionType,
-            Description = notification.Description
+            Implementation = notification.Implementation,
         };
 
         return GenericResult<NotificationDetailDto?>.Success(detail);

@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class SchemaObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for schemas.
+    /// Material Symbols icon name for schemas.
     /// </summary>
-    public const string SchemaIcon = "folder"; // Icons.Material.Filled.Folder
+    public const string SchemaIcon = "folder";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SchemaObjectType"/> class.
     /// </summary>
     public SchemaObjectType()
         : base(
-            id: 2,
             name: "Schema",
             icon: SchemaIcon,
             color: "Default",

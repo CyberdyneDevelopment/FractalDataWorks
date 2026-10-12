@@ -62,6 +62,45 @@ public sealed class DataSetApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
+    public async Task GetDataSetsReadsTheItemsOfAStreamedPage()
+    {
+        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{"skip":0,"take":2,"hasMore":true,"items":[{"name":"set1"},{"name":"set2"}],"error":null}""",
+                System.Text.Encoding.UTF8,
+                "application/json")
+        });
+        var sut = CreateClient(handler);
+
+        var result = await sut.GetDataSets(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Api")]
+    public async Task GetDataSetsFailsWhenAStreamedPageEndedEarly()
+    {
+        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """{"skip":0,"take":2,"hasMore":true,"items":[{"name":"set1"}],"error":{"title":"Configuration 'X' refused"}}""",
+                System.Text.Encoding.UTF8,
+                "application/json")
+        });
+        var sut = CreateClient(handler);
+
+        var result = await sut.GetDataSets(TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Api")]
     public async Task GetDataSetsReturnsFailureOnException()
     {
         var handler = new MockHttpMessageHandler((_, _) =>

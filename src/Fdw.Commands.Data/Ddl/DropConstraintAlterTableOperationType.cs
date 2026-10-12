@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class DropConstraintAlterTableOperationType : AlterTableOperationTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="DropConstraintAlterTableOperationType"/>.</summary>
-    public DropConstraintAlterTableOperationType() : base(6, "DropConstraint") { }
+    public DropConstraintAlterTableOperationType() : base("DropConstraint") { }
 }

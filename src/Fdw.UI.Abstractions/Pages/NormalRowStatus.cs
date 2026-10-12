@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class NormalRowStatus : RowStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="NormalRowStatus"/>.</summary>
-    public NormalRowStatus() : base(1, "Normal") { }
+    public NormalRowStatus() : base("Normal") { }
 }

@@ -13,7 +13,6 @@ public sealed class Concurrency : RateLimitPolicyBase
     /// Initializes a new instance of the <see cref="Concurrency"/> class.
     /// </summary>
     public Concurrency() : base(
-        id: 5,
         name: "Concurrency",
         maxRequests: 10,
         windowSizeInSeconds: 1,

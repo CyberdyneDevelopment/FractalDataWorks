@@ -91,21 +91,26 @@ public sealed class ContainerSchema : IContainerSchema
     /// Get fields with Identity role (primary keys, unique identifiers).
     /// </summary>
     /// <remarks>
-    /// Uses IsKeyRole from PropertyRoles to identify Surrogate and NaturalKey roles.
+    /// Uses IsKeyRole from DatumTypes to identify Surrogate and NaturalKey roles.
     /// </remarks>
     public IReadOnlyList<IField> GetIdentityFields() =>
         Fields.Where(f => f.Role.IsKeyRole).ToList();
 
     /// <summary>
-    /// Get the fields a dataset may select.
+    /// Get the fields a command returns when it names no columns of its own (FDW-988).
     /// </summary>
+    /// <param name="includeMetadata">Whether the command includes Metadata columns.</param>
+    /// <param name="includeDescriptions">Whether the command includes Descriptive columns.</param>
+    /// <param name="includeKeys">Whether the command includes DbKey columns (server-side reads only).</param>
+    /// <returns>The fields whose datum type says they are returned.</returns>
     /// <remarks>
     /// Every command that builds a column list from the container reads this rather than Fields.
-    /// Fields is the container as declared — which is what an admin or analyst authoring it needs to
-    /// see, including the physical key. A dataset gets what the container chose to expose.
+    /// Fields is the container as declared, which is what an admin or analyst authoring it needs to
+    /// see, including the physical key. Each field's datum type decides whether it is returned: detail
+    /// always, Metadata and Description when asked for, DbKey only when a server-side read asks.
     /// </remarks>
-    public IReadOnlyList<IField> GetProjectableFields() =>
-        Fields.Where(f => f.Visibility.AllowsProjection).ToList();
+    public IReadOnlyList<IField> GetReturnedFields(bool includeMetadata, bool includeDescriptions, bool includeKeys) =>
+        Fields.Where(f => f.Role.IsReturned(includeMetadata, includeDescriptions, includeKeys)).ToList();
 
     /// <summary>
     /// Get fields with Attribute role (descriptive, dimensional).
@@ -120,7 +125,7 @@ public sealed class ContainerSchema : IContainerSchema
     /// Get fields with Measure role (numeric, aggregatable).
     /// </summary>
     /// <remarks>
-    /// Uses IsAggregatable from PropertyRoles.
+    /// Uses IsAggregatable from DatumTypes.
     /// </remarks>
     public IReadOnlyList<IField> GetMeasureFields() =>
         Fields.Where(f => f.Role.IsAggregatable).ToList();
@@ -136,7 +141,7 @@ public sealed class ContainerSchema : IContainerSchema
     /// </summary>
     /// <param name="role">The property role to filter by.</param>
     /// <returns>A list of fields matching the specified role.</returns>
-    public IReadOnlyList<IField> Get(IPropertyRole role)
+    public IReadOnlyList<IField> Get(IDatumType role)
     {
         if (role == null)
             return [];

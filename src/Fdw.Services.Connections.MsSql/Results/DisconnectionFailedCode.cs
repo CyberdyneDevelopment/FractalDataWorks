@@ -18,7 +18,7 @@ public sealed class DisconnectionFailedCode : MsSqlResultCodeBase
         : base(
             71001,
             "DisconnectionFailed",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Failed to disconnect from SQL Server: {ErrorMessage}",
             isRetryable: false)
     {

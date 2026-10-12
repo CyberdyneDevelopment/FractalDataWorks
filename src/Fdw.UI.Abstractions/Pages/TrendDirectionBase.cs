@@ -7,10 +7,10 @@ namespace Fdw.UI.Abstractions.Pages;
 /// Base class for trend direction for metrics.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class TrendDirectionBase : TypeOptionBase<int, TrendDirectionBase>, ITrendDirection
+public abstract class TrendDirectionBase : TypeOptionBase<TrendDirectionBase>, ITrendDirection
 {
     /// <summary>
     /// Initializes a new instance of <see cref="TrendDirectionBase"/>.
     /// </summary>
-    protected TrendDirectionBase(int id, string name) : base(id, name) { }
+    protected TrendDirectionBase(string name) : base(name) { }
 }

@@ -13,7 +13,7 @@ public sealed class GetMethod : HttpMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="GetMethod"/> class.
     /// </summary>
-    public GetMethod() : base(1, "GET", "Retrieves data from the server")
+    public GetMethod() : base("GET", "Retrieves data from the server")
     {
     }
 }

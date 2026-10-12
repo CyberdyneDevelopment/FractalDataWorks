@@ -1,3 +1,5 @@
+using Fdw.Results;
+using Fdw.Workspace.Roslyn;
 using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections.RoslynWorkspace;
@@ -15,4 +17,17 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 /// </remarks>
 public interface IRoslynWorkspaceConnectionFactory : IConnectionFactory<IGenericConnection, RoslynWorkspaceConnectionConfiguration>
 {
+    /// <summary>Creates the connection from an already-opened workspace.</summary>
+    /// <param name="configuration">The connection configuration.</param>
+    /// <param name="workspace">The opened workspace; Live mode requires one, Snapshot ignores it.</param>
+    /// <returns>The connection, or a structured failure.</returns>
+    /// <remarks>
+    /// Declared here and not on <see cref="IConnectionFactory"/>: a workspace means something to this
+    /// implementation and nothing to the domain. Opening it is the provider's job, which is what
+    /// keeps every Create on this factory synchronous.
+    /// </remarks>
+    IGenericResult<IGenericConnection> Create(
+        RoslynWorkspaceConnectionConfiguration configuration,
+        IRoslynWorkspace? workspace);
+
 }

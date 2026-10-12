@@ -26,7 +26,6 @@ public sealed class LoadStageType : StageTypeBase
     /// </summary>
     public LoadStageType()
         : base(
-            id: 3,
             name: "Load",
             requiresSource: false,
             requiresDestination: true,

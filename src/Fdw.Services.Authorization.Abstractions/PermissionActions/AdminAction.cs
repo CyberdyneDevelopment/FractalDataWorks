@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class AdminAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for admin action.
+    /// Material Symbols icon name for admin action.
     /// </summary>
-    public const string AdminIcon = "admin_panel_settings"; // Icons.Material.Filled.AdminPanelSettings
+    public const string AdminIcon = "admin_panel_settings";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminAction"/> class.
     /// </summary>
     public AdminAction()
         : base(
-            id: 8,
             name: "Admin",
             icon: AdminIcon,
             color: "Primary",

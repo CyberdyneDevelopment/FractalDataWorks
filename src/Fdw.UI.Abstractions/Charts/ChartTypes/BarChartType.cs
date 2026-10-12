@@ -15,7 +15,6 @@ public sealed class BarChartType : ChartTypeBase
     /// </summary>
     public BarChartType()
         : base(
-            id: 1,
             name: "Bar",
             displayName: "Bar Chart",
             category: "Comparison",

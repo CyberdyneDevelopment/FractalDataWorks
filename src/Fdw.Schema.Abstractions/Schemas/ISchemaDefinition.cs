@@ -102,5 +102,5 @@ public interface ISchemaDefinition<TProperty> where TProperty : IPropertyDefinit
     /// </summary>
     /// <param name="role">The property role to filter by.</param>
     /// <returns>A list of properties matching the specified role.</returns>
-    IReadOnlyList<TProperty> Get(IPropertyRole role);
+    IReadOnlyList<TProperty> Get(IDatumType role);
 }

@@ -5,14 +5,13 @@ namespace Fdw.Data.Abstractions;
 /// <summary>
 /// Base class for path implementations.
 /// </summary>
-public abstract class PathBase : TypeOptionBase<int, PathBase>, IPath
+public abstract class PathBase : TypeOptionBase<PathBase>, IPath
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PathBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this path type.</param>
     /// <param name="name">The name of this path type.</param>
-    protected PathBase(int id, string name) : base(id, name, "Path")
+    protected PathBase(string name) : base(name, "Path")
     {
     }
 

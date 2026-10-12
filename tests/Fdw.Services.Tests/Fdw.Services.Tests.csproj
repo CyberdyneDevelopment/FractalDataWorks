@@ -27,6 +27,8 @@
     <ProjectReference Include="..\..\src\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Workspaces\Fdw.Services.Workspaces.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Workspaces.Endpoints\Fdw.Services.Workspaces.Endpoints.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" />

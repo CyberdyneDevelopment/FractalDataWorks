@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 
 namespace Fdw.Calculations.Endpoints.CalculationEntities;
 
@@ -29,4 +30,12 @@ public sealed class CreateCalculationEntityRequest
 
     /// <summary>Gets or sets the data type name for the result (e.g. "Decimal", "Int32").</summary>
     public string ResultDataTypeName { get; set; } = "Decimal";
+
+    /// <summary>
+    /// Gets or sets the calculation type's own settings, as a JSON object read into the configuration
+    /// class <see cref="CalculationEntityType"/> declares — for Formula, <c>FormulaLanguage</c>,
+    /// <c>FormulaBody</c> and <c>TimeoutSeconds</c>. Required: the implementation is the record the
+    /// calculation is written as.
+    /// </summary>
+    public JsonElement? Configuration { get; set; }
 }

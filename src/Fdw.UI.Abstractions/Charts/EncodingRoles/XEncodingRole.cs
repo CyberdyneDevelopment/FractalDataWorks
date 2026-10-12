@@ -14,7 +14,7 @@ public sealed class XEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="XEncodingRole"/> class.
     /// </summary>
     public XEncodingRole()
-        : base(1, "X", "X Axis", isSpatial: true)
+        : base("X", "X Axis", isSpatial: true)
     {
     }
 }

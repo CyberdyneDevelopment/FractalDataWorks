@@ -32,7 +32,6 @@ public sealed class ApplyNamingConventionsTranslator : RoslynCommandTranslatorBa
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: check fields, public members, async methods for naming
     public override async Task<IGenericResult<MutationResult<NamingConventionsData>>> Translate(
         ApplyNamingConventionsCommand command,
         Solution solution,
@@ -178,5 +177,4 @@ public sealed class ApplyNamingConventionsTranslator : RoslynCommandTranslatorBa
                 fileChanges,
                 data));
     }
-#pragma warning restore MA0051
 }

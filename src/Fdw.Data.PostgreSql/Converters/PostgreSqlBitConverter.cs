@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlBitConverter()
     : DataTypeConverterBase(
-        id: 23,
         name: "Bit",
         sourceType: "bit",
         targetClrType: typeof(bool),

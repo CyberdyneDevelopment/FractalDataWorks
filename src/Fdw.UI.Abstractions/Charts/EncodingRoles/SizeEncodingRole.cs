@@ -14,7 +14,7 @@ public sealed class SizeEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="SizeEncodingRole"/> class.
     /// </summary>
     public SizeEncodingRole()
-        : base(5, "Size", "Size", isSpatial: false)
+        : base("Size", "Size", isSpatial: false)
     {
     }
 }

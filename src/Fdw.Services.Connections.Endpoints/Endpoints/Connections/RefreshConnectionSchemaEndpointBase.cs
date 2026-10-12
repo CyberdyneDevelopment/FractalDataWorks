@@ -52,9 +52,7 @@ public abstract class RefreshConnectionSchemaEndpointBase : Endpoint<ConnectionN
 
         if (!result.IsSuccess || result.Value == null)
         {
-            HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Schema discovery failed", Details = result.CurrentMessage ?? string.Empty }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Schema discovery failed", Details = result.CurrentMessage ?? string.Empty }, statusCode: StatusCodes.Status500InternalServerError)).ConfigureAwait(false);
             return;
         }
 

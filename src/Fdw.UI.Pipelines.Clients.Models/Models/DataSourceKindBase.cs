@@ -7,10 +7,10 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 /// <summary>
 /// Base class for data source kinds.
 /// </summary>
-public abstract class DataSourceKindBase : TypeOptionBase<int, DataSourceKindBase>, IDataSourceKind
+public abstract class DataSourceKindBase : TypeOptionBase<DataSourceKindBase>, IDataSourceKind
 {
     /// <summary>
     /// Initializes a new instance of <see cref="DataSourceKindBase"/>.
     /// </summary>
-    protected DataSourceKindBase(int id, string name) : base(id, name) { }
+    protected DataSourceKindBase(string name) : base(name) { }
 }

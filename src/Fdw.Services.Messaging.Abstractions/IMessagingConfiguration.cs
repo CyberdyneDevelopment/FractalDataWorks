@@ -19,7 +19,7 @@ namespace Fdw.Services.Messaging.Abstractions;
 /// </para>
 /// </remarks>
 public interface IMessagingConfiguration
-    : IPlatformServiceConfiguration<IMessagingImplementationConfiguration>
+    : IDomainConfiguration
 {
     /// <summary>Gets or sets the store this deployment keeps its messaging data in.</summary>
     string? DataStoreName { get; set; }

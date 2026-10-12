@@ -13,6 +13,6 @@ public sealed class LastAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="LastAggregationType"/> class.
     /// </summary>
-    public LastAggregationType() : base(4, "Last", values => values.Count == 0 ? 0m : values[values.Count - 1])
+    public LastAggregationType() : base("Last", values => values.Count == 0 ? 0m : values[values.Count - 1])
     { }
 }

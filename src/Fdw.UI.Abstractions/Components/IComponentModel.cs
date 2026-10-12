@@ -9,7 +9,7 @@ namespace Fdw.UI.Abstractions.Components;
 /// <para>
 /// Component models represent the data and metadata for UI components,
 /// independent of any specific rendering framework. The same model can
-/// be rendered by Spectre.Console, RazorConsole, Blazor, or future backends.
+/// be rendered by Spectre.Console, RazorConsole, or future backends.
 /// </para>
 /// <para>
 /// Implementations should be pure data objects without framework-specific dependencies.

@@ -28,7 +28,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Why: registered as the <c>"Federated"</c> member of <see cref="DataSetTypes"/>; selected when a
-/// dataset's authored <c>ServiceOptionType</c> is <c>"Federated"</c>. A cross-store join cannot be
+/// dataset's authored <c>Implementation</c> is <c>"Federated"</c>. A cross-store join cannot be
 /// pushed down to any single backend, so it is performed in the application. The type option is a
 /// stateless module-init singleton; per-execution state flows through the
 /// <see cref="DataSetExecutionContext"/>.
@@ -45,7 +45,7 @@ public sealed class FederatedDataSetType : DataSetTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="FederatedDataSetType"/> class.</summary>
     public FederatedDataSetType()
-        : base(3, "Federated", "Multi-store dataset joined in memory per the federation strategy",
+        : base("Federated", "Multi-store dataset joined in memory per the federation strategy",
             typeof(object), Array.Empty<IDataField>(), category: "DataSetStrategy")
     {
     }
@@ -60,28 +60,37 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         if (context is not DataSetExecutionContext ctx)
             return GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataSetConfigurationRequired"));
 
+        if (command is IQueryCommand { Aggregation: not null })
+            return GenericResult<T>.Failure(
+                DataServiceResultCodes.ByName("DataSetNotGroupable"), ctx.Logger,
+                ResultDetails.Create("dataSet", ctx.Config.Name, "reason", "a Federated data set builds its rows from more than one read, so it has no one query to group"));
+
+        if (ctx.Config is not IFederatedDataSetConfiguration federated)
+            return DataSetExecutionHelpers.KindMismatch<T>(ctx, "Federated");
+
         IReadOnlyList<DataSetSourceConfiguration> sources =
             ctx.Config.Sources as IReadOnlyList<DataSetSourceConfiguration> ?? ctx.Config.Sources?.ToList() ?? [];
         if (sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
-        if (string.IsNullOrWhiteSpace(ctx.Config.FederationStrategy))
+        if (string.IsNullOrWhiteSpace(federated.FederationStrategy))
             return GenericResult<T>.Failure(
                 DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, "no FederationStrategy is configured"));
 
-        var strategy = FederationStrategies.ByName(ctx.Config.FederationStrategy);
+        var strategy = FederationStrategies.ByName(federated.FederationStrategy);
         if (ReferenceEquals(strategy, FederationStrategies.NotFound))
             return GenericResult<T>.Failure(
-                DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, $"'{ctx.Config.FederationStrategy}' is not a registered FederationStrategies member"));
+                DataGatewayLogger.FederationStrategyMissing(ctx.Logger, ctx.Config.Name, $"'{federated.FederationStrategy}' is not a registered FederationStrategies member"));
 
         DataGatewayLogger.ExecutingMultiSourceDataSet(ctx.Logger, ctx.Config.Name, sources.Count);
-        return await ExecuteDistributed<T>(ctx, command, sources, strategy.IsParallel, ct).ConfigureAwait(false);
+        return await ExecuteDistributed<T>(ctx, command, sources, federated.Joins, strategy.IsParallel, ct).ConfigureAwait(false);
     }
 
     private static async Task<IGenericResult<T>> ExecuteDistributed<T>(
         DataSetExecutionContext ctx,
         IDataCommand command,
         IReadOnlyList<DataSetSourceConfiguration> sources,
+        IList<DataSetJoinConfiguration> joins,
         bool isParallel,
         CancellationToken ct)
     {
@@ -89,7 +98,9 @@ public sealed class FederatedDataSetType : DataSetTypeBase
 
         try
         {
-            IFilterExpression? inputFilter = command is QueryCommand<T> qc ? qc.Filter : null;
+            // Ordering and paging are NOT applied here: the join is in memory, so they would have to
+            // follow it, and PagesInStore stays false until they do (FDW-876, FDW-884).
+            IFilterExpression? inputFilter = (command as IQueryCommand)?.Filter;
             var fieldMappings = PreResolveFieldMappings(sources);
 
             var decomposed = ctx.Pushdown.DecomposeBySource(inputFilter, ctx.Config, sources, fieldMappings);
@@ -104,12 +115,20 @@ public sealed class FederatedDataSetType : DataSetTypeBase
             if (!pulled.IsSuccess || pulled.Value is null)
                 return pulled.ToNewResult<T>();
 
-            var joined = JoinRecords(ctx, pulled.Value, sources);
+            var joined = JoinRecords(ctx, pulled.Value, sources, joins);
             if (!joined.IsSuccess || joined.Value is null)
                 return joined.ToNewResult<T>();
 
-            DataGatewayLogger.FederatedExecutionCompleted(ctx.Logger, ctx.Config.Name, joined.Value.Count, 0, 0, 0);
-            return ConvertRecordsToType<T>(ctx, joined.Value);
+            // Each source's attached chains run on the joined logical records (FDW-877).
+            var chains = await DataSetExecutionHelpers.ResolveChains(ctx, sources, ct).ConfigureAwait(false);
+            if (chains.IsFailure)
+                return chains.ToNewResult<T>();
+            var transformed = await DataSetExecutionHelpers.ApplyFieldTransformations(ctx, joined.Value, chains.Value!, ctx.Config.Name, ct).ConfigureAwait(false);
+            if (transformed.IsFailure)
+                return transformed.ToNewResult<T>();
+
+            DataGatewayLogger.FederatedExecutionCompleted(ctx.Logger, ctx.Config.Name, transformed.Value!.Count, 0, 0, 0);
+            return ConvertRecordsToType<T>(ctx, transformed.Value!);
         }
         catch (Exception ex)
         {
@@ -256,9 +275,10 @@ public sealed class FederatedDataSetType : DataSetTypeBase
     private static IGenericResult<List<DataRecord>> JoinRecords(
         DataSetExecutionContext ctx,
         Dictionary<string, MaterializedSource> sourceData,
-        IReadOnlyList<DataSetSourceConfiguration> sources)
+        IReadOnlyList<DataSetSourceConfiguration> sources,
+        IList<DataSetJoinConfiguration> joins)
     {
-        if (ctx.Config.Joins.Count == 0)
+        if (joins.Count == 0)
         {
             DataGatewayLogger.DataSetNoJoins(ctx.Logger, ctx.Config.Name, sources.Count);
             var all = new List<DataRecord>();
@@ -270,24 +290,24 @@ public sealed class FederatedDataSetType : DataSetTypeBase
         List<DataRecord>? accumulated = null;
         RecordSchema? accumulatedSchema = null;
 
-        foreach (var join in ctx.Config.Joins)
+        foreach (var join in joins.OrderBy(j => j.Ordinal))
         {
-            if (!sourceData.TryGetValue(join.LeftSource, out var left))
+            if (!sourceData.TryGetValue(join.LeftSourceName, out var left))
                 return GenericResult<List<DataRecord>>.Failure(
-                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.LeftSource));
-            if (!sourceData.TryGetValue(join.RightSource, out var right))
+                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.LeftSourceName));
+            if (!sourceData.TryGetValue(join.RightSourceName, out var right))
                 return GenericResult<List<DataRecord>>.Failure(
-                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSource));
+                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName));
 
             var leftRecords = accumulated ?? left.Records;
             var leftSchema = accumulatedSchema ?? left.Schema;
             var combinedSchema = CombineSchema(leftSchema, right.Schema);
 
-            accumulated = HashJoin(leftRecords, right.Records, combinedSchema, join.LeftField, join.RightField, join.JoinType);
+            accumulated = HashJoin(leftRecords, right.Records, combinedSchema, join.LeftFieldName, join.RightFieldName, join.JoinType);
             accumulatedSchema = combinedSchema;
 
             DataGatewayLogger.JoinCompleted(
-                ctx.Logger, join.LeftSource, join.LeftField, join.RightSource, join.RightField, join.JoinType, accumulated.Count);
+                ctx.Logger, join.LeftSourceName, join.LeftFieldName, join.RightSourceName, join.RightFieldName, join.JoinType, accumulated.Count);
         }
 
         return GenericResult<List<DataRecord>>.Success(accumulated ?? []);

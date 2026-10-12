@@ -24,7 +24,6 @@ public sealed class StreamCapability : CommandCapabilityTypeBase
     /// </summary>
     public StreamCapability()
         : base(
-            id: 5,
             name: "Stream",
             displayName: "Stream",
             configurationFields:

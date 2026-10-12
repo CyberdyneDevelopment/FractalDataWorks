@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Greek")]
 public sealed class GreekTimeZoneType : TimeZoneTypeBase
 {
-    public GreekTimeZoneType() : base(28, "Greek", "GTB Standard Time") { }
+    public GreekTimeZoneType() : base("Greek", "GTB Standard Time") { }
 }

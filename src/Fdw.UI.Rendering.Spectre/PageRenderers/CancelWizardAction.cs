@@ -9,5 +9,5 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 public sealed class CancelWizardAction : WizardActionBase
 {
     /// <summary>Initializes a new instance of <see cref="CancelWizardAction"/>.</summary>
-    public CancelWizardAction() : base(6, "Cancel") { }
+    public CancelWizardAction() : base("Cancel") { }
 }

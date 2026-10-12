@@ -13,7 +13,6 @@ public sealed class FixedWindow : RateLimitPolicyBase
     /// Initializes a new instance of the <see cref="FixedWindow"/> class.
     /// </summary>
     public FixedWindow() : base(
-        id: 2,
         name: "FixedWindow",
         maxRequests: 100,
         windowSizeInSeconds: 60,

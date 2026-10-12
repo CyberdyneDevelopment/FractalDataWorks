@@ -13,7 +13,7 @@ public sealed class TimestampType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="TimestampType"/> class.</summary>
     public TimestampType()
-        : base(id: 7, name: "timestamp")
+        : base(name: "timestamp")
     {
     }
 

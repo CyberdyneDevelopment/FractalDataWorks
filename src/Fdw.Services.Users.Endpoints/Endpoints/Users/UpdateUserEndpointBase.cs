@@ -43,7 +43,9 @@ public abstract class UpdateUserEndpointBase<TRequest> : Endpoint<TRequest>
     /// <inheritdoc />
     public override void Configure()
     {
-        Patch("/users/{Name}");
+        // FDW-1047: route param is {IdOrName}, like every other /users/{...} route. One template has one parameter name,
+        // or the reference document lists two paths that OpenAPI cannot tell apart.
+        Patch("/users/{IdOrName}");
         Policies(WritePolicy);
         ConfigureEndpoint();
     }

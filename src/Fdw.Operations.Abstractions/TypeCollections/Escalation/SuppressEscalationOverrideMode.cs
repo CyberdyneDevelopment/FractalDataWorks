@@ -14,7 +14,7 @@ public sealed class SuppressEscalationOverrideMode : EscalationOverrideModeBase
     /// Initializes a new instance of the <see cref="SuppressEscalationOverrideMode"/> class.
     /// </summary>
     public SuppressEscalationOverrideMode()
-        : base(id: 3, name: "Suppress")
+        : base(name: "Suppress")
     {
     }
 }

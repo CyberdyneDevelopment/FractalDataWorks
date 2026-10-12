@@ -29,14 +29,13 @@ namespace Fdw.Services.SecretManagers.Abstractions.Handlers;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 public abstract class SecretManagerCommandHandlerBase
-    : TypeOptionBase<int, SecretManagerCommandHandlerBase>, ISecretManagerCommandHandler
+    : TypeOptionBase<SecretManagerCommandHandlerBase>, ISecretManagerCommandHandler
 {
     /// <summary>
     /// Initializes the handler with the identity the collection indexes it by.
     /// </summary>
-    /// <param name="id">The unique identifier for this handler.</param>
     /// <param name="name">The command type name (e.g., "GetSecret").</param>
-    protected SecretManagerCommandHandlerBase(int id, string name) : base(id, name)
+    protected SecretManagerCommandHandlerBase(string name) : base(name)
     {
     }
 

@@ -23,15 +23,16 @@ namespace Fdw.Services.RateLimiting.Handlers;
 /// </para>
 /// <para>
 /// The Retry-After value is determined from the lease metadata if available, otherwise
-/// defaults to 60 seconds.
+/// <see cref="DefaultRetryAfterSeconds"/>.
 /// </para>
 /// </remarks>
 public static class RateLimitRejectionHandler
 {
     /// <summary>
-    /// Default retry-after duration in seconds when metadata is not available.
+    /// The Retry-After value, in seconds, sent when the rejecting limiter reports none. A deployment
+    /// sets this before the host starts.
     /// </summary>
-    private const int DefaultRetryAfterSeconds = 60;
+    public static int DefaultRetryAfterSeconds { get; set; } = 60;
 
     /// <summary>
     /// Handles a rate limit rejection by returning a 429 response with Retry-After header.

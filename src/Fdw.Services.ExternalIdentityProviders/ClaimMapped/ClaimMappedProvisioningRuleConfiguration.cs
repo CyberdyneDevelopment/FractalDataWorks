@@ -8,11 +8,10 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// <summary>
 /// One matchable rule of <see cref="ClaimMappedExternalIdentityProvisionerConfiguration"/> — a claim
 /// to look for on the presented <see cref="System.Security.Claims.ClaimsPrincipal"/>, and what to do
-/// when it matches. Ordered children, mirroring
-/// <see cref="Fdw.Services.ExternalIdentityProviders.Chained.ChainedProvisionerStepConfiguration"/>:
-/// the read cascade does not apply an ORDER BY, so <see cref="ClaimMapped.ClaimMappedProvisioner"/>
-/// sorts <see cref="ExecutionOrder"/> ascending itself before matching. The first matching rule wins;
-/// no matching rule is this provisioner's "not mine" outcome, not a hard failure.
+/// when it matches. Ordered children: the read cascade does not apply an ORDER BY, so
+/// <see cref="ClaimMapped.ClaimMappedProvisioner"/> sorts <see cref="ExecutionOrder"/> ascending
+/// itself before matching. The first matching rule wins; no matching rule is this provisioner's "not
+/// mine" outcome, not a hard failure.
 /// </summary>
 /// <remarks>
 /// Everything here is configuration, deliberately — no claim type, claim value, role name, or
@@ -24,26 +23,12 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner")]
 public sealed partial class ClaimMappedProvisioningRuleConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc />
-    public string SectionName => "ExternalIdentityProvisioners";
-
-    /// <inheritdoc />
-    public string ServiceType => "ExternalIdentityProvisioner";
-
-    /// <inheritdoc />
-    public string? ServiceOptionType => null;
 
     /// <summary>Gets or sets the display name for this rule.</summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the unique identifier for this rule.</summary>
     public Guid Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the owning ClaimMappedExternalIdentityProvisioner (logical FK
-    /// to sec.ClaimMappedExternalIdentityProvisioner.Id).
-    /// </summary>
-    public Guid ClaimMappedExternalIdentityProvisionerId { get; set; }
 
     /// <summary>Gets or sets the claim type this rule matches on (e.g. a custom "AutoAdmin" claim).</summary>
     public string ClaimType { get; set; } = string.Empty;
@@ -83,4 +68,14 @@ public sealed partial class ClaimMappedProvisioningRuleConfiguration : IGenericC
 
     /// <summary>Gets or sets the ascending order in which this rule is tried.</summary>
     public int ExecutionOrder { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a matched account is also granted <see cref="TenantId"/> ACCESS
+    /// (a <c>tenant.UserTenants</c> row), not just created under it. Defaults to <c>false</c>: every
+    /// rule configured before this field existed keeps behaving exactly as it does today — creating
+    /// the account under <see cref="TenantId"/> without a separate access grant. Opt in per rule for a
+    /// deployment whose tenant-access model requires the explicit grant row, e.g. a first-login
+    /// bootstrap rule provisioning an administrator.
+    /// </summary>
+    public bool GrantTenantAccess { get; set; }
 }

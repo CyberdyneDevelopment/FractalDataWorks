@@ -1,5 +1,7 @@
 # CALCULATION-PIPELINE-ARCHITECTURE.md
 
+> **FDW-872 (2026-09-22):** the Blazor packages this document names (`Fdw.UI.Components.Blazor`, the `*.razor` components, `Fdw.Web.Http.Authentication.Blazor`, the Blazor skins and renderers) were removed. The web console is now the separate `reference-react-ui` repository. Read the Blazor parts below as history.
+
 ## Design Document: Calculation as First-Class Entity and Pipeline DataSet Boundaries
 
 **Status (verified 1.3):**
@@ -10,8 +12,8 @@
 - **IMPLEMENTED (renamed):** the SQL tables exist under different names than this
   document proposed, and live in the `calc` schema of ConfigurationDb (not `cfg`).
   Authoritative names are `calc.CalculationEntity`,
-  `calc.CalculationEntityInput`, `calc.FormulaCalculation`,
-  `calc.WindowedCalculation`, plus `calc.CalculationStep*` (a row-level step layer
+  `calc.CalculationEntityInput`, `calc.FormulaCalculationConfiguration`,
+  `calc.WindowedCalculationConfiguration`, plus `calc.CalculationStep*` (a row-level step layer
   that was added after this design). See `databases/DATABASE-MAP.md` for the
   authoritative schema list. (The `cfg.*` names used throughout the proposal body
   below are pre-migration design names; the shipped schema is `calc.*`.)
@@ -51,7 +53,7 @@ Calculations are **reusable**: a single named Calculation entity can be referenc
 | `CalculationBase<TInput, TOutput>` | `Fdw.Calculations` | Base for runtime execution |
 | `ICalculationType` / `CalculationTypeBase` | `Fdw.Calculations.Abstractions` | TypeOption for aggregation math (Sum, Avg, etc.) |
 | `CalculationTypes` TypeCollection | `Fdw.Calculations.Abstractions` | Compile-time math function registry |
-| `CalculationTransformationType` | `Fdw.Services.Transformations.Calculation` | ServiceTypeOption for transformation pipeline use |
+| `CalculationTransformationType` | `Fdw.Services.Transformations.Calculation` | Implementation for transformation pipeline use |
 | `CalculationDetailDto` | `Fdw.Web.Calculations.Clients.Abstractions` | API contract for existing formula-based calculations |
 | `cfg.PipelineTransformCalculation` | ControlDb | Inline formula calculations within pipeline transforms |
 
@@ -505,7 +507,7 @@ CREATE TABLE [cfg].[FormulaCalculation]
     [CreateBy]        NVARCHAR(128)   NOT NULL DEFAULT (suser_sname()),
     [ModifyDate]      DATETIMEOFFSET  NOT NULL DEFAULT (sysdatetimeoffset()),
     [ModifyBy]        NVARCHAR(128)   NOT NULL DEFAULT (suser_sname()),
-    CONSTRAINT [PK_FormulaCalculation] PRIMARY KEY CLUSTERED ([Id])
+    CONSTRAINT [PK_FormulaCalculationConfiguration] PRIMARY KEY CLUSTERED ([Id])
 );
 ```
 
@@ -527,7 +529,7 @@ CREATE TABLE [cfg].[WindowedCalculation]
     [CreateBy]              NVARCHAR(128)   NOT NULL DEFAULT (suser_sname()),
     [ModifyDate]            DATETIMEOFFSET  NOT NULL DEFAULT (sysdatetimeoffset()),
     [ModifyBy]              NVARCHAR(128)   NOT NULL DEFAULT (suser_sname()),
-    CONSTRAINT [PK_WindowedCalculation] PRIMARY KEY CLUSTERED ([Id])
+    CONSTRAINT [PK_WindowedCalculationConfiguration] PRIMARY KEY CLUSTERED ([Id])
 );
 ```
 

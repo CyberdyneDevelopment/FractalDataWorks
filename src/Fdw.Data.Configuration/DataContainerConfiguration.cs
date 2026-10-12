@@ -45,26 +45,6 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "DataContainers";
-
-    /// <summary>
-    /// Gets the service type - always "DataStore" for DataContainer.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for base DataContainer.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
-    /// Gets or sets the DataPath ID this container is defined at.
-    /// </summary>
-    public Guid DataPathId { get; set; }
-
 
     /// <summary>
     /// Gets or sets the container type discriminator (e.g., "Table", "View", "JsonDocument", "CsvFile").
@@ -76,6 +56,12 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     /// Gets or sets the optional description for this container.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets how sensitive this data is: the <c>ClassificationId</c> of a <c>DataClassifications</c>
+    /// level. <c>NotYetClassified</c> until someone picks one; never empty. Maps to <c>ClassificationId</c> (FDW-938).
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
     /// <summary>
     /// Gets or sets the serialization format discriminator this container's payload is (de)serialized
@@ -119,20 +105,24 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     public string? FlattenSeparator { get; set; }
 
     /// <summary>
-    /// Gets or sets the keys (PrimaryKey, Surrogate, Natural, Foreign, Unique) for this container.
-    /// Loaded as a child collection from <c>data.DataContainerKey</c>.
-    /// </summary>
-#pragma warning disable MA0016 // Prefer collection abstraction — List<T> required for provider assignment
-    [NotMapped]
-    public List<DataContainerKeyConfiguration> Keys { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the fields (columns) within this container.
     /// </summary>
     /// <remarks>
     /// List{T} is required for IOptions binding - configuration system needs concrete collection types.
+    /// Declared before <see cref="Keys"/>: the generic cascade save walks child collections in
+    /// declaration order, so a container's fields are written before the keys that cite them. A key
+    /// field cites its field by the field's Id (DataContainerFieldId), which the field keeps across
+    /// saves.
     /// </remarks>
+#pragma warning disable MA0016 // Prefer collection abstraction — List<T> required for provider assignment
     public List<DataContainerFieldConfiguration> Fields { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the keys (PrimaryKey, Surrogate, Natural, Foreign, Unique) for this container.
+    /// Loaded as a child collection from <c>data.DataContainerKey</c>.
+    /// </summary>
+    [NotMapped]
+    public List<DataContainerKeyConfiguration> Keys { get; set; } = [];
 #pragma warning restore MA0016
 
     // Audit columns

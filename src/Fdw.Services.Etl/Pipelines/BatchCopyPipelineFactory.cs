@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using Fdw.Abstractions;
 using Fdw.Configuration;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
 using Fdw.ServiceTypes;
 using Fdw.Services.Abstractions;
@@ -9,9 +11,13 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
+using Fdw.Services.Etl.Pipelines.Loads;
+using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Pipelines;
 using Fdw.Services.Pipelines.Abstractions.DataDestination;
 using Fdw.Services.Pipelines.Abstractions.DataSource;
+using Fdw.Services.Etl;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -25,6 +31,11 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
     private readonly IDataGatewayProvider? _dataGateways;
     private readonly IConnectionProvider? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
+    private readonly IDataSetConfigurationProvider? _dataSets;
+    private readonly IConnectionConfigurationProvider? _connectionConfigurations;
+    private readonly ITransformationConfigurationProvider? _transformations;
+    private readonly IRuleNotifier? _ruleNotifier;
+    private readonly IEffectiveSettingsProvider? _settings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BatchCopyPipelineFactory"/> class.
@@ -34,18 +45,33 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
     /// <param name="dataGateways">The data gateway for pipeline execution (optional for backward compatibility).</param>
     /// <param name="connectionProvider">The connection provider for feature-detecting write capabilities (optional), injected lazily.</param>
     /// <param name="dataStoreProvider">The data store provider for resolving container metadata in the HTTP record writer path (optional).</param>
+    /// <param name="dataSets">The data set configuration provider that resolves the destination and source of load steps (optional; required to run load steps).</param>
+    /// <param name="connectionConfigurations">The connection configuration provider that finds a connection's type for the load capability check (optional; required to run load steps).</param>
+    /// <param name="transformations">The Transformation provider that resolves the named Transformations a field mapping's chain applies when a run starts (optional; required to run a pipeline whose mappings state a chain).</param>
+    /// <param name="ruleNotifier">Sends a Notify stage's notification through its rule (optional; required to run a pipeline that has a Notify stage).</param>
+    /// <param name="settings">The settings provider the calculation limits of a Compute stage are read from when a run starts (optional; required to run a pipeline that has a Compute stage).</param>
     public BatchCopyPipelineFactory(
         ILogger<BatchCopyPipelineFactory> logger,
         ILoggerFactory loggerFactory,
         IDataGatewayProvider? dataGateways = null,
         IConnectionProvider? connectionProvider = null,
-        IDataStoreProvider? dataStoreProvider = null)
+        IDataStoreProvider? dataStoreProvider = null,
+        IDataSetConfigurationProvider? dataSets = null,
+        IConnectionConfigurationProvider? connectionConfigurations = null,
+        ITransformationConfigurationProvider? transformations = null,
+        IRuleNotifier? ruleNotifier = null,
+        IEffectiveSettingsProvider? settings = null)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
         _dataGateways = dataGateways;
         _connectionProvider = connectionProvider;
         _dataStoreProvider = dataStoreProvider;
+        _dataSets = dataSets;
+        _connectionConfigurations = connectionConfigurations;
+        _transformations = transformations;
+        _ruleNotifier = ruleNotifier;
+        _settings = settings;
     }
 
     /// <inheritdoc />
@@ -62,7 +88,12 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 _dataGateways,
                 calculationEngine: null,
                 _connectionProvider,
-                _dataStoreProvider);
+                _dataStoreProvider,
+                dataSets: _dataSets,
+                connectionTypes: new RegisteredConnectionTypeResolver(_connectionConfigurations, pipelineLogger),
+                transformations: _transformations,
+                ruleNotifier: _ruleNotifier,
+                settings: _settings);
 
             EtlLog.PipelineConfigurationLoaded(_logger, configuration.Name, "BatchCopy");
             return GenericResult<IEtlPipeline>.Success(pipeline);
@@ -83,9 +114,11 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 EtlLog.PipelineCreationFailed(_logger, "unknown", "Configuration is null"));
         }
 
-        var engine = UnwrapEngineBody(configuration);
-        if (engine is BatchCopyPipelineConfiguration batchConfig)
+        // A domain read is already dispatched to the implementation, so what arrives IS the engine
+        // row -- there is no header to unwrap and no second body hanging off it.
+        if (configuration is BatchCopyPipelineConfiguration batchConfig)
         {
+            ResolveKinds(batchConfig);
             return Create(batchConfig);
         }
 
@@ -94,42 +127,19 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
                 $"Invalid configuration type. Expected BatchCopyPipelineConfiguration, got {configuration.GetType().Name}"));
     }
 
-    private IGenericConfiguration UnwrapEngineBody(IGenericConfiguration configuration)
-    {
-        var kind = configuration switch
-        {
-            PipelineConfiguration { Configuration: EtlPipelineConfiguration k } => k,
-            EtlPipelineConfiguration k => k,
-            _ => null
-        };
-
-        if (kind?.Configuration is not { } engine)
-            return configuration;
-
-        if (engine is BatchCopyPipelineConfiguration batch)
-        {
-            if ((batch.Transforms is null || batch.Transforms.Count == 0)
-                && kind.Transforms is { Count: > 0 })
-            {
-                batch.Transforms = kind.Transforms;
-                EtlLog.TransformsTransferredKindToEngine(_logger, batch.Name, kind.Transforms.Count);
-            }
-
-            ResolveKinds(batch);
-        }
-
-        return engine;
-    }
-
     private void ResolveKinds(BatchCopyPipelineConfiguration batch)
     {
         var hasSourceDataSet = !string.IsNullOrWhiteSpace(batch.SourceDataSet);
         var hasSourceConnection = !string.IsNullOrWhiteSpace(batch.SourceConnectionName);
+        // A data store source is the store; its path and container are checked by ValidateSourceKind, so a
+        // half-addressed one is refused there with the missing part named (FDW-1103).
+        var hasSourceDataStore = !string.IsNullOrWhiteSpace(batch.SourceDataStoreName);
+        var sourceForms = (hasSourceDataSet ? 1 : 0) + (hasSourceConnection ? 1 : 0) + (hasSourceDataStore ? 1 : 0);
 
-        if (hasSourceDataSet && hasSourceConnection)
+        if (sourceForms > 1)
         {
             EtlLog.PipelineCreationFailed(_logger, batch.Name,
-                "Both SourceDataSet and SourceConnectionName are set; exactly one is required");
+                "More than one of SourceDataSet, SourceConnectionName and SourceDataStoreName is set; exactly one is required");
         }
         else if (hasSourceDataSet)
         {
@@ -138,6 +148,10 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
         else if (hasSourceConnection)
         {
             batch.SourceKind = DataSourceKinds.ByName("Connection");
+        }
+        else if (hasSourceDataStore)
+        {
+            batch.SourceKind = DataSourceKinds.ByName("DataStore");
         }
 
         var hasDestDataSet = !string.IsNullOrWhiteSpace(batch.DestinationDataSet);

@@ -2,8 +2,6 @@ using System.Collections.Generic;
 using System.Data;
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.MsSql.Logging;
@@ -25,27 +23,29 @@ namespace Fdw.Services.Connections.MsSql;
 /// <para>
 /// <b>Its deny-ness is emergent, not declared.</b> <see cref="AuthConstants.NoAccessPrincipalId"/>
 /// appears nowhere in the <c>databases</c> repo — no predicate, no policy, no seed row names it. It
-/// denies purely because that Guid holds zero rows in <c>tenant.TenantOrgAccess</c>, so every
-/// tenant-scoped branch of <c>security.fn_TenantFilter</c> fails its <c>EXISTS</c> check. A
-/// different scheme, or the same scheme with that Guid granted access, gets a silently different
-/// verdict from the identical option.
+/// denies purely because that Guid holds no membership in <c>tenant.UserTenantsConfiguration</c>,
+/// so every tenant-scoped branch of <c>security.fn_TenantFilter</c> fails its <c>EXISTS</c> check. A
+/// different scheme, or the same scheme with that Guid given a membership, gets a silently
+/// different verdict from the identical option.
 /// </para>
 /// <para>
-/// <b>This is not deny-everywhere.</b> <c>fn_TenantFilter.sql:48-51</c> admits shared/system rows
-/// (<c>TenantId IS NULL AND VisibilityGroupId IS NULL</c>) with no session-context test at all, so
-/// the deny principal still sees those — exactly as any other tenant-less caller does. What it is
-/// denied is every <i>tenant-scoped</i> branch.
+/// <b>This is not deny-everywhere.</b> <c>fn_TenantFilter</c> admits shared rows — owned by the
+/// global or the default tenant, with no visibility group — to any identified caller, so the deny
+/// principal still sees those, exactly as any other tenant-less caller does. What it is denied is
+/// every <i>tenant-scoped</i> branch, and every write.
 /// </para>
 /// <para>
-/// Why a real reserved principal rather than setting nothing: setting nothing is the Mode 1 system
-/// bypass (see <see cref="SystemSessionContext"/>). Falling through to it for an unestablished
-/// context would be fail-<i>open</i>. A non-null <c>UserId</c> that holds no grants fails closed
-/// without needing the predicate to know anything about it.
+/// Why a real reserved principal rather than setting nothing: a connection that sets nothing now
+/// sees nothing at all (system is the explicit <c>System</c> key, see
+/// <see cref="SystemSessionContext"/>), which would hide the shared rows an anonymous request is
+/// entitled to — the platform's own themes, settings and reference data. A non-null <c>UserId</c>
+/// with no memberships sees exactly those and fails closed on everything else, without the
+/// predicate needing to know anything about it.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(MsSqlSessionContextTypes), "Deny")]
-public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
+public sealed class DenySessionContext() : MsSqlSessionContextBase("Deny")
 {
     /// <inheritdoc />
     /// <remarks>
@@ -54,41 +54,56 @@ public sealed class DenySessionContext() : MsSqlSessionContextBase(3, "Deny")
     /// catch-all so the partition is checkable at this call site.
     /// </remarks>
     public override bool Governs(IAuthenticationContext? authenticationContext)
-        => !IsSystemElevation(authenticationContext) && !IsResolvedUser(authenticationContext);
+        => !IsSystemElevation(authenticationContext)
+           && !IsResolvedUser(authenticationContext)
+           && !IsTenantRun(authenticationContext);
 
     /// <inheritdoc />
     public override SessionContextPlan Plan(IAuthenticationContext? authenticationContext)
-        => SessionContextPlan.Deny;
+        => SessionContextPlan.Deny(DescribeReason(authenticationContext));
+
+    /// <summary>
+    /// Names which of <see cref="Governs"/>'s two sub-cases actually applied — <c>IsResolvedUser</c>
+    /// is itself two checks (authenticated, and <c>UserId</c> Guid-parseable), collapsed into one
+    /// boolean there. <c>IsSystemElevation</c> is already ruled out by the time this runs (only
+    /// called when <see cref="Governs"/> returned true), so this only distinguishes the other two.
+    /// </summary>
+    private static string DescribeReason(IAuthenticationContext? authenticationContext)
+    {
+        if (authenticationContext is null)
+            return "no IAuthenticationContext was established for this connection";
+
+        if (!authenticationContext.IsAuthenticated)
+            return $"context for UserId '{authenticationContext.UserId}' is not authenticated";
+
+        return $"authenticated context's UserId '{authenticationContext.UserId}' is not Guid-parseable";
+    }
 
     /// <inheritdoc />
     /// <remarks>
-    /// Unbounded. The deny principal reaches only the shared-row branch
-    /// (<c>fn_TenantFilter.sql:48-51</c>), which tests <c>TenantId IS NULL AND VisibilityGroupId IS
-    /// NULL</c> on the row itself and joins nothing. Its emptiness in
-    /// <c>tenant.TenantOrgAccess</c> is what denies it every tenant-scoped branch, and adding grants
-    /// for a principal that exists in no table is not an operation — so what it sees cannot change
-    /// out from under a cached result.
+    /// Unbounded. The deny principal reaches only the shared-row branch of <c>fn_TenantFilter</c>,
+    /// which tests the row's own <c>TenantId</c> and <c>VisibilityGroupId</c> and joins nothing. Its
+    /// absence from <c>tenant.UserTenantsConfiguration</c> is what denies it every tenant-scoped
+    /// branch, and giving a membership to a principal that exists in no table is not an operation —
+    /// so what it sees cannot change out from under a cached result.
     /// </remarks>
     public override TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
         => TimeSpan.MaxValue;
 
     /// <inheritdoc />
-    public override async Task Apply(
-        SqlConnection connection,
-        SessionContextPlan plan,
-        ILogger logger,
-        CancellationToken cancellationToken = default)
+    public override SessionContextStatement Statement(SessionContextPlan plan, string parameterPrefix)
     {
-        await Execute(
-            connection,
-            "EXEC sp_set_session_context @key = N'UserId', @value = @userId, @read_only = 1;",
-            new List<SqlParameter>
-            {
-                new("@userId", SqlDbType.UniqueIdentifier) { Value = plan.UserId!.Value },
-            },
-            logger,
-            cancellationToken).ConfigureAwait(false);
+        var userId = string.Concat(parameterPrefix, "userId");
 
-        MsSqlConnectionLogger.TraceNoAccessPrincipalContextSet(logger);
+        return new SessionContextStatement(
+            $"EXEC sp_set_session_context @key = N'UserId', @value = @{userId}, @read_only = 1;",
+            new List<SessionContextParameter>
+            {
+                new(userId, SqlDbType.UniqueIdentifier, plan.UserId!.Value),
+            });
     }
+
+    /// <inheritdoc />
+    public override void LogApplied(SessionContextPlan plan, SqlConnection connection, ILogger logger)
+        => MsSqlConnectionLogger.NoAccessPrincipalContextSet(logger, connection.DataSource, connection.Database, plan.DenyReason);
 }

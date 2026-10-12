@@ -87,7 +87,8 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
             ParentCollectionMatchKey: parentCollection != null ? TypeOptionDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
-            BaseConstructorParameters: baseConstructorParams
+            BaseConstructorParameters: baseConstructorParams,
+            SentinelHoldsZeroId: CodeGeneration.HasOverridableIntId(baseType)
         );
     }
 
@@ -271,7 +272,6 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
         }
     }
 
-#pragma warning disable MA0051 // Source generator emits complete MutableTypeCollection class — splitting scatters the template
     // Code generation template for MutableTypeCollection — sequential string building
 #pragma warning disable FDW006, FDW007
     private static string GenerateCode(
@@ -422,13 +422,12 @@ public class MutableTypeCollectionGenerator : IIncrementalGenerator
         }
 
         // Generate fallback ById method if no [TypeLookup] ById exists. Why: same as ByName — resolve
-        // runtime-registered members by id via the boxed object Id (key-type-agnostic) rather than the
-        // previous unconditional NotFound stub.
+        // runtime-registered members by their own Id rather than the previous unconditional NotFound stub.
         if (!lookupGroups.Any(g => string.Equals(g.Key, "ById", StringComparison.Ordinal)))
         {
             sb.AppendLine($"        /// <summary>Looks up a type option by id. Returns NotFound if not found.</summary>");
             sb.AppendLine($"        public static {collection.InterfaceTypeName} ById(int id) =>");
-            sb.AppendLine($"            _all.FirstOrDefault(x => object.Equals(((global::Fdw.Collections.ITypeOption)x).Id, id)) ?? NotFound;");
+            sb.AppendLine($"            _all.FirstOrDefault(x => object.Equals(x.Id, id)) ?? NotFound;");
             sb.AppendLine();
         }
 

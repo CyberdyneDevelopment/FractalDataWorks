@@ -22,6 +22,12 @@ public sealed class ServerSettingSummaryDto
     /// <summary>Gets or sets the data type.</summary>
     public required string DataType { get; set; }
 
+    /// <summary>
+    /// Gets or sets the plain sentence saying what the setting does, as stored on the setting. It is null only for a
+    /// setting that was stored without one; nothing is substituted.
+    /// </summary>
+    public string? Description { get; set; }
+
     /// <summary>Gets or sets whether the setting is active.</summary>
     public bool IsActive { get; set; }
 }

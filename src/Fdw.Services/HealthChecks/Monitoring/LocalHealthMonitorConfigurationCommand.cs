@@ -6,10 +6,10 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <summary>
 /// The configuration command for <see cref="LocalHealthMonitorConfiguration"/> rows.
 /// </summary>
-[TypeOption(typeof(ConfigurationCommands), "LocalHealthMonitor")]
+[TypeOption(typeof(ConfigurationCommands), "LocalHealthMonitorConfiguration")]
 public sealed class LocalHealthMonitorConfigurationCommand
     : ConfigurationCommandBase<LocalHealthMonitorConfiguration>
 {
     /// <inheritdoc/>
-    public LocalHealthMonitorConfigurationCommand() : base("LocalHealthMonitor") { }
+    public LocalHealthMonitorConfigurationCommand() : base("LocalHealthMonitorConfiguration") { }
 }

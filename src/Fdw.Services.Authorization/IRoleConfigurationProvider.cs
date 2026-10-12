@@ -1,4 +1,5 @@
 using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 
 namespace Fdw.Services.Authorization;
@@ -7,10 +8,12 @@ namespace Fdw.Services.Authorization;
 /// Reads the roles this platform defines.
 /// </summary>
 /// <remarks>
-/// Named rather than consumed as a bare <c>IServiceConfigurationProvider&lt;RoleConfiguration&gt;</c>:
+/// Named rather than consumed as a bare <c>IServiceConfigurationProvider&lt;RoleImplementationConfiguration&gt;</c>:
 /// a consumer asking for the closed generic states a shape, this states which rows it reads, and two
 /// providers over different tables are no longer interchangeable at a constructor.
 /// </remarks>
-public interface IRoleConfigurationProvider : IServiceConfigurationProvider<RoleConfiguration>
+public interface IRoleConfigurationProvider 
+    : IDomainConfigurationProvider<IRoleImplementationConfiguration>,
+      IDomainRecordProvider<RoleDomainConfiguration>
 {
 }

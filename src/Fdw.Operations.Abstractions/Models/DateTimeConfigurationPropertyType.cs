@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class DateTimeConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="DateTimeConfigurationPropertyType"/>.</summary>
-    public DateTimeConfigurationPropertyType() : base(8, "DateTime") { }
+    public DateTimeConfigurationPropertyType() : base("DateTime") { }
 }

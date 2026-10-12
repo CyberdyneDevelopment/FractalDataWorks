@@ -2,10 +2,14 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.HealthChecks.Monitoring;
+
+using Fdw.Services.Abstractions;
 
 namespace Fdw.Operations.Endpoints.Health;
 
@@ -15,22 +19,22 @@ namespace Fdw.Operations.Endpoints.Health;
 public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthRequest, ServiceHealthSnapshot>
 {
     private readonly IHealthMonitorProvider _monitors;
-    private readonly HealthMonitorSelectionConfigurationProvider _selection;
+    private readonly IHealthMonitorConfigurationProvider _monitorConfigurations;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetServiceHealthEndpointBase"/> class.
     /// </summary>
     /// <param name="monitors">The health monitor domain provider.</param>
-    /// <param name="selection">The host's configured health monitor selector.</param>
+    /// <param name="monitorConfigurations">The health monitor configuration provider.</param>
     /// <param name="logger">The logger instance.</param>
     protected GetServiceHealthEndpointBase(
         IHealthMonitorProvider monitors,
-        HealthMonitorSelectionConfigurationProvider selection,
+        IHealthMonitorConfigurationProvider monitorConfigurations,
         ILogger<GetServiceHealthEndpointBase>? logger)
     {
         _monitors = monitors;
-        _selection = selection;
+        _monitorConfigurations = monitorConfigurations;
         _logger = logger ?? NullLogger<GetServiceHealthEndpointBase>.Instance;
     }
 
@@ -38,7 +42,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
     public override void Configure()
     {
         Get("/health/services/{Name}");
-        Policies("authenticated");
+        AllowAnonymous();
         Summary(s => s.Summary = "Get service health snapshot");
         ConfigureEndpoint();
     }
@@ -53,7 +57,7 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
 
         try
         {
-            var monitorResult = await _monitors.Get(await SelectedMonitorName(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+            var monitorResult = await ReportingMonitor(ct).ConfigureAwait(false);
 
             if (!monitorResult.IsSuccess || monitorResult.Value is null)
             {
@@ -85,17 +89,38 @@ public abstract class GetServiceHealthEndpointBase : Endpoint<ServiceHealthReque
         }
     }
 
+    // Why under a system elevation (FDW-1098): which monitor this host reports to, and that monitor's own row,
+    // are this host's configuration, not the caller's. The caller is usually an anonymous probe, and without the
+    // elevation both reads opened their connection as the deny principal (event 11067) on every cold read. Only
+    // the reads are elevated: the monitor's checks elevate for themselves, and nothing read here is returned.
+    private async Task<IGenericResult<IHealthMonitorService>> ReportingMonitor(CancellationToken ct)
+    {
+        using var elevation = new SystemAuthenticationContextScope(Resolve<IAuthenticationContextAccessor>());
+        return await _monitors.Get(await SelectedMonitorName(ct).ConfigureAwait(false), ct).ConfigureAwait(false);
+    }
+
     // Why a helper: the monitor rows are shared and the selection is this host's, so the name has
     // to be read rather than held.
     private async Task<string> SelectedMonitorName(CancellationToken ct)
     {
-        var result = await _selection.Get("HealthMonitorSelection", ct).ConfigureAwait(false);
+        // Which monitor this host reports to is the HealthMonitor domain row, the same way every
+        // other domain names its implementation.
+        var result = await _monitorConfigurations.Get(ct).ConfigureAwait(false);
         if (result.IsFailure || result.Value is null)
         {
             throw new InvalidOperationException(
-                "HealthMonitorSelection is not configured. This host does not know which monitor to report to.");
+                "The HealthMonitor domain could not be read. This host does not know which monitor to report to.");
         }
 
-        return result.Value.MonitorName;
+        // Exactly one, refusing both zero and more than one: which monitor this host reports to is
+        // the decision the row exists to record, so picking by order would make it depend on read order.
+        if (result.Value.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"The HealthMonitor domain must hold exactly one current row; found {result.Value.Count}. "
+                + "This host does not know which monitor to report to.");
+        }
+
+        return result.Value[0].Name;
     }
 }

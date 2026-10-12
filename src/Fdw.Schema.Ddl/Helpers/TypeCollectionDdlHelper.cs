@@ -49,7 +49,6 @@ public static class TypeCollectionDdlHelper
     /// </summary>
     /// <param name="metadata">The TypeCollection metadata.</param>
     /// <returns>A list of DDL INSERT commands for types.TypeCollection and types.TypeOption tables.</returns>
-#pragma warning disable MA0051 // Sequential data mapping to InsertDataCommands with low cyclomatic complexity
     public static IReadOnlyList<IDdlCommand> GenerateDdlCommands(TypeCollectionMetadata metadata)
     {
         var commands = new List<IDdlCommand>();
@@ -136,7 +135,6 @@ public static class TypeCollectionDdlHelper
 
         return commands;
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Generates a code snippet for the DdlCommands property that can be added to generated TypeCollections.

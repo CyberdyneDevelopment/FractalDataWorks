@@ -24,7 +24,7 @@ public abstract class EtlWebhookEndpointBase : Endpoint<EtlWebhookRequest, EtlWe
     /// <inheritdoc />
     public override void Configure()
     {
-        Post("/proxy/etl/webhook/completion");
+        Post("/etl/webhook/completion");
 #if DEVELOP
         AllowAnonymous();
 #else

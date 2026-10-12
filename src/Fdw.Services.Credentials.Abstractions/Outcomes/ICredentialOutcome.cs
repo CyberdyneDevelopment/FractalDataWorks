@@ -20,4 +20,16 @@ public interface ICredentialOutcome : ITypeOption<int>
     /// returns <c>true</c>; every policy-denial outcome returns <c>false</c>.
     /// </summary>
     bool GrantsAccess { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the presented secret was CORRECT — whatever policy then
+    /// decided. True for <c>Match</c>, and for <c>Expired</c> and <c>MustChange</c>, which are only
+    /// composed after the secret matched; false for <c>NoMatch</c> and <c>TooManyAttempts</c>.
+    /// </summary>
+    /// <remarks>
+    /// Changing a password needs proof of the current one, not permission to sign in with it: a user
+    /// whose password is due for change has to be able to change it, and <see cref="GrantsAccess"/>
+    /// is false for exactly that user.
+    /// </remarks>
+    bool ProvesSecret { get; }
 }

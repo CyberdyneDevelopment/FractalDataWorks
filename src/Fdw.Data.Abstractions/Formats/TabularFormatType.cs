@@ -17,7 +17,6 @@ public sealed class TabularFormatType : FormatTypeBase
     /// </summary>
     public TabularFormatType()
         : base(
-            id: 1,
             name: "Tabular",
             displayName: "Tabular",
             description: "Tabular/relational data format for SQL result sets and in-memory tables",

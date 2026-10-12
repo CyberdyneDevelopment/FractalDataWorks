@@ -22,14 +22,20 @@ public abstract class DataGatewayTypeBase<TService, TFactory> :
     /// <param name="sectionName">The configuration section name.</param>
     /// <param name="displayName">The display name.</param>
     /// <param name="description">The description.</param>
+    /// <param name="defaultPathName">The schema this option's implementation configuration lives in.</param>
+    /// <param name="defaultContainerName">This option's implementation configuration table: {Implementation}{Domain}Configuration. Required, so every option states it; its registration reads it back as Container.</param>
     /// <param name="category">The optional category.</param>
     protected DataGatewayTypeBase(
         string name,
         string sectionName,
         string displayName,
         string description,
+        string defaultPathName,
+        string defaultContainerName,
         string? category = null)
-        : base(name, sectionName, displayName, description, category ?? "DataGateway")
+        : base(name, sectionName, displayName, description, category ?? "DataGateway",
+               defaultPathName: defaultPathName,
+               defaultContainerName: defaultContainerName)
     {
     }
 }

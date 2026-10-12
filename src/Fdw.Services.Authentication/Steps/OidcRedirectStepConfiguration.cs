@@ -11,6 +11,9 @@ namespace Fdw.Services.Authentication.Steps;
 [ExcludeFromCodeCoverage]
 public sealed record OidcRedirectStepConfiguration : IOidcAuthorityConfiguration
 {
+    /// <summary>Gets the name this deployment declared the authority under.</summary>
+    public required string Name { get; init; }
+
     /// <summary>Gets the provider's issuer, as it appears in the token's <c>iss</c> claim.</summary>
     public required string Issuer { get; init; }
 
@@ -26,9 +29,12 @@ public sealed record OidcRedirectStepConfiguration : IOidcAuthorityConfiguration
     /// <summary>Gets the client identifier this platform registered with the provider.</summary>
     public required string ClientId { get; init; }
 
-    /// <summary>Gets the name of the client secret, resolved from the secret manager.</summary>
-    /// <remarks>A name, never a value. A secret in a configuration row is a secret in every backup.</remarks>
-    public string? ClientSecretName { get; init; }
+    /// <summary>Gets the name of how this platform authenticates itself at the provider's token endpoint.</summary>
+    public required string ClientAuthenticationType { get; init; }
+
+    /// <summary>Gets the properties the named client authentication type reads.</summary>
+    /// <remarks>Names, never values. A secret in a configuration row is a secret in every backup.</remarks>
+    public IReadOnlyDictionary<string, string?> ClientAuthenticationProperties { get; init; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Gets the redirect the provider returns the caller to.</summary>
     /// <remarks>

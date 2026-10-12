@@ -22,7 +22,7 @@ public sealed class ScatterPlotVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="ScatterPlotVisualizationType"/> class.
     /// </summary>
     public ScatterPlotVisualizationType()
-        : base(5, "ScatterPlot", "Scatter Plot", "mdi-chart-scatter-plot", SupportedTypes)
+        : base("ScatterPlot", "Scatter Plot", "mdi-chart-scatter-plot", SupportedTypes)
     {
     }
 

@@ -14,7 +14,6 @@ public sealed class BigIntType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="BigIntType"/> class.</summary>
     public BigIntType()
         : base(
-            id: 1,
             name: "bigint",
             description: "64-bit signed integer.",
             abstractType: DataTypes.Int64,

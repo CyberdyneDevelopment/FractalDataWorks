@@ -12,13 +12,13 @@ namespace Fdw.Services.Quality.Endpoints;
 /// </summary>
 public abstract class GetQualityDashboardEndpointBase : EndpointWithoutRequest<QualityDashboardResponseDto>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetQualityDashboardEndpointBase"/> class.
     /// </summary>
     /// <param name="provider">The configuration provider for quality data.</param>
-    protected GetQualityDashboardEndpointBase(QualityConfigurationProvider provider)
+    protected GetQualityDashboardEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -45,13 +45,11 @@ public abstract class GetQualityDashboardEndpointBase : EndpointWithoutRequest<Q
     /// <inheritdoc />
     public override async Task HandleAsync(CancellationToken ct)
     {
-        var result = await _provider.GetAllQualityRules(ct).ConfigureAwait(false);
+        var result = await _provider.Get(ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to load quality rules for dashboard", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to load quality rules for dashboard", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

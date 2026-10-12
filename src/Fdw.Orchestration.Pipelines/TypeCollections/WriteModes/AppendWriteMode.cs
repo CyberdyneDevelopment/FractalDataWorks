@@ -24,7 +24,6 @@ public sealed class AppendWriteMode : WriteModeBase
     /// </summary>
     public AppendWriteMode()
         : base(
-            id: 1,
             name: "Append",
             requiresExistenceCheck: false,
             preservesExistingData: true,

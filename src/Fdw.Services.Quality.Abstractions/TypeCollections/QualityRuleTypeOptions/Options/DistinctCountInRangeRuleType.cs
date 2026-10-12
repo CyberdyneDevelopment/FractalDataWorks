@@ -15,7 +15,6 @@ public sealed class DistinctCountInRangeRuleType : QualityRuleTypeBase
     /// </summary>
     public DistinctCountInRangeRuleType()
         : base(
-            id: 12,
             name: "DistinctCountInRange",
             requiresField: true,
             supportsMultipleFields: false,

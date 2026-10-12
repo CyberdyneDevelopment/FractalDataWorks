@@ -56,14 +56,19 @@ public abstract class ListTenantsEndpointBase : Endpoint<ListTenantsRequest, Lis
     public override async Task HandleAsync(ListTenantsRequest req, CancellationToken ct)
     {
         
-        var isAdmin = _systemRoleConfiguration.IsInRole(User, _systemRoleConfiguration.AdminRoleName);
+        var isAdmin = _systemRoleConfiguration.IsPlatformAdmin(User);
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         var tenantsResult = await GetTenants(userId, isAdmin, req.IncludeInactive, ct).ConfigureAwait(false);
 
+        // Why 500 and not an empty list: "no tenants exist", "you belong to none" and "the read
+        // failed" are three different facts, and only the first two are answerable with [].
+        // Returning [] here fabricates an absence out of a failure, and the caller cannot tell
+        // which it got -- a console draws "you have no tenants" over a database that has five.
         if (!tenantsResult.IsSuccess || tenantsResult.Value is null)
         {
-            await Send.OkAsync(new List<TenantDto>(), ct).ConfigureAwait(false);
+            AddError(tenantsResult.CurrentMessage ?? "Failed to retrieve tenants");
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
             return;
         }
 

@@ -25,7 +25,7 @@ public sealed class GraphQLSubscriptionsProtocol : GraphQLProtocolBase
     /// Initializes a new instance of the <see cref="GraphQLSubscriptionsProtocol"/> class.
     /// </summary>
     public GraphQLSubscriptionsProtocol()
-        : base(7, "GraphQLSubscriptions", "GraphQL protocol with subscription support over WebSocket")
+        : base("GraphQLSubscriptions", "GraphQL protocol with subscription support over WebSocket")
     {
     }
 

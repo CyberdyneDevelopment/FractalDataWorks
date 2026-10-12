@@ -29,10 +29,4 @@ public sealed partial class MsSqlDailyBudgetConfiguration
     /// When null, no query count cap is enforced.
     /// </summary>
     public int? MaxQueriesPerDay { get; set; }
-
-    /// <summary>
-    /// Gets or sets the maximum total bytes read/written per calendar day.
-    /// When null, no byte budget is enforced.
-    /// </summary>
-    public long? MaxBytesPerDay { get; set; }
 }

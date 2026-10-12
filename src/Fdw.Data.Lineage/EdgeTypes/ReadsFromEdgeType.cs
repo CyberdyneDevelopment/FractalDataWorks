@@ -14,5 +14,5 @@ public sealed class ReadsFromEdgeType : LineageEdgeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ReadsFromEdgeType"/> class.
     /// </summary>
-    public ReadsFromEdgeType() : base(3, "ReadsFrom") { }
+    public ReadsFromEdgeType() : base("ReadsFrom") { }
 }

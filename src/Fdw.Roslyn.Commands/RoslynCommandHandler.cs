@@ -45,14 +45,11 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
     }
 
     /// <inheritdoc/>
-    // MA0051: Method length acceptable - command handler pattern with translator lookup, execution, and error handling
-#pragma warning disable MA0051 // Method is too long
     public async Task<IGenericResult<TResult>> Execute<TCommand, TResult>(
         TCommand command,
         CancellationToken cancellationToken = default)
         where TCommand : IRoslynCommand
         where TResult : IRoslynCommandResult
-#pragma warning restore MA0051
     {
         if (command is null)
         {
@@ -120,12 +117,9 @@ public sealed class RoslynCommandHandler : IRoslynCommandHandler
     }
 
     /// <inheritdoc/>
-    // MA0051: Method length acceptable - non-generic command handler with translator lookup, execution, and error handling
-#pragma warning disable MA0051 // Method is too long
     public async Task<IGenericResult<IRoslynCommandResult>> Execute(
         IRoslynCommand command,
         CancellationToken cancellationToken = default)
-#pragma warning restore MA0051
     {
         if (command is null)
         {

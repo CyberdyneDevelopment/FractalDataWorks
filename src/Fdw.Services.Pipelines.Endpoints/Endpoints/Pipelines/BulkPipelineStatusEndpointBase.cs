@@ -17,22 +17,27 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<BulkPipelineStatusResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="BulkPipelineStatusEndpointBase"/> class.</summary>
-        private readonly IDataGatewayProvider _dataGateways;
+        private readonly IConfigurationGatewayProvider _configurationGateways;
 
     /// <summary>Initializes a new instance of the <see cref="BulkPipelineStatusEndpointBase"/> class.</summary>
-    protected BulkPipelineStatusEndpointBase(ILogger logger, IDataGatewayProvider dataGateways)
+    protected BulkPipelineStatusEndpointBase(ILogger logger, IConfigurationGatewayProvider configurationGateways)
     {
         EndpointLogger = logger;
-        _dataGateways = dataGateways;
+        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
     }
 
 
+    private static string PlatformConfigurationConnection => PlatformConnection.Name;
+
     /// <summary>
-    /// Gets the data gateway.
+    /// Gets the gateway onto the platform's own configuration store, where pipeline status rows live.
     /// </summary>
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    protected IDataGateway DataGateway => _dataGateways.ByName("Main");
+    // The platform's own rows are read through the configuration gateway onto that store, never the request-facing
+    // Main gateway (FDW-1068): Main runs whatever data store a request names, and these rows are not a request's to name.
+    protected IDataGateway DataGateway => _configurationGateways.Get(PlatformConfigurationConnection) is { IsSuccess: true, Value: { } gateway }
+        ? gateway
+        : throw new InvalidOperationException(
+            $"No configuration gateway is available for connection '{PlatformConfigurationConnection}'. It must be declared in the host's configurationSchema.json.");
 
     /// <summary>
     /// Gets the logger instance.
@@ -68,7 +73,7 @@ public abstract class BulkPipelineStatusEndpointBase : EndpointWithoutRequest<Bu
             var command = new QueryCommand<PipelineStatusRecord>();
 
             var result = await DataGateway.Execute<IEnumerable<PipelineStatusRecord>>(
-                command, new DataStoreTarget("PlatformConfiguration", "etl", "Pipeline"), ct).ConfigureAwait(false);
+                command, new DataStoreTarget(PlatformConfigurationConnection, "etl", "Pipeline"), ct).ConfigureAwait(false);
             if (result.IsSuccess && result.Value != null)
             {
                 pipelines = result.Value

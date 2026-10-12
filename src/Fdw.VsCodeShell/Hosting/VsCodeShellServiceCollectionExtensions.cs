@@ -15,7 +15,7 @@ public static class VsCodeShellServiceCollectionExtensions
     /// Registers the VS Code shell and every command contributed by this host and its referenced packages.
     /// </summary>
     /// <remarks>
-    /// Commands are not declared here. Each is a <c>[ServiceTypeOption]</c> on
+    /// Commands are not declared here. Each is a <c>[Implementation]</c> on
     /// <see cref="VsCodeCommandTypes"/> in the package that owns it, registered at assembly load by the
     /// generated module initializer — so referencing such a package is itself the intent to contribute its
     /// commands. This call registers their handlers and projects the manifest from the collection.

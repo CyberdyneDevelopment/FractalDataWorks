@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class CancelledExecutionState : ExecutionStateBase
 {
     /// <summary>Initializes a new instance of <see cref="CancelledExecutionState"/>.</summary>
-    public CancelledExecutionState() : base(7, "Cancelled") { }
+    public CancelledExecutionState() : base("Cancelled") { }
 }

@@ -18,6 +18,4 @@ namespace Fdw.Services.SecretManagers.Abstractions;
 /// </remarks>
 public interface ISecretManagerImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets or sets the FK to the parent SecretManager's logical Id.</summary>
-    Guid SecretManagerId { get; set; }
 }

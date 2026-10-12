@@ -8,7 +8,7 @@ namespace Fdw.Services.Authentication.Logging;
 /// <summary>
 /// MessageLogging for loading flows from configuration.
 /// </summary>
-/// <remarks>EventId range: 91230–91239.</remarks>
+/// <remarks>EventId range: 91230–91239, continued at 91121–91123.</remarks>
 [MessageLoggingTypeCode("AUTHENTICATION")]
 internal static partial class FlowProviderLog
 {
@@ -101,4 +101,34 @@ internal static partial class FlowProviderLog
         Message = "Flow '{flowName}' is configured but invalid: {reason}")]
     internal static partial IGenericMessage FlowKnownInvalid(
         ILogger<AuthenticationFlowProvider> logger, string flowName, string reason);
+
+    /// <summary>A caller selected a flow an operator has switched off.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">What they asked for.</param>
+    // Warning, not Error: nothing is broken. The host refused exactly as configured, and an operator
+    // reading the log wants to see that somebody still tries a switched-off flow.
+    [MessageLogging(EventId = 91121, Level = LogLevel.Warning,
+        Message = "Flow '{flowName}' is switched off (IsEnabled = 0) and was refused")]
+    internal static partial IGenericMessage FlowDisabled(
+        ILogger<AuthenticationFlowProvider> logger, string flowName);
+
+    /// <summary>A flow row loaded switched off, so it was not validated or offered.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">The flow.</param>
+    // Information: an operator switching a flow off wants to see, once at load, that the host took it.
+    [MessageLogging(EventId = 91122, Level = LogLevel.Information,
+        Message = "Flow '{flowName}' is switched off; it is neither validated nor offered until IsEnabled is set")]
+    internal static partial IGenericMessage FlowLoadedDisabled(
+        ILogger<AuthenticationFlowProvider> logger, string flowName);
+
+    /// <summary>A configured step refused the settings a flow gives it.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">The flow.</param>
+    /// <param name="stepName">The step.</param>
+    /// <param name="reason">What the step said is wrong.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(EventId = 91123, Level = LogLevel.Error,
+        Message = "Flow '{flowName}' gives step '{stepName}' settings it cannot run with: {reason}. Fix the step row's Configuration column")]
+    internal static partial IGenericMessage StepConfigurationRejected(
+        ILogger logger, string flowName, string stepName, string reason);
 }

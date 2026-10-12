@@ -18,7 +18,6 @@ public sealed class EndpointContainerType : ContainerTypeBase
 
     private EndpointContainerType()
         : base(
-            id: 10,
             name: "Endpoint",
             displayName: "REST Endpoint",
             description: "REST API endpoint container with HTTP method support",

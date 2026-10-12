@@ -13,7 +13,7 @@ public sealed class UuidType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="UuidType"/> class.</summary>
     public UuidType()
-        : base(id: 16, name: "uuid")
+        : base(name: "uuid")
     {
     }
 

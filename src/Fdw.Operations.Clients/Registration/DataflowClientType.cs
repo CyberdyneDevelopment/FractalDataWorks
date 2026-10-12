@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Operations.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Dataflow API client.
+/// Implementation for the Dataflow API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "DataflowClient")]
+[Implementation(typeof(ApiClientTypes), "DataflowClient")]
 public sealed class DataflowClientType : ApiClientTypeBase<DataflowApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class DataflowClientType : ApiClientTypeBase<DataflowApiClient>
         {
             builder.Services.AddScoped<DataflowApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<DataflowApiClient>>() ?? NullLogger<DataflowApiClient>.Instance;
-                return new DataflowApiClient(factory.CreateClient(Name), logger);
+                return new DataflowApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

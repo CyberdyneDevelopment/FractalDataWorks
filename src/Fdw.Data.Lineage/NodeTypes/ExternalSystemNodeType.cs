@@ -14,5 +14,5 @@ public sealed class ExternalSystemNodeType : LineageNodeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ExternalSystemNodeType"/> class.
     /// </summary>
-    public ExternalSystemNodeType() : base(4, "ExternalSystem") { }
+    public ExternalSystemNodeType() : base("ExternalSystem") { }
 }

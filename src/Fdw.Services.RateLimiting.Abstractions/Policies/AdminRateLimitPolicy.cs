@@ -26,7 +26,7 @@ public sealed class AdminRateLimitPolicy : RateLimitPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminRateLimitPolicy"/> class.
     /// </summary>
-    public AdminRateLimitPolicy() : base(4, "Admin")
+    public AdminRateLimitPolicy() : base("Admin")
     {
     }
 

@@ -21,6 +21,17 @@ public interface IDataStore : IDataNode
     Guid ConnectionId { get; }
 
     /// <summary>
+    /// Gets whether the host declared this store in its <c>configurationSchema.json</c> for the platform's own use,
+    /// rather than it being a store configured at run time.
+    /// </summary>
+    /// <remarks>
+    /// Set by the configuration gateway, which builds exactly the stores the host declares, and by nothing else. A
+    /// host-declared store holds the platform's own configuration, credentials and sessions, so the main data gateway
+    /// refuses to run a request over one unless the caller is the system context (FDW-1068).
+    /// </remarks>
+    bool DeclaredByHost { get; }
+
+    /// <summary>
     /// Gets all paths (schemas, directories, namespaces) within this store.
     /// </summary>
     /// <remarks>

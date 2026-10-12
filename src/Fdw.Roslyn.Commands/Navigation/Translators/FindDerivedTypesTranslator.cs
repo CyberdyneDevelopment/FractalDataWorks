@@ -30,7 +30,6 @@ public sealed class FindDerivedTypesTranslator : RoslynCommandTranslatorBase<Fin
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve type, find derived classes and implementations
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>> Translate(
         FindDerivedTypesCommand command,
         Solution solution,
@@ -129,5 +128,4 @@ public sealed class FindDerivedTypesTranslator : RoslynCommandTranslatorBase<Fin
 
         return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Success(result, summary);
     }
-#pragma warning restore MA0051
 }

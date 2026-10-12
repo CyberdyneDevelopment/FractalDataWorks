@@ -20,7 +20,6 @@ public sealed class TrimStartFieldTransformer : FieldTransformationBase
     /// </summary>
     public TrimStartFieldTransformer()
         : base(
-            id: 301,
             name: "TrimStart",
             displayName: "Trim Start",
             description: "Trims leading whitespace or specified characters from a string value.",

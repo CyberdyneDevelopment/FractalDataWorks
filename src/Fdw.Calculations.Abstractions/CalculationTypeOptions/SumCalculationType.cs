@@ -15,7 +15,6 @@ public sealed class SumCalculationType : CalculationTypeBase
     /// Initializes a new instance of the <see cref="SumCalculationType"/> class.
     /// </summary>
     public SumCalculationType() : base(
-        id: 1,
         name: "Sum",
         category: "Aggregation",
         calculate: (rows, col, _) => rows.Sum(r => r.TryGetValue<decimal>(col, out var v) ? v : 0m),

@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
@@ -9,42 +7,46 @@ using Fdw.Results;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
 using Fdw.Services.Etl.Logging;
+using Fdw.Services.Etl.Pipelines.Loads;
+using Fdw.Services.Etl.Predicates;
 using Microsoft.Extensions.Logging;
 using OptionTransformTypes = Fdw.Services.Etl.Abstractions.OptionTypes.TransformTypes;
 
 namespace Fdw.Services.Etl.Transforms;
 
 /// <summary>
-/// Transform type that filters records based on an expression.
+/// Transform type that filters records based on a condition.
 /// </summary>
+/// <remarks>
+/// The condition is written in the pipeline's condition language (see <see cref="RecordPredicates"/>) and read strictly: a
+/// condition that cannot be read is refused when the pipeline is saved or validated and fails the run, naming the text. It
+/// is never a condition that every record meets.
+/// </remarks>
 [TypeOption(typeof(OptionTransformTypes), "Filter")]
 public sealed class FilterTransformType : TransformTypeBase
 {
-    private static readonly string[] EqualsSeparator = ["=="];
-    private static readonly string[] NotEqualsSeparator = ["!="];
-    private static readonly string[] GreaterThanOrEqualSeparator = [">="];
-    private static readonly string[] LessThanOrEqualSeparator = ["<="];
-    private static readonly string[] GreaterThanSeparator = [">"];
-    private static readonly string[] LessThanSeparator = ["<"];
-    private static readonly string[] ContainsSeparator = [" contains ", " CONTAINS "];
-    private static readonly string[] StartsWithSeparator = [" startswith ", " STARTSWITH "];
-    private static readonly string[] EndsWithSeparator = [" endswith ", " ENDSWITH "];
-    private static readonly string[] AndSeparator = [" && ", " AND ", " and "];
-    private static readonly string[] OrSeparator = [" || ", " OR ", " or "];
-
     /// <summary>
     /// Initializes a new instance of the <see cref="FilterTransformType"/> class.
     /// </summary>
     public FilterTransformType() : base(
-        id: 2,
         name: "Filter",
         displayName: "Record Filter",
         description: "Filters records based on an expression - records not matching are excluded",
         category: "Filter",
         modifiesStructure: false,
-        canFilterRecords: true)
+        canFilterRecords: true,
+        inputPorts: ["input"],
+        outputPorts: ["output"])
     {
     }
+
+    private static readonly StageMember[] OwnedMembers =
+    [
+        new("filterExpression", "Expression", true, "The condition a record must meet to stay; may reference {{run parameters}}")
+    ];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<StageMember> Members => OwnedMembers;
 
     /// <inheritdoc />
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
@@ -65,9 +67,26 @@ public sealed class FilterTransformType : TransformTypeBase
                 EtlLog.FilterExpressionMissing(context.Logger, config.Name)));
         }
 
-        var passes = EvaluateFilter(input, config.FilterExpression, context);
+        var expression = PipelineRunParameterReferences.Resolve(
+            string.Concat("transform '", config.Name, "'"), config.FilterExpression, context.Parameters, context.Logger);
+        if (expression.IsFailure)
+        {
+            return Task.FromResult(expression.ToNewResult<IDictionary<string, object?>>());
+        }
 
-        if (passes)
+        var condition = FilterStageCondition.Prepare(expression.Value!, context);
+        if (condition.IsFailure)
+        {
+            return Task.FromResult(condition.ToNewResult<IDictionary<string, object?>>());
+        }
+
+        var passes = condition.Value!.Passes(input);
+        if (passes.IsFailure)
+        {
+            return Task.FromResult(passes.ToNewResult<IDictionary<string, object?>>());
+        }
+
+        if (passes.Value)
         {
             return Task.FromResult(GenericResult<IDictionary<string, object?>>.Success(input));
         }
@@ -95,12 +114,31 @@ public sealed class FilterTransformType : TransformTypeBase
                 EtlLog.FilterExpressionMissing(context.Logger, config.Name)));
         }
 
+        var expression = PipelineRunParameterReferences.Resolve(
+            string.Concat("transform '", config.Name, "'"), config.FilterExpression, context.Parameters, context.Logger);
+        if (expression.IsFailure)
+        {
+            return Task.FromResult(expression.ToNewResult<IEnumerable<IDictionary<string, object?>>>());
+        }
+
+        var condition = FilterStageCondition.Prepare(expression.Value!, context);
+        if (condition.IsFailure)
+        {
+            return Task.FromResult(condition.ToNewResult<IEnumerable<IDictionary<string, object?>>>());
+        }
+
         var results = new List<IDictionary<string, object?>>();
 
         foreach (var input in inputs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (EvaluateFilter(input, config.FilterExpression, context))
+            var passes = condition.Value!.Passes(input);
+            if (passes.IsFailure)
+            {
+                return Task.FromResult(passes.ToNewResult<IEnumerable<IDictionary<string, object?>>>());
+            }
+
+            if (passes.Value)
             {
                 results.Add(input);
             }
@@ -122,349 +160,17 @@ public sealed class FilterTransformType : TransformTypeBase
             return GenericResult.Failure(EtlLog.FilterExpressionMissing(logger, spec.Name));
         }
 
+        // The text is read here, with any {{parameter}} placeholders still in it, so a condition that cannot be read is
+        // refused when the pipeline is saved or validated and not first met by a run.
+        var read = RecordPredicates.Parse(spec.FilterExpression, logger);
+        if (read.IsFailure)
+        {
+            return read;
+        }
+
         config.FilterExpression = spec.FilterExpression;
 
         EtlLog.TransformSpecMapped(logger, spec.Name, spec.OperationType);
         return GenericResult.Success();
-    }
-
-    private static bool EvaluateFilter(
-        IDictionary<string, object?> record,
-        string expression,
-        ITransformContext context)
-    {
-        // Try to use IExpressionEvaluator from CalculationEngine if available
-        if (context.CalculationEngine is IExpressionEvaluator evaluator)
-        {
-            var variables = new Dictionary<string, object?>(record, StringComparer.OrdinalIgnoreCase);
-            var result = evaluator.EvaluatePredicate(expression, variables);
-            if (result.IsSuccess)
-            {
-                return result.Value;
-            }
-            // Fall through to built-in evaluation if expression evaluator fails
-        }
-
-        // Built-in expression evaluation supporting common filter operations
-        return EvaluateBuiltInFilter(record, expression.Trim());
-    }
-
-    private static bool EvaluateBuiltInFilter(IDictionary<string, object?> record, string expression)
-    {
-        if (TryEvaluateLogicalOperators(record, expression, out var logicalResult))
-        {
-            return logicalResult;
-        }
-
-        if (TryEvaluateNullChecks(record, expression, out var nullResult))
-        {
-            return nullResult;
-        }
-
-        if (TryEvaluateStringOperators(record, expression, out var stringResult))
-        {
-            return stringResult;
-        }
-
-        if (TryEvaluateComparisonOperators(record, expression, out var comparisonResult))
-        {
-            return comparisonResult;
-        }
-
-        // Boolean field check: just "FieldName" or "!FieldName"
-        if (record.TryGetValue(expression, out var boolValue))
-        {
-            if (boolValue is bool b) return b;
-            if (boolValue is string s) return bool.TryParse(s, out var parsed) && parsed;
-            return boolValue != null;
-        }
-
-        // Default: pass through if expression cannot be parsed
-        return true;
-    }
-
-    private static bool TryEvaluateLogicalOperators(IDictionary<string, object?> record, string expression, out bool result)
-    {
-        // OR operator: "Condition1 || Condition2"
-        if (TryFindTopLevelSeparator(expression, OrSeparator, out var orIndex, out var orSepLength))
-        {
-            var left = expression[..orIndex].Trim();
-            var right = expression[(orIndex + orSepLength)..].Trim();
-            result = EvaluateBuiltInFilter(record, left) || EvaluateBuiltInFilter(record, right);
-            return true;
-        }
-
-        // AND operator: "Condition1 && Condition2"
-        if (TryFindTopLevelSeparator(expression, AndSeparator, out var andIndex, out var andSepLength))
-        {
-            var left = expression[..andIndex].Trim();
-            var right = expression[(andIndex + andSepLength)..].Trim();
-            result = EvaluateBuiltInFilter(record, left) && EvaluateBuiltInFilter(record, right);
-            return true;
-        }
-
-        // Handle parenthesized expressions
-        if (expression.StartsWith('(') && expression.EndsWith(')'))
-        {
-            result = EvaluateBuiltInFilter(record, expression[1..^1].Trim());
-            return true;
-        }
-
-        // Handle NOT operator: "NOT Condition" or "!Condition"
-        if (expression.StartsWith("NOT ", StringComparison.OrdinalIgnoreCase))
-        {
-            result = !EvaluateBuiltInFilter(record, expression[4..].Trim());
-            return true;
-        }
-        if (expression.StartsWith('!') && !expression.StartsWith("!=", StringComparison.Ordinal))
-        {
-            result = !EvaluateBuiltInFilter(record, expression[1..].Trim());
-            return true;
-        }
-
-        result = false;
-        return false;
-    }
-
-    /// <summary>
-    /// Finds the first occurrence (across the given separator spellings) of a logical-operator
-    /// separator that sits at parenthesis depth 0, so callers never split inside a grouped "(...)"
-    /// sub-clause.
-    /// </summary>
-    private static bool TryFindTopLevelSeparator(string expression, string[] separators, out int index, out int separatorLength)
-    {
-        foreach (var separator in separators)
-        {
-            var candidate = IndexOfAtDepthZero(expression, separator);
-            if (candidate >= 0)
-            {
-                index = candidate;
-                separatorLength = separator.Length;
-                return true;
-            }
-        }
-
-        index = -1;
-        separatorLength = 0;
-        return false;
-    }
-
-    private static int IndexOfAtDepthZero(string expression, string separator)
-    {
-        var depth = 0;
-        var maxStart = expression.Length - separator.Length;
-        for (var i = 0; i <= maxStart; i++)
-        {
-            var c = expression[i];
-            if (c == '(')
-            {
-                depth++;
-            }
-            else if (c == ')')
-            {
-                depth--;
-            }
-
-            if (depth == 0 && expression.AsSpan(i, separator.Length).Equals(separator, StringComparison.OrdinalIgnoreCase))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static bool TryEvaluateNullChecks(IDictionary<string, object?> record, string expression, out bool result)
-    {
-        if (expression.EndsWith("!= null", StringComparison.OrdinalIgnoreCase))
-        {
-            var fieldName = expression[..^7].Trim();
-            result = record.TryGetValue(fieldName, out var value) && value != null;
-            return true;
-        }
-        if (expression.EndsWith("== null", StringComparison.OrdinalIgnoreCase))
-        {
-            var fieldName = expression[..^7].Trim();
-            result = !record.TryGetValue(fieldName, out var value) || value == null;
-            return true;
-        }
-
-        result = false;
-        return false;
-    }
-
-    private static bool TryEvaluateStringOperators(IDictionary<string, object?> record, string expression, out bool result)
-    {
-        if (TryEvaluateStringOperator(record, expression, ContainsSeparator, out result,
-            (actual, search) => actual.ToString()?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
-        {
-            return true;
-        }
-
-        if (TryEvaluateStringOperator(record, expression, StartsWithSeparator, out result,
-            (actual, search) => actual.ToString()?.StartsWith(search, StringComparison.OrdinalIgnoreCase) == true))
-        {
-            return true;
-        }
-
-        if (TryEvaluateStringOperator(record, expression, EndsWithSeparator, out result,
-            (actual, search) => actual.ToString()?.EndsWith(search, StringComparison.OrdinalIgnoreCase) == true))
-        {
-            return true;
-        }
-
-        result = false;
-        return false;
-    }
-
-    private static bool TryEvaluateStringOperator(
-        IDictionary<string, object?> record,
-        string expression,
-        string[] separators,
-        out bool result,
-        Func<object, string, bool> comparison)
-    {
-        foreach (var sep in separators)
-        {
-            var index = expression.IndexOf(sep, StringComparison.OrdinalIgnoreCase);
-            if (index >= 0)
-            {
-                var fieldName = expression[..index].Trim();
-                var searchValue = ExtractValue(expression[(index + sep.Length)..].Trim());
-                if (record.TryGetValue(fieldName, out var actualValue) && actualValue != null)
-                {
-                    result = comparison(actualValue, searchValue);
-                    return true;
-                }
-                result = false;
-                return true;
-            }
-        }
-
-        result = false;
-        return false;
-    }
-
-    private static bool TryEvaluateComparisonOperators(IDictionary<string, object?> record, string expression, out bool result)
-    {
-        // Order matters - check >= and <= before > and <
-        if (TrySplitComparison(expression, GreaterThanOrEqualSeparator, out var geField, out var geValue))
-        {
-            result = CompareValues(record, geField, geValue, (a, b) => a >= b);
-            return true;
-        }
-
-        if (TrySplitComparison(expression, LessThanOrEqualSeparator, out var leField, out var leValue))
-        {
-            result = CompareValues(record, leField, leValue, (a, b) => a <= b);
-            return true;
-        }
-
-        if (TrySplitComparison(expression, NotEqualsSeparator, out var neField, out var neValue))
-        {
-            result = !CompareEqual(record, neField, neValue);
-            return true;
-        }
-
-        if (TrySplitComparison(expression, EqualsSeparator, out var eqField, out var eqValue))
-        {
-            result = CompareEqual(record, eqField, eqValue);
-            return true;
-        }
-
-        if (TrySplitComparison(expression, GreaterThanSeparator, out var gtField, out var gtValue))
-        {
-            result = CompareValues(record, gtField, gtValue, (a, b) => a > b);
-            return true;
-        }
-
-        if (TrySplitComparison(expression, LessThanSeparator, out var ltField, out var ltValue))
-        {
-            result = CompareValues(record, ltField, ltValue, (a, b) => a < b);
-            return true;
-        }
-
-        result = false;
-        return false;
-    }
-
-    private static bool TrySplitComparison(string expression, string[] separators, out string field, out string value)
-    {
-        foreach (var sep in separators)
-        {
-            var index = expression.IndexOf(sep, StringComparison.Ordinal);
-            if (index >= 0)
-            {
-                field = expression[..index].Trim();
-                value = ExtractValue(expression[(index + sep.Length)..].Trim());
-                return true;
-            }
-        }
-        field = string.Empty;
-        value = string.Empty;
-        return false;
-    }
-
-    private static string ExtractValue(string value)
-    {
-        // Remove surrounding quotes
-        if ((value.StartsWith('\'') && value.EndsWith('\'')) ||
-            (value.StartsWith('"') && value.EndsWith('"')))
-        {
-            return value[1..^1];
-        }
-        return value;
-    }
-
-    private static bool CompareEqual(IDictionary<string, object?> record, string fieldName, string expectedValue)
-    {
-        if (!record.TryGetValue(fieldName, out var actualValue))
-        {
-            return false;
-        }
-
-        if (actualValue == null)
-        {
-            return string.IsNullOrEmpty(expectedValue);
-        }
-
-        return string.Equals(actualValue.ToString(), expectedValue, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool CompareValues(IDictionary<string, object?> record, string fieldName, string compareValue, Func<decimal, decimal, bool> comparison)
-    {
-        if (!record.TryGetValue(fieldName, out var actualValue) || actualValue == null)
-        {
-            return false;
-        }
-
-        // Try numeric comparison
-        if (TryGetDecimal(actualValue, out var actualDecimal) &&
-            decimal.TryParse(compareValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var compareDecimal))
-        {
-            return comparison(actualDecimal, compareDecimal);
-        }
-
-        // Fall back to string comparison
-        var stringCompare = string.Compare(actualValue.ToString(), compareValue, StringComparison.OrdinalIgnoreCase);
-        return comparison(stringCompare, 0);
-    }
-
-    private static bool TryGetDecimal(object? value, out decimal result)
-    {
-        result = 0;
-        if (value == null) return false;
-
-        return value switch
-        {
-            decimal d => (result = d) == d,
-            double dbl => (result = (decimal)dbl) == (decimal)dbl,
-            float f => (result = (decimal)f) == (decimal)f,
-            int i => (result = i) == i,
-            long l => (result = l) == l,
-            short s => (result = s) == s,
-            byte b => (result = b) == b,
-            _ => decimal.TryParse(value.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out result)
-        };
     }
 }

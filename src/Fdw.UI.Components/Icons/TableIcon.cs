@@ -11,7 +11,6 @@ public sealed class TableIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="TableIcon"/>.</summary>
     public TableIcon()
         : base(
-            35,
             "Table",
             "0 0 24 24",
             "none",

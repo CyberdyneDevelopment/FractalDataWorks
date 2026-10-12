@@ -16,7 +16,6 @@ public sealed class DeviceCodeFlow : AuthenticationFlowBase
     /// Initializes a new instance of the <see cref="DeviceCodeFlow"/> class.
     /// </summary>
     public DeviceCodeFlow() : base(
-        id: 4,
         name: "DeviceCode",
         requiresUserInteraction: true,
         supportsRefreshTokens: true,

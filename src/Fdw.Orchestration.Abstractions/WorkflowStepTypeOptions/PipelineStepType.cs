@@ -14,5 +14,5 @@ public sealed class PipelineStepType : WorkflowStepTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PipelineStepType"/> class.
     /// </summary>
-    public PipelineStepType() : base(0, "Pipeline", executesPipeline: true, supportsParallelism: true) { }
+    public PipelineStepType() : base("Pipeline", executesPipeline: true, supportsParallelism: true) { }
 }

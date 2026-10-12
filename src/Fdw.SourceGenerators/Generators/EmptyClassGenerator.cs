@@ -33,7 +33,6 @@ public sealed class EmptyClassGenerator
     /// <param name="namespace">The namespace for the Empty class</param>
     /// <param name="compilation">The compilation context for type resolution</param>
     /// <returns>The generated Empty class code</returns>
-#pragma warning disable MA0051 // Sequential type resolution and code generation with low complexity
     public static string GenerateEmptyClass<TId>(
         GenericTypeInfoModel<TId> definition,
         string returnType,
@@ -221,7 +220,6 @@ public sealed class EmptyClassGenerator
 
         return sb.ToString();
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Generates implementations for all abstract methods in the inheritance chain.

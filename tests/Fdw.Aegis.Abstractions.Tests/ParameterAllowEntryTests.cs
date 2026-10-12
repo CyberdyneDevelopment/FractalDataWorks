@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using Fdw.Aegis.Configuration;
 
@@ -9,19 +10,19 @@ public class ParameterAllowEntryTests
     [Trait("Category", "Security")]
     public void ParameterAllowEntryRoundTripsThroughJson()
     {
-        var entry = new ParameterAllowEntry
+        var entry = new ParameterAllowEntryConfiguration
         {
             ParameterName = "mode",
-            PermittedValues = ["echo"],
+            PermittedValues = [new PermittedValueConfiguration { Value = "echo" }],
             Required = true,
         };
 
         var json = JsonSerializer.Serialize(entry);
-        var roundTripped = JsonSerializer.Deserialize<ParameterAllowEntry>(json);
+        var roundTripped = JsonSerializer.Deserialize<ParameterAllowEntryConfiguration>(json);
 
         roundTripped.ShouldNotBeNull();
         roundTripped.ParameterName.ShouldBe("mode");
-        roundTripped.PermittedValues.ShouldBe(["echo"]);
+        roundTripped.PermittedValues.Select(v => v.Value).ShouldBe(["echo"]);
         roundTripped.Required.ShouldBeTrue();
     }
 
@@ -34,14 +35,14 @@ public class ParameterAllowEntryTests
             SecretManagerName = "EnvSecrets",
             SecretKeyName = "AEGIS_SYNTHETIC_TOKEN",
         };
-        config.ParameterAllowList.Add(new ParameterAllowEntry
+        config.ParameterAllowList.Add(new ParameterAllowEntryConfiguration
         {
             ParameterName = "mode",
-            PermittedValues = ["echo"],
+            PermittedValues = [new PermittedValueConfiguration { Value = "echo" }],
             Required = true,
         });
 
         config.ParameterAllowList.Count.ShouldBe(1);
-        config.ParameterAllowList[0].PermittedValues.ShouldContain("echo");
+        config.ParameterAllowList[0].PermittedValues.Select(v => v.Value).ShouldContain("echo");
     }
 }

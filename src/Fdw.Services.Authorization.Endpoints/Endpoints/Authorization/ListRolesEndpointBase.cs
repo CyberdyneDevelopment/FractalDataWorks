@@ -7,67 +7,56 @@ using FastEndpoints;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Web.RestEndpoints.Models;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.Pagination;
+using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Web.RestEndpoints.Crud;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing all roles.
+/// Base endpoint for listing roles, one page at a time in name order (FDW-951).
 /// </summary>
-public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedResponse<RoleSummaryResponse>>
+/// <remarks>
+/// A page is one read of the roles domain table: the fields a list shows live on the domain row, so no
+/// role's implementation and none of its permissions are read to list it (FDW-1002).
+/// </remarks>
+public abstract class ListRolesEndpointBase : CrudPageEndpointBase<RoleDomainConfiguration, RoleSummaryResponse>
 {
-    /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
-        private readonly IAuthorizationProvider _authorizationProvider;
-
-    /// <summary>
-    /// Gets the logger instance.
-    /// </summary>
-    protected ILogger EndpointLogger { get; }
+    private readonly IRoleConfigurationProvider _roleProvider;
 
     /// <summary>Initializes a new instance of the <see cref="ListRolesEndpointBase"/> class.</summary>
-    protected ListRolesEndpointBase(ILogger logger, IAuthorizationProvider authorizationProvider)
+    /// <param name="logger">The logger.</param>
+    /// <param name="roleProvider">Reads the page of roles.</param>
+    protected ListRolesEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider) : base(logger)
     {
-        EndpointLogger = logger;
-        _authorizationProvider = authorizationProvider;
+        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
     }
 
+    /// <summary>Gets the resource name used for the route: <c>/roles</c>.</summary>
+    protected override string ResourceName => "roles";
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
     /// </summary>
-    protected virtual string ReadPolicy => "settings/role:read";
+    protected override string ReadPolicy => "settings/role:read";
 
     /// <inheritdoc />
-    public override void Configure()
-    {
-        Get("/roles");
-        Policies(ReadPolicy);
-        ConfigureEndpoint();
-    }
-
-    /// <summary>
-    /// Override to configure endpoint-specific settings (auth, summary, etc.).
-    /// </summary>
-    protected abstract void ConfigureEndpoint();
+    protected override Task<IGenericResult<ConfigurationPage<RoleDomainConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
+        => _roleProvider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct);
 
     /// <inheritdoc />
-    public override async Task HandleAsync(CancellationToken ct)
-    {
-        
-        var allRoles = await _authorizationProvider.GetAllRoles(ct).ConfigureAwait(false);
-        var roles = allRoles
-            .Select(MapToSummary)
-            .OrderBy(r => r.SortOrder)
-            .ThenBy(r => r.Name, StringComparer.Ordinal)
-            .ToList();
+    protected override Task<IGenericResult<RoleSummaryResponse>> ToSummary(RoleDomainConfiguration item, CancellationToken ct)
+        => Task.FromResult(GenericResult<RoleSummaryResponse>.Success(MapToSummary(item)));
 
-        var response = PaginatedResponse<RoleSummaryResponse>.Create(roles, 0, roles.Count, roles.Count);
-        await Send.OkAsync(response, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Maps a RoleConfiguration to a summary DTO. Override for custom mapping.
-    /// </summary>
-    protected virtual RoleSummaryResponse MapToSummary(RoleConfiguration role)
+    /// <summary>Maps a role, as the roles domain table holds it, to its summary.</summary>
+    /// <param name="role">The role's domain record.</param>
+    /// <returns>The summary.</returns>
+    protected virtual RoleSummaryResponse MapToSummary(RoleDomainConfiguration role)
     {
         return new RoleSummaryResponse
         {
@@ -76,8 +65,7 @@ public abstract class ListRolesEndpointBase : EndpointWithoutRequest<PaginatedRe
             DisplayName = role.DisplayName,
             Description = role.Description,
             IsTenantScoped = role.IsTenantScoped,
-            SortOrder = role.SortOrder,
-            CreatedAt = role.CreateDate
+            CreatedAt = role.CreatedAt
         };
     }
 }

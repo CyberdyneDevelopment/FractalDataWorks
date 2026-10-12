@@ -7,8 +7,11 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Execution;
+using Fdw.Services.Authentication.Abstractions.Results;
+using Fdw.Services.Authentication.Abstractions.Sessions;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -28,8 +31,10 @@ public sealed class AuthenticationRunner
 {
     private readonly IAcrPolicy _acrPolicy;
     private readonly ITokenIssuer _issuer;
+    private readonly ISessionStore _sessions;
     private readonly IAuthenticationExecutionStore _executions;
     private readonly IAuthenticationFlowProvider _flows;
+    private readonly ITenantProvider _tenants;
     private readonly ILogger<AuthenticationRunner> _logger;
 
     // How a name becomes a step. Defaults to the collection, which is the registry — a delegate
@@ -41,6 +46,9 @@ public sealed class AuthenticationRunner
     /// <summary>Initializes a new instance of the <see cref="AuthenticationRunner"/> class.</summary>
     /// <param name="acrPolicy">Turns proved methods into an assurance level.</param>
     /// <param name="issuer">Mints the token once the terminal check passes.</param>
+    /// <param name="sessions">
+    /// Creates the server-side session instead, for a flow that names a Session service (FDW-903).
+    /// </param>
     /// <param name="executions">Holds a suspended flow between the redirect and the return.</param>
     /// <param name="flows">
     /// Resolves the flow a suspended execution belongs to by the name it recorded at suspend time, so
@@ -53,20 +61,28 @@ public sealed class AuthenticationRunner
     /// collection, which is the registry, and a test hands over steps that vary per case — which is
     /// what proving this runner's invariants requires.
     /// </param>
+    /// <param name="tenants">
+    /// This request's tenant provider -- Scoped, same as this runner, so holding it here is safe.
+    /// Handed down to every step's <see cref="IAuthenticationStep.Execute"/> call.
+    /// </param>
     /// <param name="logger">The logger.</param>
     public AuthenticationRunner(
         IAcrPolicy acrPolicy,
         ITokenIssuer issuer,
+        ISessionStore sessions,
         IAuthenticationExecutionStore executions,
         IAuthenticationFlowProvider flows,
         Func<string, IAuthenticationStep?> step,
+        ITenantProvider tenants,
         ILogger<AuthenticationRunner>? logger = null)
     {
-        _acrPolicy = acrPolicy ?? throw new ArgumentNullException(nameof(acrPolicy));
-        _issuer = issuer ?? throw new ArgumentNullException(nameof(issuer));
-        _executions = executions ?? throw new ArgumentNullException(nameof(executions));
-        _flows = flows ?? throw new ArgumentNullException(nameof(flows));
+        _acrPolicy = acrPolicy;
+        _issuer = issuer;
+        _sessions = sessions;
+        _executions = executions;
+        _flows = flows;
         _step = step ?? throw new ArgumentNullException(nameof(step));
+        _tenants = tenants;
         _logger = logger ?? NullLogger<AuthenticationRunner>.Instance;
     }
 
@@ -124,19 +140,25 @@ public sealed class AuthenticationRunner
             // The collection answers by name and what it returns IS the step. A flow that reached
             // here was validated when configuration loaded, so a miss now means the collection
             // changed under a cached flow rather than a mis-typed row.
-            if (_step(flow.Steps[i]) is not { } step)
+            var entry = flow.Steps[i];
+            if (_step(entry.Name) is not { } step)
                 return GenericResult<FlowResult>.Failure(
-                    RunnerLog.StepNotAvailable(_logger, flow.Steps[i]));
-            RunnerLog.StepExecuting(_logger, flow.Name, flow.Steps[i], i);
+                    RunnerLog.StepNotAvailable(_logger, entry.Name));
+            RunnerLog.StepExecuting(_logger, flow.Name, entry.Name, i);
 
             // I3 — enforced here and not only when the configuration loaded, because a step that
             // returned NotApplicable contributed nothing however valid the declared order was.
             if (!context.Satisfies(step.Requires))
                 return GenericResult<FlowResult>.Failure(RunnerLog.RequirementMissing(
-                    _logger, flow.Name, flow.Steps[i],
+                    _logger, flow.Name, entry.Name,
                     string.Join(", ", step.Requires.Where(r => !context.Has(r)))));
 
-            var outcome = await step.Execute(context, cancellationToken).ConfigureAwait(false);
+            // A configured step reads this flow's settings for it, handed over per run: the step is one
+            // instance serving every flow that names it, so the settings cannot live on the step.
+            var outcome = step is IConfiguredAuthenticationStep configured
+                ? await configured.Execute(context, entry.Configuration, _tenants, cancellationToken).ConfigureAwait(false)
+                : await step.Execute(context, _tenants, cancellationToken).ConfigureAwait(false);
+
             if (outcome.IsFailure)
                 return outcome.ToNewResult<FlowResult>();
 
@@ -146,8 +168,8 @@ public sealed class AuthenticationRunner
             {
                 case StepOutcome.Contributed c:
                     contributed = c.Contribution;
-                    context = Merge(context, contributed, step, flow.Steps[i]);
-                    RunnerLog.StepContributed(_logger, flow.Steps[i],
+                    context = Merge(context, contributed, step, entry.Name);
+                    RunnerLog.StepContributed(_logger, entry.Name,
                         string.Join(", ", contributed.Present()));
                     break;
 
@@ -170,12 +192,12 @@ public sealed class AuthenticationRunner
                             TaskScheduler.Current).ConfigureAwait(false);
 
                 case StepOutcome.NotApplicable notApplicable:
-                    RunnerLog.StepNotApplicable(_logger, flow.Steps[i], notApplicable.Reason);
+                    RunnerLog.StepNotApplicable(_logger, entry.Name, notApplicable.Reason);
                     continue;
 
                 default:
                     return GenericResult<FlowResult>.Failure(
-                        RunnerLog.UnknownOutcome(_logger, flow.Steps[i]));
+                        RunnerLog.UnknownOutcome(_logger, entry.Name));
             }
 
             // I2 — the intersection, and only once the step has actually succeeded. A step that
@@ -183,7 +205,7 @@ public sealed class AuthenticationRunner
             foreach (var method in Recordable(step, contributed))
             {
                 context = context with { AchievedMethods = [.. context.AchievedMethods, method] };
-                RunnerLog.MethodRecorded(_logger, flow.Steps[i], method);
+                RunnerLog.MethodRecorded(_logger, entry.Name, method);
             }
         }
 
@@ -223,15 +245,37 @@ public sealed class AuthenticationRunner
                 ? contribution.Principal : context.Principal,
             Claims = declared.Contains(ContextElements.Claims) && contribution.Claims.Count > 0
                 ? context.Claims.Add(contribution.Claims) : context.Claims,
-            Decision = declared.Contains(ContextElements.Decision) && contribution.Decision is not null
-                ? contribution.Decision : context.Decision,
+            ClaimsValidUntil = declared.Contains(ContextElements.Claims)
+                ? Earliest(context.ClaimsValidUntil, contribution.ClaimsValidUntil) : context.ClaimsValidUntil,
+            Decision = Decide(context.Decision, declared.Contains(ContextElements.Decision) ? contribution.Decision : null, stepName),
         };
     }
+
+    // I7 — a refusal stands. A step that says no has decided the flow; a later step saying yes would
+    // be a later step overruling it, which is elevation by position in the list. So an earlier
+    // refusal is kept and the later decision is discarded and reported, whatever it says.
+    private Decision? Decide(Decision? current, Decision? contributed, string stepName)
+    {
+        if (contributed is null)
+            return current;
+
+        if (current is { Permitted: false })
+        {
+            RunnerLog.RefusalStands(_logger, stepName, current.Reason);
+            return current;
+        }
+
+        return contributed;
+    }
+
+    // The earlier of two ends; an absent end (null) is no end, so it never wins over a present one.
+    private static DateTimeOffset? Earliest(DateTimeOffset? current, DateTimeOffset? contributed)
+        => current is null || (contributed is not null && contributed < current) ? contributed : current;
 
     private async Task<IGenericResult<string>> Suspend(
         AuthenticationFlow flow, AuthenticationContext context, int stepIndex, CancellationToken cancellationToken)
     {
-        RunnerLog.FlowSuspended(_logger, flow.Name, flow.Steps[stepIndex]);
+        RunnerLog.FlowSuspended(_logger, flow.Name, flow.Steps[stepIndex].Name);
 
         return await _executions.Suspend(
             new ExecutionRecord
@@ -259,40 +303,57 @@ public sealed class AuthenticationRunner
             return GenericResult<FlowResult>.Failure(RunnerLog.NotPermitted(
                 _logger, flow.Name, context.Decision?.Reason ?? "no decision was reached"));
 
-        if (!_acrPolicy.Meets(context.AchievedAcr, flow.MinimumAcr))
+        // A level nobody declared is a misconfigured flow, and says so; only a real shortfall reads as one.
+        var meets = _acrPolicy.Meets(context.AchievedAcr, flow.MinimumAcr);
+        if (meets.IsFailure)
+            return meets.ToNewResult<FlowResult>();
+
+        if (!meets.Value)
             return GenericResult<FlowResult>.Failure(RunnerLog.InsufficientAssurance(
                 _logger, flow.Name, context.AchievedAcr ?? "none", flow.MinimumAcr ?? "none"));
 
         RunnerLog.TerminalPassed(_logger, flow.Name, flow.Audience);
 
-        var issued = await _issuer.Issue(
-            new IssuanceRequest
-            {
-                PrincipalId = context.Principal.Id,
-                TenantId = context.Principal.TenantId,
-                Audience = flow.Audience,
-                Scopes = [],
-                AuthenticationMethods = context.AchievedMethods,
-                Acr = context.AchievedAcr,
+        var assertion = new IssuanceRequest
+        {
+            PrincipalId = context.Principal.Id,
+            TenantId = context.Principal.TenantId,
+            Audience = flow.Audience,
+            Scopes = [],
+            AuthenticationMethods = context.AchievedMethods,
+            Acr = context.AchievedAcr,
+            ValidUntil = context.ClaimsValidUntil,
 
-                // I6 — an external claim is advisory. A provider naming a role does not grant one,
-                // so only what this platform states or derived itself reaches the token.
-                //
-                // Every value of a repeated type is carried, not the first: permissions and roles
-                // arrive as many claims of one type, and keeping one would mint a token that
-                // verifies and then refuses everything its holder is actually entitled to.
-                Claims = context.Claims.Claims
-                    .Where(c => c.Source == ClaimSources.Local || c.Source == ClaimSources.Derived)
-                    .GroupBy(c => c.Type, StringComparer.Ordinal)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => (IReadOnlyList<string>)[.. g.Select(c => c.Value)],
-                        StringComparer.Ordinal),
-            },
-            cancellationToken).ConfigureAwait(false);
+            // I6 — an external claim is advisory. A provider naming a role does not grant one,
+            // so only what this platform states or derived itself reaches the token.
+            //
+            // Every value of a repeated type is carried, not the first: permissions and roles
+            // arrive as many claims of one type, and keeping one would mint a token that
+            // verifies and then refuses everything its holder is actually entitled to.
+            Claims = context.Claims.Claims
+                .Where(c => c.Source == ClaimSources.Local || c.Source == ClaimSources.Derived)
+                .GroupBy(c => c.Type, StringComparer.Ordinal)
+                .ToDictionary(
+                    g => g.Key,
+                    g => (IReadOnlyList<string>)[.. g.Select(c => c.Value)],
+                    StringComparer.Ordinal),
+        };
 
+        // What the flow's product is, is the flow's own configuration (FDW-903): the same assertion is
+        // either minted into a bearer token or stored as a server-side session the browser reaches by
+        // a random id. Both pass the same terminal check above, so neither is a weaker way in.
+        var issued = flow.SessionServiceName is { } sessionService
+            ? await _sessions.Create(sessionService, flow.Name, assertion, cancellationToken).ConfigureAwait(false)
+            : await _issuer.Issue(assertion, cancellationToken).ConfigureAwait(false);
+
+        // Past the terminal check the caller has been accepted, so a failure to issue is this host's
+        // fault, never a refusal. It is chained under its own code so a route can tell the two apart
+        // and not answer a correct sign-in as a rejected one (FDW-918).
         if (issued.IsFailure)
-            return issued.ToNewResult<FlowResult>();
+        {
+            RunnerLog.IssuanceFailed(_logger, flow.Name, flow.SessionServiceName is null ? "token" : "session");
+            return GenericResult<FlowResult>.Chain(AuthenticationResultCodes.ByName("IssuanceFailed"), issued);
+        }
 
         RunnerLog.FlowCompleted(_logger, flow.Name,
             string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? "none");

@@ -12,5 +12,5 @@ namespace Fdw.Services.Resiliency.Abstractions;
 public sealed class HttpClientResiliencyCategory : ResiliencyCategoryBase
 {
     /// <summary>Initializes a new instance of <see cref="HttpClientResiliencyCategory"/>.</summary>
-    public HttpClientResiliencyCategory() : base(2, "HttpClient") { }
+    public HttpClientResiliencyCategory() : base("HttpClient") { }
 }

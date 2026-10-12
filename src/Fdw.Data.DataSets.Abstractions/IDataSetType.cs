@@ -51,6 +51,18 @@ public interface IDataSetType : ITypeOption<int, DataSetTypeBase>
     string Version { get; }
 
     /// <summary>
+    /// Gets whether this kind applies a query's ordering and paging in the store, so that a page asked
+    /// for is the page returned.
+    /// </summary>
+    bool PagesInStore { get; }
+
+    /// <summary>
+    /// Gets whether this kind runs a query's grouping and aggregates in the store it reads, so a grouped
+    /// query comes back grouped. A kind that builds its rows from several reads has no one query to group.
+    /// </summary>
+    bool AggregatesInStore { get; }
+
+    /// <summary>
     /// Executes a data command against an instance of this dataset type.
     /// </summary>
     /// <typeparam name="T">The expected result type.</typeparam>

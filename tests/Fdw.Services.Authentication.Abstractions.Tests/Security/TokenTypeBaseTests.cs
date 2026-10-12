@@ -15,15 +15,11 @@ public class TokenTypeBaseTests
     {
         // Arrange & Act
         var tokenType = new TestTokenType(
-            id: 1,
             name: "AccessToken",
             format: "JWT",
             canBeRefreshed: true,
             containsUserIdentity: true,
             typicalLifetimeSeconds: 3600);
-
-        // Assert
-        tokenType.Id.ShouldBe(1);
         tokenType.Name.ShouldBe("AccessToken");
         tokenType.Format.ShouldBe("JWT");
         tokenType.CanBeRefreshed.ShouldBeTrue();
@@ -38,7 +34,6 @@ public class TokenTypeBaseTests
     {
         // Arrange & Act
         var tokenType = new TestTokenType(
-            id: 2,
             name: "RefreshToken",
             format: "Opaque",
             canBeRefreshed: false,
@@ -56,7 +51,6 @@ public class TokenTypeBaseTests
     {
         // Arrange & Act
         var tokenType = new TestTokenType(
-            id: 3,
             name: "IdToken",
             format: "JWT",
             canBeRefreshed: false,
@@ -74,7 +68,7 @@ public class TokenTypeBaseTests
     public void PropertiesAreReadOnly()
     {
         // Arrange
-        var tokenType = new TestTokenType(1, "Test", "JWT", true, true, 3600);
+        var tokenType = new TestTokenType("Test", "JWT", true, true, 3600);
 
         // Assert - Properties should only have getters
         var type = typeof(ITokenType);
@@ -90,7 +84,7 @@ public class TokenTypeBaseTests
     public void TokenTypeImplementsITokenType()
     {
         // Arrange
-        var tokenType = new TestTokenType(1, "Test", "JWT", true, true, 3600);
+        var tokenType = new TestTokenType("Test", "JWT", true, true, 3600);
 
         // Assert
         tokenType.ShouldBeAssignableTo<ITokenType>();
@@ -103,13 +97,12 @@ public class TokenTypeBaseTests
     private sealed class TestTokenType : TokenTypeBase
     {
         public TestTokenType(
-            int id,
             string name,
             string format,
             bool canBeRefreshed,
             bool containsUserIdentity,
             int? typicalLifetimeSeconds)
-            : base(id, name, format, canBeRefreshed, containsUserIdentity, typicalLifetimeSeconds)
+            : base(name, format, canBeRefreshed, containsUserIdentity, typicalLifetimeSeconds)
         {
         }
     }

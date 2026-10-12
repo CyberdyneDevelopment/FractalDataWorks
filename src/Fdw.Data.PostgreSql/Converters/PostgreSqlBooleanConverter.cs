@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlBooleanConverter()
     : DataTypeConverterBase(
-        id: 1,
         name: "Boolean",
         sourceType: "Bool",
         targetClrType: typeof(bool),

@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class CountAggregateFunction : AggregateFunctionBase
 {
     /// <summary>Initializes a new instance of the <see cref="CountAggregateFunction"/> class.</summary>
-    public CountAggregateFunction() : base(2, "Count")
+    public CountAggregateFunction() : base("Count")
     {
     }
 

@@ -16,6 +16,4 @@ namespace Fdw.Services.Credentials.Abstractions;
 /// </remarks>
 public interface ICredentialServiceImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets or sets the FK to <c>sec.CredentialService.Id</c>.</summary>
-    Guid CredentialServiceId { get; set; }
 }

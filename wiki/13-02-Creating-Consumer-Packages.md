@@ -33,32 +33,31 @@ Consumer API (e.g., Reference.Api)
   +-- Application-specific packages
 ```
 
-### Client-Side (UI and API Clients)
+### Client-Side (.NET API Clients)
+
+The web console (`reference-react-ui`) calls the API over HTTP and uses none of these packages. They serve .NET consumers.
 
 ```
-Consumer UI (e.g., reference-ui)
+.NET consumer (e.g., Fdw.TUI.Management)
   |
-  +-- Fdw.UI.Components.Blazor            (Protocol providers)
-  |     +-- Per-domain .Clients packages (transitive, 15 packages)
-  |           +-- Services.Connections.Clients          (ConnectionApiClient)
-  |           +-- Services.Data.Clients                 (DataStoreApiClient, DataSetApiClient)
-  |           +-- Services.Pipelines.Clients            (PipelineApiClient)
-  |           +-- Services.Scheduling.Clients           (ScheduleApiClient)
-  |           +-- Services.Users.Clients                (UserApiClient)
-  |           +-- Services.Authorization.Clients        (RoleApiClient)
-  |           +-- Services.Multitenancy.Clients         (TenantApiClient)
-  |           +-- Services.Quality.Clients              (QualityApiClient)
-  |           +-- Services.Catalog.Clients              (CatalogApiClient)
-  |           +-- Schema.Clients                        (SchemaApiClient)
-  |           +-- Operations.Clients                    (DataflowApiClient, ConfigurationApiClient)
-  |           +-- Web.Analytics.Clients                 (AnalyticsApiClient)
-  |           +-- Web.Calculations.Clients              (CalculationApiClient)
-  |           +-- Web.Search.Clients                    (SearchApiClient)
-  |           +-- UI.Themes.Clients                     (ThemeApiClient)
-  |           +-- Web.Clients.Abstractions              (ApiClientBase, ClientLog)
-  |                 +-- Contracts/                      (IColumnSchema, IDataSetField, etc.)
-  |
-  +-- Fdw.UI.Blazor.MudBlazor             (or Tailwind helpers)
+  +-- Per-domain .Clients packages (referenced directly, one per domain used)
+        +-- Services.Connections.Clients          (ConnectionApiClient)
+        +-- Services.Data.Clients                 (DataStoreApiClient, DataSetApiClient)
+        +-- Services.Pipelines.Clients            (PipelineApiClient)
+        +-- Services.Scheduling.Clients           (ScheduleApiClient)
+        +-- Services.Users.Clients                (UserApiClient)
+        +-- Services.Authorization.Clients        (RoleApiClient)
+        +-- Services.Multitenancy.Clients         (TenantApiClient)
+        +-- Services.Quality.Clients              (QualityApiClient)
+        +-- Services.Catalog.Clients              (CatalogApiClient)
+        +-- Schema.Clients                        (SchemaApiClient)
+        +-- Operations.Clients                    (DataflowApiClient, ConfigurationApiClient)
+        +-- Web.Analytics.Clients                 (AnalyticsApiClient)
+        +-- Web.Calculations.Clients              (CalculationApiClient)
+        +-- Web.Search.Clients                    (SearchApiClient)
+        +-- UI.Themes.Clients                     (ThemeApiClient)
+        +-- Web.Clients.Abstractions              (ApiClientBase, ClientLog)
+              +-- Contracts/                      (IColumnSchema, IDataSetField, etc.)
   +-- Application-specific rendering
 ```
 
@@ -97,7 +96,7 @@ public sealed class GetConnectionEndpoint : GetConnectionEndpointBase<MsSqlConne
         {
             Id = config.Id,
             Name = config.Name,
-            ServiceType = config.ServiceOptionType ?? "MsSql",
+            ServiceType = config.Implementation ?? "MsSql",
             Server = config.Server,
             // ... implementation-specific fields
         };
@@ -143,7 +142,7 @@ The endpoint base classes use **REST-style routes** by default:
 | Update | PUT | `/{resource}/{name}` |
 | Delete | DELETE | `/{resource}/{name}` |
 
-Consumer projects may override `Configure()` for **RPC-style routes** (useful for Blazor compatibility):
+Consumer projects may override `Configure()` for **RPC-style routes**:
 
 | Operation | Verb | Route |
 |-----------|------|-------|
@@ -171,16 +170,16 @@ public sealed class DeleteConnectionEndpoint : DeleteConnectionEndpointBase<MsSq
 
 Each closure is typically 5-30 lines -- just constructor forwarding plus abstract method implementations for type-specific mapping. Closures can be organized either in a single file per domain or one file per endpoint.
 
-## Creating Consumer UI
+## Consuming the API from .NET
 
-Consumer UI projects are rendering-only skins that consume FDW Protocol providers via the headless architecture. The Protocol providers handle all API calls, state management, error handling, and caching; the consumer UI only renders the state they provide.
+A .NET consumer (the terminal UI, or a host that calls another host's API) references the `.Clients` package of each domain it calls. Each package registers its named `HttpClient` through the `ApiClientTypes` collection. Attach the bearer token with `Web.Http.Authentication`'s `AddBearerTokenHandler<TProvider>()`.
 
 ### Package References
 
 ```xml
-<PackageReference Include="Fdw.UI.Components.Blazor" />
-<PackageReference Include="Fdw.UI.Blazor.MudBlazor" />  <!-- or your UI framework -->
-<!-- Per-domain .Clients packages are transitive from UI.Components.Blazor -->
+<PackageReference Include="Fdw.Services.Connections.Clients" />
+<PackageReference Include="Fdw.Services.Data.Clients" />
+<!-- one per domain the consumer calls -->
 ```
 
 ### Per-Domain .Clients Packages (15 total)
@@ -207,22 +206,16 @@ All clients inherit from `ApiClientBase` in `Web.Clients.Abstractions`, which pr
 
 ### Cross-Domain Interface Contracts
 
-When a DTO is used across domain boundaries (e.g., `IColumnSchema` shared between Schema and Data), the contract interface lives in `Web.Clients.Abstractions/Contracts/`. Each per-domain `.Clients` package implements the interface on its concrete DTO. This allows Protocol providers and consuming code to work with the interface without taking a dependency on a specific domain's package.
-
-See [13-01 Headless UI Pattern](13-01-Headless-UI-Pattern.md) for the full list of contract interfaces and how Protocols work.
+When a DTO is used across domain boundaries (e.g., `IColumnSchema` shared between Schema and Data), the contract interface lives in `Web.Clients.Abstractions/Contracts/`. Each per-domain `.Clients` package implements the interface on its concrete DTO. This lets consuming code work with the interface without taking a dependency on a specific domain's package.
 
 ### Adding Consumer-Specific Features
 
-For features not covered by the framework, create additional:
-1. **API clients** in your project (inheriting from `ApiClientBase`)
-2. **Protocol components** that inject your custom API clients
-3. **Visual components** that wrap your Protocols with your UI framework
+For routes the framework does not cover, create an API client in your project that inherits from `ApiClientBase`.
 
 ## See Also
 
 - [12-07 API Endpoints](12-07-API-Endpoints.md) -- Per-domain endpoint architecture
 - [12-08 Customizing Endpoints](12-08-Customizing-Endpoints.md) -- Thin closure pattern details
 - [Web.RestEndpoints](../src/Fdw.Web.RestEndpoints/) -- Tier 1 CRUD base classes
-- [13-01 Headless UI Pattern](13-01-Headless-UI-Pattern.md) -- Protocol architecture
 - [12-01 Creating a Server](12-01-Creating-A-Server.md) -- Hosting startup
-- [11-01 Management UI Overview](11-01-Management-UI-Overview.md) -- Reference UI implementations
+- [11-01 Management UI Overview](11-01-Management-UI-Overview.md) -- The web console and the terminal UI

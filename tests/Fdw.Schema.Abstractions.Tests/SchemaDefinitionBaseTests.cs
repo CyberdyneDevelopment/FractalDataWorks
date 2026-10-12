@@ -13,7 +13,7 @@ public sealed class SchemaDefinitionBaseTests
     private sealed class TestProperty : IPropertyDefinition
     {
         public required string Name { get; init; }
-        public required IPropertyRole Role { get; init; }
+        public required IDatumType Role { get; init; }
         public bool IsRequired { get; init; }
         public string? Description { get; init; }
         public IReadOnlyDictionary<string, object>? Metadata { get; init; }
@@ -41,9 +41,9 @@ public sealed class SchemaDefinitionBaseTests
         return DataLayouts.ByName("Tabular");
     }
 
-    private static IPropertyRole CreateRole(string name = "Attribute")
+    private static IDatumType CreateRole(string name = "Attribute")
     {
-        return PropertyRoles.ByName(name);
+        return DatumTypes.ByName(name);
     }
 
     private static TestProperty CreateProperty(string name, string roleName = "Attribute")
@@ -275,7 +275,7 @@ public sealed class SchemaDefinitionBaseTests
         var props = new List<TestProperty> { CreateProperty("Id") };
         var schema = new TestSchema("Test", props, CreateLayout());
 
-        Should.Throw<ArgumentNullException>(() => schema.Get((IPropertyRole)null!));
+        Should.Throw<ArgumentNullException>(() => schema.Get((IDatumType)null!));
     }
 
     [Fact]

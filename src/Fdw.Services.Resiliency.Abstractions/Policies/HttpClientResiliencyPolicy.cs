@@ -25,7 +25,7 @@ public sealed class HttpClientResiliencyPolicy : ResiliencyPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpClientResiliencyPolicy"/> class.
     /// </summary>
-    public HttpClientResiliencyPolicy() : base(2, "HttpClient")
+    public HttpClientResiliencyPolicy() : base("HttpClient")
     {
     }
 

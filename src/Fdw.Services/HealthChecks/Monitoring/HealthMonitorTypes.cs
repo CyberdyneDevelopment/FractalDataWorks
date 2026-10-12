@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 ﻿using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services.Abstractions;
@@ -24,10 +25,10 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// <para>
 /// The health monitor is a full service domain: options ("Local" in this assembly, "HttpClient" in
 /// <c>Fdw.Web.Analytics.Clients</c>) register factories with the domain provider, and consumers depend
-/// on the provider (<see cref="IPlatformServiceProvider{TService,TConfiguration}"/> of
-/// <see cref="IHealthMonitorService"/>/<see cref="HealthMonitorConfiguration"/>) — never on a direct
+/// on the provider (<see cref="IDomainServiceProvider{TService,TConfiguration}"/> of
+/// <see cref="IHealthMonitorService"/>/<see cref="DomainConfiguration"/>) — never on a direct
 /// <see cref="IHealthMonitorService"/> registration. Which implementation a host runs is that host's
-/// <c>HealthMonitors</c> appsettings row (<c>ServiceOptionType</c>), resolved at first use — not a
+/// <c>HealthMonitors</c> appsettings row (<c>Implementation</c>), resolved at first use — not a
 /// registration-order race.
 /// </para>
 /// <para>
@@ -37,7 +38,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>, HealthMonitorConfiguration>),
+    typeof(HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, DomainConfiguration>, DomainConfiguration>),
     typeof(IHealthMonitorType),
     typeof(HealthMonitorTypes),
     ServiceInterface = typeof(IHealthMonitorService),
@@ -45,7 +46,7 @@ namespace Fdw.Services.HealthChecks.Monitoring;
     ProviderInterface = typeof(IHealthMonitorProvider),
     ServiceCategory = "HealthMonitor")]
 public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
-    HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, HealthMonitorConfiguration>, HealthMonitorConfiguration>,
+    HealthMonitorTypeBase<IHealthMonitorService, IHealthMonitorFactory<IHealthMonitorService, DomainConfiguration>, DomainConfiguration>,
     IHealthMonitorType>
 {
 
@@ -62,16 +63,23 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
     /// <remarks>
-    /// Which monitor a host runs is per-host rather than shared across hosts, so this domain defaults
-    /// to <c>ServerConfiguration</c> — the store for boot-time and near-static server values — where a
-    /// domain whose rows are shared defaults to <c>PlatformConfiguration</c>.
+    /// The monitors themselves are shared across hosts, so they live in
+    /// <c>PlatformConfiguration</c>. Which one a given host reports to is per-host and lives in
+    /// <c>ServerConfiguration</c> — see <see cref="SelectionConnection"/>. The two are separate
+    /// because they answer different questions, and reading the selection from this store found
+    /// nothing: the container is not declared there, so every /health/system call returned 500 with
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
+
+    /// <summary>Gets the store the per-host monitor selection is read from.</summary>
+    /// <remarks>
+    /// <c>ServerConfiguration</c>, the store for boot-time and near-static server values, alongside
+    /// the other per-host settings such as Cors and the host record itself.
+    /// </remarks>
+    public static string SelectionConnection => ServerConnection.Name;
 
     static HealthMonitorTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IHealthMonitorProvider).ToString();
 
         Registration((builder, loggerFactory) =>
@@ -81,33 +89,17 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<HealthMonitorConfigurationProvider>(sp =>
                 new HealthMonitorConfigurationProvider(
                     sp.GetService<ILogger<HealthMonitorConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<HealthMonitorSelectionConfigurationProvider>(sp =>
-                new HealthMonitorSelectionConfigurationProvider(
-                    sp.GetService<ILogger<HealthMonitorSelectionConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), HealthMonitorTypes.ConfigurationConnection, "hlth", "HealthMonitor"));
 
-            builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(
-                sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<HealthMonitorConfiguration>>(
-                sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
+            builder.Services.TryAddSingleton<IHealthMonitorConfigurationProvider>(sp => sp.GetRequiredService<HealthMonitorConfigurationProvider>());
 
-            var collected = collectOptions(builder, loggerFactory);
-            if (collected.IsFailure)
-                return collected;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(HealthMonitorTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(HealthMonitorTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- it has to already be in
+            // builder.Services before any option's own Register() runs, since each option decorates
+            // this registration (wraps its factory, adding its own name) rather than being handed
+            // the provider as a parameter.
             builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
             {
                 var provider = new HealthMonitorProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<HealthMonitorProvider>()
                     ?? NullLogger<HealthMonitorProvider>.Instance);
 
@@ -130,7 +122,7 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(HealthMonitorTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<HealthMonitorConfiguration>).ToString());
+                            typeof(IHealthMonitorConfigurationProvider).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -138,8 +130,26 @@ public partial class HealthMonitorTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(HealthMonitorTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            // Runs each option's own Register(builder, loggerFactory) -- unchanged, existing
+            // signature. Each option decorates the AddScoped<IHealthMonitorProvider> registration
+            // set up immediately above, wrapping its factory so its own name gets registered
+            // whichever scope actually constructs the instance.
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(HealthMonitorTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(HealthMonitorTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(HealthMonitorTypes), providerService);

@@ -15,6 +15,7 @@ using Fdw.Services.Connections.Http.Abstractions;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 using Fdw.Services.Connections.Http.Abstractions.Results;
+using Fdw.Services.Connections.Http.Security;
 
 namespace Fdw.Services.Connections.Http.Protocols;
 
@@ -56,11 +57,10 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     /// <summary>
     /// Initializes a new instance of the <see cref="GraphQLProtocolBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the protocol.</param>
     /// <param name="name">The name of the protocol.</param>
     /// <param name="description">The description of the protocol.</param>
-    protected GraphQLProtocolBase(int id, string name, string description)
-        : base(id, name, description, "application/json")
+    protected GraphQLProtocolBase(string name, string description)
+        : base(name, description, "application/json")
     {
     }
 
@@ -74,6 +74,23 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     {
         try
         {
+            if (command is IQueryCommand queryCommand
+                && queryCommand.Filter?.Root is { } filterRoot
+                && FirstUnsupportedNode(filterRoot) is { } unsupported)
+            {
+                return GenericResult<HttpRequestMessage>.Failure(
+                    HttpResultCodes.ByName("UnsupportedFilterOperator"),
+                    unsupported is IFilterCondition unsupportedCondition
+                        ? ResultDetails.Create(
+                            "Protocol", Name,
+                            "Operator", unsupportedCondition.Operator.Name,
+                            "Field", unsupportedCondition.PropertyName)
+                        : ResultDetails.Create(
+                            "Protocol", Name,
+                            "Operator", unsupported.GetType().Name,
+                            "Field", "(unrecognized filter node)"));
+            }
+
             // GraphQL always uses POST
             var endpoint = GetRequestPath(command, container, context);
             var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -418,11 +435,16 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     {
         if (node is IFilterCondition condition)
         {
+            // IsNull/IsNotNull's Value is null by convention, not by anything the type system
+            // enforces -- RequiresValue is the actual contract (ODataProtocol checks the same thing
+            // for the identical reason). A condition built with a non-null Value against one of these
+            // would otherwise silently filter on that value instead of the null check it names.
+            var value = condition.Operator.RequiresValue ? condition.Value : null;
             var filterObj = new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 [condition.PropertyName] = new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
-                    [MapOperatorToGraphQL(condition.Operator?.Name ?? "Equal")] = condition.Value
+                    [MapOperatorToGraphQL(condition.Operator.Name)] = value
                 }
             };
             return filterObj;
@@ -451,6 +473,57 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     }
 
     /// <summary>
+    /// Whether <see cref="MapOperatorToGraphQL"/> can correctly represent the given operator.
+    /// </summary>
+    /// <remarks>
+    /// Every operator <see cref="MapOperatorToGraphQL"/> names explicitly. An operator missing from
+    /// that switch used to fall through to "eq" silently -- IsNotNull, before this changed, was one
+    /// such operator: it rendered identically to IsNull ({{field: {eq: null}}} for both), wrong for
+    /// IsNotNull. Both are now named explicitly (IsNull as "eq", IsNotNull as "ne", the same
+    /// equal/not-equal vocabulary this class already uses for null comparisons) rather than refused --
+    /// refusing a case the mechanism can actually express correctly would just trade a wrong answer
+    /// for a needless one. <see cref="Translate"/> refuses only what genuinely has no mapping.
+    /// </remarks>
+    /// <param name="operatorName">The filter operator's <c>IFilterOperator.Name</c>.</param>
+    protected virtual bool SupportsOperator(string operatorName) => operatorName switch
+    {
+        "Equal" or "NotEqual" or "GreaterThan" or "GreaterThanOrEqual" or "LessThan" or "LessThanOrEqual"
+            or "Contains" or "StartsWith" or "EndsWith" or "In" or "NotIn" or "IsNull" or "IsNotNull" => true,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Walks a filter tree depth-first and returns the first node -- a condition whose operator
+    /// <see cref="SupportsOperator"/> declines, or any node that is neither a condition nor a group --
+    /// this protocol cannot express, or <see langword="null"/> when the whole tree is supported.
+    /// </summary>
+    /// <remarks>
+    /// An unrecognized <see cref="IFilterNode"/> implementation is treated as unsupported rather than
+    /// silently skipped: <see cref="IFilterNode"/> is a public marker interface, and the safe reading
+    /// for anything this protocol doesn't know how to render is "not expressed," never "fine, proceed"
+    /// (the same principle <see cref="IQueryCapability"/> documents for a translator generally).
+    /// </remarks>
+    private IFilterNode? FirstUnsupportedNode(IFilterNode node)
+    {
+        if (node is IFilterCondition condition)
+            return SupportsOperator(condition.Operator.Name) ? null : node;
+
+        if (node is FilterGroup group)
+        {
+            foreach (var child in group.Nodes)
+            {
+                var found = FirstUnsupportedNode(child);
+                if (found is not null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        return node;
+    }
+
+    /// <summary>
     /// Maps a filter operator to GraphQL convention.
     /// </summary>
     protected virtual string MapOperatorToGraphQL(string operatorName)
@@ -468,7 +541,18 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
             "EndsWith" => "endsWith",
             "In" => "in",
             "NotIn" => "notIn",
-            _ => "eq"
+            // IsNull/IsNotNull carry no separate value (Value is null by convention); "eq"/"ne"
+            // against a null Value is this class's existing null-comparison vocabulary.
+            "IsNull" => "eq",
+            "IsNotNull" => "ne",
+            // Unreachable from Translate -- SupportsOperator gates every operator this switch does
+            // not name before BuildFilterObjectFromExpression (and so this method) is ever reached.
+            // Kept as a thrown failure rather than a silent "eq" default so a direct call (e.g. a
+            // future override forgetting to also override SupportsOperator) fails loud instead of
+            // mis-mapping -- see RecordRowMatcher.Matches for the same "should have been rejected
+            // first" idiom elsewhere in this codebase.
+            _ => throw new InvalidOperationException(
+                $"Filter operator '{operatorName}' has no GraphQL mapping.")
         };
     }
 
@@ -514,15 +598,17 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
         // Add API key if configured
         if (!string.IsNullOrEmpty(context.ResolvedApiKey))
         {
-            string? headerName = null;
+            var headerName = HttpAuthenticationTypes.ApiKeyHeaderName;
             if (context.Configuration is HttpConnectionConfigurationBase httpConfig
                 && string.Equals(httpConfig.AuthenticationType, "ApiKey", StringComparison.OrdinalIgnoreCase)
-                && httpConfig.AdditionalProperties is { Count: > 0 } securityValues)
+                && httpConfig.AdditionalProperties is { Count: > 0 } securityValues
+                && securityValues.TryGetValue("ApiKeyHeaderName", out var configuredHeaderName)
+                && !string.IsNullOrEmpty(configuredHeaderName))
             {
-                securityValues.TryGetValue("ApiKeyHeaderName", out headerName);
+                headerName = configuredHeaderName;
             }
 
-            request.Headers.TryAddWithoutValidation(headerName ?? "X-API-Key", context.ResolvedApiKey);
+            request.Headers.TryAddWithoutValidation(headerName, context.ResolvedApiKey);
         }
     }
 
@@ -607,8 +693,13 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
     #endregion
 
     /// <inheritdoc />
-    /// <remarks>Filter, ordering and paging become field arguments and query variables on the generated operation.</remarks>
-    public override bool CanExpressFilter(IFilterExpression filter) => true;
+    /// <remarks>
+    /// Honest per <see cref="SupportsOperator"/> rather than a blanket <see langword="true"/> -- see
+    /// <see cref="Translate"/>, which refuses a filter carrying an operator this declines instead of
+    /// mapping it to the wrong one.
+    /// </remarks>
+    public override bool CanExpressFilter(IFilterExpression filter)
+        => filter.Root is null || FirstUnsupportedNode(filter.Root) is null;
 
     /// <inheritdoc />
     public override bool CanExpressOrdering(IOrderingExpression ordering) => true;

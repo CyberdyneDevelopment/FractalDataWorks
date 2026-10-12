@@ -37,7 +37,6 @@ public sealed class DetectCodeSmellsTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: iterate methods and types, check smell patterns, aggregate results
     public override async Task<IGenericResult<QueryResult<CodeSmellsData>>> Translate(
         DetectCodeSmellsCommand command,
         Solution solution,
@@ -189,7 +188,6 @@ public sealed class DetectCodeSmellsTranslator
 
         return GenericResult<QueryResult<CodeSmellsData>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static CodeSmell CreateSmell(string type, string member, Location location, string description, string severity)
     {

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using Fdw.Collections.Attributes;
 using Fdw.Results;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.MsSql.Authentication.Types;
 
@@ -16,10 +17,10 @@ public sealed class EntraIdConfiguration : MsSqlAuthenticationConfiguration
 
     /// <summary>Initializes a new instance of the <see cref="EntraIdConfiguration"/> class.</summary>
     public EntraIdConfiguration()
-        : base(3, "EntraId",
+        : base("EntraId",
                "Microsoft Entra ID",
                "Authenticate using Microsoft Entra ID (Azure Active Directory)",
-               Expected, [], [])
+               Expected, [], [], requiresSecret: false)
     {
     }
 
@@ -49,5 +50,24 @@ public sealed class EntraIdConfiguration : MsSqlAuthenticationConfiguration
         if (!string.IsNullOrEmpty(resolvedPassword))
             fragment += string.Format(CultureInfo.InvariantCulture, "Password={0};", resolvedPassword);
         return GenericResult<string>.Success(fragment);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Carries no stored credential.</remarks>
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [];
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A service principal signs in with its own client id and secret. Every other mode -- Default, Interactive,
+    /// ManagedIdentity, and no mode at all, which <see cref="BuildAuthFragment"/> builds as Default -- takes the
+    /// identity the host process has, so it is the host's.
+    /// </remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values)
+    {
+        if (values is null || !values.TryGetValue("AzureAdMode", out var mode) || string.IsNullOrEmpty(mode))
+            return true;
+
+        return !string.Equals(mode, "SERVICEPRINCIPAL", System.StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(mode, "SPN", System.StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -14,7 +14,7 @@ public sealed class GreaterThanOrEqualOperator : ComparisonOperatorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="GreaterThanOrEqualOperator"/> class.
     /// </summary>
-    public GreaterThanOrEqualOperator() : base(3, "GreaterThanOrEqual", ">=") { }
+    public GreaterThanOrEqualOperator() : base("GreaterThanOrEqual", ">=") { }
 
     /// <inheritdoc />
     public override bool Evaluate(double left, double right) => left >= right;

@@ -15,7 +15,6 @@ public sealed class LineChartType : ChartTypeBase
     /// </summary>
     public LineChartType()
         : base(
-            id: 2,
             name: "Line",
             displayName: "Line Chart",
             category: "Trend",

@@ -14,5 +14,5 @@ public sealed class UpsertMode : WriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="UpsertMode"/> class.
     /// </summary>
-    public UpsertMode() : base(2, "Upsert") { }
+    public UpsertMode() : base("Upsert") { }
 }

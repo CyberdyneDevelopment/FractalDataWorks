@@ -9,9 +9,14 @@ using Fdw.Data.Builders.Results;
 namespace Fdw.Data.Builders;
 
 /// <summary>
-/// Provides a fluent builder API for constructing <see cref="DataSetConfiguration"/> instances.
+/// Provides a fluent builder API for constructing <see cref="SimpleDataSetConfiguration"/> instances.
 /// </summary>
 /// <remarks>
+/// <para>
+/// It builds a Simple data set: fields, key fields, sources and caching. It has no way to state joins, aggregates or a
+/// federation strategy, which is what a Compound, Simple-with-aggregates or Federated data set adds, so a data set that
+/// needs them is built from its own configuration class (FDW-1031).
+/// </para>
 /// <para>
 /// This builder implements a fluent interface for creating dataset configurations with validation.
 /// It ensures all required properties are set and validates the configuration before building.
@@ -30,7 +35,7 @@ public sealed class DataSetConfigurationBuilder
     private string _version = "1.0";
     private string _category = "Dataset";
     private string? _recordTypeName;
-    private readonly List<DataFieldConfiguration> _fields = new();
+    private readonly List<DataSetFieldConfiguration> _fields = new();
     private readonly List<string> _keyFields = new();
     private readonly List<DataSetSourceConfiguration> _sources = new();
     private CachingConfiguration? _caching;
@@ -40,7 +45,7 @@ public sealed class DataSetConfigurationBuilder
     /// </summary>
     /// <remarks>
     /// These are populated after <see cref="Build"/> is called. The caller is responsible
-    /// for persisting these configurations separately from the DataSetConfiguration.
+    /// for persisting these configurations separately from the SimpleDataSetConfiguration.
     /// </remarks>
     public IReadOnlyList<DataSetSourceConfiguration> SourceConfigurations => _sources;
 
@@ -141,7 +146,7 @@ public sealed class DataSetConfigurationBuilder
     /// </summary>
     /// <param name="field">The field configuration to add.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddField(DataFieldConfiguration field)
+    public DataSetConfigurationBuilder AddField(DataSetFieldConfiguration field)
     {
         if (field != null)
         {
@@ -157,13 +162,13 @@ public sealed class DataSetConfigurationBuilder
     /// <summary>
     /// Adds a field using a builder function.
     /// </summary>
-    /// <param name="builderFunc">A function that configures a <see cref="DataFieldConfigurationBuilder"/> and returns the result.</param>
+    /// <param name="builderFunc">A function that configures a <see cref="DataSetFieldConfigurationBuilder"/> and returns the result.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddField(Func<DataFieldConfigurationBuilder, IGenericResult<DataFieldConfiguration>> builderFunc)
+    public DataSetConfigurationBuilder AddField(Func<DataSetFieldConfigurationBuilder, IGenericResult<DataSetFieldConfiguration>> builderFunc)
     {
         if (builderFunc != null)
         {
-            var builder = new DataFieldConfigurationBuilder();
+            var builder = new DataSetFieldConfigurationBuilder();
             var result = builderFunc(builder);
             if (result.IsSuccess && result.Value != null)
             {
@@ -177,13 +182,13 @@ public sealed class DataSetConfigurationBuilder
     /// Adds a simple field with name and type.
     /// </summary>
     /// <param name="name">The field name.</param>
-    /// <param name="typeName">The .NET type name.</param>
+    /// <param name="typeName">The field's data type: the name of a <c>DataTypes</c> option, such as <c>Int32</c>.</param>
     /// <param name="isKey">Whether this field is part of the primary key.</param>
     /// <param name="isRequired">Whether this field is required.</param>
     /// <returns>This builder instance for method chaining.</returns>
     public DataSetConfigurationBuilder AddField(string name, string typeName, bool isKey = false, bool isRequired = false)
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = name,
             TypeName = typeName,
@@ -198,7 +203,7 @@ public sealed class DataSetConfigurationBuilder
     /// </summary>
     /// <param name="fields">The field configurations to add.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder AddFields(IEnumerable<DataFieldConfiguration> fields)
+    public DataSetConfigurationBuilder AddFields(IEnumerable<DataSetFieldConfiguration> fields)
     {
         if (fields != null)
         {
@@ -214,20 +219,21 @@ public sealed class DataSetConfigurationBuilder
     /// Adds a calculated field that computes its value from other fields.
     /// </summary>
     /// <param name="name">The calculated field name.</param>
-    /// <param name="type">The .NET type of the calculated value.</param>
+    /// <param name="type">The .NET type of the calculated value; the field takes the one <c>DataTypes</c> option that reads it.</param>
     /// <param name="calculator">Function that computes the value from a data row.</param>
     /// <param name="description">Optional description of the calculation.</param>
     /// <returns>This builder instance for method chaining.</returns>
+    /// <exception cref="ArgumentException">No option, or more than one, reads <paramref name="type"/>.</exception>
     public DataSetConfigurationBuilder WithCalculatedField(
         string name,
         Type type,
         Func<IDataRow, object> calculator,
         string? description = null)
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = name,
-            TypeName = type.FullName ?? type.Name,
+            TypeName = FieldDataType.NameFor(type),
             Description = description,
             IsKey = false,
             IsRequired = false,
@@ -294,8 +300,8 @@ public sealed class DataSetConfigurationBuilder
     /// <param name="source">The source configuration to add.</param>
     /// <returns>This builder instance for method chaining.</returns>
     /// <remarks>
-    /// The source's <see cref="DataSetSourceConfiguration.DataSetId"/> will be
-    /// set to the DataSet's ID when <see cref="Build"/> is called.
+    /// The source hangs from the DataSet by RowId; saving the DataSet names it as the source's owner,
+    /// so nothing is set on the source here.
     /// </remarks>
     public DataSetConfigurationBuilder AddSource(DataSetSourceConfiguration source)
     {
@@ -361,13 +367,13 @@ public sealed class DataSetConfigurationBuilder
     }
 
     /// <summary>
-    /// Builds a <see cref="DataSetConfiguration"/> instance from the configured values.
+    /// Builds a <see cref="SimpleDataSetConfiguration"/> instance from the configured values.
     /// </summary>
     /// <returns>
-    /// A result containing the constructed <see cref="DataSetConfiguration"/> if validation succeeds,
+    /// A result containing the constructed <see cref="SimpleDataSetConfiguration"/> if validation succeeds,
     /// or a failure result with error details if validation fails.
     /// </returns>
-    public IGenericResult<DataSetConfiguration> Build()
+    public IGenericResult<SimpleDataSetConfiguration> Build()
     {
         var validationResult = ValidateBuildInputs(out var dataSetName, out var recordTypeName);
         if (validationResult is not null)
@@ -375,21 +381,16 @@ public sealed class DataSetConfigurationBuilder
             return validationResult;
         }
 
-        // Update source configurations with the DataSet ID
-        foreach (var source in _sources)
-        {
-            source.DataSetId = _dataSetId;
-        }
-
-        var config = new DataSetConfiguration
+        var config = new SimpleDataSetConfiguration
         {
             Id = _dataSetId,
+            Implementation = SimpleDataSetConfiguration.ImplementationName,
             Name = dataSetName,
             Description = _description ?? string.Empty,
             Version = _version,
             Category = _category,
             RecordTypeName = recordTypeName,
-            Fields = new List<DataFieldConfiguration>(_fields),
+            Fields = new List<DataSetFieldConfiguration>(_fields),
             KeyFields = _keyFields
                 .Select((name, i) => new DataSetKeyFieldConfiguration
                 {
@@ -402,34 +403,34 @@ public sealed class DataSetConfigurationBuilder
             Caching = _caching
         };
 
-        return GenericResult<DataSetConfiguration>.Success(config);
+        return GenericResult<SimpleDataSetConfiguration>.Success(config);
     }
 
-    private IGenericResult<DataSetConfiguration>? ValidateBuildInputs(out string dataSetName, out string recordTypeName)
+    private IGenericResult<SimpleDataSetConfiguration>? ValidateBuildInputs(out string dataSetName, out string recordTypeName)
     {
         dataSetName = _dataSetName ?? string.Empty;
         recordTypeName = _recordTypeName ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(_dataSetName))
         {
-            return GenericResult<DataSetConfiguration>.Failure(BuilderResultCodes.ByName("DatasetNameRequired"));
+            return GenericResult<SimpleDataSetConfiguration>.Failure(BuilderResultCodes.ByName("DatasetNameRequired"));
         }
 
         if (string.IsNullOrWhiteSpace(_recordTypeName))
         {
-            return GenericResult<DataSetConfiguration>.Failure(BuilderResultCodes.ByName("RecordTypeNameRequired"));
+            return GenericResult<SimpleDataSetConfiguration>.Failure(BuilderResultCodes.ByName("RecordTypeNameRequired"));
         }
 
         if (_fields.Count == 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<SimpleDataSetConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetMissingFields"),
                 ResultDetails.Create().With("DatasetName", _dataSetName));
         }
 
         if (_keyFields.Count == 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<SimpleDataSetConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetMissingKeyFields"),
                 ResultDetails.Create().With("DatasetName", _dataSetName));
         }
@@ -442,7 +443,7 @@ public sealed class DataSetConfigurationBuilder
 
         if (duplicateFields.Count > 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<SimpleDataSetConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetDuplicateFields"),
                 ResultDetails.Create()
                     .With("DatasetName", _dataSetName)
@@ -452,7 +453,7 @@ public sealed class DataSetConfigurationBuilder
         var invalidKeyFields = _keyFields.Where(kf => !fieldNames.Contains(kf)).ToList();
         if (invalidKeyFields.Count > 0)
         {
-            return GenericResult<DataSetConfiguration>.Failure(
+            return GenericResult<SimpleDataSetConfiguration>.Failure(
                 BuilderResultCodes.ByName("DatasetInvalidKeyFields"),
                 ResultDetails.Create()
                     .With("DatasetName", _dataSetName)

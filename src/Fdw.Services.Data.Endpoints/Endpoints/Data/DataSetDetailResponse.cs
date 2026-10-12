@@ -19,6 +19,11 @@ public class DataSetDetailResponse : ResourceDetail
     /// <summary>Gets or sets the data set description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data set's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
+
     /// <summary>Gets or sets the data set version.</summary>
     public string? Version { get; set; }
 
@@ -29,7 +34,7 @@ public class DataSetDetailResponse : ResourceDetail
     /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", or "Federated"
     /// (a registered <c>DataSetTypes</c> member).
     /// </summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>
     /// Gets or sets the federation strategy used to combine sources for a Federated dataset (a

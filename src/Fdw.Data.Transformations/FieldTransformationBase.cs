@@ -18,7 +18,6 @@ public abstract class FieldTransformationBase : TransformationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FieldTransformationBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this field transformer type.</param>
     /// <param name="name">The name of this field transformer type.</param>
     /// <param name="displayName">The display name for this field transformer type.</param>
     /// <param name="description">A description of what this field transformer does.</param>
@@ -26,14 +25,13 @@ public abstract class FieldTransformationBase : TransformationTypeBase
     /// <param name="supportsBatching">Whether this transform can operate on columns rather than rows.</param>
     /// <param name="parameters">The parameter definitions this transform accepts.</param>
     protected FieldTransformationBase(
-        int id,
         string name,
         string displayName,
         string description,
         string category,
         bool supportsBatching,
         params OperationParameterDefinition[] parameters)
-        : base(id, name, displayName, description, supportsStreaming: supportsBatching, category)
+        : base(name, displayName, description, supportsStreaming: supportsBatching, category)
     {
         ExpectedParameters = parameters;
         SupportsBatching = supportsBatching;

@@ -12,7 +12,7 @@ public sealed class LocalEnvironmentType : EnvironmentTypeBase
     /// <summary>
     /// Initializes a new instance of <see cref="LocalEnvironmentType"/>.
     /// </summary>
-    public LocalEnvironmentType() : base(1, "Local")
+    public LocalEnvironmentType() : base("Local")
     {
     }
 }

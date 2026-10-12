@@ -14,7 +14,6 @@ public sealed class Pending : ProcessStateBase
     /// </summary>
     public Pending()
         : base(
-            id: 6,
             name: "Pending",
             isTerminal: false,
             isError: false,

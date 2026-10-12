@@ -27,7 +27,7 @@ public sealed class ModuloOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="ModuloOperation"/> class.
     /// </summary>
     public ModuloOperation()
-        : base(id: 5, name: "Modulo", category: "Arithmetic", description: "Computes the remainder of left divided by right (left % right)")
+        : base(name: "Modulo", category: "Arithmetic", description: "Computes the remainder of left divided by right (left % right)")
     {
         _logger = NullLogger<ModuloOperation>.Instance;
         Parameters =
@@ -52,7 +52,7 @@ public sealed class ModuloOperation : CalculationOperationBase
             if (right == 0m)
             {
                 return Task.FromResult(GenericResult<object>.Failure(
-                    CalculationOperationLog.DivisionByZero(_logger, Name)));
+                    CalculationOperationLog.DivisionByZero(_logger, Name, "Left % Right")));
             }
 
             var result = left % right;

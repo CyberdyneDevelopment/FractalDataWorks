@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Russian")]
 public sealed class RussianTimeZoneType : TimeZoneTypeBase
 {
-    public RussianTimeZoneType() : base(26, "Russian", "Russian Standard Time") { }
+    public RussianTimeZoneType() : base("Russian", "Russian Standard Time") { }
 }

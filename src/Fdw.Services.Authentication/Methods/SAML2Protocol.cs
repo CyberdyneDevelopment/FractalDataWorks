@@ -16,7 +16,6 @@ public sealed class SAML2Protocol : AuthenticationProtocolBase
     /// Initializes a new instance of the <see cref="SAML2Protocol"/> class.
     /// </summary>
     public SAML2Protocol() : base(
-        id: 3,
         name: "SAML2",
         version: "2.0",
         requiresSecureTransport: true,

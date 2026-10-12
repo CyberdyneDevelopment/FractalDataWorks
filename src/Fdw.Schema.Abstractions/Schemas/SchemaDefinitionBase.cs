@@ -103,7 +103,7 @@ public abstract class SchemaDefinitionBase<TProperty> : ISchemaDefinition<TPrope
     }
 
     /// <inheritdoc/>
-    public virtual IReadOnlyList<TProperty> Get(IPropertyRole role)
+    public virtual IReadOnlyList<TProperty> Get(IDatumType role)
     {
         if (role == null)
         {

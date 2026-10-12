@@ -11,7 +11,6 @@ public sealed class PlayIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="PlayIcon"/>.</summary>
     public PlayIcon()
         : base(
-            15,
             "Play",
             "0 0 24 24",
             "none",

@@ -14,7 +14,6 @@ public sealed class UniqueIdentifierType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="UniqueIdentifierType"/> class.</summary>
     public UniqueIdentifierType()
         : base(
-            id: 22,
             name: "uniqueidentifier",
             description: "Globally unique identifier.",
             abstractType: DataTypes.Guid)

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Fdw.Services.Data.Clients.Models;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -65,4 +67,14 @@ public class CreateDataSetSourceRequest
 
     /// <summary>Gets or sets the container identifier resolved from the DataStore tree picker.</summary>
     public Guid? ContainerId { get; set; }
+
+    /// <summary>Gets or sets the field mappings this source fills.</summary>
+    /// <remarks>
+    /// Null means the request says nothing about mappings: an existing source keeps the mappings it
+    /// has, the same way a null <c>Sources</c> leaves a data set's sources alone on update. A list,
+    /// empty included, replaces them. The wire shape is the one the client payload already sends
+    /// (<see cref="DataSetFieldMappingPayload"/>); before this property existed the binder dropped it,
+    /// so no API call could create a mapping and nothing could be attached to one (FDW-877).
+    /// </remarks>
+    public IList<DataSetFieldMappingPayload>? FieldMappings { get; set; }
 }

@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Fiji")]
 public sealed class FijiTimeZoneType : TimeZoneTypeBase
 {
-    public FijiTimeZoneType() : base(42, "Fiji", "Fiji Standard Time") { }
+    public FijiTimeZoneType() : base("Fiji", "Fiji Standard Time") { }
 }

@@ -113,7 +113,6 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear session creation flow: validate, open workspace, build state, update index
     public async Task<IGenericResult<SessionInfo>> CreateSession(
         string solutionPath,
         string description,
@@ -202,10 +201,8 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
                 ResultDetails.Create().With("SolutionPath", fullPath).With("ErrorMessage", ex.Message));
         }
     }
-#pragma warning restore MA0051
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear session resume flow: check memory, load from store, rebuild state
     public async Task<IGenericResult<SessionInfo>> ResumeSession(
         Guid sessionId,
         bool setAsActive = true,
@@ -304,7 +301,6 @@ public sealed class RoslynSessionManager : IRoslynSessionManager
                 ResultDetails.Create().With("SessionId", sessionId.ToString()).With("ErrorMessage", ex.Message));
         }
     }
-#pragma warning restore MA0051
 
     /// <inheritdoc/>
     public async Task<IGenericResult<bool>> SaveSession(

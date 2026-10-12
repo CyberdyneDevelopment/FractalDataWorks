@@ -44,14 +44,16 @@ public static class HtmlRenderer
         }
 
         // Use TypeCollection to determine rendering
-        return componentType.Id switch
+        // Why by type and not by Id: an option's id is derived from its type name, so a number here
+        // names nothing. (The numbers that used to be here had already drifted: 10 was CheckboxList.)
+        return componentType switch
         {
-            1 => RenderTextInput(property),        // TextInput
-            2 => RenderNumericInput(property),     // NumericInput
-            3 => RenderTextArea(property),         // TextArea
-            4 => RenderSwitch(property),           // Switch
-            5 => RenderDatePicker(property),       // DatePicker
-            10 => RenderDropdown(property),        // Dropdown
+            TextInputComponentType => RenderTextInput(property),
+            NumericInputComponentType => RenderNumericInput(property),
+            TextAreaComponentType => RenderTextArea(property),
+            SwitchComponentType => RenderSwitch(property),
+            DatePickerComponentType => RenderDatePicker(property),
+            DropdownComponentType => RenderDropdown(property),
             _ => RenderGenericInput(property)
         };
     }

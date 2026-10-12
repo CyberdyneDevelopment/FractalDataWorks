@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Alaska")]
 public sealed class AlaskaTimeZoneType : TimeZoneTypeBase
 {
-    public AlaskaTimeZoneType() : base(6, "Alaska", "Alaskan Standard Time") { }
+    public AlaskaTimeZoneType() : base("Alaska", "Alaskan Standard Time") { }
 }

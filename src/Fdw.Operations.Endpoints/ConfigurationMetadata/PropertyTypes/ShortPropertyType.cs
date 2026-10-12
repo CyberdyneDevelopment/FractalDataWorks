@@ -11,5 +11,5 @@ public sealed class ShortPropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="ShortPropertyType"/> class.
     /// </summary>
-    public ShortPropertyType() : base(4, "Short", typeof(short), ConfigurationPropertyTypeDtos.WholeNumber) { }
+    public ShortPropertyType() : base("Short", typeof(short), ConfigurationPropertyTypeDtos.WholeNumber) { }
 }

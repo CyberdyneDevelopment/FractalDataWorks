@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlJsonConverter()
     : DataTypeConverterBase(
-        id: 20,
         name: "Json",
         sourceType: "json",
         targetClrType: typeof(string),

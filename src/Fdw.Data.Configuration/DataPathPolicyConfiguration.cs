@@ -41,12 +41,6 @@ public partial class DataPathPolicyConfiguration : IGenericConfiguration
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the parent DataPath's logical Id (FK to data.DataPath.Id). The physical DataPathRowId
-    /// is DB-managed and invisible — the save translator resolves it from this Id on insert.
-    /// </summary>
-    public Guid DataPathId { get; set; }
-
-    /// <summary>
     /// Gets or sets the display name for this policy entry.
     /// </summary>
     /// <remarks>
@@ -57,21 +51,6 @@ public partial class DataPathPolicyConfiguration : IGenericConfiguration
     [NotMapped]
     public string Name { get; set; } = string.Empty;
 
-
-    /// <summary>
-    /// Gets the section name for IOptions binding.
-    /// </summary>
-    public string SectionName => "DataPathPolicies";
-
-    /// <summary>
-    /// Gets the service type — always "DataStore" for child config of DataPath.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type — always "DataPathPolicy".
-    /// </summary>
-    public string? ServiceOptionType => "DataPathPolicy";
 
 
     /// <summary>

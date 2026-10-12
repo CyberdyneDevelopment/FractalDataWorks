@@ -14,7 +14,6 @@ public sealed class NVarCharType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="NVarCharType"/> class.</summary>
     public NVarCharType()
         : base(
-            id: 6,
             name: "nvarchar",
             description: "Variable-length Unicode character data.",
             abstractType: DataTypes.String,

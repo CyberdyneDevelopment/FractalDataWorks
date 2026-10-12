@@ -92,7 +92,7 @@ public sealed class Interval : TriggerTypeBase
     /// Interval triggers require schedule persistence to track next execution times and
     /// do not execute immediately - they wait for their calculated schedule time.
     /// </remarks>
-    public Interval(ILogger<Interval>? logger = null) : base(2, "Interval", requiresSchedule: true, isImmediate: false)
+    public Interval(ILogger<Interval>? logger = null) : base("Interval", requiresSchedule: true, isImmediate: false)
     {
         _logger = logger ?? NullLogger<Interval>.Instance;
     }
@@ -138,7 +138,6 @@ public sealed class Interval : TriggerTypeBase
     /// // Returns 9 AM Eastern + 2 hours (first execution after start time)
     /// </code>
     /// </example>
-#pragma warning disable MA0051 // Linear interval calculation with timezone conversion and fallback
     [ConventionOverride(MaxCyclomaticComplexity = 25)]  // Interval calculation with timezone conversion and multiple fallback paths
     public override DateTime? CalculateNextExecution(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -228,7 +227,6 @@ public sealed class Interval : TriggerTypeBase
             return null;
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Determines whether the interval trigger is due, treating a never-executed trigger as due
@@ -361,7 +359,6 @@ public sealed class Interval : TriggerTypeBase
     /// A success result containing the next execution time in UTC as (lastExecution ?? startTime ?? now) + interval,
     /// or a failure result if the interval configuration is invalid.
     /// </returns>
-#pragma warning disable MA0051 // Linear interval calculation with timezone conversion and fallback
     [ConventionOverride(MaxCyclomaticComplexity = 25)]
     public override IGenericResult<DateTimeOffset> GetNextRunTime(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -421,7 +418,6 @@ public sealed class Interval : TriggerTypeBase
             return GenericResult<DateTimeOffset>.Failure(SchedulingLogger.InvalidStartTime(_logger, ex.Message));
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Attempts to convert an object to an integer.

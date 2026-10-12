@@ -14,11 +14,12 @@ namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 /// </summary>
 /// <remarks>
 /// Identity reaches the collection through this constructor rather than through overridden
-/// properties, matching how every other option family in the framework is built —
+/// properties, matching how every other option family in the framework is built:
 /// DevelopmentCommandBase, RoslynCommandBase and SqlCommandBase all take their values as
-/// constructor arguments and hand a derived id to the base.
+/// constructor arguments. None of them passes an id; <c>TypeOptionBase&lt;TBase&gt;</c> derives it
+/// from the option's fully qualified type name.
 /// </remarks>
-public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeOptionBase>, IEndpointTypeOption
+public abstract class EndpointTypeOptionBase : TypeOptionBase<EndpointTypeOptionBase>, IEndpointTypeOption
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EndpointTypeOptionBase"/> class.
@@ -32,7 +33,7 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         Type endpointType,
         string description,
         string? category = null)
-        : base(GenerateIdFromName(name), name, name, name, description, category ?? "Endpoint")
+        : base(name, name, name, description, category ?? "Endpoint")
     {
         EndpointType = endpointType ?? throw new ArgumentNullException(nameof(endpointType));
     }
@@ -324,8 +325,8 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
     /// missing one, because the agent has no way to tell a 404 from a genuine empty result.
     ///
     /// No route is read here. It is not known yet: FastEndpoints has not built the route table at
-    /// Register time, and the route lives in the endpoint's Configure body regardless. MapWebMcp
-    /// joins these declarations against the live route table once it exists.
+    /// Register time, and the route lives in the endpoint's Configure body regardless. The WebMcp
+    /// registrant's Initialize joins these declarations against the live route table once it exists.
     /// </remarks>
     private void DeclareWebMcpTool()
     {
@@ -340,7 +341,9 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
             tool.Name,
             tool.Description,
             tool.ReadOnly,
-            tool.HttpMethod));
+            tool.HttpMethod,
+            tool.PresetFieldName,
+            tool.PresetOptionType));
     }
 
     /// <summary>
@@ -368,37 +371,5 @@ public abstract class EndpointTypeOptionBase : TypeOptionBase<int, EndpointTypeO
         return name.EndsWith("Endpoint", StringComparison.Ordinal) && name.Length > "Endpoint".Length
             ? name.Substring(0, name.Length - "Endpoint".Length)
             : name;
-    }
-
-    /// <summary>
-    /// Derives a stable identifier from an option's name.
-    /// </summary>
-    /// <remarks>
-    /// FNV-1a over the name, masked to stay non-negative. The same derivation every other option
-    /// base uses, so an endpoint's id is stable across builds and machines — it is a hash of the
-    /// name, never a counter or a <c>GetHashCode</c>, which .NET does not guarantee between runs.
-    /// </remarks>
-    /// <param name="name">The option's name.</param>
-    /// <returns>A stable identifier for an option of that name.</returns>
-    protected static int GenerateIdFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-        {
-            throw new ArgumentNullException(nameof(name));
-        }
-
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-
-            return hash & 0x7FFFFFFF;
-        }
     }
 }

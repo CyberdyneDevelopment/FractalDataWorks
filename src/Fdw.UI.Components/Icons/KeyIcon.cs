@@ -11,7 +11,6 @@ public sealed class KeyIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="KeyIcon"/>.</summary>
     public KeyIcon()
         : base(
-            37,
             "Key",
             "0 0 24 24",
             "none",

@@ -9,5 +9,5 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 public sealed class CompleteWizardAction : WizardActionBase
 {
     /// <summary>Initializes a new instance of <see cref="CompleteWizardAction"/>.</summary>
-    public CompleteWizardAction() : base(5, "Complete") { }
+    public CompleteWizardAction() : base("Complete") { }
 }

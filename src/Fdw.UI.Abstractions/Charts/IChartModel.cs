@@ -10,12 +10,12 @@ namespace Fdw.UI.Abstractions.Charts;
 /// <para>
 /// <see cref="IChartModel"/> mirrors the shape of the page-model family (Id, Title, RenderMode)
 /// for consistency with the FDW page-model family. The same chart model is used regardless of
-/// whether the host renders it with a Blazor chart component, an SVG export, or a TUI sparkline —
+/// whether the host renders it with a chart component, an SVG export, or a TUI sparkline —
 /// the <see cref="ChartType"/> and <see cref="Encodings"/> carry the data-binding contract;
 /// the renderer decides how to fulfil it.
 /// </para>
 /// <para>
-/// No Blazor, ASP.NET, or chart-library types appear in this interface — the chart contract layer
+/// No UI-framework, ASP.NET, or chart-library types appear in this interface — the chart contract layer
 /// is render-agnostic.
 /// </para>
 /// </remarks>

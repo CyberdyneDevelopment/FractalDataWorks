@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Fdw.Data.Abstractions;
 using Fdw.Data.MsSql;
 using Fdw.Results;
+using Fdw.Schema;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -22,12 +23,12 @@ public sealed class MsSqlContainerTests
     }
 
     private static IReadOnlyList<IMsSqlDataField> CreateFields()
-        => [new MsSqlDataField("Id", null, 0, false, (DataTypeOptionBase)MsSqlNativeTypes.ByName("Int"), null, null, null, null)];
+        => [new MsSqlDataField("Id", null, 0, false, (DataTypeOptionBase)MsSqlNativeTypes.ByName("Int"), null, null, null, null, DatumTypes.NotYetTyped)];
 
     private static IGenericResult<IReadOnlyList<ReferencingKeyBinding>> NoReferencingKeys()
         => GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([]);
 
-    private static IReadOnlyDictionary<string, object> NoMetadata()
+    private static Dictionary<string, object> NoMetadata()
         => new Dictionary<string, object>(System.StringComparer.Ordinal);
 
     private static MsSqlTableContainer CreateTable(string name = "Customers")

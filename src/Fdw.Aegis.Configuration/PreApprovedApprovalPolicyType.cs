@@ -15,7 +15,7 @@ public sealed class PreApprovedApprovalPolicyType : ApprovalPolicyTypeBase
     /// Initializes a new instance of the <see cref="PreApprovedApprovalPolicyType"/> class.
     /// </summary>
     public PreApprovedApprovalPolicyType()
-        : base(id: 1, name: "PreApproved", configurationType: typeof(PreApprovedCommandConfiguration))
+        : base(name: "PreApproved", configurationType: typeof(PreApprovedCommandConfiguration))
     {
     }
 }

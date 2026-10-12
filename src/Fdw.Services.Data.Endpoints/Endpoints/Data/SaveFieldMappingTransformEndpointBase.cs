@@ -1,163 +1,144 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data;
 using Fdw.Data.DataSets;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
-using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
+using Fdw.Services.Data.Transformations;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for creating or updating a field mapping transform step.
-/// Provides virtual default implementations using IDataGateway for reads and writes.
+/// Attaches an existing transformation to a field mapping at a position in its chain (FDW-846):
+/// <c>POST /field-mappings/{FieldMappingId}/transforms</c>. Define transformations at <c>/transforms</c>.
 /// </summary>
-/// <remarks>
-/// Why: FieldMappingTransform and FieldMappingTransformParameter are child records that do not
-/// implement IGenericConfiguration, so they cannot be routed through IConfigurationWriter.
-/// ConfigurationSaveCommand via IDataGateway is the documented exception for child records.
-/// The configuration connection name and path are sourced from DataSetConfigurationProvider
-/// rather than IConfigurationConnectionNameProvider (which is an anti-pattern).
-/// </remarks>
 public abstract class SaveFieldMappingTransformEndpointBase : CrudCreateEndpointBase<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>
 {
-    /// <summary>Gets the data gateway for executing queries and commands.</summary>
-    protected IDataGateway DataGateway { get; }
+    private readonly TransformationConfigurationProvider _transformations;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    private readonly DataSetConfigurationProvider _dataSetProvider;
-
-    /// <inheritdoc />
-    protected SaveFieldMappingTransformEndpointBase(ILogger<SaveFieldMappingTransformEndpointBase> logger, IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider) : base(logger)
+    /// <summary>Initializes a new instance of the <see cref="SaveFieldMappingTransformEndpointBase"/> class.</summary>
+    /// <remarks>
+    /// The attachments are configuration rows in the transformation store the host declared, so they are written
+    /// through that store's configuration gateway: the main gateway refuses a request over a host-declared store.
+    /// </remarks>
+    protected SaveFieldMappingTransformEndpointBase(ILogger<SaveFieldMappingTransformEndpointBase> logger,
+        IConfigurationGatewayProvider configurationGateways, TransformationConfigurationProvider transformations) : base(logger)
     {
-        DataGateway = dataGateways.ByName("Main");
-        _dataSetProvider = dataSetProvider;
+        _configurationGateways = configurationGateways;
+        _transformations = transformations;
     }
 
-    /// <summary>Gets the resource name used for route and policy generation.</summary>
+    /// <inheritdoc/>
     protected override string ResourceName => "field-mapping-transforms";
 
-    /// <summary>Gets the write policy for this endpoint.</summary>
+    /// <inheritdoc/>
     protected override string WritePolicy => "datasets:write";
 
-    /// <summary>Gets the route for this endpoint.</summary>
+    /// <inheritdoc/>
     protected override string Route => "/field-mappings/{FieldMappingId}/transforms";
 
-    /// <summary>Gets the OpenAPI summary for this endpoint.</summary>
-    protected override string EndpointSummary => "Save a field mapping transform";
+    /// <inheritdoc/>
+    protected override string EndpointSummary => "Attach a transformation to a field mapping";
 
-    /// <summary>Gets the OpenAPI description for this endpoint.</summary>
+    /// <inheritdoc/>
     protected override string EndpointDescription =>
-        "Creates or updates a transform step in a field mapping's transform chain.";
+        "Applies an existing transformation (see /transforms) to a field mapping at the given position in its chain.";
 
-    /// <summary>Gets the connection name for configuration database queries.</summary>
-    protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;
+    /// <inheritdoc/>
+    protected override string GetResourceName(SaveFieldMappingTransformRequest request) => request.TransformationName;
 
-    /// <summary>
-    /// Gets the configuration path that holds the transform containers.
-    /// </summary>
-    protected virtual string TransformPathName => "transform";
-
-    /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
-    protected virtual string TransformContainerName => "FieldMappingTransform";
-
-    /// <summary>Gets the container name for FieldMappingTransformParameter queries.</summary>
-    protected virtual string TransformParameterContainerName => "FieldMappingTransformParameter";
-
-    /// <summary>Returns the transform type from the save request.</summary>
-    protected override string GetResourceName(SaveFieldMappingTransformRequest request) => request.TransformType;
-
-    /// <summary>
-    /// Checks whether a transform already exists. Always returns false since transforms
-    /// are identified by position, not uniqueness constraints.
-    /// </summary>
-    protected override Task<IGenericResult<bool>> CheckExists(SaveFieldMappingTransformRequest request, CancellationToken ct)
+    /// <inheritdoc/>
+    protected override async Task<IGenericResult<bool>> CheckExists(SaveFieldMappingTransformRequest request, CancellationToken ct)
     {
-        return Task.FromResult(GenericResult<bool>.Success(false));
-    }
+        var transformation = await _transformations.Get(request.TransformationName, ct).ConfigureAwait(false);
+        if (transformation.IsFailure)
+            return transformation.ToNewResult<bool>();
+        if (transformation.Value is null)
+            return GenericResult<bool>.Success(false);
 
-    /// <summary>Creates or updates the transform and its parameters.</summary>
-    protected override Task<IGenericResult<FieldMappingTransformPayload>> Create(SaveFieldMappingTransformRequest request, CancellationToken ct)
-    {
-        return SaveTransform(request, ct);
-    }
+        var gateway = _configurationGateways.Get(_transformations.DataStoreName);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<bool>();
 
-    /// <summary>
-    /// Saves a field mapping transform and its parameters.
-    /// Default implementation uses IDataGateway with ConfigurationSaveCommand. Override for custom behavior.
-    /// </summary>
-    protected virtual async Task<IGenericResult<FieldMappingTransformPayload>> SaveTransform(SaveFieldMappingTransformRequest request, CancellationToken ct)
-    {
-        FieldMappingTransformEndpointLog.SavingTransform(Logger, request.TransformType);
-
-        var config = new FieldMappingTransformConfiguration
-        {
-            Id = Guid.CreateVersion7(),
-            DataSetFieldMappingId = request.FieldMappingId,
-            TransformType = request.TransformType,
-            Ordinal = request.Ordinal
-        };
-
-        var saveResult = await DataGateway
-            .Execute<int>(
-                new ConfigurationSaveCommand<FieldMappingTransformConfiguration>(config),
-                new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName),
-                ct)
+        var attached = await FieldMappingTransformations
+            .ForFieldMapping(gateway.Value!, _transformations.DataStoreName, request.FieldMappingId, ct)
             .ConfigureAwait(false);
-        if (saveResult.IsFailure)
-        {
-            FieldMappingTransformEndpointLog.SaveTransformFailed(Logger, request.TransformType);
-            return saveResult.ToNewResult<FieldMappingTransformPayload>();
-        }
+        if (attached.IsFailure)
+            return attached.ToNewResult<bool>();
 
-        // Save parameters
-        var savedParams = new List<FieldMappingTransformParameterPayload>();
-        foreach (var param in request.Parameters)
-        {
-            var paramConfig = new FieldMappingTransformParameterConfiguration
+        return GenericResult<bool>.Success(attached.Value!.Any(a => a.TransformationId == transformation.Value.Id));
+    }
+
+    /// <inheritdoc/>
+    protected override async Task<IGenericResult> ValidateCreate(SaveFieldMappingTransformRequest request, CancellationToken ct)
+    {
+        var transformation = await _transformations.Get(request.TransformationName, ct).ConfigureAwait(false);
+        if (transformation.IsFailure)
+            return transformation;
+
+        if (transformation.Value is null)
+            return GenericResult.Failure(FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.TransformationName));
+
+        // Only a transformation of one column attaches to a field mapping; the set kinds run in pipeline stages.
+        return transformation.Value is IFieldTransformationConfiguration
+            ? GenericResult.Success()
+            : GenericResult.Failure(FieldMappingTransformEndpointLog.TransformationNotFieldLevel(
+                Logger, request.TransformationName, transformation.Value.Implementation));
+    }
+
+    /// <inheritdoc/>
+    protected override async Task<IGenericResult<FieldMappingTransformPayload>> Create(
+        SaveFieldMappingTransformRequest request, CancellationToken ct)
+    {
+        FieldMappingTransformEndpointLog.SavingTransform(Logger, request.TransformationName);
+
+        var transformation = await _transformations.Get(request.TransformationName, ct).ConfigureAwait(false);
+        if (transformation.IsFailure)
+            return transformation.ToNewResult<FieldMappingTransformPayload>();
+        if (transformation.Value is null)
+            return GenericResult<FieldMappingTransformPayload>.Failure(
+                FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.TransformationName));
+        if (transformation.Value is not IFieldTransformationConfiguration field)
+            return GenericResult<FieldMappingTransformPayload>.Failure(
+                FieldMappingTransformEndpointLog.TransformationNotFieldLevel(
+                    Logger, request.TransformationName, transformation.Value.Implementation));
+
+        var gateway = _configurationGateways.Get(_transformations.DataStoreName);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<FieldMappingTransformPayload>();
+
+        var saved = await FieldMappingTransformations
+            .Save(gateway.Value!, _transformations.DataStoreName, new FieldMappingTransformationConfiguration
             {
                 Id = Guid.CreateVersion7(),
-                FieldMappingTransformId = config.Id,
-                Name = param.Name,
-                Value = param.Value
-            };
-
-            var paramResult = await DataGateway
-                .Execute<int>(
-                    new ConfigurationSaveCommand<FieldMappingTransformParameterConfiguration>(paramConfig),
-                    new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformParameterContainerName),
-                    ct)
-                .ConfigureAwait(false);
-            if (paramResult.IsFailure)
-            {
-                FieldMappingTransformEndpointLog.SaveTransformFailed(Logger, request.TransformType);
-                return paramResult.ToNewResult<FieldMappingTransformPayload>();
-            }
-
-            savedParams.Add(new FieldMappingTransformParameterPayload
-            {
-                Id = paramConfig.Id,
-                TransformId = config.Id,
-                Name = paramConfig.Name,
-                Value = paramConfig.Value
-            });
+                DataSetFieldMappingId = request.FieldMappingId,
+                TransformationId = field.Id,
+                Ordinal = request.Ordinal
+            }, ct)
+            .ConfigureAwait(false);
+        if (saved.IsFailure)
+        {
+            FieldMappingTransformEndpointLog.SaveTransformFailed(Logger, request.TransformationName);
+            return saved.ToNewResult<FieldMappingTransformPayload>();
         }
 
-        FieldMappingTransformEndpointLog.SavedTransform(Logger, request.TransformType);
-
+        FieldMappingTransformEndpointLog.SavedTransform(Logger, request.TransformationName);
         return GenericResult<FieldMappingTransformPayload>.Success(new FieldMappingTransformPayload
         {
-            Id = config.Id,
-            FieldMappingId = config.DataSetFieldMappingId,
-            TransformType = config.TransformType,
-            Ordinal = config.Ordinal,
-            Parameters = savedParams
+            FieldMappingId = request.FieldMappingId,
+            TransformationName = field.Name,
+            TransformationType = field.TransformationType,
+            Ordinal = request.Ordinal,
+            IsSystemProvided = field.IsSystemProvided,
+            Parameters = TransformationEndpointSupport.ToParameterPayloads(field.Parameters)
         });
     }
 }

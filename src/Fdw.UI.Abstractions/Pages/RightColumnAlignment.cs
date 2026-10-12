@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class RightColumnAlignment : ColumnAlignmentBase
 {
     /// <summary>Initializes a new instance of <see cref="RightColumnAlignment"/>.</summary>
-    public RightColumnAlignment() : base(3, "Right") { }
+    public RightColumnAlignment() : base("Right") { }
 }

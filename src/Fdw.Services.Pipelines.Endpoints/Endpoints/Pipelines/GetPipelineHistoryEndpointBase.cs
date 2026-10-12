@@ -63,13 +63,11 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
         // and this proves it for anything that reaches the endpoint without having run registration.
         if (string.IsNullOrWhiteSpace(PipelineServiceTypes.OperationalConnection))
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new
+            await Send.ResultAsync(TypedResults.Json(new
                 {
                     Error = "The Pipelines operational connection is not configured",
                     Details = "The host must set PipelineServiceTypes.OperationalConnection before this endpoint can read execution history."
-                }, ct).ConfigureAwait(false);
+                }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -94,9 +92,7 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
         if (!result.IsSuccess)
         {
             OnExecutionHistoryFetchFailed(result.CurrentMessage ?? "Unknown error");
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch execution history", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution history", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

@@ -31,7 +31,6 @@ public sealed class SearchTextTranslator : RoslynCommandTranslatorBase<SearchTex
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: validate pattern, iterate documents, find text matches
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<TextMatchInfo>>>> Translate(
         SearchTextCommand command,
         Solution solution,
@@ -110,7 +109,6 @@ public sealed class SearchTextTranslator : RoslynCommandTranslatorBase<SearchTex
 
         return GenericResult<QueryResult<IReadOnlyList<TextMatchInfo>>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static IEnumerable<(int Index, int Length, string Value)> FindMatches(
         string text,

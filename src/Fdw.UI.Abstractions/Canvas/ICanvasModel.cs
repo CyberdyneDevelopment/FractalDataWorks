@@ -14,7 +14,7 @@ namespace Fdw.UI.Abstractions.Canvas;
 /// is active.
 /// </para>
 /// <para>
-/// Implementations must be render-agnostic (no Blazor/ASP.NET types).
+/// Implementations must be render-agnostic (no UI-framework or ASP.NET types).
 /// Renderers receive this model and produce framework-specific output.
 /// </para>
 /// </remarks>

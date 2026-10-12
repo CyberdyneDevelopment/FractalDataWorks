@@ -15,7 +15,7 @@ namespace Fdw.Services.Data.Discovery;
 /// bound from IConfiguration.
 /// </summary>
 public abstract class DiscoveryMethodBase
-    : TypeOptionBase<int, DiscoveryMethodBase>,
+    : TypeOptionBase<DiscoveryMethodBase>,
       IDiscoveryMethod
 {
     /// <summary>
@@ -30,14 +30,13 @@ public abstract class DiscoveryMethodBase
     /// Constructor for concrete TypeOptions.
     /// </summary>
     protected DiscoveryMethodBase(
-        int id,
         string name,
         string displayName,
         string description,
         bool supportsAutoDiscovery,
         IReadOnlyList<string> expectedProperties,
         IReadOnlyList<string> requiredProperties)
-        : base(id, name, $"Discovery:{name}", displayName, description, "Discovery")
+        : base(name, $"Discovery:{name}", displayName, description, "Discovery")
     {
         SupportsAutoDiscovery = supportsAutoDiscovery;
         ExpectedProperties = expectedProperties;

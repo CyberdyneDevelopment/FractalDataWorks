@@ -14,7 +14,6 @@ public sealed class TinyIntType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="TinyIntType"/> class.</summary>
     public TinyIntType()
         : base(
-            id: 4,
             name: "tinyint",
             description: "8-bit unsigned integer.",
             abstractType: DataTypes.Byte,

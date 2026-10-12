@@ -14,6 +14,7 @@ using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Schema.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Logging;
 
 using Fdw.Data.DataSets;
@@ -25,18 +26,14 @@ namespace Fdw.Schema.Endpoints;
 /// Endpoint to save field mappings for a source (replace all).
 /// </summary>
 /// <remarks>
-/// Why: DataSetConfigurationProvider.Get(name) provides the authoritative DataSet lookup with
-/// Sources already composed into the aggregate (including SourceName for matching).
-/// IDataGateway is retained only for the FieldMapping child record operations (insert/soft-delete),
-/// which are a documented exception because DataSetFieldMapping does not implement IGenericConfiguration.
+/// A source owns its mappings as a child of the data set aggregate, so the replacement is assigned to
+/// the source and the data set is saved: the cascade supplies the row key tying each mapping to its
+/// source and retires the mappings left out. Each mapping keeps the Id its source gives its field
+/// (<see cref="DataSetSourceConfiguration.MappingIdFor"/>), so re-saving a source does not detach the
+/// transformations attached to its mappings (FDW-877).
 /// </remarks>
 public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly IDataGatewayProvider _dataGateways;
-
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<SaveSourceMappingsEndpointBase> _logger;
 
@@ -44,11 +41,9 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
     /// Initializes a new instance of the <see cref="SaveSourceMappingsEndpointBase"/> class.
     /// </summary>
     protected SaveSourceMappingsEndpointBase(
-        IDataGatewayProvider dataGateways,
         DataSetConfigurationProvider dataSetProvider,
         ILogger<SaveSourceMappingsEndpointBase> logger)
     {
-        _dataGateways = dataGateways;
         _dataSetProvider = dataSetProvider;
         _logger = logger ?? NullLogger<SaveSourceMappingsEndpointBase>.Instance;
     }
@@ -95,24 +90,33 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             return;
         }
 
+        var validation = DataSetSourceConfiguration.ValidateMappingFields(
+            req.Mappings.Select(m => m.LogicalFieldName), req.Name, source.SourceName, _logger);
+        if (validation.IsFailure)
+        {
+            await SendError(validation, ct).ConfigureAwait(false);
+            return;
+        }
+
+        // ToList runs before the assignment, so MappingIdFor still reads the mappings being replaced.
         source.Mappings = req.Mappings
             .Select((m, i) => new DataSetFieldMappingConfiguration
             {
-                Id = default,
-                DataSetSourceId = source.Id,
+                Id = source.MappingIdFor(m.LogicalFieldName),
                 // The field it fills is what identifies it within the source.
                 Name = m.LogicalFieldName,
                 LogicalFieldName = m.LogicalFieldName,
+                SourceKind = source.SourceKind,
                 PhysicalFieldName = m.PhysicalFieldName,
                 TransformExpression = m.TransformExpression,
                 Ordinal = i,
             })
             .ToList();
 
-        var saveResult = await _dataSetProvider.Save(dsResult.Value, ct).ConfigureAwait(false);
+        var saveResult = await _dataSetProvider.Save(dsResult.Value, "DataSet", dsResult.Value.Implementation, dsResult.Value.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
-            await SendSaveFailure(saveResult, ct).ConfigureAwait(false);
+            await SendError(saveResult, ct).ConfigureAwait(false);
             return;
         }
 
@@ -127,131 +131,16 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
         }).ToList(), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Answers a failed save with the reason rather than an empty success.</summary>
-    /// <param name="result">The failed result the gateway returned.</param>
+    /// <summary>Answers a failed validation or save with the status its result codes map to.</summary>
+    /// <remarks>
+    /// Through <see cref="ResultHttpStatusMapper"/> rather than a status picked here, so a caller's
+    /// mistake (DATASETS-20011/20012) answers 400 and a failed save answers what its code says.
+    /// </remarks>
+    /// <param name="result">The failed result.</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    private Task SendSaveFailure(IGenericResult result, CancellationToken ct)
+    private async Task SendError(IGenericResult result, CancellationToken ct)
     {
-        HttpContext.Response.StatusCode = 500;
-        HttpContext.Response.ContentType = "application/json";
-        return HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
-        {
-            Status = 500,
-            Title = "Field mappings were not saved",
-            Detail = result.CurrentMessage,
-            Instance = HttpContext.Request.Path.HasValue ? HttpContext.Request.Path.Value : null,
-        }, ct);
-    }
-
-    /// <summary>Soft-deletes all active mappings for the specified source by setting IsDeleted and clearing IsCurrent.</summary>
-    protected virtual async Task<IGenericResult> SoftDeleteExistingMappings(Guid sourceId, CancellationToken ct)
-    {
-        var existingCommand = new QueryCommand<FieldMappingDbRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterGroup
-                {
-                    Operator = LogicalOperator.And,
-                    Nodes =
-                    [
-                        new FilterCondition
-                        {
-                            PropertyName = "DataSetSourceId",
-                            Operator = FilterOperators.ByName("Equal"),
-                            Value = sourceId
-                        },
-                        new FilterCondition
-                        {
-                            PropertyName = "IsDeleted",
-                            Operator = FilterOperators.ByName("Equal"),
-                            Value = false
-                        }
-                    ]
-                }
-            }
-        };
-
-        var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
-        var existingResult = await Gateway.Execute<IEnumerable<FieldMappingDbRecord>>(existingCommand, fieldMappingTarget, ct).ConfigureAwait(false);
-        if (existingResult.IsFailure)
-        {
-            return existingResult;
-        }
-
-        var existingMappings = existingResult.Value?.ToList() ?? [];
-
-        foreach (var existing in existingMappings)
-        {
-            existing.IsDeleted = true;
-            existing.IsCurrent = false;
-
-            var updateCommand = new UpdateCommand<FieldMappingDbRecord>(existing)
-            {
-                Filter = new FilterExpression
-                {
-                    Root = new FilterCondition
-                    {
-                        PropertyName = "Id",
-                        Operator = FilterOperators.ByName("Equal"),
-                        Value = existing.Id
-                    }
-                }
-            };
-
-            var retire = await Gateway.Execute<int>(updateCommand, fieldMappingTarget, ct).ConfigureAwait(false);
-            if (retire.IsFailure)
-            {
-                return retire;
-            }
-        }
-
-        return GenericResult.Success();
-    }
-
-    /// <summary>Inserts new field mapping records and returns the created response DTOs.</summary>
-    protected virtual async Task<IGenericResult<IReadOnlyList<FieldMappingResponsePayload>>> InsertNewMappings(
-        Guid sourceId,
-        string sourceName,
-        IList<FieldMappingInputPayload> mappings,
-        CancellationToken ct)
-    {
-        var created = new List<FieldMappingResponsePayload>();
-
-        foreach (var mapping in mappings)
-        {
-            var newMapping = new FieldMappingDbRecord
-            {
-                Id = default,
-                DataSetSourceId = sourceId,
-                LogicalFieldName = mapping.LogicalFieldName,
-                PhysicalFieldName = mapping.PhysicalFieldName,
-                TransformExpression = mapping.TransformExpression,
-                IsCurrent = true,
-                IsDeleted = false
-            };
-
-            var insertCommand = new InsertCommand<FieldMappingDbRecord>(newMapping);
-
-            var fieldMappingTarget = new DataStoreTarget(_dataSetProvider.DataStoreName, _dataSetProvider.PathName, "DataSetFieldMapping");
-            var insertResult = await Gateway.Execute<int>(insertCommand, fieldMappingTarget, ct).ConfigureAwait(false);
-
-            if (insertResult.IsFailure)
-            {
-                return insertResult.ToNewResult<IReadOnlyList<FieldMappingResponsePayload>>();
-            }
-
-            created.Add(new FieldMappingResponsePayload
-            {
-                Id = newMapping.Id,
-                DataSetSourceId = sourceId,
-                SourceName = sourceName,
-                LogicalFieldName = newMapping.LogicalFieldName,
-                PhysicalFieldName = newMapping.PhysicalFieldName,
-                TransformExpression = newMapping.TransformExpression
-            });
-        }
-
-        return GenericResult<IReadOnlyList<FieldMappingResponsePayload>>.Success(created);
+        var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
+        await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
     }
 }

@@ -29,15 +29,25 @@ public sealed class MapTransformType : TransformTypeBase
     /// Initializes a new instance of the <see cref="MapTransformType"/> class.
     /// </summary>
     public MapTransformType() : base(
-        id: 1,
         name: "Map",
         displayName: "Field Mapping",
         description: "Maps fields from source to destination with optional renaming and type conversion",
         category: "Structure",
         modifiesStructure: true,
-        canFilterRecords: false)
+        canFilterRecords: false,
+        inputPorts: ["input"],
+        outputPorts: ["output"])
     {
     }
+
+    private static readonly StageMember[] OwnedMembers =
+    [
+        new("fieldMappings", "FieldMappings", true, "Source to destination field mappings"),
+        new("transforms", "TransformationChain", false, "On a field mapping: the named Transformations its value goes through, in order")
+    ];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<StageMember> Members => OwnedMembers;
 
     /// <inheritdoc />
     public override async Task<IGenericResult<IDictionary<string, object?>>> Transform(
@@ -84,7 +94,6 @@ public sealed class MapTransformType : TransformTypeBase
         config.FieldMappings = spec.FieldMappings
             .Select(fm => new PipelineTransformFieldMappingConfiguration
             {
-                PipelineTransformId = config.Id,
                 Name = fm.DestinationField,
                 SourceField = fm.SourceField,
                 DestinationField = fm.DestinationField,
@@ -100,7 +109,9 @@ public sealed class MapTransformType : TransformTypeBase
         return GenericResult.Success();
     }
 
-    private static async Task MapField(
+    // ValueTask, not Task: this runs once per field per row and almost always completes without
+    // awaiting anything (no named transformer), so a Task would be allocated for nothing each time.
+    private static async ValueTask MapField(
         PipelineTransformFieldMappingConfiguration mapping,
         IDictionary<string, object?> input,
         Dictionary<string, object?> output,
@@ -120,7 +131,7 @@ public sealed class MapTransformType : TransformTypeBase
 
             // Apply a named field transformer (e.g. "FromUnixMilliseconds" epoch-ms -> DateTimeOffset)
             // before the TargetType coercion — see ApplyNamedTransformer for why TargetType alone can't.
-            value = await ApplyTransformChain(mapping.Transforms, value, sourceField, input, context, cancellationToken).ConfigureAwait(false);
+            value = await ApplyTransformChain(ChainOf(mapping, context), value, sourceField, input, context, cancellationToken).ConfigureAwait(false);
 
             // Apply type conversion if specified
             if (!string.IsNullOrEmpty(mapping.TargetType) && value != null)
@@ -163,6 +174,12 @@ public sealed class MapTransformType : TransformTypeBase
         // If source field missing, not required, and no default, skip the field
     }
 
+    // Why the run's resolved chain wins: a mapping that states a chain of named Transformations is run from what the run
+    // resolved for it (ITransformContext.FieldTransformChains); a mapping that states none keeps the legacy projection of
+    // its single TransformExpression name, which stays until it is retired.
+    private static IReadOnlyList<IFieldMappingTransform> ChainOf(PipelineTransformFieldMappingConfiguration mapping, ITransformContext context) =>
+        context.FieldTransformChains.TryGetValue(mapping.Id, out var chain) ? chain : mapping.Transforms;
+
     /// <summary>
     /// Applies a field mapping's ordered transform chain (each step a <see cref="TransformationTypes"/> option such as
     /// "FromUnixMilliseconds") to a mapped value before TargetType coercion, returning the transformed
@@ -175,7 +192,7 @@ public sealed class MapTransformType : TransformTypeBase
     /// honours the otherwise-unread <c>TransformExpression</c> column so a Map field-mapping can name a
     /// transformer instead of producing garbage.
     /// </remarks>
-    private static async Task<object?> ApplyTransformChain(
+    private static async ValueTask<object?> ApplyTransformChain(
         IReadOnlyList<IFieldMappingTransform> transforms,
         object? value,
         string sourceField,
@@ -183,7 +200,7 @@ public sealed class MapTransformType : TransformTypeBase
         ITransformContext context,
         CancellationToken cancellationToken)
     {
-        if (value == null)
+        if (value == null || transforms.Count == 0)
         {
             return value;
         }

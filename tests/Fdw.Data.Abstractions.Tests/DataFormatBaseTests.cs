@@ -7,17 +7,6 @@ namespace Fdw.Data.Abstractions.Tests;
 
 public sealed class DataFormatBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat");
-
-        // Assert
-        format.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -25,7 +14,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat");
+        var format = new TestDataFormat("TestFormat");
 
         // Assert
         format.Name.ShouldBe("TestFormat");
@@ -37,7 +26,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsMimeType()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat");
+        var format = new TestDataFormat("TestFormat");
 
         // Assert
         format.MimeType.ShouldBe("application/test");
@@ -49,7 +38,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsFileExtensions()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat");
+        var format = new TestDataFormat("TestFormat");
 
         // Assert
         format.FileExtensions.ShouldNotBeNull();
@@ -64,7 +53,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsIsBinary()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat", isBinary: true);
+        var format = new TestDataFormat("TestFormat", isBinary: true);
 
         // Assert
         format.IsBinary.ShouldBeTrue();
@@ -76,7 +65,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsSupportsSchemaDiscovery()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat", supportsSchemaDiscovery: true);
+        var format = new TestDataFormat("TestFormat", supportsSchemaDiscovery: true);
 
         // Assert
         format.SupportsSchemaDiscovery.ShouldBeTrue();
@@ -88,7 +77,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsSupportsStreaming()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat", supportsStreaming: true);
+        var format = new TestDataFormat("TestFormat", supportsStreaming: true);
 
         // Assert
         format.SupportsStreaming.ShouldBeTrue();
@@ -100,7 +89,7 @@ public sealed class DataFormatBaseTests
     public void ConstructorSetsSupportsCompression()
     {
         // Arrange & Act
-        var format = new TestDataFormat(1, "TestFormat", supportsCompression: true);
+        var format = new TestDataFormat("TestFormat", supportsCompression: true);
 
         // Assert
         format.SupportsCompression.ShouldBeTrue();
@@ -113,7 +102,6 @@ public sealed class DataFormatBaseTests
     {
         // Arrange & Act
         var format = new TestDataFormat(
-            1,
             "JSON",
             mimeType: "application/json",
             fileExtensions: [".json"],
@@ -139,7 +127,6 @@ public sealed class DataFormatBaseTests
     {
         // Arrange & Act
         var format = new TestDataFormat(
-            2,
             "Parquet",
             mimeType: "application/parquet",
             fileExtensions: [".parquet"],
@@ -160,7 +147,7 @@ public sealed class DataFormatBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var format = new TestDataFormat(1, "TestFormat");
+        var format = new TestDataFormat("TestFormat");
 
         // Act & Assert
         format.ShouldBeAssignableTo<DataFormatBase>();
@@ -172,7 +159,7 @@ public sealed class DataFormatBaseTests
     public void ImplementsIDataFormat()
     {
         // Arrange
-        var format = new TestDataFormat(1, "TestFormat");
+        var format = new TestDataFormat("TestFormat");
 
         // Act & Assert
         format.ShouldBeAssignableTo<IDataFormat>();
@@ -182,7 +169,6 @@ public sealed class DataFormatBaseTests
     private sealed class TestDataFormat : DataFormatBase
     {
         public TestDataFormat(
-            int id,
             string name,
             string mimeType = "application/test",
             string[]? fileExtensions = null,
@@ -191,7 +177,6 @@ public sealed class DataFormatBaseTests
             bool supportsStreaming = false,
             bool supportsCompression = false)
             : base(
-                id,
                 name,
                 mimeType,
                 fileExtensions ?? [".test", ".tst"],

@@ -21,5 +21,5 @@ public static partial class ScheduleProxyEndpointLog
 
     /// <summary>Logs a proxy failure.</summary>
     [MessageLogging(EventId = 71000, Level = LogLevel.Error, Message = "Proxy call to {service} failed: {error}")]
-    public static partial IGenericMessage ProxyFailed(ILogger logger, string service, string error);
+    public static partial IGenericMessage ProxyFailed(ILogger logger, string service, string? error);
 }

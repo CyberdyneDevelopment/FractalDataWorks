@@ -21,15 +21,22 @@ namespace Fdw.Services.Authorization.Abstractions.Paths;
 public sealed class TenantScopedPolicy : PathAuthorizationPolicyBase
 {
     /// <summary>Initializes the TenantScoped policy.</summary>
-    public TenantScopedPolicy() : base(1, "TenantScoped") { }
+    public TenantScopedPolicy() : base("TenantScoped") { }
 
     /// <inheritdoc />
     public override IGenericResult<IPathAuthorizationDecision> Evaluate(string canonicalAddress, IRequestContext context)
     {
-        if (context.IsSystemAdmin)
+        if (context.IsPlatformAdmin)
             return GenericResult<IPathAuthorizationDecision>.Success(PathAuthorizationDecision.Allow(Name));
 
-        var tenantSegment = context.TenantId.ToString("D", System.Globalization.CultureInfo.InvariantCulture);
+        // A caller acting in no tenant has no tenant segment to match. It used to be matched as
+        // Guid.Empty's text, which no address contains -- the same deny, but for a reason nothing
+        // said out loud.
+        if (context.TenantId is not { } tenantId)
+            return GenericResult<IPathAuthorizationDecision>.Success(
+                PathAuthorizationDecision.Deny(Name, "The caller is not acting in a tenant."));
+
+        var tenantSegment = tenantId.ToString("D", System.Globalization.CultureInfo.InvariantCulture);
         if (canonicalAddress.IndexOf(tenantSegment, StringComparison.OrdinalIgnoreCase) >= 0)
             return GenericResult<IPathAuthorizationDecision>.Success(PathAuthorizationDecision.Allow(Name));
 

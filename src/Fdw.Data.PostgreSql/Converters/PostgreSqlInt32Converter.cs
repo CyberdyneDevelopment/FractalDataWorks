@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlInt32Converter()
     : DataTypeConverterBase(
-        id: 3,
         name: "Int32",
         sourceType: "int4",
         targetClrType: typeof(int),

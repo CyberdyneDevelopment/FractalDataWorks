@@ -8,14 +8,13 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 /// Provides the common structure for all rate limit policies including
 /// request limits, time windows, and throttling configuration.
 /// </summary>
-public abstract class RateLimitPolicyBase : TypeOptionBase<int, IRateLimitPolicy>, ITypeOption<int, RateLimitPolicyBase>, IRateLimitPolicy
+public abstract class RateLimitPolicyBase : TypeOptionBase<IRateLimitPolicy>, ITypeOption<int, RateLimitPolicyBase>, IRateLimitPolicy
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RateLimitPolicyBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this policy.</param>
     /// <param name="name">Name of the policy.</param>
-    protected RateLimitPolicyBase(int id, string name) : base(id, name)
+    protected RateLimitPolicyBase(string name) : base(name)
     {
     }
 

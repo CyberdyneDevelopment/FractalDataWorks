@@ -27,7 +27,7 @@ public sealed class RankOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="RankOperation"/> class.
     /// </summary>
     public RankOperation()
-        : base(id: 31, name: "Rank", category: "Window", description: "Assigns a rank within a partition, with gaps for ties")
+        : base(name: "Rank", category: "Window", description: "Assigns a rank within a partition, with gaps for ties")
     {
         _logger = NullLogger<RankOperation>.Instance;
         Parameters =

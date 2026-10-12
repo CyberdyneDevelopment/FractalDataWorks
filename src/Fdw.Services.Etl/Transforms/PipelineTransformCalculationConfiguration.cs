@@ -31,24 +31,6 @@ public sealed partial class PipelineTransformCalculationConfiguration : IGeneric
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent transform (column pipe.CalculationOperationConfiguration.PipelineTransformId).
-    /// </summary>
-    /// <remarks>
-    /// Why: set by the configuration cascade-save to the parent transform's logical Id; the configuration
-    /// save translator resolves the physical PipelineTransformRowId via FK subquery on insert.
-    /// </remarks>
-    public Guid PipelineTransformId { get; set; }
-
-    /// <inheritdoc/>
-    public string SectionName => string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType => "Pipeline";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the output field name.
     /// </summary>
     public string OutputField { get; set; } = string.Empty;

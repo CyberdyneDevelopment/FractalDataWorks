@@ -21,7 +21,6 @@ public sealed class TableChartType : ChartTypeBase
     /// </summary>
     public TableChartType()
         : base(
-            id: 8,
             name: "Table",
             displayName: "Table",
             category: "Data",

@@ -14,7 +14,6 @@ public sealed class MoneyType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="MoneyType"/> class.</summary>
     public MoneyType()
         : base(
-            id: 18,
             name: "money",
             description: "Currency value with four decimal places.",
             abstractType: DataTypes.Decimal,

@@ -206,7 +206,6 @@ internal static class TypeOptionDiscovery
             return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
 
-#pragma warning disable MA0051 // Roslyn symbol inspection walks inheritance chain — must stay cohesive
         private static ImmutableArray<LookupPropertyModel> DiscoverLookupProperties(
             INamedTypeSymbol typeSymbol,
             INamedTypeSymbol? lookupAttrType)

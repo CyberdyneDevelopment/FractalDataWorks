@@ -3,35 +3,27 @@ using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Users.Commands;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Users;
 
-/// <summary>
-/// Reads the users domain's own configuration row.
-/// </summary>
-/// <remarks>
-/// Sits beside UserConfigurationProvider on the same store and path, because the settings that
-/// govern the users domain are the users domain's data -- not a section of the host's
-/// configuration file that every consumer has to be handed through IOptions.
-/// </remarks>
-public class UsersServiceConfigurationProvider
-    : ImplementationConfigurationProviderBase<UsersServiceConfiguration, UsersServiceConfigurationCommand>
+/// <summary>Supplies the UsersService configuration.</summary>
+public sealed class UsersServiceConfigurationProvider
+    : DomainConfigurationProviderBase<IUsersServiceImplementationConfiguration>,
+      IUsersServiceConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="UsersServiceConfigurationProvider"/> class.</summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the store these rows live on.</param>
-    /// <param name="dataStoreName">The store the domain's rows live in.</param>
-    /// <param name="pathName">The path the rows live under.</param>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public UsersServiceConfigurationProvider(
-        ILogger<UsersServiceConfigurationProvider>? logger,
+        ILogger<UsersServiceConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "usr")
-        : base(logger ?? NullLogger<UsersServiceConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
 }

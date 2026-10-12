@@ -8,17 +8,6 @@ namespace Fdw.Web.Http.Abstractions.Tests;
 /// </summary>
 public sealed class EndpointTypeBaseTests
 {
-    // --- CRUD endpoint ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void CrudHasCorrectId()
-    {
-        var sut = new CrudEndpoint();
-
-        sut.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -98,18 +87,6 @@ public sealed class EndpointTypeBaseTests
         var sut = new CrudEndpoint();
 
         sut.DefaultHttpMethods.ShouldBe(["GET", "POST", "PUT", "DELETE", "PATCH"]);
-    }
-
-    // --- Query endpoint ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void QueryHasCorrectId()
-    {
-        var sut = new QueryEndpointBase();
-
-        sut.Id.ShouldBe(2);
     }
 
     [Fact]
@@ -192,18 +169,6 @@ public sealed class EndpointTypeBaseTests
         sut.DefaultHttpMethods.ShouldBe(["GET"]);
     }
 
-    // --- Command endpoint ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void CommandHasCorrectId()
-    {
-        var sut = new CommandEndpointBase();
-
-        sut.Id.ShouldBe(3);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -254,18 +219,6 @@ public sealed class EndpointTypeBaseTests
         sut.RequiresValidation.ShouldBeTrue();
     }
 
-    // --- EventEndpoint ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void EventEndpointHasCorrectId()
-    {
-        var sut = new EventEndpoint();
-
-        sut.Id.ShouldBe(4);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -306,18 +259,6 @@ public sealed class EndpointTypeBaseTests
         sut.IsReadOnly.ShouldBeFalse();
     }
 
-    // --- File endpoint ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void FileHasCorrectId()
-    {
-        var sut = new FileEndpoint();
-
-        sut.Id.ShouldBe(5);
-    }
-
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
@@ -356,18 +297,6 @@ public sealed class EndpointTypeBaseTests
         var sut = new FileEndpoint();
 
         sut.RequiresValidation.ShouldBeTrue();
-    }
-
-    // --- Health endpoint ---
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public void HealthHasCorrectId()
-    {
-        var sut = new HealthEndpoint();
-
-        sut.Id.ShouldBe(6);
     }
 
     [Fact]

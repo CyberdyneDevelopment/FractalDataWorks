@@ -20,13 +20,10 @@ namespace Fdw.Commands.Data;
 /// optimizations like SqlBulkCopy, PostgreSQL COPY, MySQL LOAD DATA, etc.
 /// </para>
 /// <para>
-/// Translators convert it to:
-/// <list type="bullet">
-/// <item>SQL Server: SqlBulkCopy (with constraints/triggers enabled)</item>
-/// <item>PostgreSQL: COPY command</item>
-/// <item>MySQL: LOAD DATA or batched multi-row INSERT</item>
-/// <item>Other DBs: Batched multi-row INSERT (fallback)</item>
-/// </list>
+/// A database connection runs it one of two ways (FDW-1152). Up to the connection's configured <c>MaxSerialInsert</c> rows it runs
+/// serially, translated to batched multi-row INSERT statements like any insert; above that it takes the connection's bulk mode
+/// (SQL Server: SqlBulkCopy, PostgreSQL: COPY), inside the unit of work when there is one. The command only answers which
+/// (<see cref="ReroutesToBulk"/>); the connection acts on the answer.
 /// </para>
 /// <para>
 /// ⚠️ IMPORTANT: Bulk operations may have different transaction/locking behavior.
@@ -51,8 +48,16 @@ public sealed class BulkInsertCommand<T> : DataCommandBase<int, IEnumerable<T>>
     /// </summary>
     /// <param name="data">The collection of entities to insert.</param>
     public BulkInsertCommand(IEnumerable<T> data)
-        : base("BulkInsert", data)
+        : base("BulkInsert", Rows(data))
     {
         BulkInsertCommandLog.CommandCreated(NullLogger<BulkInsertCommand<T>>.Instance, typeof(T).Name);
     }
+
+    /// <inheritdoc/>
+    /// <remarks>Yes when the command has more rows than the connection lets an insert run serially.</remarks>
+    public override bool ReroutesToBulk(int maxSerialInsert) => Data is IReadOnlyCollection<T> rows && rows.Count > maxSerialInsert;
+
+    // The rows are counted to choose the route, so a lazy sequence is read once, here, and the command holds what it will write.
+    // The rows are non-null by type, as for every data command; a command whose input a translator cannot read is refused there with the coded MissingInputData failure.
+    private static IEnumerable<T> Rows(IEnumerable<T> data) => data is IReadOnlyCollection<T> ? data : [.. data];
 }

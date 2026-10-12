@@ -6,16 +6,15 @@ namespace Fdw.UI.Components.Icons;
 
 /// <summary>
 /// Base class for icon glyphs. Carries the path data and the svg attributes the glyph is drawn with;
-/// size and colour are the call site's business and arrive on the <see cref="Icon"/> component instead.
+/// size and colour are the call site's business and come from whichever renderer draws the glyph.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class IconGlyphBase : TypeOptionBase<int, IconGlyphBase>, IIconGlyph
+public abstract class IconGlyphBase : TypeOptionBase<IconGlyphBase>, IIconGlyph
 {
     /// <summary>
     /// Initializes a new instance of <see cref="IconGlyphBase"/>.
     /// </summary>
     protected IconGlyphBase(
-        int id,
         string name,
         string viewBox,
         string fill,
@@ -23,7 +22,7 @@ public abstract class IconGlyphBase : TypeOptionBase<int, IconGlyphBase>, IIconG
         string strokeWidth,
         bool rounded,
         string[] paths)
-        : base(id, name)
+        : base(name)
     {
         ViewBox = viewBox;
         Fill = fill;

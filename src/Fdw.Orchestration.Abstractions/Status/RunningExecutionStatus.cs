@@ -14,5 +14,5 @@ public sealed class RunningExecutionStatus : WorkflowExecutionStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="RunningExecutionStatus"/> class.
     /// </summary>
-    public RunningExecutionStatus() : base(1, "Running", isTerminal: false, isSuccess: false, isFailure: false) { }
+    public RunningExecutionStatus() : base("Running", isTerminal: false, isSuccess: false, isFailure: false) { }
 }

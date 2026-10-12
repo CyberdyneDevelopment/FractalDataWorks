@@ -14,5 +14,5 @@ namespace Fdw.Services.Credentials.Sql.Outcomes;
 public sealed class TooManyAttemptsOutcome : CredentialOutcomeBase
 {
     /// <summary>Initializes a new instance of the <see cref="TooManyAttemptsOutcome"/> class.</summary>
-    public TooManyAttemptsOutcome() : base(4, "TooManyAttempts", grantsAccess: false) { }
+    public TooManyAttemptsOutcome() : base("TooManyAttempts", grantsAccess: false, provesSecret: false) { }
 }

@@ -6,7 +6,7 @@ namespace Fdw.Services.Authorization.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the UserRole configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "UserRole")]
-public sealed class UserRoleConfigurationCommand : ConfigurationCommandBase<UserRoleConfiguration>
+public sealed class UserRoleConfigurationCommand : ConfigurationCommandBase<UserRoleImplementationConfiguration>
 {
     /// <inheritdoc/>
     public UserRoleConfigurationCommand() : base("UserRole") { }

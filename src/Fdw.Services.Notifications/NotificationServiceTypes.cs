@@ -28,7 +28,7 @@ namespace Fdw.Services.Notifications;
 
 /// <summary>
 /// ServiceTypeCollection for all notification service implementations.
-/// The source generator populates this with discovered [ServiceTypeOption] types.
+/// The source generator populates this with discovered [Implementation] types.
 /// </summary>
 /// <remarks>
 /// PlatformServices runs Register(services), which invokes each option's Register phase.
@@ -39,7 +39,7 @@ namespace Fdw.Services.Notifications;
     typeof(INotificationType),
     typeof(NotificationServiceTypes),
     ServiceInterface = typeof(IPlatformNotification),
-    ConfigurationInterface = typeof(NotificationConfiguration),
+    ConfigurationInterface = typeof(INotificationConfiguration),
     ProviderType = typeof(NotificationServiceProvider),
     ProviderInterface = typeof(INotificationServiceProvider),
     ServiceCategory = "Notification")]
@@ -51,7 +51,7 @@ public partial class NotificationServiceTypes
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     // Configure(), Register() and Initialize() are source-generated
 
@@ -66,59 +66,51 @@ public partial class NotificationServiceTypes
     /// </remarks>
     static NotificationServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(INotificationServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<NotificationServiceTypes>() ?? NullLogger<NotificationServiceTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
             // Notification configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
             builder.Services.TryAddScoped<IUserNotificationPreferenceService, SqlUserNotificationPreferenceService>();
 
-            builder.Services.TryAddSingleton<INotificationConfigurationProvider>(sp =>
-                new NotificationConfigurationProvider(
-                    sp.GetService<ILogger<NotificationConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<NotificationConfigurationProvider>(
-                sp => (NotificationConfigurationProvider)sp.GetRequiredService<INotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<NotificationConfiguration, NotificationConfigurationCommand>>(
-                sp => sp.GetRequiredService<NotificationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationConfiguration>>(
-                sp => sp.GetRequiredService<NotificationConfigurationProvider>());
+            // The concrete provider is registered as itself and the interface maps to it: the list and query
+            // endpoints read a page of the domain table, which only the provider itself offers (FDW-1005).
+            builder.Services.AddSingleton<NotificationConfigurationProvider>(sp => new NotificationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "Notification"));
+            builder.Services.AddSingleton<INotificationConfigurationProvider>(sp => sp.GetRequiredService<NotificationConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<INotificationImplementationConfiguration>>(
+                sp => sp.GetRequiredService<INotificationConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<NotificationRuleConfiguration>>(sp =>
-                new ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>(
-                    sp.GetService<ILoggerFactory>()?.CreateLogger<ImplementationConfigurationProviderBase<NotificationRuleConfiguration, NotificationRuleConfigurationCommand>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    "PlatformConfiguration", "notify"));
+            builder.Services.AddSingleton<INotificationRuleImplementationConfigurationProvider, NotificationRuleImplementationConfigurationProvider>(sp => new NotificationRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<NotificationRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "NotificationRuleConfiguration"));
+            builder.Services.TryAddSingleton<NotificationRuleConfigurationProvider>(sp =>
+            {
+                var domain = new NotificationRuleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<NotificationRuleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), NotificationServiceTypes.ConfigurationConnection, "notify", "NotificationRule");
+                domain.Register("NotificationRule", sp.GetRequiredService<INotificationRuleImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<INotificationRuleConfigurationProvider>(sp => sp.GetRequiredService<NotificationRuleConfigurationProvider>());
 
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationServiceTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationServiceTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<INotificationServiceProvider>(sp =>
             {
                 var provider = new NotificationServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceProvider>()
                     ?? NullLogger<NotificationServiceProvider>.Instance);
 
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<NotificationServiceTypes>()
                     ?? NullLogger<NotificationServiceTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(NotificationServiceTypes), provider.GetType().Name);
+                var cfgProvider = sp.GetService<INotificationConfigurationProvider>();
                 try
                 {
-                    if (sp.GetService<INotificationConfigurationProvider>() is { } cfgProvider)
+                    if (cfgProvider is not null)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -132,7 +124,7 @@ public partial class NotificationServiceTypes
                             stLogger,
                             nameof(NotificationServiceTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<NotificationConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<INotificationImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -140,8 +132,29 @@ public partial class NotificationServiceTypes
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(NotificationServiceTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            // Sends a notification through a named rule. Scoped because the rule's notification service is resolved
+            // through the scoped provider above.
+            builder.Services.AddScoped<IRuleNotifier>(sp => new RuleNotifier(
+                sp.GetRequiredService<INotificationRuleConfigurationProvider>(),
+                sp.GetRequiredService<INotificationServiceProvider>(),
+                sp.GetService<ILogger<RuleNotifier>>()));
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(NotificationServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(NotificationServiceTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(NotificationServiceTypes), providerService);

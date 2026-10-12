@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class DatasetDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="DatasetDataflowNodeType"/>.</summary>
-    public DatasetDataflowNodeType() : base(1, "Dataset") { }
+    public DatasetDataflowNodeType() : base("Dataset") { }
 }

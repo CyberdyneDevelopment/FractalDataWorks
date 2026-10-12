@@ -13,7 +13,6 @@ public sealed class CreatePageMode : PageModeBase
     /// Creates the create page mode.
     /// </summary>
     public CreatePageMode() : base(
-        id: 2,
         name: "Create",
         label: "Create",
         icon: "+",

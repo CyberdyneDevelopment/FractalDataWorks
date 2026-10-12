@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlGuidConverter()
     : DataTypeConverterBase(
-        id: 9,
         name: "Guid",
         sourceType: "uniqueidentifier",
         targetClrType: typeof(Guid),

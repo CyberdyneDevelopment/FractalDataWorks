@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class StaleLineageNodeStatus : LineageNodeStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="StaleLineageNodeStatus"/>.</summary>
-    public StaleLineageNodeStatus() : base(5, "Stale") { }
+    public StaleLineageNodeStatus() : base("Stale") { }
 }

@@ -13,39 +13,10 @@ public sealed class SecretManagerConfigurationBaseTests
     /// </summary>
     private sealed class TestSecretManagerConfiguration : SecretManagerConfigurationBase
     {
-        public override string SectionName => "TestSecretManagers";
         public override string SecretManagerType => "TestType";
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void ServiceTypeReturnsSecretManager()
-    {
-        // Arrange
-        var sut = new TestSecretManagerConfiguration();
 
-        // Act
-        var serviceType = sut.ServiceType;
-
-        // Assert
-        serviceType.ShouldBe("SecretManager");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void ServiceOptionTypeReturnsSecretManagerType()
-    {
-        // Arrange
-        var sut = new TestSecretManagerConfiguration();
-
-        // Act
-        var serviceOptionType = sut.ServiceOptionType;
-
-        // Assert
-        serviceOptionType.ShouldBe("TestType");
-    }
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -59,17 +30,6 @@ public sealed class SecretManagerConfigurationBaseTests
         sut.SecretManagerType.ShouldBe("TestType");
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void SectionNameReturnsExpectedValue()
-    {
-        // Arrange
-        var sut = new TestSecretManagerConfiguration();
-
-        // Act & Assert
-        sut.SectionName.ShouldBe("TestSecretManagers");
-    }
 
     [Fact]
     [Trait("Priority", "P0")]

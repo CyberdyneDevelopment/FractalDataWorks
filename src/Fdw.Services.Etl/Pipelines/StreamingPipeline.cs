@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Fdw.Configuration;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.ServiceTypes;
@@ -18,7 +19,9 @@ using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Transforms;
+using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Pipelines.Notifications;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -37,6 +40,9 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private readonly IPipelineTestController? _testController;
     private readonly IPipelineExecutionInspector? _inspector;
     private readonly IPipelineStatusBroadcaster? _broadcaster;
+    private readonly ITransformationConfigurationProvider? _transformations;
+    private readonly IRuleNotifier? _ruleNotifier;
+    private readonly IEffectiveSettingsProvider? _settings;
     private int _isExecuting;
 
     /// <summary>
@@ -50,7 +56,10 @@ public sealed class StreamingPipeline : EtlPipelineBase
         IConnectionProvider? connectionProvider = null,
         IPipelineTestController? testController = null,
         IPipelineExecutionInspector? inspector = null,
-        IPipelineStatusBroadcaster? broadcaster = null)
+        IPipelineStatusBroadcaster? broadcaster = null,
+        ITransformationConfigurationProvider? transformations = null,
+        IRuleNotifier? ruleNotifier = null,
+        IEffectiveSettingsProvider? settings = null)
         : base(logger)
     {
         _configuration = configuration;
@@ -61,10 +70,13 @@ public sealed class StreamingPipeline : EtlPipelineBase
         _testController = testController;
         _inspector = inspector;
         _broadcaster = broadcaster;
+        _transformations = transformations;
+        _ruleNotifier = ruleNotifier;
+        _settings = settings;
     }
 
     /// <inheritdoc />
-    public override Guid Id => _configuration.Id;
+    public override string Id => _configuration.Id.ToString();
 
     /// <inheritdoc />
     public override string Name => _configuration.Name;
@@ -96,7 +108,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
         try
         {
-            return await ExecuteCore(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
+            return await ExecuteWithHooks(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException oce)
         {
@@ -115,8 +127,82 @@ public sealed class StreamingPipeline : EtlPipelineBase
         finally
         {
             Interlocked.Exchange(ref _isExecuting, 0);
-            LookupTransformType.ClearCache();
         }
+    }
+
+    // The Notify stages are gathered and checked before anything is read: a stage that cannot send fails the run at once, and
+    // its OnFailure hooks are not trusted to fire. A stream has no final page of its own, so AfterStage and AfterLoad both
+    // fire once the stream has ended (a test run's single pass, or cancellation), after its last flush has loaded.
+    private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteWithHooks(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        EtlPipelineExecutionResult result,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        var hooks = NotifyHooks.Collect(_configuration.Transforms);
+        var checkedHooks = await hooks.Check(_ruleNotifier, Name, _logger, cancellationToken).ConfigureAwait(false);
+        if (!checkedHooks.IsSuccess)
+        {
+            result.Complete();
+            return checkedHooks.ToNewResult<IEtlPipelineExecutionResult>();
+        }
+
+        var core = await ExecuteCoreObserved(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
+        var settled = core.IsSuccess
+            ? await FireHooks(hooks, options, point => point.FiresAfterStage, result, cancellationToken).ConfigureAwait(false)
+            : core;
+        if (settled.IsSuccess)
+        {
+            settled = await FireHooks(hooks, options, point => point.FiresAfterLoad, result, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (settled.IsSuccess)
+        {
+            return core;
+        }
+
+        await FireHooks(hooks, options, point => point.FiresOnFailure, result, cancellationToken).ConfigureAwait(false);
+        return core.IsSuccess ? settled.ToNewResult<IEtlPipelineExecutionResult>() : core;
+    }
+
+    // An unexpected exception fails the run exactly as Execute reports it, but here, so the OnFailure hooks still fire.
+    private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteCoreObserved(
+        Guid executionId,
+        PipelineExecutionOptions options,
+        EtlPipelineExecutionResult result,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ExecuteCore(executionId, options, result, stopwatch, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            result.AddError(ex.Message);
+            result.Complete();
+            return GenericResult<IEtlPipelineExecutionResult>.Failure(
+                EtlLog.ExecutionException(_logger, ex, Name, executionId));
+        }
+    }
+
+    // A dry run (test mode that skips destination writes) has no side effects, so it sends nothing; the stages were
+    // still checked at the start of the run.
+    private async Task<IGenericResult> FireHooks(
+        NotifyHooks hooks,
+        PipelineExecutionOptions options,
+        Func<IRunPoint, bool> firesAt,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        if (hooks.IsEmpty || (options.IsTestMode && options.SkipDestinationWrites))
+        {
+            return GenericResult.Success();
+        }
+
+        return await hooks.Fire(
+            firesAt, NotifyRunFacts.Of(_configuration.Id, Name, result), _ruleNotifier!, _logger, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecuteCore(
@@ -144,13 +230,13 @@ public sealed class StreamingPipeline : EtlPipelineBase
             return GenericResult<IEtlPipelineExecutionResult>.Failure(
                 EtlLog.ExecutionFailed(_logger, Name, executionId, ex.Message));
         }
-        var transformContext = new TransformContext(
-            executionId: executionId,
-            logger: _logger,
-            variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
-            calculationEngine: _calculationEngine,
-            connectionProvider: _connectionProvider,
-            dataGateway: gateway);
+        var context = await NewTransformContext(executionId, gateway, cancellationToken).ConfigureAwait(false);
+        if (!context.IsSuccess)
+        {
+            return context.ToNewResult<IEtlPipelineExecutionResult>();
+        }
+
+        var transformContext = context.Value!;
 
         PipelineTestExecutionState? testState = null;
         if (options.IsTestMode && _testController != null)
@@ -190,6 +276,37 @@ public sealed class StreamingPipeline : EtlPipelineBase
         return GenericResult<IEtlPipelineExecutionResult>.Success(result);
     }
 
+    // Why the chains are resolved here, before any record moves: a Map stage's field mapping names its Transformations by id,
+    // and a Transformation that no longer resolves must fail the run naming it, not be skipped halfway through the stream.
+    private async Task<IGenericResult<TransformContext>> NewTransformContext(
+        Guid executionId,
+        IDataGateway gateway,
+        CancellationToken cancellationToken)
+    {
+        var chains = await FieldTransformChains.Resolve(GetOrderedTransforms(), _transformations, _logger, cancellationToken).ConfigureAwait(false);
+        if (!chains.IsSuccess)
+        {
+            return chains.ToNewResult<TransformContext>();
+        }
+
+        var built = await BuiltCalculationResolver.Resolve(GetOrderedTransforms(), _transformations, _settings, _logger, cancellationToken).ConfigureAwait(false);
+        if (!built.IsSuccess)
+        {
+            return built.ToNewResult<TransformContext>();
+        }
+
+        return GenericResult<TransformContext>.Success(new TransformContext(
+            executionId: executionId,
+            logger: _logger,
+            variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
+            calculationEngine: _calculationEngine,
+            connectionProvider: _connectionProvider,
+            dataGateway: gateway,
+            fieldTransformChains: chains.Value!,
+            builtCalculations: built.Value!.Calculations,
+            builtSets: built.Value.Sets));
+    }
+
     private async Task<IGenericResult> ProcessStream(
         Guid executionId,
         PipelineExecutionOptions options,
@@ -217,7 +334,10 @@ public sealed class StreamingPipeline : EtlPipelineBase
 
             var iterationStopwatch = Stopwatch.StartNew();
 
-            var extractResult = await ExtractAndBuffer(effectiveTake, gateway, buffer, cancellationToken).ConfigureAwait(false);
+            // totalExtracted is how many source rows this run has already taken, so it is also where the next
+            // read starts: nothing in this pipeline removes or acknowledges a source row, so reading from 0
+            // every poll would hand back, and load again, the same first rows each time (FDW-948).
+            var extractResult = await ExtractAndBuffer(totalExtracted, effectiveTake, gateway, buffer, cancellationToken).ConfigureAwait(false);
             if (!extractResult.IsSuccess) return extractResult;
 
             totalExtracted += extractResult.Value.Extracted;
@@ -328,12 +448,13 @@ public sealed class StreamingPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<(int Extracted, int Failed)>> ExtractAndBuffer(
+        int skip,
         int effectiveTake,
         IDataGateway gateway,
         List<IDictionary<string, object?>> buffer,
         CancellationToken cancellationToken)
     {
-        var extractResult = await ExtractBatch(effectiveTake, gateway, cancellationToken).ConfigureAwait(false);
+        var extractResult = await ExtractBatch(skip, effectiveTake, gateway, cancellationToken).ConfigureAwait(false);
         if (!extractResult.IsSuccess)
         {
             if (!_configuration.ContinueOnError)
@@ -473,6 +594,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatch(
+        int skip,
         int effectiveTake,
         IDataGateway gateway,
         CancellationToken cancellationToken)
@@ -486,7 +608,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
             {
                 Paging = new PagingExpression
                 {
-                    Skip = 0,
+                    Skip = skip,
                     Take = effectiveTake
                 }
             };
@@ -574,10 +696,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
     private List<PipelineTransformConfiguration>? GetOrderedTransforms()
     {
         if (_configuration.Transforms == null || _configuration.Transforms.Count == 0) return null;
-        return _configuration.Transforms
-            .Where(t => t.IsEnabled)
-            .OrderBy(t => t.ExecutionOrder)
-            .ToList();
+        return StageRunner.Ordered(_configuration.Transforms);
     }
 
     private async Task<SingleRecordTransformResult> TransformSingleRecord(
@@ -607,7 +726,7 @@ public sealed class StreamingPipeline : EtlPipelineBase
             var transformResult = await transformType.Transform(currentRecord, transformConfig, transformContext, cancellationToken).ConfigureAwait(false);
             if (!transformResult.IsSuccess)
             {
-                if (!_configuration.ContinueOnError)
+                if (!_configuration.ContinueOnError || StageFailures.StopsRun(transformResult))
                     return SingleRecordTransformResult.AsHardFailure(transformResult.ToNewResult<List<IDictionary<string, object?>>>());
                 return SingleRecordTransformResult.AsRecordError();
             }

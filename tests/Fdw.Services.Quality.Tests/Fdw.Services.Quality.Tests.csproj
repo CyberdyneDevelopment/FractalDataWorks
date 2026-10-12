@@ -31,4 +31,7 @@
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Shared\GatewayWriteTransaction.cs" Link="TestSupport\GatewayWriteTransaction.cs" />
+  </ItemGroup>
 </Project>

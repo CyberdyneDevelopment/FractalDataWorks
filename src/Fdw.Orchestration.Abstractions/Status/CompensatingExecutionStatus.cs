@@ -14,5 +14,5 @@ public sealed class CompensatingExecutionStatus : WorkflowExecutionStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CompensatingExecutionStatus"/> class.
     /// </summary>
-    public CompensatingExecutionStatus() : base(8, "Compensating", isTerminal: false, isSuccess: false, isFailure: false) { }
+    public CompensatingExecutionStatus() : base("Compensating", isTerminal: false, isSuccess: false, isFailure: false) { }
 }

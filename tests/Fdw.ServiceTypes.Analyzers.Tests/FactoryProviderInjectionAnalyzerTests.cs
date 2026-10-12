@@ -25,11 +25,11 @@ public class FactoryProviderInjectionAnalyzerTests
         {
             using Fdw.Abstractions;
 
-            public interface IPlatformServiceProvider<TService> where TService : IGenericService
+            public interface IDomainServiceProvider<TService> where TService : IGenericService
             {
             }
 
-            public interface IPlatformServiceProvider<TService, TConfiguration> : IPlatformServiceProvider<TService>
+            public interface IDomainServiceProvider<TService, TConfiguration> : IDomainServiceProvider<TService>
                 where TService : IGenericService
             {
             }
@@ -66,7 +66,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
                 public class SqlConnectionFactory : IServiceFactory
                 {
-                    public SqlConnectionFactory(IPlatformServiceProvider<ISecretManager> {|#0:provider|})
+                    public SqlConnectionFactory(IDomainServiceProvider<ISecretManager> {|#0:provider|})
                     {
                     }
                 }
@@ -75,7 +75,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
         var expected = VerifyCS.Diagnostic("FDW045")
             .WithLocation(0)
-            .WithArguments("SqlConnectionFactory", "IPlatformServiceProvider");
+            .WithArguments("SqlConnectionFactory", "IDomainServiceProvider");
 
         await VerifyCS.VerifyAnalyzerAsync(test, expected);
     }
@@ -121,7 +121,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
                 public class SqlConnectionFactory : IServiceFactory
                 {
-                    public SqlConnectionFactory(Lazy<IPlatformServiceProvider<ISecretManager>> provider)
+                    public SqlConnectionFactory(Lazy<IDomainServiceProvider<ISecretManager>> provider)
                     {
                     }
                 }
@@ -165,7 +165,7 @@ public class FactoryProviderInjectionAnalyzerTests
 
                 public class SomeService
                 {
-                    public SomeService(IPlatformServiceProvider<ISecretManager> provider)
+                    public SomeService(IDomainServiceProvider<ISecretManager> provider)
                     {
                     }
                 }

@@ -13,7 +13,7 @@ public sealed class JsonbType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="JsonbType"/> class.</summary>
     public JsonbType()
-        : base(id: 18, name: "jsonb")
+        : base(name: "jsonb")
     {
     }
 

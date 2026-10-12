@@ -112,6 +112,27 @@ public class QueryCommandBuilder<T>
     }
 
     /// <summary>
+    /// Add an INNER JOIN that continues from a container an earlier join brought in, rather than from
+    /// the primary (FROM) container.
+    /// </summary>
+    /// <param name="sourceContainer">The earlier join's target the <paramref name="leftColumn"/> belongs to.</param>
+    /// <param name="targetContainer">The container/table to join to.</param>
+    /// <param name="leftColumn">The column on <paramref name="sourceContainer"/>.</param>
+    /// <param name="rightColumn">The column on <paramref name="targetContainer"/>.</param>
+    /// <returns>This builder for chaining.</returns>
+    public QueryCommandBuilder<T> JoinFrom(string sourceContainer, string targetContainer, string leftColumn, string rightColumn)
+    {
+        _joins.Add(new JoinExpression
+        {
+            SourceContainerName = sourceContainer,
+            TargetContainerName = targetContainer,
+            JoinType = "INNER",
+            JoinConditions = [(leftColumn, rightColumn)]
+        });
+        return this;
+    }
+
+    /// <summary>
     /// Start a type-safe WHERE condition using a property expression.
     /// Returns a <see cref="FilterConditionBuilder{T, TProperty}"/> to select the operator.
     /// </summary>

@@ -11,7 +11,6 @@ public sealed class SearchAltIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="SearchAltIcon"/>.</summary>
     public SearchAltIcon()
         : base(
-            32,
             "SearchAlt",
             "0 0 24 24",
             "none",

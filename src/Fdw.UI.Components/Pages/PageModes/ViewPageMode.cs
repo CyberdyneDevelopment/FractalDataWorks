@@ -13,7 +13,6 @@ public sealed class ViewPageMode : PageModeBase
     /// Creates the view page mode.
     /// </summary>
     public ViewPageMode() : base(
-        id: 1,
         name: "View",
         label: "View",
         icon: "👁",

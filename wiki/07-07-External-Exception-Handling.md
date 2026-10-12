@@ -319,7 +319,7 @@ UI components receive the `ErrorResponse` DTO from API calls and render appropri
 3. Passes to a display component that renders severity-based styling
 
 ```csharp
-// In a Blazor provider/service
+// In a .NET client of the API
 var response = await _httpClient.GetAsync(url, ct).ConfigureAwait(false);
 if (!response.IsSuccessStatusCode)
 {

@@ -13,5 +13,5 @@ public sealed class RadioGroupComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="RadioGroupComponentType"/> class.
     /// </summary>
-    public RadioGroupComponentType() : base(9, "RadioGroup", "Radio Group", "Selection", "Radio button group") { }
+    public RadioGroupComponentType() : base("RadioGroup", "Radio Group", "Selection", "Radio button group") { }
 }

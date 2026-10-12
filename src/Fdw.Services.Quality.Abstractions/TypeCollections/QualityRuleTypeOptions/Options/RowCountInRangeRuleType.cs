@@ -16,7 +16,6 @@ public sealed class RowCountInRangeRuleType : QualityRuleTypeBase
     /// </summary>
     public RowCountInRangeRuleType()
         : base(
-            id: 10,
             name: "RowCountInRange",
             requiresField: false,
             supportsMultipleFields: false,

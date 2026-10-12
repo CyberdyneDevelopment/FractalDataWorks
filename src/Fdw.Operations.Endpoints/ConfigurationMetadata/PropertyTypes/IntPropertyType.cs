@@ -11,5 +11,5 @@ public sealed class IntPropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="IntPropertyType"/> class.
     /// </summary>
-    public IntPropertyType() : base(2, "Int", typeof(int), ConfigurationPropertyTypeDtos.WholeNumber) { }
+    public IntPropertyType() : base("Int", typeof(int), ConfigurationPropertyTypeDtos.WholeNumber) { }
 }

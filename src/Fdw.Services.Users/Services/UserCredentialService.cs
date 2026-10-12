@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Security.Hashing;
 using Fdw.Services.Credentials.Abstractions;
 using Fdw.Services.Credentials.Abstractions.Outcomes;
@@ -32,6 +33,8 @@ namespace Fdw.Services.Users.Services;
 /// </remarks>
 public sealed class UserCredentialService : IUserCredentialService
 {
+    private const string UsersDomain = "Users";
+
     private const string PasswordSecretType = "Password";
 
     private const string DecoySaltBase64 = "ZmR3LWRlY295LXNhbHQwMQ==";
@@ -42,6 +45,7 @@ public sealed class UserCredentialService : IUserCredentialService
     private readonly ICredentialServiceProvider _credentialServiceProvider;
     private readonly UsersServiceConfigurationProvider _configuration;
     private readonly UserConfigurationProvider _userProvider;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<UserCredentialService> _logger;
 
     private ICredentialService? _credentialService;
@@ -53,21 +57,25 @@ public sealed class UserCredentialService : IUserCredentialService
         ICredentialServiceProvider credentialServiceProvider,
         UsersServiceConfigurationProvider configuration,
         UserConfigurationProvider userProvider,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserCredentialService>? logger = null)
     {
         _credentialServiceProvider = credentialServiceProvider ?? throw new ArgumentNullException(nameof(credentialServiceProvider));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _userProvider = userProvider ?? throw new ArgumentNullException(nameof(userProvider));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<UserCredentialService>.Instance;
     }
 
     /// <inheritdoc />
-#pragma warning disable MA0051 // Why: sequential fail-loud + uniform-timing branches read top-to-bottom; splitting hurts the anti-enumeration flow.
     public async Task<IGenericResult<ICredentialOutcome>> Verify(
         Guid userId, string secretType, string plaintext, CancellationToken cancellationToken = default)
     {
         if (!string.Equals(secretType, PasswordSecretType, StringComparison.OrdinalIgnoreCase))
             return GenericResult<ICredentialOutcome>.Failure(UserLog.SecretTypeNotSupported(_logger, userId, secretType));
+
+        // This platform authentication lookup precedes the request authentication context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var configurationResult = await LoadConfiguration(cancellationToken).ConfigureAwait(false);
         if (configurationResult.IsFailure)
@@ -110,9 +118,8 @@ public sealed class UserCredentialService : IUserCredentialService
 
         return await ComposeSuccessOutcome(userId, userCfg, policy, now, cancellationToken).ConfigureAwait(false);
     }
-#pragma warning restore MA0051
 
-    private IGenericResult<ICredentialOutcome> RunDecoyAndDeny(Guid userId, string plaintext, UsersServiceConfiguration policy)
+    private IGenericResult<ICredentialOutcome> RunDecoyAndDeny(Guid userId, string plaintext, IUsersServiceImplementationConfiguration policy)
     {
         var decoyAlgorithm = PasswordHashAlgorithms.ByName(policy.PasswordHashAlgorithm);
         if (decoyAlgorithm != PasswordHashAlgorithms.NotFound)
@@ -124,7 +131,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     private async Task<IGenericResult<ICredentialOutcome>> ComposeSuccessOutcome(
-        Guid userId, UserConfiguration userCfg, UsersServiceConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, IUserImplementationConfiguration userCfg, IUsersServiceImplementationConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         if (userCfg.LockoutEnd is { } lockoutEnd && lockoutEnd > now)
         {
@@ -154,7 +161,7 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     private async Task<IGenericResult<ICredentialOutcome>> OnNoMatch(
-        Guid userId, UserConfiguration userCfg, UsersServiceConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
+        Guid userId, IUserImplementationConfiguration userCfg, IUsersServiceImplementationConfiguration policy, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var newCount = userCfg.FailedLoginCount + 1;
         DateTimeOffset? lockoutEnd = userCfg.LockoutEnd;
@@ -204,7 +211,7 @@ public sealed class UserCredentialService : IUserCredentialService
             return createResult;
         }
 
-        var userResult = await _userProvider.GetUser(userId, cancellationToken).ConfigureAwait(false);
+        var userResult = await _userProvider.Get(userId, cancellationToken).ConfigureAwait(false);
         if (!userResult.IsSuccess || userResult.Value is null)
         {
             UserLog.VaultStoreFailed(_logger, userId, secretType);
@@ -219,7 +226,7 @@ public sealed class UserCredentialService : IUserCredentialService
         cfg.LastPasswordChangedAt = DateTimeOffset.UtcNow;
         cfg.MustChangePasswordOnLogin = false;
 
-        var updateResult = await _userProvider.Save(cfg, cancellationToken).ConfigureAwait(false);
+        var updateResult = await _userProvider.Save(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
         if (!updateResult.IsSuccess)
         {
             UserLog.VaultStoreFailed(_logger, userId, secretType);
@@ -231,9 +238,45 @@ public sealed class UserCredentialService : IUserCredentialService
     }
 
     /// <inheritdoc />
+    public async Task<IGenericResult<bool>> HasCredential(
+        Guid userId, string secretType, CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(secretType, PasswordSecretType, StringComparison.OrdinalIgnoreCase))
+            return GenericResult<bool>.Failure(UserLog.SecretTypeNotSupported(_logger, userId, secretType));
+
+        var serviceResult = await ResolveCredentialService(userId, secretType, cancellationToken).ConfigureAwait(false);
+        if (!serviceResult.IsSuccess || serviceResult.Value is null)
+            return serviceResult.ToNewResult<bool>();
+
+        return await serviceResult.Value.Exists(userId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult> Remove(
+        Guid userId, string secretType, CancellationToken cancellationToken = default)
+    {
+        if (!string.Equals(secretType, PasswordSecretType, StringComparison.OrdinalIgnoreCase))
+            return GenericResult.Failure(UserLog.SecretTypeNotSupported(_logger, userId, secretType));
+
+        var serviceResult = await ResolveCredentialService(userId, secretType, cancellationToken).ConfigureAwait(false);
+        if (!serviceResult.IsSuccess || serviceResult.Value is null)
+            return serviceResult;
+
+        var disabled = await serviceResult.Value.Disable(userId, cancellationToken).ConfigureAwait(false);
+        if (disabled.IsFailure)
+        {
+            UserCredentialLog.RemoveFailed(_logger, userId, secretType);
+            return disabled;
+        }
+
+        UserCredentialLog.Removed(_logger, userId, secretType);
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc />
     public async Task<IGenericResult> ForcePasswordChange(Guid userId, CancellationToken cancellationToken = default)
     {
-        var userResult = await _userProvider.GetUser(userId, cancellationToken).ConfigureAwait(false);
+        var userResult = await _userProvider.Get(userId, cancellationToken).ConfigureAwait(false);
         if (!userResult.IsSuccess || userResult.Value is null)
         {
             UserCredentialLog.ForceChangeFailed(_logger, userId);
@@ -245,7 +288,7 @@ public sealed class UserCredentialService : IUserCredentialService
         var cfg = userResult.Value;
         cfg.MustChangePasswordOnLogin = true;
 
-        var result = await _userProvider.Save(cfg, cancellationToken).ConfigureAwait(false);
+        var result = await _userProvider.Save(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             UserCredentialLog.ForceChangeFailed(_logger, userId);
@@ -258,14 +301,14 @@ public sealed class UserCredentialService : IUserCredentialService
 
     // Why a helper: every caller needs the row and a non-null value, and folding the two checks
     // into one keeps each call site to a single branch.
-    private async Task<IGenericResult<UsersServiceConfiguration>> LoadConfiguration(CancellationToken cancellationToken)
+    private async Task<IGenericResult<IUsersServiceImplementationConfiguration>> LoadConfiguration(CancellationToken cancellationToken)
     {
         var result = await _configuration.Get(ConfigurationName, cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
             return result;
 
         return result.Value is null
-            ? GenericResult<UsersServiceConfiguration>.Failure(
+            ? GenericResult<IUsersServiceImplementationConfiguration>.Failure(
                 UserLog.CredentialServiceNameMissing(_logger))
             : result;
     }
@@ -296,21 +339,21 @@ public sealed class UserCredentialService : IUserCredentialService
         return GenericResult<ICredentialService>.Success(_credentialService);
     }
 
-    private Task<IGenericResult<UserConfiguration?>> GetUserSecurity(Guid userId, CancellationToken cancellationToken)
-        => _userProvider.GetUser(userId, cancellationToken);
+    private Task<IGenericResult<IUserImplementationConfiguration>> GetUserSecurity(Guid userId, CancellationToken cancellationToken)
+        => _userProvider.Get(userId, cancellationToken);
 
     private async Task<IGenericResult<int>> WriteLoginAttempt(
-        Guid userId, UserConfiguration cfg, int failedCount, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
+        Guid userId, IUserImplementationConfiguration cfg, int failedCount, DateTimeOffset? lockoutEnd, CancellationToken cancellationToken)
     {
         cfg.FailedLoginCount = failedCount;
         cfg.LockoutEnd = lockoutEnd;
-        var saveResult = await _userProvider.Save(cfg, cancellationToken).ConfigureAwait(false);
+        var saveResult = await _userProvider.Save(cfg, UsersDomain, UsersDomain, cfg.Name, cancellationToken).ConfigureAwait(false);
         return saveResult.IsSuccess
             ? GenericResult<int>.Success(1)
             : saveResult.ToNewResult<int>();
     }
 
-    private async Task ResetLockout(Guid userId, UserConfiguration cfg, CancellationToken cancellationToken)
+    private async Task ResetLockout(Guid userId, IUserImplementationConfiguration cfg, CancellationToken cancellationToken)
     {
         var write = await WriteLoginAttempt(userId, cfg, 0, null, cancellationToken).ConfigureAwait(false);
         if (!write.IsSuccess)

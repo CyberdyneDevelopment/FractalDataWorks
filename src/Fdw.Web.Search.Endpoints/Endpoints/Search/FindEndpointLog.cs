@@ -43,22 +43,14 @@ public static partial class FindEndpointLog
         string searchTerm,
         string containerName);
 
-    /// <summary>Logs when a find operation fails.</summary>
+    /// <summary>Logs that a find was answered with its failure instead of matches.</summary>
+    // Why Information: the gateway already logged why the find failed, at that failure's own level. This line only
+    // records that the endpoint answered it once, with that status.
     [MessageLogging(
-        EventId = 91001,
-        Level = LogLevel.Error,
-        Message = "Find failed: {errorMessage}")]
-    public static partial IGenericMessage FindFailed(
-        ILogger logger,
-        Exception ex,
-        string errorMessage);
-
-    /// <summary>Logs when a find operation fails with no upstream error details.</summary>
-    [MessageLogging(
-        EventId = 91002,
-        Level = LogLevel.Error,
-        Message = "Find operation failed with no upstream error details for container '{containerName}'")]
-    public static partial IGenericMessage FindFailedNoDetails(
+        EventId = 11016,
+        Level = LogLevel.Information,
+        Message = "Find in container '{containerName}' was answered with its failure; no matches were returned")]
+    public static partial IGenericMessage FindNotAnswered(
         ILogger logger,
         string containerName);
 

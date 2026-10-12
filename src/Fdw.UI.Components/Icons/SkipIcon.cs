@@ -11,7 +11,6 @@ public sealed class SkipIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="SkipIcon"/>.</summary>
     public SkipIcon()
         : base(
-            26,
             "Skip",
             "0 0 24 24",
             "none",

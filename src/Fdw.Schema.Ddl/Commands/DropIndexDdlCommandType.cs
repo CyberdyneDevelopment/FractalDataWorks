@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Commands;
 public sealed class DropIndexDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="DropIndexDdlCommandType"/>.</summary>
-    public DropIndexDdlCommandType() : base(6, "DropIndex") { }
+    public DropIndexDdlCommandType() : base("DropIndex") { }
 }

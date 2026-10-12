@@ -13,12 +13,11 @@ namespace Fdw.UI.Abstractions.Charts;
 /// constructor arguments — no property overrides.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public abstract class ChartTypeBase : TypeOptionBase<int, ChartTypeBase>, IChartType
+public abstract class ChartTypeBase : TypeOptionBase<ChartTypeBase>, IChartType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ChartTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique numeric identifier for this chart type.</param>
     /// <param name="name">The registry name (used by <c>ChartTypes.ByName()</c>).</param>
     /// <param name="displayName">The human-readable name shown in the chart-type picker.</param>
     /// <param name="category">The group for organising the chart-type picker (e.g. "Comparison").</param>
@@ -26,14 +25,13 @@ public abstract class ChartTypeBase : TypeOptionBase<int, ChartTypeBase>, IChart
     /// <param name="requiredEncodings">Encoding role names that MUST be bound.</param>
     /// <param name="optionalEncodings">Encoding role names that may optionally be bound.</param>
     protected ChartTypeBase(
-        int id,
         string name,
         string displayName,
         string category,
         string iconHint,
         IReadOnlyList<string>? requiredEncodings = null,
         IReadOnlyList<string>? optionalEncodings = null)
-        : base(id, name, name, displayName, displayName, category)
+        : base(name, name, displayName, displayName, category)
     {
         IconHint = iconHint;
         RequiredEncodings = requiredEncodings ?? [];

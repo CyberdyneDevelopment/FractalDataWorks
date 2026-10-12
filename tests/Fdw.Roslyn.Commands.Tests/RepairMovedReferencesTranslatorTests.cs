@@ -19,7 +19,7 @@ public sealed class RepairMovedReferencesTranslatorTests
     private static SymbolChange Moved(string fqn, string oldAssembly, string newAssembly) =>
         new(fqn, fqn, SymbolChangeTypes.Moved.Name, "NamedType", null, null, oldAssembly, newAssembly, null);
 
-    private static IChangeLedger LedgerWith(params SymbolChange[] changes)
+    private static ChangeLedger LedgerWith(params SymbolChange[] changes)
     {
         var ledger = new ChangeLedger();
         ledger.Record("MoveTypeToProject", "moved", Array.Empty<FileChange>(), changes, Array.Empty<PathChange>());

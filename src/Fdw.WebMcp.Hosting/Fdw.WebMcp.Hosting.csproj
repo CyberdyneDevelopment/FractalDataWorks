@@ -26,6 +26,9 @@
     <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.WebMcp.Abstractions\Fdw.WebMcp.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections\Fdw.Collections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Hosts.Abstractions\Fdw.Services.Hosts.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
   </ItemGroup>
 
 </Project>

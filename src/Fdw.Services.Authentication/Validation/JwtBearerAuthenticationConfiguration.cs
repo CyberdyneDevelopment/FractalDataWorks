@@ -34,12 +34,26 @@ namespace Fdw.Services.Authentication.Validation;
 [ManagedConfiguration(ServiceCategory = "AuthenticationService")]
 public partial class JwtBearerAuthenticationConfiguration : IJwtBearerAuthenticationConfiguration
 {
+    /// <inheritdoc/>
+    public bool Enabled { get; set; }
+
+    /// <inheritdoc/>
+    public string? Authority { get; set; }
+
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationConfiguration"/> class.</summary>
     public JwtBearerAuthenticationConfiguration()
     {
-        ServiceType = "AuthenticationService";
-        ServiceOptionType = "JwtBearer";
-        SectionName = "AuthenticationServices";
     }
 
     /// <inheritdoc />
@@ -47,15 +61,6 @@ public partial class JwtBearerAuthenticationConfiguration : IJwtBearerAuthentica
 
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
-
-    /// <inheritdoc />
-    public string SectionName { get; set; }
-
-    /// <inheritdoc />
-    public string ServiceType { get; set; }
-
-    /// <inheritdoc />
-    public string? ServiceOptionType { get; set; }
 
     /// <inheritdoc />
     public Guid AuthenticationServiceId { get; set; }

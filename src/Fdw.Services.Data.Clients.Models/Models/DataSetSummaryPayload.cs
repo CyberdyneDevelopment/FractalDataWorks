@@ -22,11 +22,7 @@ public sealed class DataSetSummaryPayload
     /// <summary>Gets or sets the category.</summary>
     public string Category { get; set; } = "Standard";
     /// <summary>Gets or sets the service option type.</summary>
-    public string ServiceOptionType { get; set; } = "Standard";
-    /// <summary>Gets or sets the number of fields.</summary>
-    public int FieldCount { get; set; }
-    /// <summary>Gets or sets the number of sources.</summary>
-    public int SourceCount { get; set; }
+    public string Implementation { get; set; } = "Standard";
     /// <summary>Gets or sets the creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; }
     /// <summary>Gets or sets the last modification timestamp.</summary>

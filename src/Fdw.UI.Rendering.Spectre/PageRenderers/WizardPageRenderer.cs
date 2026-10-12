@@ -189,10 +189,7 @@ public sealed class WizardPageRenderer
         return $"[{theme.Colors.Muted}]-[/]";
     }
 
-    // MA0051: Method length acceptable - procedural wizard navigation with conditional menu construction
-#pragma warning disable MA0051 // Method is too long
     private static WizardPageResult RenderNavigation(IWizardPageModel wizard, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         var choices = new List<(string Id, string Label)>();
 

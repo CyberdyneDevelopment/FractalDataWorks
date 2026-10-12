@@ -10,107 +10,6 @@ public sealed class UserResultCodesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void AllReturnsAllUserResultCodes()
-    {
-        // Act
-        var all = UserResultCodes.All();
-
-        // Assert
-        all.ShouldNotBeEmpty();
-        all.Count.ShouldBe(6);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByIdReturnsCorrectResultCode()
-    {
-        // Arrange — resolve the catalog Id by name (numbers are renumber-prone catalog values).
-        var expected = UserResultCodes.ByName("UserNotFound");
-
-        // Act
-        var result = UserResultCodes.ById(expected.Id);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Id.ShouldBe(expected.Id);
-        result.Name.ShouldBe("UserNotFound");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByIdReturnsNotFoundForUnknownId()
-    {
-        // Act
-        var result = UserResultCodes.ById(99999);
-
-        // Assert
-        result.ShouldBe(UserResultCodes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByNameReturnsCorrectResultCode()
-    {
-        // Act
-        var result = UserResultCodes.ByName("UserNotFound");
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("UserNotFound");
-        // Catalog invariant: Code == "{prefix}-{number}", Id == EventId == number, Domain == prefix.
-        result.Code.ShouldBe($"USER-{result.Id}");
-        result.EventId.ShouldBe(result.Id);
-        result.Domain.ShouldBe("USER");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByNameIsCaseSensitive()
-    {
-        // Arrange & Act
-        var found = UserResultCodes.ByName("UserNotFound");
-        var lowercase = UserResultCodes.ByName("usernotfound");
-        var uppercase = UserResultCodes.ByName("USERNOTFOUND");
-
-        // Assert
-        found.ShouldNotBeNull();
-        found.Name.ShouldBe("UserNotFound");
-        lowercase.ShouldBe(UserResultCodes.NotFound);
-        uppercase.ShouldBe(UserResultCodes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByNameReturnsNotFoundForUnknownName()
-    {
-        // Act
-        var result = UserResultCodes.ByName("UnknownCode");
-
-        // Assert
-        result.ShouldBe(UserResultCodes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void NotFoundReturnsEmptyInstance()
-    {
-        // Act
-        var result = UserResultCodes.NotFound;
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("NotFound");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
     public void UserNotFoundHasCorrectProperties()
     {
         // Act
@@ -206,19 +105,6 @@ public sealed class UserResultCodesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void AllCodesHaveUniqueIds()
-    {
-        // Act
-        var all = UserResultCodes.All();
-        var ids = all.Select(c => c.Id).ToList();
-
-        // Assert
-        ids.Distinct().Count().ShouldBe(ids.Count);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
     public void AllCodesHaveUniqueNames()
     {
         // Act
@@ -279,104 +165,18 @@ public sealed class UserResultCodesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void AllCodesHaveUserDomain()
+    public void RetryableIsExactlyTheCodesARetryCouldChange()
     {
+        // Retryable is a claim about the world, not a severity: repeating the call can plausibly
+        // give a different answer. QueryFailed is a transport/store failure; ExternalIssuersUnreadable
+        // means an authority would not state its issuer, so whether the issuer is resolvable is
+        // unknown rather than known-bad. Every other code is a settled "no" that a retry cannot move.
+        // Listing them by name is deliberate: adding a retryable code should be a decision someone
+        // makes here, not a count that drifts.
         // Act
-        var all = UserResultCodes.All();
-
-        // Assert — catalog prefix is the uppercase token "USER".
-        foreach (var code in all)
-        {
-            code.Domain.ShouldBe("USER");
-        }
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void AllCodesHaveNonEmptyMessageTemplate()
-    {
-        // Act
-        var all = UserResultCodes.All();
+        var retryable = UserResultCodes.All().Where(c => c.IsRetryable).Select(c => c.Name).ToList();
 
         // Assert
-        foreach (var code in all)
-        {
-            code.MessageTemplate.ShouldNotBeNullOrEmpty();
-        }
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void AllCodesHaveNonEmptyCode()
-    {
-        // Act
-        var all = UserResultCodes.All();
-
-        // Assert
-        foreach (var code in all)
-        {
-            code.Code.ShouldNotBeNullOrEmpty();
-        }
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void OnlyQueryFailedIsRetryable()
-    {
-        // Act
-        var all = UserResultCodes.All();
-        var retryable = all.Where(c => c.IsRetryable).ToList();
-
-        // Assert
-        retryable.Count.ShouldBe(1);
-        retryable[0].Name.ShouldBe("QueryFailed");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByIdWithZeroReturnsNotFound()
-    {
-        // Act
-        var result = UserResultCodes.ById(0);
-
-        // Assert
-        result.ShouldBe(UserResultCodes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByIdWithNegativeValueReturnsNotFound()
-    {
-        // Act
-        var result = UserResultCodes.ById(-1);
-
-        // Assert
-        result.ShouldBe(UserResultCodes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByNameWithNullThrowsArgumentNullException()
-    {
-        // Act & Assert
-        Should.Throw<ArgumentNullException>(() => UserResultCodes.ByName(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ByNameWithEmptyStringReturnsNotFound()
-    {
-        // Act
-        var result = UserResultCodes.ByName(string.Empty);
-
-        // Assert
-        result.ShouldBe(UserResultCodes.NotFound);
+        retryable.ShouldBe(["ExternalIssuersUnreadable", "QueryFailed"], ignoreOrder: true);
     }
 }

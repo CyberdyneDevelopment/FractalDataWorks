@@ -7,6 +7,6 @@ namespace Fdw.Services.TokenManagers.Abstractions;
 /// that implementation's own configuration.
 /// </summary>
 public interface ITokenManagerConfiguration
-    : IPlatformServiceConfiguration<ITokenManagerImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

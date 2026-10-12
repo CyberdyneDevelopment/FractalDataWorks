@@ -12,5 +12,5 @@ public sealed class QualityNavSection : NavSectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="QualityNavSection"/> class.
     /// </summary>
-    public QualityNavSection() : base(5, "Quality", "Quality", 50) { }
+    public QualityNavSection() : base("Quality", "Quality", 50) { }
 }

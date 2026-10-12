@@ -22,4 +22,16 @@ public static partial class MsSqlDataCommandTranslatorBaseLog
     public static partial IGenericMessage SerializingEnumerableParameter(
         ILogger logger,
         string parameterName);
+
+    /// <summary>
+    /// Logs when a null value whose property is declared <c>byte[]</c> is bound as VARBINARY, so SQL
+    /// Server does not receive an untyped NULL as NVARCHAR for a binary column (FDW-918).
+    /// </summary>
+    [MessageLogging(
+        EventId = 12001,
+        Level = LogLevel.Debug,
+        Message = "Binding null value for parameter '{parameterName}' as VARBINARY from its declared byte[] type")]
+    public static partial IGenericMessage BindingNullBinaryParameter(
+        ILogger logger,
+        string parameterName);
 }

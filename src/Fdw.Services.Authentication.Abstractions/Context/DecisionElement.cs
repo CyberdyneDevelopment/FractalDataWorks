@@ -8,7 +8,7 @@ public sealed class DecisionElement : ContextElementBase
 {
     /// <summary>Initializes a new instance of the <see cref="DecisionElement"/> class.</summary>
     public DecisionElement()
-        : base(4, "Decision")
+        : base("Decision")
     {
     }
 

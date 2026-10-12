@@ -14,7 +14,7 @@ public sealed class MergeEscalationOverrideMode : EscalationOverrideModeBase
     /// Initializes a new instance of the <see cref="MergeEscalationOverrideMode"/> class.
     /// </summary>
     public MergeEscalationOverrideMode()
-        : base(id: 2, name: "Merge")
+        : base(name: "Merge")
     {
     }
 }

@@ -26,10 +26,6 @@ public class ServiceTypeBaseSimpleTests
     private class SimpleConfig : IGenericConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; } = "Test";
-        public string SectionName => "Test";
-        public string ServiceType => "Test";
-        public string? ServiceOptionType => "Test";
     }
 
     [ExcludeFromCodeCoverage]
@@ -75,7 +71,7 @@ public class ServiceTypeBaseSimpleTests
                 // Inline, because binding from appsettings is three lines in the body that wants it
                 // rather than a helper on every service type that does not.
                 builder.Services.AddOptions<SimpleConfig>()
-                    .BindConfiguration(SectionName)
+                    .BindConfiguration(ConfigurationKey)
                     .ValidateDataAnnotations()
                     .ValidateOnStart();
 
@@ -137,13 +133,13 @@ public class ServiceTypeBaseSimpleTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void SectionNameEqualsConfigurationKey()
+    public void ConfigurationKeyIsTheSectionItBinds()
     {
         // Act
         var serviceType = new SimpleServiceType();
 
         // Assert
-        serviceType.SectionName.ShouldBe(serviceType.ConfigurationKey);
+        serviceType.ConfigurationKey.ShouldBe("SimpleSection");
     }
 
     [Fact]

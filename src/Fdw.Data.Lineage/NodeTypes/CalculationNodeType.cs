@@ -14,5 +14,5 @@ public sealed class CalculationNodeType : LineageNodeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CalculationNodeType"/> class.
     /// </summary>
-    public CalculationNodeType() : base(5, "Calculation") { }
+    public CalculationNodeType() : base("Calculation") { }
 }

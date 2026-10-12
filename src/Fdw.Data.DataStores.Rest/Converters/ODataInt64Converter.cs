@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataInt64Converter()
     : DataTypeConverterBase(
-        id: 3,
         name: "Int64",
         sourceType: "Int64",
         targetClrType: typeof(long),

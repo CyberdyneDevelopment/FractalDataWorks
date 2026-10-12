@@ -19,7 +19,7 @@ namespace Fdw.Data.DataStores.Rest;
 
 /// <summary>
 /// Imports schema from OData $metadata endpoints.
-/// Returns a discovered <see cref="DataStoreConfiguration"/> with HttpPath rows containing
+/// Returns a discovered <see cref="DataStoreImplementationConfiguration"/> with HttpPath rows containing
 /// one Endpoint container per EntitySet.
 /// </summary>
 [TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "OData", RestrictToCurrentCompilation = true)]
@@ -39,7 +39,6 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
     /// <param name="logger">The logger instance.</param>
     public ODataSchemaImporter(ILogger<ODataSchemaImporter> logger)
         : base(
-            id: 3,
             name: "OData",
             description: "Imports schema from OData $metadata endpoints",
             dataStoreType: "Rest")
@@ -55,7 +54,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
     /// <param name="options">The schema importer options.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns></returns>
-    public override async Task<IGenericResult<DataStoreConfiguration>> Import(
+    public override async Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -63,7 +62,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
         try
         {
             if (string.IsNullOrWhiteSpace(source))
-                return GenericResult<DataStoreConfiguration>.Failure(
+                return GenericResult<DataStoreImplementationConfiguration>.Failure(
                     RestDataStoreResultCodes.ByName("ODataServiceUrlRequired"));
 
             RestImporterLogger.ODataImportStarted(_logger, source);
@@ -72,23 +71,20 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
 
             var metadataXmlResult = await FetchMetadata(metadataUrl, cancellationToken).ConfigureAwait(false);
             if (!metadataXmlResult.IsSuccess)
-                return metadataXmlResult.ToNewResult<DataStoreConfiguration>();
+                return metadataXmlResult.ToNewResult<DataStoreImplementationConfiguration>();
 
             var parseResult = ParseEdmxDocument(metadataXmlResult.Value!);
             if (!parseResult.IsSuccess)
-                return parseResult.ToNewResult<DataStoreConfiguration>();
+                return parseResult.ToNewResult<DataStoreImplementationConfiguration>();
 
             var edmx = parseResult.Value!;
             var edmNamespace = DetectEdmNamespace(edmx);
             var serviceName = edmx.Descendants(edmNamespace + "EntityContainer")
                 .FirstOrDefault()?.Attribute("Name")?.Value ?? "OData Service";
 
-            var dataStore = new DataStoreConfiguration
+            var dataStore = new DataStoreImplementationConfiguration
             {
                 Name = serviceName,
-                ServiceType = "DataStore",
-                ServiceOptionType = "Rest",
-                SectionName = "DataStores"
             };
 
             var totalEntitySets = 0;
@@ -96,7 +92,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
             {
                 if (!pathResult.IsSuccess)
                 {
-                    return pathResult.ToNewResult<DataStoreConfiguration>();
+                    return pathResult.ToNewResult<DataStoreImplementationConfiguration>();
                 }
 
                 if (pathResult.Value is { } path)
@@ -112,11 +108,11 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
 
             RestImporterLogger.ODataImportCompleted(_logger, serviceName, totalEntitySets);
 
-            return GenericResult<DataStoreConfiguration>.Success(dataStore);
+            return GenericResult<DataStoreImplementationConfiguration>.Success(dataStore);
         }
         catch (Exception ex)
         {
-            return GenericResult<DataStoreConfiguration>.Failure(
+            return GenericResult<DataStoreImplementationConfiguration>.Failure(
                 RestImporterLogger.ODataImportFailed(_logger, ex));
         }
     }
@@ -175,7 +171,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
 
             // Validate $metadata endpoint is accessible
             using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(10);
+            httpClient.Timeout = SchemaImporters.Abstractions.SchemaImporters.SourceCheckTimeout;
             var response = await httpClient.GetAsync(metadataUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
 
             return GenericResult<bool>.Success(response.IsSuccessStatusCode);
@@ -359,7 +355,7 @@ public sealed partial class ODataSchemaImporter : SchemaImporterBase<RestConfigu
         try
         {
             using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            httpClient.Timeout = SchemaImporters.Abstractions.SchemaImporters.SourceFetchTimeout;
             var content = await httpClient.GetStringAsync(metadataUrl, cancellationToken).ConfigureAwait(false);
             LogMetadataFetched(_logger, metadataUrl, content.Length);
             return GenericResult<string>.Success(content);

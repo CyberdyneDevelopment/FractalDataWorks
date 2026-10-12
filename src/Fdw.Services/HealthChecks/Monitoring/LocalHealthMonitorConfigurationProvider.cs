@@ -1,37 +1,28 @@
-using System;
 using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.HealthChecks.Monitoring;
 
-/// <summary>
-/// Supplies the local health monitor's own configuration.
-/// </summary>
+/// <summary>Supplies the LocalHealthMonitor configuration.</summary>
 public sealed class LocalHealthMonitorConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IHealthMonitorImplementationConfiguration,
-          LocalHealthMonitorConfiguration,
-          LocalHealthMonitorConfigurationCommand>
+    : ImplementationProviderBase<LocalHealthMonitorConfiguration, IHealthMonitorImplementationConfiguration>,
+      ILocalHealthMonitorConfigurationProvider
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationProvider"/> class.
-    /// </summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
-    /// <param name="dataStoreName">The connection the rows live in.</param>
-    /// <param name="pathName">The schema the rows live in.</param>
+    /// <summary>Initializes a new instance of the <see cref="LocalHealthMonitorConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public LocalHealthMonitorConfigurationProvider(
         ILogger<LocalHealthMonitorConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "settings")
-        : base(logger ?? NullLogger<LocalHealthMonitorConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName,
-               pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
 }

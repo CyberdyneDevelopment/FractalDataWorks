@@ -16,11 +16,6 @@ public sealed class DataContainerFieldConfigurationValidator : FdwConfigurationV
         RuleFor(x => x.Name)
             .IsValidName(200);
 
-        RuleFor(x => x.DataContainerId)
-            .NotEqual(System.Guid.Empty)
-            .WithMessage("DataContainerId is required");
-
-
         When(x => x.Description is not null, () =>
         {
             RuleFor(x => x.Description!)

@@ -14,5 +14,5 @@ public sealed class AppendMode : WriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AppendMode"/> class.
     /// </summary>
-    public AppendMode() : base(4, "Append") { }
+    public AppendMode() : base("Append") { }
 }

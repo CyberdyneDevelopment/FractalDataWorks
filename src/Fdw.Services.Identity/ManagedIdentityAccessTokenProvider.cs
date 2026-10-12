@@ -22,8 +22,8 @@ namespace Fdw.Services.Identity;
 /// already goes through the seam.
 /// </para>
 /// <para>
-/// <b>This does not replace user-token forwarding.</b> <c>BlazorServerAccessTokenProvider</c> and
-/// <c>InstanceAccessTokenProvider</c> forward the signed-in user's token on purpose, so downstream
+/// <b>This does not replace user-token forwarding.</b> <c>InstanceAccessTokenProvider</c>
+/// forwards the signed-in user's token on purpose, so downstream
 /// authorization runs as the real user. Substituting a service identity there would widen authority
 /// rather than narrow it. Register this one only on clients whose calls have no user in the loop —
 /// scheduled dispatches, background reconciliation, CI-initiated work.

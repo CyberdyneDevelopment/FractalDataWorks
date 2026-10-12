@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Web.Analytics.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Promotion API client.
+/// Implementation for the Promotion API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "PromotionClient")]
+[Implementation(typeof(ApiClientTypes), "PromotionClient")]
 public sealed class PromotionClientType : ApiClientTypeBase<PromotionApiClient>
 {
     /// <summary>
@@ -34,9 +34,8 @@ public sealed class PromotionClientType : ApiClientTypeBase<PromotionApiClient>
         {
             builder.Services.AddScoped<PromotionApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<PromotionApiClient>>() ?? NullLogger<PromotionApiClient>.Instance;
-                return new PromotionApiClient(factory.CreateClient(Name), logger);
+                return new PromotionApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

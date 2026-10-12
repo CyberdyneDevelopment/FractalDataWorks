@@ -13,5 +13,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class HibernatedState : SessionStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="HibernatedState"/> class.</summary>
-    public HibernatedState() : base(3, "Hibernated", isTerminal: false, isReclaimable: true) { }
+    public HibernatedState() : base("Hibernated", isTerminal: false, isReclaimable: true) { }
 }

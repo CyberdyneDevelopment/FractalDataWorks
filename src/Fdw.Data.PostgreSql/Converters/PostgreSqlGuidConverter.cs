@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlGuidConverter()
     : DataTypeConverterBase(
-        id: 13,
         name: "Guid",
         sourceType: "uuid",
         targetClrType: typeof(Guid),

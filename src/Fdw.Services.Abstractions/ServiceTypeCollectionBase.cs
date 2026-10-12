@@ -44,12 +44,68 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     // guarantees complete before Main() and thus before anything can trigger the freeze.
     private static readonly List<IServiceTypeRegistration> _pending = new();
 
-    private static readonly HashSet<object> _registeredIds = new();
+    // Why keyed on the option's type and not its Id: members are service types (Guid ids) and endpoint
+    // collections (int ids), and both ids are derived from the option's type, so the type is the one key
+    // they share. One registration per option type is what the check has always meant.
+    private static readonly HashSet<Type> _registeredTypes = new();
 
     private static IServiceTypeRegistration[] _frozenOptions = Array.Empty<IServiceTypeRegistration>();
     private static volatile bool _frozen;
 
-    private static string CollectionName => typeof(TInterface).Name;
+    /// <summary>
+    /// Gets the concrete collection type's own name, when the generator supplied one.
+    /// </summary>
+    /// <remarks>
+    /// Statics are not polymorphic in C#, so code running here in the shared base has no way to ask
+    /// "which derived class called me" -- <c>typeof(TInterface).Name</c> is the only name this class
+    /// can compute on its own, and for a collection whose TBase and TInterface are the same shared
+    /// marker (e.g. Endpoints closes both over IEndpointTypeCollection), that name says nothing about
+    /// which concrete collection is actually running. <c>ServiceTypeCollectionGenerator</c>
+    /// closes the gap by emitting a field initializer into the generated partial that calls
+    /// <see cref="RegisterCollectionTypeName"/> with the concrete class's own name -- field
+    /// initializers run for every partial declaration of a type, so this is set before the type's own
+    /// static constructor (and so before any phase can run) regardless of which file declares it.
+    /// </remarks>
+    protected static string? CollectionTypeName { get; private set; }
+
+    /// <summary>
+    /// Records this collection's own concrete type name. Called from a source-generated field
+    /// initializer -- see <see cref="CollectionTypeName"/> for why that is the only place that can
+    /// hand the base class this information.
+    /// </summary>
+    /// <param name="name">The concrete collection class's own name.</param>
+    /// <returns><paramref name="name"/>, so the call can be a field initializer expression.</returns>
+    protected static string RegisterCollectionTypeName(string name)
+    {
+        CollectionTypeName = name;
+        return name;
+    }
+
+    /// <summary>
+    /// Gets the label every phase log line names itself by: the concrete collection's own name
+    /// alongside the shared interface it collects, or just the interface name when no concrete name
+    /// was registered (a collection whose generator predates this, or one built by hand).
+    /// </summary>
+    private static string CollectionName => CollectionTypeName is { Length: > 0 } concrete
+        ? $"{concrete} ({typeof(TInterface).Name})"
+        : typeof(TInterface).Name;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this collection's real membership is tracked by a
+    /// sibling collection instead of its own native <c>[TypeOption]</c>/<c>[ServiceTypeOption]</c>
+    /// surface.
+    /// </summary>
+    /// <remarks>
+    /// A collection whose members live in other packages cannot declare this collection as their
+    /// parent (a <c>[TypeOption]</c> parent/child pair emits a partial class onto the parent, and a
+    /// partial cannot span assemblies) -- it joins a plain <c>TypeCollection</c> instead and this
+    /// collection's own phase bodies read that TypeCollection's <c>All()</c>. For a collection built
+    /// this way, <see cref="Options"/> is empty forever, by design, not because a package reference is
+    /// missing -- so <see cref="ServiceTypeLog.CollectionPhaseNoOptions"/>'s warning is never
+    /// informative here and would fire on every single run. Set this from the collection's static
+    /// constructor to log <see cref="ServiceTypeLog.CollectionPhaseMembersElsewhere"/> instead.
+    /// </remarks>
+    protected static bool NativeMembersUnused { get; set; }
 
     /// <summary>
     /// Adds an option to this collection. Called from the generated <c>[ModuleInitializer]</c> as the
@@ -63,12 +119,12 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
 
         lock (_gate)
         {
-            if (!_registeredIds.Add(option.Id))
+            if (!_registeredTypes.Add(option.GetType()))
                 return;
 
             if (_frozen)
             {
-                _registeredIds.Remove(option.Id);
+                _registeredTypes.Remove(option.GetType());
                 throw new InvalidOperationException(
                     $"The {typeof(TInterface).Name} collection was already read; registering '{option.Name}' now would be invisible to it.");
             }
@@ -488,7 +544,12 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
             if (result.IsSuccess)
             {
                 if (Options.Length == 0)
-                    ServiceTypeLog.CollectionPhaseNoOptions(logger, CollectionName, phase, position);
+                {
+                    if (NativeMembersUnused)
+                        ServiceTypeLog.CollectionPhaseMembersElsewhere(logger, CollectionName, phase, position);
+                    else
+                        ServiceTypeLog.CollectionPhaseNoOptions(logger, CollectionName, phase, position);
+                }
                 else
                     ServiceTypeLog.CollectionPhaseSucceeded(logger, CollectionName, phase, position, Options.Length);
             }

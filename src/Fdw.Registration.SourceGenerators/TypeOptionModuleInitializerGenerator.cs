@@ -38,8 +38,8 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
         Compilation compilation)
     {
         // Library assemblies skip module initializer generation — only executables need it.
-        // ServiceTypeOption cross-assembly registration for DLL assemblies is handled by
-        // ServiceTypeOptionModuleInitializerGenerator.
+        // Implementation cross-assembly registration for DLL assemblies is handled by
+        // ImplementationModuleInitializerGenerator.
         if (compilation.Options.OutputKind == OutputKind.DynamicallyLinkedLibrary)
             return;
 
@@ -79,7 +79,6 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
             SourceText.From(code, Encoding.UTF8));
     }
 
-#pragma warning disable MA0051 // Source generator emits complete module initializer — splitting scatters the template
     private static string GenerateModuleInitializer(
         List<IGrouping<string, ModuleInitOptionModel>> byCollection,
         string assemblyName)
@@ -179,7 +178,6 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
         string CollectionClassName
     );
 
-#pragma warning disable MA0051 // Cross-assembly discovery scans all referenced assemblies — must stay as one cohesive pass
     private static (List<ModuleInitOptionModel> Options, List<string> DiagnosticInfo) DiscoverOptionsInReferencedAssembliesWithDiagnostics(Compilation compilation)
     {
         var options = new List<ModuleInitOptionModel>();
@@ -322,7 +320,6 @@ public class TypeOptionModuleInitializerGenerator : IIncrementalGenerator
         }
     }
 
-#pragma warning disable MA0051 // Roslyn symbol inspection walks type hierarchy — must stay cohesive
     private static void ScanTypeForOptions(
         INamedTypeSymbol type,
         INamedTypeSymbol attributeSymbol,

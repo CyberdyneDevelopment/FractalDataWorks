@@ -33,7 +33,6 @@ public sealed class GeneratePropertyTranslator : RoslynCommandTranslatorBase<Gen
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear code generation: validate property, build via SyntaxFactory
     public override async Task<IGenericResult<MutationResult>> Translate(
         GeneratePropertyCommand command,
         Solution solution,
@@ -183,5 +182,4 @@ public sealed class GeneratePropertyTranslator : RoslynCommandTranslatorBase<Gen
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 }

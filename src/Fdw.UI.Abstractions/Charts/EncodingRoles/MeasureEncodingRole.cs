@@ -14,7 +14,7 @@ public sealed class MeasureEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="MeasureEncodingRole"/> class.
     /// </summary>
     public MeasureEncodingRole()
-        : base(9, "Measure", "Measure", isSpatial: false)
+        : base("Measure", "Measure", isSpatial: false)
     {
     }
 }

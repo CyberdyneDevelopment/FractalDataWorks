@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Connections;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
@@ -40,7 +41,7 @@ public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<Get
             return allResult.ToNewResult<List<ConnectionByTypeDto>?>();
         var allConnections = allResult.Value!;
         var connections = allConnections
-            .Where(c => string.Equals(c.ServiceOptionType, request.TypeName, StringComparison.OrdinalIgnoreCase))
+            .Where(c => string.Equals(c.Implementation, request.TypeName, StringComparison.OrdinalIgnoreCase))
             .Select(MapToDto)
             .ToList();
 
@@ -48,12 +49,12 @@ public abstract class GetConnectionsByTypeEndpointBase : CrudGetEndpointBase<Get
     }
 
     /// <summary>Maps a connection configuration to a connection by type DTO.</summary>
-    protected virtual ConnectionByTypeDto MapToDto(ConnectionConfiguration connection)
+    protected virtual ConnectionByTypeDto MapToDto(IConnectionImplementationConfiguration connection)
     {
         return new ConnectionByTypeDto
         {
             Name = connection.Name,
-            ConnectionType = connection.ServiceOptionType ?? "Unknown"
+            ConnectionType = connection.Implementation
         };
     }
 }

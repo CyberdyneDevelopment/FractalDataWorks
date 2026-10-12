@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,16 @@ public sealed class DateTimeDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DateTimeDataType"/> class.</summary>
     public DateTimeDataType()
-        : base(id: 9, name: "DateTime")
+        : base(name: "DateTime")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(DateTime);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Moment(text) is { } held ? held.UtcDateTime : null;
+
+    /// <inheritdoc />
+    public override string Format(object value) => ((DateTime)value).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 }

@@ -22,7 +22,6 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformationBase
     /// </summary>
     public CompositeDateTimeFieldTransformer()
         : base(
-            id: 104,
             name: "CompositeDateTime",
             displayName: "Composite DateTime",
             description: "Builds a DateTimeOffset from separate date, hour, and optional sub-hour interval fields in the current record.",
@@ -119,7 +118,7 @@ public sealed class CompositeDateTimeFieldTransformer : FieldTransformationBase
         }
 
         var zoneType = TimeZoneTypes.ByName(zone);
-        if (string.Equals(zoneType.Name, "_Empty", StringComparison.Ordinal))
+        if (string.Equals(zoneType.Name, "NotFound", StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Unknown timezone '{zone}'. Use TimeZoneTypes.All() for available options.");

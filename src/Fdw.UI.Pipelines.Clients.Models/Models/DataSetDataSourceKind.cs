@@ -10,5 +10,5 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 public sealed class DataSetDataSourceKind : DataSourceKindBase
 {
     /// <summary>Initializes a new instance of <see cref="DataSetDataSourceKind"/>.</summary>
-    public DataSetDataSourceKind() : base(2, "DataSet") { }
+    public DataSetDataSourceKind() : base("DataSet") { }
 }

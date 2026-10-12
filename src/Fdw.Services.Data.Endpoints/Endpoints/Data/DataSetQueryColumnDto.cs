@@ -17,6 +17,9 @@ public sealed class DataSetQueryColumnDto
     /// <summary>Gets or sets whether the field is indexed.</summary>
     public bool IsIndexed { get; set; }
 
+    /// <summary>Gets or sets whether API callers may filter on the field.</summary>
+    public bool IsFilterable { get; set; }
+
     /// <summary>Gets or sets the field role (Surrogate, NaturalKey, Lookup, Attribute, Measure).</summary>
     public string? Role { get; set; }
 }

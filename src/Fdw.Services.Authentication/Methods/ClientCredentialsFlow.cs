@@ -16,7 +16,6 @@ public sealed class ClientCredentialsFlow : AuthenticationFlowBase
     /// Initializes a new instance of the <see cref="ClientCredentialsFlow"/> class.
     /// </summary>
     public ClientCredentialsFlow() : base(
-        id: 2,
         name: "ClientCredentials",
         requiresUserInteraction: false,
         supportsRefreshTokens: false,

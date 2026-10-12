@@ -14,5 +14,5 @@ public sealed class ConsumesEdgeType : LineageEdgeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ConsumesEdgeType"/> class.
     /// </summary>
-    public ConsumesEdgeType() : base(2, "Consumes") { }
+    public ConsumesEdgeType() : base("Consumes") { }
 }

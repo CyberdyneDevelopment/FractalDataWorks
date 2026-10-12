@@ -14,5 +14,5 @@ public sealed class UpsertWriteMode : ContainerWriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="UpsertWriteMode"/> class.
     /// </summary>
-    public UpsertWriteMode() : base(3, "Upsert", preservesExistingData: true, requiresExistingContainer: false, failsIfExists: false) { }
+    public UpsertWriteMode() : base("Upsert", preservesExistingData: true, requiresExistingContainer: false, failsIfExists: false) { }
 }

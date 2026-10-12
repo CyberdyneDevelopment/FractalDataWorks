@@ -8,4 +8,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConnectionStates), "Unknown", RestrictToCurrentCompilation = true)]
-public sealed class UnknownConnectionState() : ConnectionStateBase(0, "Unknown");
+public sealed class UnknownConnectionState() : ConnectionStateBase("Unknown");

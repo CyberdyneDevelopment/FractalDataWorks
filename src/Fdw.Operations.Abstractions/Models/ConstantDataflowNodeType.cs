@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class ConstantDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ConstantDataflowNodeType"/>.</summary>
-    public ConstantDataflowNodeType() : base(8, "Constant") { }
+    public ConstantDataflowNodeType() : base("Constant") { }
 }

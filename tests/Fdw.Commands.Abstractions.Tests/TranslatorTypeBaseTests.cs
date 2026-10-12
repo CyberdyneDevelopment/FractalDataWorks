@@ -18,16 +18,12 @@ public sealed class TranslatorTypeBaseTests
 
         // Act
         var translator = new TestTranslatorType(
-            id: 1,
             name: "SqlToRest",
             description: "SQL to REST translator",
             sourceFormat: sourceFormat,
             targetFormat: targetFormat,
             capabilities: capabilities,
             priority: 75);
-
-        // Assert
-        translator.Id.ShouldBe(1);
         translator.Name.ShouldBe("SqlToRest");
         // Description is passed as 'category' to TypeOptionBase, not 'description'
         // TypeOptionBase auto-generates description as "Type option: {name}"
@@ -52,7 +48,6 @@ public sealed class TranslatorTypeBaseTests
 
         // Act
         var translator = new TestTranslatorType(
-            id: 2,
             name: "DefaultPriority",
             description: "Translator with default priority",
             sourceFormat: sourceFormat,
@@ -75,7 +70,6 @@ public sealed class TranslatorTypeBaseTests
 
         // Act
         var translator = new TestTranslatorType(
-            id: 3,
             name: "BasicTranslator",
             description: "Translator with basic capabilities",
             sourceFormat: sourceFormat,
@@ -103,7 +97,6 @@ public sealed class TranslatorTypeBaseTests
 
         // Act
         var translator = new TestTranslatorType(
-            id: 4,
             name: "LowPriority",
             description: "Translator with zero priority",
             sourceFormat: sourceFormat,
@@ -126,7 +119,6 @@ public sealed class TranslatorTypeBaseTests
 
         // Act
         var translator = new TestTranslatorType(
-            id: 5,
             name: "HighPriority",
             description: "Translator with high priority",
             sourceFormat: sourceFormat,
@@ -148,7 +140,6 @@ public sealed class TranslatorTypeBaseTests
 
         // Act
         var translator = new TestTranslatorType(
-            id: 6,
             name: "Passthrough",
             description: "Passthrough translator",
             sourceFormat: format,
@@ -164,14 +155,13 @@ public sealed class TranslatorTypeBaseTests
     private sealed class TestTranslatorType : TranslatorTypeBase
     {
         public TestTranslatorType(
-            int id,
             string name,
             string description,
             IDataFormat sourceFormat,
             IDataFormat targetFormat,
             TranslationCapabilities capabilities,
             int priority = 50)
-            : base(id, name, description, sourceFormat, targetFormat, capabilities, priority)
+            : base(name, description, sourceFormat, targetFormat, capabilities, priority)
         {
         }
 

@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Rendering;
 public sealed class CancelPageAction : PageActionBase
 {
     /// <summary>Initializes a new instance of <see cref="CancelPageAction"/>.</summary>
-    public CancelPageAction() : base(2, "Cancel") { }
+    public CancelPageAction() : base("Cancel") { }
 }

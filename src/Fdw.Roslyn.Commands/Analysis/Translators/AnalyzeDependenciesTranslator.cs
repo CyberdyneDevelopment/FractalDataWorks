@@ -32,7 +32,6 @@ public sealed class AnalyzeDependenciesTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve type, iterate descendant nodes, collect dependencies
     public override async Task<IGenericResult<QueryResult<DependencyAnalysisData>>> Translate(
         AnalyzeDependenciesCommand command,
         Solution solution,
@@ -128,5 +127,4 @@ public sealed class AnalyzeDependenciesTranslator
 
         return GenericResult<QueryResult<DependencyAnalysisData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

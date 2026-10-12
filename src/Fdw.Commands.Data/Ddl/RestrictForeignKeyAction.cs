@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class RestrictForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="RestrictForeignKeyAction"/>.</summary>
-    public RestrictForeignKeyAction() : base(4, "Restrict") { }
+    public RestrictForeignKeyAction() : base("Restrict") { }
 }

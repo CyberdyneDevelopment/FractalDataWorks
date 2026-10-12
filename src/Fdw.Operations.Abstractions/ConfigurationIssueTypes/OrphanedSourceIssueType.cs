@@ -14,5 +14,5 @@ public sealed class OrphanedSourceIssueType : ConfigurationIssueTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OrphanedSourceIssueType"/> class.
     /// </summary>
-    public OrphanedSourceIssueType() : base(2, "OrphanedSource", isHealable: true) { }
+    public OrphanedSourceIssueType() : base("OrphanedSource", isHealable: true) { }
 }

@@ -12,5 +12,5 @@ public sealed class CatalogNavSection : NavSectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CatalogNavSection"/> class.
     /// </summary>
-    public CatalogNavSection() : base(6, "Catalog", "Catalog", 60) { }
+    public CatalogNavSection() : base("Catalog", "Catalog", 60) { }
 }

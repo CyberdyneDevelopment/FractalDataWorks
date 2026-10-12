@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -12,7 +13,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Identity.Commands;
 
@@ -44,7 +44,28 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
+
+    /// <summary>
+    /// How long a token-endpoint call may take before it is treated as unreachable.
+    /// </summary>
+    /// <remarks>
+    /// Why bounded, and why short: this call sits in front of an outbound request that has its own
+    /// deadline. An unbounded wait here turns a slow identity provider into a stalled caller, which is
+    /// harder to diagnose than a clean failure. A deployment sets this before the host registers
+    /// services.
+    /// </remarks>
+    public static TimeSpan TokenEndpointTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How long before actual expiry a token stops being served from cache.
+    /// </summary>
+    /// <remarks>
+    /// Headroom for the in-flight request, not a policy tuned per identity. It must exceed the round
+    /// trip to the peer; 60 seconds covers that with room for clock skew between FDW and the issuer.
+    /// A deployment sets this before the host registers services.
+    /// </remarks>
+    public static TimeSpan TokenRefreshSkew { get; set; } = TimeSpan.FromSeconds(60);
 
     // Configure(), Register(), Initialize() are source-generated.
 
@@ -60,46 +81,31 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static IdentityServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IIdentityServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<IdentityServiceTypes>() ?? NullLogger<IdentityServiceTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
             builder.Services.TryAddSingleton<IIdentityServiceConfigurationProvider>(sp =>
                 new IdentityServiceConfigurationProvider(
                     sp.GetService<ILogger<IdentityServiceConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), IdentityServiceTypes.ConfigurationConnection, "sec", "Identity"));
             builder.Services.TryAddSingleton<IdentityServiceConfigurationProvider>(
                 sp => (IdentityServiceConfigurationProvider)sp.GetRequiredService<IIdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<IdentityServiceConfiguration, IdentityServiceConfigurationCommand>>(
-                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<IdentityServiceConfiguration>>(
-                sp => sp.GetRequiredService<IdentityServiceConfigurationProvider>());
 
             builder.Services.AddSingleton<IIdentityTokenCache>(sp =>
                 new IdentityTokenCache(
                     sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityTokenCache>()
                     ?? NullLogger<IdentityTokenCache>.Instance,
-                    IdentityTokenCache.DefaultRefreshSkew));
+                    TokenRefreshSkew));
 
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<IIdentityServiceProvider>(sp =>
             {
                 var provider = new IdentityServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<IdentityServiceProvider>()
                     ?? NullLogger<IdentityServiceProvider>.Instance);
 
@@ -122,7 +128,7 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(IdentityServiceTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<IdentityServiceConfiguration>).ToString());
+                            typeof(IIdentityServiceConfigurationProvider).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -130,8 +136,22 @@ public partial class IdentityServiceTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(IdentityServiceTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(IdentityServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(IdentityServiceTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(IdentityServiceTypes), providerService);

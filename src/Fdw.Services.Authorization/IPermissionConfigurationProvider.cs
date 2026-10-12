@@ -1,4 +1,5 @@
 using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 
 namespace Fdw.Services.Authorization;
@@ -6,6 +7,8 @@ namespace Fdw.Services.Authorization;
 /// <summary>
 /// Reads the permissions this platform defines.
 /// </summary>
-public interface IPermissionConfigurationProvider : IServiceConfigurationProvider<PermissionConfiguration>
+public interface IPermissionConfigurationProvider 
+    : IDomainConfigurationProvider<IPermissionImplementationConfiguration>,
+      IDomainRecordProvider<PermissionDomainConfiguration>
 {
 }

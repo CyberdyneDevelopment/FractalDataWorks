@@ -28,7 +28,6 @@ public sealed class RetryWithBackoffMode : ErrorHandlingModeBase
     /// </summary>
     public RetryWithBackoffMode()
         : base(
-            id: 3,
             name: "RetryWithBackoff",
             continuesExecution: true,
             supportsRetry: true,

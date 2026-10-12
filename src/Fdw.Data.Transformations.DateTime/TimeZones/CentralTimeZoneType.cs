@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Central")]
 public sealed class CentralTimeZoneType : TimeZoneTypeBase
 {
-    public CentralTimeZoneType() : base(2, "Central", "Central Standard Time") { }
+    public CentralTimeZoneType() : base("Central", "Central Standard Time") { }
 }

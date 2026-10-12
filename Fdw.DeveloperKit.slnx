@@ -114,7 +114,6 @@
   <Folder Name="/src/Services/">
     <Project Path="src/Fdw.Services.Abstractions/Fdw.Services.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.SessionState.Abstractions/Fdw.Services.SessionState.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.SessionState.Components/Fdw.Services.SessionState.Components.csproj" />
     <Project Path="src/Fdw.Services.SessionState/Fdw.Services.SessionState.csproj" />
     <Project Path="src/Fdw.Services/Fdw.Services.csproj" />
   </Folder>
@@ -188,31 +187,25 @@
     <Project Path="src/Fdw.Messages/Fdw.Messages.csproj" />
     <Project Path="src/Fdw.Operations.Abstractions/Fdw.Operations.Abstractions.csproj" />
     <Project Path="src/Fdw.Operations.Endpoints/Fdw.Operations.Endpoints.csproj" />
-    <Project Path="src/Fdw.Operations.UI.Pages/Fdw.Operations.UI.Pages.csproj" />
     <Project Path="src/Fdw.Operations/Fdw.Operations.csproj" />
     <Project Path="src/Fdw.Processors.Abstractions/Fdw.Processors.Abstractions.csproj" />
+    <Project Path="src/Fdw.Protocols.Tds/Fdw.Protocols.Tds.csproj" />
     <Project Path="src/Fdw.Registration.SourceGenerators/Fdw.Registration.SourceGenerators.csproj" />
     <Project Path="src/Fdw.Aegis.Abstractions/Fdw.Aegis.Abstractions.csproj" />
     <Project Path="src/Fdw.Aegis.Configuration/Fdw.Aegis.Configuration.csproj" />
     <Project Path="src/Fdw.Aegis.McpServer/Fdw.Aegis.McpServer.csproj" />
     <Project Path="src/Fdw.Aegis/Fdw.Aegis.csproj" />
-    <Project Path="src/Fdw.Agents.Components/Fdw.Agents.Components.csproj" />
-    <Project Path="src/Fdw.Agents.UI.Pages/Fdw.Agents.UI.Pages.csproj" />
     <Project Path="src/Fdw.Aui.Abstractions/Fdw.Aui.Abstractions.csproj" />
     <Project Path="src/Fdw.Aui/Fdw.Aui.csproj" />
-    <Project Path="src/Fdw.Calculations.Components/Fdw.Calculations.Components.csproj" />
     <Project Path="src/Fdw.Calculations.Endpoints/Fdw.Calculations.Endpoints.csproj" />
-    <Project Path="src/Fdw.Calculations.UI.Pages/Fdw.Calculations.UI.Pages.csproj" />
+    <Project Path="src/Fdw.Claims.Abstractions/Fdw.Claims.Abstractions.csproj" />
     <Project Path="src/Fdw.Collections/Fdw.Collections.csproj" />
     <Project Path="src/Fdw.Commands.Data.Fluency/Fdw.Commands.Data.Fluency.csproj" />
     <Project Path="src/Fdw.Commands.Data/Fdw.Commands.Data.csproj" />
-    <Project Path="src/Fdw.Configuration.Components/Fdw.Configuration.Components.csproj" />
     <Project Path="src/Fdw.Configuration.Endpoints/Fdw.Configuration.Endpoints.csproj" />
-    <Project Path="src/Fdw.Configuration.UI.Pages/Fdw.Configuration.UI.Pages.csproj" />
     <Project Path="src/Fdw.Conventions.Analyzers/Fdw.Conventions.Analyzers.csproj" />
     <Project Path="src/Fdw.Conventions.CodeFixes/Fdw.Conventions.CodeFixes.csproj" />
     <Project Path="src/Fdw.Conventions.FileSplitter/Fdw.Conventions.FileSplitter.csproj" />
-    <Project Path="src/Fdw.Dashboard.UI.Components/Fdw.Dashboard.UI.Components.csproj" />
     <Project Path="src/Fdw.Data.Configuration/Fdw.Data.Configuration.csproj" />
     <Project Path="src/Fdw.Data.DataNodes/Fdw.Data.DataNodes.csproj" />
     <Project Path="src/Fdw.Data.DataPaths/Fdw.Data.DataPaths.csproj" />
@@ -230,8 +223,6 @@
     <Project Path="src/Fdw.Data.Transformations.Numeric/Fdw.Data.Transformations.Numeric.csproj" />
     <Project Path="src/Fdw.Data.Transformations.Text/Fdw.Data.Transformations.Text.csproj" />
     <Project Path="src/Fdw.Data.Transformations/Fdw.Data.Transformations.csproj" />
-    <Project Path="src/Fdw.Data.UI.Components/Fdw.Data.UI.Components.csproj" />
-    <Project Path="src/Fdw.Data.UI.Pages/Fdw.Data.UI.Pages.csproj" />
     <Project Path="src/Fdw.Data/Fdw.Data.csproj" />
     <Project Path="src/Fdw.DevSession.Abstractions/Fdw.DevSession.Abstractions.csproj" />
     <Project Path="src/Fdw.DevSession.McpServer/Fdw.DevSession.McpServer.csproj" />
@@ -244,21 +235,17 @@
     <Project Path="src/Fdw.Schema.Ddl.Tasks/Fdw.Schema.Ddl.Tasks.csproj" />
     <Project Path="src/Fdw.Schema.Ddl/Fdw.Schema.Ddl.csproj" />
     <Project Path="src/Fdw.Schema.Endpoints/Fdw.Schema.Endpoints.csproj" />
+    <Project Path="src/Fdw.Security.Encryption/Fdw.Security.Encryption.csproj" />
     <Project Path="src/Fdw.Security.Hashing/Fdw.Security.Hashing.csproj" />
     <Project Path="src/Fdw.Services.Agents.Abstractions/Fdw.Services.Agents.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Agents/Fdw.Services.Agents.csproj" />
-    <Project Path="src/Fdw.Services.Authentication.Components/Fdw.Services.Authentication.Components.csproj" />
     <Project Path="src/Fdw.Services.Authentication.Endpoints/Fdw.Services.Authentication.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Authentication.UI.Pages/Fdw.Services.Authentication.UI.Pages.csproj" />
-    <Project Path="src/Fdw.Services.Authorization.Components/Fdw.Services.Authorization.Components.csproj" />
     <Project Path="src/Fdw.Services.Authorization.Endpoints/Fdw.Services.Authorization.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Authorization/Fdw.Services.Authorization.csproj" />
     <Project Path="src/Fdw.Services.Calculations.Abstractions/Fdw.Services.Calculations.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Calculations/Fdw.Services.Calculations.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Clients.Models/Fdw.Services.Catalog.Clients.Models.csproj" />
-    <Project Path="src/Fdw.Services.Catalog.Components/Fdw.Services.Catalog.Components.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Endpoints/Fdw.Services.Catalog.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Catalog.UI.Pages/Fdw.Services.Catalog.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.Connections.Endpoints/Fdw.Services.Connections.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Connections.PostgreSql/Fdw.Services.Connections.PostgreSql.csproj" />
     <Project Path="src/Fdw.Services.Connections.RoslynWorkspace.Abstractions/Fdw.Services.Connections.RoslynWorkspace.Abstractions.csproj" />
@@ -273,12 +260,14 @@
     <Project Path="src/Fdw.Services.Data.SignalR/Fdw.Services.Data.SignalR.csproj" />
     <Project Path="src/Fdw.Services.DataVault.Abstractions/Fdw.Services.DataVault.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.DataVault/Fdw.Services.DataVault.csproj" />
+    <Project Path="src/Fdw.Services.Workspaces.Abstractions/Fdw.Services.Workspaces.Abstractions.csproj" />
+    <Project Path="src/Fdw.Services.Workspaces.Endpoints/Fdw.Services.Workspaces.Endpoints.csproj" />
+    <Project Path="src/Fdw.Services.Workspaces.Tds/Fdw.Services.Workspaces.Tds.csproj" />
+    <Project Path="src/Fdw.Services.Workspaces/Fdw.Services.Workspaces.csproj" />
     <Project Path="src/Fdw.Services.Etl.Abstractions/Fdw.Services.Etl.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Etl.JobTriggerSources/Fdw.Services.Etl.JobTriggerSources.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects.Registration/Fdw.Services.Etl.Projects.Registration.csproj" />
-    <Project Path="src/Fdw.Services.Etl.Projects.UI.Components/Fdw.Services.Etl.Projects.UI.Components.csproj" />
     <Project Path="src/Fdw.Services.Etl.Projects/Fdw.Services.Etl.Projects.csproj" />
-    <Project Path="src/Fdw.Services.Etl.UI.Pages/Fdw.Services.Etl.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.Etl/Fdw.Services.Etl.csproj" />
     <Project Path="src/Fdw.Services.EtlMappers.Abstractions/Fdw.Services.EtlMappers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.EtlMappers.Dynamic/Fdw.Services.EtlMappers.Dynamic.csproj" />
@@ -296,21 +285,15 @@
     <Project Path="src/Fdw.Services.Logging.Abstractions/Fdw.Services.Logging.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Logging/Fdw.Services.Logging.csproj" />
     <Project Path="src/Fdw.Services.Messaging.Abstractions/Fdw.Services.Messaging.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Messaging.Components/Fdw.Services.Messaging.Components.csproj" />
     <Project Path="src/Fdw.Services.Messaging.Endpoints/Fdw.Services.Messaging.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Messaging.UI.Pages/Fdw.Services.Messaging.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.Messaging/Fdw.Services.Messaging.csproj" />
-    <Project Path="src/Fdw.Services.Multitenancy.Components/Fdw.Services.Multitenancy.Components.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy.Endpoints/Fdw.Services.Multitenancy.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Multitenancy/Fdw.Services.Multitenancy.csproj" />
-    <Project Path="src/Fdw.Services.Notifications.Components/Fdw.Services.Notifications.Components.csproj" />
     <Project Path="src/Fdw.Services.Notifications.Endpoints/Fdw.Services.Notifications.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Notifications.System/Fdw.Services.Notifications.System.csproj" />
     <Project Path="src/Fdw.Services.Pipelines.Clients/Fdw.Services.Pipelines.Clients.csproj" />
     <Project Path="src/Fdw.Services.Pipelines.Endpoints/Fdw.Services.Pipelines.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Quality.Components/Fdw.Services.Quality.Components.csproj" />
     <Project Path="src/Fdw.Services.Quality.Endpoints/Fdw.Services.Quality.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Quality.UI.Pages/Fdw.Services.Quality.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.RateLimiting.Abstractions/Fdw.Services.RateLimiting.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.RateLimiting/Fdw.Services.RateLimiting.csproj" />
     <Project Path="src/Fdw.Services.Registration.SourceGenerators/Fdw.Services.Registration.SourceGenerators.csproj" />
@@ -320,49 +303,34 @@
     <Project Path="src/Fdw.Services.Resiliency.PrimaryBackup/Fdw.Services.Resiliency.PrimaryBackup.csproj" />
     <Project Path="src/Fdw.Services.Resiliency.RetryNotify/Fdw.Services.Resiliency.RetryNotify.csproj" />
     <Project Path="src/Fdw.Services.Resiliency/Fdw.Services.Resiliency.csproj" />
-    <Project Path="src/Fdw.Services.Scheduling.Components/Fdw.Services.Scheduling.Components.csproj" />
     <Project Path="src/Fdw.Services.Scheduling.Endpoints/Fdw.Services.Scheduling.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.SecretManagers.Components/Fdw.Services.SecretManagers.Components.csproj" />
     <Project Path="src/Fdw.Services.SecretManagers.Endpoints/Fdw.Services.SecretManagers.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.SessionState.Clients.Registration/Fdw.Services.SessionState.Clients.Registration.csproj" />
     <Project Path="src/Fdw.Services.SessionState.Clients/Fdw.Services.SessionState.Clients.csproj" />
-    <Project Path="src/Fdw.Services.SessionState.UI.Pages/Fdw.Services.SessionState.UI.Pages.csproj" />
-    <Project Path="src/Fdw.Services.Settings.Components/Fdw.Services.Settings.Components.csproj" />
     <Project Path="src/Fdw.Services.Settings.Endpoints/Fdw.Services.Settings.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Settings/Fdw.Services.Settings.csproj" />
     <Project Path="src/Fdw.Services.Telemetry.Abstractions/Fdw.Services.Telemetry.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Telemetry/Fdw.Services.Telemetry.csproj" />
     <Project Path="src/Fdw.Services.Terminal.Abstractions/Fdw.Services.Terminal.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Terminal.Components/Fdw.Services.Terminal.Components.csproj" />
-    <Project Path="src/Fdw.Services.Terminal.UI.Pages/Fdw.Services.Terminal.UI.Pages.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers.Abstractions/Fdw.Services.TokenManagers.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.TokenManagers/Fdw.Services.TokenManagers.csproj" />
-    <Project Path="src/Fdw.Services.Universes.Abstractions/Fdw.Services.Universes.Abstractions.csproj" />
-    <Project Path="src/Fdw.Services.Universes.Endpoints/Fdw.Services.Universes.Endpoints.csproj" />
-    <Project Path="src/Fdw.Services.Universes/Fdw.Services.Universes.csproj" />
     <Project Path="src/Fdw.Services.Users.Abstractions/Fdw.Services.Users.Abstractions.csproj" />
     <Project Path="src/Fdw.Services.Users.Endpoints/Fdw.Services.Users.Endpoints.csproj" />
     <Project Path="src/Fdw.Services.Users/Fdw.Services.Users.csproj" />
     <Project Path="src/Fdw.SignalR/Fdw.SignalR.csproj" />
     <Project Path="src/Fdw.StateCollections.Abstractions/Fdw.StateCollections.Abstractions.csproj" />
     <Project Path="src/Fdw.StateCollections/Fdw.StateCollections.csproj" />
+    <Project Path="src/Fdw.Tds.Endpoints/Fdw.Tds.Endpoints.csproj" />
     <Project Path="src/Fdw.Types.Abstractions/Fdw.Types.Abstractions.csproj" />
     <Project Path="src/Fdw.Types.MsSql/Fdw.Types.MsSql.csproj" />
-    <Project Path="src/Fdw.UI.Blazor.Authentication/Fdw.UI.Blazor.Authentication.csproj" />
-    <Project Path="src/Fdw.UI.Canvas.Blazor/Fdw.UI.Canvas.Blazor.csproj" />
-    <Project Path="src/Fdw.UI.Charts.Blazor/Fdw.UI.Charts.Blazor.csproj" />
-    <Project Path="src/Fdw.UI.CommandBuilders.Abstractions/Fdw.UI.CommandBuilders.Abstractions.csproj" />
     <Project Path="src/Fdw.UI.Lineage.Clients.Abstractions/Fdw.UI.Lineage.Clients.Abstractions.csproj" />
     <Project Path="src/Fdw.UI.Pipelines.Clients.Models/Fdw.UI.Pipelines.Clients.Models.csproj" />
     <Project Path="src/Fdw.UI.Pipelines.Endpoints/Fdw.UI.Pipelines.Endpoints.csproj" />
-    <Project Path="src/Fdw.UI.Rendering.Blazor/Fdw.UI.Rendering.Blazor.csproj" />
     <Project Path="src/Fdw.UI.Schema.Clients.Abstractions/Fdw.UI.Schema.Clients.Abstractions.csproj" />
     <Project Path="src/Fdw.UI.Services/Fdw.UI.Services.csproj" />
     <Project Path="src/Fdw.UI.Themes.Abstractions/Fdw.UI.Themes.Abstractions.csproj" />
-    <Project Path="src/Fdw.UI.Themes.Components/Fdw.UI.Themes.Components.csproj" />
     <Project Path="src/Fdw.UI.Themes.Endpoints/Fdw.UI.Themes.Endpoints.csproj" />
-    <Project Path="src/Fdw.UI.WebMcp/Fdw.UI.WebMcp.csproj" />
-    <Project Path="src/Fdw.UI.Wizard/Fdw.UI.Wizard.csproj" />
+    <Project Path="src/Fdw.UI.Themes.Registration/Fdw.UI.Themes.Registration.csproj" />
     <Project Path="src/Fdw.UI/Fdw.UI.csproj" />
     <Project Path="src/Fdw.Validation.Abstractions/Fdw.Validation.Abstractions.csproj" />
     <Project Path="src/Fdw.Validation.FastEndpoints/Fdw.Validation.FastEndpoints.csproj" />
@@ -370,17 +338,16 @@
     <Project Path="src/Fdw.VsCodeShell.Abstractions/Fdw.VsCodeShell.Abstractions.csproj" />
     <Project Path="src/Fdw.VsCodeShell/Fdw.VsCodeShell.csproj" />
     <Project Path="src/Fdw.Web.Analytics.Clients.Abstractions/Fdw.Web.Analytics.Clients.Abstractions.csproj" />
-    <Project Path="src/Fdw.Web.Analytics.Components/Fdw.Web.Analytics.Components.csproj" />
     <Project Path="src/Fdw.Web.Api/Fdw.Web.Api.csproj" />
     <Project Path="src/Fdw.Web.Calculations.Clients.Abstractions/Fdw.Web.Calculations.Clients.Abstractions.csproj" />
     <Project Path="src/Fdw.Web.Clients/Fdw.Web.Clients.csproj" />
     <Project Path="src/Fdw.Web.Endpoints/Fdw.Web.Endpoints.csproj" />
-    <Project Path="src/Fdw.Web.Http.Authentication.Blazor/Fdw.Web.Http.Authentication.Blazor.csproj" />
     <Project Path="src/Fdw.Web.Http.Authentication/Fdw.Web.Http.Authentication.csproj" />
     <Project Path="src/Fdw.Web.Search.Clients.Models/Fdw.Web.Search.Clients.Models.csproj" />
     <Project Path="src/Fdw.Web.Search.Endpoints/Fdw.Web.Search.Endpoints.csproj" />
     <Project Path="src/Fdw.WebMcp.Abstractions/Fdw.WebMcp.Abstractions.csproj" />
     <Project Path="src/Fdw.WebMcp.Hosting/Fdw.WebMcp.Hosting.csproj" />
+    <Project Path="src/Fdw.WebMcp.Mcp/Fdw.WebMcp.Mcp.csproj" />
   </Folder>
   <!-- ═══════════════════════════════════════════════════════════════════════════════ -->
   <!-- src/Analyzers - Framework-wide code style analyzers and code fixes               -->
@@ -444,11 +411,6 @@
     <Project Path="src/Fdw.UI.Rendering.Spectre/Fdw.UI.Rendering.Spectre.csproj" />
     <Project Path="src/Fdw.UI.Themes/Fdw.UI.Themes.csproj" />
     <Project Path="src/Fdw.UI.Web.Abstractions/Fdw.UI.Web.Abstractions.csproj" />
-    <Project Path="src/Fdw.Data.Components/Fdw.Data.Components.csproj" />
-    <Project Path="src/Fdw.Operations.Components/Fdw.Operations.Components.csproj" />
-    <Project Path="src/Fdw.Schema.Components/Fdw.Schema.Components.csproj" />
-    <Project Path="src/Fdw.Services.Connections.Components/Fdw.Services.Connections.Components.csproj" />
-    <Project Path="src/Fdw.Services.Pipelines.Components/Fdw.Services.Pipelines.Components.csproj" />
     <Project Path="src/Fdw.TUI.Management/Fdw.TUI.Management.csproj" />
   </Folder>
 
@@ -459,7 +421,6 @@
     <Project Path="src/Fdw.Agents.Clients/Fdw.Agents.Clients.csproj" />
     <Project Path="src/Fdw.Operations.Clients/Fdw.Operations.Clients.csproj" />
     <Project Path="src/Fdw.Schema.Clients/Fdw.Schema.Clients.csproj" />
-    <Project Path="src/Fdw.Services.Authentication.Clients/Fdw.Services.Authentication.Clients.csproj" />
     <Project Path="src/Fdw.Services.Authorization.Clients/Fdw.Services.Authorization.Clients.csproj" />
     <Project Path="src/Fdw.Services.Catalog.Clients/Fdw.Services.Catalog.Clients.csproj" />
     <Project Path="src/Fdw.Services.Connections.Clients/Fdw.Services.Connections.Clients.csproj" />
@@ -555,14 +516,6 @@
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
     <Project Path="tests/Fdw.Data.Abstractions.Tests/Fdw.Data.Abstractions.Tests.csproj" />
-    <Project Path="tests/Fdw.Data.Components.Tests/Fdw.Data.Components.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
     <Project Path="tests/Fdw.Data.DataContainers.Abstractions.Tests/Fdw.Data.DataContainers.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Data.DataNodes.Tests/Fdw.Data.DataNodes.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
@@ -650,6 +603,14 @@
     <Project Path="tests/Fdw.Orchestration.Abstractions.Tests/Fdw.Orchestration.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Orchestration.Pipelines.Abstractions.Tests/Fdw.Orchestration.Pipelines.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Processors.Abstractions.Tests/Fdw.Processors.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Protocols.Tds.Tests/Fdw.Protocols.Tds.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Registration.SourceGenerators.Tests/Fdw.Registration.SourceGenerators.Tests.csproj" />
     <Project Path="tests/Fdw.Results.Abstractions.Tests/Fdw.Results.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Roslyn.Commands.Refactoring.Tests/Fdw.Roslyn.Commands.Refactoring.Tests.csproj">
@@ -690,6 +651,14 @@
     <Project Path="tests/Fdw.Services.Connections.Abstractions.Tests/Fdw.Services.Connections.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.Clients.Tests/Fdw.Services.Connections.Clients.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.Http.Abstractions.Tests/Fdw.Services.Connections.Http.Abstractions.Tests.csproj" />
+    <Project Path="tests/Fdw.Services.Connections.Http.Tests/Fdw.Services.Connections.Http.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Services.Connections.Limits.Tests/Fdw.Services.Connections.Limits.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Connections.PostgreSql.Tests/Fdw.Services.Connections.PostgreSql.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
@@ -719,8 +688,7 @@
     </Project>
     <Project Path="tests/Fdw.Services.Data.Abstractions.Tests/Fdw.Services.Data.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Data.Clients.Tests/Fdw.Services.Data.Clients.Tests.csproj" />
-    <Project Path="tests/Fdw.Services.Etl.Abstractions.Tests/Fdw.Services.Etl.Abstractions.Tests.csproj" />
-    <Project Path="tests/Fdw.Services.Etl.JobTriggerSources.Tests/Fdw.Services.Etl.JobTriggerSources.Tests.csproj">
+    <Project Path="tests/Fdw.Services.Data.Endpoints.Tests/Fdw.Services.Data.Endpoints.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
@@ -728,6 +696,15 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
+    <Project Path="tests/Fdw.Services.Data.Tests/Fdw.Services.Data.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.Services.Etl.Abstractions.Tests/Fdw.Services.Etl.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Etl.Projects.Tests/Fdw.Services.Etl.Projects.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
@@ -793,14 +770,6 @@
     <Project Path="tests/Fdw.Services.Notifications.Tests/Fdw.Services.Notifications.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Pipelines.Abstractions.Tests/Fdw.Services.Pipelines.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Services.Pipelines.Clients.Tests/Fdw.Services.Pipelines.Clients.Tests.csproj" />
-    <Project Path="tests/Fdw.Services.Pipelines.Components.Tests/Fdw.Services.Pipelines.Components.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
     <Project Path="tests/Fdw.Services.Pipelines.Tests/Fdw.Services.Pipelines.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
@@ -885,50 +854,18 @@
       <BuildType Solution="Test-Local|*" Project="Debug" />
       <BuildType Solution="Test|*" Project="Debug" />
     </Project>
+    <Project Path="tests/Fdw.Tds.Endpoints.Tests/Fdw.Tds.Endpoints.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
     <Project Path="tests/Fdw.Types.Abstractions.Tests/Fdw.Types.Abstractions.Tests.csproj" />
-    <Project Path="tests/Fdw.UI.Canvas.Blazor.Tests/Fdw.UI.Canvas.Blazor.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
-    <Project Path="tests/Fdw.UI.Charts.Blazor.Tests/Fdw.UI.Charts.Blazor.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
-    <Project Path="tests/Fdw.UI.Components.Blazor.Tests/Fdw.UI.Components.Blazor.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
     <Project Path="tests/Fdw.UI.Components.TUI.Tests/Fdw.UI.Components.TUI.Tests.csproj" />
-    <Project Path="tests/Fdw.UI.Rendering.Conformance.Tests/Fdw.UI.Rendering.Conformance.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
     <Project Path="tests/Fdw.UI.Tests/Fdw.UI.Tests.csproj" />
     <Project Path="tests/Fdw.UI.Themes.Clients.Tests/Fdw.UI.Themes.Clients.Tests.csproj" />
-    <Project Path="tests/Fdw.UI.WebMcp.Tests/Fdw.UI.WebMcp.Tests.csproj">
-      <BuildType Solution="Debug-Local|*" Project="Debug" />
-      <BuildType Solution="Develop-Local|*" Project="Debug" />
-      <BuildType Solution="Develop|*" Project="Debug" />
-      <BuildType Solution="Release-Local|*" Project="Debug" />
-      <BuildType Solution="Test-Local|*" Project="Debug" />
-      <BuildType Solution="Test|*" Project="Debug" />
-    </Project>
     <Project Path="tests/Fdw.Validation.Tests/Fdw.Validation.Tests.csproj" />
     <Project Path="tests/Fdw.VsCodeShell.Tests/Fdw.VsCodeShell.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
@@ -952,6 +889,14 @@
     <Project Path="tests/Fdw.Web.Http.Abstractions.Tests/Fdw.Web.Http.Abstractions.Tests.csproj" />
     <Project Path="tests/Fdw.Web.Search.Clients.Tests/Fdw.Web.Search.Clients.Tests.csproj" />
     <Project Path="tests/Fdw.WebMcp.Hosting.Tests/Fdw.WebMcp.Hosting.Tests.csproj">
+      <BuildType Solution="Debug-Local|*" Project="Debug" />
+      <BuildType Solution="Develop-Local|*" Project="Debug" />
+      <BuildType Solution="Develop|*" Project="Debug" />
+      <BuildType Solution="Release-Local|*" Project="Debug" />
+      <BuildType Solution="Test-Local|*" Project="Debug" />
+      <BuildType Solution="Test|*" Project="Debug" />
+    </Project>
+    <Project Path="tests/Fdw.WebMcp.Mcp.Tests/Fdw.WebMcp.Mcp.Tests.csproj">
       <BuildType Solution="Debug-Local|*" Project="Debug" />
       <BuildType Solution="Develop-Local|*" Project="Debug" />
       <BuildType Solution="Develop|*" Project="Debug" />
@@ -984,11 +929,9 @@
   <Folder Name="/tests/Data/">
     <Project Path="tests/Fdw.Data.Builders.Tests/Fdw.Data.Builders.Tests.csproj" />
     <Project Path="tests/Fdw.Data.DataSets.Tests/Fdw.Data.DataSets.Tests.csproj" />
-    <Project Path="tests/Fdw.Data.DataStores.FileSystem.Tests/Fdw.Data.DataStores.FileSystem.Tests.csproj" />
     <Project Path="tests/Fdw.Data.DataStores.Rest.Tests/Fdw.Data.DataStores.Rest.Tests.csproj" />
     <Project Path="tests/Fdw.Data.DataStores.SqlServer.Tests/Fdw.Data.DataStores.SqlServer.Tests.csproj" />
     <Project Path="tests/Fdw.Data.DataStores.Tests/Fdw.Data.DataStores.Tests.csproj" />
-    <Project Path="tests/Fdw.Data.Execution.Tests/Fdw.Data.Execution.Tests.csproj" />
     <Project Path="tests/Fdw.Data.JsonSchema.Tests/Fdw.Data.JsonSchema.Tests.csproj" />
     <Project Path="tests/Fdw.Data.MsSql.Tests/Fdw.Data.MsSql.Tests.csproj" />
     <Project Path="tests/Fdw.Data.OData.Tests/Fdw.Data.OData.Tests.csproj" />

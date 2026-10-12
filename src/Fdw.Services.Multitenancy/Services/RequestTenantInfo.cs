@@ -1,5 +1,6 @@
 using System;
 using System.Security.Claims;
+using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
@@ -54,7 +55,7 @@ public sealed class RequestTenantInfo : IRequestTenantInfo
             if (user == null)
                 return false;
 
-            return _systemRoleConfiguration.IsInRole(user, _systemRoleConfiguration.AdminRoleName);
+            return _systemRoleConfiguration.IsPlatformAdmin(user);
         }
     }
 

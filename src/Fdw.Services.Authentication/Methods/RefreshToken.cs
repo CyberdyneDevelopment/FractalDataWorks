@@ -16,7 +16,6 @@ public sealed class RefreshToken : TokenTypeBase
     /// Initializes a new instance of the <see cref="RefreshToken"/> class.
     /// </summary>
     public RefreshToken() : base(
-        id: 3,
         name: "RefreshToken",
         format: "Opaque",
         canBeRefreshed: true,

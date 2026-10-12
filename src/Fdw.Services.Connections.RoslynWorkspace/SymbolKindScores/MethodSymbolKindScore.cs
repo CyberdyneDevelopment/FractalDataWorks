@@ -9,5 +9,5 @@ namespace Fdw.Services.Connections.RoslynWorkspace;
 public sealed class MethodSymbolKindScore : SymbolKindScoreBase
 {
     /// <summary>Initializes the Method scoring option.</summary>
-    public MethodSymbolKindScore() : base(id: 1, name: "Method", weight: 5) { }
+    public MethodSymbolKindScore() : base(name: "Method", weight: 5) { }
 }

@@ -33,7 +33,7 @@ public sealed class ProportionalAllocationOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="ProportionalAllocationOperation"/> class.
     /// </summary>
     public ProportionalAllocationOperation()
-        : base(id: 7, name: "ProportionalAllocation", category: "Arithmetic", description: "Allocates a total in proportion to a part of a whole ((Part / Whole) * Total)")
+        : base(name: "ProportionalAllocation", category: "Arithmetic", description: "Allocates a total in proportion to a part of a whole ((Part / Whole) * Total)")
     {
         _logger = NullLogger<ProportionalAllocationOperation>.Instance;
         Parameters =
@@ -58,7 +58,7 @@ public sealed class ProportionalAllocationOperation : CalculationOperationBase
             if (whole == 0m)
             {
                 return Task.FromResult(GenericResult<object>.Failure(
-                    CalculationOperationLog.DivisionByZero(_logger, Name)));
+                    CalculationOperationLog.DivisionByZero(_logger, Name, "Part / Whole")));
             }
 
             var result = Convert.ToDecimal(parameters["Part"], CultureInfo.InvariantCulture)

@@ -38,7 +38,7 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A phase belongs to the [ServiceTypeOption] or [ServiceTypeCollection] class that declares it. An intermediate base class holding part of a phase leaves the leaf option unable to set its own func without silently destroying what the base contributed, and neither site shows that it happened. Wiring that every option of a domain needs applies to the domain rather than to any one option, so it belongs in the collection's Register body, where the option set is already in hand.");
+        description: "A phase belongs to the [Implementation] or [ServiceTypeCollection] class that declares it. An intermediate base class holding part of a phase leaves the leaf option unable to set its own func without silently destroying what the base contributed, and neither site shows that it happened. Wiring that every option of a domain needs applies to the domain rather than to any one option, so it belongs in the collection's Register body, where the option set is already in hand.");
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -152,7 +152,7 @@ public sealed class PhaseFuncCompositionAnalyzer : DiagnosticAnalyzer
         foreach (var attribute in type.GetAttributes())
         {
             var name = attribute.AttributeClass?.Name;
-            if (string.Equals(name, "ServiceTypeOptionAttribute", StringComparison.Ordinal)
+            if (string.Equals(name, "ImplementationAttribute", StringComparison.Ordinal)
                 || string.Equals(name, "ServiceTypeCollectionAttribute", StringComparison.Ordinal)
                 || string.Equals(name, "PlatformServiceProviderAttribute", StringComparison.Ordinal))
             {

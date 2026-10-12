@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Logging;
@@ -27,6 +29,7 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
     private readonly ILogger<DataGatewayResultCache> _logger;
 
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _tagToKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _inFlight = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Initializes a new instance of <see cref="DataGatewayResultCache"/> backed by the
@@ -52,6 +55,69 @@ public sealed class DataGatewayResultCache : ICacheInvalidator
 
         value = null;
         return false;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="execute"/> for <paramref name="cacheKey"/>, or, when a call for the same key is
+    /// already running, waits for that call and returns its result. Concurrent misses for one key are one
+    /// read, not one per caller: a screen that fires ten requests at once, each reading the same
+    /// configuration, used to read it ten times each time an entry expired (FDW-983).
+    /// </summary>
+    /// <typeparam name="T">The result type the key was built for; the key already names it.</typeparam>
+    /// <param name="cacheKey">The key the read is cached under, which carries the caller's partition.</param>
+    /// <param name="execute">The read. The call that leads runs it, and caches its own success.</param>
+    /// <param name="cancellationToken">
+    /// Passed to the read a waiter has to make for itself, and it ends a waiter's wait on the read that leads.
+    /// It never cancels the read for other callers.
+    /// </param>
+    /// <returns>
+    /// The result of the shared read. A failure is shared with the callers waiting on it and is not cached.
+    /// When the leading call did not finish (it was cancelled, or its read threw) a waiter makes the read itself.
+    /// </returns>
+    public async Task<IGenericResult<T>> Coalesce<T>(
+        string cacheKey,
+        Func<Task<IGenericResult<T>>> execute,
+        CancellationToken cancellationToken = default)
+    {
+        var mine = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var flight = _inFlight.GetOrAdd(cacheKey, mine);
+
+        if (!ReferenceEquals(flight, mine))
+        {
+            DataGatewayCacheLog.InFlightJoined(_logger, cacheKey);
+
+            // The wait on the read never throws, whatever became of it: a faulted or cancelled flight is one the
+            // leader did not finish, and the read is this call's to make. It ends when THIS call is cancelled,
+            // not only when the leader is done, and that never cancels the leader's read.
+            _ = await Task.WhenAny(flight.Task.WaitAsync(cancellationToken)).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return flight.Task.Status == TaskStatus.RanToCompletion
+                ? (IGenericResult<T>)await flight.Task.ConfigureAwait(false)
+                : await execute().ConfigureAwait(false);
+        }
+
+        // The result the leader has, if it has one: an exception or a cancellation leaves it null, which is
+        // how the waiters are told to read for themselves.
+        IGenericResult<T>? result = null;
+        try
+        {
+            result = await execute().ConfigureAwait(false);
+            return result;
+        }
+        finally
+        {
+            if (result is not null)
+            {
+                _ = mine.TrySetResult(result);
+            }
+            else
+            {
+                _ = mine.TrySetCanceled(cancellationToken);
+            }
+
+            _ = _inFlight.TryRemove(cacheKey, out _);
+        }
     }
 
     /// <summary>Stores a typed result under the given key, tracking its invalidation tags.</summary>

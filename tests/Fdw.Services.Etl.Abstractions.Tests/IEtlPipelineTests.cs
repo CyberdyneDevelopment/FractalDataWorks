@@ -14,7 +14,7 @@ public class IEtlPipelineTests
     public void IdPropertyCanBeReadFromImplementation()
     {
         // Arrange
-        var expectedId = Guid.NewGuid();
+        var expectedId = "pipeline-1";
         var pipeline = new TestEtlPipeline { Id = expectedId };
 
         // Act
@@ -141,7 +141,7 @@ public class IEtlPipelineTests
     [ExcludeFromCodeCoverage]
     private sealed class TestEtlPipeline : IEtlPipeline
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Id { get; set; } = "test-pipeline";
         public string Name { get; set; } = "Test";
         public string PipelineType { get; set; } = "Test";
         public bool IsExecuting { get; set; }
@@ -172,7 +172,6 @@ public class IEtlPipelineTests
         }
 
         // IGenericService members
-        string IPlatformService.Id => Id.ToString();
         string IPlatformService.ServiceType => PipelineType;
         bool IPlatformService.IsAvailable => !IsExecuting;
 

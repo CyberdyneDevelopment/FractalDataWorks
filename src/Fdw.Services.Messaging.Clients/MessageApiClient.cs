@@ -12,7 +12,6 @@ namespace Fdw.Services.Messaging.Clients;
 
 /// <summary>
 /// HTTP client for the messaging API endpoints.
-/// Shared between ManagementUI (MudBlazor) and ManagementUI-Tailwind skins.
 /// </summary>
 /// <remarks>
 /// Headless chain:

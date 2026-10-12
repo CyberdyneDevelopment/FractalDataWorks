@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Schema.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Table API client.
+/// Implementation for the Table API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "TableClient")]
+[Implementation(typeof(ApiClientTypes), "TableClient")]
 public sealed class TableClientType : ApiClientTypeBase<TableApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class TableClientType : ApiClientTypeBase<TableApiClient>
         {
             builder.Services.AddScoped<TableApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<TableApiClient>>() ?? NullLogger<TableApiClient>.Instance;
-                return new TableApiClient(factory.CreateClient(Name), logger);
+                return new TableApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

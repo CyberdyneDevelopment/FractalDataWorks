@@ -16,18 +16,25 @@ public abstract class UpdateScheduleRequestValidator : FdwEndpointValidator<Upda
         ValidateName(x => x.Name);
 
         RuleFor(x => x)
-            .Must(x => x.PipelineName is not null
-                || x.SchedulerType is not null
-                || x.CronExpression is not null
-                || x.IntervalSeconds is not null
-                || x.IsEnabled is not null)
-            .WithMessage("At least one updateable field must be supplied");
+            .Must(x => UpdateScheduleChanges.Stated(x))
+            .WithErrorCode(UpdateScheduleChanges.NothingStatedCode)
+            .WithMessage(UpdateScheduleChanges.RefusalMessage);
 
-        When(x => x.PipelineName is not null, () =>
+        When(x => x.PipelineId is not null, () =>
         {
+            RuleFor(x => x.PipelineId)
+                .NotEmpty()
+                .WithMessage("PipelineId cannot be empty when provided");
             RuleFor(x => x.PipelineName)
                 .NotEmpty()
-                .WithMessage("PipelineName cannot be empty when provided");
+                .WithMessage("PipelineName is required with PipelineId");
+        });
+
+        When(x => x.PipelineId is null, () =>
+        {
+            RuleFor(x => x.PipelineName)
+                .Null()
+                .WithMessage("PipelineName is sent only with PipelineId");
         });
 
         When(x => x.SchedulerType is not null, () =>

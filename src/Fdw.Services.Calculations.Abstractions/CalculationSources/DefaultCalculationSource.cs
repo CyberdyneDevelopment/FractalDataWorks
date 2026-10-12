@@ -21,7 +21,7 @@ namespace Fdw.Services.Calculations.Abstractions.CalculationSources;
 public sealed class DefaultCalculationSource : CalculationSourceTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DefaultCalculationSource"/> class.</summary>
-    public DefaultCalculationSource() : base(1, "Default")
+    public DefaultCalculationSource() : base("Default")
     {
     }
 

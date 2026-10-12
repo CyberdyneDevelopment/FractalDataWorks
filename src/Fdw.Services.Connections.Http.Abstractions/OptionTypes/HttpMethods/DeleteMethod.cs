@@ -13,7 +13,7 @@ public sealed class DeleteMethod : HttpMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteMethod"/> class.
     /// </summary>
-    public DeleteMethod() : base(4, "DELETE", "Deletes a resource from the server")
+    public DeleteMethod() : base("DELETE", "Deletes a resource from the server")
     {
     }
 }

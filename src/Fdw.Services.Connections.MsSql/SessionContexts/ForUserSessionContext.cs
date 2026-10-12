@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.MsSql.Logging;
@@ -15,31 +12,26 @@ namespace Fdw.Services.Connections.MsSql;
 
 /// <summary>
 /// A real, authenticated, <see cref="Guid"/>-identified user: sets the
-/// <c>UserId</c> / <c>TenantId</c> / <c>CrossTenant</c> / <c>CanReadSecrets</c> key set that
+/// <c>UserId</c> / <c>TenantId</c> key set that
 /// <c>security.fn_TenantFilter</c> reads.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Four names but <b>at most three keys</b>. <c>TenantId</c> and <c>CrossTenant</c> are mutually
-/// exclusive: Mode 3 (strict single active tenant) and Mode 2 (cross-tenant authorized) are
-/// alternatives in the predicate, never both. That exclusion is part of the contract, not an
-/// implementation detail — setting both would put the connection in a state the deployed predicate
-/// has no branch for.
+/// <c>TenantId</c> is the tenant the caller is acting in — the tenant their token was issued for.
+/// It decides everything the connection sees: acting in the global tenant sees every tenant's rows,
+/// acting in any other tenant sees that tenant's rows plus shared ones, and either way only while
+/// the user holds a membership the predicate can find. There is no cross-tenant key: seeing more
+/// than one tenant is what acting in the global tenant means (FDW-825).
 /// </para>
 /// <para>
-/// <c>CanReadSecrets</c> is set only when the caller's token actually carries
-/// <c>connections:read-secrets</c>. Absence keeps the default (Mode 4 restricted system rows stay
-/// hidden) with no fallback.
+/// No key lets a user read a Restricted row: those are the system context's alone, and no permission
+/// reaches them (FDW-1086).
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(MsSqlSessionContextTypes), "ForUser")]
-public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUser")
+public sealed class ForUserSessionContext() : MsSqlSessionContextBase("ForUser")
 {
-    private const string ReadSecretsPermission = "connections:read-secrets";
-
-    private static readonly TimeSpan RevocationCeiling = TimeSpan.FromSeconds(30);
-
     /// <inheritdoc />
     public override bool Governs(IAuthenticationContext? authenticationContext)
         => IsResolvedUser(authenticationContext);
@@ -55,17 +47,15 @@ public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUse
 
         return SessionContextPlan.ForUser(
             Guid.Parse(authenticationContext!.UserId),
-            authenticationContext.ActiveTenantId,
-            authenticationContext.IsCrossTenant,
-            authenticationContext.Permissions.Contains(ReadSecretsPermission, StringComparer.OrdinalIgnoreCase));
+            authenticationContext.ActiveTenantId);
     }
 
     /// <inheritdoc />
     /// <remarks>
     /// <para>
-    /// Bounded, because every branch this context can reach joins a live table. Modes 2 and 3 test
-    /// <c>tenant.TenantOrgAccess</c> for the calling user, and Modes 2 and 4 test
-    /// <c>security.VisibilityGroup</c> (<c>fn_TenantFilter.sql:61-123</c>). Revoking a grant changes
+    /// Bounded, because every branch this context can reach joins a live table: membership in
+    /// <c>tenant.UserTenantsConfiguration</c>, org access in <c>tenant.TenantOrgAccess</c>, and
+    /// <c>security.VisibilityGroup</c>. Revoking a membership or a grant changes
     /// the next query's answer immediately while the caller's own identity — and therefore the cache
     /// partition — is unchanged, so without a ceiling a revoked user keeps being served the rows they
     /// just lost for as long as the entry lives.
@@ -83,56 +73,39 @@ public sealed class ForUserSessionContext() : MsSqlSessionContextBase(2, "ForUse
     /// </para>
     /// </remarks>
     public override TimeSpan MaxCacheDuration(IAuthenticationContext? authenticationContext)
-        => RevocationCeiling;
+        => MsSqlSessionContextTypes.RevocationCacheCeiling;
 
     /// <inheritdoc />
-    public override async Task Apply(
-        SqlConnection connection,
-        SessionContextPlan plan,
-        ILogger logger,
-        CancellationToken cancellationToken = default)
+    public override SessionContextStatement Statement(SessionContextPlan plan, string parameterPrefix)
     {
-        var userId = plan.UserId!.Value; // Always populated for a non-system plan.
-
-        var sql = "EXEC sp_set_session_context @key = N'UserId', @value = @userId, @read_only = 1;";
-        var parameters = new List<SqlParameter>
+        var userId = string.Concat(parameterPrefix, "userId");
+        var sql = $"EXEC sp_set_session_context @key = N'UserId', @value = @{userId}, @read_only = 1;";
+        var parameters = new List<SessionContextParameter>
         {
-            new("@userId", SqlDbType.UniqueIdentifier) { Value = userId },
+            // Always populated for a non-system plan.
+            new(userId, SqlDbType.UniqueIdentifier, plan.UserId!.Value),
         };
 
         if (plan.TenantId.HasValue)
         {
-            sql += " EXEC sp_set_session_context @key = N'TenantId', @value = @tenantId, @read_only = 1;";
-            parameters.Add(new SqlParameter("@tenantId", SqlDbType.UniqueIdentifier) { Value = plan.TenantId.Value });
-        }
-        else if (plan.IsCrossTenant)
-        {
-            sql += " EXEC sp_set_session_context @key = N'CrossTenant', @value = N'1', @read_only = 1;";
+            var tenantId = string.Concat(parameterPrefix, "tenantId");
+            sql += $" EXEC sp_set_session_context @key = N'TenantId', @value = @{tenantId}, @read_only = 1;";
+            parameters.Add(new SessionContextParameter(tenantId, SqlDbType.UniqueIdentifier, plan.TenantId.Value));
         }
 
-        if (plan.CanReadSecrets)
-        {
-            sql += " EXEC sp_set_session_context @key = N'CanReadSecrets', @value = N'1', @read_only = 1;";
-        }
+        return new SessionContextStatement(sql, parameters);
+    }
 
-        await Execute(connection, sql, parameters, logger, cancellationToken).ConfigureAwait(false);
-
+    /// <inheritdoc />
+    public override void LogApplied(SessionContextPlan plan, SqlConnection connection, ILogger logger)
+    {
         if (plan.TenantId.HasValue)
         {
             MsSqlConnectionLogger.TraceTenantContextSet(logger, plan.TenantId.Value.ToString());
         }
-        else if (plan.IsCrossTenant)
-        {
-            MsSqlConnectionLogger.TraceCrossTenantContextSet(logger, userId.ToString());
-        }
         else
         {
-            MsSqlConnectionLogger.TraceTenantContextSet(logger, userId.ToString());
-        }
-
-        if (plan.CanReadSecrets)
-        {
-            MsSqlConnectionLogger.TraceCanReadSecretsContextSet(logger);
+            MsSqlConnectionLogger.TraceTenantContextSet(logger, plan.UserId!.Value.ToString());
         }
     }
 }

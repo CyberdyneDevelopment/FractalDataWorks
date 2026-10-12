@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Operations.Abstractions.Results;
 using Fdw.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -44,12 +45,18 @@ public abstract class ListTypeCollectionValuesEndpointBase
 
         if (collectionType == null)
             return Task.FromResult(
-                GenericResult<List<TypeCollectionValueSummaryDto>>.Success([]));
+                GenericResult<List<TypeCollectionValueSummaryDto>>.Failure(
+                    OperationsResultCodes.ByName("TypeCollectionNotFound"),
+                    Logger,
+                    ResultDetails.Create().With("CollectionName", request.CollectionName)));
 
-        var values = TypeCollectionResolver.GetValues(collectionType)
+        var summaries = TypeCollectionResolver.GetValues(collectionType)
             .Select(TypeCollectionResolver.ToSummary)
-            .OrderBy(v => v.Name, System.StringComparer.Ordinal)
             .ToList();
+
+        // Why by name: an option's id is derived from its type name, so ids carry no order. The console
+        // renders in the order returned, and name is the one stable order every collection has.
+        var values = summaries.OrderBy(v => v.Name, System.StringComparer.Ordinal).ToList();
 
         return Task.FromResult(GenericResult<List<TypeCollectionValueSummaryDto>>.Success(values));
     }

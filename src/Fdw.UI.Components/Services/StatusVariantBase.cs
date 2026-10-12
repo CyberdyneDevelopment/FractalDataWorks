@@ -8,12 +8,12 @@ namespace Fdw.UI.Components.Services;
 /// that colours it, so the tone-to-class mapping exists once instead of per component.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class StatusVariantBase : TypeOptionBase<int, StatusVariantBase>, IStatusVariant
+public abstract class StatusVariantBase : TypeOptionBase<StatusVariantBase>, IStatusVariant
 {
     /// <summary>
     /// Initializes a new instance of <see cref="StatusVariantBase"/>.
     /// </summary>
-    protected StatusVariantBase(int id, string name, string badgeClass) : base(id, name)
+    protected StatusVariantBase(string name, string badgeClass) : base(name)
     {
         BadgeClass = badgeClass;
     }

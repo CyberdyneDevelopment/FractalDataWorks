@@ -31,11 +31,11 @@ public class UserApiClient : ApiClientBase
         => GetList<UserSummaryPayload>("users", ct);
 
     /// <summary>
-    /// Gets a specific user by their unique identifier.
+    /// Gets a specific user by their unique identifier: <c>POST users/get</c>.
     /// </summary>
     /// <returns>A result containing the user detail.</returns>
     public virtual Task<IGenericResult<UserDetailPayload>> GetUser(Guid id, CancellationToken ct = default)
-        => Get<UserDetailPayload>($"users/{id}", ct);
+        => Post<GetUserPayload, UserDetailPayload>("users/get", new GetUserPayload { IdOrName = id.ToString() }, ct);
 
     /// <summary>
     /// Gets the detailed information for the currently authenticated user.

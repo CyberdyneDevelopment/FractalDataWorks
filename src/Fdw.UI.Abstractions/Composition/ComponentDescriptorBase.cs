@@ -12,18 +12,17 @@ namespace Fdw.UI.Abstractions.Composition;
 /// generated module initializer discovers them, so an app's component library and FDW's arrive
 /// through one mechanism rather than the app maintaining a parallel list.
 /// </remarks>
-public abstract class ComponentDescriptorBase : TypeOptionBase<int, ComponentDescriptorBase>, IComponentDescriptor
+public abstract class ComponentDescriptorBase : TypeOptionBase<ComponentDescriptorBase>, IComponentDescriptor
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ComponentDescriptorBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="key">The stable key a saved layout stores.</param>
     /// <param name="displayName">The palette display name.</param>
     /// <param name="category">The palette grouping.</param>
     /// <param name="description">A short description of what the component shows.</param>
-    protected ComponentDescriptorBase(int id, string key, string displayName, string category, string description)
-        : base(id, key)
+    protected ComponentDescriptorBase(string key, string displayName, string category, string description)
+        : base(key)
     {
         Key = key;
         DisplayName = displayName;

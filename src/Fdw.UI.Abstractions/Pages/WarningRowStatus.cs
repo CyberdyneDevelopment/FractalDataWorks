@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class WarningRowStatus : RowStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="WarningRowStatus"/>.</summary>
-    public WarningRowStatus() : base(3, "Warning") { }
+    public WarningRowStatus() : base("Warning") { }
 }

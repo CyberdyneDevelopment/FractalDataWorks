@@ -30,7 +30,7 @@ public sealed class CriticalResiliencyPolicy : ResiliencyPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CriticalResiliencyPolicy"/> class.
     /// </summary>
-    public CriticalResiliencyPolicy() : base(3, "Critical")
+    public CriticalResiliencyPolicy() : base("Critical")
     {
     }
 

@@ -10,8 +10,8 @@ namespace Fdw.Services.ExternalIdentityProviders.Logging;
 /// <summary>
 /// MessageLogging methods for the ExternalIdentityProviders domain: identity binding
 /// (<c>ExternalIdentityBinding</c>) and JIT provisioning (each <c>IExternalIdentityProvisioner</c>
-/// implementation, e.g. <c>ChainedExternalIdentityProvisioner</c>/<c>ClaimMappedProvisioner</c>). Every
-/// log message is returned in the result AND logged.
+/// implementation, e.g. <c>ClaimMappedProvisioner</c>). Every log message is returned in the result
+/// AND logged.
 /// EventId range: 7457-7466 (see EVENTID-ALLOCATION.md).
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "MessageLogging partial class - implementation is source-generated")]
@@ -85,12 +85,12 @@ public static partial class ExternalIdentityProviderLog
         Message = "External identity provider factory failed to create service for configName='{configName}': {message}")]
     public static partial IGenericMessage FactoryCreateFailed(ILogger logger, string configName, string message);
 
-    /// <summary>Logs that an external identity provider ServiceTypeOption completed registration.</summary>
+    /// <summary>Logs that an external identity provider Implementation completed registration.</summary>
     [MessageLogging(
         EventId = 7466,
         Level = LogLevel.Information,
-        Message = "External identity provider registered: serviceOptionType='{serviceOptionType}'.")]
-    public static partial IGenericMessage ProviderRegistered(ILogger logger, string serviceOptionType);
+        Message = "External identity provider registered: implementation='{implementation}'.")]
+    public static partial IGenericMessage ProviderRegistered(ILogger logger, string implementation);
 
     /// <summary>Logs that the login-discovery endpoint returned the active external identity providers.</summary>
     [MessageLogging(

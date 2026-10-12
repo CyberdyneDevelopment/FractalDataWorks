@@ -67,17 +67,6 @@ public static partial class ConnectionLimitLog
         int maxQueriesPerDay);
 
     /// <summary>
-    /// Logs when a query is rejected because the daily byte budget is exhausted.
-    /// </summary>
-    [MessageLogging(EventId = 81005, Level = LogLevel.Warning,
-        Message = "Daily byte budget exhausted on connection '{connectionId}' — {bytesUsed} of {maxBytesPerDay} bytes used today")]
-    public static partial IGenericMessage DailyByteBudgetExhausted(
-        ILogger logger,
-        Guid connectionId,
-        long bytesUsed,
-        long maxBytesPerDay);
-
-    /// <summary>
     /// Logs when limit resolution fails for a connection (e.g., limit config record missing).
     /// </summary>
     [MessageLogging(EventId = 61001, Level = LogLevel.Error,

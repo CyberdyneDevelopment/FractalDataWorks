@@ -13,5 +13,5 @@ public sealed class CollectionComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CollectionComponentType"/> class.
     /// </summary>
-    public CollectionComponentType() : base(11, "Collection", "Collection", "Complex", "Nested collection") { }
+    public CollectionComponentType() : base("Collection", "Collection", "Complex", "Nested collection") { }
 }

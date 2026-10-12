@@ -13,7 +13,7 @@ public sealed class CodeSearchCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="CodeSearchCommandCategory"/> class.
     /// </summary>
     public CodeSearchCommandCategory()
-        : base(8, "CodeSearch", "Semantic code search commands for finding usages, implementations, and duplicates")
+        : base("CodeSearch", "Semantic code search commands for finding usages, implementations, and duplicates")
     {
     }
 }

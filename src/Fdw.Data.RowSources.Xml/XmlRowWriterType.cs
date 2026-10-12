@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 using System.IO;
 using Fdw.Collections.Attributes;
 using Fdw.Data.RowSources.Abstractions;
@@ -13,18 +14,28 @@ namespace Fdw.Data.RowSources.Xml;
 /// TypeOption for XML row writers. The write-side mirror of <see cref="XmlRowSourceType"/>.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(RecordWriterTypes), "Xml", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(RecordWriterTypes), "Xml")]
 public sealed class XmlRowWriterType : RecordWriterTypeBase
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="XmlRowWriterType"/> class.
     /// </summary>
-    public XmlRowWriterType() : base(2, "Xml")
+    public XmlRowWriterType() : base("Xml")
     {
     }
 
     /// <inheritdoc />
     public override string Format => "Xml";
+
+    /// <inheritdoc />
+    public override string MediaType => "application/xml";
+
+    /// <inheritdoc />
+    public override string FileExtension => "xml";
+
+    /// <inheritdoc />
+    public override RowWriterOptions CreateOptions(IReadOnlyList<string> columns)
+        => new XmlRowWriterOptions { Columns = [.. columns] };
 
     /// <inheritdoc />
     public override IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options)

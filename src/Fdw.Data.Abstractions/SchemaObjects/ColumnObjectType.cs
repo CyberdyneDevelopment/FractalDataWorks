@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class ColumnObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for columns.
+    /// Material Symbols icon name for columns.
     /// </summary>
-    public const string ColumnIcon = "view_column"; // Icons.Material.Filled.ViewColumn
+    public const string ColumnIcon = "view_column";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ColumnObjectType"/> class.
     /// </summary>
     public ColumnObjectType()
         : base(
-            id: 6,
             name: "Column",
             icon: ColumnIcon,
             color: "Default",

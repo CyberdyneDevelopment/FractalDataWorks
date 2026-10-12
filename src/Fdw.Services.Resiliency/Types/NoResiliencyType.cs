@@ -18,7 +18,6 @@ public sealed class NoResiliencyType : ResiliencyTypeBase
     /// <summary>Initializes a new instance of <see cref="NoResiliencyType"/>.</summary>
     public NoResiliencyType()
         : base(
-            id: 1,
             name: "None",
             displayName: "No Resiliency",
             description: "No-op strategy. Stage runs once; failures propagate immediately.")

@@ -13,7 +13,7 @@ public sealed class PatchMethod : HttpMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PatchMethod"/> class.
     /// </summary>
-    public PatchMethod() : base(5, "PATCH", "Applies partial modifications to a resource")
+    public PatchMethod() : base("PATCH", "Applies partial modifications to a resource")
     {
     }
 }

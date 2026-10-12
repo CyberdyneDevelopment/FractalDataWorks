@@ -15,7 +15,7 @@ public sealed class AdHocApprovalPolicyType : ApprovalPolicyTypeBase
     /// Initializes a new instance of the <see cref="AdHocApprovalPolicyType"/> class.
     /// </summary>
     public AdHocApprovalPolicyType()
-        : base(id: 2, name: "AdHoc", configurationType: typeof(AdHocCommandConfiguration))
+        : base(name: "AdHoc", configurationType: typeof(AdHocCommandConfiguration))
     {
     }
 }

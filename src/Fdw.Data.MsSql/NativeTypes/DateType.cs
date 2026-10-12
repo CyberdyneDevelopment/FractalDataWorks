@@ -14,7 +14,6 @@ public sealed class DateType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="DateType"/> class.</summary>
     public DateType()
         : base(
-            id: 13,
             name: "date",
             description: "Date with no time component.",
             abstractType: DataTypes.Date,

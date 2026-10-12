@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class DegradedServiceStatus : ServiceStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="DegradedServiceStatus"/>.</summary>
-    public DegradedServiceStatus() : base(3, "Degraded") { }
+    public DegradedServiceStatus() : base("Degraded") { }
 }

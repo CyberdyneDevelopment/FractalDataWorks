@@ -10,5 +10,5 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 public sealed class DraftPipelineStatus : PipelineStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="DraftPipelineStatus"/>.</summary>
-    public DraftPipelineStatus() : base(0, "Draft") { }
+    public DraftPipelineStatus() : base("Draft") { }
 }

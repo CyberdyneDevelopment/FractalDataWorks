@@ -9,11 +9,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that creates a new glossary term in the catalog.</summary>
 public abstract class CreateGlossaryTermEndpointBase : Endpoint<GlossaryTermResponse, GlossaryTermResponse>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IGlossaryTermConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="CreateGlossaryTermEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected CreateGlossaryTermEndpointBase(QualityConfigurationProvider provider)
+    protected CreateGlossaryTermEndpointBase(IGlossaryTermConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -38,17 +38,15 @@ public abstract class CreateGlossaryTermEndpointBase : Endpoint<GlossaryTermResp
     {
         var config = GlossaryTermMapper.MapFromDto(req);
 
-        var result = await _provider.SaveGlossaryTerm(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "GlossaryTerm", "GlossaryTerm", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to create glossary term", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to create glossary term", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
-        req.Id = result.Value?.Id ?? req.Id;
+        req.Id = config.Id;
 
         await Send.CreatedAtAsync<GetGlossaryTermEndpointBase>(new { Id = req.Id }, req, cancellation: ct).ConfigureAwait(false);
     }

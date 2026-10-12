@@ -59,7 +59,7 @@ public sealed class EndpointRegistrationLogTests
 
     /// <summary>Skipping because no group joined is not an error.</summary>
     /// <remarks>
-    /// A Blazor skin joins no endpoint group and is not broken. If this severity ever rises, a host
+    /// A host that serves only a UI joins no endpoint group and is not broken. If this severity ever rises, a host
     /// that is behaving correctly starts reporting a fault, which is the judgement the guard exists
     /// to avoid making.
     /// </remarks>

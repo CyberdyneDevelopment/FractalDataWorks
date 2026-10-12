@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Configuration;
+using Fdw.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Services.Connections.Abstractions;
 
@@ -47,26 +48,6 @@ public partial class DataPathConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the section name for configuration binding.
-    /// </summary>
-    public string SectionName => "DataPaths";
-
-    /// <summary>
-    /// Gets the service type - always "DataStore" for DataPath.
-    /// </summary>
-    public string ServiceType => "DataStore";
-
-    /// <summary>
-    /// Gets the service option type - null for base DataPath.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
-    /// Gets or sets the DataStore ID this path belongs to.
-    /// </summary>
-    public Guid DataStoreId { get; set; }
-
-    /// <summary>
     /// Gets or sets the full path string (e.g., "dbo.Customers", "/api/v1/orders").
     /// </summary>
     /// <remarks>
@@ -86,8 +67,8 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// Gets or sets the path type. Alias for <see cref="TypeId"/>.
     /// </summary>
     /// <remarks>
-    /// Why: Legacy consumers reference PathType. Bridge property keeps them working while
-    /// the column name in the database is TypeId.
+    /// Why: PathType is the column on data.DataPath; TypeId is the name the rest of the tree uses
+    /// for a kind, and this alias carries the same value under both.
     /// </remarks>
     public string? PathType
     {
@@ -99,6 +80,12 @@ public partial class DataPathConfiguration : IGenericConfiguration
     /// Gets or sets the optional description for this path.
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets how sensitive this data is: the <c>ClassificationId</c> of a <c>DataClassifications</c>
+    /// level. <c>NotYetClassified</c> until someone picks one; never empty. Maps to <c>ClassificationId</c> (FDW-938).
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
     /// <summary>
     /// Gets or sets the source-discovered description (e.g., MS_Description from SQL Server).

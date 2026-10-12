@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlFloatConverter()
     : DataTypeConverterBase(
-        id: 6,
         name: "Float",
         sourceType: "float8",
         targetClrType: typeof(double),

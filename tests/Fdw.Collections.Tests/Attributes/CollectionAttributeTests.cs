@@ -7,7 +7,7 @@ namespace Fdw.Collections.Tests.Attributes;
 /// Tests for MutableTypeCollectionAttribute, TypeInstanceCollectionAttribute,
 /// ServiceTypeCollectionAttribute,
 /// MutableServiceTypeCollectionAttribute, ServiceTypeInstanceCollectionAttribute,
-/// and ServiceTypeOptionAttribute.
+/// and ImplementationAttribute.
 /// </summary>
 public class CollectionAttributeTests
 {
@@ -99,31 +99,18 @@ public class CollectionAttributeTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void MutableTypeCollectionAttribute_GenerateUIComponent_DefaultsFalse()
-    {
-        var attr = new MutableTypeCollectionAttribute(typeof(TestBase), typeof(TestReturn), typeof(TestCollection));
-        attr.GenerateUIComponent.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void MutableTypeCollectionAttribute_OptionalProperties_CanBeSet()
     {
         var attr = new MutableTypeCollectionAttribute(typeof(TestBase), typeof(TestReturn), typeof(TestCollection))
         {
             UseMethods = true,
             RestrictToCurrentCompilation = true,
-            GenerateUIComponent = true,
-            UIComponent = typeof(TestParent),
             TypeOption = typeof(TestBase),
             TypeOptionName = "TestOption"
         };
 
         attr.UseMethods.ShouldBeTrue();
         attr.RestrictToCurrentCompilation.ShouldBeTrue();
-        attr.GenerateUIComponent.ShouldBeTrue();
-        attr.UIComponent.ShouldBe(typeof(TestParent));
         attr.TypeOption.ShouldBe(typeof(TestBase));
         attr.TypeOptionName.ShouldBe("TestOption");
     }
@@ -201,16 +188,12 @@ public class CollectionAttributeTests
         {
             UseMethods = true,
             RestrictToCurrentCompilation = true,
-            GenerateUIComponent = true,
-            UIComponent = typeof(TestParent),
             TypeOption = typeof(TestBase),
             TypeOptionName = "FactoryOption"
         };
 
         attr.UseMethods.ShouldBeTrue();
         attr.RestrictToCurrentCompilation.ShouldBeTrue();
-        attr.GenerateUIComponent.ShouldBeTrue();
-        attr.UIComponent.ShouldBe(typeof(TestParent));
         attr.TypeOption.ShouldBe(typeof(TestBase));
         attr.TypeOptionName.ShouldBe("FactoryOption");
     }
@@ -381,14 +364,14 @@ public class CollectionAttributeTests
 
     #endregion
 
-    #region ServiceTypeOptionAttribute Tests
+    #region ImplementationAttribute Tests
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void ServiceTypeOptionAttribute_Constructor_SetsProperties()
+    public void ImplementationAttribute_Constructor_SetsProperties()
     {
-        var attr = new ServiceTypeOptionAttribute(typeof(TestCollection), "MsSql");
+        var attr = new ImplementationAttribute(typeof(TestCollection), "MsSql");
 
         attr.CollectionType.ShouldBe(typeof(TestCollection));
         attr.Name.ShouldBe("MsSql");

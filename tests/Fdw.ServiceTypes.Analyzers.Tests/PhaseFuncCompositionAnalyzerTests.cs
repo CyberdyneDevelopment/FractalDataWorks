@@ -19,9 +19,9 @@ public class PhaseFuncCompositionAnalyzerTests
         namespace Fdw.Collections.Attributes
         {
             [AttributeUsage(AttributeTargets.Class)]
-            public class ServiceTypeOptionAttribute : Attribute
+            public class ImplementationAttribute : Attribute
             {
-                public ServiceTypeOptionAttribute(Type collectionType, string name) { }
+                public ImplementationAttribute(Type collectionType, string name) { }
             }
 
             [AttributeUsage(AttributeTargets.Class)]
@@ -59,7 +59,7 @@ public class PhaseFuncCompositionAnalyzerTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public async Task AppendRegistration_InServiceTypeOption_ReportsDiagnostic()
+    public async Task AppendRegistration_InImplementation_ReportsDiagnostic()
     {
         var test = Fixture + """
             namespace TestNamespace
@@ -69,7 +69,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
                 public abstract class ConnectionTypes { }
 
-                [ServiceTypeOption(typeof(ConnectionTypes), "MsSql")]
+                [Implementation(typeof(ConnectionTypes), "MsSql")]
                 public sealed class MsSqlConnectionType : ServiceTypeBase
                 {
                     public MsSqlConnectionType()
@@ -88,7 +88,7 @@ public class PhaseFuncCompositionAnalyzerTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public async Task PrependRegistration_InServiceTypeOption_ReportsDiagnostic()
+    public async Task PrependRegistration_InImplementation_ReportsDiagnostic()
     {
         var test = Fixture + """
             namespace TestNamespace
@@ -98,7 +98,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
                 public abstract class ConnectionTypes { }
 
-                [ServiceTypeOption(typeof(ConnectionTypes), "MsSql")]
+                [Implementation(typeof(ConnectionTypes), "MsSql")]
                 public sealed class MsSqlConnectionType : ServiceTypeBase
                 {
                     public MsSqlConnectionType()
@@ -127,7 +127,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
                 public abstract class ConnectionTypes { }
 
-                [ServiceTypeOption(typeof(ConnectionTypes), "MsSql")]
+                [Implementation(typeof(ConnectionTypes), "MsSql")]
                 public sealed class MsSqlConnectionType : ServiceTypeBase
                 {
                     public MsSqlConnectionType()
@@ -175,7 +175,7 @@ public class PhaseFuncCompositionAnalyzerTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Analyzer")]
-    public async Task Registration_InServiceTypeOption_ReportsNothing()
+    public async Task Registration_InImplementation_ReportsNothing()
     {
         var test = Fixture + """
             namespace TestNamespace
@@ -185,7 +185,7 @@ public class PhaseFuncCompositionAnalyzerTests
 
                 public abstract class ConnectionTypes { }
 
-                [ServiceTypeOption(typeof(ConnectionTypes), "MsSql")]
+                [Implementation(typeof(ConnectionTypes), "MsSql")]
                 public sealed class MsSqlConnectionType : ServiceTypeBase
                 {
                     public MsSqlConnectionType()

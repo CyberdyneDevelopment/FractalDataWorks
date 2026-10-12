@@ -17,7 +17,6 @@ public sealed class TriggeredStateType : ExecutionStateTypeBase
     /// </summary>
     public TriggeredStateType()
         : base(
-            id: 2,
             name: "Triggered",
             displayName: "Triggered",
             isTerminal: false,

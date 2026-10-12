@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -16,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class ListServerSettingsEndpointBase : CrudListEndpointBase<ServerSettingSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<ServerSettingConfiguration> _provider;
+    private readonly IServerSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListServerSettingsEndpointBase(ILogger<ListServerSettingsEndpointBase> logger, IServiceConfigurationProvider<ServerSettingConfiguration> provider) : base(logger)
+    protected ListServerSettingsEndpointBase(ILogger<ListServerSettingsEndpointBase> logger, IServerSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -44,13 +45,14 @@ public abstract class ListServerSettingsEndpointBase : CrudListEndpointBase<Serv
             return allResult.ToNewResult<List<ServerSettingSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<ServerSettingConfiguration>)[])
+        var items = allResult.Value!
             .Select(s => new ServerSettingSummaryDto
             {
                 Id = s.Id,
-                SettingName = s.SettingName,
+                SettingName = s.Name,
                 SettingValue = s.SettingValue,
                 DataType = s.DataType,
+                Description = s.Description,
                 IsActive = s.IsActive
             })
             .ToList();

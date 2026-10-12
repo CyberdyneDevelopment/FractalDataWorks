@@ -16,8 +16,6 @@ public sealed class FakeRoslynCommandTranslator : IRoslynCommandTranslator
 {
     public int Id => 1;
 
-    object ITypeOption.Id => Id;
-
     public string Name => "FakeTranslator";
 
     public string Category => "Fake";

@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Fdw.Collections.Attributes;
 using Fdw.Configuration;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.DataSets.Results;
+using Fdw.Results;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Data.DataSets.Abstractions;
 
@@ -14,7 +18,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// </summary>
 /// <remarks>
 /// Physical binding record: one row per source in a DataSet. The strategy discriminator
-/// (Simple/Compound/Federated) lives on the parent <c>DataSetConfiguration.ServiceOptionType</c>,
+/// (Simple/Compound/Federated) lives on the parent <c>IDataSetImplementationConfiguration.Implementation</c>,
 /// never on the source row.
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -29,15 +33,6 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     /// <summary>Gets or sets the name of this source configuration.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets the section name for configuration binding.</summary>
-    public string SectionName => $"DataSetSources:{Id}";
-
-    /// <summary>Gets or sets the service type domain ("DataSet").</summary>
-    public string ServiceType { get; set; } = "DataSet";
-
-    /// <summary>Gets or sets the service option type discriminator ("DataSetSource").</summary>
-    public string? ServiceOptionType { get; set; } = "DataSetSource";
-
     /// <summary>Gets or sets whether this is the current active version of the record.</summary>
     public bool IsCurrent { get; set; } = true;
 
@@ -47,9 +42,6 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     // ============================================================================
     // Identity
     // ============================================================================
-
-    /// <summary>Gets or sets the parent DataSet identifier (FK to data.DataSet.Id).</summary>
-    public Guid DataSetId { get; set; }
 
     // ============================================================================
     // Source binding
@@ -172,11 +164,27 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
     /// Gets or sets the resolved field mappings for this source (logical→physical).
     /// </summary>
     /// <remarks>
-    /// Why: [NotMapped] — composed at runtime from DataSetFieldMapping rows by
-    /// DataSetConfigurationProvider; never a column on data.DataSetSource.
+    /// Why computed from <see cref="Mappings"/> rather than set: nothing ever composed it. The comment
+    /// here used to say DataSetConfigurationProvider filled it, and nothing did, so every data-set
+    /// read ran with no renames and no stored mapping reached the read path (FDW-877). Deriving it
+    /// from the stored collection means there is one source of truth and nothing to forget to fill.
+    /// A mapping with no physical field (a non-DataStore source kind) has nothing to rename.
     /// </remarks>
     [NotMapped]
-    public IReadOnlyDictionary<string, string> FieldMappings { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+    public IReadOnlyDictionary<string, string> FieldMappings
+    {
+        get
+        {
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var mapping in Mappings)
+            {
+                if (mapping.IsCurrent && !mapping.IsDeleted && mapping.PhysicalFieldName is { Length: > 0 } physical)
+                    map[mapping.LogicalFieldName] = physical;
+            }
+
+            return map;
+        }
+    }
 
     /// <summary>
     /// Gets or sets the field mappings this source owns.
@@ -192,6 +200,58 @@ public sealed partial class DataSetSourceConfiguration : IGenericConfiguration
 #pragma warning disable MA0016 // Prefer collection abstraction - required for IOptions binding
     public List<DataSetFieldMappingConfiguration> Mappings { get; set; } = [];
 #pragma warning restore MA0016
+
+    /// <summary>
+    /// Gets the Id a mapping for <paramref name="logicalFieldName"/> keeps when this source's mappings
+    /// are replaced: the current mapping's for that field, or an unset Id when the field is new.
+    /// </summary>
+    /// <remarks>
+    /// Why identity is the field and not whatever Id a caller sends: a mapping is identified within its
+    /// source by the field it fills (see <see cref="DataSetFieldMappingConfiguration.Name"/>), and the
+    /// transformations attached to it are found by its Id. Minting a new Id on every replace — which
+    /// the per-source mappings route did — silently detached every transformation on the source. An
+    /// unset Id is left for the save cascade to mint, the one place a configuration id is created.
+    /// Every path that replaces mappings asks this, so there is one rule (FDW-877).
+    /// </remarks>
+    /// <param name="logicalFieldName">The data set field the mapping fills.</param>
+    public Guid MappingIdFor(string logicalFieldName)
+        => Mappings.FirstOrDefault(m => m.IsCurrent && !m.IsDeleted
+                                        && string.Equals(m.LogicalFieldName, logicalFieldName, StringComparison.Ordinal))
+            is { } current ? current.Id : default;
+
+    /// <summary>
+    /// Validates the fields a replacement set of mappings fills: every mapping names one, and no field
+    /// is mapped twice. The rule for every path that replaces a source's mappings.
+    /// </summary>
+    /// <param name="logicalFieldNames">The field each replacement mapping fills, in request order.</param>
+    /// <param name="dataSetName">The data set the source belongs to, for the failure.</param>
+    /// <param name="sourceName">The source, for the failure.</param>
+    /// <param name="logger">The logger the failure is written to.</param>
+    public static IGenericResult<bool> ValidateMappingFields(
+        IEnumerable<string?> logicalFieldNames, string dataSetName, string sourceName, ILogger logger)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var fieldName in logicalFieldNames)
+        {
+            if (string.IsNullOrWhiteSpace(fieldName))
+            {
+                return GenericResult<bool>.Failure(
+                    DataSetsResultCodes.FieldMappingFieldNameRequired, logger,
+                    ResultDetails.Create("name", dataSetName, "sourceName", sourceName));
+            }
+
+            // Two mappings for one field would be one identity with two meanings, and whichever kept
+            // the Id would silently take the other's transformations.
+            if (!seen.Add(fieldName))
+            {
+                return GenericResult<bool>.Failure(
+                    DataSetsResultCodes.FieldMappingDuplicateField, logger,
+                    ResultDetails.Create("name", dataSetName, "sourceName", sourceName, "fieldName", fieldName));
+            }
+        }
+
+        return GenericResult<bool>.Success(true);
+    }
 
     // ============================================================================
     // Audit

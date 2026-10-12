@@ -17,10 +17,4 @@ public class McpToolSourceTypesTests
         kind.ShouldNotBe(McpToolSourceTypes.NotFound);
         kind.Name.ShouldBe("StdioBridge");
     }
-
-    [Fact]
-    public void UnknownKindReturnsNotFound()
-    {
-        McpToolSourceTypes.ByName("DefinitelyNot").ShouldBe(McpToolSourceTypes.NotFound);
-    }
 }

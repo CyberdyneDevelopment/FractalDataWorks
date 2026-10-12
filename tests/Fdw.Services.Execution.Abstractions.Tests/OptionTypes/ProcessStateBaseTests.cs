@@ -13,15 +13,11 @@ public class ProcessStateBaseTests
     {
         // Arrange & Act
         var state = new TestableProcessState(
-            id: 99,
             name: "TestState",
             isTerminal: true,
             isError: true,
             isActive: false,
             isInitial: true);
-
-        // Assert
-        state.Id.ShouldBe(99);
         state.Name.ShouldBe("TestState");
         state.IsTerminal.ShouldBeTrue();
         state.IsError.ShouldBeTrue();
@@ -36,7 +32,6 @@ public class ProcessStateBaseTests
     {
         // Arrange & Act
         var state = new TestableProcessState(
-            id: 1,
             name: "Active",
             isTerminal: false,
             isError: false,
@@ -56,7 +51,7 @@ public class ProcessStateBaseTests
     public void StateInheritsFromTypeOptionBase()
     {
         // Arrange & Act
-        var state = new TestableProcessState(1, "Test", false, false, false);
+        var state = new TestableProcessState("Test", false, false, false);
 
         // Assert
         state.ShouldBeAssignableTo<IProcessState>();
@@ -64,8 +59,8 @@ public class ProcessStateBaseTests
 
     private sealed class TestableProcessState : ProcessStateBase
     {
-        public TestableProcessState(int id, string name, bool isTerminal, bool isError, bool isActive, bool isInitial = false)
-            : base(id, name, isTerminal, isError, isActive, isInitial)
+        public TestableProcessState(string name, bool isTerminal, bool isError, bool isActive, bool isInitial = false)
+            : base(name, isTerminal, isError, isActive, isInitial)
         {
         }
     }

@@ -17,7 +17,6 @@ public sealed class LeftJoinType : JoinTypeBase
     /// </summary>
     public LeftJoinType()
         : base(
-            id: 2,
             name: "Left",
             sqlKeyword: "LEFT JOIN",
             description: "Returns all rows from left source, matching rows from right source",

@@ -15,7 +15,6 @@ public sealed class StepItemType : ExecutionItemTypeBase
     /// </summary>
     public StepItemType()
         : base(
-            id: 4,
             name: "Step",
             displayName: "Step",
             hierarchyLevel: 3,

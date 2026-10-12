@@ -545,6 +545,22 @@ public static partial class EtlLog
         Exception exception,
         string outputField);
 
+    /// <summary>
+    /// Logs that a calculation divided by zero. This is a failure of the record, never an empty value or a zero result.
+    /// </summary>
+    /// <remarks>
+    /// The Calculations package reports the same condition as 91007; this package already uses 91007 for the generic
+    /// calculation failure, and a number is per package, so the stage uses the next free one.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 91014,
+        Level = LogLevel.Error,
+        Message = "Division by zero in the calculation for field '{outputField}': the divisor of expression '{expression}' is zero")]
+    public static partial IGenericMessage DivisionByZero(
+        ILogger logger,
+        string outputField,
+        string expression);
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Background Executor Events (8170-8189)
     // ═══════════════════════════════════════════════════════════════════════════
@@ -816,19 +832,6 @@ public static partial class EtlLog
     // Pipeline Factory Events (8199)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Logs when the pipeline factory carries the kind-level Transforms onto the engine body across the
-    /// kind→engine unwrap seam (the engine's [NotMapped] Transforms cannot load via its own FK, so the
-    /// factory transfers the composed transforms from the ETL-kind body).
-    /// </summary>
-    [MessageLogging(
-        EventId = 11039,
-        Level = LogLevel.Debug,
-        Message = "Transferred {transformCount} transform(s) from the ETL-kind body to engine pipeline '{pipelineName}'")]
-    public static partial IGenericMessage TransformsTransferredKindToEngine(
-        ILogger logger,
-        string pipelineName,
-        int transformCount);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // State Walk / Lifecycle Warning Events (91010-91013)
@@ -1066,6 +1069,32 @@ public static partial class EtlLog
         string joinType,
         string name);
 
+    /// <summary>
+    /// Logs when a Lookup transform cannot pre-load its reference data. The stage fails: a lookup that never ran
+    /// would otherwise treat every key as missing.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11059,
+        Level = LogLevel.Error,
+        Message = "Lookup '{name}' could not preload from {connection}:{dataSet}: {error}")]
+    public static partial IGenericMessage LookupPreloadFailed(
+        ILogger logger,
+        string name,
+        string connection,
+        string dataSet,
+        string error);
+
+    /// <summary>
+    /// Logs when a Lookup transform runs on a context that carries no data gateway, so it cannot load its reference data.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11060,
+        Level = LogLevel.Error,
+        Message = "Lookup '{name}' has no data gateway on its transform context, so its reference data cannot be preloaded")]
+    public static partial IGenericMessage LookupGatewayMissing(
+        ILogger logger,
+        string name);
+
 
     /// <summary>
     /// Logs when the per-record <c>Transform</c> is invoked on a set-based transform option
@@ -1080,16 +1109,54 @@ public static partial class EtlLog
         string name);
 
     /// <summary>
-    /// Logs when a per-execution WorkAuthenticationContext is established on the background
-    /// execution's DI scope, carrying the execution's TenantId for RLS SESSION_CONTEXT.
+    /// Logs that a background execution's DI scope was elevated to the system authentication
+    /// context, which reads across every tenant.
     /// </summary>
+    /// <remarks>
+    /// Under system elevation the tenant is never enforced — this line says which tenant the run
+    /// BELONGS to, never which rows it can reach. It is also the tenant the rows the run writes
+    /// default to (FDW-825); a run with no tenant writes into the default tenant.
+    /// </remarks>
     [MessageLogging(
         EventId = 11057,
         Level = LogLevel.Information,
-        Message = "WorkAuthenticationContext established for execution {executionId} with TenantId {tenantId}")]
-    public static partial IGenericMessage WorkAuthenticationContextEstablished(
+        Message = "Execution {executionId} (tenant {tenantId}) elevated to the system authentication context; reads are not tenant-scoped")]
+    public static partial IGenericMessage ExecutionElevatedToSystemContext(
         ILogger logger,
         Guid executionId,
-        Guid tenantId);
+        Guid? tenantId);
 
+    /// <summary>Logs the identity a run's work acts as: its tenant run (FDW-1087).</summary>
+    // Why Information: what a run could read and write is decided here, once per run.
+    [MessageLogging(
+        EventId = 11058,
+        Level = LogLevel.Information,
+        Message = "Execution {executionId} of pipeline {pipelineId} acts as its tenant run in tenant {tenantId} with roles {roles}")]
+    public static partial IGenericMessage ExecutionActingAsTenantRun(
+        ILogger logger,
+        Guid executionId,
+        Guid pipelineId,
+        Guid tenantId,
+        string roles);
+
+    /// <summary>Logs a run refused because it names no tenant to run in.</summary>
+    [MessageLogging(
+        EventId = 21004,
+        Level = LogLevel.Warning,
+        Message = "Execution {executionId} of pipeline '{pipelineName}' names no tenant, so it has no tenant run to act as")]
+    public static partial IGenericMessage ExecutionRefusedNoTenant(
+        ILogger logger,
+        Guid executionId,
+        string pipelineName);
+
+    /// <summary>Logs a run refused because the roles its pipeline runs under could not be resolved.</summary>
+    [MessageLogging(
+        EventId = 21005,
+        Level = LogLevel.Warning,
+        Message = "Execution {executionId} of pipeline '{pipelineName}' was refused: its run roles could not be resolved: {reason}")]
+    public static partial IGenericMessage ExecutionRefusedRunRoles(
+        ILogger logger,
+        Guid executionId,
+        string pipelineName,
+        string? reason);
 }

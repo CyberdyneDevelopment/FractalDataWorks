@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Mountain")]
 public sealed class MountainTimeZoneType : TimeZoneTypeBase
 {
-    public MountainTimeZoneType() : base(5, "Mountain", "Mountain Standard Time") { }
+    public MountainTimeZoneType() : base("Mountain", "Mountain Standard Time") { }
 }

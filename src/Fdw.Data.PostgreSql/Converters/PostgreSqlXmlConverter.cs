@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlXmlConverter()
     : DataTypeConverterBase(
-        id: 22,
         name: "Xml",
         sourceType: "xml",
         targetClrType: typeof(string),

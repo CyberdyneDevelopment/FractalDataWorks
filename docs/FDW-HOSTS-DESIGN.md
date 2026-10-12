@@ -1,5 +1,7 @@
 # FDW Hosts — Final Design (docs/FDW-HOSTS-DESIGN.md)
 
+> **FDW-872 (2026-09-22):** the Blazor packages this document names (`Fdw.UI.Components.Blazor`, the `*.razor` components, `Fdw.Web.Http.Authentication.Blazor`, the Blazor skins and renderers) were removed. The web console is now the separate `reference-react-ui` repository. Read the Blazor parts below as history.
+
 **Status:** APPROVED FOR IMPLEMENTATION (synthesized from the design tournament: *builder* won 2 of 3 judge lenses — consumer experience + migration reality, and mechanism soundness — and its doctrine gaps are closed here by grafts from *typecollection* and *minimalist*. Every judge criticism of the winning design is resolved in §9; one policy decision requires explicit user sign-off, §10.)
 
 **Branch context:** extends the in-flight `feature/platform-services-generator` work (`Fdw.Services.Registration` / `PlatformServices`).
@@ -32,12 +34,12 @@ The centralization the instinct actually wants is a single central **mechanism**
 | `Fdw.Hosting.Api` **(NEW)** | net10.0 | `FdwApiHost` / `FdwApiHostBuilder`. Refs Fdw.Hosting, Fdw.Web.Api, Fdw.Web.RestEndpoints, FastEndpoints.Swagger, Scalar, Fdw.SignalR, Fdw.Services.Multitenancy. |
 | `Fdw.Hosting.Worker` **(NEW)** | net10.0 | `FdwWorkerHost` / `FdwWorkerHostBuilder`. Refs Fdw.Hosting, FastEndpoints.Swagger, Scalar, Fdw.SignalR. |
 | `Fdw.Hosting.Ui` **(NEW)** | net10.0 | `FdwUiHost` / `FdwUiHostBuilder`. Refs **`Fdw.Hosting.Core` only** plus `Fdw.Web.Http.Authentication.Blazor`, `Fdw.UI.Navigation`. **No ConfigurationGateway path exists in this package** — the UI-never-touches-ConfigurationDb seam is structural, not a runtime flag. |
-| `Fdw.Hosting.AuthServer` **(NEW)** | net10.0 | `AddTokenIssuer(this FdwApiHostBuilder)` (co-hosted issuance, today's topology) and `FdwAuthServerHost` (standalone issuer, future). Refs Fdw.Services.Authentication.OpenIddict. Owns `AuthAndTagDocumentProcessor` (moves out of Reference.Api), TokenSwitch loopback client wiring (base URL from **required** config — the `?? "http://localhost:5020"` chain dies), Scalar demo-credentials banner feature. |
+| `Fdw.Hosting.AuthServer` **(NEW)** | net10.0 | `AddTokenIssuer(this FdwApiHostBuilder)` (co-hosted issuance, today's topology) and `FdwAuthServerHost` (standalone issuer, future). Refs Fdw.Services.Authentication.OpenIddict. Owns `AuthAndTagDocumentProcessor` (moves out of Reference.Api), TokenSwitch loopback client wiring (base URL from **required** config — the `?? "http://localhost:5020"` chain dies). |
 | `Fdw.Hosting.MsSql` (existing) | net10.0 | Unchanged role: backend-flavor meta-package (transitive refs for `MsSqlConnectionFactory` + friends). |
 | `Fdw.Hosting.Abstractions` (existing, **shrinks**) | netstandard2.0 | **DELETE** `IFdwHost`, `IFdwHostBuilder`, `IFdwHostBuilderContext`, `IFdwHostLifetime`, `IFdwHostApplicationLifetime`, `FdwHostOptions`, `FeatureOptions`, and the unconsumed `LogLevels`/`Sinks`/`TelemetryExporters` catalogs (all grep-confirmed dead). |
 | `Fdw.Services.Registration` (+ `.SourceGenerators`) (in-flight, extended) | netstandard2.0 | `Group` attribute argument, async `Initialize` returning `IGenericResult`, `Verify` member, `InitializeAllAsync`/`VerifyAllAsync`, `Entries()` (§5). `SetGroup` **deleted** — one mechanism. |
 | `Fdw.Services.HostRegistry.Abstractions` **(NEW)** | netstandard2.0 | `MonitoredHostTypes` `[ServiceTypeCollection(ServiceCategory = "MonitoredHost")]`, `IHostRegistryClient`, registration payload records. |
-| `Fdw.Services.HostRegistry.Client` **(NEW)** | net10.0 | `ApiRegisteredHostType` `[ServiceTypeOption]` + `MonitoredHostRegistrar : IHostedService` (registered by the **option's** `RegisterRequiredServices`, never by the spine). |
+| `Fdw.Services.HostRegistry.Client` **(NEW)** | net10.0 | `ApiRegisteredHostType` `[Implementation]` + `MonitoredHostRegistrar : IHostedService` (registered by the **option's** `RegisterRequiredServices`, never by the spine). |
 | `Fdw.Services.HostRegistry` **(NEW)** | net10.0 | Server side: registration endpoints, storage, `LocalRegisteredHostType` option (in-process registration for the host that hosts the registry), permission seed `hostregistry.register`. |
 | D-bucket relocation targets | | `Fdw.Services.Scheduling` gains the scheduler mechanism (`SchedulerBackgroundService`, `EtlDispatchService`, dispatch client wiring, `SchedulerTypes.Verify` gate); `Fdw.Calculations.PreCompute` **(NEW)** gains `PreComputeCalculationsJob` + `CalculationApiClient`; `Fdw.UI.Themes.Scalar` **(NEW)** gains the ~150 lines of Scalar theming/tenants-js/preview-hosts (hosts from config); `Fdw.Web.Http.Authentication.Blazor` gains `AddFdwBlazorTokenClient` (cookie scheme, ROPC/refresh via `IHttpClientFactory` — the raw `new HttpClient` in `OnValidatePrincipal` dies) + `MapFdwBlazorAuthEndpoints` (login/logout minimal APIs); `Fdw.Services.Credentials` gains `OutboundIdentityTypes` (§4). |
 
@@ -78,7 +80,7 @@ public static class PlatformServices
 }
 ```
 
-Both sweeps return `IGenericResult` so there is **one** fail-loud exit path (Initialize failure and Verify failure are both `HostLog.BootStepFailed` + exit 1). Additional uniformity fixes riding on the same branch: `ConnectionTypes.RegisterAdditionalInterfaces` folds into its `Register`; `DataStoreProvider`/`DataSetProvider` get conforming `[ServiceTypeCollection]` descriptors registered by module initializer in their own packages; the three hardcoded root `RegisterDomainServices("ConfigurationDb","sec"/"data"/"notify")` calls finish their migration into the owning domains' ServiceTypeOptions.
+Both sweeps return `IGenericResult` so there is **one** fail-loud exit path (Initialize failure and Verify failure are both `HostLog.BootStepFailed` + exit 1). Additional uniformity fixes riding on the same branch: `ConnectionTypes.RegisterAdditionalInterfaces` folds into its `Register`; `DataStoreProvider`/`DataSetProvider` get conforming `[ServiceTypeCollection]` descriptors registered by module initializer in their own packages; the three hardcoded root `RegisterDomainServices("ConfigurationDb","sec"/"data"/"notify")` calls finish their migration into the owning domains' Implementations.
 
 ### 2.3 Public API — bootstrap, context, builders
 
@@ -130,7 +132,7 @@ public abstract class FdwHttpHostBuilderBase<TSelf> : FdwHostBuilderBase<TSelf>
 }
 ```
 
-**There is deliberately NO `WithHostedService<T>()`.** Hosted services are domain services; they are registered exclusively by their owning `[ServiceTypeOption].RegisterRequiredServices` and arrive by package reference + config row (doctrine #5). This resolves the tournament's double-registration contradiction in `Verify`'s favor (§9-C1). Likewise there is **no `WithBackgroundExecutor`** — ETL's pipeline background executor is registered by the Orchestration/EtlPipeline domain option with queue capacity from its config row.
+**There is deliberately NO `WithHostedService<T>()`.** Hosted services are domain services; they are registered exclusively by their owning `[Implementation].RegisterRequiredServices` and arrive by package reference + config row (doctrine #5). This resolves the tournament's double-registration contradiction in `Verify`'s favor (§9-C1). Likewise there is **no `WithBackgroundExecutor`** — ETL's pipeline background executor is registered by the Orchestration/EtlPipeline domain option with queue capacity from its config row.
 
 ```csharp
 namespace Fdw.Hosting.Api;
@@ -146,7 +148,6 @@ public sealed class FdwApiHostBuilder : FdwHttpHostBuilderBase<FdwApiHostBuilder
     public FdwApiHostBuilder WithMultitenancy();
     public FdwApiHostBuilder WithScalar(Action<FdwScalarOptions> configure);
         // theming via Fdw.UI.Themes.Scalar; preview hosts from config section "Scalar:PreviewHosts";
-        // scalar.DemoCredentialsFromConfig("Scalar:DemoCredentials") — values in config, never code.
 }
 
 namespace Fdw.Hosting.Worker;
@@ -214,7 +215,7 @@ Consumed by domain options (`ApiClientTypes` rows select client + identity per r
 1. try/catch/finally shell; `finally` = `FlushFrameworkSerilog()` (bounded FDW-424 flush, everywhere — etl/sched unbounded-flush drift dies structurally).
 2. `WebApplication.CreateBuilder(args)`. Version inject: read `FileVersionInfo`; if unresolvable ⇒ `HostLog.AssemblyVersionUnresolvable` **warning and the Serilog property is omitted** — no substitute string (the `?? "unknown"` fallback dies).
 3. `AddFrameworkSerilog(applicationName)` → startup `ILoggerFactory`; `HostLog.HostStarting`.
-4. `bootstrap.Apply(services)` → `AddConfigurationGateway<,>(path)`; `AddFrameworkOpenTelemetry`; `Lazy<IDataGateway>` singleton. (Ui archetype: this step does not exist.)
+4. `bootstrap.Apply(services)` → `AddConfigurationGateway<,>(path)`; `AddFrameworkOpenTelemetry`. (Ui archetype: this step does not exist.)
 5. `PlatformServices.Configure(builder, lf)`; `PlatformServices.Register(builder.Services, lf)` — ordered by attribute-declared `Group`. Replaces all ~25 per-domain Configure/Register pairs.
 6. Archetype services, compiled into the package (Api: `AddDistributedMemoryCache` → `AddMultitenancy` iff `WithMultitenancy` → `RealTimeHubs.Register` iff `RealTimeHubs.All()` non-empty (package reference IS the opt-in) → `AddFrameworkRateLimiting` (the real one — the empty-stub drift dies) → `AddFrameworkCors` → `AddFastEndpoints` → `AddHttpContextAccessor` → `SwaggerDocument` with framework doc processors in fixed order `DataSetQuery → ValuesFromSchema → PermissionFilter → app processors`).
 7. Issuer wiring iff `AddTokenIssuer` (Api only).
@@ -259,7 +260,6 @@ return await FdwApiHost
     .WithScalar(scalar =>
     {
         scalar.UseThemeProvider();                                  // Fdw.UI.Themes.Scalar; preview hosts from "Scalar:PreviewHosts"
-        scalar.DemoCredentialsFromConfig("Scalar:DemoCredentials"); // dev-env values live in appsettings, not code
     })
     .WithAppMiddleware(static app => app.UseMiddleware<EmptyBodyBadRequestMiddleware>())
     .WithDomainServices(ctx => ctx
@@ -290,7 +290,7 @@ return await FdwWorkerHost
     .RunAsync();
 ```
 
-That is the whole file. `SchedulerBackgroundService`, `EtlDispatchService`, `IFrameworkSchedulingService` wiring, dispatch clients, and config binds live in `Fdw.Services.Scheduling`'s `[ServiceTypeOption].RegisterRequiredServices`/`Configure` (they were doctrine-#3 bugs in app code); the fail-loud gate is `SchedulerTypes.Verify`. `PreComputeCalculationsJob` + `CalculationApiClient` arrive from `Fdw.Calculations.PreCompute` by package reference + its config rows (`ClientCredentials` identity). `ICalculationUsageRepository` is renamed and re-homed during the move (no Repository pattern, ever). ETL's Program.cs is byte-identical in shape (name + swagger text differ); hubs and the background executor arrive via its package graph and config rows.
+That is the whole file. `SchedulerBackgroundService`, `EtlDispatchService`, `IFrameworkSchedulingService` wiring, dispatch clients, and config binds live in `Fdw.Services.Scheduling`'s `[Implementation].RegisterRequiredServices`/`Configure` (they were doctrine-#3 bugs in app code); the fail-loud gate is `SchedulerTypes.Verify`. `PreComputeCalculationsJob` + `CalculationApiClient` arrive from `Fdw.Calculations.PreCompute` by package reference + its config rows (`ClientCredentials` identity). `ICalculationUsageRepository` is renamed and re-homed during the move (no Repository pattern, ever). ETL's Program.cs is byte-identical in shape (name + swagger text differ); hubs and the background executor arrive via its package graph and config rows.
 
 **`reference-ui/public/src/Reference.Ui/Program.cs`**
 
@@ -314,7 +314,7 @@ The UI stops being a hosting orphan: it gains `AddFrameworkSerilog`, the try/cat
 
 **The mechanism splits now; the deployment stays in reference-api for now.**
 
-Prerequisite: split the fused `OpenIddict` `[ServiceTypeOption]` into two options of `AuthenticationServiceTypes`:
+Prerequisite: split the fused `OpenIddict` `[Implementation]` into two options of `AuthenticationServiceTypes`:
 
 - **`OpenIddictServer`** — issuance: `AddOpenIddict().AddCore(...).AddServer(...)`, `/connect/token` + jwks + revoke/introspect, `ConnectTokenEndpoint`, `OpenIddictSigningKeyLoader`/`Configurator`, `OpenIddictClientSecretProvisioner`, `ProcessSignInClaimsHandler`.
 - **`OpenIddictValidation`** — resource side, with a **required, explicit `Mode`** on its config row: `LocalServer` | `Remote` (Remote additionally **requires** `Authority`). Missing `Mode`, or `Remote` without `Authority` ⇒ MessageLogging error + exit 1. **There is no auto-detection of a co-hosted server** — "validation silently chooses `UseLocalServer()` when the server option happens to be present" is exactly the banned "I'll figure out which" guesser (this replaces the marker-guard auto-detect idea from the losing design; see §9-G1).
@@ -334,7 +334,7 @@ Topologies, all config-selected via `AuthenticationServices` rows:
 - `MonitoredHostTypes` `[ServiceTypeCollection(ServiceCategory = "MonitoredHost", Group = 10)]` with two options:
   - **`ApiRegistered`** (`Fdw.Services.HostRegistry.Client`) — HTTP POST to the central registry. Its `RegisterRequiredServices` adds `AddHostedService<MonitoredHostRegistrar>` + `AddHttpClient("HostRegistry")` (Microsoft infra inside the option — the established precedent).
   - **`LocalRegistered`** (`Fdw.Services.HostRegistry` server package) — direct in-process call, used by the host that hosts the registry itself. **This mechanically kills the API-registers-to-itself loopback bootstrap race** — no retry-hope needed.
-- **Config row (appsettings, per §3's blessed surface) — the spoke declares WHAT it registers, WITH whom, AS whom:** `MonitoredHosts: [{ "Name": "EtlPrimary", "ServiceOptionType": "ApiRegistered", "RegistryBaseUrl": "<hub>", "IdentityName": "EtlMachine", "PublicBaseUrl": "<this spoke's reachable URL>", "HealthPath": "/health", "HealthCheckOnStartup": false, "HealthCheckIntervalSeconds": 300 }]`. PublicBaseUrl/HealthPath/cadence are the advertisement the hub persists as its `settings.MonitoredHost` row and probes on; a host cannot reliably self-derive its public URL behind proxies, so it is DECLARED. All keys required for the selected option; any missing ⇒ MessageLogging error + failed `Initialize` ⇒ exit 1. **No rows ⇒ the collection legitimately has zero instances** — no registrar is registered, the sweep logs Info. That is standard empty-collection semantics (nothing is substituted), not a fallback. Defaulting to any registry URL is explicitly rejected (§8-R10).
+- **Config row (appsettings, per §3's blessed surface) — the spoke declares WHAT it registers, WITH whom, AS whom:** `MonitoredHosts: [{ "Name": "EtlPrimary", "Implementation": "ApiRegistered", "RegistryBaseUrl": "<hub>", "IdentityName": "EtlMachine", "PublicBaseUrl": "<this spoke's reachable URL>", "HealthPath": "/health", "HealthCheckOnStartup": false, "HealthCheckIntervalSeconds": 300 }]`. PublicBaseUrl/HealthPath/cadence are the advertisement the hub persists as its `settings.MonitoredHost` row and probes on; a host cannot reliably self-derive its public URL behind proxies, so it is DECLARED. All keys required for the selected option; any missing ⇒ MessageLogging error + failed `Initialize` ⇒ exit 1. **No rows ⇒ the collection legitimately has zero instances** — no registrar is registered, the sweep logs Info. That is standard empty-collection semantics (nothing is substituted), not a fallback. Defaulting to any registry URL is explicitly rejected (§8-R10).
 - **Identity — ONE seam, two consumers:** `OutboundIdentityTypes` `[ServiceTypeCollection]` in `Fdw.Services.Credentials`, options today: `ClientCredentials` (wraps the existing `IOutboundCredentialService`; secret via `SecretManagerName`) and `ForwardedUser` (user-delegated, for API→ETL/Scheduler call-through). Future options, each a new `[TypeOption]` in a new backend package with **zero changes to any host or the registrar**: `AzureManagedIdentity`, `AwsIrsa`, `GcpWorkloadIdentity`. The registrar resolves `OutboundIdentityTypes.ByName(row.IdentityName)` — compare against the `NotFound` sentinel, fail loud. The **same collection** feeds `AddFdwDownstreamClient` (§2.3) — the *builder* design's separate `AccessTokenProviderTypes` is collapsed into this single seam.
 - **Timing:** `MonitoredHostRegistrar : IHostedService` starts on `IHostApplicationLifetime.ApplicationStarted` — after `InitializeAllAsync`, `VerifyAllAsync`, and gates, exactly when connections are resolvable, tokens obtainable, and `/health` is servable.
 - **Payload:** `{ host, hostArchetype, instanceId/slot, checks[] }` where `hostArchetype` is a compile-time constant shipped by the archetype package ("Api" | "Worker" | "Ui" | "AuthServer") — machine-readable host-shape metadata in the registry. `checks[]` = per-connection health-check descriptors derived from the configured `ConnectionTypes` instances + `HealthMonitorTypes` rows.
@@ -360,7 +360,7 @@ Neither owns the other: `PlatformServices` knows *what* is present; the archetyp
 **Ownership: the archetype package owns the total order, compiled in. Apps physically cannot reorder** — no hook ever receives `WebApplication`; the one middleware slot receives `IApplicationBuilder` at exactly one position. Each archetype's sequence is covered by an integration test asserting the middleware order.
 
 **Api/Worker pipeline (fixed):**
-`UseForwardedHeaders(ForwardedHeadersDefaults.PreviewChain)` → `UseStatusCodePages` (401/403 `{errorCode, messages[]}` envelope) → `UseFrameworkApplicationPipeline(multitenancy)` → **[WithAppMiddleware slot]** → `UseFdwFastEndpoints` — extended to carry `RoutePrefix "api/v1"`, `RoleClaimType "roles"`, the flattened-error `ResponseBuilder`, and `PermissionClaimsPreProcessor` as framework constants, so Reference.Api's raw-`UseFastEndpoints` deviation is *impossible to reproduce* → `UseSwaggerGen` → `MapRealTimeHubs` iff `RealTimeHubs.All()` non-empty → Scalar map + `"/" → /scalar` iff `WithScalar` → `MapFrameworkHealthEndpoint(applicationName)`. (Worker = same spine, minus multitenancy/CORS/doc-processor extras/Scalar theming. The api-vs-etl hub-map-order disagreement is resolved once, in the package.)
+`UseForwardedHeaders(ForwardedHeadersDefaults.PreviewChain)` → `UseStatusCodePages` (401/403 `{errorCode, messages[]}` envelope) → `UseFrameworkApplicationPipeline(multitenancy)` → **[WithAppMiddleware slot]** → `UseFdwFastEndpoints` — extended to carry `RoutePrefix "api/v1"`, `RoleClaimType "roles"`, the flattened-error `ResponseBuilder`, and `PermissionClaimsPreProcessor` as framework constants, so Reference.Api's raw-`UseFastEndpoints` deviation is *impossible to reproduce* → `MapRealTimeHubs` iff `RealTimeHubs.All()` non-empty → every `ApiReferencePages` page mapped + `"/" →` the ApiReference row's `RoutePath` (FDW-919: no `UseSwaggerGen`; each page reads a document endpoint that cuts the generated document per caller) → `MapFrameworkHealthEndpoint(applicationName)`. (Worker = same spine, minus multitenancy/CORS/doc-processor extras/Scalar theming. The api-vs-etl hub-map-order disagreement is resolved once, in the package.)
 
 **Ui pipeline (fixed):** `UseExceptionHandler("/Error")` (non-dev) → `UseSerilogRequestLogging` → `MapStaticAssets` → `UseForwardedHeaders` → `UseAuthentication` → `UseAuthorization` → `UseAntiforgery` → `MapRazorComponents<TApp>().AddAdditionalAssemblies(PageTypes.All()…).AddInteractiveServerRenderMode()` → `MapFdwBlazorAuthEndpoints()` → `MapFrameworkHealthEndpoint`.
 
@@ -410,7 +410,7 @@ There are **no** `Action<WebApplicationBuilder>` / `Action<WebApplication>` hook
 - **R5 — Generic `Action<WebApplicationBuilder>` / `Action<WebApplication>` escape hooks.** Program.cs with extra steps; the soup, verbatim. Only named, typed, position-fixed slots.
 - **R6 — Auto-detecting co-hosted issuance** (validation choosing `UseLocalServer()` iff the server option is present — including via the marker guard). A banned "I'll figure out which" guesser. `Mode` is explicit required config; missing ⇒ exit 1.
 - **R7 — `Fdw.Hosting.Scheduler` (or distinct Etl/Scheduler archetypes).** Worker is the shape; scheduler/etl are domains arriving via package refs + rows. A domain-named host package inevitably accretes domain values; archetype-per-app recreates the drift problem one level up.
-- **R8 — `WithHostedService<T>()` / `WithBackgroundExecutor` on the builders.** Hosted services and executors are domain services owned by `[ServiceTypeOption].RegisterRequiredServices` (doctrine #5). An app-side registration path would be a second, competing mechanism — the tournament's own double-registration contradiction proved the hazard.
+- **R8 — `WithHostedService<T>()` / `WithBackgroundExecutor` on the builders.** Hosted services and executors are domain services owned by `[Implementation].RegisterRequiredServices` (doctrine #5). An app-side registration path would be a second, competing mechanism — the tournament's own double-registration contradiction proved the hazard.
 - **R9 — `dotnet new` templates as the fix.** Templates copy code; copies drift — precisely today's disease (the copy-paste fossils prove the lineage). Templates may emit the ~10-line Program.cs; mechanism lives in packages.
 - **R10 — Auto-enabling self-registration / defaulting a registry URL when no row exists.** No rows = feature off with an Info log; substituting a default endpoint is a textbook forbidden fallback.
 - **R11 — Fatal self-registration boot gate.** Circular (the registry's own host must boot; every host self-registers) and conflates transient remote unavailability with missing configuration. Documented in the package so nobody "hardens" it later.

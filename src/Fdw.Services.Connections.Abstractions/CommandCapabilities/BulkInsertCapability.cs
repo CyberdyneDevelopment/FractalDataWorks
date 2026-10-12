@@ -23,7 +23,6 @@ public sealed class BulkInsertCapability : CommandCapabilityTypeBase
     /// </summary>
     public BulkInsertCapability()
         : base(
-            id: 4,
             name: "BulkInsert",
             displayName: "Bulk Insert",
             configurationFields:

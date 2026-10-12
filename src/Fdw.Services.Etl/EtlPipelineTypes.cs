@@ -34,14 +34,14 @@ namespace Fdw.Services.Etl;
 /// </summary>
 /// <remarks>
 /// This ServiceTypeCollection manages ETL pipeline ENGINE types (BatchCopy, Streaming).
-/// Engine types are services with behavior - they register factories and the two-level configuration
-/// typed-body chain (Pipeline → Etl → engine). Each engine type registers its own engine configuration
-/// body (e.g., BatchCopyPipelineConfiguration : IEtlPipelineTypedConfiguration) plus the ETL-kind header
-/// provider (EtlPipelineConfiguration, the "Etl" kind of PipelineConfiguration).
+/// Engine types are services with behavior: each registers its factory and the provider for its own
+/// implementation row (BatchCopyPipelineConfiguration over pipe.BatchCopyPipeline,
+/// StreamingPipelineConfiguration over pipe.StreamingPipeline), then registers that provider into the
+/// EtlPipeline domain under its own name.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>),
+    typeof(EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, IEtlPipelineImplementationConfiguration>, IEtlPipelineImplementationConfiguration>),
     typeof(IEtlPipelineType),
     typeof(EtlPipelineTypes),
     ServiceInterface = typeof(IEtlPipeline),
@@ -49,13 +49,13 @@ namespace Fdw.Services.Etl;
     ProviderInterface = typeof(IEtlPipelineProvider),
     ServiceCategory = "Pipeline")]
 public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
-    EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>, EtlPipelineConfiguration>,
-    IEtlPipelineType<IEtlPipeline, EtlPipelineConfiguration, IEtlPipelineFactory<IEtlPipeline, EtlPipelineConfiguration>>>
+    EtlPipelineTypeBase<IEtlPipeline, IEtlPipelineFactory<IEtlPipeline, IEtlPipelineImplementationConfiguration>, IEtlPipelineImplementationConfiguration>,
+    IEtlPipelineType<IEtlPipeline, IEtlPipelineImplementationConfiguration, IEtlPipelineFactory<IEtlPipeline, IEtlPipelineImplementationConfiguration>>>
 {
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     /// <summary>
     /// The connection this domain's operational rows live in. The host must set it; there is no default.
@@ -66,14 +66,14 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     /// is therefore known before any row is read. An operational store is a row INSIDE that store, so a
     /// default here would name a store the application merely hopes exists — the absence the
     /// no-fallbacks rule exists to catch, rather than the ConfigurationConnection case it resembles.
-    /// Not proven at registration: every host registers this domain as part of the platform sweep,
+    /// Not proven at registration: every host registers this domain as part of the platform bootstrap,
     /// including hosts that never touch its operational store, so refusing to start them would demand
     /// a value a correct host cannot supply. The sites that read it report it instead.
     /// </remarks>
     public static string? OperationalConnection { get; set; }
 
     // Configure(), Register() and Initialize() are source-generated.
-    // Each pipeline type (BatchCopy, Streaming) registers its own configuration via its ServiceTypeOption.
+    // Each pipeline type (BatchCopy, Streaming) registers its own configuration via its Implementation.
 
     /// <summary>
     /// Registers execution-inspection singletons consumed by test-mode endpoints.
@@ -82,7 +82,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     /// <remarks>
     /// Why: IPipelineExecutionInspector / IPipelineTestController are consumed by
     /// InspectEdgeEndpoint, StepExecutionEndpoint, and ResumeTestExecutionEndpoint at
-    /// FastEndpoints activation time. They have no ServiceTypeOption of their own — they
+    /// FastEndpoints activation time. They have no Implementation of their own — they
     /// are cross-cutting singletons that belong to the ETL execution subsystem, not to a
     /// pipeline type variant. RegisterAdditionalServices is the canonical home for
     /// non-variant singletons inside a ServiceTypeCollection.
@@ -134,40 +134,18 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static EtlPipelineTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(IEtlPipelineProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<EtlPipelineTypes>() ?? NullLogger<EtlPipelineTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-            // EtlPipeline configuration, registered once for the domain here rather
-            // than by every caller that needs it.
-
-            builder.Services.TryAddSingleton<EtlPipelineConfigurationProvider>(sp =>
-                new EtlPipelineConfigurationProvider(
-                    sp.GetService<ILogger<EtlPipelineConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        EtlPipelineTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<EtlPipelineConfiguration, EtlPipelineConfigurationCommand>>(
-                sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<EtlPipelineConfiguration>>(
-                sp => sp.GetRequiredService<EtlPipelineConfigurationProvider>());
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(EtlPipelineTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(EtlPipelineTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
             {
                 var provider = new EtlPipelineProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<EtlPipelineProvider>()
                     ?? NullLogger<EtlPipelineProvider>.Instance);
 
@@ -190,7 +168,7 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(EtlPipelineTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<PipelineConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<IPipelineImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -198,8 +176,22 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(EtlPipelineTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(EtlPipelineTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(EtlPipelineTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(EtlPipelineTypes), providerService);

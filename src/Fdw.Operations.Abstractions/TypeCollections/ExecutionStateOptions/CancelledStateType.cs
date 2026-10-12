@@ -15,7 +15,6 @@ public sealed class CancelledStateType : ExecutionStateTypeBase
     /// </summary>
     public CancelledStateType()
         : base(
-            id: 22,
             name: "Cancelled",
             displayName: "Cancelled",
             isTerminal: true,

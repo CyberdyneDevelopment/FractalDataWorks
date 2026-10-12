@@ -15,10 +15,12 @@ using Fdw.Operations.Data;
 using Fdw.Operations.Logging;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Notifications;
 using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Notifications.Configuration;
+using Fdw.Services.Notifications.Results;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +37,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private const string ContainerNameExecutionEvent = "ExecutionEvent";
 
     private readonly IDataGatewayProvider _dataGateways;
+    private readonly IAuthenticationContextAccessor _authContext;
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
     // would be a captive dependency. The provider is asked when a call is actually being made.
@@ -42,17 +45,18 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private readonly ILogger _logger;
     private readonly string? _dataStoreName;
     private readonly INotificationServiceProvider? _notificationProvider;
-    private readonly IServiceConfigurationProvider<NotificationRuleConfiguration>? _notificationRuleProvider;
+    private readonly INotificationRuleConfigurationProvider? _notificationRuleProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionTrackingService"/> class.
     /// </summary>
     /// <param name="dataGateways">The data gateway for persistence.</param>
     /// <param name="loggerFactory">Logger factory.</param>
+    /// <param name="authContext">Supplies the caller, whose tenant scopes every read and control (see <see cref="ExecutionTenantScope"/>).</param>
     /// <param name="dataStoreName">
     /// The store the tracker reads and writes, or null when the host has not named one. Null is
     /// accepted rather than rejected here because every host registers the Operations option as part
-    /// of the platform sweep, including hosts that never track an execution; refusing construction
+    /// of the platform bootstrap, including hosts that never track an execution; refusing construction
     /// would stop those hosts booting. Each operation reports it instead.
     /// </param>
     /// <param name="notificationProvider">Optional notification service provider. When null, notification emission is skipped.</param>
@@ -60,13 +64,15 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     public ExecutionTrackingService(
         IDataGatewayProvider dataGateways,
         ILoggerFactory loggerFactory,
+        IAuthenticationContextAccessor authContext,
         string? dataStoreName,
         INotificationServiceProvider? notificationProvider = null,
-        IServiceConfigurationProvider<NotificationRuleConfiguration>? notificationRuleProvider = null)
+        INotificationRuleConfigurationProvider? notificationRuleProvider = null)
     {
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = loggerFactory?.CreateLogger<ExecutionTrackingService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
+        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
         _dataStoreName = dataStoreName;
         _notificationProvider = notificationProvider;
         _notificationRuleProvider = notificationRuleProvider;
@@ -90,6 +96,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     public async Task<IGenericResult<IExecutionItem>> CreateItem(
         IExecutionItemType itemType,
         string name,
+        Guid? tenantId,
         Guid? parentId = null,
         string? correlationId = null,
         string? triggerSource = null,
@@ -113,9 +120,15 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             return parentValidation.ToNewResult<IExecutionItem>();
         }
 
-        var rootId = parentValidation.Value;
+        var (rootId, parentTenantId) = parentValidation.Value;
 
-        var poco = ExecutionItemRecord.CreatePoco(itemType, name, parentId, rootId, correlationId, triggerSource, parameters);
+        var tenantResult = ResolveTenant(name, tenantId, parentId, parentTenantId);
+        if (!tenantResult.IsSuccess)
+        {
+            return tenantResult.ToNewResult<IExecutionItem>();
+        }
+
+        var poco = ExecutionItemRecord.CreatePoco(itemType, name, parentId, rootId, tenantResult.Value, correlationId, triggerSource, parameters);
 
         if (!parentId.HasValue)
         {
@@ -319,6 +332,14 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!StoreIsNamed)
             return GenericResult<IReadOnlyList<IExecutionEvent>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
+        // Why the item is read first: events carry no tenant of their own; they are the item's, so an
+        // item the caller does not reach has no events for them -- the same answer as an unknown id.
+        var itemResult = await GetItemInternal(executionItemId, cancellationToken).ConfigureAwait(false);
+        if (!itemResult.IsSuccess)
+        {
+            return GenericResult<IReadOnlyList<IExecutionEvent>>.Success(new List<IExecutionEvent>());
+        }
+
         var queryCommand = new QueryCommand<ExecutionEvent>
         {
             Filter = new FilterExpression
@@ -366,17 +387,18 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!StoreIsNamed)
             return GenericResult<IReadOnlyList<IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
+        var scope = CallerScope();
+        if (scope.ReachesNothing)
+            return GenericResult<IReadOnlyList<IExecutionItem>>.Success(new List<IExecutionItem>());
+
         var queryCommand = new QueryCommand<ExecutionItem>
         {
-            Filter = new FilterExpression
+            Filter = Scoped(new FilterCondition
             {
-                Root = new FilterCondition
-                {
-                    PropertyName = "ParentExecutionItemId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = parentId
-                }
-            },
+                PropertyName = "ParentExecutionItemId",
+                Operator = FilterOperators.ByName("Equal"),
+                Value = parentId
+            }, scope),
             Ordering = new OrderingExpression
             {
                 OrderedFields =
@@ -413,17 +435,18 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!StoreIsNamed)
             return GenericResult<IReadOnlyList<IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
+        var scope = CallerScope();
+        if (scope.ReachesNothing)
+            return GenericResult<IReadOnlyList<IExecutionItem>>.Success(new List<IExecutionItem>());
+
         var queryCommand = new QueryCommand<ExecutionItem>
         {
-            Filter = new FilterExpression
+            Filter = Scoped(new FilterCondition
             {
-                Root = new FilterCondition
-                {
-                    PropertyName = "CorrelationId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = correlationId
-                }
-            },
+                PropertyName = "CorrelationId",
+                Operator = FilterOperators.ByName("Equal"),
+                Value = correlationId
+            }, scope),
             Ordering = new OrderingExpression
             {
                 OrderedFields =
@@ -473,7 +496,14 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         if (!StoreIsNamed)
             return GenericResult<IPagedResponse<IExecutionItem>>.Failure(OperationsLog.OperationalConnectionNotSet(_logger));
 
-        var filter = BuildListFilter(itemType, state, correlationId);
+        var scope = CallerScope();
+        if (scope.ReachesNothing)
+        {
+            return GenericResult<IPagedResponse<IExecutionItem>>.Success(
+                new PagedResponse<IExecutionItem>(new List<IExecutionItem>(), page, pageSize, 0));
+        }
+
+        var filter = BuildListFilter(itemType, state, correlationId, scope);
 
         var queryCommand = new QueryCommand<ExecutionItem>
         {
@@ -515,9 +545,13 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     private static FilterExpression? BuildListFilter(
         IExecutionItemType? itemType,
         IExecutionStateType? state,
-        string? correlationId)
+        string? correlationId,
+        ExecutionTenantScope scope)
     {
         var conditions = new List<FilterCondition>();
+
+        if (TenantCondition(scope) is { } tenant)
+            conditions.Add(tenant);
 
         if (itemType != null)
         {
@@ -565,7 +599,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         };
     }
 
-    private async Task<IGenericResult<Guid>> ValidateParent(
+    private async Task<IGenericResult<(Guid RootId, Guid? ParentTenantId)>> ValidateParent(
         IExecutionItemType itemType,
         string name,
         Guid? parentId,
@@ -573,13 +607,14 @@ public sealed class ExecutionTrackingService : IExecutionTracker
     {
         if (!parentId.HasValue)
         {
-            return GenericResult<Guid>.Success(Guid.NewGuid());
+            return GenericResult<(Guid, Guid?)>.Success((Guid.NewGuid(), null));
         }
 
+        // Scoped like every other read: a parent the caller does not reach is a parent not found.
         var domainResult = await GetItemInternal(parentId.Value, cancellationToken).ConfigureAwait(false);
         if (!domainResult.IsSuccess)
         {
-            return GenericResult<Guid>.Failure(
+            return GenericResult<(Guid, Guid?)>.Failure(
                 OperationsLog.ParentExecutionItemNotFound(_logger, parentId.Value, name));
         }
 
@@ -588,11 +623,58 @@ public sealed class ExecutionTrackingService : IExecutionTracker
 
         if (!parentType.CanContain(itemType))
         {
-            return GenericResult<Guid>.Failure(
+            return GenericResult<(Guid, Guid?)>.Failure(
                 OperationsLog.InvalidContainment(_logger, parentType.Name, itemType.Name));
         }
 
-        return GenericResult<Guid>.Success(parentItem.RootExecutionItemId);
+        return GenericResult<(Guid, Guid?)>.Success((parentItem.RootExecutionItemId, parentItem.TenantId));
+    }
+
+    // The tenant a new item belongs to. A child is its parent's; a root states its own, and a caller
+    // confined to one tenant may state only that one. Nothing is assumed when the tenant is missing.
+    private IGenericResult<Guid> ResolveTenant(string name, Guid? tenantId, Guid? parentId, Guid? parentTenantId)
+    {
+        if (parentId is { } parent && parentTenantId is { } inherited)
+        {
+            return tenantId is { } stated && stated != inherited
+                ? GenericResult<Guid>.Failure(OperationsLog.ExecutionTenantDiffersFromParent(_logger, name, stated, parent, inherited))
+                : GenericResult<Guid>.Success(inherited);
+        }
+
+        if (tenantId is not { } rootTenant)
+            return GenericResult<Guid>.Failure(OperationsLog.ExecutionTenantRequired(_logger, name));
+
+        return CallerScope().Reaches(rootTenant)
+            ? GenericResult<Guid>.Success(rootTenant)
+            : GenericResult<Guid>.Failure(OperationsLog.ExecutionTenantNotCallers(_logger, name, rootTenant));
+    }
+
+    private ExecutionTenantScope CallerScope() => ExecutionTenantScope.For(_authContext.Current);
+
+    // The tenant term every list read carries, or none when the caller reaches every tenant.
+    private static FilterCondition? TenantCondition(ExecutionTenantScope scope)
+        => scope.ReachesAll
+            ? null
+            : new FilterCondition
+            {
+                PropertyName = "TenantId",
+                Operator = FilterOperators.ByName("Equal"),
+                Value = scope.TenantId
+            };
+
+    private static FilterExpression Scoped(FilterCondition condition, ExecutionTenantScope scope)
+    {
+        if (TenantCondition(scope) is not { } tenant)
+            return new FilterExpression { Root = condition };
+
+        return new FilterExpression
+        {
+            Root = new FilterGroup
+            {
+                Operator = LogicalOperator.And,
+                Nodes = [condition, tenant]
+            }
+        };
     }
 
     private async Task<IGenericResult> PersistNewItem(
@@ -702,8 +784,10 @@ public sealed class ExecutionTrackingService : IExecutionTracker
             return result.ToNewResult<ExecutionItem>();
         }
 
+        // An item of a tenant the caller does not reach answers exactly as one that does not exist, so no
+        // read, transition, event or completion can touch another tenant's execution.
         var item = result.Value?.FirstOrDefault();
-        if (item == null)
+        if (item == null || !CallerScope().Reaches(item.TenantId))
         {
             return GenericResult<ExecutionItem>.Failure(
                 OperationsLog.ExecutionItemNotFound(_logger, executionItemId));
@@ -785,26 +869,11 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                     continue;
                 }
 
-                if (!RuleMatchesExecution(rule, record))
+                if (!NotificationRuleScope.Covers(rule, record.RootId, ParameterGuid(record, "PipelineId"), ParameterGuid(record, "ScheduleId")))
                 {
                     continue;
                 }
 
-                var svcResult = await _notificationProvider.Get(rule.NotificationServiceName, cancellationToken).ConfigureAwait(false);
-                if (!svcResult.IsSuccess || svcResult.Value is not INotificationService svc)
-                {
-                    OperationsLog.NotificationChannelUnresolved(_logger, rule.Name, rule.NotificationServiceName);
-                    continue;
-                }
-
-                var priority = MapSeverityToPriority(rule.Severity);
-                if (priority == NotificationPriorities.NotFound)
-                {
-                    OperationsLog.NotificationSeverityInvalid(_logger, rule.Name, rule.Severity);
-                    continue;
-                }
-
-                var message = BuildNotificationMessage(rule, record, targetState);
                 var metadata = new Dictionary<string, object?>(StringComparer.Ordinal)
                 {
                     ["ExecutionItemId"] = item.Id,
@@ -815,24 +884,21 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                     ["ResultMessage"] = item.ResultMessage
                 };
 
-                var request = new NotificationRequest(
-                    channelName: rule.NotificationServiceType,
-                    recipients: [],
-                    subject: $"[{rule.Severity}] {item.Name} {targetState.Name}",
-                    message: message,
-                    priority: priority,
-                    metadata: metadata,
-                    correlationId: item.CorrelationId);
+                var delivered = await NotificationRuleDelivery.Deliver(
+                    _notificationProvider,
+                    rule,
+                    new RuleNotification
+                    {
+                        RuleName = rule.Name,
+                        Subject = $"[{rule.Severity}] {item.Name} {targetState.Name}",
+                        Message = BuildNotificationMessage(rule, record, targetState),
+                        Metadata = metadata,
+                        CorrelationId = item.CorrelationId
+                    },
+                    _logger,
+                    cancellationToken).ConfigureAwait(false);
 
-                var sendResult = await svc.Send(request, cancellationToken).ConfigureAwait(false);
-                if (sendResult.IsSuccess)
-                {
-                    OperationsLog.NotificationSent(_logger, item.Id, rule.Name, rule.NotificationServiceName);
-                }
-                else
-                {
-                    OperationsLog.NotificationSendFailed(_logger, item.Id, rule.Name, rule.NotificationServiceName);
-                }
+                LogDelivery(item.Id, rule, delivered);
             }
         }
         catch (OperationCanceledException ex)
@@ -845,88 +911,38 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         }
     }
 
-    /// <summary>
-    /// Maps <see cref="NotificationRuleConfiguration.Severity"/> vocabulary to the priority
-    /// TypeCollection using an explicit, case-insensitive total mapping. Returns
-    /// <see cref="NotificationPriorities.NotFound"/> for unrecognised strings so the caller
-    /// can fail loud rather than silently defaulting.
-    /// </summary>
-    /// <remarks>
-    /// Why an explicit map instead of NotificationPriorities.ByName(severity): the Severity
-    /// field uses log-level vocabulary ("Info", "Warning", "Error") while the priority
-    /// TypeCollection uses delivery-urgency vocabulary ("Low", "Normal", "High", "Critical").
-    /// A 1-to-1 name match would make the default severity "Info" always unmapped, breaking
-    /// out-of-the-box behaviour. The deliberate map below gives "Info" → Normal so that a
-    /// newly created rule emits without any extra configuration.
-    /// </remarks>
-    private static INotificationPriority MapSeverityToPriority(string severity)
+    private void LogDelivery(Guid itemId, INotificationRuleImplementationConfiguration rule, IGenericResult delivered)
     {
-        if (string.Equals(severity, "Low", StringComparison.OrdinalIgnoreCase))
+        if (delivered.IsSuccess)
         {
-            return NotificationPriorities.ByName("Low");
+            OperationsLog.NotificationSent(_logger, itemId, rule.Name, rule.NotificationServiceName);
         }
-
-        if (string.Equals(severity, "Info", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "Information", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "Normal", StringComparison.OrdinalIgnoreCase))
+        else if (delivered.Code == NotificationResultCodes.ByName("ChannelNotFound"))
         {
-            return NotificationPriorities.ByName("Normal");
+            OperationsLog.NotificationChannelUnresolved(_logger, rule.Name, rule.NotificationServiceName);
         }
-
-        if (string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "Warn", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "High", StringComparison.OrdinalIgnoreCase))
+        else if (delivered.Code == NotificationResultCodes.ByName("RuleSeverityInvalid"))
         {
-            return NotificationPriorities.ByName("High");
+            OperationsLog.NotificationSeverityInvalid(_logger, rule.Name, rule.Severity);
         }
-
-        if (string.Equals(severity, "Error", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "Critical", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "Fatal", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(severity, "Severe", StringComparison.OrdinalIgnoreCase))
+        else
         {
-            return NotificationPriorities.ByName("Critical");
+            OperationsLog.NotificationSendFailed(_logger, itemId, rule.Name, rule.NotificationServiceName);
         }
-
-        return NotificationPriorities.NotFound;
     }
 
-    private static bool RuleMatchesExecution(NotificationRuleConfiguration rule, ExecutionItemRecord record)
+    private static Guid? ParameterGuid(ExecutionItemRecord record, string parameterKey)
     {
-        // Catch-all rule: no scope constraints.
-        if (rule.PipelineId is null && rule.WorkflowId is null && rule.ScheduleId is null)
-        {
-            return true;
-        }
-
-        // Match by workflow (root execution) ID.
-        if (rule.WorkflowId.HasValue && rule.WorkflowId.Value == record.RootId)
-        {
-            return true;
-        }
-
-        // Match by pipeline or schedule ID from execution parameters.
-        return MatchesParameterGuid(record, "PipelineId", rule.PipelineId)
-            || MatchesParameterGuid(record, "ScheduleId", rule.ScheduleId);
-    }
-
-    private static bool MatchesParameterGuid(ExecutionItemRecord record, string parameterKey, Guid? ruleValue)
-    {
-        if (!ruleValue.HasValue)
-        {
-            return false;
-        }
-
         if (!record.Parameters.TryGetValue(parameterKey, out var paramObj) || paramObj is null)
         {
-            return false;
+            return null;
         }
 
-        return Guid.TryParse(paramObj.ToString(), out var parsed) && parsed == ruleValue.Value;
+        return Guid.TryParse(paramObj.ToString(), out var parsed) ? parsed : null;
     }
 
     private static string BuildNotificationMessage(
-        NotificationRuleConfiguration rule,
+        INotificationRuleImplementationConfiguration rule,
         ExecutionItemRecord record,
         IExecutionStateType targetState)
     {

@@ -33,7 +33,6 @@ public sealed class MoveTypeToProjectTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear flow: resolve target, collect documents, compute references, move.
     public override async Task<IGenericResult<IRoslynCommandResult>> Translate(
         MoveTypeToProjectCommand command,
         Solution solution,
@@ -168,7 +167,6 @@ public sealed class MoveTypeToProjectTranslator
                 move.PathChanges,
                 data));
     }
-#pragma warning restore MA0051
 
     private async Task<List<DocumentInProject>> CollectDocuments(
         Solution solution,

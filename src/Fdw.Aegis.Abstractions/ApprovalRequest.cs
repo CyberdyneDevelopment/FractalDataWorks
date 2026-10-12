@@ -25,7 +25,7 @@ public sealed class ApprovalRequest
 
     /// <summary>
     /// Gets or sets the name of the declared connection this request targets (a
-    /// <c>ConfigurationSchema.Commands</c> entry's <c>ConnectionName</c>).
+    /// declared AegisCommand implementation's <c>ConnectionName</c>).
     /// </summary>
     public string ConnectionName { get; set; } = string.Empty;
 

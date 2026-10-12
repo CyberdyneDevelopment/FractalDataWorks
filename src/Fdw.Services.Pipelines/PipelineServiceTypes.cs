@@ -43,7 +43,7 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     /// <summary>
     /// The connection this domain's operational rows live in. The host must set it; there is no default.
@@ -54,7 +54,7 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
     /// is therefore known before any row is read. An operational store is a row INSIDE that store, so a
     /// default here would name a store the application merely hopes exists — the absence the
     /// no-fallbacks rule exists to catch, rather than the ConfigurationConnection case it resembles.
-    /// Not proven at registration: every host registers this domain as part of the platform sweep,
+    /// Not proven at registration: every host registers this domain as part of the platform bootstrap,
     /// including hosts that never touch its operational store, so refusing to start them would demand
     /// a value a correct host cannot supply. The sites that read it report it instead.
     /// </remarks>
@@ -65,37 +65,27 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
     /// </summary>
     static PipelineServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         Registration((builder, loggerFactory) =>
         {
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
             builder.Services.TryAddSingleton<IPipelineConfigurationProvider>(sp =>
                 new PipelineServiceConfigurationProvider(
-                    sp.GetService<ILogger<PipelineServiceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<ILogger<PipelineServiceConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), PipelineServiceTypes.ConfigurationConnection, "pipe", "Pipeline"));
             builder.Services.TryAddSingleton<PipelineServiceConfigurationProvider>(
                 sp => (PipelineServiceConfigurationProvider)sp.GetRequiredService<IPipelineConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>(
-                sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<PipelineConfiguration>>(
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<PipelineServiceConfigurationProvider>());
 
             // Published under the closed generic as well as the domain interface: a consumer asking
-            // for IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>
+            // for IDomainServiceProvider<IGenericService, IPipelineImplementationConfiguration>
             // and one asking for IPipelineServiceProvider must get the SAME instance, or the second
             // gets a provider whose factory registrations the first one made.
-            builder.Services.AddScoped<IPlatformServiceProvider<IGenericService, IPipelineImplementationConfiguration>>(
+            builder.Services.AddScoped<IDomainServiceProvider<IGenericService, IPipelineImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IPipelineServiceProvider>());
 
             builder.Services.AddScoped<IPipelineServiceProvider>(sp =>
             {
                 var provider = new PipelineServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<PipelineServiceProvider>()
                     ?? NullLogger<PipelineServiceProvider>.Instance);
 
@@ -103,7 +93,8 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
                     ?? NullLogger<PipelineServiceTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(PipelineServiceTypes), provider.GetType().Name);
 
-                if (sp.GetService<IPipelineConfigurationProvider>() is { } cfgProvider)
+                var cfgProvider = sp.GetService<IPipelineConfigurationProvider>();
+                if (cfgProvider is not null)
                 {
                     var domainResult = provider.Register(cfgProvider);
                     if (domainResult.IsSuccess)
@@ -124,6 +115,13 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
 
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

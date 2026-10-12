@@ -10,7 +10,7 @@ namespace $namespace$.$serviceName$.$implName$;
 /// <summary>
 /// ServiceType definition for $implName$ $serviceName$ services.
 /// </summary>
-[ServiceTypeOption]
+[Implementation]
 public sealed class $implName$$serviceName$Type
     : $serviceName$TypeBase<I$serviceName$Service, I$serviceName$Factory, $implName$$serviceName$Configuration>
 {

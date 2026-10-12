@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
 using Fdw.Services.TokenManagers.Logging;
@@ -33,6 +34,7 @@ namespace Fdw.Services.TokenManagers;
 /// </remarks>
 internal sealed class JwtIssuanceResolver : IDisposable
 {
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly IServiceProvider _services;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly ILogger<JwtIssuanceResolver> _logger;
@@ -42,10 +44,12 @@ internal sealed class JwtIssuanceResolver : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="JwtIssuanceResolver"/> class.</summary>
     /// <param name="services">The container the providers come from.</param>
+    /// <param name="authContextAccessor">Establishes context for platform issuer configuration reads.</param>
     /// <param name="logger">The logger.</param>
-    public JwtIssuanceResolver(IServiceProvider services, ILogger<JwtIssuanceResolver>? logger = null)
+    public JwtIssuanceResolver(IServiceProvider services, IAuthenticationContextAccessor authContextAccessor, ILogger<JwtIssuanceResolver>? logger = null)
     {
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<JwtIssuanceResolver>.Instance;
     }
 
@@ -91,8 +95,12 @@ internal sealed class JwtIssuanceResolver : IDisposable
             if (_issuer is not null && _credentials is not null)
                 return GenericResult.Success();
 
+            IssuerLog.ResolvingIssuance(_logger);
+
+            using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
+
             var headers = await _services
-                .GetRequiredService<TokenManagerConfigurationProvider>()
+                .GetRequiredService<ITokenManagerConfigurationProvider>()
                 .Get(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -100,30 +108,21 @@ internal sealed class JwtIssuanceResolver : IDisposable
                 return GenericResult.Failure(
                     IssuerLog.HeadersUnreadable(_logger, headers.CurrentMessage));
 
-            if (Select(rows) is not { } header)
+            if (Select(rows) is not { } body)
                 return GenericResult.Failure(IssuerLog.NoJwtTokenManager(
                     _logger,
                     rows.Count == 0
                         ? "no rows"
-                        : string.Join(", ", rows.Select(r => r.ServiceOptionType ?? "(none)"))));
+                        : string.Join(", ", rows.Select(r => r.GetType().Name))));
 
-            if (header.SecretManagerName is not { Length: > 0 } secretManager
-                || header.SecretKeyName is not { Length: > 0 } secretKey)
-                return GenericResult.Failure(IssuerLog.SigningKeyNotLocatable(_logger, header.Name));
-
-            var typed = await _services
-                .GetRequiredService<JwtTokenManagerConfigurationProvider>()
-                .Get(header.Id, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (typed.IsFailure || typed.Value is not JwtTokenManagerConfiguration body)
-                return GenericResult.Failure(
-                    IssuerLog.TypedBodyUnreadable(_logger, header.Name, typed.CurrentMessage));
+            if (body.SecretManagerName is not { Length: > 0 } secretManager
+                || body.SecretKeyName is not { Length: > 0 } secretKey)
+                return GenericResult.Failure(IssuerLog.SigningKeyNotLocatable(_logger, body.Name));
 
             if (body.Issuer is not { Length: > 0 } issuer)
-                return GenericResult.Failure(IssuerLog.IssuerMissing(_logger, header.Name));
+                return GenericResult.Failure(IssuerLog.IssuerMissing(_logger, body.Name));
 
-            var lifetime = Lifetime(body.AccessTokenLifetime, header.Name);
+            var lifetime = Lifetime(body.AccessTokenLifetime, body.Name);
             if (lifetime.IsFailure)
                 return lifetime;
 
@@ -131,7 +130,8 @@ internal sealed class JwtIssuanceResolver : IDisposable
                 _services.GetRequiredService<ISecretManagerProvider>(),
                 secretManager,
                 secretKey,
-                TimeSpan.FromMinutes(10),
+                TokenManagerTypes.SigningCredentialCacheLifetime,
+                _authContextAccessor,
                 _services.GetService<ILogger<SecretManagerSigningCredentialProvider>>());
 
             _issuer = new JwtTokenIssuer(
@@ -141,7 +141,7 @@ internal sealed class JwtIssuanceResolver : IDisposable
 
             _credentials = credentials;
 
-            IssuerLog.IssuanceResolved(_logger, header.Name, issuer);
+            IssuerLog.IssuanceResolved(_logger, body.Name, issuer);
             return GenericResult.Success();
         }
         finally
@@ -152,9 +152,8 @@ internal sealed class JwtIssuanceResolver : IDisposable
 
     // Matched on the option type rather than a configured name: the name is a label someone chose,
     // and which option a row declares is what decides whether this code can serve it.
-    private static TokenManagerConfiguration? Select(IReadOnlyList<TokenManagerConfiguration> rows) =>
-        rows.FirstOrDefault(row =>
-            string.Equals(row.ServiceOptionType, "Jwt", StringComparison.OrdinalIgnoreCase));
+    private static JwtTokenManagerConfiguration? Select(IReadOnlyList<ITokenManagerImplementationConfiguration> rows) =>
+        rows.OfType<JwtTokenManagerConfiguration>().FirstOrDefault();
 
     private IGenericResult<TimeSpan> Lifetime(string? configured, string name)
     {

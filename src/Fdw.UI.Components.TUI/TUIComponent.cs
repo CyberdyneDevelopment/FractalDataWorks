@@ -61,7 +61,7 @@ public abstract class TUIComponent<TSelf, TModel> : ComponentBase<TSelf, TModel>
         IAnsiConsole console,
         string promptText,
         IEnumerable<TOption> options)
-        where TOption : class, ITypeOption
+        where TOption : class, ITypeOption<int>
     {
         return Prompts.TypeCollectionPromptHelper.Prompt(
             console,

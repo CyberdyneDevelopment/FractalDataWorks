@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "CentralEuropean")]
 public sealed class CentralEuropeanTimeZoneType : TimeZoneTypeBase
 {
-    public CentralEuropeanTimeZoneType() : base(9, "CentralEuropean", "Central European Standard Time") { }
+    public CentralEuropeanTimeZoneType() : base("CentralEuropean", "Central European Standard Time") { }
 }

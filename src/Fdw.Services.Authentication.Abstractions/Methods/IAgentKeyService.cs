@@ -43,6 +43,21 @@ public interface IAgentKeyService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reports whether a presented raw credential is an agent key, by the format this service mints.
+    /// </summary>
+    /// <remarks>
+    /// The format — the configured credential prefix followed by <c>agent_</c> — belongs to the service
+    /// that mints the key, so the authentication handler asks here instead of knowing the prefix itself.
+    /// A failure means the format could not be read; the caller refuses the credential.
+    /// </remarks>
+    /// <param name="rawKey">The raw credential presented by the caller.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>True when the credential has the agent-key format; false when it does not.</returns>
+    Task<IGenericResult<bool>> IsAgentKey(
+        string rawKey,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns all active agent keys for the specified user (summary view only — no raw values).
     /// </summary>
     /// <param name="userId">The ID of the user whose keys to list.</param>

@@ -43,7 +43,8 @@ public abstract class CancelExecutionEndpointBase : Endpoint<ExecutionStateReque
 #if DEVELOP
         AllowAnonymous();
 #else
-        Policies("pipelines:read");
+        // Why execute, not read: stopping or resuming a run changes it; a read permission never may.
+        Policies("pipelines:execute");
 #endif
         Summary(s =>
         {
@@ -89,9 +90,7 @@ public abstract class CancelExecutionEndpointBase : Endpoint<ExecutionStateReque
         {
             var errorMessage = transitionResult.CurrentMessage ?? "Failed to cancel execution";
             OnCancelFailed(req.Id, errorMessage);
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to cancel execution", Details = errorMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to cancel execution", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

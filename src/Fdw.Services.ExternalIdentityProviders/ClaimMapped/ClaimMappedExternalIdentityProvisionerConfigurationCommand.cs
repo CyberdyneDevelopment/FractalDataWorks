@@ -9,11 +9,11 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 /// <see cref="ClaimMappedExternalIdentityProvisionerConfiguration"/> (the ClaimMapped typed-body
 /// record in <c>sec.ClaimMappedExternalIdentityProvisioner</c>).
 /// </summary>
-[TypeOption(typeof(ConfigurationCommands), "ClaimMappedExternalIdentityProvisioner")]
+[TypeOption(typeof(ConfigurationCommands), "ClaimMappedExternalIdentityProvisionerConfiguration")]
 public sealed class ClaimMappedExternalIdentityProvisionerConfigurationCommand
     : ConfigurationCommandBase<ClaimMappedExternalIdentityProvisionerConfiguration>
 {
     /// <inheritdoc/>
     public ClaimMappedExternalIdentityProvisionerConfigurationCommand()
-        : base("ClaimMappedExternalIdentityProvisioner") { }
+        : base("ClaimMappedExternalIdentityProvisionerConfiguration") { }
 }

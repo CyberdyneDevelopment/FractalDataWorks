@@ -7,7 +7,7 @@ namespace Fdw.Services.Logging.Abstractions;
 /// </summary>
 /// <remarks>
 /// Implementations add their own settings — sinks, output templates, per-source overrides — and the
-/// domain configuration holds one of these, named by its <c>ServiceOptionType</c>.
+/// domain configuration holds one of these, named by its <c>Implementation</c>.
 /// </remarks>
 public interface ILoggingImplementationConfiguration : IImplementationConfiguration
 {

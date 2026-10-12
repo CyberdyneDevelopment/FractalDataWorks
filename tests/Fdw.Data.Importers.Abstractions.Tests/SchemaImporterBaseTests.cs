@@ -7,15 +7,6 @@ namespace Fdw.Data.Importers.Abstractions.Tests;
 
 public class SchemaImporterBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        var sut = new TestSchemaImporter();
-
-        sut.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P2")]
@@ -124,8 +115,8 @@ public class SchemaImporterBaseTests
     [Trait("Category", "DataIntegrity")]
     public async Task ImportReturnsDiscoveredDataStoreConfiguration()
     {
-        var discovered = new DataStoreConfiguration { Name = "Discovered" };
-        var sut = new TestSchemaImporter { ImportResult = GenericResult<DataStoreConfiguration>.Success(discovered) };
+        var discovered = new DataStoreImplementationConfiguration { Name = "Discovered" };
+        var sut = new TestSchemaImporter { ImportResult = GenericResult<DataStoreImplementationConfiguration>.Success(discovered) };
 
         var result = await sut.Import("test-source", cancellationToken: TestContext.Current.CancellationToken);
 
@@ -140,7 +131,7 @@ public class SchemaImporterBaseTests
     {
         var sut = new TestSchemaImporter
         {
-            ImportResult = GenericResult<DataStoreConfiguration>.Failure(
+            ImportResult = GenericResult<DataStoreImplementationConfiguration>.Failure(
                 SchemaImporters.Abstractions.Results.SchemaImporterResultCodes.ByName("ImportFailed"))
         };
 
@@ -156,7 +147,7 @@ public class SchemaImporterBaseTests
     [Trait("Category", "DataIntegrity")]
     public async Task ImportPassesSource()
     {
-        var sut = new TestSchemaImporter { ImportResult = GenericResult<DataStoreConfiguration>.Success(new DataStoreConfiguration()) };
+        var sut = new TestSchemaImporter { ImportResult = GenericResult<DataStoreImplementationConfiguration>.Success(new DataStoreImplementationConfiguration()) };
 
         await sut.Import("my-source", cancellationToken: TestContext.Current.CancellationToken);
 
@@ -170,21 +161,21 @@ public class SchemaImporterBaseTests
 
     private sealed class TestSchemaImporter : SchemaImporterBase<TestConfig>
     {
-        public IGenericResult<DataStoreConfiguration>? ImportResult { get; set; }
+        public IGenericResult<DataStoreImplementationConfiguration>? ImportResult { get; set; }
         public string? LastImportSource { get; private set; }
 
         public TestSchemaImporter()
-            : base(1, "TestImporter", "Test schema importer", "SqlServer")
+            : base("TestImporter", "Test schema importer", "SqlServer")
         {
         }
 
-        public override Task<IGenericResult<DataStoreConfiguration>> Import(
+        public override Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
             string source,
             SchemaImporterOptions? options = null,
             CancellationToken cancellationToken = default)
         {
             LastImportSource = source;
-            return Task.FromResult(ImportResult ?? GenericResult<DataStoreConfiguration>.Failure());
+            return Task.FromResult(ImportResult ?? GenericResult<DataStoreImplementationConfiguration>.Failure());
         }
     }
 }

@@ -15,7 +15,7 @@ The canonical reference implementation of an FDW scheduler server lives in the *
 
 ## Trigger Types
 
-The shipped trigger types are registered as `[ServiceTypeOption(typeof(TriggerTypes), "...")]` instances. See the `scheduling` skill bundle for the Cron / Interval / Once / Manual specifics.
+The shipped trigger types are registered as `[Implementation(typeof(TriggerTypes), "...")]` instances. See the `scheduling` skill bundle for the Cron / Interval / Once / Manual specifics.
 
 ## Inter-Service Communication
 

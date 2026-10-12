@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 
 namespace Fdw.Services.Pipelines.Clients.Abstractions;
@@ -8,9 +9,16 @@ namespace Fdw.Services.Pipelines.Clients.Abstractions;
 public class TriggerPipelineRequest
 {
     /// <summary>
-    /// Gets or sets the name of the item (pipeline) to execute.
+    /// Gets or sets the name of the item (pipeline) to execute. Leave it empty when <see cref="Id"/> names the
+    /// pipeline; a request names it one way, not both.
     /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the logical id of the pipeline to execute (FDW-1088). A schedule relays the id it stores, so
+    /// the run resolves exactly that pipeline and never another tenant's of the same name.
+    /// </summary>
+    public Guid? Id { get; set; }
 
     /// <summary>
     /// Gets or sets the trigger source identifier.
@@ -35,4 +43,17 @@ public class TriggerPipelineRequest
     /// which spans every tenant's schedules).
     /// </remarks>
     public Guid? TenantId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the roles the run acts with (FDW-1161), by name. Required: a run names at least one, only roles the caller holds
+    /// in the tenant it acts in, and the roles must be able to reach everything the pipeline reads and writes. A schedule relays the
+    /// roles its creator chose; a pipeline carries none of its own.
+    /// </summary>
+    public IList<string>? RunRoles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the run parameter values (contract item 3): each name must be a parameter the pipeline declares, each
+    /// required parameter must be given, and each value is parsed by the declared type.
+    /// </summary>
+    public IList<PipelineParameterValue>? Parameters { get; set; }
 }

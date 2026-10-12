@@ -9,13 +9,13 @@ public class ExpressionBuilderTests
 {
     private readonly ExpressionBuilder _sut = new();
 
-    private static IDataSchema CreateSchema(params (string Name, Type DataType)[] fields)
+    private static DataSchema CreateSchema(params (string Name, Type DataType)[] fields)
     {
         var schemaFields = fields.Select((f, i) => new SchemaField(f.Name, f.DataType, i)).ToList();
         return DataSchema.FromFields(schemaFields);
     }
 
-    private static IDataRow CreateRow(IDataSchema schema, params object?[] values)
+    private static DataRow CreateRow(IDataSchema schema, params object?[] values)
     {
         return new DataRow(schema, values);
     }

@@ -29,7 +29,6 @@ public sealed class FileDiscovery : DiscoveryMethodBase
     /// <summary>Initializes a new instance of the <see cref="FileDiscovery"/> class.</summary>
     public FileDiscovery()
         : base(
-            id: 2,
             name: "FromFile",
             displayName: "File Discovery",
             description: "Imports container definitions from a file",

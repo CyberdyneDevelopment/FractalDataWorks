@@ -14,7 +14,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaNumberDoubleConverter()
     : DataTypeConverterBase(
-        id: 4,
         name: "NumberDouble",
         sourceType: "number+double",
         targetClrType: typeof(double),

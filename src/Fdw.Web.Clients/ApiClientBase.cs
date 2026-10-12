@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Web.Clients.Abstractions.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -74,6 +75,18 @@ public abstract class ApiClientBase
         }
         catch (HttpRequestException ex)
         {
+            // Why branch on StatusCode: GetFromJsonAsync throws on any non-success response, with
+            // .NET populating StatusCode from that response since .NET 5 -- a null StatusCode is
+            // the transport-level failure (no response at all), which carries no status to map.
+            if (ex.StatusCode.HasValue)
+            {
+                var code = ClientResultCodes.ByName(StatusCode(ex.StatusCode.Value));
+                var details = ResultDetails.Create()
+                    .With("method", "GET").With("uri", RequestUri(path))
+                    .With("statusCode", (int)ex.StatusCode.Value).With("detail", ex.Message);
+                return GenericResult<T>.Failure(code, Logger, details);
+            }
+
             return GenericResult<T>.Failure(
                 ClientLog.HttpRequestFailed(Logger, ex, "GET", RequestUri(path), ex.Message));
         }
@@ -101,8 +114,7 @@ public abstract class ApiClientBase
             var response = await HttpClient.GetAsync(path, ct).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                return GenericResult<IReadOnlyList<T>>.Failure(
-                    await NonSuccessDetail("GET", path, response, ct).ConfigureAwait(false));
+                return (await NonSuccessDetail("GET", path, response, ct).ConfigureAwait(false)).ToNewResult<IReadOnlyList<T>>();
             }
 
             using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
@@ -121,6 +133,16 @@ public abstract class ApiClientBase
             {
                 return GenericResult<IReadOnlyList<T>>.Failure(
                     ClientLog.ResponseShapeUnrecognized(Logger, "GET", RequestUri(path)));
+            }
+
+            // A streamed page writes its error after its items: the status was already 200 when the
+            // server found it could not finish the page.
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("error", out var error)
+                && error.ValueKind != JsonValueKind.Null)
+            {
+                return GenericResult<IReadOnlyList<T>>.Failure(
+                    ClientLog.PageEndedEarly(Logger, "GET", RequestUri(path), error.GetRawText()));
             }
 
             ClientLog.RequestCompleted(Logger, "GET", RequestUri(path));
@@ -149,18 +171,27 @@ public abstract class ApiClientBase
     };
 
     /// <summary>
-    /// Builds the failure message for a non-success HTTP response, folding in the server's
-    /// response body so the real reason survives to the caller.
+    /// Builds a coded failure for a non-success HTTP response, folding in the server's response
+    /// body so the real reason survives to the caller, and carrying the actual status band so a
+    /// caller downstream (a proxy endpoint, for instance) can answer with the status the server
+    /// really sent instead of one fixed status for every kind of failure.
     /// </summary>
-    private async Task<IGenericMessage> NonSuccessDetail(string method, string path, HttpResponseMessage response, CancellationToken ct)
+    private async Task<IGenericResult> NonSuccessDetail(string method, string path, HttpResponseMessage response, CancellationToken ct)
     {
         string detail;
+        string? reason;
+        string? upstreamReferenceId;
+        string? upstreamCode;
         try
         {
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            using var document = ObjectBody(body, method, path);
             detail = string.IsNullOrWhiteSpace(body)
                 ? $"status {(int)response.StatusCode}"
-                : DescribeBody(body, (int)response.StatusCode);
+                : DescribeBody(document, body);
+            reason = document is null ? null : StringOf(document.RootElement, "detail");
+            upstreamReferenceId = document is null ? null : StringOf(document.RootElement, "referenceId");
+            upstreamCode = document is null ? null : StringOf(document.RootElement, "code");
         }
         catch (OperationCanceledException)
         {
@@ -168,15 +199,84 @@ public abstract class ApiClientBase
         }
         catch (IOException ex)
         {
-            detail = $"status {(int)response.StatusCode}: {ex.Message}";
+            return ChainedNonSuccess(response, method, path, ex);
         }
         catch (HttpRequestException ex)
         {
-            detail = $"status {(int)response.StatusCode}: {ex.Message}";
+            return ChainedNonSuccess(response, method, path, ex);
         }
 
-        return ClientLog.RequestNonSuccessDetail(Logger, method, RequestUri(path), (int)response.StatusCode, detail);
+        var code = ClientResultCodes.ByName(StatusCode(response.StatusCode));
+        var details = ResultDetails.Create()
+            .With("method", method).With("uri", RequestUri(path))
+            .With("statusCode", (int)response.StatusCode).With("detail", detail).With("reason", reason)
+            .With(ResultDetailKeys.UpstreamReferenceId, upstreamReferenceId).With(ResultDetailKeys.UpstreamCode, upstreamCode);
+        return GenericResult.Failure(code, Logger, details);
     }
+
+    // The body as a JSON object, or null when it is not one. Only text that starts with '{' can carry a problem body's detail or
+    // title: plain text, an HTML page from a proxy and a bare JSON value are ordinary upstream answers that give no reason, so
+    // they are recognised without parsing and without an exception. Text that starts like an object but does not parse is logged
+    // and gives no reason either; the coded failure for the upstream's status is kept in every case.
+    private JsonDocument? ObjectBody(string body, string method, string path)
+    {
+        if (!body.TrimStart().StartsWith('{'))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonDocument.Parse(body);
+        }
+        catch (JsonException ex)
+        {
+            ClientLog.UpstreamBodyNotJson(Logger, ex, method, RequestUri(path), ex.Message);
+            return null;
+        }
+    }
+
+    // A property read as text only when it is text: an upstream that sends a number or an object there is not a reason, and
+    // reading it as a string would throw.
+    private static string? StringOf(JsonElement element, string name)
+        => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    /// <summary>
+    /// Builds the coded non-success failure when reading the response body itself threw --
+    /// the exception is chained as the inner result rather than folded into a string, so it
+    /// survives on the result the same way any other caught exception does here.
+    /// </summary>
+    private IGenericResult ChainedNonSuccess(HttpResponseMessage response, string method, string path, Exception ex)
+    {
+        var code = ClientResultCodes.ByName(StatusCode(response.StatusCode));
+        var details = ResultDetails.Create()
+            .With("method", method).With("uri", RequestUri(path))
+            .With("statusCode", (int)response.StatusCode).With("detail", ex.Message);
+        var inner = GenericResult.Failure(ClientLog.HttpRequestFailed(Logger, ex, method, RequestUri(path), ex.Message));
+        return GenericResult.Chain(code, inner, Logger, details);
+    }
+
+    /// <summary>Names the <see cref="ClientResultCodes"/> option matching an HTTP status.</summary>
+    /// <remarks>
+    /// Only the bands this client has actually seen a downstream FDW host answer get their own
+    /// name; everything else (an unrecognized 4xx, a 502) falls to UpstreamCallFailed, which is
+    /// the single fixed status every non-success used to answer with. A 500 has its own name,
+    /// UpstreamInternalError, because a host that relays it must answer 500 as the downstream did:
+    /// answering 502 named the relaying host as the one that failed, and a browser behind a CDN
+    /// then received the CDN's page in place of the downstream's problem body.
+    /// </remarks>
+    private static string StatusCode(System.Net.HttpStatusCode statusCode) => (int)statusCode switch
+    {
+        400 => "UpstreamRequestInvalid",
+        401 => "UpstreamAuthenticationFailed",
+        403 => "UpstreamForbidden",
+        404 => "UpstreamResourceNotFound",
+        409 => "UpstreamConflict",
+        500 => "UpstreamInternalError",
+        503 => "UpstreamUnavailable",
+        504 => "UpstreamGatewayTimeout",
+        _ => "UpstreamCallFailed",
+    };
 
     /// <summary>
     /// Performs a POST request with a request body and deserializes the response.
@@ -202,8 +302,7 @@ public abstract class ApiClientBase
                 return GenericResult<TResponse>.Success(result);
             }
 
-            return GenericResult<TResponse>.Failure(
-                await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false));
+            return (await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false)).ToNewResult<TResponse>();
         }
         catch (HttpRequestException ex)
         {
@@ -239,8 +338,7 @@ public abstract class ApiClientBase
                 return GenericResult.Success();
             }
 
-            return GenericResult.Failure(
-                await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false));
+            return await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -277,8 +375,7 @@ public abstract class ApiClientBase
                 return GenericResult.Success();
             }
 
-            return GenericResult.Failure(
-                await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false));
+            return await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -317,8 +414,7 @@ public abstract class ApiClientBase
                 return GenericResult<TResponse>.Success(result);
             }
 
-            return GenericResult<TResponse>.Failure(
-                await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false));
+            return (await NonSuccessDetail("POST", path, response, ct).ConfigureAwait(false)).ToNewResult<TResponse>();
         }
         catch (HttpRequestException ex)
         {
@@ -361,8 +457,7 @@ public abstract class ApiClientBase
                 return GenericResult<TResponse>.Success(result);
             }
 
-            return GenericResult<TResponse>.Failure(
-                await NonSuccessDetail("PUT", path, response, ct).ConfigureAwait(false));
+            return (await NonSuccessDetail("PUT", path, response, ct).ConfigureAwait(false)).ToNewResult<TResponse>();
         }
         catch (HttpRequestException ex)
         {
@@ -398,8 +493,7 @@ public abstract class ApiClientBase
                 return GenericResult.Success();
             }
 
-            return GenericResult.Failure(
-                await NonSuccessDetail("PUT", path, response, ct).ConfigureAwait(false));
+            return await NonSuccessDetail("PUT", path, response, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -435,8 +529,7 @@ public abstract class ApiClientBase
                 return GenericResult.Success();
             }
 
-            return GenericResult.Failure(
-                await NonSuccessDetail("PATCH", path, response, ct).ConfigureAwait(false));
+            return await NonSuccessDetail("PATCH", path, response, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -480,8 +573,7 @@ public abstract class ApiClientBase
                 return GenericResult<TResponse>.Success(result);
             }
 
-            return GenericResult<TResponse>.Failure(
-                await NonSuccessDetail("PATCH", path, response, ct).ConfigureAwait(false));
+            return (await NonSuccessDetail("PATCH", path, response, ct).ConfigureAwait(false)).ToNewResult<TResponse>();
         }
         catch (HttpRequestException ex)
         {
@@ -517,8 +609,7 @@ public abstract class ApiClientBase
                 return GenericResult.Success();
             }
 
-            return GenericResult.Failure(
-                await NonSuccessDetail("DELETE", path, response, ct).ConfigureAwait(false));
+            return await NonSuccessDetail("DELETE", path, response, ct).ConfigureAwait(false);
         }
         catch (HttpRequestException ex)
         {
@@ -533,34 +624,24 @@ public abstract class ApiClientBase
     }
 
     /// <summary>Turns a response body into one readable sentence.</summary>
+    /// <param name="document">The body parsed as a JSON object, or null when it is not one.</param>
     /// <param name="body">The raw response body.</param>
-    /// <param name="statusCode">The HTTP status, used when the body says nothing useful.</param>
     /// <returns>The description.</returns>
-    private static string DescribeBody(string body, int statusCode)
+    private static string DescribeBody(JsonDocument? document, string body)
     {
-        // Why: a non-JSON body is the ordinary case here, not a failure, so this probes with a
-        // non-throwing parse rather than catching JsonException. Catching it made a routine outcome
-        // look like a swallowed error and cost an exception on every plain-text response.
-        var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(body));
-        if (JsonDocument.TryParseValue(ref reader, out var doc))
+        if (document is not null)
         {
-            using (doc)
+            var text = StringOf(document.RootElement, "detail");
+            if (string.IsNullOrWhiteSpace(text))
             {
-                if (doc.RootElement.ValueKind == JsonValueKind.Object)
-                {
-                    var text = doc.RootElement.TryGetProperty("detail", out var d) ? d.GetString() : null;
-                    if (string.IsNullOrWhiteSpace(text) && doc.RootElement.TryGetProperty("title", out var t))
-                    {
-                        text = t.GetString();
-                    }
+                text = StringOf(document.RootElement, "title");
+            }
 
-                    if (!string.IsNullOrWhiteSpace(text))
-                    {
-                        return doc.RootElement.TryGetProperty("code", out var c) && c.GetString() is string codeText
-                            ? $"{text} ({codeText})"
-                            : text;
-                    }
-                }
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return StringOf(document.RootElement, "code") is string codeText
+                    ? $"{text} ({codeText})"
+                    : text;
             }
         }
 

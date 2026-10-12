@@ -13,7 +13,7 @@ public sealed class VarCharType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="VarCharType"/> class.</summary>
     public VarCharType()
-        : base(id: 5, name: "varchar")
+        : base(name: "varchar")
     {
     }
 

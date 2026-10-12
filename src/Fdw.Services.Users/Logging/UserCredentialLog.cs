@@ -38,4 +38,14 @@ public static partial class UserCredentialLog
     [LoggerMessage(EventId = 7835, Level = LogLevel.Error,
         Message = "Failed to set force password change for user {UserId}")]
     public static partial void ForceChangeFailed(ILogger logger, Guid userId);
+
+    /// <summary>Logs that a user's credential was removed (FDW-910).</summary>
+    [LoggerMessage(EventId = 7836, Level = LogLevel.Information,
+        Message = "Credential removed for user {UserId} type {SecretType}")]
+    public static partial void Removed(ILogger logger, Guid userId, string secretType);
+
+    /// <summary>Logs that removing a user's credential failed (FDW-910).</summary>
+    [LoggerMessage(EventId = 7837, Level = LogLevel.Error,
+        Message = "Failed to remove credential for user {UserId} type {SecretType}")]
+    public static partial void RemoveFailed(ILogger logger, Guid userId, string secretType);
 }

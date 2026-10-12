@@ -14,7 +14,6 @@ public sealed class VarBinaryType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="VarBinaryType"/> class.</summary>
     public VarBinaryType()
         : base(
-            id: 20,
             name: "varbinary",
             description: "Variable-length binary data.",
             abstractType: DataTypes.Binary,

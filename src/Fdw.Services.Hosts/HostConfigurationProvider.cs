@@ -1,53 +1,30 @@
+using Fdw.Configuration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Hosts.Abstractions;
 using Fdw.Services.Hosts.Commands;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Hosts;
 
-/// <summary>
-/// Supplies hosting configuration, composing the domain record with the implementation's own.
-/// </summary>
-/// <remarks>
-/// Why <c>ServerConfiguration</c> rather than <c>PlatformConfiguration</c>: a hosting pipeline has to
-/// exist before the platform store is reachable, so this domain's rows live in the file-backed server
-/// tier declared in <c>configurationSchema.json</c>. The gateway is the ordinary one — only the
-/// datastore differs.
-/// </remarks>
-public class HostConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          HostConfiguration,
-          IHostImplementationConfiguration,
-          HostConfigurationCommand>,
+/// <summary>Supplies the Host configuration.</summary>
+public sealed class HostConfigurationProvider
+    : DomainConfigurationProviderBase<IHostImplementationConfiguration>,
       IHostConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="HostConfigurationProvider"/> class.</summary>
-    /// <param name="logger">The logger for this provider.</param>
-    /// <param name="gatewayProvider">Yields the gateway for the named datastore.</param>
-    /// <param name="dataStoreName">The datastore this reads through — the server tier.</param>
-    /// <param name="pathName">The path holding the hosting tables.</param>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public HostConfigurationProvider(
-        ILogger<HostConfigurationProvider>? logger,
+        ILogger<HostConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
-        string dataStoreName = "ServerConfiguration",
-        string pathName = "hst")
-        : base(logger ?? NullLogger<HostConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string dataStoreName,
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
-
-    /// <inheritdoc />
-    protected override HostConfiguration Compose<T>(
-        string serviceOptionType,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            ServiceOptionType = serviceOptionType,
-            Configuration = implementationConfiguration,
-        };
 }

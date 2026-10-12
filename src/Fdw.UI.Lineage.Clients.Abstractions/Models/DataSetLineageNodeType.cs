@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class DataSetLineageNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="DataSetLineageNodeType"/>.</summary>
-    public DataSetLineageNodeType() : base(2, "DataSet") { }
+    public DataSetLineageNodeType() : base("DataSet") { }
 }

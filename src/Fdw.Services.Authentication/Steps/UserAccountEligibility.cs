@@ -2,10 +2,12 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
-using Fdw.Services.Configuration;
+using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Users;
 using Fdw.Services.Users.Commands;
 using Fdw.Services.Users.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,26 +24,33 @@ namespace Fdw.Services.Authentication.Steps;
 /// </remarks>
 public sealed class UserAccountEligibility : IIssuanceEligibility
 {
-    private readonly ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand> _users;
+    private readonly IUserConfigurationProvider _users;
+    private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly ILogger<UserAccountEligibility> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="UserAccountEligibility"/> class.</summary>
     /// <param name="users">Reads user records.</param>
+    /// <param name="authContextAccessor">Establishes the trusted context for pre-authentication reads.</param>
     /// <param name="logger">The logger.</param>
     public UserAccountEligibility(
-        ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand> users,
+        IUserConfigurationProvider users,
+        IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserAccountEligibility>? logger = null)
     {
         _users = users ?? throw new ArgumentNullException(nameof(users));
+        _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<UserAccountEligibility>.Instance;
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<Decision>> MayBeIssued(
-        Principal principal, CancellationToken cancellationToken = default)
+        Principal principal, ITenantProvider tenants, CancellationToken cancellationToken = default)
     {
         if (principal is null)
             return GenericResult<Decision>.Failure(EligibilityLog.PrincipalMissing(_logger));
+
+        // This platform authentication lookup precedes the request authentication context.
+        using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var user = await _users.Get(principal.Id, cancellationToken).ConfigureAwait(false);
 
@@ -60,8 +69,17 @@ public sealed class UserAccountEligibility : IIssuanceEligibility
         if (user.Value.LockoutEnd is { } until && until > DateTimeOffset.UtcNow)
             return Deny(principal.Id, "the account is locked out");
 
-        if (user.Value.TenantId != principal.TenantId)
-            return Deny(principal.Id, "the principal's tenant does not match the account's");
+        // Not "is this the account's home tenant": a user acts in any tenant they are a member of,
+        // and a member of the global tenant may act in any tenant (FDW-825). One question, one
+        // answer -- the tenant switch asks the same one before issuing.
+        var access = await tenants
+            .ValidateTenantAccess(principal.TenantId, principal.Id.ToString(), cancellationToken)
+            .ConfigureAwait(false);
+        if (access.IsFailure)
+            return access.ToNewResult<Decision>();
+
+        if (!access.Value)
+            return Deny(principal.Id, "the principal may not act in the tenant the token would be issued for");
 
         EligibilityLog.Permitted(_logger, principal.Id);
 

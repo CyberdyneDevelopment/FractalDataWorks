@@ -58,13 +58,11 @@ public abstract class GetPromotionEndpointBase : Endpoint<PromotionIdRequest, Pr
                 || (result.IsSuccess && result.Value is null))
             {
                 PromotionEndpointLog.PromotionNotFound(_logger, req.Id);
-                HttpContext.Response.StatusCode = 404;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(new
+                await Send.ResultAsync(TypedResults.Json(new
                 {
                     errorCode = "NotFound",
                     messages = new[] { $"Promotion '{req.Id}' was not found." }
-                }, ct).ConfigureAwait(false);
+                }, statusCode: 404)).ConfigureAwait(false);
                 return;
             }
 

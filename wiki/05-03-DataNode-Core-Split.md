@@ -72,22 +72,15 @@ Each transport's `SupplyBuilder` passes `ConnectionTypes.ByName(...).DefaultResp
 discriminator, falling back to that supplied default — format is config-driven per container, not a
 hardcoded string.
 
-## UI side — same trees, zero server-core references
+## UI side — removed
 
-`Fdw.Data.Components` (the thin UI's data package) gained:
-
-- `ClientsDataStoreConfigurationProvider` — an `IServiceConfigurationProvider<DataStoreConfiguration>`
-  backed by API-fetched configs instead of a gateway;
-- `GenericBuilderSelector` — an `IDataStoreBuilderSelector`;
-- `DataStoreProviderClientType` — a `[ServiceTypeOption(ApiClientTypes)]`.
-
-With those three, the UI constructs the identical `IDataNode` trees from configs it fetched over
-HTTP — building on the same `Fdw.Data.DataNodes` core the server uses, with no reference to any
-server core, connection factory, or `IConfigurationGateway`.
+The UI-side builders (`ClientsDataStoreConfigurationProvider`, `GenericBuilderSelector`,
+`DataStoreProviderClientType`) lived in the Blazor package `Fdw.Data.Components` and were deleted
+with it in FDW-872 (c46278e41). No client builds `IDataNode` trees today; the web console reads
+configurations over HTTP as DTOs.
 
 ## See Also
 
 - [05-01 DataGateway Pattern](05-01-DataGateway-Pattern.md) — how `IDataGateway` routes against the tree
 - [DataNode navigation skill] — `Provider.Get(name) → Path(name) → Container(name) → Field(name)`, all `IGenericResult<T>`, fail-loud on miss
 - [12-01 Creating a Server](12-01-Creating-A-Server.md) — the PlatformServices sweep that drives `ConfigurationGatewayDataStoreProvider`'s three phases
-- [13-01 Headless UI Pattern](13-01-Headless-UI-Pattern.md) — the per-domain `*.Components` isolation the UI side observes

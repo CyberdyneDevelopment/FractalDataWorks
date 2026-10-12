@@ -319,7 +319,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
         _currentSolution = solution;
     }
 
-#pragma warning disable MA0051 // Linear file-write loop; reads explanatory at every branch
     /// <summary>
     /// Deletes files whose documents disappeared from the solution since the last apply.
     /// </summary>
@@ -453,7 +452,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
 
         return GenericResult<IReadOnlyList<string>>.Success(written);
     }
-#pragma warning restore MA0051
 
     /// <inheritdoc/>
     public IReadOnlyList<ProjectInfo> GetAllProjects()
@@ -485,7 +483,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear project loading: validate, resolve from full solution, add documents and references
     public async Task<IGenericResult<ProjectInfo>> LoadProject(
         string projectName,
         CancellationToken cancellationToken = default)
@@ -581,7 +578,6 @@ public sealed class RoslynWorkspace : IRoslynWorkspace
                 ResultDetails.Create("ProjectName", projectName, "ErrorMessage", ex.Message));
         }
     }
-#pragma warning restore MA0051
 
     /// <inheritdoc/>
     public IGenericResult<ProjectInfo> UnloadProject(string projectName, bool force = false)

@@ -15,7 +15,6 @@ public sealed class UniqueRuleType : QualityRuleTypeBase
     /// </summary>
     public UniqueRuleType()
         : base(
-            id: 2,
             name: "Unique",
             requiresField: true,
             supportsMultipleFields: false,

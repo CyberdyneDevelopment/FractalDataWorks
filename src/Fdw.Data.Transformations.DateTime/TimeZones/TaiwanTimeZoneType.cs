@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Taiwan")]
 public sealed class TaiwanTimeZoneType : TimeZoneTypeBase
 {
-    public TaiwanTimeZoneType() : base(39, "Taiwan", "Taipei Standard Time") { }
+    public TaiwanTimeZoneType() : base("Taiwan", "Taipei Standard Time") { }
 }

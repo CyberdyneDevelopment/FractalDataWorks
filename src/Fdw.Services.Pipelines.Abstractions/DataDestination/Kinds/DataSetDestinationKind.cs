@@ -14,5 +14,5 @@ public sealed class DataSetDestinationKind : DataDestinationKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetDestinationKind"/> class.
     /// </summary>
-    public DataSetDestinationKind() : base(2, "DataSet") { }
+    public DataSetDestinationKind() : base("DataSet") { }
 }

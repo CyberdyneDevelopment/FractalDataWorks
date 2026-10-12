@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -19,23 +20,22 @@ namespace Fdw.Services.Notifications.System;
     ServiceType = "System")]
 public sealed partial class SystemNotificationConfiguration : INotificationImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <inheritdoc/>
     public Guid Id { get; set; }
 
     /// <inheritdoc/>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
     public string Name { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string SectionName => "Notifications:System";
-
-    /// <inheritdoc/>
-    public string ServiceType => "Notification";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
-
-    /// <summary>Gets or sets the owning notification's durable id.</summary>
-    public Guid NotificationId { get; set; }
 
     /// <summary>
     /// Gets or sets the service lifetime for DI registration.

@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class SumAggregateFunction : AggregateFunctionBase
 {
     /// <summary>Initializes a new instance of the <see cref="SumAggregateFunction"/> class.</summary>
-    public SumAggregateFunction() : base(1, "Sum")
+    public SumAggregateFunction() : base("Sum")
     {
     }
 

@@ -61,6 +61,18 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
     /// <value>The fields to project, or null to select all fields.</value>
     public IProjectionExpression? Projection { get; init; }
 
+    /// <inheritdoc />
+    /// <remarks>Applies only when <see cref="Projection"/> names no columns; an explicit projection wins.</remarks>
+    public bool IncludeMetadata { get; init; }
+
+    /// <inheritdoc />
+    /// <remarks>Applies only when <see cref="Projection"/> names no columns; an explicit projection wins.</remarks>
+    public bool IncludeDescriptions { get; init; }
+
+    /// <inheritdoc />
+    /// <remarks>Applies only when <see cref="Projection"/> names no columns; an explicit projection wins.</remarks>
+    public bool IncludeKeys { get; init; }
+
     /// <summary>
     /// Gets or sets the ordering expression (ORDER BY clause).
     /// </summary>

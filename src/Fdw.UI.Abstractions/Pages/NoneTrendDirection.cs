@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class NoneTrendDirection : TrendDirectionBase
 {
     /// <summary>Initializes a new instance of <see cref="NoneTrendDirection"/>.</summary>
-    public NoneTrendDirection() : base(1, "None") { }
+    public NoneTrendDirection() : base("None") { }
 }

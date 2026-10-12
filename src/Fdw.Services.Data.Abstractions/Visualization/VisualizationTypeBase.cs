@@ -7,7 +7,7 @@ namespace Fdw.Services.Data.Abstractions.Visualization;
 /// <summary>
 /// Base class for visualization type TypeOptions using CRTP pattern.
 /// </summary>
-public abstract class VisualizationTypeBase : TypeOptionBase<int, VisualizationTypeBase>, IVisualizationType
+public abstract class VisualizationTypeBase : TypeOptionBase<VisualizationTypeBase>, IVisualizationType
 {
     /// <summary>
     /// Parameterless constructor required by the TypeCollection source generator for the Empty sentinel.
@@ -22,18 +22,16 @@ public abstract class VisualizationTypeBase : TypeOptionBase<int, VisualizationT
     /// <summary>
     /// Initializes a new instance of the <see cref="VisualizationTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The visualization type name.</param>
     /// <param name="displayName">The display name for the visualization type.</param>
     /// <param name="icon">The icon identifier.</param>
     /// <param name="supportedDataTypes">The data types this visualization supports.</param>
     protected VisualizationTypeBase(
-        int id,
         string name,
         string displayName,
         string icon,
         IReadOnlyList<Type> supportedDataTypes)
-        : base(id, name, $"VisualizationTypes:{name}", displayName, $"{displayName} visualization type", "Visualization")
+        : base(name, $"VisualizationTypes:{name}", displayName, $"{displayName} visualization type", "Visualization")
     {
         Icon = icon;
         SupportedDataTypes = supportedDataTypes;

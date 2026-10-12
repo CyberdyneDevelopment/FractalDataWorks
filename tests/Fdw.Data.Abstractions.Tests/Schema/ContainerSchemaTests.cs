@@ -13,7 +13,7 @@ public sealed class ContainerSchemaTests
     {
         Name = "Id",
         FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-        Role = PropertyRoles.Surrogate,
+        Role = DatumTypes.DbKey,
         IsNullable = false,
     };
 
@@ -21,7 +21,7 @@ public sealed class ContainerSchemaTests
     {
         Name = "Name",
         FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-        Role = PropertyRoles.Attribute,
+        Role = DatumTypes.Attribute,
         IsNullable = false
     };
 
@@ -29,7 +29,7 @@ public sealed class ContainerSchemaTests
     {
         Name = "Amount",
         FieldType = new SimpleFieldType { TypeName = "decimal", ClrType = typeof(decimal) },
-        Role = PropertyRoles.Measure,
+        Role = DatumTypes.Measure,
         IsNullable = true
     };
 
@@ -213,7 +213,7 @@ public sealed class ContainerSchemaTests
         var schema = new ContainerSchema { Fields = fields };
 
         // Act
-        var result = schema.Get((IPropertyRole)null!);
+        var result = schema.Get((IDatumType)null!);
 
         // Assert
         result.ShouldBeEmpty();
@@ -229,7 +229,7 @@ public sealed class ContainerSchemaTests
         var schema = new ContainerSchema { Fields = fields };
 
         // Act
-        var result = schema.Get(PropertyRoles.Surrogate);
+        var result = schema.Get(DatumTypes.DbKey);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -246,7 +246,7 @@ public sealed class ContainerSchemaTests
         var schema = new ContainerSchema { Fields = fields };
 
         // Act
-        var result = schema.Get(PropertyRoles.Measure);
+        var result = schema.Get(DatumTypes.Measure);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -263,7 +263,7 @@ public sealed class ContainerSchemaTests
         var schema = new ContainerSchema { Fields = fields };
 
         // Act
-        var result = schema.Get(PropertyRoles.Attribute);
+        var result = schema.Get(DatumTypes.Attribute);
 
         // Assert
         result.Count.ShouldBe(1);
@@ -280,7 +280,7 @@ public sealed class ContainerSchemaTests
         {
             Name = "Tags",
             FieldType = new ArrayFieldType { ElementType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) } },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             IsNullable = true
         };
         var fields = new[] { _idField, arrayField };
@@ -387,14 +387,14 @@ public sealed class ContainerSchemaTests
         {
             Name = "CategoryId",
             FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-            Role = PropertyRoles.Lookup,
+            Role = DatumTypes.Categorical,
             IsNullable = false
         };
         var fields = new[] { _idField, lookupField, _amountField };
         var schema = new ContainerSchema { Fields = fields };
 
         // Act
-        var result = schema.Get(PropertyRoles.Lookup);
+        var result = schema.Get(DatumTypes.Categorical);
 
         // Assert
         result.Count.ShouldBe(1);

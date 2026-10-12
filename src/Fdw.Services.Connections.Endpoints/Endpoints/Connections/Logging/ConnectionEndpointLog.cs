@@ -70,4 +70,44 @@ public static partial class ConnectionEndpointLog
     /// <summary>Logs when a create/update request enables health checks without any trigger that would ever run them.</summary>
     [MessageLogging(EventId = 71005, Level = LogLevel.Warning, Message = "Connection '{connectionName}' has HealthCheckEnabled=true but no trigger is configured (HealthCheckOnStartup=false and HealthCheckIntervalSeconds is null) — this would never be checked; refusing to save")]
     public static partial IGenericMessage HealthCheckEnabledWithoutTrigger(ILogger logger, string connectionName);
+
+    /// <summary>A request tried to choose where a connection's credentials are stored (FDW-1086).</summary>
+    // Why Warning: the request is refused; a caller naming a secret is either a stale client or a probe.
+    [MessageLogging(EventId = 21000, Level = LogLevel.Warning, Message = "Connection '{connectionName}' refused: the request set '{property}', which only the server sets")]
+    public static partial IGenericMessage CredentialReferenceRefused(ILogger logger, string connectionName, string property);
+
+    /// <summary>An update stated a member a connection does not store, so there was nothing for it to change (FDW-1177).</summary>
+    // Why Warning: the request is refused; a caller stating it is a stale client that believes the member does something.
+    [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "Connection '{connectionName}' update refused: it states '{property}', which a connection does not store")]
+    public static partial IGenericMessage ConnectionMemberNotSettable(ILogger logger, string connectionName, string property);
+
+    /// <summary>A connection's credentials were stored; the count only, never a value or a secret name.</summary>
+    // Why Information: a credential change is an operator-visible event worth an audit line.
+    [MessageLogging(EventId = 11005, Level = LogLevel.Information, Message = "Stored {count} credential(s) for connection '{connectionName}'")]
+    public static partial IGenericMessage CredentialsStored(ILogger logger, string connectionName, int count);
+
+    /// <summary>A secret a connection no longer names could not be deleted; it is never read again.</summary>
+    // Why Warning: nothing is broken for the caller, but an orphaned secret is left for an operator to remove.
+    [MessageLogging(EventId = 71006, Level = LogLevel.Warning, Message = "Secret '{secretKey}' that connection '{connectionName}' no longer names could not be deleted")]
+    public static partial IGenericMessage CredentialRetireFailed(ILogger logger, string connectionName, string secretKey);
+
+    /// <summary>A secret a connection names was not deleted because the credential store did not mint it; it belongs to whoever keeps it.</summary>
+    // Why Information: this is the designed outcome for a secret an operator keeps, not a fault; the line records what was left.
+    [MessageLogging(EventId = 71009, Level = LogLevel.Information, Message = "Secret '{secretKey}' in secret manager '{secretManagerName}' was left in place: the credential store did not create it for connection '{connectionName}'")]
+    public static partial IGenericMessage CredentialLeftAlone(ILogger logger, string connectionName, string secretManagerName, string secretKey);
+
+    /// <summary>The secret manager holding a connection's replaced credentials could not be opened to delete them.</summary>
+    // Why Warning: the save succeeded; the old secrets are orphaned until an operator removes them.
+    [MessageLogging(EventId = 71007, Level = LogLevel.Warning, Message = "Secret manager '{secretManagerName}' could not be opened to delete the secrets connection '{connectionName}' replaced")]
+    public static partial IGenericMessage CredentialSecretManagerUnavailable(ILogger logger, string connectionName, string secretManagerName);
+
+    /// <summary>The credential secret manager refused or failed to store one credential of a connection (FDW-1176); the field and the store's result code, never a value.</summary>
+    // Why Error: the connection is not saved and nothing the caller can change fixes it; an operator must read the store's own log.
+    [MessageLogging(EventId = 71008, Level = LogLevel.Error, Message = "Connection '{connectionName}' was not saved: the credential store failed to store '{field}' (store result {reason})")]
+    public static partial IGenericMessage CredentialWriteFailed(ILogger logger, string connectionName, string field, string reason);
+
+    /// <summary>The server setting naming the credential secret manager is empty (FDW-1086).</summary>
+    // Why Error: no connection's credentials can be stored until an operator sets it.
+    [MessageLogging(EventId = 61000, Level = LogLevel.Error, Message = "Connection credentials cannot be stored: the server setting '{setting}' names no secret manager")]
+    public static partial IGenericMessage CredentialStoreNotConfigured(ILogger logger, string setting);
 }

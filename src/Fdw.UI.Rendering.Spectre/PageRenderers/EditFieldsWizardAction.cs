@@ -9,5 +9,5 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 public sealed class EditFieldsWizardAction : WizardActionBase
 {
     /// <summary>Initializes a new instance of <see cref="EditFieldsWizardAction"/>.</summary>
-    public EditFieldsWizardAction() : base(4, "EditFields") { }
+    public EditFieldsWizardAction() : base("EditFields") { }
 }

@@ -15,7 +15,6 @@ public sealed class EqualOperator : FilterOperatorBase
     /// </summary>
     public EqualOperator()
         : base(
-            id: 1,
             name: "Equal",
             sqlOperator: "=",
             odataOperator: "eq",

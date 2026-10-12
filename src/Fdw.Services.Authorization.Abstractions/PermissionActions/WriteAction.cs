@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class WriteAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for write action.
+    /// Material Symbols icon name for write action.
     /// </summary>
-    public const string WriteIcon = "edit"; // Icons.Material.Filled.Edit
+    public const string WriteIcon = "edit";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WriteAction"/> class.
     /// </summary>
     public WriteAction()
         : base(
-            id: 2,
             name: "Write",
             icon: WriteIcon,
             color: "Success",

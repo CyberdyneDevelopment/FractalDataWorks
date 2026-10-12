@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.ServiceTypes;
-using Fdw.Services.Abstractions;
 using Fdw.Services.ExternalIdentityProviders.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.ExternalIdentityProviders;
 
@@ -15,8 +15,8 @@ namespace Fdw.Services.ExternalIdentityProviders;
 /// Lives in the concrete <c>Fdw.Services.ExternalIdentityProviders</c> package (net10.0), not
 /// <c>Fdw.Services.ExternalIdentityProviders.Abstractions</c> (netstandard2.0). This class closes
 /// <c>TProvider</c> to
-/// <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>,
-/// and <see cref="ExternalIdentityProvisionerConfiguration"/> is only available from this package (its
+/// <c>IDomainServiceProvider&lt;IExternalIdentityProvisioner, ExternalIdentityProvisionerConfiguration&gt;</c>,
+/// and <c>IExternalIdentityProvisionerImplementationConfiguration</c> is only available from this package (its
 /// <c>[GenerateMapper]</c>/<c>[ManagedConfiguration]</c> source generators are net10.0-only), so the
 /// base class cannot live in Abstractions without breaking the package boundary.
 /// </remarks>
@@ -43,7 +43,7 @@ public abstract class ExternalIdentityProvisionerTypeBase<TService, TConfigurati
         string defaultContainerName = "")
         : base(name, $"ExternalIdentityProvisioners:{name}", $"{name} External Identity Provisioner",
                $"External identity provisioner using {name}", category ?? "ExternalIdentityProvisioner",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {

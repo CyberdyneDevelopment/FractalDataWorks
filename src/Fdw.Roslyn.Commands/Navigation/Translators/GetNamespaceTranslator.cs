@@ -30,7 +30,6 @@ public sealed class GetNamespaceTranslator : RoslynCommandTranslatorBase<GetName
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: walk syntax tree for namespace, check file-scoped fallback
     public override async Task<IGenericResult<QueryResult<NamespaceInfo>>> Translate(
         GetNamespaceCommand command,
         Solution solution,
@@ -128,5 +127,4 @@ public sealed class GetNamespaceTranslator : RoslynCommandTranslatorBase<GetName
 
         return GenericResult<QueryResult<NamespaceInfo>>.Success(result);
     }
-#pragma warning restore MA0051
 }

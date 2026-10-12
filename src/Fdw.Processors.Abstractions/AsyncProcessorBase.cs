@@ -24,7 +24,7 @@ namespace Fdw.Processors;
 /// </para>
 /// </remarks>
 public abstract class AsyncProcessorBase<TCommand, TContext, TBase>
-    : TypeOptionBase<int, TBase>, IAsyncProcessor<TCommand, TContext>
+    : TypeOptionBase<TBase>, IAsyncProcessor<TCommand, TContext>
     where TBase : AsyncProcessorBase<TCommand, TContext, TBase>
 {
     /// <summary>
@@ -50,9 +50,7 @@ public abstract class AsyncProcessorBase<TCommand, TContext, TBase>
         string description,
         IReadOnlyList<string> requiredProperties,
         string category = "Processor")
-        : base(
-            GenerateIdFromName(name),
-            name,
+        : base(name,
             $"Processor:{category}:{name}",
             displayName,
             description,
@@ -75,24 +73,4 @@ public abstract class AsyncProcessorBase<TCommand, TContext, TBase>
         TCommand command,
         TContext context,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Generates a stable ID from the processor name using FNV-1a hash.
-    /// </summary>
-    protected static int GenerateIdFromName(string name)
-    {
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = unchecked((int)0x811C9DC5);
-
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-            return hash & 0x7FFFFFFF;
-        }
-    }
 }

@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Web.Analytics.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Profile API client.
+/// Implementation for the Profile API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "ProfileClient")]
+[Implementation(typeof(ApiClientTypes), "ProfileClient")]
 public sealed class ProfileClientType : ApiClientTypeBase<ProfileApiClient>
 {
     /// <summary>
@@ -34,9 +34,8 @@ public sealed class ProfileClientType : ApiClientTypeBase<ProfileApiClient>
         {
             builder.Services.AddScoped<ProfileApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ProfileApiClient>>() ?? NullLogger<ProfileApiClient>.Instance;
-                return new ProfileApiClient(factory.CreateClient(Name), logger);
+                return new ProfileApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -17,7 +17,6 @@ public sealed class CompensatingStateType : ExecutionStateTypeBase
     /// </summary>
     public CompensatingStateType()
         : base(
-            id: 12,
             name: "Compensating",
             displayName: "Compensating",
             isTerminal: false,

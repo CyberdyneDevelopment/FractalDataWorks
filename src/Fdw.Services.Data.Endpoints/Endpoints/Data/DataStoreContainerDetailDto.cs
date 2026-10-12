@@ -20,6 +20,11 @@ public class DataStoreContainerDetailDto
     /// <summary>Gets or sets the container description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the container's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
+
     /// <summary>Gets or sets the fields within this container.</summary>
     public IList<DataStoreFieldResponse> Fields { get; set; } = [];
 }

@@ -17,9 +17,10 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
     private readonly bool _isIdentity;
     private readonly bool _isComputed;
     private readonly bool _isSystemProvided;
+    private readonly bool _hasDefault;
     private readonly SimpleFieldType _fieldType;
 
-    private static readonly IPropertyRole AttributeRole = PropertyRoles.ByName("Attribute");
+    private readonly IDatumType _datumType;
 
     /// <inheritdoc />
     public string Name { get; }
@@ -68,7 +69,11 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
     // IField / IPropertyDefinition implementation
     // -------------------------------------------------------
 
-    IPropertyRole IPropertyDefinition.Role => AttributeRole;
+    // Why the stored type rather than one derived from IsSystemProvided or IsIdentity: an identity or
+    // computed column is not automatically a column a query must withhold, and deciding that here would
+    // change what every existing query returns without anyone asking. The container declaration
+    // (DatumTypeId) says what the column is, and the builder that reads it passes it in (FDW-988).
+    IDatumType IPropertyDefinition.Role => _datumType;
     bool IPropertyDefinition.IsRequired => !IsNullable;
     IReadOnlyDictionary<string, object>? IPropertyDefinition.Metadata => null;
 
@@ -78,15 +83,7 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
     bool IField.IsIdentity => _isIdentity;
     bool IField.IsComputed => _isComputed;
     bool IField.IsSystemProvided => _isSystemProvided || _isIdentity || _isComputed;
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// Why Visible here rather than derived from IsSystemProvided: an identity or computed column is
-    /// not automatically a column a dataset must not see, and deciding that here would change what
-    /// every existing query returns without anyone asking for it. The value belongs to the container
-    /// declaration (VisibilityId) and is supplied by the builder that reads it.
-    /// </remarks>
-    IFieldVisibility IField.Visibility => FieldVisibilities.ByName("Visible");
+    bool IField.HasDefault => _hasDefault;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MsSqlDataField"/> class.
@@ -101,9 +98,11 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
         int? scale,
         int? maxLength,
         string? collation,
+        IDatumType datumType,
         bool isIdentity = false,
         bool isComputed = false,
-        bool isSystemProvided = false)
+        bool isSystemProvided = false,
+        bool hasDefault = false)
     {
         Name = name;
         Description = description;
@@ -114,9 +113,11 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
         Scale = scale;
         MaxLength = maxLength;
         Collation = collation;
+        _datumType = datumType;
         _isIdentity = isIdentity;
         _isComputed = isComputed;
         _isSystemProvided = isSystemProvided;
+        _hasDefault = hasDefault;
         _fieldType = new SimpleFieldType
         {
             TypeName = nativeType.Name,

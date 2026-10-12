@@ -22,7 +22,6 @@ public sealed class AddDurationFieldTransformer : FieldTransformationBase
     /// </summary>
     public AddDurationFieldTransformer()
         : base(
-            id: 103,
             name: "AddDuration",
             displayName: "Add Duration",
             description: "Adds a fixed duration (Hours, Minutes, Days, or Seconds) to a DateTime or DateTimeOffset value.",
@@ -86,7 +85,7 @@ public sealed class AddDurationFieldTransformer : FieldTransformationBase
         }
 
         var unitType = DurationUnitTypes.ByName(unit);
-        if (string.Equals(unitType.Name, "_Empty", StringComparison.Ordinal))
+        if (string.Equals(unitType.Name, "NotFound", StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Unknown duration unit '{unit}'. Use DurationUnitTypes.All() for available options.");

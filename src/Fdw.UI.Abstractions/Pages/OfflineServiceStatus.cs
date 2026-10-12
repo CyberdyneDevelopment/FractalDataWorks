@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class OfflineServiceStatus : ServiceStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="OfflineServiceStatus"/>.</summary>
-    public OfflineServiceStatus() : base(5, "Offline") { }
+    public OfflineServiceStatus() : base("Offline") { }
 }

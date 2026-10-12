@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlTimeConverter()
     : DataTypeConverterBase(
-        id: 13,
         name: "Time",
         sourceType: "time",
         targetClrType: typeof(TimeOnly),

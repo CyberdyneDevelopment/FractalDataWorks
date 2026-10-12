@@ -27,7 +27,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
         var nonDbPath = new Mock<IPath>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([]);
-        schema.Setup(s => s.GetProjectableFields()).Returns([]);
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(nonDbPath.Object);
@@ -42,6 +42,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
     {
         var container = CreateContainerWithNonDatabasePath();
         var command = new Mock<IQueryCommand>();
+        command.Setup(q => q.Joins).Returns([]);
         command.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         command.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         command.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -59,6 +60,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
     public async Task TranslateReturnsFailureWhenContainerIsNull()
     {
         var command = new Mock<IQueryCommand>();
+        command.Setup(q => q.Joins).Returns([]);
         command.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         command.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         command.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -82,7 +84,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
 
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([idField.Object]);
-        schema.Setup(s => s.GetProjectableFields()).Returns([idField.Object]);
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns([idField.Object]);
 
         var container = new Mock<IDataContainer>();
         container.As<IStorageContainer>().Setup(c => c.Path).Returns(dbPath);
@@ -92,6 +94,7 @@ public sealed class SqlTranslatorBaseFailLoudTests
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
 
         var command = new Mock<IQueryCommand>();
+        command.Setup(q => q.Joins).Returns([]);
         command.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         command.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         command.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);

@@ -16,7 +16,6 @@ public sealed class ViewContainerType : ContainerTypeBase
     /// </summary>
     public ViewContainerType()
         : base(
-            id: 2,
             name: "View",
             displayName: "SQL View",
             description: "SQL Server view container with schema discovery support",

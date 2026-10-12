@@ -14,7 +14,7 @@ public sealed class CalcInputNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="CalcInputNodeType"/> class.
     /// </summary>
     public CalcInputNodeType()
-        : base(8, "CalcInput", "Calc Input", "Calculation", "log-in")
+        : base("CalcInput", "Calc Input", "Calculation", "log-in")
     {
     }
 }

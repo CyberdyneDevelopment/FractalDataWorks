@@ -28,6 +28,10 @@
     <ProjectReference Include="..\..\src\Fdw.Commands.Data.Abstractions\Fdw.Commands.Data.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Pipelines.Endpoints\Fdw.Services.Pipelines.Endpoints.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Shared\GatewayWriteTransaction.cs" Link="TestSupport\GatewayWriteTransaction.cs" />
+  </ItemGroup>
 </Project>

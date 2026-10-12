@@ -29,8 +29,6 @@ public class GenericMessage : IGenericMessage, ITypeOption<int>
     /// </summary>
     public int Id { get; set; } = 1;
 
-    object ITypeOption.Id => Id;
-
     /// <summary>
     /// Gets or sets the display name or string representation of this enum value.
     /// </summary>

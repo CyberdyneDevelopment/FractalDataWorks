@@ -83,7 +83,7 @@ public sealed class Once : TriggerTypeBase
     /// Once triggers do not require schedule persistence as they execute only once and
     /// do not execute immediately - they wait for their specified execution time.
     /// </remarks>
-    public Once(ILogger<Once>? logger = null) : base(3, "Once", requiresSchedule: false, isImmediate: false)
+    public Once(ILogger<Once>? logger = null) : base("Once", requiresSchedule: false, isImmediate: false)
     {
         _logger = logger ?? NullLogger<Once>.Instance;
     }
@@ -129,7 +129,6 @@ public sealed class Once : TriggerTypeBase
     /// // Returns current time (executes immediately)
     /// </code>
     /// </example>
-#pragma warning disable MA0051 // Linear one-time execution calculation with timezone handling
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // One-time execution calculation with timezone conversion and multiple fallback paths
     public override DateTime? CalculateNextExecution(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -202,7 +201,6 @@ public sealed class Once : TriggerTypeBase
             return null;
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Validates that the trigger configuration contains valid parameters.
@@ -243,7 +241,6 @@ public sealed class Once : TriggerTypeBase
     /// // result.Error == true with timezone validation error
     /// </code>
     /// </example>
-#pragma warning disable MA0051 // Linear trigger validation: check execution time, timezone, expiry
     [ConventionOverride(MaxCyclomaticComplexity = 25)]  // Validation logic — start time validation with timezone conversion and multiple checks
     public override IGenericResult ValidateTrigger(IGenericTrigger trigger)
     {
@@ -302,7 +299,6 @@ public sealed class Once : TriggerTypeBase
 
         return GenericResult.Success();
     }
-#pragma warning restore MA0051
 
     private TimeZoneInfo ResolveTimeZoneOrUtc(string timeZoneId)
     {
@@ -343,7 +339,6 @@ public sealed class Once : TriggerTypeBase
     /// A success result containing the configured execution time in UTC if never executed before,
     /// or a failure result if the trigger has already executed or configuration is invalid.
     /// </returns>
-#pragma warning disable MA0051 // Linear one-time execution calculation with timezone handling
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
     public override IGenericResult<DateTimeOffset> GetNextRunTime(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -393,7 +388,6 @@ public sealed class Once : TriggerTypeBase
             return GenericResult<DateTimeOffset>.Failure(SchedulingLogger.InvalidStartTime(_logger, ex.Message));
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Attempts to convert an object to a DateTime.

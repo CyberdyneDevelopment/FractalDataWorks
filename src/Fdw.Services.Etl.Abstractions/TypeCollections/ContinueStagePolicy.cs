@@ -13,7 +13,7 @@ namespace Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 public sealed class ContinueStagePolicy : StepFailurePolicyBase
 {
     /// <summary>Initializes a new instance of the <see cref="ContinueStagePolicy"/> class.</summary>
-    public ContinueStagePolicy() : base(2, "ContinueStage")
+    public ContinueStagePolicy() : base("ContinueStage")
     {
     }
 }

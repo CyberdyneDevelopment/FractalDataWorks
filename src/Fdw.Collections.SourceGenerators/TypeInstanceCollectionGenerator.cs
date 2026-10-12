@@ -95,7 +95,8 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
             ParentCollectionMatchKey: parentCollection != null ? TypeOptionDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
-            BaseConstructorParameters: baseConstructorParams
+            BaseConstructorParameters: baseConstructorParams,
+            SentinelHoldsZeroId: CodeGeneration.HasOverridableIntId(baseType)
         );
     }
 
@@ -232,7 +233,6 @@ public class TypeInstanceCollectionGenerator : IIncrementalGenerator
         }
     }
 
-#pragma warning disable MA0051 // Source generator emits complete TypeInstanceCollection class — splitting scatters the template
     [ConventionOverride(MaxMethodLines = 127)]  // Code generation template for TypeInstanceCollection — sequential string building
     private static string GenerateCode(
         TypeCollectionModel collection,

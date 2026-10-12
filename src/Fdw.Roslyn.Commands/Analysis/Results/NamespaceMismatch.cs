@@ -58,7 +58,7 @@ public sealed class NamespaceMismatch
 
     /// <summary>
     /// Gets or sets a value indicating whether the type is a <c>[TypeOption]</c> or
-    /// <c>[ServiceTypeOption]</c>.
+    /// <c>[Implementation]</c>.
     /// </summary>
     /// <remarks>
     /// The highest-value diagnostic in this tool. A package reference IS a registration here: module

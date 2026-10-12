@@ -18,7 +18,7 @@ public sealed class ExecutionItemAlreadyCompletedCode : OperationsResultCodeBase
         : base(
             40001,
             "ExecutionItemAlreadyCompleted",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Execution item '{ExecutionItemId}' is already completed",
             isRetryable: false)
     {

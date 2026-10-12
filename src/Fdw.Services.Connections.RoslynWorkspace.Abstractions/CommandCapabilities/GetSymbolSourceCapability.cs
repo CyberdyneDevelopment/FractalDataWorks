@@ -19,7 +19,6 @@ public sealed class GetSymbolSourceCapability : CommandCapabilityTypeBase
     /// </summary>
     public GetSymbolSourceCapability()
         : base(
-            id: 9,
             name: "GetSymbolSource",
             displayName: "Get Symbol Source",
             configurationFields:

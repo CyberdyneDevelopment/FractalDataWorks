@@ -8,12 +8,11 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class JoinTypeBase : TypeOptionBase<int, JoinTypeBase>, IJoinType
+public abstract class JoinTypeBase : TypeOptionBase<JoinTypeBase>, IJoinType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="JoinTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this join type.</param>
     /// <param name="name">The name of this join type.</param>
     /// <param name="sqlKeyword">The SQL keyword for this join type.</param>
     /// <param name="description">A description of this join type's behavior.</param>
@@ -21,14 +20,13 @@ public abstract class JoinTypeBase : TypeOptionBase<int, JoinTypeBase>, IJoinTyp
     /// <param name="includesAllLeft">Whether this join includes all records from the left source.</param>
     /// <param name="includesAllRight">Whether this join includes all records from the right source.</param>
     protected JoinTypeBase(
-        int id,
         string name,
         string sqlKeyword,
         string description,
         bool requiresConditions,
         bool includesAllLeft,
         bool includesAllRight)
-        : base(id, name, description)
+        : base(name, description)
     {
         SqlKeyword = sqlKeyword;
         RequiresConditions = requiresConditions;

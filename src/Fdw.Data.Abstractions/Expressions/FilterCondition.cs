@@ -22,8 +22,9 @@ namespace Fdw.Data.Abstractions;
 ///     Value = "Acme"
 /// };
 ///
-/// // Direct property access - no switch statements
-/// var sqlCondition = $"[{condition.PropertyName}] {condition.Operator.SqlOperator} {condition.Operator.FormatSqlParameter(condition.PropertyName)}";
+/// // Direct property access - no switch statements. The SQL translator writes the condition
+/// // through the connection's dialect; the operator only states what it means.
+/// var sqlOperator = condition.Operator.SqlOperator;
 /// </code>
 /// </para>
 /// </remarks>

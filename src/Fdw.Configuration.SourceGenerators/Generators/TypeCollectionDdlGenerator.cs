@@ -14,10 +14,7 @@ public static class TypeCollectionDdlGenerator
     /// <summary>
     /// Generates DDL provider class for a TypeCollection.
     /// </summary>
-    // MA0051: Statement count acceptable - procedural DDL code generation with fixed schema structure
-#pragma warning disable MA0051 // Method is too long
     public static string Generate(TypeCollectionReference tcRef)
-#pragma warning restore MA0051
     {
         var sb = new StringBuilder();
         var className = $"{tcRef.TypeCollectionName}TypeCollectionDdl";
@@ -77,10 +74,7 @@ public static class TypeCollectionDdlGenerator
     /// <summary>
     /// Generates the TypeCollectionDdlRegistry class.
     /// </summary>
-    // MA0051: Statement count acceptable - procedural registry code generation with fixed structure
-#pragma warning disable MA0051 // Method is too long
     public static string GenerateRegistry(ImmutableArray<TypeCollectionReference> typeCollections, string targetNamespace)
-#pragma warning restore MA0051
     {
         var sb = new StringBuilder();
         var distinct = typeCollections

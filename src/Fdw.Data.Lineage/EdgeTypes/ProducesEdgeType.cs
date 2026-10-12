@@ -14,5 +14,5 @@ public sealed class ProducesEdgeType : LineageEdgeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ProducesEdgeType"/> class.
     /// </summary>
-    public ProducesEdgeType() : base(1, "Produces") { }
+    public ProducesEdgeType() : base("Produces") { }
 }

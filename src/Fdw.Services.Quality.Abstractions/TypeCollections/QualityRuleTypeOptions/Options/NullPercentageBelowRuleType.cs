@@ -15,7 +15,6 @@ public sealed class NullPercentageBelowRuleType : QualityRuleTypeBase
     /// </summary>
     public NullPercentageBelowRuleType()
         : base(
-            id: 11,
             name: "NullPercentageBelow",
             requiresField: true,
             supportsMultipleFields: false,

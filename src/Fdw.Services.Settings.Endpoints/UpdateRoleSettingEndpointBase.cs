@@ -16,10 +16,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<UpdateRoleSettingRequest, RoleSettingSummaryDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IRoleSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected UpdateRoleSettingEndpointBase(ILogger<UpdateRoleSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected UpdateRoleSettingEndpointBase(ILogger<UpdateRoleSettingEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -78,7 +78,7 @@ public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<Upd
         if (request.SettingValue is not null) setting.SettingValue = request.SettingValue;
         if (request.IsActive.HasValue) setting.IsActive = request.IsActive.Value;
 
-        var saveResult = await _provider.SaveRoleSetting(setting, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(setting, "RoleSetting", "RoleSetting", setting.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<RoleSettingSummaryDto>();
@@ -99,11 +99,11 @@ public abstract class UpdateRoleSettingEndpointBase : CrudUpdateEndpointBase<Upd
         return GenericResult<RoleSettingSummaryDto>.Success(dto);
     }
 
-    private async Task<RoleSettingConfiguration?> FindRoleSetting(
+    private async Task<IRoleSettingImplementationConfiguration?> FindRoleSetting(
         Guid tenantId, string roleName, string settingName, CancellationToken ct)
     {
-        var roleSettingsResult = await _provider.GetRoleSettings(ct).ConfigureAwait(false);
-        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingConfiguration>)[];
+        var roleSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
+        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<IRoleSettingImplementationConfiguration>)[];
         return roleSettings
             .FirstOrDefault(s => s.TenantId == tenantId
                                  && string.Equals(s.RoleName, roleName, StringComparison.OrdinalIgnoreCase)

@@ -17,9 +17,10 @@ public sealed class ApiKeyDelegatingHandler : DelegatingHandler
     private readonly ILogger<ApiKeyDelegatingHandler> _logger;
 
     /// <summary>
-    /// The default header name for API key authentication.
+    /// The header the API key is attached in. A client whose server expects another header sets
+    /// this before the first request is sent.
     /// </summary>
-    public const string DefaultHeaderName = "X-Api-Key";
+    public static string HeaderName { get; set; } = "X-API-Key";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApiKeyDelegatingHandler"/> class.
@@ -45,7 +46,7 @@ public sealed class ApiKeyDelegatingHandler : DelegatingHandler
 
         if (!string.IsNullOrEmpty(apiKey))
         {
-            request.Headers.TryAddWithoutValidation(DefaultHeaderName, apiKey);
+            request.Headers.TryAddWithoutValidation(HeaderName, apiKey);
             ApiKeyLog.ApiKeyAttached(_logger, path);
         }
         else

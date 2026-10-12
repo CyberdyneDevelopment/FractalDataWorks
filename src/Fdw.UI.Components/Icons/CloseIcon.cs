@@ -11,7 +11,6 @@ public sealed class CloseIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="CloseIcon"/>.</summary>
     public CloseIcon()
         : base(
-            1,
             "Close",
             "0 0 24 24",
             "none",

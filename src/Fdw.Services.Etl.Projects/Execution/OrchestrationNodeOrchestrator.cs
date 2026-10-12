@@ -28,7 +28,7 @@ namespace Fdw.Services.Etl.Projects.Execution;
 /// </summary>
 /// <remarks>
 /// Flow:
-/// 1. Resolve root OrchestrationNodeConfiguration via IOrchestrationNodeConfigurationProvider.Get(id, depth).
+/// 1. Resolve the root node via IOrchestrationNodeConfigurationProvider.Get(id) -- the provider composes the whole aggregate, so there is no depth to ask for.
 /// 2. Transition root ExecutionItem → Running; broadcast.
 /// 3. ExecuteNode(root): if CanHostPipelines → execute pipelines; else → foreach(child) ExecuteNode(child).
 /// 4. Failure policy: ShouldHaltOnChildFailure reads StepFailurePolicy/StageFailurePolicy depending on level.
@@ -74,7 +74,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// <inheritdoc/>
     public async Task Execute(OrchestrationNodeExecutionRequest request, CancellationToken cancellationToken = default)
     {
-        var configResult = await _nodeProvider.Get(request.RootNodeId, depth: int.MaxValue, cancellationToken)
+        var configResult = await _nodeProvider.Get(request.RootNodeId, cancellationToken)
             .ConfigureAwait(false);
 
         if (!configResult.IsSuccess || configResult.Value is null)
@@ -109,7 +109,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         var rootPolicy = _policyResolver.ResolveForNode(rootNode, serverDefaultPolicy);
 
         // Recursive execution.
-        var overallSuccess = await ExecuteNode(rootNode, rootPolicy, request.ExecutionId, cancellationToken)
+        var overallSuccess = await ExecuteNode(rootNode, rootPolicy, request.ExecutionId, request.RunRoles, cancellationToken)
             .ConfigureAwait(false);
 
         var finalStatus = overallSuccess ? "Succeeded" : "Failed";
@@ -126,9 +126,10 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Stage-level nodes additionally wrap their children in IResiliencyExecutor.
     /// </summary>
     private async Task<bool> ExecuteNode(
-        OrchestrationNodeConfiguration node,
+        IOrchestrationNodeImplementationConfiguration node,
         ExecutionPolicySnapshot effectivePolicy,
         Guid parentExecutionItemId,
+        IReadOnlyList<string> runRoles,
         CancellationToken cancellationToken)
     {
         var nodeType = OrchestrationNodeTypes.ById(node.NodeTypeId);
@@ -136,7 +137,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         if (nodeType.CanHostPipelines)
         {
             // Leaf: execute pipeline memberships.
-            return await ExecuteLeafNode(node, effectivePolicy, parentExecutionItemId, cancellationToken)
+            return await ExecuteLeafNode(node, effectivePolicy, parentExecutionItemId, runRoles, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -151,9 +152,11 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             var childPolicy = _policyResolver.ResolveForNode(child, effectivePolicy);
 
             // Create a tracking item for this child.
+            // A child belongs to its parent's tenant, so it states none of its own.
             var childItemResult = await _tracker.CreateItem(
                 ExecutionItemTypes.ByName(nodeType.Name),
                 child.Name,
+                tenantId: null,
                 parentId: parentExecutionItemId,
                 correlationId: parentExecutionItemId.ToString("N"),
                 triggerSource: $"Node:{node.Name}",
@@ -177,7 +180,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
 
             OrchestrationNodeOrchestratorLog.ChildNodeExecutionStarted(_logger, child.Name, child.Ordinal, childItem.Id);
 
-            var childSucceeded = await ExecuteChildNode(child, childPolicy, parentExecutionItemId, childItem.Id, cancellationToken)
+            var childSucceeded = await ExecuteChildNode(child, childPolicy, parentExecutionItemId, childItem.Id, runRoles, cancellationToken)
                 .ConfigureAwait(false);
 
             var childCompleteResult = await _tracker.Complete(
@@ -214,10 +217,11 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Extracted from ExecuteNode to satisfy FDW006 (60-line method limit).
     /// </summary>
     private async Task<bool> ExecuteChildNode(
-        OrchestrationNodeConfiguration child,
+        OrchestrationNodeImplementationConfiguration child,
         ExecutionPolicySnapshot childPolicy,
         Guid parentExecutionItemId,
         Guid childItemId,
+        IReadOnlyList<string> runRoles,
         CancellationToken cancellationToken)
     {
         if (child.NodeTypeId == StageNodeTypeId && childPolicy.ResiliencyPolicyId.HasValue)
@@ -232,7 +236,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
                 childPolicy.ResiliencyPolicyId,
                 async ct =>
                 {
-                    var nodeSucceeded = await ExecuteNode(child, childPolicy, childItemId, ct).ConfigureAwait(false);
+                    var nodeSucceeded = await ExecuteNode(child, childPolicy, childItemId, runRoles, ct).ConfigureAwait(false);
                     return nodeSucceeded
                         ? GenericResult.Success()
                         : GenericResult.Failure(OrchestrationNodeOrchestratorLog.NodeFailed(_logger, childItemId));
@@ -243,7 +247,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             return resiliencyResult.IsSuccess;
         }
 
-        return await ExecuteNode(child, childPolicy, childItemId, cancellationToken).ConfigureAwait(false);
+        return await ExecuteNode(child, childPolicy, childItemId, runRoles, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -251,9 +255,10 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// bounded by MaxParallelPipelines in the effective policy.
     /// </summary>
     private async Task<bool> ExecuteLeafNode(
-        OrchestrationNodeConfiguration node,
+        IOrchestrationNodeImplementationConfiguration node,
         ExecutionPolicySnapshot effectivePolicy,
         Guid parentExecutionItemId,
+        IReadOnlyList<string> runRoles,
         CancellationToken cancellationToken)
     {
         if (node.PipelineMemberships.Count == 0)
@@ -275,9 +280,11 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
 
         await Parallel.ForEachAsync(orderedPipelineIds, parallelOptions, async (pipelineId, ct) =>
         {
+            // A child belongs to its parent's tenant, so it states none of its own.
             var childItemResult = await _tracker.CreateItem(
                 ExecutionItemTypes.ByName("Task"),
                 $"Pipeline:{pipelineId}",
+                tenantId: null,
                 parentId: parentExecutionItemId,
                 correlationId: parentExecutionItemId.ToString("N"),
                 triggerSource: $"Node:{node.Name}",
@@ -301,7 +308,9 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
                 new PipelineExecutionRequest
                 {
                     ExecutionId = childExecutionId,
+                    PipelineId = pipelineId,
                     PipelineName = pipelineName,
+                    RunRoles = runRoles,
                     TriggerSource = $"Node:{node.Name}"
                 }, ct).ConfigureAwait(false);
 
@@ -345,7 +354,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// </summary>
     private static bool ShouldHaltOnChildFailure(
         ExecutionPolicySnapshot parentPolicy,
-        OrchestrationNodeConfiguration failedChild)
+        OrchestrationNodeImplementationConfiguration failedChild)
     {
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         if (nodeType.Name.Equals("Step", StringComparison.Ordinal) ||
@@ -360,7 +369,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// <summary>Returns the name of the halting policy for logging purposes.</summary>
     private static string GetHaltPolicy(
         ExecutionPolicySnapshot parentPolicy,
-        OrchestrationNodeConfiguration failedChild)
+        OrchestrationNodeImplementationConfiguration failedChild)
     {
         var nodeType = OrchestrationNodeTypes.ById(failedChild.NodeTypeId);
         return (nodeType.Name.Equals("Step", StringComparison.Ordinal) || nodeType.CanHostPipelines)
@@ -407,7 +416,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     /// Builds a topological order over the pipeline IDs in a leaf node, respecting prerequisite edges.
     /// Uses Kahn's algorithm. The node validator guarantees a DAG (no cycles).
     /// </summary>
-    private static List<Guid> BuildTopologicalOrder(OrchestrationNodeConfiguration node)
+    private static List<Guid> BuildTopologicalOrder(IOrchestrationNodeImplementationConfiguration node)
     {
         var dependents = new Dictionary<Guid, List<Guid>>();
         var inDegree = new Dictionary<Guid, int>();

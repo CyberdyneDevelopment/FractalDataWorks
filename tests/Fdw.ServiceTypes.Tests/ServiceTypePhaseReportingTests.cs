@@ -25,7 +25,7 @@ public class ServiceTypePhaseReportingTests
     public interface IThrowingCase : IServiceTypeRegistration;
     public interface ICodedCase : IServiceTypeRegistration;
     public interface IPassThroughCase : IServiceTypeRegistration;
-    public interface ISweepCase : IServiceTypeRegistration;
+    public interface IPassCase : IServiceTypeRegistration;
 
     public abstract class OptionBase;
 
@@ -41,7 +41,7 @@ public class ServiceTypePhaseReportingTests
     private sealed class CodedCaseCollection : ServiceTypeCollectionBase<OptionBase, ICodedCase>;
     private sealed class PassThroughCaseCollection : ServiceTypeCollectionBase<OptionBase, IPassThroughCase>;
 
-    private sealed class SweepCaseCollection : ServiceTypeCollectionBase<OptionBase, ISweepCase>;
+    private sealed class PassCaseCollection : ServiceTypeCollectionBase<OptionBase, IPassCase>;
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -84,7 +84,7 @@ public class ServiceTypePhaseReportingTests
     {
         var log = new CapturingLoggerFactory();
 
-        ServiceTypeCollectionBase<OptionBase, ISweepCase>.Configure(NewBuilder(), log);
+        ServiceTypeCollectionBase<OptionBase, IPassCase>.Configure(NewBuilder(), log);
 
         log.Messages.ShouldContain(m => m.Contains(ServiceTypeLogDocumentation, StringComparison.Ordinal));
     }
@@ -160,7 +160,7 @@ public class ServiceTypePhaseReportingTests
 
         // Opening a collection's pass restarts option numbering, so an option's position is read
         // against its own collection rather than against everything registered before it.
-        ServiceTypeCollectionBase<OptionBase, ISweepCase>.Register(NewBuilder(), log);
+        ServiceTypeCollectionBase<OptionBase, IPassCase>.Register(NewBuilder(), log);
         log.Messages.Clear();
 
         new TestServiceType().Register(NewBuilder(), log);

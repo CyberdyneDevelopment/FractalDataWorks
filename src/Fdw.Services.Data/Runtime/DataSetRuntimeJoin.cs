@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.Abstractions;
-using JoinConfiguration = Fdw.Data.DataSets.Abstractions.JoinConfiguration;
+using DataSetJoinConfiguration = Fdw.Data.DataSets.Abstractions.DataSetJoinConfiguration;
 
 namespace Fdw.Services.Data.Runtime;
 
 /// <summary>
-/// Runtime implementation of <see cref="IDataSetJoin"/> built from a <c>JoinConfiguration</c> record
-/// and the resolved source map for the parent <c>DataSetConfiguration</c>.
+/// Runtime implementation of <see cref="IDataSetJoin"/> built from a <c>DataSetJoinConfiguration</c> record
+/// and the resolved source map for the parent <c>DataSetImplementationConfiguration</c>.
 /// </summary>
 internal sealed class DataSetRuntimeJoin : IDataSetJoin
 {
@@ -25,18 +25,18 @@ internal sealed class DataSetRuntimeJoin : IDataSetJoin
     /// Thrown when the left or right source name in <paramref name="config"/> cannot be resolved
     /// from <paramref name="sourcesByName"/>.
     /// </exception>
-    public DataSetRuntimeJoin(JoinConfiguration config, IReadOnlyDictionary<string, IDataSetSource> sourcesByName)
+    public DataSetRuntimeJoin(DataSetJoinConfiguration config, IReadOnlyDictionary<string, IDataSetSource> sourcesByName)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(sourcesByName);
 
-        if (!sourcesByName.TryGetValue(config.LeftSource, out var left))
+        if (!sourcesByName.TryGetValue(config.LeftSourceName, out var left))
             throw new ArgumentException(
-                $"Left source '{config.LeftSource}' not found in DataSet source map.", nameof(config));
+                $"Left source '{config.LeftSourceName}' not found in DataSet source map.", nameof(config));
 
-        if (!sourcesByName.TryGetValue(config.RightSource, out var right))
+        if (!sourcesByName.TryGetValue(config.RightSourceName, out var right))
             throw new ArgumentException(
-                $"Right source '{config.RightSource}' not found in DataSet source map.", nameof(config));
+                $"Right source '{config.RightSourceName}' not found in DataSet source map.", nameof(config));
 
         Left = left;
         Right = right;

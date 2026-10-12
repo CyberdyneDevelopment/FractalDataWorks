@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class IdleExecutionState : ExecutionStateBase
 {
     /// <summary>Initializes a new instance of <see cref="IdleExecutionState"/>.</summary>
-    public IdleExecutionState() : base(1, "Idle") { }
+    public IdleExecutionState() : base("Idle") { }
 }

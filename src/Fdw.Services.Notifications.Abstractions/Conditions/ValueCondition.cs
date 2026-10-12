@@ -17,7 +17,7 @@ public sealed class ValueCondition : NotificationConditionTypeBase
     /// Initializes a new instance of the <see cref="ValueCondition"/> class.
     /// </summary>
     public ValueCondition()
-        : base(5, "ValueCondition", "compare", "Primary")
+        : base("ValueCondition", "compare", "Primary")
     {
     }
 

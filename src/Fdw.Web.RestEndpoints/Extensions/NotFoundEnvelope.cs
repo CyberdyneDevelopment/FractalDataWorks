@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 
 namespace Fdw.Web.RestEndpoints.Extensions;
@@ -21,12 +22,13 @@ public static class NotFoundEnvelope
     /// <param name="ct">Cancellation token.</param>
     public static Task WriteNotFound(this HttpContext context, string resource, string identifier, CancellationToken ct)
     {
-        context.Response.StatusCode = 404;
-        context.Response.ContentType = "application/json";
-        return context.Response.WriteAsJsonAsync(new
+        // Through FastEndpoints' sender, not a raw write: it marks the response as sent, which is
+        // what stops the endpoint from sending again -- a raw write left that to whether the body
+        // had reached the wire yet.
+        return context.Response.SendResultAsync(TypedResults.Json(new
         {
             errorCode = "NotFound",
             messages = new[] { $"{resource} '{identifier}' was not found." }
-        }, ct);
+        }, statusCode: StatusCodes.Status404NotFound));
     }
 }

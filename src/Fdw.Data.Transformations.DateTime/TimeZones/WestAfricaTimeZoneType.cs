@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "WestAfrica")]
 public sealed class WestAfricaTimeZoneType : TimeZoneTypeBase
 {
-    public WestAfricaTimeZoneType() : base(30, "WestAfrica", "W. Central Africa Standard Time") { }
+    public WestAfricaTimeZoneType() : base("WestAfrica", "W. Central Africa Standard Time") { }
 }

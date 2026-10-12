@@ -123,6 +123,9 @@ public abstract class ResultCodeBase : TypeOptionBase<int, ResultCodeBase>, IRes
         return result.ToString();
     }
 
+    /// <inheritdoc />
+    public virtual string? FormatClientMessage(IResultDetails? details = null) => null;
+
     /// <summary>
     /// Gets the LogLevel corresponding to this result code's severity.
     /// </summary>

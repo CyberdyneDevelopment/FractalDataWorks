@@ -13,5 +13,5 @@ public sealed class TextInputComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="TextInputComponentType"/> class.
     /// </summary>
-    public TextInputComponentType() : base(1, "TextInput", "Text Input", "Input", "Single-line text input") { }
+    public TextInputComponentType() : base("TextInput", "Text Input", "Input", "Single-line text input") { }
 }

@@ -1,6 +1,9 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Pipelines.Clients.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -13,7 +16,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// <c>MapTransformType.MapSpecToConfiguration</c> (via <see cref="Fdw.Services.Etl.Abstractions.ITransformOperationSpec.FieldMappings"/>)
 /// without a separate app-owned adapter type (FDW-556).
 /// </remarks>
-public class CreatePipelineFieldMappingRequest : IFieldMapping
+public class CreatePipelineFieldMappingRequest : IFieldMapping, IFieldMappingChainSpec
 {
     /// <summary>
     /// Gets or sets the mapping name (display/identity within the transform).
@@ -42,10 +45,33 @@ public class CreatePipelineFieldMappingRequest : IFieldMapping
     public string? TargetType { get; set; }
 
     /// <summary>
+    /// Gets or sets the chain of named Transformations the mapping applies to its value (the request's <c>transforms</c>).
+    /// </summary>
+    /// <remarks>
+    /// Why each step names its Transformation by name OR by id (exactly one): the name is what a person writes and the id is
+    /// what a read-back returns. The pipeline stores the id. A stage that states a chain together with a
+    /// <see cref="TransformExpression"/> on the same mapping is refused: a mapping has one or the other.
+    /// </remarks>
+    [JsonPropertyName("transforms")]
+    public IList<PipelineFieldTransformationReference>? TransformationChain { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional named transform expression applied before TargetType coercion
     /// (e.g. "FromUnixMilliseconds"). Resolved against the TransformationTypes collection at runtime.
     /// </summary>
     public string? TransformExpression { get; set; }
+
+    // Why the chain is exposed to the stage mapper through its own interface: a stage kind that reads a mapping should not
+    // have to know about chains, and the mapper (which resolves names to ids) reads them here. An absent chain and an empty
+    // one are the same thing.
+    [JsonIgnore]
+    IReadOnlyList<IFieldTransformationReferenceSpec> IFieldMappingChainSpec.TransformationReferences =>
+        TransformationChain is null
+            ? []
+            : [.. TransformationChain.Select(reference => new FieldTransformationReferenceSpec(
+                string.IsNullOrWhiteSpace(reference.Transformation) ? null : reference.Transformation,
+                reference.TransformationId,
+                reference.Ordinal))];
 
     /// <inheritdoc/>
     /// <remarks>
@@ -53,6 +79,7 @@ public class CreatePipelineFieldMappingRequest : IFieldMapping
     /// name and no parameter values, so a one-step chain is what it actually describes. It reports no
     /// chain when no name was supplied rather than inventing one.
     /// </remarks>
+    [JsonIgnore]
     public IReadOnlyList<IFieldMappingTransform> Transforms =>
         string.IsNullOrEmpty(TransformExpression)
             ? []

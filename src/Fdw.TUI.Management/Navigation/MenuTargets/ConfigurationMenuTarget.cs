@@ -13,7 +13,6 @@ public sealed class ConfigurationMenuTarget : MenuTargetBase
     /// Creates the configuration menu target.
     /// </summary>
     public ConfigurationMenuTarget() : base(
-        id: 2,
         name: "configuration",
         label: "Configuration Management",
         group: "Main",

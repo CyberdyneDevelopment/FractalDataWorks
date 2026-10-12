@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlDateTimeOffsetConverter()
     : DataTypeConverterBase(
-        id: 6,
         name: "DateTimeOffset",
         sourceType: "datetimeoffset",
         targetClrType: typeof(DateTimeOffset),

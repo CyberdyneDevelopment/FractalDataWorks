@@ -15,7 +15,6 @@ public sealed class PausedStatus : ExecutionStatusBase
     /// </summary>
     public PausedStatus()
         : base(
-            id: 3,
             name: "Paused",
             isTerminal: false,
             isSuccess: false,

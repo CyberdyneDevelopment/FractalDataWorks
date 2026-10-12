@@ -9,5 +9,5 @@ namespace Fdw.Orchestration.Abstractions.Caching;
 public sealed class NormalCachePriority : CachePriorityBase
 {
     /// <summary>Initializes a new instance of <see cref="NormalCachePriority"/>.</summary>
-    public NormalCachePriority() : base(1, "Normal") { }
+    public NormalCachePriority() : base("Normal") { }
 }

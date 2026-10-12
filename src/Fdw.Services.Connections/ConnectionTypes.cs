@@ -19,6 +19,8 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System;
+using Fdw.Services.Connections.Abstractions.Authentication;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Connections;
 
@@ -40,7 +42,7 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [ServiceTypeCollection(
-    typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, ConnectionConfiguration>, ConnectionConfiguration>),
+    typeof(ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration>),
     typeof(IConnectionType),
     typeof(ConnectionTypes),
     ServiceInterface = typeof(IGenericConnection),
@@ -48,8 +50,8 @@ namespace Fdw.Services.Connections;
     ProviderInterface = typeof(IConnectionProvider),
     ServiceCategory = "Connection")]
 public partial class ConnectionTypes : ServiceTypeCollectionBase<
-    ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, ConnectionConfiguration>, ConnectionConfiguration>,
-    IConnectionType<IGenericConnection, ConnectionConfiguration, IConnectionFactory<IGenericConnection, ConnectionConfiguration>>>
+    ConnectionTypeBase<IGenericConnection, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>, IConnectionImplementationConfiguration>,
+    IConnectionType<IGenericConnection, IConnectionImplementationConfiguration, IConnectionFactory<IGenericConnection, IConnectionImplementationConfiguration>>>
 {
     /// <summary>
     /// Sets this collection's Register body: the option collect, then this domain's provider.
@@ -77,12 +79,12 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
     /// <remarks>
-    /// Defaulted here and public so a host can point the whole domain at a different configuration
-    /// store before registration runs. Every implementation of a connection lives in the same store as
+    /// The host's <c>ConnectionRoles.Platform</c> declaration, so a host points the whole domain at its own
+    /// configuration store. Every implementation of a connection lives in the same store as
     /// the connection row that owns it — the foreign key is declared on that row and cannot span
     /// connections — so this one value settles the domain and its implementations together.
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     static ConnectionTypes()
     {
@@ -107,20 +109,26 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ConnectionConfigurationProvider>(sp =>
                 new ConnectionConfigurationProvider(
                     sp.GetService<ILogger<ConnectionConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "conn", "Connection"));
 
-            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(
-                sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
+            builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
 
             builder.Services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
 
             builder.Services.TryAddScoped<IConnectionHealthService, ConnectionHealthService>();
 
-            builder.Services.AddHostedService<ConnectionHealthMonitorWorker>();
+            // The health monitor's scan bounds are stated here, where it is registered, and a host that
+            // wants others replaces this body. After each check it waits until the soonest enabled
+            // connection falls due, never less than the first and never more than the second, which is
+            // also the longest a newly enabled health check waits to be noticed (FDW-970).
+            builder.Services.AddHostedService(sp => new ConnectionHealthMonitorWorker(
+                sp.GetRequiredService<IServiceScopeFactory>(),
+                TimeSpan.FromSeconds(15),
+                TimeSpan.FromMinutes(5),
+                sp.GetService<ILogger<ConnectionHealthMonitorWorker>>()));
 
-            builder.Services.TryAddScoped<IDataConnectionProvider>(sp =>
+            builder.Services.TryAddSingleton<IDataConnectionProvider>(sp =>
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
             builder.Services.TryAddSingleton<IServiceConnectionProvider, ServiceConnectionProvider>();
@@ -134,28 +142,15 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             ServiceTypeLog.DomainOptionsCollected(log, nameof(ConnectionTypes), declaredOptions.Length, optionNames);
 
-            foreach (var option in declaredOptions)
-            {
-                if (option is not IServiceType serviceType)
-                    return GenericResult<IHostApplicationBuilder>.Failure(
-                        ServiceTypeLog.FactoryRegistrationFailed(
-                            log,
-                            option.Name,
-                            FormattableString.Invariant($"'{option.GetType().Name}' does not implement IServiceType, so it cannot name a factory type")));
-
-                var factoryType = serviceType.FactoryType;
-                ConnectionProvider.Register(
-                    option.Name,
-                    sp => (IServiceFactory<IGenericConnection>)sp.GetRequiredService(factoryType));
-
-                ServiceTypeLog.FactoryRegistered(log, nameof(ConnectionTypes), option.Name, factoryType.Name);
-            }
+            // No factory registration here any more. Each option registers its own implementation
+            // provider with this domain in its Initialization body, once a container exists to
+            // resolve both out of -- the same place it already registers its implementation
+            // CONFIGURATION provider. A domain no longer reaches into its options to wire them.
             ServiceTypeLog.DomainProviderDeclared(log, nameof(ConnectionTypes), providerService);
 
-            builder.Services.AddScoped<IConnectionProvider>(sp =>
+            builder.Services.AddSingleton<IConnectionProvider>(sp =>
             {
                 var provider = new ConnectionProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ConnectionProvider>()
                     ?? NullLogger<ConnectionProvider>.Instance);
 
@@ -178,7 +173,7 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(ConnectionTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<ConnectionConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<IConnectionImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -196,5 +191,29 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
+    }
+
+    // The generated NotFound sentinel answers the host-identity question the only honest way: a connection whose
+    // type is not registered says nothing about how it authenticates, so the answer cannot be given.
+    private sealed partial class NotFoundConnectionTypes
+    {
+        /// <inheritdoc />
+        protected override IGenericResult<bool> DecideHostIdentity(IConnectionImplementationConfiguration configuration)
+            => GenericResult<bool>.Failure(
+                Results.ConnectionsResultCodes.ByName("HostIdentityUndetermined"),
+                ResultDetails.Create("name", configuration.Name, "reason", "its connection type is not registered"));
+
+        protected override IGenericResult<ConnectionCredentialSlots> DescribeCredentials(IConnectionImplementationConfiguration configuration)
+            => GenericResult<ConnectionCredentialSlots>.Failure(
+                Results.ConnectionsResultCodes.ByName("CredentialsUndetermined"),
+                ResultDetails.Create("name", configuration.Name, "reason", "its connection type is not registered"));
+
+        protected override IGenericResult BindCredentialReferences(
+            IConnectionImplementationConfiguration configuration,
+            string secretManagerName,
+            IReadOnlyDictionary<string, string> secretKeyByField)
+            => GenericResult.Failure(
+                Results.ConnectionsResultCodes.ByName("CredentialsUndetermined"),
+                ResultDetails.Create("name", configuration.Name, "reason", "its connection type is not registered"));
     }
 }

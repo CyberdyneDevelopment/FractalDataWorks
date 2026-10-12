@@ -7,18 +7,18 @@ using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Runtime;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using DataFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataFieldConfiguration;
+using DataSetFieldConfiguration = Fdw.Data.DataSets.Abstractions.DataSetFieldConfiguration;
 using DataSetCompositionTypes = Fdw.Data.Abstractions.DataSetCompositionTypes;
-using DataSetConfiguration = Fdw.Data.DataSets.Abstractions.DataSetConfiguration;
 using DataSetSourceConfiguration = Fdw.Data.DataSets.Abstractions.DataSetSourceConfiguration;
+using IDataSetImplementationConfiguration = Fdw.Data.DataSets.Abstractions.IDataSetImplementationConfiguration;
 using IDataSetBuilder = Fdw.Data.DataSets.Abstractions.IDataSetBuilder;
-using JoinConfiguration = Fdw.Data.DataSets.Abstractions.JoinConfiguration;
+using DataSetImplementationConfigurationExtensions = Fdw.Data.DataSets.Abstractions.DataSetImplementationConfigurationExtensions;
 
 namespace Fdw.Services.Data;
 
 /// <summary>
 /// Default implementation of <see cref="IDataSetBuilder"/>.
-/// Builds live <see cref="IDataSet"/> runtime instances from <see cref="DataSetConfiguration"/> records.
+/// Builds live <see cref="IDataSet"/> runtime instances from <see cref="IDataSetImplementationConfiguration"/> records.
 /// </summary>
 public sealed class DataSetBuilder : IDataSetBuilder
 {
@@ -34,10 +34,10 @@ public sealed class DataSetBuilder : IDataSetBuilder
     }
 
     /// <inheritdoc />
-    private DataSetConfiguration? _config;
+    private IDataSetImplementationConfiguration? _config;
 
     /// <inheritdoc />
-    public IGenericResult Configure(DataSetConfiguration dataSetConfig)
+    public IGenericResult Configure(IDataSetImplementationConfiguration dataSetConfig)
     {
         ArgumentNullException.ThrowIfNull(dataSetConfig);
         _config = dataSetConfig;
@@ -84,10 +84,11 @@ public sealed class DataSetBuilder : IDataSetBuilder
 
         // Build join runtimes.
         IReadOnlyList<IDataSetJoin> joins;
-        if (config.Joins.Count > 0 && sourcesByName.Count > 0)
+        var configuredJoins = DataSetImplementationConfigurationExtensions.JoinsOrNone(config);
+        if (configuredJoins.Count > 0 && sourcesByName.Count > 0)
         {
-            var joinList = new List<IDataSetJoin>(config.Joins.Count);
-            foreach (var joinConfig in config.Joins)
+            var joinList = new List<IDataSetJoin>(configuredJoins.Count);
+            foreach (var joinConfig in configuredJoins.OrderBy(j => j.Ordinal))
             {
                 try
                 {
@@ -130,10 +131,10 @@ public sealed class DataSetBuilder : IDataSetBuilder
     /// <summary>
     /// Determines the composition strategy from the configuration.
     /// </summary>
-    private static IDataSetCompositionType ResolveComposition(DataSetConfiguration config)
+    private static IDataSetCompositionType ResolveComposition(IDataSetImplementationConfiguration config)
     {
         var sourceCount = config.Sources?.Count ?? 0;
-        if (sourceCount <= 1 || config.Joins.Count == 0)
+        if (sourceCount <= 1 || DataSetImplementationConfigurationExtensions.JoinsOrNone(config).Count == 0)
         {
             if (sourceCount > 1)
                 return DataSetCompositionTypes.ByName("Union");

@@ -34,7 +34,6 @@ public sealed class GetSemanticModelTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: get semantic model, collect type declarations
     public override async Task<IGenericResult<QueryResult<SemanticModelData>>> Translate(
         GetSemanticModelCommand command,
         Solution solution,
@@ -129,5 +128,4 @@ public sealed class GetSemanticModelTranslator
 
         return GenericResult<QueryResult<SemanticModelData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

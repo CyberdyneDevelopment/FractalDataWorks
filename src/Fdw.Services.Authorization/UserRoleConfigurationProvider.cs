@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -11,54 +6,28 @@ using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Authorization.Logging;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Authorization;
 
-/// <summary>
-/// Domain configuration provider for user-role assignments.
-/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with a by-user convenience method.
-/// </summary>
-public class UserRoleConfigurationProvider : ImplementationConfigurationProviderBase<UserRoleConfiguration, UserRoleConfigurationCommand>
+/// <summary>Supplies the UserRole configuration.</summary>
+public sealed class UserRoleConfigurationProvider
+    : DomainConfigurationProviderBase<IUserRoleImplementationConfiguration>,
+      IUserRoleConfigurationProvider
 {
-    private readonly ILogger _logger;
-
-
     /// <summary>Initializes a new instance of the <see cref="UserRoleConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public UserRoleConfigurationProvider(
-        ILogger<UserRoleConfigurationProvider>? logger,
+        ILogger<UserRoleConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "authz")
-        : base(logger ?? NullLogger<UserRoleConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        _logger = logger ?? NullLogger<UserRoleConfigurationProvider>.Instance;
-    }
-
-    /// <summary>
-    /// Gets all user-role assignments for a specific user.
-    /// Returns a failure result if the underlying provider fails — callers must treat failure as
-    /// an authorization denial (fail-closed).
-    /// </summary>
-    public virtual async Task<IGenericResult<IReadOnlyList<UserRoleConfiguration>>> GetByUser(
-        string userId,
-        CancellationToken cancellationToken = default)
-    {
-        var allResult = await Get(cancellationToken).ConfigureAwait(false);
-        if (!allResult.IsSuccess || allResult.Value is null)
-            return allResult.ToNewResult<IReadOnlyList<UserRoleConfiguration>>();
-
-        var filtered = allResult.Value
-            .Where(ur => string.Equals(ur.UserId, userId, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        UserRoleConfigurationProviderLog.UserRolesForUserLoaded(_logger, filtered.Count, userId);
-        return GenericResult<IReadOnlyList<UserRoleConfiguration>>.Success(filtered);
     }
 }

@@ -20,7 +20,6 @@ public sealed class ToLowerFieldTransformer : FieldTransformationBase
     /// </summary>
     public ToLowerFieldTransformer()
         : base(
-            id: 303,
             name: "ToLower",
             displayName: "To Lower",
             description: "Converts a string value to lowercase using invariant culture.",

@@ -4,7 +4,7 @@ namespace Fdw.UI.Web.Abstractions;
 
 /// <summary>
 /// Generic JavaScript interop interface.
-/// Implementations vary by framework (Blazor, Node.js, browser).
+/// Implementations vary by framework (Node.js, browser).
 /// </summary>
 public interface IJavaScriptInterop
 {

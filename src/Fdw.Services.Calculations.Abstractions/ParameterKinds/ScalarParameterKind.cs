@@ -14,7 +14,7 @@ public sealed class ScalarParameterKind : OperationParameterKindBase
     /// Initializes a new instance of the <see cref="ScalarParameterKind"/> class.
     /// </summary>
     public ScalarParameterKind()
-        : base(id: 1, name: "Scalar", description: "A single scalar value (number, string)")
+        : base(name: "Scalar", description: "A single scalar value (number, string)")
     {
     }
 }

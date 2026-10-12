@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class InnerLookupJoinType : LookupJoinTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="InnerLookupJoinType"/> class.</summary>
-    public InnerLookupJoinType() : base(1, "Inner", failOnMissing: true)
+    public InnerLookupJoinType() : base("Inner", failOnMissing: true)
     {
     }
 }

@@ -51,7 +51,6 @@ public sealed class PropertyCollectionKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="PropertyCollectionKeyType"/> class.</summary>
     public PropertyCollectionKeyType()
         : base(
-            id: 9,
             name: "PropertyCollection",
             isPrimaryKey: false,
             hasConstraint: false,

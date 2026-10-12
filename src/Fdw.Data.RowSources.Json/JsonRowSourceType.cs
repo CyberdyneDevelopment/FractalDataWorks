@@ -19,7 +19,7 @@ public sealed class JsonRowSourceType : RecordSourceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="JsonRowSourceType"/> class.
     /// </summary>
-    public JsonRowSourceType() : base(4, "Json")
+    public JsonRowSourceType() : base("Json")
     {
     }
 

@@ -14,5 +14,5 @@ public sealed class InsertMode : WriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="InsertMode"/> class.
     /// </summary>
-    public InsertMode() : base(1, "Insert") { }
+    public InsertMode() : base("Insert") { }
 }

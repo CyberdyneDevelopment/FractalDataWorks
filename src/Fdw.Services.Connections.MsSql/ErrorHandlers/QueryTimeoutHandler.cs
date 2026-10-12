@@ -19,7 +19,7 @@ public sealed class QueryTimeoutHandler : SqlErrorHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="QueryTimeoutHandler"/> class.
     /// </summary>
-    public QueryTimeoutHandler() : base(6, "QueryTimeout") { }
+    public QueryTimeoutHandler() : base("QueryTimeout") { }
 
     /// <inheritdoc />
     public override IReadOnlyList<int> SqlErrorNumbers => [-2];

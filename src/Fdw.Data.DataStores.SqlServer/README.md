@@ -16,13 +16,10 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ConnectionIdEmptyCode` | class | ConnectionId cannot be empty. |
 | `ConnectionStringEmptyCode` | class | Connection string cannot be null or empty. |
-| `DataStoreNullCode` | class | DataStore cannot be null. |
 | `DataStoreSaveFailedCode` | class | Failed to save DataStore. |
 | `DiscoverTablesFailedCode` | class | Failed to discover tables. |
 | `DiscoveryQueryFailedCode` | class | Discovery query failed. |
-| `ExistingDataStoreIdEmptyCode` | class | ExistingDataStoreId cannot be empty. |
 | `ExtendedPropertiesUnavailableCode` | class | Extended properties query failed (non-fatal). |
 | `GetColumnsFailedCode` | class | Failed to get columns. |
 | `GetParametersFailedCode` | class | Failed to get parameters. |

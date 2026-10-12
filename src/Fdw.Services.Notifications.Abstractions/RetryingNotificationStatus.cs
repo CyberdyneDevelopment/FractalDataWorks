@@ -9,5 +9,5 @@ namespace Fdw.Services.Notifications.Abstractions;
 public sealed class RetryingNotificationStatus : NotificationStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="RetryingNotificationStatus"/>.</summary>
-    public RetryingNotificationStatus() : base(5, "Retrying") { }
+    public RetryingNotificationStatus() : base("Retrying") { }
 }

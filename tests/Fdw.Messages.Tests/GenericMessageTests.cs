@@ -216,25 +216,12 @@ public class GenericMessageTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
-    public void IEnumOption_IdProperty_CanBeSetViaInterface()
-    {
-        // Arrange
-        ITypeOption message = new GenericMessage();
-
-        // Act
-        ((GenericMessage)message).Id = 100;
-
-        // Assert
-        message.Id.ShouldBe(100);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
     public void IEnumOption_NameProperty_CanBeSetViaInterface()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         ITypeOption message = new GenericMessage();
+#pragma warning restore CA1859
 
         // Act
         ((GenericMessage)message).Name = "CustomEnumOption";
@@ -249,7 +236,9 @@ public class GenericMessageTests
     public void IGenericMessage_PropertiesAccessible_ViaInterface()
     {
         // Arrange
+#pragma warning disable CA1859 // interface-contract test, narrowing defeats the point
         IGenericMessage message = new GenericMessage(MessageSeverity.Warning, "Test");
+#pragma warning restore CA1859
 
         // Assert
         message.Message.ShouldBe("Test");

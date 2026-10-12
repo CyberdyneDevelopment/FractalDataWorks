@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "China")]
 public sealed class ChinaTimeZoneType : TimeZoneTypeBase
 {
-    public ChinaTimeZoneType() : base(12, "China", "China Standard Time") { }
+    public ChinaTimeZoneType() : base("China", "China Standard Time") { }
 }

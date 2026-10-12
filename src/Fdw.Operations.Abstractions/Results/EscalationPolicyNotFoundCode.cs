@@ -18,7 +18,7 @@ public sealed class EscalationPolicyNotFoundCode : OperationsResultCodeBase
         : base(
             31000,
             "EscalationPolicyNotFound",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "No escalation policy found for '{ExecutionItemId}'",
             isRetryable: false)
     {

@@ -13,12 +13,11 @@ namespace Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.StageTypeOpti
 /// Provides common functionality for stage types. Derived classes implement
 /// specific stage type behaviors (Extract, Transform, Load, etc.).
 /// </remarks>
-public abstract class StageTypeBase : TypeOptionBase<int, StageTypeBase>, IStageType
+public abstract class StageTypeBase : TypeOptionBase<StageTypeBase>, IStageType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="StageTypeBase"/> class.
     /// </summary>
-    /// <param name="id">Unique numeric identifier.</param>
     /// <param name="name">Human-readable name.</param>
     /// <param name="requiresSource">Whether this stage requires a source connection.</param>
     /// <param name="requiresDestination">Whether this stage requires a destination connection.</param>
@@ -26,14 +25,13 @@ public abstract class StageTypeBase : TypeOptionBase<int, StageTypeBase>, IStage
     /// <param name="producesOutput">Whether this stage produces output data.</param>
     /// <param name="consumesInput">Whether this stage consumes input data.</param>
     protected StageTypeBase(
-        int id,
         string name,
         bool requiresSource,
         bool requiresDestination,
         bool supportsParallel,
         bool producesOutput = true,
         bool consumesInput = true)
-        : base(id, name)
+        : base(name)
     {
         RequiresSource = requiresSource;
         RequiresDestination = requiresDestination;

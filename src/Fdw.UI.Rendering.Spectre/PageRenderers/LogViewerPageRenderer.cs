@@ -84,10 +84,7 @@ public sealed class LogViewerPageRenderer
         console.WriteLine();
     }
 
-    // MA0051: Method length acceptable - procedural log entry formatting with timestamps, levels, and exception truncation
-#pragma warning disable MA0051 // Method is too long
     private static void RenderLogEntries(ILogViewerPageModel page, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         if (page.Entries.Count == 0)
         {
@@ -201,10 +198,7 @@ public sealed class LogViewerPageRenderer
         };
     }
 
-    // MA0051: Method length acceptable - procedural action menu with level/search/filter options and switch-based dispatch
-#pragma warning disable MA0051 // Method is too long
     private static LogViewerPageResult PromptAction(ILogViewerPageModel page, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         var choices = new List<(string Id, string Label)>
         {

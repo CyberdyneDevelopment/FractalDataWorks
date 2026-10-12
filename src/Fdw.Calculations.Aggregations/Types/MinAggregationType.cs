@@ -14,6 +14,6 @@ public sealed class MinAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MinAggregationType"/> class.
     /// </summary>
-    public MinAggregationType() : base(7, "Min", values => values.Count == 0 ? 0m : values.Min())
+    public MinAggregationType() : base("Min", values => values.Count == 0 ? 0m : values.Min())
     { }
 }

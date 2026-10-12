@@ -25,16 +25,6 @@ public class RoleDetailResponse : ResourceDetail
     public bool IsTenantScoped { get; set; }
 
     /// <summary>
-    /// Gets or sets the parent role name, if any.
-    /// </summary>
-    public string? ParentRoleName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the sort order.
-    /// </summary>
-    public int SortOrder { get; set; }
-
-    /// <summary>
     /// Gets or sets the permissions assigned to this role.
     /// </summary>
     public IList<PermissionSummaryDto> Permissions { get; set; } = [];

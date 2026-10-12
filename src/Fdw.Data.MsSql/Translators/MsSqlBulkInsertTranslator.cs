@@ -9,6 +9,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Conventions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.MsSql.Logging;
 using Fdw.Data.MsSql.Results;
 using Fdw.Data.MsSql.Translators;
@@ -20,41 +21,21 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Data.MsSql;
 
 /// <summary>
-/// Translates BulkInsertCommand to SqlBulkCopy operation for maximum performance.
+/// Translates BulkInsertCommand to batched multi-row INSERT statements, and plans the SqlBulkCopy the connection runs when the
+/// command is rerouted to bulk (FDW-1152).
 /// </summary>
 /// <remarks>
 /// <para>
-/// Uses SqlBulkCopy for high-performance bulk insert operations.
-/// Configures safe defaults:
-/// <list type="bullet">
-/// <item>CheckConstraints - ensures data integrity</item>
-/// <item>FireTriggers - ensures business logic executes</item>
-/// <item>KeepIdentity - preserves identity values if provided</item>
-/// <item>NO TableLock - uses row-level locking for concurrency</item>
-/// </list>
+/// A bulk insert runs one of two ways, chosen by the connection before it translates: up to the connection's configured
+/// <c>MaxSerialInsert</c> rows it runs serially, and this translator gives it the same batched INSERT statements a batch insert
+/// gets, so it runs identically in and out of a unit of work; above that the command answers
+/// <see cref="IDatabaseConnectionCommand.ReroutesToBulk"/> and the connection takes the bulk route with <see cref="Plan"/>,
+/// which builds the rows and the destination and nothing else. No SQL is faked: the translator never returns a command that is
+/// not SQL.
 /// </para>
 /// <para>
-/// ⚠️ Performance vs Safety Trade-off:
-/// <list type="bullet">
-/// <item>FASTER than batched INSERT for large datasets (10,000+ rows)</item>
-/// <item>Uses minimal logging (faster but impacts recovery)</item>
-/// <item>May have different locking behavior than standard INSERT</item>
-/// </list>
-/// </para>
-/// <para>
-/// Recommended for:
-/// <list type="bullet">
-/// <item>ETL processes loading large datasets</item>
-/// <item>Initial data loads</item>
-/// <item>Batch imports where performance is critical</item>
-/// </list>
-/// </para>
-/// <para>
-/// Not recommended for:
-/// <list type="bullet">
-/// <item>Transactional OLTP inserts</item>
-/// <item>Small batches (&lt; 1000 rows) - use MsSqlBatchInsertTranslator instead</item>
-/// </list>
+/// The bulk copy (SqlBulkCopy) is configured by the connection with safe defaults: CheckConstraints, FireTriggers and
+/// KeepIdentity, no TableLock, and the unit of work's transaction when there is one.
 /// </para>
 /// </remarks>
 [TypeOption(typeof(MsSqlDataCommandTranslators), "BulkInsert", RestrictToCurrentCompilation = true)]
@@ -69,13 +50,8 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
     }
 
     /// <summary>
-    /// Translates a BulkInsertCommand to SqlBulkCopy operation.
+    /// Translates a BulkInsertCommand to batched T-SQL INSERT statements, the serial route.
     /// </summary>
-    /// <remarks>
-    /// NOTE: This translator returns a "wrapper" SqlCommand that encapsulates
-    /// SqlBulkCopy metadata. The actual bulk copy is executed by MsSqlConnection
-    /// when it detects this special command type.
-    /// </remarks>
     public override Task<IGenericResult<SqlCommand>> Translate(
         IDataCommand command,
         IStorageContainer container,
@@ -86,103 +62,104 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
 
         try
         {
-            if (container == null)
-            {
-                MsSqlBulkInsertTranslatorLog.ContainerNull(NullLogger<MsSqlBulkInsertTranslator>.Instance);
-                return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
-            }
+            var source = Source(command, container);
+            if (source.IsFailure)
+                return Task.FromResult(source.ToNewResult<SqlCommand>());
 
-            if (container.Path is not IDatabasePath dbPath)
-            {
-                MsSqlBulkInsertTranslatorLog.InvalidContainerPath(
-                    NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
-                return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
-            }
-
-            // Get collection data from command
-            var dataObj = GetCommandData(command);
-            if (dataObj == null)
-            {
-                MsSqlBulkInsertTranslatorLog.MissingInputData(
-                    NullLogger<MsSqlBulkInsertTranslator>.Instance, "BulkInsertCommand", container.Name);
-                return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(
-                        MsSqlDataResultCodes.ByName("MissingInputData"),
-                        ResultDetails.Create("CommandType", "BulkInsertCommand")));
-            }
-
-            if (dataObj is not IEnumerable collection)
-            {
-                MsSqlBulkInsertTranslatorLog.InvalidDataType(
-                    NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name, dataObj.GetType().Name);
-                return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(
-                        MsSqlDataResultCodes.ByName("InvalidDataType"),
-                        ResultDetails.Create("TranslatorName", "MsSqlBulkInsertTranslator", "ActualType", dataObj.GetType().Name)));
-            }
-
-            // Build SqlBulkCopy wrapper command
-            var sqlCommand = BuildBulkCopyCommand(container, dbPath, collection);
-
-            return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
+            var (dbPath, collection) = source.Value!;
+            return Task.FromResult(GenericResult<SqlCommand>.Success(
+                MsSqlBatchInsertTranslator.BuildBatchedInsertStatements(container!, dbPath, collection)));
         }
         catch (Exception ex)
         {
             MsSqlBulkInsertTranslatorLog.BulkInsertTranslationFailed(
                 NullLogger<MsSqlBulkInsertTranslator>.Instance, ex, container?.Name ?? "<null>", ex.Message);
-            return Task.FromResult(
-                GenericResult<SqlCommand>.Failure(
-                    MsSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
-                    ResultDetails.Create("ErrorMessage", ex.Message)));
+            return Task.FromResult(GenericResult<SqlCommand>.Failure(
+                MsSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
+                ResultDetails.Create("ErrorMessage", ex.Message)));
         }
     }
 
     /// <summary>
-    /// Builds a special SqlCommand that wraps SqlBulkCopy metadata.
-    /// MsSqlConnection will detect this and use SqlBulkCopy instead of ExecuteNonQuery.
+    /// Plans the bulk copy of a BulkInsertCommand: the rows as a DataTable, the table to copy into and the columns to map.
     /// </summary>
-    private static SqlCommand BuildBulkCopyCommand(
-        IStorageContainer container,
-        IDatabasePath dbPath,
-        IEnumerable collection)
+    /// <param name="command">The bulk insert command, carrying its rows as input data.</param>
+    /// <param name="container">The container the rows are copied into.</param>
+    /// <returns>The plan, or the coded failure that stopped it.</returns>
+    public static IGenericResult<MsSqlBulkCopyPlan> Plan(IDataCommand command, IStorageContainer container)
     {
-        // Exclude system-provided columns (IDENTITY, COMPUTED, DEFAULT-filled like NEWSEQUENTIALID()).
-        // IsSystemProvided is the superset (same rule as MsSqlInsertTranslator); mapping a
-        // system-provided column here sends DBNull and the copy fails
-        // "Column 'X' does not allow DBNull.Value".
-        var fields = container.Schema.Fields
-            .Where(f => !f.IsIdentity && !f.IsComputed && !f.IsSystemProvided)
-            .ToList();
-
-        if (fields.Count == 0)
+        try
         {
-            MsSqlBulkInsertTranslatorLog.NoInsertableFields(
-                NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
-            throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
+            var source = Source(command, container);
+            if (source.IsFailure)
+                return source.ToNewResult<MsSqlBulkCopyPlan>();
+
+            var (dbPath, collection) = source.Value!;
+            var fields = MsSqlBatchInsertTranslator.InsertableFields(container);
+            if (fields.Count == 0)
+            {
+                MsSqlBulkInsertTranslatorLog.NoInsertableFields(
+                    NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
+                throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
+            }
+
+            var rows = ConvertToDataTable(collection, fields);
+            MsSqlBulkInsertTranslatorLog.Planned(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name, rows.Rows.Count);
+            return GenericResult<MsSqlBulkCopyPlan>.Success(
+                new MsSqlBulkCopyPlan(rows, BuildSchemaQualifiedTableName(dbPath), [.. fields.Select(f => f.Name)]));
+        }
+        catch (Exception ex)
+        {
+            MsSqlBulkInsertTranslatorLog.BulkInsertTranslationFailed(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, ex, container.Name, ex.Message);
+            return GenericResult<MsSqlBulkCopyPlan>.Failure(
+                MsSqlDataResultCodes.ByName("BulkInsertTranslationFailed"),
+                ResultDetails.Create("ErrorMessage", ex.Message));
+        }
+    }
+
+    // What both routes need first: the database path of the container and the rows the command carries, each refused with its
+    // own coded failure when it is missing or not what a bulk insert takes.
+    private static IGenericResult<BulkSource> Source(IDataCommand command, IStorageContainer? container)
+    {
+        if (container == null)
+        {
+            MsSqlBulkInsertTranslatorLog.ContainerNull(NullLogger<MsSqlBulkInsertTranslator>.Instance);
+            return GenericResult<BulkSource>.Failure(MsSqlDataResultCodes.ByName("ContainerNull"));
         }
 
-        // Convert collection to DataTable for SqlBulkCopy
-        var dataTable = ConvertToDataTable(collection, fields);
+        if (container.Path is not IDatabasePath dbPath)
+        {
+            MsSqlBulkInsertTranslatorLog.InvalidContainerPath(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name);
+            return GenericResult<BulkSource>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath"));
+        }
 
-        // Get special marker command that MsSqlConnection will recognize
-        var command = CreateCommand($"-- BULK INSERT MARKER: {BuildQualifiedTableName(dbPath)}");
+        var dataObj = GetCommandData(command);
+        if (dataObj == null)
+        {
+            MsSqlBulkInsertTranslatorLog.MissingInputData(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, "BulkInsertCommand", container.Name);
+            return GenericResult<BulkSource>.Failure(
+                MsSqlDataResultCodes.ByName("MissingInputData"),
+                ResultDetails.Create("CommandType", "BulkInsertCommand"));
+        }
 
-        // Store metadata in command for MsSqlConnection to use
-        command.CommandType = CommandType.StoredProcedure; // Marker for bulk operation
+        if (dataObj is not IEnumerable collection)
+        {
+            MsSqlBulkInsertTranslatorLog.InvalidDataType(
+                NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name, dataObj.GetType().Name);
+            return GenericResult<BulkSource>.Failure(
+                MsSqlDataResultCodes.ByName("InvalidDataType"),
+                ResultDetails.Create("TranslatorName", "MsSqlBulkInsertTranslator", "ActualType", dataObj.GetType().Name));
+        }
 
-        // Store DataTable and destination in Parameters collection as metadata
-        command.Parameters.Add(new SqlParameter("@__BulkCopy_DataTable", dataTable));
-        command.Parameters.Add(new SqlParameter("@__BulkCopy_Destination", BuildSchemaQualifiedTableName(dbPath)));
-        command.Parameters.Add(new SqlParameter("@__BulkCopy_ColumnMappings",
-            string.Join(",", fields.Select(f => f.Name))));
-
-        MsSqlBulkInsertTranslatorLog.Translated(
-            NullLogger<MsSqlBulkInsertTranslator>.Instance, container.Name, dataTable.Rows.Count);
-
-        return command;
+        return GenericResult<BulkSource>.Success(new BulkSource(dbPath, collection));
     }
+
+    // The container's database path and the rows the command carries.
+    private sealed record BulkSource(IDatabasePath Path, IEnumerable Collection);
 
     /// <summary>
     /// Converts IEnumerable to DataTable for SqlBulkCopy.
@@ -234,19 +211,13 @@ public sealed class MsSqlBulkInsertTranslator : MsSqlDataCommandTranslatorBase
         return dataTable;
     }
 
+    // Each column is read from the row the one way the serial route reads it (RowValues), so the copy stores the rows the
+    // INSERT statements would have stored. A column the row lacks, or holds null, is a database NULL.
     private static void FillRow(DataRow row, object entity, List<IField> fields)
     {
-        if (entity is IDictionary<string, object?> dict)
-        {
-            foreach (var field in fields)
-                row[field.Name] = dict.TryGetValue(field.Name, out var v) && v is not null ? v : DBNull.Value;
-            return;
-        }
-
-        var entityType = entity.GetType();
         foreach (var field in fields)
         {
-            var value = entityType.GetProperty(field.Name)?.GetValue(entity);
+            RowValues.TryRead(entity, field.Name, out var value, out _);
             row[field.Name] = value ?? DBNull.Value;
         }
     }

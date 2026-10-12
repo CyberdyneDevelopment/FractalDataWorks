@@ -8,17 +8,16 @@ namespace Fdw.Aegis.Abstractions;
 /// its id, name, and the two behavior flags — no switch statement anywhere resolves them.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class VerdictDispositionBase : TypeOptionBase<int, VerdictDispositionBase>, IVerdictDisposition
+public abstract class VerdictDispositionBase : TypeOptionBase<VerdictDispositionBase>, IVerdictDisposition
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="VerdictDispositionBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The disposition name.</param>
     /// <param name="isTerminal">Whether this disposition is a final answer.</param>
     /// <param name="allowsInjection">Whether this disposition permits secret injection.</param>
-    protected VerdictDispositionBase(int id, string name, bool isTerminal, bool allowsInjection)
-        : base(id, name)
+    protected VerdictDispositionBase(string name, bool isTerminal, bool allowsInjection)
+        : base(name)
     {
         IsTerminal = isTerminal;
         AllowsInjection = allowsInjection;

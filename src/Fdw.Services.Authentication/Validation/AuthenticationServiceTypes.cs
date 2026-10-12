@@ -1,4 +1,6 @@
+using System.Linq;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using Fdw.Collections;
@@ -6,6 +8,7 @@ using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.ServiceTypes;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,10 +52,23 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
     /// configuration. Two hosts sharing a tenant legitimately trust different issuers, the same
     /// reason the flows themselves live there.
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
+    public static string ConfigurationConnection => ServerConnection.Name;
 
     /// <summary>The ServerConfiguration folder this domain's rows live in.</summary>
     public static string ServerConfigurationPath { get; set; } = "auth";
+
+    /// <summary>
+    /// The request header the Antiforgery CSRF protection reads the token from. Browser clients send
+    /// the token from <c>GET /api/v1/auth/session/csrf</c> in this header on every write.
+    /// </summary>
+    public static string AntiforgeryHeaderName { get; set; } = "X-CSRF-Token";
+
+    /// <summary>
+    /// How long a token minted for a session caller's outbound calls stays valid. It only has to
+    /// outlast the outbound calls of the one request it was minted for; the session's own end caps
+    /// it further.
+    /// </summary>
+    public static TimeSpan DelegationTokenLifetime { get; set; } = TimeSpan.FromMinutes(5);
 
     // Configure(), Register() and Initialize() are source-generated. Each body below runs the loop
     // over this collection's options first - which is what Registration and Initialization replace -
@@ -81,14 +97,7 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
             // through the gateway onto the store the host declared it on — not application settings,
             // because two hosts sharing a tenant legitimately trust different issuers, the same
             // reason the flows themselves live there.
-            builder.Services.TryAddSingleton<AuthenticationServiceConfigurationProvider>(sp =>
-                new AuthenticationServiceConfigurationProvider(
-                    sp.GetRequiredService<ILogger<AuthenticationServiceConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection,
-                    ServerConfigurationPath));
-            builder.Services.TryAddSingleton<IAuthenticationServiceConfigurationProvider>(sp =>
-                sp.GetRequiredService<AuthenticationServiceConfigurationProvider>());
+            builder.Services.AddSingleton<IAuthenticationServiceConfigurationProvider, AuthenticationServiceConfigurationProvider>(sp => new AuthenticationServiceConfigurationProvider(sp.GetRequiredService<ILogger<AuthenticationServiceConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection, "auth", "AuthenticationService"));
 
             // Filled during Initialize, once the gateway can be reached. The selector reads it per
             // request, so it cannot be a set of service registrations made before the container is
@@ -106,6 +115,11 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                     configureOptions: options => options.ForwardDefaultSelector = IssuerSchemeSelector.Select);
 
             builder.Services.AddSingleton<IPostConfigureOptions<AuthenticationOptions>, SelectorIsDefaultScheme>();
+
+            // Backs the Antiforgery SessionCsrfProtectionTypes option (FDW-945): registered once
+            // here regardless of whether any Session service names it, so pointing a service's
+            // CsrfProtection column at it is a configuration change, not a redeploy.
+            builder.Services.AddAntiforgery(options => options.HeaderName = AntiforgeryHeaderName);
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
@@ -126,18 +140,28 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                 return GenericResult<IHost>.Success(host);
 
             var services = host.Services;
-            // VSTHRD002: Initialization is a synchronous phase by contract, and this runs once at
-            // startup on the host's own thread before any request exists to deadlock against.
+
+            // The elevation is opened and closed around this read, by the domain that needs it. The
+            // read has no ClaimsPrincipal and no TenantId, so under the RLS predicates it resolves to
+            // the deny-everywhere principal and returns nothing -- the host then cannot see its own
+            // declared authentication services. Scoping it here rather than in the host keeps the
+            // window to the one statement that needs it, and means no host has to know to do it.
+            IGenericResult<IReadOnlyList<IAuthenticationServiceImplementationConfiguration>> declared;
+            using (new SystemAuthenticationContextScope(
+                services.GetRequiredService<IAuthenticationContextAccessor>()))
+            {
+                // VSTHRD002: Initialization is a synchronous phase by contract, and this runs once at
+                // startup on the host's own thread before any request exists to deadlock against.
 #pragma warning disable VSTHRD002
-            var declared = services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                .GetHeaders(CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                declared = services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
+                    .Get(CancellationToken.None)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+            }
 
             if (!declared.IsSuccess || declared.Value is null)
                 return declared.ToNewResult<IHost>();
 
-            var schemes = services.GetRequiredService<IAuthenticationSchemeProvider>();
             var bindings = services.GetRequiredService<AuthenticationSchemeBindings>();
 
             foreach (var entry in declared.Value)
@@ -149,26 +173,22 @@ public partial class AuthenticationServiceTypes : ServiceTypeCollectionBase<Auth
                     return GenericResult<IHost>.Failure(
                         AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
 
-                if (entry.ServiceOptionType is not { Length: > 0 } kind)
+                // Which option serves this row is the row's own Implementation -- the same name the
+                // option registered its implementation provider under, stamped onto the row by the
+                // domain provider during dispatch. Matching on the configuration TYPE could never
+                // work: ConfigurationType is ServiceTypeBase's TConfiguration, and every option here
+                // closes it to IServiceConfiguration, so all of them compared equal to each other and
+                // none to the concrete row. Every declared service was reported as an unreadable
+                // section no matter how correctly it was configured.
+                if (ByName(entry.Implementation) is not AuthenticationServiceTypeBase option
+                    || option == NotFound)
                     return GenericResult<IHost>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, serviceName));
+                        AuthenticationValidationLog.NoOptionForImplementation(
+                            log, serviceName, entry.Implementation));
 
-                // Through IssuerName, which the options bridge also reads its ValidIssuer through:
-                // the selector matches the binding ordinally and the scheme checks ValidIssuer
-                // ordinally, so both have to derive from the same rule or a declared "https://host"
-                // routes a token minted against "https://host/" and is then refused by the scheme
-                // it was correctly routed to.
-                var issuer = IssuerName.Read(entry.Authority, serviceName, log);
-                if (!issuer.IsSuccess || issuer.Value is null)
-                    return issuer.ToNewResult<IHost>();
+                var kind = option.Name;
 
-                entry.Authority = issuer.Value;
-
-                if (ByName(kind) is not AuthenticationServiceTypeBase option)
-                    return GenericResult<IHost>.Failure(
-                        AuthenticationValidationLog.SectionUnreadable(log, kind));
-
-                var binding = option.TakeScheme(entry, schemes, services, hostLoggerFactory);
+                var binding = option.TakeScheme(entry, services.GetRequiredService<IAuthenticationSchemeProvider>(), services, hostLoggerFactory);
                 if (!binding.IsSuccess || binding.Value is null)
                     return binding.ToNewResult<IHost>();
 

@@ -1,6 +1,6 @@
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
-using Fdw.Services.Authentication.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Abstractions.Scoping;
 
@@ -18,7 +18,6 @@ public sealed class VisibilityGroupScopeLayer : ScopeLayerBase
     /// <summary>Initializes a new instance of the <see cref="VisibilityGroupScopeLayer"/> class.</summary>
     public VisibilityGroupScopeLayer()
         : base(
-            id: 2,
             name: "VisibilityGroup",
             claim: ClaimDefinitions.orgId,
             columnName: "VisibilityGroupId",

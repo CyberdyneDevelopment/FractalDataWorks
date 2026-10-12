@@ -8,7 +8,7 @@ public sealed class ClaimsElement : ContextElementBase
 {
     /// <summary>Initializes a new instance of the <see cref="ClaimsElement"/> class.</summary>
     public ClaimsElement()
-        : base(3, "Claims")
+        : base("Claims")
     {
     }
 

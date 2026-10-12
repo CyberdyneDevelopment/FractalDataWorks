@@ -10,6 +10,25 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 public static class AuthConstants
 {
     /// <summary>
+    /// The issuer a token carries when this platform signed it, as opposed to one signed by a foreign authority.
+    /// </summary>
+    /// <remarks>
+    /// Here, not on a step, because more than one step names it: the step that proves a password and the step
+    /// that switches tenant both stamp their subject with it, and neither should need the other's package.
+    /// </remarks>
+    public const string LocalIssuer = "local";
+
+    /// <summary>
+    /// The policy name an endpoint declares to require a platform administrator: the Admin role held while
+    /// acting in the global tenant. It is not a permission; no token carries it as a <c>perm</c> claim.
+    /// </summary>
+    /// <remarks>
+    /// Here because both the policy provider that answers it and the permission pre-processor that must leave
+    /// it alone read the same name.
+    /// </remarks>
+    public const string PlatformAdminPolicy = "system:admin";
+
+    /// <summary>
     /// The reserved "deny-everywhere" principal <c>UserId</c> that <c>MsSqlConnection</c> sets on
     /// <c>SESSION_CONTEXT('UserId')</c> whenever no real, Guid-identified, authenticated principal is
     /// established for the current call flow (and the call is not an explicit

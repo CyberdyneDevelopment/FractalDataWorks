@@ -14,7 +14,7 @@ public sealed class ConnectionNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="ConnectionNodeType"/> class.
     /// </summary>
     public ConnectionNodeType()
-        : base(1, "Connection", "Connection", "Infrastructure", "plug")
+        : base("Connection", "Connection", "Infrastructure", "plug")
     {
     }
 }

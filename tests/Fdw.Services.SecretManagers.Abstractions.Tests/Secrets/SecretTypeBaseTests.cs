@@ -12,9 +12,7 @@ public class SecretTypeBaseTests
     [Trait("Category", "Security")]
     public void ConstructorInitializesPropertiesCorrectly()
     {
-        var secretType = new TestSecretType(1, "Test", "Test description", true, "TestCategory");
-
-        secretType.Id.ShouldBe(1);
+        var secretType = new TestSecretType("Test", "Test description", true, "TestCategory");
         secretType.Name.ShouldBe("Test");
         secretType.Description.ShouldBe("Test description");
         secretType.RequiresSecureStorage.ShouldBeTrue();
@@ -26,7 +24,7 @@ public class SecretTypeBaseTests
     [Trait("Category", "Security")]
     public void ConstructorUsesDefaultCategoryWhenNull()
     {
-        var secretType = new TestSecretType(2, "Test", "Test description", false, null);
+        var secretType = new TestSecretType("Test", "Test description", false, null);
 
         secretType.Category.ShouldBe("Secret");
     }
@@ -36,7 +34,7 @@ public class SecretTypeBaseTests
     [Trait("Category", "Security")]
     public void ConstructorUsesEmptyStringForNullDescription()
     {
-        var secretType = new TestSecretType(3, "Test", null!, false);
+        var secretType = new TestSecretType("Test", null!, false);
 
         secretType.Description.ShouldBe(string.Empty);
     }
@@ -46,7 +44,7 @@ public class SecretTypeBaseTests
     [Trait("Category", "Security")]
     public void RequiresSecureStorageDefaultsToTrue()
     {
-        var secretType = new TestSecretType(4, "Test", "Description");
+        var secretType = new TestSecretType("Test", "Description");
 
         secretType.RequiresSecureStorage.ShouldBeTrue();
     }
@@ -56,7 +54,7 @@ public class SecretTypeBaseTests
     [Trait("Category", "Security")]
     public void RequiresSecureStorageCanBeFalse()
     {
-        var secretType = new TestSecretType(5, "Test", "Description", false);
+        var secretType = new TestSecretType("Test", "Description", false);
 
         secretType.RequiresSecureStorage.ShouldBeFalse();
     }
@@ -64,8 +62,8 @@ public class SecretTypeBaseTests
     [TypeOption(typeof(SecretTypes), "Test", RestrictToCurrentCompilation = true)]
     private sealed class TestSecretType : SecretTypeBase
     {
-        public TestSecretType(int id, string name, string description, bool requiresSecureStorage = true, string? category = null)
-            : base(id, name, description, requiresSecureStorage, category)
+        public TestSecretType(string name, string description, bool requiresSecureStorage = true, string? category = null)
+            : base(name, description, requiresSecureStorage, category)
         {
         }
     }

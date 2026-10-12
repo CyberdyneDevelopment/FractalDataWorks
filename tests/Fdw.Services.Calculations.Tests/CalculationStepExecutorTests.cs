@@ -29,7 +29,7 @@ public class CalculationStepExecutorTests
     private static CalculationStepExecutor CreateExecutor() =>
         new(NullLogger<CalculationStepExecutor>.Instance);
 
-    private static CalculationStepOperandConfiguration Operand(
+    private static FormulaCalculationStepOperandConfiguration Operand(
         string name,
         string operandType,
         string? inputAlias = null,
@@ -48,12 +48,12 @@ public class CalculationStepExecutorTests
             Ordinal = ordinal,
         };
 
-    private static CalculationStepConfiguration Step(
+    private static FormulaCalculationStepConfiguration Step(
         string name,
         string operationType,
         string outputAlias,
         int ordinal,
-        params CalculationStepOperandConfiguration[] operands) =>
+        params FormulaCalculationStepOperandConfiguration[] operands) =>
         new()
         {
             Name = name,

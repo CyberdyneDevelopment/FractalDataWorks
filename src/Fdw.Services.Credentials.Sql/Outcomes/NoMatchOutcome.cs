@@ -14,5 +14,5 @@ namespace Fdw.Services.Credentials.Sql.Outcomes;
 public sealed class NoMatchOutcome : CredentialOutcomeBase
 {
     /// <summary>Initializes a new instance of the <see cref="NoMatchOutcome"/> class.</summary>
-    public NoMatchOutcome() : base(2, "NoMatch", grantsAccess: false) { }
+    public NoMatchOutcome() : base("NoMatch", grantsAccess: false, provesSecret: false) { }
 }

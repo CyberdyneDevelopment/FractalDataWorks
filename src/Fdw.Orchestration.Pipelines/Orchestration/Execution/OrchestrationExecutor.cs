@@ -34,6 +34,12 @@ namespace Fdw.Orchestration.Execution;
 /// </remarks>
 public class OrchestrationExecutor : IOrchestrationExecutor
 {
+    /// <summary>
+    /// How long a cacheable step's result is kept when the execution policy sets no duration of its
+    /// own. A deployment sets this before the host starts.
+    /// </summary>
+    public static TimeSpan DefaultResultCacheDuration { get; set; } = TimeSpan.FromHours(1);
+
     private readonly IResiliencePipelineFactory _resilienceFactory;
     private readonly IOrchestrationCache? _cache;
     private readonly ILogger<OrchestrationExecutor> _logger;
@@ -385,10 +391,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
     /// <summary>
     /// Resolves the execution order of steps using topological sort.
     /// </summary>
-    // MA0051: Method length acceptable - topological sort algorithm (Kahn's algorithm for dependency resolution)
-#pragma warning disable MA0051 // Method is too long
     private static List<IOrchestrationStep> ResolveExecutionOrder(IOrchestration orchestration)
-#pragma warning restore MA0051
     {
         var steps = orchestration.Phases.ToDictionary(s => s.StepId, StringComparer.Ordinal);
         var inDegree = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -497,7 +500,9 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         {
             return OrchestrationStepResult.Failure(
                 step.StepId, step.Name, startTime,
-                $"Step timed out after {(step.Timeout ?? TimeSpan.FromMinutes(5)).TotalSeconds:F1} seconds",
+                step.Timeout is { } timeout
+                    ? $"Step timed out after {timeout.TotalSeconds:F1} seconds"
+                    : "Step timed out",
                 ex, retryAttempts: 0);
         }
         catch (Exception ex)
@@ -769,7 +774,7 @@ public class OrchestrationExecutor : IOrchestrationExecutor
         }
 
         var cacheKey = BuildStepCacheKey(context.ExecutionId.ToString(), step.StepId, stepContext.InputData);
-        var cacheDuration = context.Policy.ResultCacheDuration ?? TimeSpan.FromHours(1);
+        var cacheDuration = context.Policy.ResultCacheDuration ?? DefaultResultCacheDuration;
 
         await _cache.Set(
             cacheKey,

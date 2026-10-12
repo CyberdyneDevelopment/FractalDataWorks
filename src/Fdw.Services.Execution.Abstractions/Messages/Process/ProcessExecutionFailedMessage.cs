@@ -17,8 +17,7 @@ public sealed class ProcessExecutionFailedMessage : ExecutionMessage, IServiceMe
         : base(1001, "ProcessExecutionFailed", MessageSeverity.Error,
                "Process execution failed",
                "EXEC_PROCESS_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/process-management")
+               "Process")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class ProcessExecutionFailedMessage : ExecutionMessage, IServiceMe
         : base(1001, "ProcessExecutionFailed", MessageSeverity.Error,
                string.Format(CultureInfo.InvariantCulture, "Process execution failed for process: {0}", processId),
                "EXEC_PROCESS_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/process-management")
+               "Process")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class ProcessExecutionFailedMessage : ExecutionMessage, IServiceMe
                string.Format(CultureInfo.InvariantCulture, "Process execution failed for process: {0} with error: {1}",
                            processId, errorDetails),
                "EXEC_PROCESS_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/process-management")
+               "Process")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class ProcessExecutionFailedMessage : ExecutionMessage, IServiceMe
                string.Format(CultureInfo.InvariantCulture, "Process execution failed for process: {0}, operation: {1} with error: {2}",
                            processId, operationName, errorDetails),
                "EXEC_PROCESS_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/process-management")
+               "Process")
     { }
 }

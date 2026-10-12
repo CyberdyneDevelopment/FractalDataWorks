@@ -1,3 +1,5 @@
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Abstractions.Authentication;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -16,13 +18,13 @@ namespace Fdw.Services.Connections.PostgreSql.Authentication;
 /// loaded from the <c>conn.PostgreSqlConnectionAuthentication</c> KVP table.
 /// </summary>
 public abstract class PostgreSqlAuthenticationConfiguration
-    : TypeOptionBase<int, PostgreSqlAuthenticationConfiguration>
+    : ConnectionAuthenticationTypeBase<PostgreSqlAuthenticationConfiguration>
 {
     /// <summary>
     /// Parameterless constructor for the Empty/NotFound sentinel (source-generated).
     /// </summary>
     protected PostgreSqlAuthenticationConfiguration()
-        : base(0, string.Empty)
+        : base(string.Empty, string.Empty, string.Empty, string.Empty, null, requiresSecret: false)
     {
     }
 
@@ -30,14 +32,14 @@ public abstract class PostgreSqlAuthenticationConfiguration
     /// Constructor for concrete TypeOptions.
     /// </summary>
     protected PostgreSqlAuthenticationConfiguration(
-        int id,
         string name,
         string displayName,
         string description,
         IReadOnlyList<string> expectedProperties,
         IReadOnlyList<string> requiredProperties,
-        IReadOnlyList<string> secretPropertyNames)
-        : base(id, name, $"Authentication:{name}", displayName, description, "Authentication")
+        IReadOnlyList<string> secretPropertyNames,
+        bool requiresSecret)
+        : base(name, $"Authentication:{name}", displayName, description, "Authentication", requiresSecret)
     {
         ExpectedProperties = expectedProperties;
         RequiredProperties = requiredProperties;
@@ -91,12 +93,19 @@ public abstract class PostgreSqlAuthenticationConfiguration
     /// by name, because which of the two applies is this type's own decision: SecretManagerName is
     /// one of its properties. A type with no secret-bearing properties ignores both arguments.
     /// </remarks>
-    public virtual Task<IGenericResult<string>> BuildAuthFragment(
-        IReadOnlyDictionary<string, string?> values,
-        ISecretManager? supplied,
-        ISecretManagerProvider? provider,
-        CancellationToken cancellationToken = default)
-        => Task.FromResult(BuildAuthFragment(values, resolvedPassword: null));
+    /// <summary>Reports the secret this authentication type needs fetched before it can build.</summary>
+    /// <param name="values">The connection's authentication properties.</param>
+    /// <returns>
+    /// The manager and key to read, or <see cref="SecretRequirement.None"/> when this type needs no
+    /// secret — the default, since most authentication types carry no password.
+    /// </returns>
+    /// <remarks>
+    /// This type decides; the provider fetches and hands the value back to
+    /// <c>BuildAuthFragment(values, resolvedPassword)</c>, which is where the secret portion of the
+    /// connection string is built. Deciding stays here, awaiting moved out.
+    /// </remarks>
+    public virtual IGenericResult<SecretRequirement> RequiredSecret(IReadOnlyDictionary<string, string?> values)
+        => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 
     /// <inheritdoc />
     public abstract IGenericResult Validate(IReadOnlyDictionary<string, string?> values);

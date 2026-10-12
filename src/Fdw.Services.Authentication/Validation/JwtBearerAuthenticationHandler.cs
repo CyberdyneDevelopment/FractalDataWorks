@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Messages;
+using Fdw.Claims.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
@@ -41,7 +42,7 @@ namespace Fdw.Services.Authentication.Validation;
 internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 {
     private readonly IAuthenticationServiceConfigurationProvider _configuration;
-    private readonly IRolePermissionResolver _permissionResolver;
+    private readonly IRoleGrants _roleGrants;
     private readonly ILogger _log;
 
     // Keyed by issuer rather than by scheme: two services naming the same issuer read the same
@@ -59,15 +60,15 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationHandler"/> class.</summary>
     /// <param name="configuration">Reads the declared service and dispatches to its implementation.</param>
-    /// <param name="permissionResolver">Expands the declared roles to the permissions they grant.</param>
+    /// <param name="roleGrants">Expands the declared roles to the permissions they grant.</param>
     /// <param name="logger">The logger for validation outcomes.</param>
     public JwtBearerAuthenticationHandler(
         IAuthenticationServiceConfigurationProvider configuration,
-        IRolePermissionResolver permissionResolver,
+        IRoleGrants roleGrants,
         ILogger<JwtBearerAuthenticationHandler>? logger = null)
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _permissionResolver = permissionResolver ?? throw new ArgumentNullException(nameof(permissionResolver));
+        _roleGrants = roleGrants ?? throw new ArgumentNullException(nameof(roleGrants));
         _log = logger ?? NullLogger<JwtBearerAuthenticationHandler>.Instance;
     }
 
@@ -85,7 +86,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         if (_scheme is null || _context is null)
             return AuthenticateResult.NoResult();
 
-        if (ReadBearerToken(_context) is not { Length: > 0 } token)
+        if (BearerTokenReader.Read(_context) is not { Length: > 0 } token)
             return AuthenticateResult.NoResult();
 
         var parameters = await ResolveParameters(_context.RequestAborted).ConfigureAwait(false);
@@ -102,7 +103,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 
         // The token proves who called; it says nothing about what they may do here, because it
         // carries the issuer's claims and not this host's. The roles the entry declares are what
-        // confer that, and they expand to permissions through the same resolver a signed-in user's
+        // confer that, and they expand to permissions through the same role catalogue a signed-in user's
         // roles go through.
         var conferred = await ConferDeclaredRoles(
             validated.ClaimsIdentity, parameters.Value.ValidAudience, _context.RequestAborted).ConfigureAwait(false);
@@ -119,7 +120,7 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
     /// <param name="cancellationToken">A token to cancel the reads.</param>
     private async Task<IGenericResult<TokenValidationParameters>> ResolveParameters(CancellationToken cancellationToken)
     {
-        var headers = await _configuration.GetHeaders(cancellationToken).ConfigureAwait(false);
+        var headers = await _configuration.Get(cancellationToken).ConfigureAwait(false);
         if (!headers.IsSuccess || headers.Value is null)
             return headers.ToNewResult<TokenValidationParameters>();
 
@@ -139,8 +140,11 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 
         // The audience and roles are on the implementation row, which the provider dispatches to by
         // the kind the domain row names.
-        var implementation = await _configuration.Get(header.Id, cancellationToken).ConfigureAwait(false);
-        if (!implementation.IsSuccess || implementation.Value is not IJwtBearerAuthenticationConfiguration body)
+        // Get returns the DOMAIN record; the audience is on the implementation it carries. Testing the
+        // record itself for the implementation contract can never match, and the failure is silent in
+        // the worst way: the scheme builds with no key and no issuer and refuses every valid token.
+        var record = await _configuration.Get(header.Id, cancellationToken).ConfigureAwait(false);
+        if (!record.IsSuccess || record.Value is not IJwtBearerAuthenticationConfiguration body)
         {
             return GenericResult<TokenValidationParameters>.Failure(
                 AuthenticationValidationLog.JwtBearerEntryUnreadable(_log, ServiceName));
@@ -175,7 +179,11 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         return GenericResult<TokenValidationParameters>.Success(new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = issuer.Value,
+
+            // Both spellings, because this comparison happens inside the JWT handler and is ordinal.
+            // The minter and this validator read the issuer from different rows and neither is
+            // obliged to carry a trailing slash; matching on bytes 401d every route twice in one day.
+            ValidIssuers = IssuerName.Spellings(issuer.Value),
             ValidateAudience = true,
             ValidAudience = body.Audience,
             ValidateLifetime = true,
@@ -199,22 +207,22 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
     /// <param name="audience">The audience the token was checked against, named in failures.</param>
     /// <param name="cancellationToken">A token to cancel the resolution.</param>
     /// <remarks>
-    /// A resolver failure refuses the request rather than admitting a caller with no permissions:
+    /// A role-grants failure refuses the request rather than admitting a caller with no permissions:
     /// authenticating someone into nothing means every route they reach denies them, which reads as
-    /// a permissions problem rather than the resolver being down.
+    /// a permissions problem rather than role grants being unreadable.
     /// </remarks>
     private async Task<IGenericResult> ConferDeclaredRoles(
         ClaimsIdentity identity, string? audience, CancellationToken cancellationToken)
     {
         var roles = _declaredRoles;
-        var permissions = await _permissionResolver
-            .Resolve(roles, cancellationToken).ConfigureAwait(false);
+        var permissions = await _roleGrants
+            .Get(roles, cancellationToken).ConfigureAwait(false);
 
         if (permissions.IsFailure || permissions.Value is not { } granted)
         {
             return GenericResult.Failure(AuthenticationValidationLog.DeclaredRolesNotResolved(
                 _log, ServiceName, string.Join(", ", roles),
-                permissions.CurrentMessage ?? "the resolver reported success with no permission set"));
+                permissions.CurrentMessage ?? "role grants reported success with no permission set"));
         }
 
         foreach (var role in roles)
@@ -304,13 +312,4 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
         return Task.CompletedTask;
     }
 
-    private static string? ReadBearerToken(HttpContext context)
-    {
-        const string prefix = "Bearer ";
-        var header = context.Request.Headers.Authorization.ToString();
-
-        return header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? header[prefix.Length..].Trim()
-            : null;
-    }
 }

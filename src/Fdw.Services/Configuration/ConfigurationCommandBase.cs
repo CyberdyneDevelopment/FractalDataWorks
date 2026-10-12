@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using CmdBuilders = Fdw.Commands.Data.Extensions;
 
 
@@ -46,6 +48,12 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     IDataCommand IConfigurationCommands.Create(string dataStoreName, string pathName, IGenericConfiguration record)
         => Create(dataStoreName, pathName, (TConfig)record);
 
+    IDataCommand IConfigurationCommands.Create(string dataStoreName, string pathName, IGenericConfiguration record, IReadOnlyDictionary<string, object?> fieldValues)
+        => Create(dataStoreName, pathName, (TConfig)record, fieldValues);
+
+    IDataCommand IConfigurationCommands.Insert(string dataStoreName, string pathName, IGenericConfiguration record, IReadOnlyDictionary<string, object?> fieldValues)
+        => Insert(dataStoreName, pathName, (TConfig)record, fieldValues);
+
     /// <summary>
     /// Initializes a new instance of <see cref="ConfigurationCommandBase{TConfig}"/> with the table name.
     /// </summary>
@@ -65,16 +73,42 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
     /// </summary>
     protected virtual string IdColumn => "Id";
 
-    /// <summary>Creates a configuration save command (version-on-write transaction with FK subquery resolution).</summary>
-    /// <remarks>
-    /// Why: ConfigurationSaveCommand routes through MsSqlConfigurationSaveTranslator which (a) writes
-    /// the IsCurrent/IsDeleted audit columns automatically and (b) resolves physical FK columns
-    /// (e.g. ConnectionRowId → parent.RowId) via subquery using container metadata. A plain
-    /// InsertCommand would skip both — typed-body INSERTs then fail 515 because ConnectionRowId
-    /// can't be sourced from the POCO.
-    /// </remarks>
+    /// <summary>Creates a version-on-write save of a record whose fields are all mapped properties.</summary>
+    /// <param name="dataStoreName">The data store name.</param>
+    /// <param name="pathName">The path (schema) name.</param>
+    /// <param name="record">The record to save.</param>
+    /// <returns>The save command.</returns>
     public virtual IDataCommand Create(string dataStoreName, string pathName, TConfig record)
-        => new ConfigurationSaveCommand<TConfig>(record);
+        => new ConfigurationSaveCommand<TConfig>(record, replacesCurrent: true);
+
+    /// <summary>
+    /// Creates a version-on-write save of a record plus field values its properties do not carry --
+    /// the Foreign key fields its owner fills with the owner's key values.
+    /// </summary>
+    /// <param name="dataStoreName">The data store name.</param>
+    /// <param name="pathName">The path (schema) name.</param>
+    /// <param name="record">The record to save.</param>
+    /// <param name="fieldValues">The field values written with the record, keyed by field name.</param>
+    /// <returns>The save command.</returns>
+    public virtual IDataCommand Create(string dataStoreName, string pathName, TConfig record, IReadOnlyDictionary<string, object?> fieldValues)
+        => new ConfigurationSaveCommand<TConfig>(record, fieldValues, replacesCurrent: true);
+
+    /// <summary>
+    /// Creates an insert-only write of a record plus field values its properties do not carry: the row is
+    /// written and nothing is retired.
+    /// </summary>
+    /// <param name="dataStoreName">The data store name.</param>
+    /// <param name="pathName">The path (schema) name.</param>
+    /// <param name="record">The record to insert.</param>
+    /// <param name="fieldValues">The field values written with the record, keyed by field name.</param>
+    /// <returns>The insert command.</returns>
+    /// <remarks>
+    /// For a row that replaces nothing: a child written under its owner's new row, or a new version of a
+    /// row whose previous version the caller has just retired with <see cref="Supersede"/>. Unlike
+    /// the field values of <c>Create</c>, which also select the row it retires, these are only written.
+    /// </remarks>
+    public virtual IDataCommand Insert(string dataStoreName, string pathName, TConfig record, IReadOnlyDictionary<string, object?> fieldValues)
+        => new ConfigurationSaveCommand<TConfig>(record, fieldValues, replacesCurrent: false);
 
     /// <summary>
     /// Applies the version predicate: the current version, or the version in force at
@@ -233,10 +267,143 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
             .Build().Command;
     }
 
+    /// <summary>Builds a query for one page of the current, non-deleted configuration records, in name order.</summary>
+    /// <param name="dataStoreName">The data store to read from.</param>
+    /// <param name="pathName">The path within the data store.</param>
+    /// <param name="skip">How many records precede the page.</param>
+    /// <param name="take">How many records the page holds at most.</param>
+    /// <remarks>
+    /// Ordered by name because a page is only a page of something in a fixed order: without one, two
+    /// requests for consecutive pages may overlap or skip rows. Name is unique among current records,
+    /// so the order is total.
+    /// </remarks>
+    public virtual IDataCommand List(string dataStoreName, string pathName, int skip, int take)
+    {
+        return ApplyVersionFilter(
+                new QueryCommandBuilder<TConfig>(dataStoreName, pathName, TableName),
+                null)
+            .OrderBy(NameColumn)
+            .Paging(skip, take)
+            .Build().Command;
+    }
 
-    /// <summary>Creates a DELETE command for a configuration record by id (soft delete).</summary>
+    /// <summary>The name of the column a count query returns its number in.</summary>
+    public const string CountColumn = "Total";
+
+    /// <summary>Builds a query for one page of the current, non-deleted records a <see cref="DomainQuery"/> selects.</summary>
+    /// <param name="dataStoreName">The data store to read from.</param>
+    /// <param name="pathName">The path within the data store.</param>
+    /// <param name="query">The caller's filter, ordering and page.</param>
+    /// <param name="keyFields">
+    /// The container's declared key fields, read from its configuration by the provider. They complete
+    /// the ordering, so two requests for consecutive pages cannot overlap or skip a row.
+    /// </param>
+    /// <remarks>
+    /// The version predicates are always present and the caller's filter is ANDed to them: a query can
+    /// narrow what is current, never reach a retired or deleted row. With no ordering asked for, the
+    /// records come in name order, as <c>List</c> returns them. The page asks for one row past the
+    /// take: that row is how the page knows another follows, without counting.
+    /// </remarks>
+    public virtual IDataCommand Get(string dataStoreName, string pathName, DomainQuery query, IReadOnlyList<string> keyFields)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(keyFields);
+
+        return new QueryCommand<TConfig>
+        {
+            Filter = QueryFilter(query),
+            Ordering = QueryOrdering(query, keyFields),
+            Paging = new PagingExpression { Skip = query.Skip, Take = query.Take + 1 },
+        };
+    }
+
+    /// <summary>Builds a query that counts the current, non-deleted records a <see cref="DomainQuery"/> selects.</summary>
+    /// <param name="dataStoreName">The data store to read from.</param>
+    /// <param name="pathName">The path within the data store.</param>
+    /// <param name="query">The caller's filter; its ordering and page do not apply to a count.</param>
+    /// <returns>A query whose one row carries the number in <see cref="CountColumn"/>.</returns>
+    public virtual IDataCommand Count(string dataStoreName, string pathName, DomainQuery query)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        return new QueryCommand<Dictionary<string, object?>>
+        {
+            Filter = QueryFilter(query),
+            Aggregation = new AggregationExpression
+            {
+                GroupByFields = [],
+                Aggregations = new Dictionary<string, string>(StringComparer.Ordinal) { [CountColumn] = "COUNT(*)" },
+            },
+        };
+    }
+
+    /// <summary>Creates a retire, not a delete, of the current row whose durable id is <paramref name="id"/>.</summary>
+    /// <param name="dataStoreName">The data store name.</param>
+    /// <param name="pathName">The path (schema) name.</param>
+    /// <param name="id">The durable id of the row whose current version is retired.</param>
+    /// <remarks>
+    /// For replacing a row with a new version of itself when the new version is written by
+    /// <c>Insert</c>. The row stops being current and is not marked deleted, so it stays in the row's
+    /// history as what the row used to be. <c>Delete</c> is the retire that also marks it deleted.
+    /// </remarks>
+    public virtual IDataCommand Supersede(string dataStoreName, string pathName, Guid id)
+        => new ConfigurationRetireCommand((KeyTypeBase)KeyTypes.ByName("Logical"), [id], markDeleted: false);
+
+    // The caller's filter narrows the current rows; it never widens them.
+    private static FilterExpression QueryFilter(DomainQuery query)
+    {
+        var nodes = new List<IFilterNode>
+        {
+            new FilterCondition { PropertyName = "IsCurrent", Operator = FilterOperators.ByName("Equal"), Value = true },
+            new FilterCondition { PropertyName = "IsDeleted", Operator = FilterOperators.ByName("Equal"), Value = false },
+        };
+        if (query.Filter?.Root is { } asked)
+            nodes.Add(asked);
+
+        return new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = nodes } };
+    }
+
+    // The order the caller asked for, or name order; then every key field not already ordered on.
+    private OrderingExpression QueryOrdering(DomainQuery query, IReadOnlyList<string> keyFields)
+    {
+        var ascending = SortDirections.ByName("Ascending");
+        var ordered = new List<IOrderedField>();
+        if (query.Ordering is { OrderedFields.Count: > 0 } asked)
+            ordered.AddRange(asked.OrderedFields);
+        else
+            ordered.Add(new OrderedField { PropertyName = NameColumn, Direction = ascending });
+
+        foreach (var key in keyFields)
+        {
+            var alreadyOrdered = false;
+            foreach (var field in ordered)
+            {
+                if (string.Equals(field.PropertyName, key, StringComparison.Ordinal))
+                {
+                    alreadyOrdered = true;
+                    break;
+                }
+            }
+
+            if (!alreadyOrdered)
+                ordered.Add(new OrderedField { PropertyName = key, Direction = ascending });
+        }
+
+        return new OrderingExpression { OrderedFields = ordered };
+    }
+
+
+    /// <summary>Creates a delete of the record whose durable id is <paramref name="id"/>.</summary>
+    /// <remarks>
+    /// The id is the value of the key the container declares as Logical; the translator reads which
+    /// fields that key names from the container's configuration.
+    /// </remarks>
     public virtual IDataCommand Delete(string dataStoreName, string pathName, Guid id)
-        => new ConfigurationDeleteCommand(id);
+        => new ConfigurationRetireCommand((KeyTypeBase)KeyTypes.ByName("Logical"), [id], markDeleted: true);
+
+    /// <summary>Creates a retire of every current row whose fields hold <paramref name="fieldValues"/>.</summary>
+    public virtual IDataCommand Retire(string dataStoreName, string pathName, IReadOnlyDictionary<string, object?> fieldValues, bool markDeleted)
+        => new ConfigurationRetireCommand(fieldValues, markDeleted);
 
     /// <summary>Builds a query returning all versions of a configuration record in descending order.</summary>
     public virtual IDataCommand ViewHistory(string dataStoreName, string pathName, Guid id)

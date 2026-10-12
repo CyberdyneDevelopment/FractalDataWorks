@@ -14,5 +14,5 @@ public sealed class InputsFromEdgeType : LineageEdgeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="InputsFromEdgeType"/> class.
     /// </summary>
-    public InputsFromEdgeType() : base(5, "InputsFrom") { }
+    public InputsFromEdgeType() : base("InputsFrom") { }
 }

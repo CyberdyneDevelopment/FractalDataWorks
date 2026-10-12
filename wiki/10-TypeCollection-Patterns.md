@@ -62,8 +62,7 @@ The base class keeps type parameters **open**. Each concrete option resolves the
 
 public abstract class ConnectionTypeBase<TService, TFactory, TConfiguration>
     : ServiceTypeBase<TService, TFactory, TConfiguration, DefaultConnectionProvider>,
-      IConnectionType<TService, TConfiguration, TFactory>,
-      ISchemaDiscovery
+      IConnectionType<TService, TConfiguration, TFactory>
     where TService : IGenericConnection
     where TConfiguration : class, IConnectionConfiguration
     where TFactory : IConnectionFactory<TService, TConfiguration>
@@ -132,7 +131,7 @@ Each option resolves all type parameters to specific types, giving it a unique i
 ```csharp
 // Fdw.Services.Connections.MsSql/MsSqlConnectionType.cs
 
-[ServiceTypeOption(typeof(ConnectionTypes), "MsSql")]
+[Implementation(typeof(ConnectionTypes), "MsSql")]
 public sealed class MsSqlConnectionType
     : ConnectionTypeBase<IGenericConnection, IMsSqlConnectionFactory, MsSqlConnectionConfiguration>
 {
@@ -176,7 +175,7 @@ Fdw.Services.{Domain}/
     {Domain}Configuration.cs      — Configuration record
 
 Fdw.Services.{Domain}.{Implementation}/
-    {Impl}{Domain}Type.cs         — [ServiceTypeOption] concrete option
+    {Impl}{Domain}Type.cs         — [Implementation] concrete option
     {Impl}{Domain}Configuration.cs — Implementation-specific config
 ```
 
@@ -197,7 +196,7 @@ Each concrete option resolves at least one type parameter to a **unique type** (
 
 Concrete options typically live in separate packages from the collection (e.g., `MsSqlConnectionType` in `Services.Connections.MsSql`, while `ConnectionTypes` is in `Services.Connections`). The `Fdw.Registration.SourceGenerators` package generates `[ModuleInitializer]` methods that call `RegisterMember()` before any user code runs.
 
-**The generator is referenced only by entry point projects** (executables like `Reference.Api`, `Reference.UI`). When the entry point compiles, the generator scans all referenced assemblies for `[ServiceTypeOption]` types and emits a single `[ModuleInitializer]` in the executable that registers every discovered option with its collection.
+**The generator is referenced only by entry point projects** (executables like `Reference.Api`, `Reference.UI`). When the entry point compiles, the generator scans all referenced assemblies for `[Implementation]` types and emits a single `[ModuleInitializer]` in the executable that registers every discovered option with its collection.
 
 ```csharp
 // Auto-generated in the entry point project (e.g., Reference.Api)
@@ -214,7 +213,7 @@ internal static void Initialize()
     // Register with ApiClientTypes
     ApiClientTypes.RegisterMember(new PipelineClientType());
     ApiClientTypes.RegisterMember(new ConnectionClientType());
-    // ... every [ServiceTypeOption] found across all referenced assemblies
+    // ... every [Implementation] found across all referenced assemblies
 }
 ```
 
@@ -235,7 +234,7 @@ internal static void Initialize()
 ```csharp
 // Services.Credentials.Sql/Registration/SqlCredentialServiceType.cs
 
-[ServiceTypeOption(typeof(CredentialServiceTypes), "Sql")]
+[Implementation(typeof(CredentialServiceTypes), "Sql")]
 public sealed class SqlCredentialServiceType : CredentialServiceTypeBase<…>
 {
     // Configure: binds List<SqlCredentialServiceConfiguration> + CredentialsSqlOptions (selector)
@@ -363,7 +362,7 @@ public sealed class DataSetProvider : IDataSetConfigurationProvider
     {
         // Why: DataSetTypes holds the static strategy KINDS (Simple/Compound/Federated) — it is NOT a
         // registry of dataset instances. Instances are resolved live from the configuration provider;
-        // DataGatewayService dispatches on the authored ServiceOptionType. No per-instance registration
+        // DataGatewayService dispatches on the authored Implementation. No per-instance registration
         // happens here.
     }
 }

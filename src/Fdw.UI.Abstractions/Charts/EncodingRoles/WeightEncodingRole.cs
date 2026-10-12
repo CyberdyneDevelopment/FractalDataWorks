@@ -14,7 +14,7 @@ public sealed class WeightEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="WeightEncodingRole"/> class.
     /// </summary>
     public WeightEncodingRole()
-        : base(12, "Weight", "Weight", isSpatial: false)
+        : base("Weight", "Weight", isSpatial: false)
     {
     }
 }

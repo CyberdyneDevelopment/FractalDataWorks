@@ -15,7 +15,6 @@ public sealed class CancelledStatus : ExecutionStatusBase
     /// </summary>
     public CancelledStatus()
         : base(
-            id: 7,
             name: "Cancelled",
             isTerminal: true,
             isSuccess: false,

@@ -11,7 +11,6 @@ public sealed class ShieldIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ShieldIcon"/>.</summary>
     public ShieldIcon()
         : base(
-            16,
             "Shield",
             "0 0 24 24",
             "none",

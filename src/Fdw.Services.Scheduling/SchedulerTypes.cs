@@ -9,6 +9,7 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
+using Fdw.Services.Scheduling.Abstractions.OptionTypes;
 using Fdw.Services.Scheduling.Commands;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,7 +45,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     /// <summary>
     /// The connection this domain's operational rows live in. The host must set it; there is no default.
@@ -55,7 +56,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
     /// is therefore known before any row is read. An operational store is a row INSIDE that store, so a
     /// default here would name a store the application merely hopes exists — the absence the
     /// no-fallbacks rule exists to catch, rather than the ConfigurationConnection case it resembles.
-    /// Not proven at registration: every host registers this domain as part of the platform sweep,
+    /// Not proven at registration: every host registers this domain as part of the platform bootstrap,
     /// including hosts that never touch its operational store, so refusing to start them would demand
     /// a value a correct host cannot supply. The sites that read it report it instead.
     /// </remarks>
@@ -74,59 +75,56 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static SchedulerTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(ISchedulerServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<SchedulerTypes>() ?? NullLogger<SchedulerTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
+            builder.Services.AddSingleton<ISchedulerConfigurationProvider, SchedulerConfigurationProvider>(sp => new SchedulerConfigurationProvider(sp.GetRequiredService<ILogger<SchedulerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "Scheduler"));
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISchedulerImplementationConfiguration>>(
+                sp => sp.GetRequiredService<ISchedulerConfigurationProvider>());
 
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
-
-            builder.Services.TryAddSingleton<ISchedulerConfigurationProvider>(sp =>
-                new SchedulerConfigurationProvider(
-                    sp.GetService<ILogger<SchedulerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<SchedulerConfigurationProvider>(
-                sp => (SchedulerConfigurationProvider)sp.GetRequiredService<ISchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SchedulerConfiguration, SchedulerConfigurationCommand>>(
-                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<SchedulerConfiguration>>(
-                sp => sp.GetRequiredService<SchedulerConfigurationProvider>());
+            builder.Services.TryAddSingleton<ScheduleImplementationConfigurationProvider>(sp =>
+                new ScheduleImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ScheduleImplementationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "ScheduleConfiguration"));
 
             builder.Services.TryAddSingleton<ScheduleConfigurationProvider>(sp =>
-                new ScheduleConfigurationProvider(
-                    sp.GetService<ILogger<ScheduleConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        SchedulerTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ScheduleConfiguration, ScheduleConfigurationCommand>>(
-                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ScheduleConfiguration>>(
-                sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+            {
+                var domain = new ScheduleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ScheduleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SchedulerTypes.ConfigurationConnection, "sched", "Schedule");
 
+                // Why every trigger kind registers the SAME provider: the kinds share one
+                // sched.ScheduleConfiguration row and the domain row's Implementation names which
+                // kind it is, so dispatch lands on the one provider whatever the kind. Without these
+                // the domain read finds its row and then has nothing to hand it to.
+                foreach (var kind in TriggerTypes.All())
+                {
+                    domain.Register(kind.Name, sp.GetRequiredService<ScheduleImplementationConfigurationProvider>());
+                }
+
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IScheduleConfigurationProvider>(sp => sp.GetRequiredService<ScheduleConfigurationProvider>());
+
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<ISchedulerServiceProvider>(sp =>
             {
                 var provider = new SchedulerServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<SchedulerServiceProvider>()
                     ?? NullLogger<SchedulerServiceProvider>.Instance);
 
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<SchedulerTypes>()
                     ?? NullLogger<SchedulerTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(SchedulerTypes), provider.GetType().Name);
+                var cfgProvider = sp.GetService<ISchedulerConfigurationProvider>();
                 try
                 {
-                    if (sp.GetService<ISchedulerConfigurationProvider>() is { } cfgProvider)
+                    if (cfgProvider is not null)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -140,7 +138,7 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(SchedulerTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<SchedulerConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<ISchedulerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -148,8 +146,22 @@ public partial class SchedulerTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(SchedulerTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(SchedulerTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(SchedulerTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(SchedulerTypes), providerService);

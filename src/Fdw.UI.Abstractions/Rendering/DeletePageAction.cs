@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Rendering;
 public sealed class DeletePageAction : PageActionBase
 {
     /// <summary>Initializes a new instance of <see cref="DeletePageAction"/>.</summary>
-    public DeletePageAction() : base(3, "Delete") { }
+    public DeletePageAction() : base("Delete") { }
 }

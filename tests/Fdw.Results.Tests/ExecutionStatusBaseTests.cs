@@ -17,9 +17,6 @@ public sealed class ExecutionStatusBaseTests
     {
         // Arrange & Act
         var status = new PendingStatus();
-
-        // Assert
-        status.Id.ShouldBe(1);
         status.Name.ShouldBe("Pending");
         status.Icon.ShouldBe(PendingStatus.PendingIcon);
         status.Color.ShouldBe("Default");
@@ -35,9 +32,6 @@ public sealed class ExecutionStatusBaseTests
     {
         // Arrange & Act
         var status = new RunningStatus();
-
-        // Assert
-        status.Id.ShouldBe(2);
         status.Name.ShouldBe("Running");
         status.Icon.ShouldBe(RunningStatus.RunningIcon);
         status.Color.ShouldBe("Info");
@@ -53,9 +47,6 @@ public sealed class ExecutionStatusBaseTests
     {
         // Arrange & Act
         var status = new SucceededStatus();
-
-        // Assert
-        status.Id.ShouldBe(3);
         status.Name.ShouldBe("Succeeded");
         status.Icon.ShouldBe(SucceededStatus.SucceededIcon);
         status.Color.ShouldBe("Success");
@@ -71,9 +62,6 @@ public sealed class ExecutionStatusBaseTests
     {
         // Arrange & Act
         var status = new FailedStatus();
-
-        // Assert
-        status.Id.ShouldBe(4);
         status.Name.ShouldBe("Failed");
         status.Icon.ShouldBe(FailedStatus.FailedIcon);
         status.Color.ShouldBe("Error");
@@ -89,9 +77,6 @@ public sealed class ExecutionStatusBaseTests
     {
         // Arrange & Act
         var status = new CancelledStatus();
-
-        // Assert
-        status.Id.ShouldBe(5);
         status.Name.ShouldBe("Cancelled");
         status.Icon.ShouldBe(CancelledStatus.CancelledIcon);
         status.Color.ShouldBe("Warning");
@@ -107,9 +92,6 @@ public sealed class ExecutionStatusBaseTests
     {
         // Arrange & Act
         var status = new SkippedStatus();
-
-        // Assert
-        status.Id.ShouldBe(6);
         status.Name.ShouldBe("Skipped");
         status.Icon.ShouldBe(SkippedStatus.SkippedIcon);
         status.Color.ShouldBe("Default");

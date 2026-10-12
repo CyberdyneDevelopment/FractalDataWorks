@@ -13,9 +13,9 @@ namespace Fdw.Services.Etl.Commands;
 /// <see cref="PipelineTransformLookupConfiguration"/> item via <c>ConfigurationCommands.All()</c>;
 /// without this TypeOption the cascade would fail loud (NoChildCommandForType) when persisting a lookup.
 /// </remarks>
-[TypeOption(typeof(ConfigurationCommands), "LookupOperationConfiguration")]
+[TypeOption(typeof(ConfigurationCommands), "PipelineTransformLookup")]
 public sealed class PipelineTransformLookupConfigurationCommand : ConfigurationCommandBase<PipelineTransformLookupConfiguration>
 {
     /// <summary>Initializes the command targeting the LookupOperationConfiguration table.</summary>
-    public PipelineTransformLookupConfigurationCommand() : base("LookupOperationConfiguration") { }
+    public PipelineTransformLookupConfigurationCommand() : base("PipelineTransformLookup") { }
 }

@@ -11,7 +11,7 @@
     <!-- Package Information -->
     <PackageId>Fdw.Configuration.UI.SourceGenerators</PackageId>
     <Title>Fdw Configuration UI Source Generators</Title>
-    <Description>Incremental source generator that creates Web, Blazor, and TUI components from [PersistConfiguration] attributes.</Description>
+    <Description>Incremental source generator that creates Web and TUI components from [PersistConfiguration] attributes.</Description>
     <PackageTags>sourcegenerator;roslyn;ui;blazor;tui;codegen</PackageTags>
 
     <!-- Source Generator Packaging -->

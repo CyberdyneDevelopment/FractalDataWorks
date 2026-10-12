@@ -28,6 +28,7 @@
     <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Validation.FastEndpoints\Fdw.Validation.FastEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Web.Calculations.Clients.Abstractions\Fdw.Web.Calculations.Clients.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Calculations\Fdw.Services.Calculations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

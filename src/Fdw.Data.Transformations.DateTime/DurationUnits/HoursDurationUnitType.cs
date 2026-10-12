@@ -9,7 +9,7 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(DurationUnitTypes), "Hours")]
 public sealed class HoursDurationUnitType : DurationUnitTypeBase
 {
-    public HoursDurationUnitType() : base(1, "Hours") { }
+    public HoursDurationUnitType() : base("Hours") { }
 
     /// <inheritdoc/>
     public override TimeSpan ToTimeSpan(double amount) => TimeSpan.FromHours(amount);

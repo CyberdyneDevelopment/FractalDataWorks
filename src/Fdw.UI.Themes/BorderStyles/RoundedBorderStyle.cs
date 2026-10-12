@@ -14,7 +14,7 @@ public sealed class RoundedBorderStyle : BorderStyleBase
     /// <summary>
     /// Creates the rounded border style.
     /// </summary>
-    public RoundedBorderStyle() : base(1, "Rounded") { }
+    public RoundedBorderStyle() : base("Rounded") { }
 
     /// <inheritdoc />
     public override BoxBorder Panel => BoxBorder.Rounded;

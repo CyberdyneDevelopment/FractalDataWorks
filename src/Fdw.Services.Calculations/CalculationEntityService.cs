@@ -22,11 +22,15 @@ namespace Fdw.Services.Calculations;
 /// typed body) and a single Save cascade-persists it. There is no hand-assembly, no Row types, and
 /// no per-type typed-body load/save.
 /// </summary>
-#pragma warning disable MA0051
 public sealed class CalculationEntityService : ICalculationEntityService
-#pragma warning restore MA0051
 {
-    private readonly CalculationConfigurationProvider _provider;
+    /// <summary>
+    /// The domain these calculations are configured members of — the value the domain row carries
+    /// and the provider was constructed against.
+    /// </summary>
+    private const string CalculationEntityDomain = "CalculationEntity";
+
+    private readonly ICalculationConfigurationProvider _provider;
     private readonly ICalculationInputResolver _inputResolver;
     private readonly ILogger<CalculationEntityService> _logger;
 
@@ -34,7 +38,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
     /// Initializes a new instance of <see cref="CalculationEntityService"/>.
     /// </summary>
     public CalculationEntityService(
-        CalculationConfigurationProvider provider,
+        ICalculationConfigurationProvider provider,
         ICalculationInputResolver inputResolver,
         ILogger<CalculationEntityService>? logger)
     {
@@ -180,12 +184,25 @@ public sealed class CalculationEntityService : ICalculationEntityService
             if (!build.IsSuccess)
                 return build.ToNewResult<ICalculationEntity>();
 
-            var saveResult = await _provider.Save(build.Value!, cancellationToken).ConfigureAwait(false);
+            var saveResult = await _provider
+                .Save(build.Value!, CalculationEntityDomain, calculationEntityType, name, cancellationToken)
+                .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<ICalculationEntity>();
 
-            CalculationEntityLog.CreateCalculationSucceeded(_logger, name, saveResult.Value!.Id);
-            return GenericResult<ICalculationEntity>.Success(MapToEntity(saveResult.Value));
+            // Save writes the domain row and the implementation together and hands back neither: the
+            // domain row's id is minted inside it. Read the member back by the name it was written
+            // under to return what was actually persisted.
+            var saved = await _provider.Get(name, cancellationToken).ConfigureAwait(false);
+            if (!saved.IsSuccess)
+                return saved.ToNewResult<ICalculationEntity>();
+
+            if (saved.Value is null)
+                return GenericResult<ICalculationEntity>.Failure(
+                    CalculationEntityLog.CalculationNotFound(_logger, name));
+
+            CalculationEntityLog.CreateCalculationSucceeded(_logger, name, saved.Value.Id);
+            return GenericResult<ICalculationEntity>.Success(MapToEntity(saved.Value));
         }
         catch (Exception ex)
         {
@@ -214,12 +231,23 @@ public sealed class CalculationEntityService : ICalculationEntityService
             if (!build.IsSuccess)
                 return build.ToNewResult<ICalculationEntity>();
 
-            var saveResult = await _provider.Save(build.Value!, cancellationToken).ConfigureAwait(false);
+            var saveResult = await _provider
+                .Save(build.Value!, CalculationEntityDomain, calculationEntityType, name, cancellationToken)
+                .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
                 return saveResult.ToNewResult<ICalculationEntity>();
 
+            // Save hands back nothing; the member is read back under the name it was written under.
+            var saved = await _provider.Get(name, cancellationToken).ConfigureAwait(false);
+            if (!saved.IsSuccess)
+                return saved.ToNewResult<ICalculationEntity>();
+
+            if (saved.Value is null)
+                return GenericResult<ICalculationEntity>.Failure(
+                    CalculationEntityLog.CalculationNotFound(_logger, name));
+
             CalculationEntityLog.UpdateCalculationSucceeded(_logger, id);
-            return GenericResult<ICalculationEntity>.Success(MapToEntity(saveResult.Value!));
+            return GenericResult<ICalculationEntity>.Success(MapToEntity(saved.Value));
         }
         catch (Exception ex)
         {
@@ -293,7 +321,7 @@ public sealed class CalculationEntityService : ICalculationEntityService
         }
     }
 
-    private IGenericResult<CalculationEntityConfiguration> BuildAggregate(
+    private IGenericResult<ICalculationEntityImplementationConfiguration> BuildAggregate(
         Guid id,
         string name,
         string? description,
@@ -304,62 +332,44 @@ public sealed class CalculationEntityService : ICalculationEntityService
         IGenericConfiguration? typedConfiguration)
     {
         if (CalculationEntityTypes.ByName(calculationEntityType) == CalculationEntityTypes.NotFound)
-            return GenericResult<CalculationEntityConfiguration>.Failure(
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
                 CalculationEntityLog.TypedConfigurationSaveUnknownType(_logger, calculationEntityType));
 
-        var inputRecords = new List<CalculationEntityInputRecord>(inputs.Count);
-        for (var i = 0; i < inputs.Count; i++)
+        foreach (var input in inputs)
         {
-            var input = inputs[i];
             if (input.Kind is null)
-                return GenericResult<CalculationEntityConfiguration>.Failure(
+                return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
                     CalculationEntityLog.CalculationValidationFailed(
                         _logger, input.InputAlias, "Calculation input Kind is required"));
-
-            inputRecords.Add(new CalculationEntityInputRecord
-            {
-                InputAlias = input.InputAlias,
-                InputKind = input.Kind.Name,
-                DataSetName = input.DataSetName,
-                ConnectionName = input.ConnectionName,
-                ContainerPath = input.ContainerPath,
-                ScalarValueTypeName = input.ScalarValue?.ValueType?.Name,
-                ScalarValue = input.ScalarValue?.SerializedValue,
-                Ordinal = i,
-                IsCurrent = true,
-                IsDeleted = false
-            });
         }
 
-        ICalculationTypedConfiguration? typedBody = null;
-        if (typedConfiguration is not null)
-        {
-            if (typedConfiguration is not ICalculationTypedConfiguration tc)
-                return GenericResult<CalculationEntityConfiguration>.Failure(
-                    CalculationEntityLog.CalculationValidationFailed(
-                        _logger, name,
-                        $"Typed configuration '{typedConfiguration.GetType().Name}' does not implement ICalculationTypedConfiguration"));
-            tc.Id = Guid.Empty;
-            typedBody = tc;
-        }
+        if (typedConfiguration is null)
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
+                CalculationEntityLog.CalculationValidationFailed(
+                    _logger, name,
+                    $"Calculation entity type '{calculationEntityType}' requires its typed configuration; the implementation is the record that is written"));
 
-        return GenericResult<CalculationEntityConfiguration>.Success(new CalculationEntityConfiguration
-        {
-            Id = id,
-            Name = name,
-            Description = description,
-            CalculationEntityType = calculationEntityType,
-            CalculationSource = CalculationSourceTypes.Configuration.Name,
-            OutputDataSetName = output.OutputDataSetName,
-            ResultFieldName = output.ResultFieldName,
-            ResultDataTypeName = output.ResultDataTypeName,
-            IsEnabled = isEnabled,
-            Inputs = inputRecords,
-            Configuration = typedBody
-        });
+        if (typedConfiguration is not ICalculationEntityImplementationConfiguration typed)
+            return GenericResult<ICalculationEntityImplementationConfiguration>.Failure(
+                CalculationEntityLog.CalculationValidationFailed(
+                    _logger, name,
+                    $"Typed configuration '{typedConfiguration.GetType().Name}' does not implement ICalculationTypedConfiguration"));
+
+        typed.Id = id;
+        typed.Name = name;
+        typed.Description = description;
+        typed.CalculationSource = CalculationSourceTypes.Configuration.Name;
+        typed.OutputDataSetName = output.OutputDataSetName;
+        typed.ResultFieldName = output.ResultFieldName;
+        typed.ResultDataTypeName = output.ResultDataTypeName;
+        typed.IsEnabled = isEnabled;
+        // Each implementation holds its inputs in its own table, so it builds them as its own type.
+        typed.ReplaceInputs(inputs);
+
+        return GenericResult<ICalculationEntityImplementationConfiguration>.Success(typed);
     }
 
-    private static CalculationEntity MapToEntity(CalculationEntityConfiguration config)
+    private static CalculationEntity MapToEntity(ICalculationEntityImplementationConfiguration config)
     {
         var output = new CalculationOutputSpec
         {
@@ -368,22 +378,27 @@ public sealed class CalculationEntityService : ICalculationEntityService
             ResultDataTypeName = config.ResultDataTypeName
         };
 
+        // Why the collection and not the record's own name: the kind is what the domain row named,
+        // and the type collection is what maps a configuration type back to that name.
+        var kind = CalculationEntityTypes.All()
+            .FirstOrDefault(t => t.ConfigurationType == config.GetType());
+
         return new CalculationEntity
         {
             Id = config.Id,
             Name = config.Name,
             Description = config.Description,
-            CalculationEntityType = config.CalculationEntityType,
+            CalculationEntityType = kind?.Name ?? string.Empty,
             CalculationSource = config.CalculationSource,
             Inputs = config.Inputs.Select(MapInputRecordToModel).ToList(),
             Steps = config.Steps.Cast<IGenericConfiguration>().ToList(),
             Output = output,
             IsEnabled = config.IsEnabled,
-            TypedConfiguration = config.Configuration
+            TypedConfiguration = config
         };
     }
 
-    private static CalculationInput MapInputRecordToModel(CalculationEntityInputRecord record)
+    private static CalculationInput MapInputRecordToModel(CalculationInputConfigurationBase record)
     {
         CalculationScalarValue? scalarValue = null;
         if (record.ScalarValueTypeName is not null && record.ScalarValue is not null)

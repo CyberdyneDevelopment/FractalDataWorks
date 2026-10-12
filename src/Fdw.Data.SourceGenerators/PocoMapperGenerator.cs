@@ -86,8 +86,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         var children = new System.Collections.Generic.List<ChildInfo>();
         string? typedBodyTypeFqn = null;
 
-        var parentFkName = StripConfigurationSuffix(typeSymbol.Name) + "Id";
-        var parentFkRowId = StripConfigurationSuffix(typeSymbol.Name) + "RowId";
 
         var current = typeSymbol;
         while (current != null && current.SpecialType == SpecialType.None)
@@ -117,8 +115,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                     if (hasPublicSetter)
                         children.Add(new ChildInfo(ChildKind.PropertyCollection, p.Name,
                             p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                            null, null, parentFkName, false, kvpValueNullable,
-                            parentFkRowId, ResolveChildContainerName(p)));
+                            null, null, kvpValueNullable, ChildTableAttributeValue(p)));
                     continue;
                 }
 
@@ -132,11 +129,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             p.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                             elem.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                             elem.Name,
-                            parentFkName,
-                            ChildHasFkSetter(elem, parentFkName),
                             false,
-                            parentFkRowId,
-                            ResolveChildContainerName(p, StripConfigurationSuffix(elem.Name))));
+                            null));
                     }
                     // Collections never become scalar columns (cannot bind as SQL parameters).
                     continue;
@@ -189,9 +183,14 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     }
 #pragma warning restore FDW017
 
-#pragma warning disable MA0051 // Source generator emits complete POCO mapper class — splitting scatters the template
     private static void GenerateMapper(SourceProductionContext context, TypeInfo typeInfo)
     {
+        foreach (var child in typeInfo.Children)
+        {
+            if (child.Kind == ChildKind.PropertyCollection && child.ChildContainerName is null)
+                context.ReportDiagnostic(Diagnostic.Create(ChildTableNotDeclared, Location.None, typeInfo.Name, child.BoundPropertyName));
+        }
+
         var safeTypeName = typeInfo.Name.Replace("<", "_").Replace(">", "_");
         // Strip global:: from the string key so it matches Type.FullName at runtime
         var typeFullName = typeInfo.FullyQualifiedName.Replace("global::", "");
@@ -314,10 +313,11 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         foreach (var prop in typeInfo.Properties)
         {
             var varName = prop.Name.ToLowerInvariant() + "Val";
-            var baseType = prop.TypeName.TrimEnd('?');
-            var defaultValue = GetDefaultValueExpression(prop);
+            var nullableValueType = prop.IsValueType && prop.TypeName.EndsWith("?", System.StringComparison.Ordinal);
+            var castType = nullableValueType ? prop.TypeName : prop.TypeName.TrimEnd('?');
+            var defaultValue = nullableValueType ? "null" : GetDefaultValueExpression(prop);
 
-            sb.AppendLine($"{indent}{prop.Name} = data.TryGetValue(\"{prop.ColumnName}\", out var {varName}) && {varName} != null ? ({baseType}){varName} : {defaultValue},");
+            sb.AppendLine($"{indent}{prop.Name} = data.TryGetValue(\"{prop.ColumnName}\", out var {varName}) && {varName} != null ? ({castType}){varName} : {defaultValue},");
         }
 
         return sb.ToString().TrimEnd('\r', '\n', ',');
@@ -367,7 +367,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         {
             if (prop.IsInitOnly)
                 continue;
-            var baseType = prop.TypeName.TrimEnd('?');
+            var baseType = prop.TypeName;
             sb.AppendLine($"                    case \"{prop.ColumnName}\": typed.{prop.Name} = ({baseType})value!; break;");
         }
 
@@ -450,7 +450,6 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                             public global::System.Type ChildType => typeof(object);
                             public string ChildTypeName => "";
                             public bool IsPropertyCollection => true;
-                            public string ChildForeignKeyColumn => "{{c.PhysicalFkColumn}}";
                             public string ChildContainerName => "{{c.ChildContainerName}}";
                             public global::System.Collections.IEnumerable? GetCollection(object parent) => null;
                             public void SetCollection(object parent, object? collection) { }
@@ -483,8 +482,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
                         public global::System.Type ChildType => typeof({{c.ElementFqn}});
                         public string ChildTypeName => "{{c.ElementShortName}}";
                         public bool IsPropertyCollection => false;
-                        public string ChildForeignKeyColumn => "{{c.PhysicalFkColumn}}";
-                        public string ChildContainerName => "{{c.ChildContainerName}}";
+                        public string ChildContainerName => "";
                         public global::System.Collections.IEnumerable? GetCollection(object parent) => (({{parentFqn}})parent).{{c.BoundPropertyName}} as global::System.Collections.IEnumerable;
                         public void SetCollection(object parent, object? collection) => (({{parentFqn}})parent).{{c.BoundPropertyName}} = ({{c.PropertyTypeFqn}})collection!;
                         public void FillDictionary(object parent, global::System.Collections.Generic.IDictionary<string, string?> values) { }
@@ -583,7 +581,8 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
 
     /// <summary>
     /// Returns true if the type is a collection (implements IEnumerable&lt;T&gt; or is an array),
-    /// excluding string which is IEnumerable&lt;char&gt; but maps to SQL nvarchar directly.
+    /// excluding string which is IEnumerable&lt;char&gt; but maps to SQL nvarchar directly, and
+    /// byte[] which is one binary value that maps to SQL varbinary.
     /// Why: Collection types (List&lt;string&gt;, IList&lt;T&gt;, etc.) cannot be passed as SQL parameters
     /// and have no standard SQL type mapping. They are excluded from generated scalar mappers so that
     /// MsSqlConfigurationSaveTranslator does not attempt to bind them as command parameters.
@@ -592,6 +591,11 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     {
         // String is IEnumerable<char> but is a valid scalar SQL type — never exclude it
         if (type.SpecialType == SpecialType.System_String)
+            return false;
+
+        // byte[] is one binary value (varbinary), not a collection of bytes — excluding it
+        // silently dropped hashes and ciphertext from every mapped read.
+        if (type is IArrayTypeSymbol { Rank: 1, ElementType.SpecialType: SpecialType.System_Byte })
             return false;
 
         // Arrays (T[]) are collection types
@@ -676,34 +680,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static bool ChildHasFkSetter(ITypeSymbol childType, string fkName)
-    {
-        var current = childType;
-        while (current != null && current.SpecialType == SpecialType.None)
-        {
-            foreach (var p in current.GetMembers().OfType<IPropertySymbol>())
-            {
-                if (string.Equals(p.Name, fkName, StringComparison.Ordinal) &&
-                    p.SetMethod != null &&
-                    p.SetMethod.DeclaredAccessibility == Accessibility.Public &&
-                    p.Type.SpecialType == SpecialType.None &&
-                    string.Equals(p.Type.ToDisplayString(), "System.Guid", StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-            current = current.BaseType;
-        }
-        return false;
-    }
 
-    private static string StripConfigurationSuffix(string typeName)
-    {
-        const string suffix = "Configuration";
-        return typeName.EndsWith(suffix, StringComparison.Ordinal) && typeName.Length > suffix.Length
-            ? typeName.Substring(0, typeName.Length - suffix.Length)
-            : typeName;
-    }
 
     private static string SanitizeName(string name)
     {
@@ -734,24 +711,18 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
         string PropertyTypeFqn,
         string? ElementFqn,
         string? ElementShortName,
-        string FkPropertyName,
-        bool HasFkSetter,
         bool KvpValueNullable,
-        string PhysicalFkColumn,
-        string ChildContainerName);
+        string? ChildContainerName);
 
     private const string ColumnAttributeFullName = "System.ComponentModel.DataAnnotations.Schema.ColumnAttribute";
     private const string ChildTableAttributeFullName = "Fdw.Data.ConfigurationChildTableAttribute";
 
-    // A child's rows live in a container named for the child, minus the Configuration suffix --
-    // EscalationLevelConfiguration rows live in EscalationLevel. [ConfigurationChildTable]
-    // overrides that for a child whose container is named something else.
-    //
-    // Why a name is always produced rather than left empty: every consumer of ChildContainerName
-    // guards on IsNullOrEmpty and SKIPS the child. Emitting empty for the typed-list case meant a
-    // child with no attribute was not a child with a derivable name -- it was a child that
-    // silently did not load, did not save, and did not retire.
-    private static string ResolveChildContainerName(IPropertySymbol prop, string conventionalName = "")
+    // The table a name/value child's rows live in, as its [ConfigurationChildTable] declares, or null
+    // when it declares none. A name/value child has no element type whose registration could name its
+    // table, so the attribute is the only source, and nothing is derived when it is missing: the
+    // generator reports FDW049 instead. A typed-list child needs no attribute -- its table is the one
+    // the ConfigurationCommands TypeOption for its element type declares.
+    private static string? ChildTableAttributeValue(IPropertySymbol prop)
     {
         foreach (var attr in prop.GetAttributes())
         {
@@ -764,8 +735,16 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
             if (attr.ConstructorArguments[0].Value is string name && !string.IsNullOrWhiteSpace(name))
                 return name;
         }
-        return conventionalName;
+        return null;
     }
+
+    private static readonly DiagnosticDescriptor ChildTableNotDeclared = new(
+        id: "FDW049",
+        title: "Name/value child collection declares no table",
+        messageFormat: "'{0}.{1}' is a name/value child collection but carries no [ConfigurationChildTable]; its rows' table is not declared",
+        category: "Configuration",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 
 
     private static string ResolveColumnName(IPropertySymbol prop)

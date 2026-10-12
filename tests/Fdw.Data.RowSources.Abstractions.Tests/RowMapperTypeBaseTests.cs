@@ -4,15 +4,6 @@ namespace Fdw.Data.RowSources.Abstractions.Tests;
 
 public class RowMapperTypeBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        var sut = new TestRowMapperType();
-
-        sut.Id.ShouldBe(5);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -56,7 +47,7 @@ public class RowMapperTypeBaseTests
 
     private sealed class TestRowMapperType : RowMapperTypeBase
     {
-        public TestRowMapperType() : base(5, "TestMapper") { }
+        public TestRowMapperType() : base("TestMapper") { }
 
         public override int EstimatedAllocationsPerRow => 3;
         public override bool SupportsPooling => true;

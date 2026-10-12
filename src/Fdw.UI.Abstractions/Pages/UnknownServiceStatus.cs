@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class UnknownServiceStatus : ServiceStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="UnknownServiceStatus"/>.</summary>
-    public UnknownServiceStatus() : base(1, "Unknown") { }
+    public UnknownServiceStatus() : base("Unknown") { }
 }

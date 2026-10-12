@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Definitions;
 public sealed class NoActionDdlForeignKeyAction : DdlForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="NoActionDdlForeignKeyAction"/>.</summary>
-    public NoActionDdlForeignKeyAction() : base(1, "NoAction") { }
+    public NoActionDdlForeignKeyAction() : base("NoAction") { }
 }

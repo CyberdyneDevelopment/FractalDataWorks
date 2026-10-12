@@ -42,4 +42,15 @@ public class GetMeResponse
     /// Gets or sets the tenant IDs the user has access to.
     /// </summary>
     public IList<Guid> AvailableTenants { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether the caller administers the whole platform: the Admin role held in the
+    /// global tenant, decided server-side by <c>ISystemRoleConfiguration.IsPlatformAdmin</c>.
+    /// </summary>
+    /// <remarks>
+    /// Stated here because a browser signed in by a server-side session (FDW-903) holds no token to
+    /// read a <c>globalTenant</c> claim from. It is for display only; every action it unlocks is
+    /// authorised again on the server.
+    /// </remarks>
+    public bool IsPlatformAdmin { get; set; }
 }

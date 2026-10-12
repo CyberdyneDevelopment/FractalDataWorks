@@ -14,7 +14,6 @@ public sealed class FloatType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="FloatType"/> class.</summary>
     public FloatType()
         : base(
-            id: 16,
             name: "Float",
             description: "Double-precision floating-point number.",
             abstractType: DataTypes.Double,

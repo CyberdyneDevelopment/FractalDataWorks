@@ -28,6 +28,11 @@ public class DataStorePathResponse
     /// <summary>Gets or sets the path description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the path's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
+
     /// <summary>Gets or sets the source-discovered description (e.g., from MS_Description).</summary>
     public string? SourceDescription { get; set; }
 

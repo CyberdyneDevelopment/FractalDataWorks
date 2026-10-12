@@ -27,7 +27,7 @@ public sealed class MaxOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="MaxOperation"/> class.
     /// </summary>
     public MaxOperation()
-        : base(id: 13, name: "Max", category: "Aggregate", description: "Computes the maximum value from a set of values")
+        : base(name: "Max", category: "Aggregate", description: "Computes the maximum value from a set of values")
     {
         _logger = NullLogger<MaxOperation>.Instance;
         Parameters =

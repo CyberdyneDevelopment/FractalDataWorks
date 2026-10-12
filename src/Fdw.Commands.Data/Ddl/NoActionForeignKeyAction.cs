@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class NoActionForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="NoActionForeignKeyAction"/>.</summary>
-    public NoActionForeignKeyAction() : base(0, "NoAction") { }
+    public NoActionForeignKeyAction() : base("NoAction") { }
 }

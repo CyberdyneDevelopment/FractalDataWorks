@@ -14,7 +14,6 @@ public sealed class DateTime2Type : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="DateTime2Type"/> class.</summary>
     public DateTime2Type()
         : base(
-            id: 11,
             name: "datetime2",
             description: "Date and time with configurable fractional-second precision.",
             abstractType: DataTypes.DateTime,

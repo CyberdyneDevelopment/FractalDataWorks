@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlImageConverter()
     : DataTypeConverterBase(
-        id: 27,
         name: "Image",
         sourceType: "image",
         targetClrType: typeof(byte[]),

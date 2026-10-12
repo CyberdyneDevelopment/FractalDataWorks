@@ -11,7 +11,6 @@ public sealed class ArrowRightIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ArrowRightIcon"/>.</summary>
     public ArrowRightIcon()
         : base(
-            19,
             "ArrowRight",
             "0 0 24 24",
             "none",

@@ -63,6 +63,9 @@
     <ProjectReference Include="..\Fdw.Services.Data.Clients.Models\Fdw.Services.Data.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Services.Catalog.Clients.Models\Fdw.Services.Catalog.Clients.Models.csproj" />
     <ProjectReference Include="..\Fdw.Web.Search.Clients.Models\Fdw.Web.Search.Clients.Models.csproj" />
+    <ProjectReference Include="..\Fdw.Data.RowSources\Fdw.Data.RowSources.csproj" />
+    <ProjectReference Include="..\Fdw.Data.RowSources.Abstractions\Fdw.Data.RowSources.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Web.Http.Abstractions\Fdw.Web.Http.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

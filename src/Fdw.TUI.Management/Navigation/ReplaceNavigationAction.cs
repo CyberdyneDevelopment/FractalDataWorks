@@ -9,5 +9,5 @@ namespace Fdw.TUI.Management.Navigation;
 public sealed class ReplaceNavigationAction : NavigationActionBase
 {
     /// <summary>Initializes a new instance of <see cref="ReplaceNavigationAction"/>.</summary>
-    public ReplaceNavigationAction() : base(4, "Replace") { }
+    public ReplaceNavigationAction() : base("Replace") { }
 }

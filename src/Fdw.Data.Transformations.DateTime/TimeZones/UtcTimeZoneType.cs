@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "UTC")]
 public sealed class UtcTimeZoneType : TimeZoneTypeBase
 {
-    public UtcTimeZoneType() : base(1, "UTC", "UTC") { }
+    public UtcTimeZoneType() : base("UTC", "UTC") { }
 }

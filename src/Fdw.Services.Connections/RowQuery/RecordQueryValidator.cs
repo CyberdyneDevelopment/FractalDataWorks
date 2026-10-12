@@ -11,10 +11,11 @@ namespace Fdw.Services.Connections.RowQuery;
 
 /// <summary>
 /// Validates that a <c>QueryCommand</c>'s filter/join shape is one <see cref="RecordRowMatcher"/> can
-/// evaluate in memory: every filter condition must be an equality predicate combined with AND, and at
-/// most one INNER join with a single condition pair is permitted (the typed-body parent-join read
-/// shape <c>ConfigurationCommandBase.GetByParentJoin</c> emits). Anything outside that grammar (a
-/// non-equality operator, an OR group, more than one join) fails loud — NO FALLBACKS.
+/// evaluate in memory: every filter condition must be an equality or IN predicate combined with AND,
+/// and INNER joins with a single condition pair each, chained from the queried container, are permitted (the typed-body parent-join
+/// read shape <c>ConfigurationCommandBase.GetByParentJoin</c>/<c>GetByParentJoinSet</c> emit — the
+/// latter's <c>WhereIn</c> is where IN comes from). Anything outside that grammar (a non-equality,
+/// non-IN operator, an OR group, more than one join) fails loud — NO FALLBACKS.
 /// </summary>
 public static class RecordQueryValidator
 {
@@ -35,12 +36,20 @@ public static class RecordQueryValidator
         if (joins.Count == 0)
             return GenericResult.Success();
 
-        if (joins.Count > 1)
-            return GenericResult.Failure(RecordQueryLog.UnsupportedJoinCount(logger, joins.Count));
+        // Each join is INNER on one column pair, and starts from the queried container or from a
+        // container an earlier join brought in -- the chain a child row walks to its implementation
+        // row and on to the domain row.
+        var joined = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var join in joins)
+        {
+            if (!string.Equals(join.JoinType, "INNER", StringComparison.OrdinalIgnoreCase) || join.JoinConditions.Count != 1)
+                return GenericResult.Failure(RecordQueryLog.UnsupportedJoinShape(logger, join.JoinType, join.JoinConditions.Count));
 
-        var join = joins[0];
-        if (!string.Equals(join.JoinType, "INNER", StringComparison.OrdinalIgnoreCase) || join.JoinConditions.Count != 1)
-            return GenericResult.Failure(RecordQueryLog.UnsupportedJoinShape(logger, join.JoinType, join.JoinConditions.Count));
+            if (join.SourceContainerName is { } source && !joined.Contains(source))
+                return GenericResult.Failure(RecordQueryLog.UnknownJoinSource(logger, source, join.TargetContainerName));
+
+            joined.Add(join.TargetContainerName);
+        }
 
         return GenericResult.Success();
     }
@@ -53,7 +62,8 @@ public static class RecordQueryValidator
                 return GenericResult.Success();
 
             case FilterCondition condition:
-                if (!string.Equals(condition.Operator.SqlOperator, "=", StringComparison.Ordinal))
+                if (!string.Equals(condition.Operator.SqlOperator, "=", StringComparison.Ordinal)
+                    && !string.Equals(condition.Operator.SqlOperator, "IN", StringComparison.Ordinal))
                     return GenericResult.Failure(RecordQueryLog.UnsupportedFilterOperator(logger, condition.PropertyName, condition.Operator.SqlOperator));
                 return GenericResult.Success();
 

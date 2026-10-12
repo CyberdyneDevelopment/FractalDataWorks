@@ -7,7 +7,7 @@ namespace Fdw.Services.Quality.Configuration;
 
 /// <summary>
 /// Configuration for a glossary term linked data set.
-/// Child of GlossaryTermConfiguration.
+/// Child of GlossaryTermImplementationConfiguration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

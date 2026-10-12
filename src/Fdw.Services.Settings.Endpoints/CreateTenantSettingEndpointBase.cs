@@ -17,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<CreateTenantSettingRequest, TenantSettingSummaryDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly ITenantSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateTenantSettingEndpointBase(ILogger<CreateTenantSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected CreateTenantSettingEndpointBase(ILogger<CreateTenantSettingEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -37,8 +37,8 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
     /// <inheritdoc />
     protected override async Task<IGenericResult<bool>> CheckExists(CreateTenantSettingRequest request, CancellationToken ct)
     {
-        var tenantSettingsResult = await _provider.GetTenantSettings(ct).ConfigureAwait(false);
-        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingConfiguration>)[];
+        var tenantSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
+        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingImplementationConfiguration>)[];
         var existing = tenantSettings
             .FirstOrDefault(s => s.TenantId == request.TenantId
                                  && string.Equals(s.SettingName, request.SettingName, StringComparison.OrdinalIgnoreCase));
@@ -48,16 +48,22 @@ public abstract class CreateTenantSettingEndpointBase : CrudCreateEndpointBase<C
     /// <inheritdoc />
     protected override async Task<IGenericResult<TenantSettingSummaryDto>> Create(CreateTenantSettingRequest request, CancellationToken ct)
     {
-        var config = new TenantSettingConfiguration
+        var config = new TenantSettingImplementationConfiguration
         {
-            Id = Guid.NewGuid(),
+            // Why: Save()'s name param is the domain-row lookup key -- an existing row carrying
+            // it is the row a save hangs from, and only its absence mints a new one. Left unset
+            // (defaults to ""), every create/update resolved the SAME single domain row regardless
+            // of tenant or setting name, so a second create silently overwrote the first instead
+            // of adding an independent override. TenantId+SettingName together identify a member
+            // here (unlike ServerSetting, where SettingName alone is unique).
+            Name = $"{request.TenantId}/{request.SettingName}",
             TenantId = request.TenantId,
             SettingName = request.SettingName,
             SettingValue = request.SettingValue,
             IsActive = true
         };
 
-        var saveResult = await _provider.SaveTenantSetting(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "TenantSetting", "TenantSetting", config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<TenantSettingSummaryDto>();

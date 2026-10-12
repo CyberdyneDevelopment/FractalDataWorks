@@ -183,9 +183,6 @@ public class ExecutionStatusConditionTests
     {
         // Arrange & Act
         var condition = new ExecutionStatusCondition();
-
-        // Assert
-        condition.Id.ShouldBe(4);
         condition.Name.ShouldBe("ExecutionStatus");
         condition.Icon.ShouldBe("flag");
         condition.Color.ShouldBe("Info");

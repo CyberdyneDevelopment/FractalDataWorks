@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
@@ -14,13 +15,9 @@ using Fdw.Services.Data;
 namespace Fdw.Services.Pipelines.Tests;
 
 /// <summary>
-/// Covers <see cref="PipelineServiceConfigurationProvider.RegisterDomainConfiguration"/>: the header
-/// provider must be resolvable under all three contracts it registers itself against (concrete type,
-/// the open <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> base, and
-/// <see cref="IServiceConfigurationProvider{T}"/>) as the very same singleton instance, targeting this
-/// domain's own default DataStore/path (no arguments — <see cref="RegisterDomainConfiguration"/> is
-/// parameterless; overriding the location is <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}.SetConfiguration"/>
-/// on the resolved instance, not a registration-time argument).
+/// Covers the registration of <see cref="PipelineServiceConfigurationProvider"/>: one singleton is
+/// published under the domain interface and every forward, and registering succeeds when no
+/// operational connection is named.
 /// </summary>
 [Trait("Category", "Configuration")]
 public sealed class PipelineServiceConfigurationProviderTests
@@ -45,12 +42,12 @@ public sealed class PipelineServiceConfigurationProviderTests
         using var provider = builder.Services.BuildServiceProvider();
         var byInterface = provider.GetRequiredService<IPipelineConfigurationProvider>();
         var concrete = provider.GetRequiredService<PipelineServiceConfigurationProvider>();
-        var asBase = provider.GetRequiredService<ImplementationConfigurationProviderBase<PipelineConfiguration, PipelineConfigurationCommand>>();
-        var asServiceConfiguration = provider.GetRequiredService<IServiceConfigurationProvider<PipelineConfiguration>>();
+        // A domain provider since the domain/implementation split: it is published under the domain
+        // contract, not the implementation-provider names it carried before.
+        var asDomain = provider.GetRequiredService<IDomainConfigurationProvider<IPipelineImplementationConfiguration>>();
 
         concrete.ShouldBeSameAs(byInterface);
-        asBase.ShouldBeSameAs(concrete);
-        asServiceConfiguration.ShouldBeSameAs(concrete);
+        asDomain.ShouldBeSameAs(concrete);
         concrete.DataStoreName.ShouldBe(PipelineServiceTypes.ConfigurationConnection);
         concrete.PathName.ShouldBe("pipe");
     }
@@ -60,7 +57,7 @@ public sealed class PipelineServiceConfigurationProviderTests
     [Trait("Category", "Configuration")]
     public void RegisterSucceedsWhenNoOperationalConnectionIsNamed()
     {
-        // Every host registers this domain as part of the platform sweep, including hosts that never
+        // Every host registers this domain as part of the platform bootstrap, including hosts that never
         // read its operational data. Refusing to register them took every reference host down at boot
         // once already; this is the regression guard for that, not a preference.
         var previous = PipelineServiceTypes.OperationalConnection;

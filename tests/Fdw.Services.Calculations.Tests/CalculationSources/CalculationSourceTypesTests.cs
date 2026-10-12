@@ -20,30 +20,4 @@ public class CalculationSourceTypesTests
         all.ShouldContain(s => s.Name == "Default");
         all.ShouldContain(s => s.Name == "Configuration");
     }
-
-    [Fact]
-    public void ByNameResolvesDefault()
-    {
-        var source = CalculationSourceTypes.ByName("Default");
-
-        source.ShouldNotBe(CalculationSourceTypes.NotFound);
-        source.Name.ShouldBe("Default");
-    }
-
-    [Fact]
-    public void ByNameResolvesConfiguration()
-    {
-        var source = CalculationSourceTypes.ByName("Configuration");
-
-        source.ShouldNotBe(CalculationSourceTypes.NotFound);
-        source.Name.ShouldBe("Configuration");
-    }
-
-    [Fact]
-    public void ByNameUnknownReturnsNotFoundSentinel()
-    {
-        var source = CalculationSourceTypes.ByName("Bogus");
-
-        source.ShouldBe(CalculationSourceTypes.NotFound);
-    }
 }

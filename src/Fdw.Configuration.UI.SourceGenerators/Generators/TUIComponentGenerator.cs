@@ -89,10 +89,7 @@ public sealed class TUIComponentGenerator
         builder.AppendLine();
     }
 
-    // MA0051: Method length acceptable - procedural code generation with switch on component types
-#pragma warning disable MA0051 // Method is too long
     private static void GeneratePropertyPrompt(StringBuilder builder, PropertyModel property, ConfigurationModel model)
-#pragma warning restore MA0051
     {
         if (property.HelpText != null)
         {

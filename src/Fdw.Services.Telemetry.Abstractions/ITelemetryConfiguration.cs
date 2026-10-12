@@ -6,6 +6,6 @@ namespace Fdw.Services.Telemetry.Abstractions;
 /// The telemetry domain configuration: names which implementation is configured and holds its settings.
 /// </summary>
 public interface ITelemetryConfiguration
-    : IPlatformServiceConfiguration<ITelemetryImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

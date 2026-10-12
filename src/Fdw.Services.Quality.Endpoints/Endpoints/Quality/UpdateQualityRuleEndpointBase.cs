@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Quality;
@@ -10,17 +10,17 @@ namespace Fdw.Services.Quality.Endpoints;
 /// <summary>Endpoint that updates an existing quality rule.</summary>
 public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRuleRequest, QualityRuleDto>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IQualityRuleConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="UpdateQualityRuleEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected UpdateQualityRuleEndpointBase(QualityConfigurationProvider provider)
+    protected UpdateQualityRuleEndpointBase(IQualityRuleConfigurationProvider provider)
     {
         _provider = provider;
     }
 
-    /// <summary>Gets the authorization policy required for write operations.</summary>
-    protected virtual string WritePolicy => "datasets:read";
+    /// <summary>Gets the authorization policy required to change a quality rule.</summary>
+    protected virtual string WritePolicy => "quality/rules:write";
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
     public override void Configure()
@@ -37,12 +37,10 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
     /// <summary>Loads the rule, applies the provided changes, and persists, returning 404 if not found.</summary>
     public override async Task HandleAsync(UpdateQualityRuleRequest req, CancellationToken ct)
     {
-        var existing = await _provider.GetQualityRule(req.Id, ct).ConfigureAwait(false);
+        var existing = await _provider.Get(req.Id, ct).ConfigureAwait(false);
         if (!existing.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to load quality rule", Details = existing.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to load quality rule", Details = existing.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -53,25 +51,23 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         }
 
         var config = existing.Value;
-        if (!string.IsNullOrWhiteSpace(req.Name)) config.Name = req.Name;
+        // No Name: the column does not exist, so assigning it changed nothing on the way out.
         if (req.Description is not null) config.Description = req.Description;
         if (req.Expression is not null) config.Expression = req.Expression;
-        config.IsEnabled = req.IsEnabled;
+        if (req.IsEnabled is not null) config.IsEnabled = req.IsEnabled.Value;
 
-        var result = await _provider.SaveQualityRule(config, ct).ConfigureAwait(false);
+        var result = await _provider.Save(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to update quality rule", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to update quality rule", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
-        await Send.OkAsync(MapToDto(result.Value!), ct).ConfigureAwait(false);
+        await Send.OkAsync(MapToDto(config), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a QualityRuleConfiguration to its corresponding DTO.</summary>
-    protected virtual QualityRuleDto MapToDto(QualityRuleConfiguration config)
+    /// <summary>Maps a QualityRuleImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual QualityRuleDto MapToDto(IQualityRuleImplementationConfiguration config)
     {
         return new QualityRuleDto
         {
@@ -85,7 +81,8 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
             MinValue = config.MinValue,
             MaxValue = config.MaxValue,
             Pattern = config.Pattern,
-            Expression = config.Expression
+            Expression = config.Expression,
+            CreatedAt = config.CreateDate
         };
     }
 }

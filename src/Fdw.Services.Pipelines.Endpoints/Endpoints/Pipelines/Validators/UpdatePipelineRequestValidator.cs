@@ -1,4 +1,3 @@
-using FluentValidation;
 using Fdw.Validation.FastEndpoints;
 
 namespace Fdw.Services.Pipelines.Endpoints.Validators;

@@ -7,7 +7,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Binding;
 
 /// <summary>ConfigurationCommands TypeOption for the ExternalIdentityProvisionerBinding configuration domain (sec.ExternalIdentityProvisionerBinding).</summary>
 [TypeOption(typeof(ConfigurationCommands), "ExternalIdentityProvisionerBinding")]
-public sealed class ExternalIdentityProvisionerBindingConfigurationCommand : ConfigurationCommandBase<ExternalIdentityProvisionerBindingConfiguration>
+public sealed class ExternalIdentityProvisionerBindingConfigurationCommand : ConfigurationCommandBase<ExternalIdentityProvisionerBindingImplementationConfiguration>
 {
     /// <inheritdoc/>
     public ExternalIdentityProvisionerBindingConfigurationCommand() : base("ExternalIdentityProvisionerBinding") { }

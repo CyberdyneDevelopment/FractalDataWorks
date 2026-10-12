@@ -17,8 +17,7 @@ public sealed class OperationExecutionCompletedMessage : ExecutionMessage, IServ
         : base(3003, "OperationExecutionCompleted", MessageSeverity.Information,
                "Operation execution completed successfully",
                "EXEC_OPERATION_COMPLETED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class OperationExecutionCompletedMessage : ExecutionMessage, IServ
         : base(3003, "OperationExecutionCompleted", MessageSeverity.Information,
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' completed successfully", operationName),
                "EXEC_OPERATION_COMPLETED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class OperationExecutionCompletedMessage : ExecutionMessage, IServ
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' completed successfully for process: {1}",
                            operationName, processId),
                "EXEC_OPERATION_COMPLETED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class OperationExecutionCompletedMessage : ExecutionMessage, IServ
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' completed successfully for process: {1} in {2}ms",
                            operationName, processId, durationMs),
                "EXEC_OPERATION_COMPLETED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 }

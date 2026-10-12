@@ -6,9 +6,9 @@ using Fdw.Validation;
 namespace Fdw.Services.Authorization.Validation;
 
 /// <summary>
-/// Validator for <see cref="RoleConfiguration"/>.
+/// Validator for <see cref="RoleImplementationConfiguration"/>.
 /// </summary>
-public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleConfiguration>
+public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RoleConfigurationValidator"/> class.
@@ -30,10 +30,6 @@ public sealed class RoleConfigurationValidator : FdwConfigurationValidator<RoleC
             RuleFor(x => x.Description!)
                 .IsSafeString(1000);
         });
-
-        RuleFor(x => x.SortOrder)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("SortOrder must be greater than or equal to 0");
 
         When(x => x.IsTenantScoped && x.TenantId.HasValue, () =>
         {

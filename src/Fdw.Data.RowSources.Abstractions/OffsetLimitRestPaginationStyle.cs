@@ -9,5 +9,5 @@ namespace Fdw.Data.RowSources.Http.Abstractions;
 public sealed class OffsetLimitRestPaginationStyle : RestPaginationStyleBase
 {
     /// <summary>Initializes a new instance of <see cref="OffsetLimitRestPaginationStyle"/>.</summary>
-    public OffsetLimitRestPaginationStyle() : base(1, "OffsetLimit") { }
+    public OffsetLimitRestPaginationStyle() : base("OffsetLimit") { }
 }

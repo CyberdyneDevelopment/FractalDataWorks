@@ -18,7 +18,7 @@ public sealed class TriggerThrottledCode : OperationsResultCodeBase
         : base(
             81000,
             "TriggerThrottled",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Trigger throttled, retry after {RetryAfter}",
             isRetryable: true)
     {

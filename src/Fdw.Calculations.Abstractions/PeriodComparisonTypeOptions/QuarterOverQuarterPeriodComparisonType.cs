@@ -15,7 +15,7 @@ public sealed class QuarterOverQuarterPeriodComparisonType : PeriodComparisonTyp
     /// <summary>
     /// Initializes a new instance of the <see cref="QuarterOverQuarterPeriodComparisonType"/> class.
     /// </summary>
-    public QuarterOverQuarterPeriodComparisonType() : base(3, "QuarterOverQuarter", isCumulative: false) { }
+    public QuarterOverQuarterPeriodComparisonType() : base("QuarterOverQuarter", isCumulative: false) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => TimeSpan.FromDays(-91);

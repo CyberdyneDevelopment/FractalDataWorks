@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Settings.Configuration;
 using Fdw.Services.Settings.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
@@ -16,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSettingSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<RoleSettingConfiguration> _provider;
+    private readonly IRoleSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IServiceConfigurationProvider<RoleSettingConfiguration> provider) : base(logger)
+    protected ListRoleSettingsEndpointBase(ILogger<ListRoleSettingsEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -44,7 +45,7 @@ public abstract class ListRoleSettingsEndpointBase : CrudListEndpointBase<RoleSe
             return allResult.ToNewResult<List<RoleSettingSummaryDto>>();
         }
 
-        var items = (allResult.Value ?? (IReadOnlyList<RoleSettingConfiguration>)[])
+        var items = (allResult.Value ?? (IReadOnlyList<RoleSettingImplementationConfiguration>)[])
             .Select(s => new RoleSettingSummaryDto
             {
                 Id = s.Id,

@@ -17,7 +17,7 @@ public sealed class CommandExecutionCancelledCode : RoslynResultCodeBase
     /// </summary>
     public CommandExecutionCancelledCode()
         : base(91000, "CommandExecutionCancelled",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Command execution was cancelled",
             isRetryable: false)
     {

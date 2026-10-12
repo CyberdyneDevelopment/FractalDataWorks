@@ -13,9 +13,6 @@ public class PendingTests
     {
         // Arrange & Act
         var pending = new Pending();
-
-        // Assert
-        pending.Id.ShouldBe(6);
         pending.Name.ShouldBe("Pending");
         pending.IsTerminal.ShouldBeFalse();
         pending.IsError.ShouldBeFalse();

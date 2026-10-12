@@ -239,10 +239,7 @@ public sealed class DetailPageRenderer
         console.WriteLine();
     }
 
-    // MA0051: Method length acceptable - procedural action menu with dynamic action list and confirmation prompts
-#pragma warning disable MA0051 // Method is too long
     private static DetailPageResult PromptAction(IDetailPageModel page, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         var choices = new List<(string Id, string Label, bool IsDestructive)>();
 

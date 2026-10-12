@@ -14,5 +14,5 @@ public sealed class RefreshConnectionStatusOperation : ConnectionManagementOpera
     /// <summary>
     /// Initializes a new instance of the <see cref="RefreshConnectionStatusOperation"/> class.
     /// </summary>
-    public RefreshConnectionStatusOperation() : base(3, "RefreshConnectionStatus", modifiesState: false, requiresExistingConnection: true) { }
+    public RefreshConnectionStatusOperation() : base("RefreshConnectionStatus", modifiesState: false, requiresExistingConnection: true) { }
 }

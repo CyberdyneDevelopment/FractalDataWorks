@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class ManageAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for manage action.
+    /// Material Symbols icon name for manage action.
     /// </summary>
-    public const string ManageIcon = "settings"; // Icons.Material.Filled.Settings
+    public const string ManageIcon = "settings";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ManageAction"/> class.
     /// </summary>
     public ManageAction()
         : base(
-            id: 10,
             name: "Manage",
             icon: ManageIcon,
             color: "Primary",

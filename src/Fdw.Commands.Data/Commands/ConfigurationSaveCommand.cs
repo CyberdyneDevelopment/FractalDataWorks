@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using Fdw.Collections;
 using Fdw.Collections.Attributes;
-using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,68 +8,45 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Commands.Data;
 
 /// <summary>
-/// Configuration save command for version-on-write upsert operations.
-/// Marks the current row as non-current and inserts a new current version.
-/// Returns the number of affected rows.
+/// Version-on-write save of one configuration row. Retires the current version its container's
+/// Logical key matches, inserts the new version, and returns the key values of both.
 /// </summary>
-/// <typeparam name="T">The type of configuration entity to save.</typeparam>
+/// <typeparam name="T">The type of configuration record to save.</typeparam>
 /// <remarks>
-/// <para>
-/// This command implements the version-on-write pattern used by all FDW configuration tables:
-/// <list type="bullet">
-/// <item>UPDATE: Sets IsCurrent = 0 on the existing current row (if any)</item>
-/// <item>INSERT: Inserts a new row with IsCurrent = 1, IsDeleted = 0</item>
-/// </list>
-/// </para>
-/// <para>
-/// When T has a [ManagedConfiguration] attribute with a non-null ParentTableName, the DataGateway
-/// detects this via <see cref="IConfigurationSaveCommand.ConfigurationType"/> and dispatches
-/// the save as a cascade: parent row first, then child row, wrapped in a single transaction.
-/// </para>
-/// <para>
-/// Example usage:
-/// <code>
-/// var call = new DataGatewayCall(
-///     new ConfigurationSaveCommand&lt;DataSetConfiguration&gt;(config),
-///     new DataStoreTarget("PlatformConfiguration", "cfg", "DataSet"));
-/// var result = await gateway.Execute&lt;int&gt;(call, ct);
-/// </code>
-/// </para>
+/// The row is the record's mapped properties plus <see cref="FieldValues"/>. A Foreign key field is
+/// one of those values -- an owner sets it from its own key values, a record carries the ones it
+/// cites -- so the translator writes it as it arrives and never resolves it.
 /// </remarks>
-[ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "ConfigurationSave", RestrictToCurrentCompilation = true)]
-public sealed class ConfigurationSaveCommand<T> : DataCommandBase<int, T>, IConfigurationSaveCommand
+public sealed class ConfigurationSaveCommand<T> : DataCommandBase<ConfigurationWriteResult, T>, IConfigurationSaveCommand
     where T : class
 {
-    private static readonly IReadOnlyDictionary<string, object?> EmptyReadOnlyDictionary =
+    private static readonly IReadOnlyDictionary<string, object?> NoFieldValues =
         new Dictionary<string, object?>(0, StringComparer.Ordinal);
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConfigurationSaveCommand{T}"/> class.
-    /// </summary>
-    /// <param name="data">The configuration entity to save.</param>
-    public ConfigurationSaveCommand(T data)
-        : this(data, EmptyReadOnlyDictionary)
+    /// <summary>Initializes a save of a record whose fields are all mapped properties.</summary>
+    /// <param name="data">The record to save.</param>
+    /// <param name="replacesCurrent">Whether the save retires a current version of the row before inserting.</param>
+    public ConfigurationSaveCommand(T data, bool replacesCurrent)
+        : this(data, NoFieldValues, replacesCurrent)
     {
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConfigurationSaveCommand{T}"/> class with extra
-    /// column=value pairs to merge into the INSERT beyond the POCO's mapped columns (e.g. a KVP
-    /// child row's logical owner FK, which has no corresponding property on <typeparamref name="T"/>).
-    /// </summary>
-    /// <param name="data">The configuration entity to save.</param>
-    /// <param name="additionalColumnValues">Extra column=value pairs merged into the INSERT.</param>
-    public ConfigurationSaveCommand(T data, IReadOnlyDictionary<string, object?> additionalColumnValues)
+    /// <summary>Initializes a save of a record plus field values its properties do not carry.</summary>
+    /// <param name="data">The record to save.</param>
+    /// <param name="fieldValues">Field values written with the record, keyed by field name.</param>
+    /// <param name="replacesCurrent">Whether the save retires a current version of the row before inserting.</param>
+    public ConfigurationSaveCommand(T data, IReadOnlyDictionary<string, object?> fieldValues, bool replacesCurrent)
         : base("ConfigurationSave", data)
     {
-        AdditionalColumnValues = additionalColumnValues ?? EmptyReadOnlyDictionary;
+        FieldValues = fieldValues;
+        ReplacesCurrent = replacesCurrent;
 
         ConfigurationSaveCommandLog.CommandCreated(NullLogger<ConfigurationSaveCommand<T>>.Instance, typeof(T).Name);
-        if (AdditionalColumnValues.Count > 0)
+        if (FieldValues.Count > 0)
         {
-            ConfigurationSaveCommandLog.AdditionalColumnsIncluded(
-                NullLogger<ConfigurationSaveCommand<T>>.Instance, typeof(T).Name, AdditionalColumnValues.Count);
+            ConfigurationSaveCommandLog.FieldValuesIncluded(
+                NullLogger<ConfigurationSaveCommand<T>>.Instance, typeof(T).Name, string.Join(", ", FieldValues.Keys));
         }
     }
 
@@ -80,5 +54,8 @@ public sealed class ConfigurationSaveCommand<T> : DataCommandBase<int, T>, IConf
     public Type ConfigurationType => typeof(T);
 
     /// <inheritdoc/>
-    public IReadOnlyDictionary<string, object?> AdditionalColumnValues { get; }
+    public IReadOnlyDictionary<string, object?> FieldValues { get; }
+
+    /// <inheritdoc/>
+    public bool ReplacesCurrent { get; }
 }

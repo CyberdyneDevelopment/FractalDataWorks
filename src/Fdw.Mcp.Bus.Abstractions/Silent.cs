@@ -9,5 +9,5 @@ namespace Fdw.Mcp.Bus;
 public sealed class Silent : ViewIntentBase
 {
     /// <summary>Initializes the Silent view intent.</summary>
-    public Silent() : base(1, "Silent") { }
+    public Silent() : base("Silent") { }
 }

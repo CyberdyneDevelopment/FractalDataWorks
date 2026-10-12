@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
+using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Web.Http.Abstractions.Security;
 
@@ -60,8 +61,6 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
 
         ActiveTenantId = ParseGuidClaim(principal, ClaimDefinitions.tenantId.Name);
         ActiveOrgId = ParseGuidClaim(principal, ClaimDefinitions.orgId.Name);
-        IsCrossTenant = string.Equals(
-            principal.FindFirst(ClaimDefinitions.crossTenant.Name)?.Value, "true", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc />
@@ -93,9 +92,6 @@ public sealed class ClaimsPrincipalAuthenticationContext : IAuthenticationContex
 
     /// <inheritdoc />
     public Guid? ActiveOrgId { get; }
-
-    /// <inheritdoc />
-    public bool IsCrossTenant { get; }
 
     /// <inheritdoc />
     public bool IsSystemContext => false;

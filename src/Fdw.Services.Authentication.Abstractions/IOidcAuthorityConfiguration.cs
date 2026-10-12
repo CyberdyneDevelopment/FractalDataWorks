@@ -14,6 +14,14 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// </remarks>
 public interface IOidcAuthorityConfiguration
 {
+    /// <summary>Gets the name this deployment declared the authority under.</summary>
+    /// <remarks>
+    /// What a person reads when choosing where to sign in - the issuer is a URL and the client id
+    /// is an opaque registration, so this is the only value here anybody recognises. It names the
+    /// provider, never the flow: what a caller selects is the flow, and the two are separate rows.
+    /// </remarks>
+    string Name { get; }
+
     /// <summary>Gets the provider's issuer, as it appears in the token's <c>iss</c> claim.</summary>
     string Issuer { get; }
 
@@ -28,6 +36,23 @@ public interface IOidcAuthorityConfiguration
 
     /// <summary>Gets the client identifier this platform registered with the provider.</summary>
     string ClientId { get; }
+
+    /// <summary>Gets the name of how this platform authenticates itself at the provider's token endpoint.</summary>
+    /// <remarks>
+    /// Names an option of the client authentication types, as a connection names its authentication
+    /// type: <c>None</c> for a public client that proves itself with PKCE alone, <c>ClientSecret</c>
+    /// for a confidential client. What the named type needs is read from
+    /// <see cref="ClientAuthenticationProperties"/>.
+    /// </remarks>
+    string ClientAuthenticationType { get; }
+
+    /// <summary>Gets the properties the named client authentication type reads.</summary>
+    /// <remarks>
+    /// The values are names, never secret values: a secret manager name and the key within it. When
+    /// the type needs a secret the step resolves it each time it exchanges a code and holds it no
+    /// longer than that request.
+    /// </remarks>
+    IReadOnlyDictionary<string, string?> ClientAuthenticationProperties { get; }
 
     /// <summary>Gets the redirect the provider returns the caller to.</summary>
     /// <remarks>

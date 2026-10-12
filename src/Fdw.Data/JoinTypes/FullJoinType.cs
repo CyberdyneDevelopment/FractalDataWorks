@@ -17,7 +17,6 @@ public sealed class FullJoinType : JoinTypeBase
     /// </summary>
     public FullJoinType()
         : base(
-            id: 4,
             name: "Full",
             sqlKeyword: "FULL OUTER JOIN",
             description: "Returns all rows from both sources",

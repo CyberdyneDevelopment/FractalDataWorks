@@ -23,12 +23,12 @@ namespace Fdw.Services.Connections;
 /// </summary>
 /// <remarks>
 /// The domain configuration provider supplies the implementation configuration; the factory registered
-/// for that ServiceOptionType builds the connection. Nothing is cached — the connection wraps a driver
+/// for that Implementation builds the connection. Nothing is cached — the connection wraps a driver
 /// that pools underneath, so a cache above it would add a disposal lifecycle and a staleness dance for
 /// nothing.
 /// </remarks>
 public sealed class ConnectionProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           IGenericConnection,
           IConnectionImplementationConfiguration,
           IServiceFactory<IGenericConnection>,
@@ -36,17 +36,16 @@ public sealed class ConnectionProvider
       IConnectionProvider,
       IDataConnectionProvider
 {
+
     private readonly ILogger<ConnectionProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves factories from.</param>
     /// <param name="logger">The logger instance.</param>
     public ConnectionProvider(
-        IServiceProvider services,
         ILogger<ConnectionProvider> logger)
-        : base(services, logger ?? NullLogger<ConnectionProvider>.Instance)
+        : base(logger ?? NullLogger<ConnectionProvider>.Instance)
     {
         _logger = logger ?? NullLogger<ConnectionProvider>.Instance;
     }

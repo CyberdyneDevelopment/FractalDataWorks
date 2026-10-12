@@ -29,7 +29,7 @@ public static partial class DataSetBuilderLog
 
     /// <summary>Logs failure when the configuration name is missing.</summary>
     [MessageLogging(EventId = 21002, Level = LogLevel.Error,
-        Message = "DataSetBuilder.Create failed: DataSetConfiguration.Name is required")]
+        Message = "DataSetBuilder.Create failed: DataSetImplementationConfiguration.Name is required")]
     public static partial IGenericMessage ConfigurationNameRequired(ILogger logger);
 
     /// <summary>Logs failure when source resolution fails during dataset construction.</summary>

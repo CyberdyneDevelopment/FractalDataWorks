@@ -17,8 +17,7 @@ public sealed class OperationNotSupportedMessage : ExecutionMessage, IServiceMes
         : base(3001, "OperationNotSupported", MessageSeverity.Error,
                "Operation is not supported",
                "EXEC_OPERATION_NOT_SUPPORTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class OperationNotSupportedMessage : ExecutionMessage, IServiceMes
         : base(3001, "OperationNotSupported", MessageSeverity.Error,
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' is not supported", operationName),
                "EXEC_OPERATION_NOT_SUPPORTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class OperationNotSupportedMessage : ExecutionMessage, IServiceMes
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' is not supported by process type: {1}",
                            operationName, processType),
                "EXEC_OPERATION_NOT_SUPPORTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class OperationNotSupportedMessage : ExecutionMessage, IServiceMes
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' is not supported by process: {1} (type: {2})",
                            operationName, processId, processType),
                "EXEC_OPERATION_NOT_SUPPORTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 }

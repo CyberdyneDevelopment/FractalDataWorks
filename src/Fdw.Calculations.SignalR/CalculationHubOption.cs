@@ -21,7 +21,7 @@ public sealed class CalculationHubOption : RealTimeHubOptionBase
     /// Initializes a new instance of the <see cref="CalculationHubOption"/> class.
     /// </summary>
     public CalculationHubOption()
-        : base(2, "Calculation", "/hubs/calculations", typeof(CalculationHub), authorizationPolicy: null)
+        : base("Calculation", "/hubs/calculations", typeof(CalculationHub), authorizationPolicy: null)
     {
     }
 

@@ -14,5 +14,5 @@ public sealed class StaleStatus : LineageNodeStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="StaleStatus"/> class.
     /// </summary>
-    public StaleStatus() : base(4, "Stale") { }
+    public StaleStatus() : base("Stale") { }
 }

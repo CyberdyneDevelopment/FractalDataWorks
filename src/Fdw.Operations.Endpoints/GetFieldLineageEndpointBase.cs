@@ -254,7 +254,7 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
                 Id = $"Pipeline_{p.Name}",
                 Type = LineageNodeTypes.ByName("Pipeline"),
                 Name = p.Name,
-                Description = p.ServiceOptionType
+                Description = p.Implementation
             });
         }
         var connectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -14,7 +14,6 @@ public sealed class NoneSecretType : SecretTypeBase, ISecretType
     /// </summary>
     public NoneSecretType()
         : base(
-            id: 0,
             name: "None",
             description: "No secret required",
             requiresSecureStorage: false)

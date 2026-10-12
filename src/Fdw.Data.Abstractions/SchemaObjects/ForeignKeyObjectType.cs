@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class ForeignKeyObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for foreign keys.
+    /// Material Symbols icon name for foreign keys.
     /// </summary>
-    public const string ForeignKeyIcon = "link"; // Icons.Material.Filled.Link
+    public const string ForeignKeyIcon = "link";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ForeignKeyObjectType"/> class.
     /// </summary>
     public ForeignKeyObjectType()
         : base(
-            id: 8,
             name: "ForeignKey",
             icon: ForeignKeyIcon,
             color: "Tertiary",

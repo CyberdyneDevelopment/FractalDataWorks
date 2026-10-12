@@ -27,13 +27,13 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public interface ISchemaObjectType : ITypeOption<int, SchemaObjectTypeBase>
 {
     /// <summary>
-    /// Gets the MudBlazor icon name for this object type.
+    /// Gets the Material Symbols icon name for this object type.
     /// </summary>
-    /// <example>@Icons.Material.Filled.TableChart</example>
+    /// <example>table_chart</example>
     string Icon { get; }
 
     /// <summary>
-    /// Gets the MudBlazor color for this object type.
+    /// Gets the semantic color role for this object type (Primary, Success, Warning, Error, Info, ...).
     /// </summary>
     /// <example>Primary, Success, Info, Warning, Error</example>
     string Color { get; }

@@ -31,35 +31,31 @@ public sealed class ConnectionLimitCounterStoreTests
         store.IncrementQueryCount(id);
         store.IncrementQueryCount(id);
 
-        store.Read(id).queries.ShouldBe(3L);
+        store.ReadQueryCount(id).ShouldBe(3L);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Limits")]
-    public void Read_UnknownId_ReturnsZeroes()
+    public void ReadQueryCount_UnknownId_ReturnsZero()
     {
         var store = new ConnectionLimitCounterStore();
-        var (queries, bytes) = store.Read(Guid.NewGuid());
 
-        queries.ShouldBe(0L);
-        bytes.ShouldBe(0L);
+        store.ReadQueryCount(Guid.NewGuid()).ShouldBe(0L);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Limits")]
-    public void Seed_SetsInitialCounters()
+    public void Seed_SetsInitialCounter()
     {
         var store = new ConnectionLimitCounterStore();
         var id = Guid.NewGuid();
         var lastReset = DateTimeOffset.UtcNow.AddHours(-1);
 
-        store.Seed(id, 500L, 1024L * 1024L, lastReset);
+        store.Seed(id, 500L, lastReset);
 
-        var (queries, bytes) = store.Read(id);
-        queries.ShouldBe(500L);
-        bytes.ShouldBe(1024L * 1024L);
+        store.ReadQueryCount(id).ShouldBe(500L);
     }
 
     [Fact]
@@ -73,12 +69,12 @@ public sealed class ConnectionLimitCounterStoreTests
 
         store.IncrementQueryCount(id1);
         store.IncrementQueryCount(id1);
-        store.IncrementByteCount(id2, 4096);
+        store.IncrementQueryCount(id2);
 
         store.ResetAll();
 
-        store.Read(id1).queries.ShouldBe(0L);
-        store.Read(id2).bytes.ShouldBe(0L);
+        store.ReadQueryCount(id1).ShouldBe(0L);
+        store.ReadQueryCount(id2).ShouldBe(0L);
     }
 
     [Fact]
@@ -93,10 +89,10 @@ public sealed class ConnectionLimitCounterStoreTests
         store.IncrementQueryCount(id);
 
         // Now try to seed — it should NOT overwrite the existing entry (TryAdd semantics)
-        store.Seed(id, 999L, 999L, DateTimeOffset.UtcNow);
+        store.Seed(id, 999L, DateTimeOffset.UtcNow);
 
         // Should still be 1, not 999
-        store.Read(id).queries.ShouldBe(1L);
+        store.ReadQueryCount(id).ShouldBe(1L);
     }
 
     [Fact]
@@ -116,6 +112,6 @@ public sealed class ConnectionLimitCounterStoreTests
 
         await Task.WhenAll(tasks);
 
-        store.Read(id).queries.ShouldBe(parallelism);
+        store.ReadQueryCount(id).ShouldBe(parallelism);
     }
 }

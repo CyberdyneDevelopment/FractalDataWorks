@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Collections;
 using Fdw.Configuration;
+using Fdw.Services.Connections.Abstractions.Authentication;
 using Microsoft.Extensions.Configuration;
 
 namespace Fdw.Services.Connections.Http.Security;
@@ -21,13 +22,13 @@ namespace Fdw.Services.Connections.Http.Security;
 /// Abstractions.HttpAuthenticationConfiguration.Name in source-generated TypeCollection code.
 /// </remarks>
 public abstract class HttpAuthenticationConfiguration
-    : TypeOptionBase<int, HttpAuthenticationConfiguration>
+    : ConnectionAuthenticationTypeBase<HttpAuthenticationConfiguration>
 {
     /// <summary>
     /// Parameterless constructor for the Empty/NotFound sentinel (source-generated).
     /// </summary>
     protected HttpAuthenticationConfiguration()
-        : base(0, string.Empty)
+        : base(string.Empty, string.Empty, string.Empty, string.Empty, null, requiresSecret: false)
     {
     }
 
@@ -35,11 +36,11 @@ public abstract class HttpAuthenticationConfiguration
     /// Constructor for concrete TypeOptions with no type-specific properties.
     /// </summary>
     protected HttpAuthenticationConfiguration(
-        int id,
         string name,
         string displayName,
-        string description)
-        : base(id, name, $"Security:{name}", displayName, description, "Security")
+        string description,
+        bool requiresSecret)
+        : base(name, $"Security:{name}", displayName, description, "Security", requiresSecret)
     {
     }
 
@@ -47,13 +48,13 @@ public abstract class HttpAuthenticationConfiguration
     /// Constructor for concrete TypeOptions with type-specific property metadata.
     /// </summary>
     protected HttpAuthenticationConfiguration(
-        int id,
         string name,
         string displayName,
         string description,
         IReadOnlyList<string> expectedProperties,
-        IReadOnlyList<string> requiredProperties)
-        : base(id, name, $"Security:{name}", displayName, description, "Security")
+        IReadOnlyList<string> requiredProperties,
+        bool requiresSecret)
+        : base(name, $"Security:{name}", displayName, description, "Security", requiresSecret)
     {
         ExpectedProperties = expectedProperties;
         RequiredProperties = requiredProperties;

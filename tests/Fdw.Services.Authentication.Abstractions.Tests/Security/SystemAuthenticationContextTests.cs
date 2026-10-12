@@ -72,13 +72,27 @@ public class SystemAuthenticationContextTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void IsCrossTenantIsAlwaysFalse()
+    public void BelongsToNoTenantUnlessGivenOne()
     {
         // Arrange
         var context = new SystemAuthenticationContext();
 
         // Assert
-        context.IsCrossTenant.ShouldBeFalse();
+        context.ActiveTenantId.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public void CarriesTheTenantItWorksForAndStaysSystem()
+    {
+        // Arrange -- a background run working for one tenant (FDW-825)
+        var tenantId = Guid.NewGuid();
+        var context = new SystemAuthenticationContext(tenantId);
+
+        // Assert -- the tenant only steers which tenant written rows default to; it is still system
+        context.ActiveTenantId.ShouldBe(tenantId);
+        context.IsSystemContext.ShouldBeTrue();
     }
 
     [Fact]

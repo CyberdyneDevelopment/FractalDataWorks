@@ -12,7 +12,7 @@ namespace Fdw.Services.Connections.Tests.RowQuery;
 /// </summary>
 public sealed class RecordRowValidatorTests
 {
-    private static IReadOnlyDictionary<string, object?> Row(params (string Key, object? Value)[] fields)
+    private static Dictionary<string, object?> Row(params (string Key, object? Value)[] fields)
     {
         var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
         foreach (var (key, value) in fields)

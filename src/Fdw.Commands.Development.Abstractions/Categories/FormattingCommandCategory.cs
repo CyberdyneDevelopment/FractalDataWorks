@@ -13,7 +13,7 @@ public sealed class FormattingCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="FormattingCommandCategory"/> class.
     /// </summary>
     public FormattingCommandCategory()
-        : base(3, "Formatting", "Code formatting commands for document formatting, import organization, and style normalization")
+        : base("Formatting", "Code formatting commands for document formatting, import organization, and style normalization")
     {
     }
 }

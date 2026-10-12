@@ -11,7 +11,7 @@ namespace Fdw.Services.Calculations.Abstractions;
 /// Provides common metadata (category, description, parameters) and requires
 /// subclasses to implement <see cref="Calculate"/>.
 /// </summary>
-public abstract class CalculationOperationBase : TypeOptionBase<int, CalculationOperationBase>, ICalculationOperation
+public abstract class CalculationOperationBase : TypeOptionBase<CalculationOperationBase>, ICalculationOperation
 {
     /// <summary>
     /// Gets the category this operation belongs to (e.g., "Arithmetic", "Aggregate", "Window").
@@ -31,12 +31,11 @@ public abstract class CalculationOperationBase : TypeOptionBase<int, Calculation
     /// <summary>
     /// Initializes a new instance of the <see cref="CalculationOperationBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this operation.</param>
     /// <param name="name">The name of this operation (e.g., "Add", "Sum").</param>
     /// <param name="category">The category grouping (e.g., "Arithmetic", "Aggregate").</param>
     /// <param name="description">A human-readable description of the operation.</param>
-    protected CalculationOperationBase(int id, string name, string category, string description)
-        : base(id, name)
+    protected CalculationOperationBase(string name, string category, string description)
+        : base(name)
     {
         Category = category;
         Description = description;

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Fdw.Services.Pipelines.Clients.Abstractions;
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
@@ -13,4 +15,16 @@ public sealed class ProxyTriggerEtlRequest
 
     /// <summary>Gets or sets the trigger source identifier.</summary>
     public string? TriggerSource { get; set; }
+
+    /// <summary>
+    /// Gets or sets the run parameter values (contract item 3): each name must be a parameter the pipeline declares, each
+    /// required parameter must be given, and each value is parsed by the declared type.
+    /// </summary>
+    public IList<PipelineParameterValue>? Parameters { get; set; }
+
+    /// <summary>
+    /// Gets or sets the roles the run acts with (FDW-1161), by name. Required: at least one, only roles the caller holds in the
+    /// tenant it acts in, and the roles must be able to reach everything the pipeline reads and writes.
+    /// </summary>
+    public IList<string>? RunRoles { get; set; }
 }

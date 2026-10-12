@@ -22,7 +22,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// <code>
 /// // Factory receives artifact from provider
 /// public IGenericResult&lt;IGenericConnection&gt; Get(
-///     ConnectionConfiguration config,
+///     IConnectionImplementationConfiguration config,
 ///     ICredentialArtifact credentials)
 /// {
 ///     if (credentials is not OAuthClientArtifact oauthArtifact)

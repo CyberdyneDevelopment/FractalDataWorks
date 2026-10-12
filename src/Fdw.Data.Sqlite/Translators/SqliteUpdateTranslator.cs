@@ -80,14 +80,12 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
         }
     }
 
-#pragma warning disable MA0051
     [ConventionOverride(MaxCyclomaticComplexity = 15)]
     private static IGenericResult<SqliteCommand> BuildUpdateStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         object data,
         IFilterExpression? filter)
-#pragma warning restore MA0051
     {
         var dialect = dbPath.Dialect;
         var pkFieldName = container.GetPrimaryKeyFieldName();

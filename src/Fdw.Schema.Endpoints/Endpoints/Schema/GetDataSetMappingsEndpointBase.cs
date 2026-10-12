@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Data.Abstractions;
 // DataSetRecord and DataSetSourcePayload now in this namespace
@@ -20,6 +21,9 @@ using Fdw.Web.RestEndpoints.Logging;
 
 using Fdw.Data.DataSets.Abstractions;
 
+using Fdw.Data.DataSets;
+using Microsoft.Extensions.Logging.Abstractions;
+
 namespace Fdw.Schema.Endpoints;
 
 /// <summary>
@@ -27,22 +31,18 @@ namespace Fdw.Schema.Endpoints;
 /// </summary>
 public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsRequest, List<FieldMappingResponsePayload>>
 {
-    private readonly IDataGatewayProvider _dataGateways;
-
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetDataSetMappingsEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GetDataSetMappingsEndpointBase"/> class.
     /// </summary>
-    /// <param name="dataGateways">The data gateway for database operations.</param>
+    /// <param name="dataSetProvider">Reads the data set with its sources and fields composed.</param>
     /// <param name="logger">The logger instance.</param>
-    protected GetDataSetMappingsEndpointBase(IDataGatewayProvider dataGateways, ILogger<GetDataSetMappingsEndpointBase> logger)
+    protected GetDataSetMappingsEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<GetDataSetMappingsEndpointBase> logger)
     {
-        _dataGateways = dataGateways;
-        _logger = logger;
+        _dataSetProvider = dataSetProvider;
+        _logger = logger ?? NullLogger<GetDataSetMappingsEndpointBase>.Instance;
     }
 
     /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
@@ -68,7 +68,9 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
     {
         EndpointLog.GettingResource(_logger, "field mappings", req.Name);
 
-        var dataSetResult = await FindDataSet(req.Name, ct).ConfigureAwait(false);
+        // Get(name) composes Sources and Fields onto the implementation record, so the data set and its
+        // children are one read.
+        var dataSetResult = await _dataSetProvider.Get(req.Name, ct).ConfigureAwait(false);
         if (!dataSetResult.IsSuccess)
         {
             await SendReadFailure("data set", dataSetResult.CurrentMessage, ct).ConfigureAwait(false);
@@ -82,150 +84,39 @@ public abstract class GetDataSetMappingsEndpointBase : Endpoint<GetMappingsReque
             return;
         }
 
-        var sourcesResult = await GetSources(dataSet.Id, ct).ConfigureAwait(false);
-        if (!sourcesResult.IsSuccess)
-        {
-            await SendReadFailure("data set sources", sourcesResult.CurrentMessage, ct).ConfigureAwait(false);
-            return;
-        }
-
-        var sources = sourcesResult.Value ?? [];
+        var sources = dataSet.Sources;
         if (sources.Count == 0)
         {
             await Send.OkAsync(new List<FieldMappingResponsePayload>(), ct).ConfigureAwait(false);
             return;
         }
 
-        var allMappings = new List<FieldMappingResponsePayload>();
-        foreach (var source in sources)
-        {
-            var mappingsResult = await GetMappingsForSource(source.Id, ct).ConfigureAwait(false);
-            if (!mappingsResult.IsSuccess)
-            {
-                await SendReadFailure("field mappings", mappingsResult.CurrentMessage, ct).ConfigureAwait(false);
-                return;
-            }
-
-            allMappings.AddRange((mappingsResult.Value ?? []).Select(m => MapToResponse(m, source.SourceName)));
-        }
-
+        // Each source's mappings are children of the data set aggregate, composed by the same read.
+        var allMappings = sources.SelectMany(source => source.Mappings.Select(m => MapToResponse(m, source))).ToList();
         await Send.OkAsync(allMappings, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Finds a data set record by name.</summary>
-    protected virtual async Task<IGenericResult<DataSetRecord?>> FindDataSet(string name, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "Name",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = name
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetRecord>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSet"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<DataSetRecord?>();
-        }
-
-        return GenericResult<DataSetRecord?>.Success(result.Value?.FirstOrDefault());
-    }
-
-    /// <summary>Gets all source records for the specified data set.</summary>
-    protected virtual async Task<IGenericResult<IList<DataSetSourceConfiguration>>> GetSources(Guid dataSetId, CancellationToken ct)
-    {
-        var command = new QueryCommand<DataSetSourceConfiguration>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterCondition
-                {
-                    PropertyName = "DataSetId",
-                    Operator = FilterOperators.ByName("Equal"),
-                    Value = dataSetId
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<DataSetSourceConfiguration>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetSource"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<IList<DataSetSourceConfiguration>>();
-        }
-
-        return GenericResult<IList<DataSetSourceConfiguration>>.Success(result.Value?.ToList() ?? []);
-    }
-
-    /// <summary>Gets all active (non-deleted) field mapping records for the specified source.</summary>
-    protected virtual async Task<IGenericResult<IList<FieldMappingDbRecord>>> GetMappingsForSource(Guid sourceId, CancellationToken ct)
-    {
-        var command = new QueryCommand<FieldMappingDbRecord>
-        {
-            Filter = new FilterExpression
-            {
-                Root = new FilterGroup
-                {
-                    Operator = LogicalOperator.And,
-                    Nodes =
-                    [
-                        new FilterCondition
-                        {
-                            PropertyName = "DataSetSourceId",
-                            Operator = FilterOperators.ByName("Equal"),
-                            Value = sourceId
-                        },
-                        new FilterCondition
-                        {
-                            PropertyName = "IsDeleted",
-                            Operator = FilterOperators.ByName("Equal"),
-                            Value = false
-                        }
-                    ]
-                }
-            }
-        };
-
-        var result = await Gateway.Execute<IEnumerable<FieldMappingDbRecord>>(
-            command, new DataStoreTarget("PlatformConfiguration", "data", "DataSetFieldMapping"), ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<IList<FieldMappingDbRecord>>();
-        }
-
-        return GenericResult<IList<FieldMappingDbRecord>>.Success(result.Value?.ToList() ?? []);
-    }
-
-    /// <summary>Maps a field mapping database record to a response DTO.</summary>
-    protected virtual FieldMappingResponsePayload MapToResponse(FieldMappingDbRecord record, string sourceName)
+    /// <summary>Maps one of a source's field mappings to a response DTO.</summary>
+    protected virtual FieldMappingResponsePayload MapToResponse(DataSetFieldMappingConfiguration mapping, DataSetSourceConfiguration source)
     {
         return new FieldMappingResponsePayload
         {
-            Id = record.Id,
-            DataSetSourceId = record.DataSetSourceId,
-            SourceName = sourceName,
-            LogicalFieldName = record.LogicalFieldName,
-            PhysicalFieldName = record.PhysicalFieldName,
-            TransformExpression = record.TransformExpression
+            Id = mapping.Id,
+            DataSetSourceId = source.Id,
+            SourceName = source.SourceName,
+            LogicalFieldName = mapping.LogicalFieldName,
+            PhysicalFieldName = mapping.PhysicalFieldName,
+            TransformExpression = mapping.TransformExpression
         };
     }
 
-    private Task SendReadFailure(string what, string? reason, CancellationToken ct)
+    private async Task SendReadFailure(string what, string? reason, CancellationToken ct)
     {
-        HttpContext.Response.StatusCode = 500;
-        HttpContext.Response.ContentType = "application/json";
-        return HttpContext.Response.WriteAsJsonAsync(new
+        await Send.ResultAsync(TypedResults.Json(new
         {
             errorCode = "ReadFailed",
             messages = new[] { $"Reading {what} failed: {reason ?? "no reason given"}" }
-        }, ct);
+        }, statusCode: 500)).ConfigureAwait(false);
     }
 
 }

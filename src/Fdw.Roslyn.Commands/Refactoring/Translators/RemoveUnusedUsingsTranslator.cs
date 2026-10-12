@@ -29,7 +29,6 @@ public sealed class RemoveUnusedUsingsTranslator : RoslynCommandTranslatorBase<R
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: detect unused usings via diagnostics and usage analysis
     public override async Task<IGenericResult<MutationResult>> Translate(
         RemoveUnusedUsingsCommand command,
         Solution solution,
@@ -153,5 +152,4 @@ public sealed class RemoveUnusedUsingsTranslator : RoslynCommandTranslatorBase<R
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 }

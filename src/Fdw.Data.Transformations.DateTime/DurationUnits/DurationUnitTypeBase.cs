@@ -6,15 +6,14 @@ namespace Fdw.Data.Transformations;
 /// <summary>
 /// Base class for duration unit type options.
 /// </summary>
-public abstract class DurationUnitTypeBase : TypeOptionBase<int, DurationUnitTypeBase>, IDurationUnitType
+public abstract class DurationUnitTypeBase : TypeOptionBase<DurationUnitTypeBase>, IDurationUnitType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DurationUnitTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The unit name (e.g., "Hours", "Minutes").</param>
-    protected DurationUnitTypeBase(int id, string name)
-        : base(id, name, "DurationUnits")
+    protected DurationUnitTypeBase(string name)
+        : base(name, "DurationUnits")
     {
     }
 

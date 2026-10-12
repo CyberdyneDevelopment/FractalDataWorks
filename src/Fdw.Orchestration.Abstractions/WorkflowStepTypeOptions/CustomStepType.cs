@@ -14,5 +14,5 @@ public sealed class CustomStepType : WorkflowStepTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomStepType"/> class.
     /// </summary>
-    public CustomStepType() : base(5, "Custom", executesPipeline: false, supportsParallelism: true) { }
+    public CustomStepType() : base("Custom", executesPipeline: false, supportsParallelism: true) { }
 }

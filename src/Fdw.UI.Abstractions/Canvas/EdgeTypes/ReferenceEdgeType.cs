@@ -14,7 +14,7 @@ public sealed class ReferenceEdgeType : CanvasEdgeTypeBase
     /// Initializes a new instance of the <see cref="ReferenceEdgeType"/> class.
     /// </summary>
     public ReferenceEdgeType()
-        : base(2, "Reference", "Reference", "link")
+        : base("Reference", "Reference", "link")
     {
     }
 }

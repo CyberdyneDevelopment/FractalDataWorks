@@ -16,10 +16,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<UpdateTenantSettingRequest, TenantSettingSummaryDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly ITenantSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected UpdateTenantSettingEndpointBase(ILogger<UpdateTenantSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected UpdateTenantSettingEndpointBase(ILogger<UpdateTenantSettingEndpointBase> logger, ITenantSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -77,7 +77,7 @@ public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<U
         if (request.SettingValue is not null) setting.SettingValue = request.SettingValue;
         if (request.IsActive.HasValue) setting.IsActive = request.IsActive.Value;
 
-        var saveResult = await _provider.SaveTenantSetting(setting, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(setting, "TenantSetting", "TenantSetting", setting.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<TenantSettingSummaryDto>();
@@ -97,11 +97,11 @@ public abstract class UpdateTenantSettingEndpointBase : CrudUpdateEndpointBase<U
         return GenericResult<TenantSettingSummaryDto>.Success(dto);
     }
 
-    private async Task<TenantSettingConfiguration?> FindTenantSetting(
+    private async Task<ITenantSettingImplementationConfiguration?> FindTenantSetting(
         Guid tenantId, string settingName, CancellationToken ct)
     {
-        var tenantSettingsResult = await _provider.GetTenantSettings(ct).ConfigureAwait(false);
-        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingConfiguration>)[];
+        var tenantSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
+        var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<ITenantSettingImplementationConfiguration>)[];
         return tenantSettings
             .FirstOrDefault(s => s.TenantId == tenantId
                                  && string.Equals(s.SettingName, settingName, StringComparison.OrdinalIgnoreCase));

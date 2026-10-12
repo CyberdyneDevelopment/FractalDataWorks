@@ -1,16 +1,14 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
-using Azure.Core;
-using Azure.Identity;
 using Fdw.Collections.Attributes;
 using Fdw.Results;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.MsSql.Authentication.Types;
 
 /// <summary>
-/// Azure CLI token-based authentication. No KVP keys required;
-/// the access token is acquired via <see cref="AzureCliCredential"/>.
+/// Azure CLI token-based authentication. No KVP keys required; SqlClient's own
+/// Authentication=ActiveDirectoryDefault pipeline acquires the token.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(MsSqlAuthenticationTypes), "AzureCli")]
@@ -18,15 +16,12 @@ public sealed class AzureCliConfiguration : MsSqlAuthenticationConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="AzureCliConfiguration"/> class.</summary>
     public AzureCliConfiguration()
-        : base(5, "AzureCli",
+        : base("AzureCli",
                "Azure CLI",
                "Azure CLI token-based auth (developer machines)",
-               [], [], [])
+               [], [], [], requiresSecret: false)
     {
     }
-
-    /// <inheritdoc/>
-    public override bool UsesAccessToken => true;
 
     /// <inheritdoc/>
     public override IGenericResult Validate(IReadOnlyDictionary<string, string?> values) => GenericResult.Success();
@@ -35,13 +30,11 @@ public sealed class AzureCliConfiguration : MsSqlAuthenticationConfiguration
     public override IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword)
         => GenericResult<string>.Success(string.Empty);
 
+    /// <inheritdoc />
+    /// <remarks>Carries no stored credential.</remarks>
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [];
+
     /// <inheritdoc/>
-    public override string? AcquireAccessToken()
-    {
-        var credential = new AzureCliCredential();
-        var token = credential.GetToken(
-            new TokenRequestContext(["https://database.windows.net/.default"]),
-            CancellationToken.None);
-        return token.Token;
-    }
+    /// <remarks>The token comes from the Azure CLI login of the account the host runs as.</remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => true;
 }

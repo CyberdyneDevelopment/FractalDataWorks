@@ -8,7 +8,7 @@ namespace Fdw.UI.Themes;
 /// Inherit from this class and apply [TypeOption] attribute to create custom themes.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class MenuThemeBase : TypeOptionBase<int, MenuThemeBase>, IMenuTheme
+public abstract class MenuThemeBase : TypeOptionBase<MenuThemeBase>, IMenuTheme
 {
     /// <summary>
     /// Parameterless constructor for the TypeCollection NotFound sentinel.
@@ -22,24 +22,17 @@ public abstract class MenuThemeBase : TypeOptionBase<int, MenuThemeBase>, IMenuT
     /// Creates a new menu theme.
     /// </summary>
     protected MenuThemeBase(
-        int id,
         string name,
         string themeFamily,
-        int colorPaletteId,
-        int borderStyleId,
-        int iconSetId,
         IColorPalette colors,
         IBorderStyle borders,
         IIconSet icons,
         int paddingSmall = 1,
         int paddingMedium = 2,
         int paddingLarge = 4)
-        : base(id, name)
+        : base(name)
     {
         ThemeFamily = themeFamily;
-        ColorPaletteId = colorPaletteId;
-        BorderStyleId = borderStyleId;
-        IconSetId = iconSetId;
         Colors = colors;
         Borders = borders;
         Icons = icons;
@@ -50,15 +43,6 @@ public abstract class MenuThemeBase : TypeOptionBase<int, MenuThemeBase>, IMenuT
 
     /// <inheritdoc />
     public string ThemeFamily { get; }
-
-    /// <inheritdoc />
-    public int ColorPaletteId { get; }
-
-    /// <inheritdoc />
-    public int BorderStyleId { get; }
-
-    /// <inheritdoc />
-    public int IconSetId { get; }
 
     /// <inheritdoc />
     public IColorPalette Colors { get; }

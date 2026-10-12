@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlVarcharConverter()
     : DataTypeConverterBase(
-        id: 10,
         name: "Varchar",
         sourceType: "varchar",
         targetClrType: typeof(string),

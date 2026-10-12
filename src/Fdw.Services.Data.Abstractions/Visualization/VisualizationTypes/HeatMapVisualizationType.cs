@@ -22,7 +22,7 @@ public sealed class HeatMapVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="HeatMapVisualizationType"/> class.
     /// </summary>
     public HeatMapVisualizationType()
-        : base(6, "HeatMap", "Heat Map", "mdi-gradient-horizontal", SupportedTypes)
+        : base("HeatMap", "Heat Map", "mdi-gradient-horizontal", SupportedTypes)
     {
     }
 

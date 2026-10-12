@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Claims.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
@@ -52,6 +53,16 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         if (string.IsNullOrWhiteSpace(request.Audience))
             return GenericResult<IssuedToken>.Failure(IssuerLog.AudienceMissing(_logger));
 
+        // Validated, never rewritten (see Fdw.Services.Authentication.Validation.IssuerName.Read):
+        // the validation side compares against auth.JwtTokenManager.Issuer exactly as configured, so
+        // minting anything other than that exact string -- including a Uri-canonicalised form --
+        // guarantees a mismatch.
+        if (!Uri.TryCreate(_configuration.Issuer, UriKind.Absolute, out var issuerUri)
+            || (issuerUri.Scheme != Uri.UriSchemeHttps && issuerUri.Scheme != Uri.UriSchemeHttp))
+        {
+            return GenericResult<IssuedToken>.Failure(IssuerLog.IssuerNotAbsolute(_logger, _configuration.Issuer));
+        }
+
         var signing = await _credentials.Current(cancellationToken).ConfigureAwait(false);
         if (signing.IsFailure)
             return signing.ToNewResult<IssuedToken>();
@@ -59,11 +70,30 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         var issuedAt = DateTimeOffset.UtcNow;
         var expiresAt = issuedAt.Add(_configuration.Lifetime);
 
+        // The configured lifetime is a ceiling, not a promise: a token never outlives the claims it
+        // carries (FDW-862). A cap already passed means what the token would assert is no longer true,
+        // and minting one that is born expired would only look like success.
+        if (request.ValidUntil is { } validUntil && validUntil < expiresAt)
+        {
+            if (validUntil <= issuedAt)
+                return GenericResult<IssuedToken>.Failure(IssuerLog.ClaimsAlreadyExpired(_logger, request.Audience, request.PrincipalId, validUntil));
+
+            IssuerLog.ExpiryCapped(_logger, request.Audience, request.PrincipalId, expiresAt, validUntil);
+            expiresAt = validUntil;
+        }
+
         var jti = Guid.CreateVersion7();
 
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             [ClaimDefinitions.sub.Name] = request.PrincipalId.ToString(),
+
+            // Same value under the .NET-standard claim type, alongside "sub" rather than instead of
+            // it: every consumer that resolves the caller via System.Security.Claims.ClaimTypes.
+            // NameIdentifier (the ASP.NET Core convention several endpoint bases already assume)
+            // finds it without a bespoke "sub" fallback at each of those call sites -- one place
+            // decides what a claim is called, same as tenantId below.
+            [ClaimTypes.NameIdentifier] = request.PrincipalId.ToString(),
 
             // A per-token identifier, distinct from the principal it was issued for: revocation
             // (LogoutEndpoint -> ITokenRevocationStore) targets one presented token, never every
@@ -99,6 +129,7 @@ public sealed class JwtTokenIssuer : ITokenIssuer
         }
 
         IssuerLog.Minting(_logger, request.Audience, claims.Count);
+        IssuerLog.ClaimTypesAssembled(_logger, request.Audience, string.Join(", ", claims.Keys));
 
         var token = new JsonWebTokenHandler
         {

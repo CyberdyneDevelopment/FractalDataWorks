@@ -78,13 +78,13 @@ internal static class CompilationHelper
         return (outputCompilation, diagnostics);
     }
 
-    public static (Compilation OutputCompilation, ImmutableArray<Diagnostic> Diagnostics) RunServiceTypeOptionGenerator(
+    public static (Compilation OutputCompilation, ImmutableArray<Diagnostic> Diagnostics) RunImplementationGenerator(
         string source,
         MetadataReference[]? additionalReferences = null,
         OutputKind outputKind = OutputKind.ConsoleApplication)
     {
         var compilation = CreateCompilation(source, additionalReferences, outputKind);
-        var generator = new ServiceTypeOptionModuleInitializerGenerator();
+        var generator = new ImplementationModuleInitializerGenerator();
         var driver = CSharpGeneratorDriver.Create(generator);
         driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out var diagnostics);
 

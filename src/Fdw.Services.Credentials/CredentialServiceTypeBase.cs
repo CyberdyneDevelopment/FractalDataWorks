@@ -1,6 +1,7 @@
 using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.Credentials.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Credentials;
 
@@ -29,17 +30,20 @@ public abstract class CredentialServiceTypeBase<TService, TFactory, TConfigurati
     /// <param name="sectionName">The configuration section name for IOptions binding.</param>
     /// <param name="displayName">The human-readable display name.</param>
     /// <param name="description">Description of what this credential service type provides.</param>
+    /// <param name="defaultContainerName">This option's implementation configuration table: {Implementation}{Domain}Configuration. Required, so every option states it; its registration reads it back as Container.</param>
     /// <param name="category">The service category (defaults to "CredentialService").</param>
     protected CredentialServiceTypeBase(
         string name,
         string sectionName,
         string displayName,
         string description,
+        string defaultContainerName,
         string category = "CredentialService")
         : base(name, sectionName, displayName, description, category,
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
-               defaultContainerName: "CredentialService")
+               defaultContainerName: defaultContainerName)
     {
     }
+
 }

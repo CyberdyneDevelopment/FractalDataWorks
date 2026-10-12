@@ -11,5 +11,5 @@ public sealed class LongPropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="LongPropertyType"/> class.
     /// </summary>
-    public LongPropertyType() : base(3, "Long", typeof(long), ConfigurationPropertyTypeDtos.WholeNumber) { }
+    public LongPropertyType() : base("Long", typeof(long), ConfigurationPropertyTypeDtos.WholeNumber) { }
 }

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Results;
@@ -24,17 +24,19 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
     DataGatewayTypeBase<IGenericService, IDataGatewayFactory>,
     IDataGatewayType>
 {
-    /// <summary>Gets or sets the connection this domain's records are read from.</summary>
+    /// <summary>Gets the connection this domain's records are read from.</summary>
     /// <remarks>
-    /// Settable, because which connection holds a domain's records is the host's to say -- the
-    /// default is the one the reference apps ship. Spoken once here rather than at each call site:
+    /// The host's <c>ConnectionRoles.Server</c> declaration, because which connection holds a domain's
+    /// records is the host's to say. Spoken once here rather than at each call site:
     /// an implementation cannot read from a different store than its domain, and a name repeated
     /// per registration is how the two drift apart.
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "ServerConfiguration";
+    public static string ConfigurationConnection => ServerConnection.Name;
 
     static DataGatewayServiceTypes()
     {
+        var collectOptions = RegisterFunc;
+
         // Domain-level, in the collection: the connection name is a value and the rest comes from
         // DI, which is why it is a factory delegate. It has to exist before an option can register
         // into it, which is why this runs ahead of the option collect.
@@ -42,12 +44,15 @@ public partial class DataGatewayServiceTypes : ServiceTypeCollectionBase<
         {
             builder.Services.TryAddSingleton<DataGatewayDomainConfigurationProvider>(sp =>
                 new DataGatewayDomainConfigurationProvider(
-                    sp.GetService<ILogger<DataGatewayDomainConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<ILogger<DataGatewayDomainConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), DataGatewayServiceTypes.ConfigurationConnection, "dg", "DataGateway"));
 
             builder.Services.TryAddSingleton<IDataGatewayConfigurationProvider>(
                 sp => sp.GetRequiredService<DataGatewayDomainConfigurationProvider>());
+
+            var registered = collectOptions(builder, loggerFactory);
+            if (registered.IsFailure)
+                return registered;
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -11,7 +11,6 @@ public sealed class SearchIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="SearchIcon"/>.</summary>
     public SearchIcon()
         : base(
-            29,
             "Search",
             "0 0 24 24",
             "none",

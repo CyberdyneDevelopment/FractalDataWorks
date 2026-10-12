@@ -19,7 +19,7 @@ public sealed class TestRealTimeHubOption : RealTimeHubOptionBase
 
     /// <summary>Initializes a new instance of the <see cref="TestRealTimeHubOption"/> class.</summary>
     public TestRealTimeHubOption()
-        : base(99, "Test", "/hubs/test", typeof(TestHub), authorizationPolicy: "test-policy")
+        : base("Test", "/hubs/test", typeof(TestHub), authorizationPolicy: "test-policy")
     {
     }
 

@@ -15,7 +15,7 @@ namespace Fdw.Services.Resiliency;
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(ResiliencyServiceTypes), "Default")]
+[Implementation(typeof(ResiliencyServiceTypes), "Default")]
 public sealed class DefaultResiliencyServiceType : ResiliencyServiceTypeBase
 {
     /// <summary>

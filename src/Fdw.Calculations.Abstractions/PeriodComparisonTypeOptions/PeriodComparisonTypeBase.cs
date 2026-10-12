@@ -9,16 +9,15 @@ namespace Fdw.Calculations.Abstractions.PeriodComparisonTypeOptions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class PeriodComparisonTypeBase : TypeOptionBase<int, PeriodComparisonTypeBase>, IPeriodComparisonType
+public abstract class PeriodComparisonTypeBase : TypeOptionBase<PeriodComparisonTypeBase>, IPeriodComparisonType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="PeriodComparisonTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this period comparison type.</param>
     /// <param name="name">The name of this period comparison type.</param>
     /// <param name="isCumulative">Whether this is a cumulative comparison.</param>
-    protected PeriodComparisonTypeBase(int id, string name, bool isCumulative)
-        : base(id, name)
+    protected PeriodComparisonTypeBase(string name, bool isCumulative)
+        : base(name)
     {
         IsCumulative = isCumulative;
     }

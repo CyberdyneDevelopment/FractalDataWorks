@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class CreateAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for create action.
+    /// Material Symbols icon name for create action.
     /// </summary>
-    public const string CreateIcon = "add"; // Icons.Material.Filled.Add
+    public const string CreateIcon = "add";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CreateAction"/> class.
     /// </summary>
     public CreateAction()
         : base(
-            id: 3,
             name: "Create",
             icon: CreateIcon,
             color: "Success",

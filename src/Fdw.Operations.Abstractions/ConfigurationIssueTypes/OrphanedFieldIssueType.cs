@@ -14,5 +14,5 @@ public sealed class OrphanedFieldIssueType : ConfigurationIssueTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OrphanedFieldIssueType"/> class.
     /// </summary>
-    public OrphanedFieldIssueType() : base(3, "OrphanedField", isHealable: true) { }
+    public OrphanedFieldIssueType() : base("OrphanedField", isHealable: true) { }
 }

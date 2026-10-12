@@ -15,7 +15,6 @@ public sealed class FailedStateType : ExecutionStateTypeBase
     /// </summary>
     public FailedStateType()
         : base(
-            id: 21,
             name: "Failed",
             displayName: "Failed",
             isTerminal: true,

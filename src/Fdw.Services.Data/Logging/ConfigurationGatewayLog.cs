@@ -142,7 +142,7 @@ public static partial class ConfigurationGatewayLog
     /// <summary>Logged when the gateway is registered, naming the connection type it will use.</summary>
     [MessageLogging(EventId = 11014, Level = LogLevel.Information,
         Message = "ConfigurationGateway registered using connection type '{connectionType}' from '{schemaFile}'. "
-                + "To use a different type, set ServiceOptionType on the connection in that file and reference the "
+                + "To use a different type, set Implementation on the connection in that file and reference the "
                 + "package that provides it (e.g. ReferenceConnections.MsSql.ServiceType for 'MsSql'). "
                 + "Registered types: {registeredTypes}")]
     public static partial IGenericMessage RegisteredWithConnectionType(
@@ -151,8 +151,25 @@ public static partial class ConfigurationGatewayLog
     /// <summary>Logged when the schema names a connection type that is not registered in ConnectionTypes.</summary>
     [MessageLogging(EventId = 71004, Level = LogLevel.Error,
         Message = "ConfigurationGateway: connection type '{connectionType}' declared in '{schemaFile}' is not "
-                + "registered. Is the package that provides it referenced? A [ServiceTypeOption] registers itself "
+                + "registered. Is the package that provides it referenced? A [Implementation] registers itself "
                 + "at assembly load, so an unreferenced package contributes nothing. Registered types: {registeredTypes}")]
     public static partial IGenericMessage ConnectionTypeNotRegistered(
         ILogger logger, string connectionType, string schemaFile, string registeredTypes);
+    /// <summary>Explains why a configuration read does not execute SQL.</summary>
+    // Why Debug: one line per cache hit is a per-call outcome, not something an operator acts on. A
+    // sign-in composes every row of the role, permission and role-permission catalogs with a read
+    // each, so at Information this line was 676 of the 741 lines one login and two /users/me wrote
+    // (FDW-987). A real miss is still visible: ExecuteEntry/ExecuteExit at Trace, and the
+    // connection's own SQL logging.
+    [MessageLogging(EventId = 11021, Level = LogLevel.Debug,
+        Message = "Configuration cache hit: store='{dataStore}', path='{path}', container='{container}'; SQL execution skipped")]
+    public static partial IGenericMessage CachedRead(ILogger logger, string dataStore, string? path, string container);
+
+    /// <summary>Explains why a value built from configuration reads was handed back but not kept.</summary>
+    // Why Debug: a per-call outcome of the cache, the same altitude as the cache hit above. 11089 is this package's
+    // own slot in the catalog's non-error category (11000 and up), because the message has a meaning of its own;
+    // 10001 is the generic Informational and is already held under this prefix by InFlightJoined.
+    [MessageLogging(EventId = 11089, Level = LogLevel.Debug,
+        Message = "Derived value '{name}' was built and not kept: {reason}")]
+    public static partial IGenericMessage DerivedNotKept(ILogger logger, string name, string reason);
 }

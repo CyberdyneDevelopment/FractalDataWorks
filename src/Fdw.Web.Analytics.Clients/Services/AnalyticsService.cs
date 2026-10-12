@@ -37,9 +37,7 @@ public sealed class AnalyticsService : IAnalyticsService
     }
 
     /// <inheritdoc />
-    #pragma warning disable MA0051
     public Task<IGenericResult> RecordExecution(CalculationExecutionRecord record, CancellationToken cancellationToken = default)
-    #pragma warning restore MA0051
     {
         AnalyticsLog.RecordExecutionEntering(_logger, record.CalculationType);
 
@@ -98,9 +96,7 @@ public sealed class AnalyticsService : IAnalyticsService
     }
 
     /// <inheritdoc />
-    #pragma warning disable MA0051
     public Task<IGenericResult<AnalyticsResponse>> GetAnalytics(AnalyticsRequest request, CancellationToken cancellationToken = default)
-    #pragma warning restore MA0051
     {
         var startStr = request.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var endStr = request.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -158,9 +154,7 @@ public sealed class AnalyticsService : IAnalyticsService
     }
 
     /// <inheritdoc />
-    #pragma warning disable MA0051
     public Task<IGenericResult<TopCalculationsResponse>> GetTopCalculations(TopCalculationsRequest request, CancellationToken cancellationToken = default)
-    #pragma warning restore MA0051
     {
         AnalyticsLog.GetTopCalculationsEntering(_logger, request.Count);
 
@@ -205,9 +199,7 @@ public sealed class AnalyticsService : IAnalyticsService
         }
     }
 
-    #pragma warning disable MA0051
     private AnalyticsSummary BuildSummary(List<ExecutionEntry> entries, DateTimeOffset start, DateTimeOffset end)
-    #pragma warning restore MA0051
     {
         var successful = entries.Count(e => e.Success);
         var failed = entries.Count - successful;

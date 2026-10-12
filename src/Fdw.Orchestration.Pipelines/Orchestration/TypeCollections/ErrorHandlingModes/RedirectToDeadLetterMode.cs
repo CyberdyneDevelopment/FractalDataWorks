@@ -28,7 +28,6 @@ public sealed class RedirectToDeadLetterMode : ErrorHandlingModeBase
     /// </summary>
     public RedirectToDeadLetterMode()
         : base(
-            id: 4,
             name: "RedirectToDeadLetter",
             continuesExecution: true,
             supportsRetry: false,

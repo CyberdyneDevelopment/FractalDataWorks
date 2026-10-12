@@ -84,10 +84,7 @@ public sealed class PropertyAnalyzer
         return model;
     }
 
-    // MA0051: Method length acceptable - switch on attribute types for model population
-#pragma warning disable MA0051 // Method is too long
     private static void AnalyzeAttributes(IPropertySymbol propertySymbol, PropertyModel model)
-#pragma warning restore MA0051
     {
         foreach (var attribute in propertySymbol.GetAttributes())
         {

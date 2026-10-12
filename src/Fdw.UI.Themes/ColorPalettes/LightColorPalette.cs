@@ -14,7 +14,7 @@ public sealed class LightColorPalette : ColorPaletteBase
     /// <summary>
     /// Creates the light color palette.
     /// </summary>
-    public LightColorPalette() : base(2, "Light") { }
+    public LightColorPalette() : base("Light") { }
 
     /// <inheritdoc />
     public override Color Primary => Color.Blue;

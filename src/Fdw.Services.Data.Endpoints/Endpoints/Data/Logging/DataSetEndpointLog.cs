@@ -128,22 +128,4 @@ public static partial class DataSetEndpointLog
     [MessageLogging(EventId = 41001, Level = LogLevel.Warning, Message = "Rejected modification of system data set '{dataSetName}' — system configurations are read-only")]
     public static partial IGenericMessage SystemDataSetReadOnly(ILogger logger, string dataSetName);
 
-    // POST query (4435-4439)
-
-    /// <summary>Logs the start of a POST-body DataSet query.</summary>
-    [MessageLogging(EventId = 11012, Level = LogLevel.Trace, Message = "POST querying DataSet '{dataSetName}' with {filterCount} filter(s), skip={skip}, take={take}")]
-    public static partial IGenericMessage PostQueryingDataSet(ILogger logger, string dataSetName, int filterCount, int skip, int take);
-
-    /// <summary>Logs that a filter field in the POST body is not a known DataSet field.</summary>
-    [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "POST query filter field '{fieldName}' not found in DataSet '{dataSetName}', ignoring")]
-    public static partial IGenericMessage PostQueryUnknownFilterField(ILogger logger, string dataSetName, string fieldName);
-
-    /// <summary>Logs completion of a POST-body DataSet query.</summary>
-    [MessageLogging(EventId = 11013, Level = LogLevel.Information, Message = "POST DataSet query '{dataSetName}' returned {rowCount} rows (hasMore={hasMore})")]
-    public static partial IGenericMessage PostQueryCompleted(ILogger logger, string dataSetName, int rowCount, bool hasMore);
-
-    /// <summary>Logs a DataGateway failure during a POST-body DataSet query.</summary>
-    [MessageLogging(EventId = 71002, Level = LogLevel.Error, Message = "POST DataSet query failed for '{dataSetName}': {message}")]
-    public static partial IGenericMessage PostQueryFailed(ILogger logger, string dataSetName, string message);
-
 }

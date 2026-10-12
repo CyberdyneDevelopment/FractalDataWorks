@@ -9,6 +9,7 @@
     <ProjectReference Include="..\Fdw.Services.SecretManagers\Fdw.Services.SecretManagers.csproj" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.Abstractions\Fdw.Services.SecretManagers.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Abstractions\Fdw.Services.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

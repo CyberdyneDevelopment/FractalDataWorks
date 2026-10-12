@@ -1,129 +1,126 @@
 # Authentication Architecture
 
-This guide documents the FractalDataWorks authentication stack: server-side token issuance and validation through the **TokenManager** domain (OpenIddict, RS256 JWT), client-side token management, and the DelegatingHandler pipeline that connects them.
+This page describes how FractalDataWorks issues and checks access tokens. There are three parts:
 
-## Server-Side: The TokenManager Domain
+- **Issuing** a token is a configured *flow* of authentication steps, run by `AuthenticationRunner`. The result is an RS256 JWT minted by `JwtTokenIssuer`.
+- **Checking** a token is one of the schemes on `AuthenticationServiceTypes`, chosen per request by the token's issuer.
+- **Clients** attach and renew tokens through the DelegatingHandlers in `Web.Http.Authentication`.
 
-The token service is the `TokenManagerTypes` provider axis. `ITokenManager` (`Issue` / `Validate` / `Invalidate` / `ExtractClaims`) is the single seam; `OpenIdTokenManager` (the `"OpenIddict"` option) is the reference implementation — it mints RS256 access tokens and manages refresh-token rotation. FDW owns credential validation and claim baking, keeping the token service IdP-agnostic. All server-side authentication flows through `IUserService` + `IUserCredentialService` (vault-backed). See [Building a Token Manager](10-03-Building-Authentication-Service.md) for the domain build-out.
+There is no OpenIddict, no `/connect/token` endpoint and no `ITokenManager`. The step pipeline replaced all of them (FDW-672). For the mechanism in depth, with a source citation for each claim, read `fdw-anatomy/content/authentication.json`.
 
-> **Replaces the auth-server split.** The capability-routed `AuthServer` / `AuthenticationServer` / `AuthorizationServer` / `AuthService` collections and `ITokenIssuanceService` are **deleted**. There is one provider axis (`TokenManagerTypes`) and one interface (`ITokenManager`).
+## Server Side: Issuing a Token
 
-### Package Map (Server)
+### A login is a flow of steps
+
+A flow is two kinds of configuration row: `auth.AuthenticationFlow` (name, audience, minimum assurance level, execution lifetime, the secret that encrypts a suspended login, and the allowed return URLs) and `auth.AuthenticationFlowStepConfiguration` (the ordered step names). `AuthenticationFlowProvider` loads and validates every flow on first use. It caches them until the host restarts. That is deliberate: a flow never changes under a login in progress. A flow whose steps are missing or badly ordered is refused by name. It never blocks another flow.
+
+A step is an option on `AuthenticationStepTypes`, and the option *is* the step: it implements `IAuthenticationStep`. Each step declares three things:
+
+| Declaration | Meaning |
+|---|---|
+| `Requires` | The context elements that must already be present before the step runs. |
+| `Contributes` | The elements the step may add. The runner discards and logs anything else it returns. |
+| `AuthenticationMethods` | The RFC 8176 methods the step proves, such as `pwd`. |
+
+The context elements are a closed set: `Subject`, `Principal`, `Claims` and `Decision`. Steps are open. A new proof ships as a package, and the runner does not change.
+
+The steps that ship live in reference-servicetypes, one package per step (`ReferenceAuthentication.<Step>.Registration`):
+
+| Step | Requires | Contributes | What it does |
+|---|---|---|---|
+| `PasswordCredential` | none | Subject, Principal | Verifies a username and password against the platform's own credential store. Proves `pwd`. |
+| `TenantSwitch` | none | Subject, Principal | Identifies an already-authenticated caller again, acting in another of their tenants. |
+| `OidcRedirect` | none | Subject, Claims | Sends the browser to an external OIDC provider, then exchanges the returned code. |
+| `ForeignToken` | none | Subject, Claims | Verifies a token another provider issued, for a client that ran its own login. |
+| `ResolvePrincipal` | Subject | Principal | Binds a proved external subject to a local user, or provisions one. |
+| `BakePermissions` | Principal | Claims | Resolves the user's roles and permissions in the tenant the token is for, and bakes them as `perm` and `roles` claims. |
+| `AuthorizeIssuance` | Principal | Decision | Decides whether a token may be issued. |
+
+### The runner
+
+`AuthenticationRunner` runs a flow's steps in order:
+
+1. It checks each step's `Requires` against the context before running it.
+2. It merges only what the step declared it `Contributes` (rule I1).
+3. It records the step's authentication methods once the step succeeds. From those it derives the assurance level (`acr`). A step can never name its own method.
+4. A step may *suspend* the flow, for example to send the browser to an external provider. The runner stores the context, encrypted with the flow's key, through `IAuthenticationExecutionStore` (`DatabaseExecutionStore`, table `auth.AuthenticationExecution`). A suspended login therefore survives a restart. `AuthenticationRunner.Resume` finds the flow by name from the stored record.
+5. The terminal check runs after the last step. It is code, not a step, so no configuration can skip it. A token is minted only if there is a subject, a principal, a decision that permits issuance, and an assurance level that meets the flow's minimum.
+
+The runner then builds an `IssuanceRequest` and hands it to `ITokenIssuer`. Only claims from this platform (`Local` or `Derived` sources) reach the token. A role named by an external provider grants nothing.
+
+### Issuance
+
+`JwtIssuanceResolver` reads the `auth.TokenManager` rows, selects the JWT one (`auth.JwtTokenManager`: `Issuer`, `AccessTokenLifetime` as an ISO 8601 duration, and the secret manager and key name of the signing key), and builds one `JwtTokenIssuer`. A missing issuer, lifetime or key location fails loud. The signing key is a PEM RSA private key read through `SecretManagerSigningCredentialProvider`.
+
+`JwtTokenIssuer` mints an `at+jwt` token signed RS256. It carries:
+
+- `sub` and `ClaimTypes.NameIdentifier`: the principal id.
+- `jti`: a version-7 GUID, so a single token can be revoked.
+- `tenantId`: the tenant the token acts in.
+- `scope`, and `amr` and `acr` from the runner.
+- Every `Local` or `Derived` claim the steps gathered. Repeated claims (`perm`, `roles`) stay arrays.
+- `exp`: the configured lifetime, capped by the claims it carries. `BakePermissions` reports the earliest `ExpiresAt` among the role assignments it used (`ContextContribution.ClaimsValidUntil`). The token never outlives that. A token whose claims have already expired is refused, not minted (FDW-862).
+
+### HTTP endpoints (reference-servicetypes `ReferenceAuth.Endpoints`)
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /auth/login` | Username and password. Runs the password flow and returns the token. |
+| `POST /auth/oidc/redirect` | Body `{flowName, returnUrl}`. Starts an external-provider flow and returns `{redirectUrl}` as JSON; the browser navigates there itself. `returnUrl` must be one of the flow's configured `ReturnUrls`; any other value answers 400. |
+| `GET /auth/oidc/callback` | The provider returns here. The flow resumes, and the browser is redirected to the return URL with a one-time `?auth_code=`, or with `error` and `error_description`. The access token never appears in a URL. |
+| `POST /auth/redeem` | Body `{authCode}`. Exchanges the one-time code for the token. A code lives for 60 seconds and redeems once (`auth.AuthorizationCode` holds its SHA-256 hash). |
+| `POST /auth/token-exchange` | RFC 8693: exchanges a token from another provider for one of this host's own. |
+| `POST /tenants/switch` | Issues a new token for the caller in another tenant they belong to (the `TenantSwitch` flow). |
+| `POST /auth/password` | Lets a user whose password must change set a new one, proving the current one. |
+| `POST /auth/logout` | Revokes the presented token. |
+
+The redirect uses three short-lived `HttpOnly` cookies: `fdw_oidc_resume` (the resume token), `fdw_oidc_flow` and `fdw_oidc_return`.
+
+### Package map (server)
 
 ```
-Services.TokenManagers.Abstractions   ITokenManager, IAuthenticationService, TokenIssuanceRequest
-Services.TokenManagers                TokenManagerTypes ([ServiceTypeCollection]), AuthenticationService
-                                      (generic, provider-agnostic authN), TokenManagerConfigurationProvider
-Services.Authentication.OpenIddict    OpenIddictTokenManagerType ([ServiceTypeOption "OpenIddict"]),
-                                      OpenIdTokenManager, ConnectTokenEndpoint, ProcessSignInClaimsHandler,
-                                      ExternalIdentityService, RevokedAccessTokenStore
-Services.Users(.Abstractions)         IUserService, IUserCredentialService (vault-backed)
-Services.Credentials(.Sql)            ICredentialService, CredentialServiceTypes (named indirection over the vault)
-Services.DataVault / Credentials.Sql  IDataVault (verify-only credential store)
-Services.SecretManagers.*             ISecretManager provider (RS256 signing key, OAUTH_* client secrets)
+Fdw.Services.Authentication.Abstractions   IAuthenticationStep, AuthenticationContext, ContextContribution,
+                                           ContextElements, ClaimSources, IAuthenticationExecutionStore,
+                                           IAuthorizationCodeStore
+Fdw.Services.Authentication                AuthenticationRunner, AuthenticationFlowProvider,
+                                           AuthenticationStepTypes, DatabaseExecutionStore,
+                                           DatabaseAuthorizationCodeStore,
+                                           Validation/: AuthenticationServiceTypes, IssuerSchemeSelector,
+                                           LocalKeyAuthenticationHandler, ApiKeyAuthenticationHandler
+Fdw.Services.TokenManagers.Abstractions    ITokenIssuer, IssuanceRequest, IssuedToken, ITokenRevocationStore
+Fdw.Services.TokenManagers                 JwtIssuanceResolver, JwtTokenIssuer,
+                                           SecretManagerSigningCredentialProvider, TokenRevocationStore,
+                                           TokenManagerTypes (a plain three-phase registrant)
+Fdw.Services.Authorization(.Abstractions)  IUserPermissions / UserPermissions: effective roles and permissions
+reference-servicetypes                     ReferenceAuthentication.<Step>.Registration (one package per step),
+                                           ReferenceAuth.Endpoints (the routes above)
 ```
 
-### Login Flow: password grant
+## Server Side: Checking a Token
 
-```
-POST /connect/token  {grant_type=password, username, password, [tenant, org]}
-        |
-        v
-ConnectTokenEndpoint.HandleAsync()          (Services.Authentication.OpenIddict)
-  builds a TokenIssuanceRequest
-        |
-        v
-IAuthenticationService.Authenticate(request)   (generic AuthenticationService)
-        |
-        +-- password/agent_key ONLY: IUserCredentialService.Verify(userId, "Password", credential)
-        |     resolves the credential service by name via ICredentialServiceProvider;
-        |     forwards to the configured vault; PBKDF2 compare inside the vault command;
-        |     returns an ICredentialOutcome (GrantsAccess true only on Match)
-        |
-        +-- ResolveActiveTokenManager(): reads auth.TokenManager headers, requires exactly ONE
-        |     enabled row, resolves the ITokenManager by name via IFdwServiceProvider
-        |
-        v
-OpenIdTokenManager.Issue(request)           (the active ITokenManager)
-        |
-        v  IssueForCredential(request, isAgentKey: false, ct)
-        |
-        +-- UserConfigurationProvider.GetUser(username)    ← DataGateway → usr.Users (user must be active)
-        +-- IUserCredentialService.Verify(...) (re-checked at the provider seam)
-        +-- BuildIdentityPrincipal(user.Id, roles:[], tenantId, orgId, isCrossTenant)
-              thin ClaimsPrincipal (sub + optional tenant/cross-tenant claims)
-        |
-        v
-ConnectTokenEndpoint: principal.SetScopes(scopes)
-        |
-        v
-Results.SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)
-        |
-        v  OpenIddict's ProcessSignIn pipeline fires
-        |
-        v
-ProcessSignInClaimsHandler.HandleAsync()
-        bakes the full FDW claim set: tenant_id, org_id, role, perm
-        single claim-baking site — never baked in the endpoint or token manager for interactive grants
-        |
-        v
-OpenIddict mints RS256 access token + refresh token
-RS256 signing key resolved on demand via the ISecretManager provider (OpenIddictSigningKeyConfigurator)
-```
+`AuthenticationServiceTypes` holds the validation schemes a host can register:
 
-**DG** = IDataGateway. User queries go through DataGateway, not raw SQL.
+- `LocalKey`: tokens this host signed.
+- `JwtBearer`: tokens from a remote OIDC authority.
+- `ApiKey`: opaque `fdx_` credentials, which are looked up rather than read.
 
-### agent_key Grant
+`IssuerSchemeSelector` picks the scheme from the token's `iss` claim. It compares the claim to each scheme's `Authority` as an exact ordinal string, so copy the issuer string verbatim between `auth.JwtTokenManager.Issuer` and `auth.JwtAuthentication`. A trailing slash is enough to make a token fail validation.
 
-Same as `password` but `isAgentKey: true` → secretType `"AgentKey"` → an additional `agent` role added to the thin principal. Agent-key verification goes through `IUserCredentialService.Verify(userId, "AgentKey", credential)` against the same credential vault.
+After the signature, issuer, audience and lifetime checks pass, `LocalKeyAuthenticationHandler` asks `ITokenRevocationStore.IsRevoked(jti, userId, issuedAt)` about every token. A token with no readable `jti` is rejected. If the revocation check itself fails, the token is rejected too. Both failure paths close.
 
-### external_identity Grant
-
-`OpenIdTokenManager.IssueForExternalIdentity` maps an external principal's `iss`/`sub` claims to a FDW `userId` via `ExternalIdentityService.FindUserId(provider, externalSubject)` (reads `auth.ExternalIdentity` rows). Returns the same thin `ClaimsPrincipal`; `ProcessSignInClaimsHandler` bakes the FDW claim set identically.
-
-### client_credentials Grant
-
-Machine-to-machine tokens carry the `client_id` as subject with no interactive user. `OpenIdTokenManager.IssueForClientCredentials` resolves the shared secret from the header's configured secret manager under the `OAUTH_{CLIENTID}` convention and constant-time-compares it (`CryptographicOperations.FixedTimeEquals`). OpenIddict's own `ValidateClientSecret` event handler is **removed** (`RemoveEventHandler(...ValidateClientSecret.Descriptor)`) so the token service owns the check — the seeded confidential-client row's `ClientSecretHash` stays `NULL`, which keeps its permissions linked. The service principal's effective permissions are baked as `perm` claims here (this grant is in `ProcessSignInClaimsHandler`'s skip-set). Missing config, missing secret, or a mismatch all fail loud.
-
-### refresh_token / authorization_code Grant
-
-`ConnectTokenEndpoint` authenticates the stored OpenIddict principal and re-signs in — `ProcessSignInClaimsHandler` re-resolves permissions on every refresh, so permission changes take effect on the next token cycle. The caller may supply a `tenant=` param to switch tenants on refresh.
-
-### Claims Baking — ProcessSignInClaimsHandler
-
-All FDW claims (`tenant_id`, `org_id`, `role`, `perm`) for interactive grants are baked here, after the endpoint calls `SignIn`. The endpoint hands a thin principal (only `sub` + optional tenant/cross-tenant context); `ProcessSignInClaimsHandler` resolves the full FDW authorization context. `client_credentials` is skipped (its `perm` claims are already baked by `OpenIdTokenManager.Issue`).
-
-### Signing Key
-
-The RS256 signing key and issuer are resolved on demand by `OpenIddictSigningKeyConfigurator` (an `IConfigureOptions<OpenIddictServerOptions>`) through the gateway-backed config providers and the `ISecretManager` provider — the same injected-provider path every other FDW service uses, no hosted service, no mutable singleton. The key name lives on the header (`TokenManagerConfiguration.SecretManagerName` / `SecretKeyName`). Never stored in appsettings. `OpenIdTokenManager.Validate`/`ExtractClaims` verify against the same key.
-
-### Provider-Swap Story
-
-The token service is a `[ServiceTypeOption]` on `TokenManagerTypes`. Swapping providers (e.g. adding Entra/external IdP support) requires:
-
-1. Create `Services.Authentication.MyProvider` with a new `[ServiceTypeOption(typeof(TokenManagerTypes), "MyProvider")]` implementing `ITokenManager`.
-2. Or reuse the `external_identity` grant + `auth.ExternalIdentity` mapping rows to route external subjects to FDW user IDs — no new option needed.
-3. The `password` vault path is simply not invoked for external-IdP users.
-4. PATs and agent keys remain vault-backed (`Services.Credentials.Sql`, the `Sql` option of `CredentialServiceTypes`) regardless of IdP — the vault is IdP-agnostic.
-
-### Registration (OpenIddict)
-
-`TokenManagerTypes` is a `[ServiceTypeCollection]` and is **discovered by PlatformServices** like every other domain — there is **no** hand-written `TokenManagerTypes.Configure/Register/Initialize` call in `Program.cs`, and it is not `Manual`. `OpenIddictTokenManagerType` is the `[ServiceTypeOption]` that registers OpenIddict's infrastructure (`AddCore` + `AddServer` + `AddValidation`, the DataGateway-backed stores, `ConnectTokenEndpoint`, `ProcessSignInClaimsHandler`) inside its `RegisterRequiredServices` — the one registration surface. Its `Registration.SourceGenerators` module initializer registers the option on package reference. No app-side `services.AddXxx` calls for token-service internals. Point a deployment at a provider by seeding one enabled `auth.TokenManager` row (`ServiceOptionType`) plus its typed-body row.
+An API key states no permissions. `ApiKeyAuthenticationHandler` resolves the owner's permissions on every request, in the owner's default tenant. A failed resolve denies rather than authenticating with an empty set.
 
 ## Client-Side Architecture
 
 ### Shared Package: `Web.Http.Authentication`
 
-Core abstractions and DelegatingHandlers used by all hosting models:
+Core abstractions and DelegatingHandlers used by every .NET client of the API (the `*.Clients` packages, the TUI):
 
-**`IAccessTokenProvider`** -- Returns the current access token. Implementations differ by hosting model:
-- `BlazorServerAccessTokenProvider` -- reads from circuit AsyncLocal, falls back to HttpContext
-- `JwtAuthService` (WASM) -- reads from localStorage, auto-refreshes if expiring
+**`IAccessTokenProvider`** -- Returns the current access token. The host supplies the implementation; `Fdw.Services.Identity`'s `ManagedIdentityAccessTokenProvider` is the one in FDW (service-to-service).
 
 **`ITokenRefreshHandler`** -- Coordinates token refresh:
 - `CanRefresh` property indicates whether refresh is supported
 - `TryRefresh(ct)` attempts to obtain a new token pair
-- `JwtAuthService` implements this for WASM
 
 **`ITokenRefreshCoordinator`** -- Prevents concurrent refresh calls. When a dashboard loads 5-8 API calls simultaneously and the token is expiring, all calls see `IsTokenExpiring=true` and attempt refresh. Without coordination, multiple concurrent refresh requests hit the server -- if the server rotates refresh tokens (OWASP best practice), all but the first fail and the user gets logged out.
 
@@ -153,131 +150,48 @@ Custom implementations can provide distributed coordination, custom cooldown log
 
 **`RetryingBearerTokenHandler`** -- Same as above, plus: on 401 response, calls `ITokenRefreshHandler.TryRefresh()`, obtains a fresh token, clones the request, and retries once. If refresh fails, notifies `IAuthExpirationNotifier`.
 
-### Blazor Server: `Web.Http.Authentication.Blazor`
-
-Blazor Server has a unique challenge: `HttpContext` is only available during the initial WebSocket handshake, not during subsequent circuit events. The circuit bridge solves this:
-
-```
-Browser                    Server
-  |                          |
-  |--- WebSocket Handshake -->|  HttpContext available
-  |                          |  TokenCapturingCircuitHandler.OnConnectionUpAsync()
-  |                          |    captures access_token from HttpContext
-  |                          |    stores in _capturedToken field
-  |                          |
-  |--- Circuit Event ------->|  HttpContext is NULL
-  |                          |  CreateInboundActivityHandler() fires
-  |                          |    sets CircuitTokenAccessor.CurrentToken = _capturedToken
-  |                          |    (AsyncLocal -- flows through async call chain)
-  |                          |
-  |                          |  BlazorServerAccessTokenProvider.GetAccessToken()
-  |                          |    reads CircuitTokenAccessor.CurrentToken
-  |                          |    returns token for BearerTokenHandler
-```
-
-**Registration:**
-```csharp
-services.AddBlazorServerAuthentication();
-// Registers: CircuitTokenAccessor (singleton), TokenCapturingCircuitHandler (scoped),
-//            HttpContextAccessor, BlazorServerAccessTokenProvider as IAccessTokenProvider
-```
-
-### Blazor WASM: `Web.Http.Authentication.Wasm`
-
-All authentication runs in the browser. There is no server-side state.
-
-**`JwtAuthService`** -- Implements `IAuthenticationClient`, `IAccessTokenProvider`, `ITokenRefreshHandler`, and `IAuthExpirationNotifier` in a single class:
-- **Login**: `POST auth/token` with credentials, store tokens in localStorage, parse JWT claims, raise `AuthStateChanged`
-- **Logout**: Best-effort `POST auth/logout`, clear localStorage, raise `AuthStateChanged`
-- **RefreshToken**: `POST auth/refresh` with stored refresh token, replace tokens, re-parse claims
-- **GetAccessToken**: Read from localStorage, auto-refresh via `ITokenRefreshCoordinator` if `IsTokenExpiring`
-- **TryRestoreAuthState**: On app startup, check localStorage for existing tokens, refresh if expiring
-
-**`JwtAuthStateProvider`** -- Blazor `AuthenticationStateProvider` that:
-- On first `GetAuthenticationStateAsync()`, calls `TryRestoreAuthState()` to resume sessions
-- Subscribes to `AuthStateChanged` events from `JwtAuthService`
-- Maps `UserInfo` claims to `ClaimsPrincipal` for Blazor's `<AuthorizeView>` components
-
-**`LocalStorageTokenService`** -- Stores `fdw_access_token`, `fdw_refresh_token`, and `fdw_token_expiration` in browser localStorage via `IJSRuntime` interop.
-
-**`AuthenticationClients`** -- TypeCollection for pluggable auth. `JwtAuthenticationClientType` is the default; additional types can be added without modifying existing code:
-
-```csharp
-[TypeCollection(typeof(AuthenticationClientBase), typeof(IAuthenticationClientType), typeof(AuthenticationClients))]
-public abstract partial class AuthenticationClients
-    : TypeCollectionBase<AuthenticationClientBase, IAuthenticationClientType> { }
-
-[TypeOption(typeof(AuthenticationClients), "Jwt")]
-public sealed class JwtAuthenticationClientType : AuthenticationClientBase { ... }
-```
-
-**Registration:**
-```csharp
-services.AddWasmAuthentication();
-// Registers: JwtAuthService as IAuthenticationClient + IAccessTokenProvider +
-//            ITokenRefreshHandler + IAuthExpirationNotifier,
-//            LocalStorageTokenService, JwtAuthStateProvider,
-//            TokenRefreshCoordinator, JwtForgotPasswordProvider
-```
-
 ## Token Flow: End-to-End
 
-### Login
+### Password login
 
 ```
-Browser (WASM)                    reference-api                    Database
-     |                                |                              |
-     |  POST /connect/token           |                              |
-     |  {username, password}          |                              |
-     |------------------------------->|                              |
-     |                                |  IAuthenticationService      |
-     |                                |    .Authenticate(request)    |
-     |                                |                              |
-     |                                |  DataGateway.Execute(query)  |
-     |                                |----------------------------->|
-     |                                |  User row                    |
-     |                                |<-----------------------------|
-     |                                |                              |
-     |                                |  IUserCredentialService.Verify() (vault)
-     |                                |  OpenIddict mints RS256 JWT  |
-     |                                |                              |
-     |  {accessToken, refreshToken,   |                              |
-     |   expiresIn}                   |                              |
-     |<-------------------------------|                              |
-     |                                                               |
-     |  localStorage.setItem(tokens)                                 |
-     |  AuthStateChanged -> ClaimsPrincipal                          |
+Client                         reference-api                                  ConfigurationDb / AuthDb
+  |  POST /auth/login             |                                                 |
+  |  {username, password}         |                                                 |
+  |------------------------------>|  AuthenticationRunner.Run(password flow)        |
+  |                               |    PasswordCredential -> Subject, Principal ---->|
+  |                               |    BakePermissions    -> perm/roles claims ----->|
+  |                               |    AuthorizeIssuance  -> Decision               |
+  |                               |  terminal check (subject, principal, decision, acr)
+  |                               |  JwtTokenIssuer mints RS256 at+jwt              |
+  |  {accessToken, tokenType,     |                                                 |
+  |   expiresAt,                  |                                                 |
+  |   passwordChangeRequired}     |                                                 |
+  |<------------------------------|                                                 |
 ```
 
-### Authenticated Request with Refresh
+The server issues no refresh token. When the access token expires, the client signs in again. Refresh-token issuance is an open decision (FDW-867).
+
+### External provider login (browser)
 
 ```
-Browser (WASM)                    reference-api
-     |                                |
-     |  IAccessTokenProvider          |
-     |    .GetAccessToken()           |
-     |  IsTokenExpiring? Yes          |
-     |                                |
-     |  ITokenRefreshCoordinator      |
-     |    .RefreshOnce(refresh)       |
-     |  (serialized -- one at a time) |
-     |                                |
-     |  POST /connect/token           |
-     |  {grant_type=refresh_token}    |
-     |------------------------------->|
-     |                                |  Validate refresh token
-     |                                |  Rotate: issue new pair
-     |  {newAccess, newRefresh}       |
-     |<-------------------------------|
-     |                                |
-     |  localStorage.setItem(new)     |
-     |                                |
-     |  GET /api/v1/connections       |
-     |  Authorization: Bearer <new>   |
-     |------------------------------->|
-     |                                |  OpenIddict validation middleware validates
-     |  200 OK                        |
-     |<-------------------------------|
+Browser/SPA                     reference-api                      OIDC provider
+  |  POST /auth/oidc/redirect     |                                   |
+  |  {flowName, returnUrl}        |  flow suspends at OidcRedirect    |
+  |------------------------------>|  (context stored, encrypted)      |
+  |  {redirectUrl} + cookies      |                                   |
+  |<------------------------------|                                   |
+  |  navigate to redirectUrl -------------------------------------->  |
+  |  <------------------------------------ 302 /auth/oidc/callback?code=
+  |  GET /auth/oidc/callback      |  flow resumes: code exchanged,    |
+  |------------------------------>|  ResolvePrincipal, BakePermissions,
+  |                               |  AuthorizeIssuance, token minted  |
+  |  302 returnUrl?auth_code=...  |  token stored under a 60 s code   |
+  |<------------------------------|                                   |
+  |  POST /auth/redeem {authCode} |                                   |
+  |------------------------------>|                                   |
+  |  {accessToken, ...}           |                                   |
+  |<------------------------------|                                   |
 ```
 
 ### 401 Retry (RetryingBearerTokenHandler)
@@ -306,56 +220,46 @@ Response = 401 Unauthorized?
      +-- No: Return response as-is
 ```
 
+`TryRefresh` succeeds only where the host's `ITokenRefreshHandler` can get a new token without the user. For example, `ManagedIdentityAccessTokenProvider` fetches a new service token. Against this API a user's token cannot be refreshed, because no refresh token is issued.
+
 ## Security Considerations
 
-### Token Storage
+### Revocation
 
-| Hosting Model | Storage | Exposure |
-|---------------|---------|----------|
-| Blazor Server | Server memory (AsyncLocal) | Not accessible to browser JS |
-| Blazor WASM | localStorage | Accessible to JS -- XSS risk |
+Access tokens are stateless JWTs. Revocation has two parts, both in AuthDb and both checked on every request:
 
-For WASM, localStorage is the pragmatic choice. The alternative (HttpOnly cookies via BFF pattern) adds a server-side session layer that defeats the purpose of pure WASM. Mitigate XSS risk with Content Security Policy headers and input sanitization.
+- **One token.** `POST /auth/logout` writes the token's `jti` to `auth.RevokedAccessToken` through `ITokenRevocationStore`.
+- **Every token of a user.** `ITokenRevocationStore.RevokeAll` writes `auth.UserTokenRevocation`: every token issued to that user before the recorded moment is revoked. It runs when a role is deleted, or when a role's permissions change, for every user holding that role (FDW-875). Their baked permissions are then no longer true.
 
-### Refresh Token Rotation
+A role assignment that expires stops counting when permissions are next resolved. Tokens already issued are capped at that expiry when they are minted (see Issuance).
 
-OpenIddict rotates refresh tokens on use (OWASP best practice): each refresh issues a new access + refresh pair and the presented refresh token is consumed. Because access tokens are stateless (`DisableTokenStorage`), refresh-token and authorization-code lifecycle is tracked through the persisted **authorization**, not a per-token row. Revoking the authorization (`OpenIdTokenManager.Logout`) invalidates the refresh tokens tied to it.
+### Short-lived codes, not tokens in URLs
 
-### Access Token Revocation
-
-Access tokens are stateless RS256 JWTs (`options.DisableTokenStorage()`) -- the server doesn't hit a database on every request. Revocation therefore has a single deny-list path:
-
-- `ITokenManager.Invalidate(token)` reads the token's `jti` and writes an unexpired row to **`auth.RevokedAccessToken`** (via `RevokedAccessTokenStore`), keyed by JWT ID with the token's own expiry.
-- `ITokenManager.Validate(token)` verifies the RS256 signature **and** rejects any token whose `jti` has an unexpired `auth.RevokedAccessToken` row.
-- For session teardown (logout, password change, role revocation), `OpenIdTokenManager.Logout(subjectId)` revokes the subject's persisted authorizations (and their refresh tokens); already-issued access tokens remain valid until expiry unless separately invalidated.
-
-The revocation list auto-expires entries with the token's own lifetime, so it never grows unbounded.
+A browser login never carries the access token in a URL. The callback hands back a one-time `auth_code`. The token is stored encrypted under the code's SHA-256 hash for 60 seconds and redeemed once over `POST /auth/redeem`. The return URL is checked against the flow's `ReturnUrls` allow-list before the browser leaves.
 
 ### Concurrent Refresh Coordination
 
-The `ITokenRefreshCoordinator` prevents a race condition where multiple simultaneous API calls all trigger refresh. Without coordination, refresh token rotation causes all but the first refresh to fail, logging the user out during normal dashboard loads. See `DefaultTokenRefreshCoordinator` for the `SemaphoreSlim` + cooldown implementation.
+Where a client can refresh, `ITokenRefreshCoordinator` stops a burst of simultaneous calls from each starting a refresh. See `DefaultTokenRefreshCoordinator` for the `SemaphoreSlim` and cooldown implementation.
 
 ## Extending the Auth Stack
 
-### Adding a New Token-Manager Provider
+### Adding an authentication step
 
-Token-service implementations are `[ServiceTypeOption]`s on `TokenManagerTypes`, each implementing `ITokenManager`. There is no `switch` on auth type — the active provider is resolved by name. To add one:
+A new proof (a second factor, a new credential type) is a new step package, not a framework change:
 
-1. Create a `Services.Authentication.MyProvider` project referencing `Fdw.Services.TokenManagers.Abstractions`.
-2. Implement `MyTokenManager : ITokenManager` (`Issue` / `Validate` / `Invalidate` / `ExtractClaims`); do all provider-specific credential/secret validation inside `Issue`.
-3. Add `MyTokenManagerType : TokenManagerTypeBase<...>` decorated with `[ServiceTypeOption(typeof(TokenManagerTypes), "MyProvider")]`; override `RegisterRequiredServices()` and `RegisterFactory()`.
-4. Add a standalone typed-body config (`[ManagedConfiguration(ServiceCategory = "TokenManager", ServiceType = "MyProvider")]`) with a `TokenManagerId` FK for any runtime fields your manager reads.
-5. For external-IdP user mapping, add `auth.ExternalIdentity` rows linking provider + external subject to a FDW `userId`, then use the `external_identity` grant.
-6. `Registration.SourceGenerators` discovers the option automatically — no app-side registration.
+1. Create a `ReferenceAuthentication.<Step>.Registration` project. The `ReferenceAuthStep` dotnet template scaffolds it.
+2. Derive from `AuthenticationStepTypeBase` and mark the class `[Implementation]` on `AuthenticationStepTypes`. Declare `Requires`, `Contributes` and `AuthenticationMethods`.
+3. Return a `ContextContribution` holding only the elements you declared. If the claims you add stop being true at a known moment, set `ClaimsValidUntil`; the token will not outlive it.
+4. Add the step's name to a flow's `auth.AuthenticationFlowStepConfiguration` rows. The flow provider validates the order when it loads, so a missing package or a wrong order fails by name, before anyone logs in.
 
-The vault path (`IUserCredentialService.Verify`) is invoked only for `password` and `agent_key` grants. External-IdP options skip the vault entirely for login; PATs and agent keys remain vault-backed regardless.
+A host that does not reference a step's package never loads it.
 
 ### Custom Token Refresh Coordination
 
 Implement `ITokenRefreshCoordinator` for scenarios the default doesn't cover:
 
 ```csharp
-// Example: distributed coordination for server-side Blazor with multiple instances
+// Example: distributed coordination across several client instances
 public sealed class RedisTokenRefreshCoordinator : ITokenRefreshCoordinator
 {
     public async Task<bool> RefreshOnce(
@@ -369,28 +273,15 @@ public sealed class RedisTokenRefreshCoordinator : ITokenRefreshCoordinator
 }
 ```
 
-Register before calling `AddWasmAuthentication()` (which uses `TryAdd`):
+`Web.Http.Authentication` does not register an `ITokenRefreshCoordinator` itself; the client host registers the one it uses:
 ```csharp
 services.AddScoped<ITokenRefreshCoordinator, RedisTokenRefreshCoordinator>();
-services.AddWasmAuthentication(); // Won't overwrite your registration
-```
-
-### Custom Token Storage
-
-Implement `ITokenStorageService` for alternative browser storage:
-
-```csharp
-// Example: sessionStorage instead of localStorage
-public sealed class SessionStorageTokenService : ITokenStorageService { ... }
-
-// Example: IndexedDB for larger token payloads
-public sealed class IndexedDbTokenService : ITokenStorageService { ... }
 ```
 
 ## Related Documentation
 
-- [Building a Token Manager](10-03-Building-Authentication-Service.md) -- the TokenManager domain and adding a provider option
+- `fdw-anatomy/content/authentication.json` -- the source-cited reference for the step pipeline, federation, issuance and provisioning
 - [Security Hardening](12-04-Security-Hardening.md) -- OWASP headers, CORS, DB isolation
 - [Authorization](12-05-Authorization.md) -- RBAC permissions, roles, endpoint policies
-- [Secret Management](12-10-Secret-Management.md) -- SecretManager resolution for JWT signing keys and OAUTH_* secrets
-- [Service Domains Overview](06-01-Service-Domains-Overview.md) -- ServiceTypeCollection plugin architecture
+- [Secret Management](12-10-Secret-Management.md) -- SecretManager resolution for the JWT signing key and OIDC client secrets
+- [Claim Types](12-15-Claim-Types.md) -- the claims a token carries

@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class JsonConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="JsonConfigurationPropertyTypeDto"/>.</summary>
-    public JsonConfigurationPropertyTypeDto() : base(10, "Json") { }
+    public JsonConfigurationPropertyTypeDto() : base("Json") { }
 }

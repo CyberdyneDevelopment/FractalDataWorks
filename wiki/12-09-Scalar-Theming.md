@@ -10,7 +10,7 @@
 FDW themes store colors as HSL strings (`"221 83% 53%"`). Scalar uses `--scalar-*` CSS custom properties on `.dark-mode` / `.light-mode` body classes. `ThemeHelper` bridges the two.
 
 ```csharp
-// Existing FDW CSS bridge (Blazor UI)
+// Existing FDW CSS bridge (tenant theme CSS variables)
 string fdwCss = theme.ToCssRootBlock();       // → :root { --color-primary: ... }
 
 // New Scalar bridge (API docs)
@@ -130,6 +130,6 @@ Hex values are output as lowercase 6-digit strings (e.g., `#1e6de8`). The `--sca
 
 ## Related
 
-- Management UI theming docs live in the separate **reference-ui** repository.
-- `ThemeHelper.ToCssRootBlock()` — FDW Blazor UI CSS bridge
+- The web console's theming lives in the separate **reference-react-ui** repository.
+- `ThemeHelper.ToCssRootBlock()` — FDW tenant theme CSS bridge
 - [Creating a Server](12-01-Creating-A-Server.md)

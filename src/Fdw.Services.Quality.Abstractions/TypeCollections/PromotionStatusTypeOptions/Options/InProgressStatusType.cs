@@ -15,7 +15,6 @@ public sealed class InProgressStatusType : PromotionStatusTypeBase
     /// </summary>
     public InProgressStatusType()
         : base(
-            id: 4,
             name: "InProgress",
             isTerminal: false,
             isSuccess: false,

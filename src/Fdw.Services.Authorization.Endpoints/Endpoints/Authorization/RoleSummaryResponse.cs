@@ -29,11 +29,6 @@ public class RoleSummaryResponse : ResourceSummary
     public bool IsTenantScoped { get; set; }
 
     /// <summary>
-    /// Gets or sets the sort order.
-    /// </summary>
-    public int SortOrder { get; set; }
-
-    /// <summary>
     /// Gets or sets when the role was created.
     /// </summary>
     public DateTimeOffset? CreatedAt { get; set; }

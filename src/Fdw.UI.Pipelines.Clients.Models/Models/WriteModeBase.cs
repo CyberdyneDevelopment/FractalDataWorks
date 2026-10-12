@@ -7,10 +7,10 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 /// <summary>
 /// Base class for data write modes.
 /// </summary>
-public abstract class WriteModeBase : TypeOptionBase<int, WriteModeBase>, IWriteMode
+public abstract class WriteModeBase : TypeOptionBase<WriteModeBase>, IWriteMode
 {
     /// <summary>
     /// Initializes a new instance of <see cref="WriteModeBase"/>.
     /// </summary>
-    protected WriteModeBase(int id, string name) : base(id, name) { }
+    protected WriteModeBase(string name) : base(name) { }
 }

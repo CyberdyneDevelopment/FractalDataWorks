@@ -26,7 +26,7 @@ public sealed class MultiplyOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="MultiplyOperation"/> class.
     /// </summary>
     public MultiplyOperation()
-        : base(id: 3, name: "Multiply", category: "Arithmetic", description: "Multiplies two values (left * right)")
+        : base(name: "Multiply", category: "Arithmetic", description: "Multiplies two values (left * right)")
     {
         _logger = NullLogger<MultiplyOperation>.Instance;
         Parameters =

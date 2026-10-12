@@ -4,49 +4,43 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
 using Fdw.Data;
-using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Transforms;
 
 namespace Fdw.Services.Etl.Pipelines;
 
 /// <summary>
-/// Configuration for streaming pipelines — the "Streaming" ENGINE typed body of
-/// <c>EtlPipelineConfiguration</c>. Persisted in <c>pipe.StreamingPipeline</c> as a type-specific child
-/// of <c>pipe.EtlPipeline</c>.
+/// The "Streaming" implementation of the EtlPipeline domain. Persisted in <c>pipe.StreamingPipelineConfiguration</c>,
+/// hanging from its <c>pipe.Pipeline</c> domain row by <c>PipelineRowId</c>.
 /// </summary>
 /// <remarks>
-/// Why: a standalone typed body implementing <see cref="IEtlPipelineTypedConfiguration"/> (NOT a C#
-/// subclass of EtlPipelineConfiguration) — C# header inheritance reintroduced the phantom-column mapper
-/// bug. Properties use <c>{ get; set; }</c> to satisfy IOptions binding.
+/// Why it is not a C# subclass of anything: header inheritance reintroduced the phantom-column
+/// mapper bug. Properties use <c>{ get; set; }</c> to satisfy IOptions binding.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Streaming")]
-public sealed partial class StreamingPipelineConfiguration : IEtlPipelineTypedConfiguration
+public sealed partial class StreamingPipelineConfiguration : IEtlPipelineImplementationConfiguration
 {
 
     /// <inheritdoc/>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the parent EtlPipeline's logical Id (FK to pipe.EtlPipeline.Id).</summary>
-    public Guid EtlPipelineId { get; set; }
-
     /// <inheritdoc/>
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
     public string Name { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public string SectionName { get; set; } = string.Empty;
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
 
     /// <inheritdoc/>
-    public string ServiceType { get; set; } = string.Empty;
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType { get; set; }
+    /// <remarks>Set by the domain provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the transforms to apply at runtime. NOT a column on pipe.StreamingPipeline — the
-    /// transforms are persisted on the ETL-kind body (<c>pipe.PipelineOperation</c> → pipe.EtlPipeline)
-    /// and copied onto the engine body by the execution seam before the pipeline runs.
+    /// Gets or sets the transforms to apply at runtime, in ExecutionOrder. Rows live in
+    /// <c>pipe.PipelineTransform</c>, each holding this implementation row's RowId in
+    /// <c>StreamingPipelineConfigurationRowId</c>, the way a connection's properties hang from theirs.
     /// </summary>
     [NotMapped]
     public IList<PipelineTransformConfiguration>? Transforms { get; set; }
@@ -110,6 +104,18 @@ public sealed partial class StreamingPipelineConfiguration : IEtlPipelineTypedCo
     /// Gets or sets the logical Id of the source DataSet.
     /// </summary>
     public Guid? SourceDataSetId { get; set; }
+
+    /// <summary>Gets or sets the Id of the org that owns the pipeline.</summary>
+    public Guid? OrgId { get; set; }
+
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
 
 
     /// <summary>

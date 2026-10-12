@@ -12,6 +12,7 @@ using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +23,7 @@ namespace Fdw.Services.Quality.Endpoints;
 public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQueryRequest, List<QualityCheckResultResponse>>
 {
     /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
-        private readonly QualityConfigurationProvider _provider;
+        private readonly IQualityRuleConfigurationProvider _provider;
     private readonly IDataGatewayProvider _dataGateways;
 
     // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
@@ -30,7 +31,7 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
     private IDataGateway Gateway => _dataGateways.ByName("Main");
 
     /// <summary>Initializes a new instance of the <see cref="ExecuteAllQualityChecksEndpointBase"/> class.</summary>
-    protected ExecuteAllQualityChecksEndpointBase(ILogger logger, QualityConfigurationProvider provider, IDataGatewayProvider dataGateways)
+    protected ExecuteAllQualityChecksEndpointBase(ILogger logger, IQualityRuleConfigurationProvider provider, IDataGatewayProvider dataGateways)
     {
         Logger = logger;
         _provider = provider;
@@ -62,19 +63,15 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
         
         if (string.IsNullOrWhiteSpace(req.DataSetName))
         {
-            HttpContext.Response.StatusCode = 400;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "DataSetName is required" }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "DataSetName is required" }, statusCode: 400)).ConfigureAwait(false);
             return;
         }
 
-        var rulesResult = await _provider.GetAllQualityRules(ct).ConfigureAwait(false);
+        var rulesResult = await _provider.Get(ct).ConfigureAwait(false);
 
         if (!rulesResult.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch quality rules", Details = rulesResult.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch quality rules", Details = rulesResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -89,57 +86,40 @@ public abstract class ExecuteAllQualityChecksEndpointBase : Endpoint<DataSetQuer
             return;
         }
 
-        var dataCommand = new QueryCommand<Dictionary<string, object>>();
+        var named = QualityRuleTarget.RequireDataSet("The request", req.DataSetName, Logger);
+        if (named.IsFailure)
+        {
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Request names no data set", Details = named.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            return;
+        }
 
-        var dataResult = await Gateway.Execute<IEnumerable<Dictionary<string, object>>>(
-            dataCommand, new DataStoreTarget(ResolveDataConnectionName(req.DataSetName), null, req.DataSetName), ct).ConfigureAwait(false);
+        // Why a failed read is the answer and not one "Failed" entry per rule (FDW-1162): no rule ran. The read's own code
+        // decides the status, and a refusal's reason reaches the caller through the mapper, written once.
+        var rows = await QualityRuleTarget.ReadRows(Gateway, req.DataSetName, Logger, ct).ConfigureAwait(false);
+        if (rows.IsFailure || rows.Value is not { } data)
+        {
+            var (statusCode, problem) = ResultHttpStatusMapper.Map(rows, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
 
-        var data = dataResult.IsSuccess ? dataResult.Value?.ToList() ?? [] : [];
         var totalCount = data.Count;
 
         var results = new List<QualityCheckResultResponse>();
 
         foreach (var rule in rules)
         {
-            QualityCheckResultResponse result;
-
-            if (!dataResult.IsSuccess)
-            {
-                result = new QualityCheckResultResponse
-                {
-                    RuleId = rule.Id,
-                    Status = "Failed",
-                    FailureCount = 0,
-                    TotalCount = 0,
-                    ExecutedAt = DateTime.UtcNow,
-                    ErrorMessage = $"Failed to query data: {dataResult.CurrentMessage}"
-                };
-            }
-            else
-            {
-                result = ExecuteRule(rule, data, totalCount);
-                result.RuleId = rule.Id;
-                result.ExecutedAt = DateTime.UtcNow;
-            }
-
+            var result = ExecuteRule(rule, data, totalCount);
+            result.RuleId = rule.Id;
+            result.ExecutedAt = DateTime.UtcNow;
             results.Add(result);
         }
 
         await Send.OkAsync(results, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Resolves the database connection name based on the DataSet name convention.</summary>
-    protected virtual string ResolveDataConnectionName(string dataSetName)
-    {
-        return dataSetName.StartsWith("NFL_", StringComparison.OrdinalIgnoreCase) ||
-               dataSetName.Equals("Teams", StringComparison.OrdinalIgnoreCase) ||
-               dataSetName.Equals("Players", StringComparison.OrdinalIgnoreCase)
-            ? "NflStats"
-            : "PlatformConfiguration";
-    }
-
     /// <summary>Executes a single quality rule against the provided data and returns the result.</summary>
-    protected virtual QualityCheckResultResponse ExecuteRule(QualityRuleConfiguration rule, IReadOnlyList<Dictionary<string, object>> data, int totalCount)
+    protected virtual QualityCheckResultResponse ExecuteRule(IQualityRuleImplementationConfiguration rule, IReadOnlyList<Dictionary<string, object>> data, int totalCount)
     {
         return rule.RuleType switch
         {

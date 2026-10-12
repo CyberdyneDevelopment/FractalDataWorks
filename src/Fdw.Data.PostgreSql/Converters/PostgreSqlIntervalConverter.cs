@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlIntervalConverter()
     : DataTypeConverterBase(
-        id: 19,
         name: "Interval",
         sourceType: "interval",
         targetClrType: typeof(TimeSpan),

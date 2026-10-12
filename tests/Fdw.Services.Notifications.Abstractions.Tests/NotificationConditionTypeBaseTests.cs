@@ -11,8 +11,8 @@ public class NotificationConditionTypeBaseTests
     [ExcludeFromCodeCoverage]
     private sealed class TestCondition : NotificationConditionTypeBase
     {
-        public TestCondition(int id, string name, string icon, string color)
-            : base(id, name, icon, color)
+        public TestCondition(string name, string icon, string color)
+            : base(name, icon, color)
         {
         }
 
@@ -28,10 +28,7 @@ public class NotificationConditionTypeBaseTests
     public void ConstructorSetsAllProperties()
     {
         // Arrange & Act
-        var condition = new TestCondition(1, "TestCondition", "test_icon", "Primary");
-
-        // Assert
-        condition.Id.ShouldBe(1);
+        var condition = new TestCondition("TestCondition", "test_icon", "Primary");
         condition.Name.ShouldBe("TestCondition");
         condition.Icon.ShouldBe("test_icon");
         condition.Color.ShouldBe("Primary");
@@ -43,7 +40,7 @@ public class NotificationConditionTypeBaseTests
     public void EvaluateCanBeOverridden()
     {
         // Arrange
-        var condition = new TestCondition(1, "TestCondition", "icon", "color");
+        var condition = new TestCondition("TestCondition", "icon", "color");
         var context = new NotificationContext();
 
         // Act

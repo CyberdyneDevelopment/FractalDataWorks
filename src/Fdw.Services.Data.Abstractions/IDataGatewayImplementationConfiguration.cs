@@ -12,6 +12,4 @@ namespace Fdw.Services.Data.Abstractions;
 /// </remarks>
 public interface IDataGatewayImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets or sets the domain record this body belongs to.</summary>
-    Guid DataGatewayId { get; set; }
 }

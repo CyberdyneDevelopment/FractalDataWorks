@@ -6,7 +6,7 @@ namespace Fdw.Services.Users.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the UserPreference configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "UserPreference")]
-public sealed class UserPreferenceConfigurationCommand : ConfigurationCommandBase<UserPreferencesConfiguration>
+public sealed class UserPreferenceConfigurationCommand : ConfigurationCommandBase<UserPreferencesImplementationConfiguration>
 {
     /// <inheritdoc/>
     public UserPreferenceConfigurationCommand() : base("UserPreferences") { }

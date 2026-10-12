@@ -17,45 +17,6 @@ public sealed class PooledRowMapperAdditionalTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void MapRowWithConverterUsesGetConvertedValue()
-    {
-        // Arrange
-        var converter = new Mock<IDataTypeConverter>();
-        converter.Setup(c => c.Name).Returns("Decimal");
-
-        var converterCollection = new Mock<IDataTypeConverters>();
-        converterCollection.Setup(c => c.ById(5)).Returns(converter.Object);
-
-        var mapper = CreateMapper(converterCollection.Object);
-
-        var field = new Mock<IField>();
-        field.Setup(f => f.Name).Returns("Price");
-        field.Setup(f => f.ConverterTypeId).Returns(5);
-
-        var container = new Mock<IStorageContainer>();
-        var schema = new Mock<IContainerSchema>();
-        schema.Setup(s => s.Fields).Returns(new List<IField> { field.Object });
-        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { field.Object });
-        container.Setup(c => c.Schema).Returns(schema.Object);
-
-        var source = new Mock<IRecordCursor>();
-        source.Setup(s => s.GetFieldOrdinal("Price")).Returns(0);
-        source.Setup(s => s.IsNull(0)).Returns(false);
-        source.Setup(s => s.GetConvertedValue(0, converter.Object)).Returns(19.99m);
-
-        mapper.Initialize(source.Object, container.Object);
-
-        // Act
-        var result = mapper.MapRow(source.Object);
-
-        // Assert
-        result["Price"].ShouldBe(19.99m);
-        source.Verify(s => s.GetConvertedValue(0, converter.Object), Times.Once);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void MapRowWithNegativeOrdinalSetsNull()
     {
         // Arrange - field not found in source (ordinal = -1)
@@ -68,7 +29,7 @@ public sealed class PooledRowMapperAdditionalTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField> { field.Object });
-        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { field.Object });
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { field.Object });
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         var source = new Mock<IRecordCursor>();
@@ -98,7 +59,7 @@ public sealed class PooledRowMapperAdditionalTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField> { field.Object });
-        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { field.Object });
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { field.Object });
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         var source = new Mock<IRecordCursor>();
@@ -135,64 +96,6 @@ public sealed class PooledRowMapperAdditionalTests
         // Assert - rent again, the pool should have reused the dictionary
         var row2 = mapper.MapRow(source.Object);
         row2.ShouldNotBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void MapRowWithMultipleFieldsMixedNullAndConverters()
-    {
-        // Arrange
-        var converter = new Mock<IDataTypeConverter>();
-        var converterCollection = new Mock<IDataTypeConverters>();
-        converterCollection.Setup(c => c.ById(10)).Returns(converter.Object);
-
-        var mapper = CreateMapper(converterCollection.Object);
-
-        var field1 = new Mock<IField>();
-        field1.Setup(f => f.Name).Returns("Id");
-        field1.Setup(f => f.ConverterTypeId).Returns((int?)null);
-
-        var field2 = new Mock<IField>();
-        field2.Setup(f => f.Name).Returns("Price");
-        field2.Setup(f => f.ConverterTypeId).Returns(10);
-
-        var field3 = new Mock<IField>();
-        field3.Setup(f => f.Name).Returns("NullField");
-        field3.Setup(f => f.ConverterTypeId).Returns((int?)null);
-
-        var container = new Mock<IStorageContainer>();
-        var schema = new Mock<IContainerSchema>();
-        schema.Setup(s => s.Fields).Returns(new List<IField>
-        {
-            field1.Object, field2.Object, field3.Object
-        });
-        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField>
-        {
-            field1.Object, field2.Object, field3.Object
-        });
-        container.Setup(c => c.Schema).Returns(schema.Object);
-
-        var source = new Mock<IRecordCursor>();
-        source.Setup(s => s.GetFieldOrdinal("Id")).Returns(0);
-        source.Setup(s => s.GetFieldOrdinal("Price")).Returns(1);
-        source.Setup(s => s.GetFieldOrdinal("NullField")).Returns(2);
-        source.Setup(s => s.IsNull(0)).Returns(false);
-        source.Setup(s => s.IsNull(1)).Returns(false);
-        source.Setup(s => s.IsNull(2)).Returns(true);
-        source.Setup(s => s.GetValue(0)).Returns(42);
-        source.Setup(s => s.GetConvertedValue(1, converter.Object)).Returns(19.99m);
-
-        mapper.Initialize(source.Object, container.Object);
-
-        // Act
-        var result = mapper.MapRow(source.Object);
-
-        // Assert
-        result.Count.ShouldBe(3);
-        result["Id"].ShouldBe(42);
-        result["Price"].ShouldBe(19.99m);
-        result["NullField"].ShouldBeNull();
     }
 
     [Fact]
@@ -250,7 +153,7 @@ public sealed class PooledRowMapperAdditionalTests
         }
 
         schema.Setup(s => s.Fields).Returns(fields);
-        schema.Setup(s => s.GetProjectableFields()).Returns(fields);
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields);
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         return container;

@@ -18,7 +18,7 @@ public class SchemaDefinitionTests
         var column = new ColumnDefinition
         {
             Name = "TestColumn",
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             SqlType = SqlDbType.VarChar,
             MaxLength = 50,
             IsRequired = false
@@ -27,7 +27,7 @@ public class SchemaDefinitionTests
         // Act & Assert
         (column is IPropertyDefinition).ShouldBeTrue();
         column.Name.ShouldBe("TestColumn");
-        column.Role.ShouldBe(PropertyRoles.Attribute);
+        column.Role.ShouldBe(DatumTypes.Attribute);
         column.SqlType.ShouldBe(SqlDbType.VarChar);
         column.MaxLength.ShouldBe(50);
         column.IsRequired.ShouldBeFalse();

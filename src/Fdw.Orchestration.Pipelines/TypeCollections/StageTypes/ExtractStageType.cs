@@ -25,7 +25,6 @@ public sealed class ExtractStageType : StageTypeBase
     /// </summary>
     public ExtractStageType()
         : base(
-            id: 1,
             name: "Extract",
             requiresSource: true,
             requiresDestination: false,

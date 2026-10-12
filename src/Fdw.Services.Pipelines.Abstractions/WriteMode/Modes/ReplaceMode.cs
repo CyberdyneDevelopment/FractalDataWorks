@@ -14,5 +14,5 @@ public sealed class ReplaceMode : WriteModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ReplaceMode"/> class.
     /// </summary>
-    public ReplaceMode() : base(3, "Replace") { }
+    public ReplaceMode() : base("Replace") { }
 }

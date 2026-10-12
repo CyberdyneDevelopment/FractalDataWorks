@@ -13,7 +13,7 @@ public sealed class TimestampTzType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="TimestampTzType"/> class.</summary>
     public TimestampTzType()
-        : base(id: 8, name: "timestamptz")
+        : base(name: "timestamptz")
     {
     }
 

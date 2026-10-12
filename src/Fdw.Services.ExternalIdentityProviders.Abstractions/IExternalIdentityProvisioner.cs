@@ -11,7 +11,7 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// Just-in-time provisioning mechanism consulted by the external-identity issuance path when an
 /// externally-validated identity has no existing <c>auth.ExternalIdentity</c> link to a FDW user.
 /// A <see cref="IExternalIdentityProvisioner"/> is a <see cref="IServiceOption"/> resolved through
-/// <c>ExternalIdentityProvisionerTypes</c>' <c>IPlatformServiceProvider&lt;IExternalIdentityProvisioner,
+/// <c>ExternalIdentityProvisionerTypes</c>' <c>IDomainServiceProvider&lt;IExternalIdentityProvisioner,
 /// ExternalIdentityProvisionerConfiguration&gt;</c> — selected per (tenant, external provider) by
 /// <c>ExternalIdentityProvisionerBindingConfigurationProvider.ResolveProvisionerName</c>. Default is
 /// OFF: with no matching binding row, the issuance path behaves exactly as it did before this
@@ -20,15 +20,16 @@ namespace Fdw.Services.ExternalIdentityProviders.Abstractions;
 /// <remarks>
 /// <para>
 /// <b>NOT-FOUND CONTRACT (load-bearing — leaf implementations MUST follow this exactly):</b> a
-/// provisioner that determines the externally-validated subject is not one it provisions (e.g. one
-/// step of a composite chain trying the next sibling) MUST return a <c>Failure</c> whose
-/// <c>IGenericResult.Code</c> is the canonical NotFound <see cref="Fdw.Results.Abstractions.IResultCode"/>
-/// — the categorized number <c>30000</c> reserved in the ResultCode catalog for "not found" (every
-/// package's own NotFound code reuses this number under its own prefix; e.g.
-/// <c>GenericResult&lt;Guid&gt;.Failure(MyDomainResultCodes.NotFound)</c>). Callers that walk multiple
-/// provisioners (e.g. <c>ChainedExternalIdentityProvisioner</c>) check
-/// <c>result.Code?.Id == 30000</c> to decide "this subject isn't mine — fall through to the next
-/// candidate" versus "this is a hard error — propagate immediately." ANY OTHER failure (a message-only
+/// provisioner that determines the externally-validated subject is not one it provisions MUST return
+/// a <c>Failure</c> whose <c>IGenericResult.Code</c> is the canonical NotFound
+/// <see cref="Fdw.Results.Abstractions.IResultCode"/> — the categorized number <c>30000</c> reserved
+/// in the ResultCode catalog for "not found" (every package's own NotFound code reuses this number
+/// under its own prefix; e.g. <c>GenericResult&lt;Guid&gt;.Failure(MyDomainResultCodes.NotFound)</c>).
+/// A caller composing more than one provisioner as fallback candidates — there is no shipped one
+/// today; <c>ClaimMappedProvisioner</c> covers ordered fallthrough with multiple rules on a single
+/// provisioner instead — would check <c>result.Code?.Id == 30000</c> to decide "this subject isn't
+/// mine — fall through to the next candidate" versus "this is a hard error — propagate immediately."
+/// ANY OTHER failure (a message-only
 /// <c>GenericResult.Failure(IGenericMessage)</c>, or a <c>Failure</c> carrying a different
 /// <see cref="Fdw.Results.Abstractions.IResultCode"/>) is treated as a hard error and propagated without
 /// falling through. Implementations that merely log-and-fail with a plain message for "not mine" will
@@ -45,12 +46,12 @@ public interface IExternalIdentityProvisioner : IServiceOption
     /// lookup path, not this provisioner). See the NOT-FOUND CONTRACT on this interface's remarks for
     /// the required failure shape when this provisioner does not recognize the subject.
     /// </summary>
-    /// <param name="provider">The external identity provider name (e.g. the configured Oidc provider's <c>Name</c>).</param>
+    /// <param name="issuer">The issuer that proved the subject — the token's <c>iss</c>, which is what a binding row is matched on. Not a flow's name and not an authority's display name.</param>
     /// <param name="externalSubject">The external subject identifier (the IdP's <c>sub</c> claim).</param>
     /// <param name="externalPrincipal">The already-validated external principal, for reading claims (email, display name, ...) needed to provision the user.</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>
     Task<IGenericResult<Guid>> Provision(
-        string provider,
+        string issuer,
         string externalSubject,
         ClaimsPrincipal externalPrincipal,
         CancellationToken cancellationToken = default);

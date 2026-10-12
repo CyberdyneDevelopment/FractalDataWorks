@@ -30,4 +30,15 @@ public interface ISqlErrorHandler : ITypeOption<int, SqlErrorHandlerBase>
     /// <param name="commandText">The SQL command text that failed.</param>
     /// <returns>A generic message describing the failure.</returns>
     IGenericMessage CreateFailureMessage(ILogger logger, Exception ex, string commandText);
+
+    /// <summary>
+    /// Creates every message a failure for this SQL error carries: the structured message, and for an error
+    /// no handler maps, the exception chain flattened after it, so a database error nobody wrote handling
+    /// for still says what the database said.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="ex">The caught exception.</param>
+    /// <param name="commandText">The SQL command text that failed.</param>
+    /// <returns>The messages to return in the failure; the structured message is first.</returns>
+    IReadOnlyList<IGenericMessage> CreateFailureMessages(ILogger logger, Exception ex, string commandText);
 }

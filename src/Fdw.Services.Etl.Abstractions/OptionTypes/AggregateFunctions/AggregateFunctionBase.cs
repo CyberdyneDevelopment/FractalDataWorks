@@ -6,14 +6,13 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 /// <summary>
 /// Base class for aggregate function type options using the CRTP pattern.
 /// </summary>
-public abstract class AggregateFunctionBase : TypeOptionBase<int, AggregateFunctionBase>, IAggregateFunction
+public abstract class AggregateFunctionBase : TypeOptionBase<AggregateFunctionBase>, IAggregateFunction
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregateFunctionBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The function name (e.g., "Sum", "Count").</param>
-    protected AggregateFunctionBase(int id, string name) : base(id, name, "AggregateFunctions")
+    protected AggregateFunctionBase(string name) : base(name, "AggregateFunctions")
     {
     }
 

@@ -22,4 +22,9 @@ public sealed class CreateDataStoreWithPathsRequest
     public string? WriteMode { get; set; }
     /// <summary>Gets or sets the list of paths to create.</summary>
     public IReadOnlyList<DataPathRequest> Paths { get; set; } = Array.Empty<DataPathRequest>();
+    /// <summary>
+    /// Gets or sets a value indicating whether the new store's schema is read from its connection and
+    /// saved with it (FDW-920).
+    /// </summary>
+    public bool Discover { get; set; }
 }

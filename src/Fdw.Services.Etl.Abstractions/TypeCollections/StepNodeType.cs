@@ -14,7 +14,6 @@ public sealed class StepNodeType : OrchestrationNodeTypeBase
     /// <summary>Initializes a new instance of <see cref="StepNodeType"/>.</summary>
     public StepNodeType()
         : base(
-            id: 3,
             name: "Step",
             displayName: "Step",
             typicalDepth: 2,

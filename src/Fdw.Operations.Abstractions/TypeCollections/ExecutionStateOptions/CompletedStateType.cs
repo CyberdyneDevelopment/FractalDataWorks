@@ -15,7 +15,6 @@ public sealed class CompletedStateType : ExecutionStateTypeBase
     /// </summary>
     public CompletedStateType()
         : base(
-            id: 20,
             name: "Completed",
             displayName: "Completed",
             isTerminal: true,

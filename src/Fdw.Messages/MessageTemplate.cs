@@ -18,8 +18,6 @@ where TSeverity : Enum
     /// <value>The unique identifier for this message type.</value>
     public int Id { get; }
 
-    object ITypeOption.Id => Id;
-
     /// <summary>
     /// Gets the name of this message type.
     /// </summary>

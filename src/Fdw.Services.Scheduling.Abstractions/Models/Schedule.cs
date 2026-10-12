@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Conventions;
 using Fdw.Results;
 using Fdw.Services.Scheduling.Abstractions.Logging;
+using Fdw.Services.Scheduling.Abstractions.OptionTypes.TriggerTypeImplementations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -159,6 +160,16 @@ public sealed class Schedule : IGenericSchedule
 
     /// <inheritdoc/>
     public IReadOnlyDictionary<string, object>? Metadata { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>This model carries only a cron expression, so what it describes is a Cron trigger.</remarks>
+    public string TriggerType => nameof(Cron);
+
+    /// <inheritdoc/>
+    public int? IntervalSeconds => null;
+
+    /// <inheritdoc/>
+    public DateTime? ExecuteAtUtc => null;
 
     #endregion
 

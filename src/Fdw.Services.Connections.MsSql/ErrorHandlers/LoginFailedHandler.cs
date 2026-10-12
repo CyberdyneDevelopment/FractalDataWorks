@@ -19,7 +19,7 @@ public sealed class LoginFailedHandler : SqlErrorHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="LoginFailedHandler"/> class.
     /// </summary>
-    public LoginFailedHandler() : base(3, "LoginFailed") { }
+    public LoginFailedHandler() : base("LoginFailed") { }
 
     /// <inheritdoc />
     public override IReadOnlyList<int> SqlErrorNumbers => [18456];

@@ -33,7 +33,6 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear code generation: validate inputs, build interface via StringBuilder
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateInterfaceCommand command,
         Solution solution,
@@ -174,5 +173,4 @@ public sealed class GenerateInterfaceTranslator : RoslynCommandTranslatorBase<Ge
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 }

@@ -90,12 +90,12 @@ This violates the TypeOption pattern architecture. Access instances via collecti
         bool inheritsFromServiceType = InheritsFromGenericType(containingType, serviceTypeBase) ||
                                         InheritsFromGenericType(containingType, serviceTypeBase5);
 
-        // Also check if the type has [TypeOption] or [ServiceTypeOption] attribute
+        // Also check if the type has [TypeOption] or [Implementation] attribute
         var hasTypeOptionAttribute = containingType.GetAttributes()
             .Any(attr => string.Equals(attr.AttributeClass?.Name, "TypeOptionAttribute", StringComparison.Ordinal) ||
                          string.Equals(attr.AttributeClass?.Name, "TypeOption", StringComparison.Ordinal) ||
-                         string.Equals(attr.AttributeClass?.Name, "ServiceTypeOptionAttribute", StringComparison.Ordinal) ||
-                         string.Equals(attr.AttributeClass?.Name, "ServiceTypeOption", StringComparison.Ordinal));
+                         string.Equals(attr.AttributeClass?.Name, "ImplementationAttribute", StringComparison.Ordinal) ||
+                         string.Equals(attr.AttributeClass?.Name, "Implementation", StringComparison.Ordinal));
 
         if (inheritsFromTypeOption || inheritsFromServiceType || hasTypeOptionAttribute)
         {

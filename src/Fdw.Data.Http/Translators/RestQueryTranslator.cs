@@ -24,10 +24,8 @@ public sealed class RestQueryTranslator : IDataCommandTranslator<HttpRequestMess
     }
 
     /// <inheritdoc/>
-    public int Id => 1;
-
-    /// <inheritdoc/>
-    object ITypeOption.Id => Id;
+    /// <remarks>Derived from this translator's fully qualified type name, like every type option's id.</remarks>
+    public int Id { get; } = OptionId.DeriveInt(typeof(RestQueryTranslator).FullName!);
 
     /// <inheritdoc/>
     public string Name => "RestQuery";

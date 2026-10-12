@@ -9,7 +9,7 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(DurationUnitTypes), "Days")]
 public sealed class DaysDurationUnitType : DurationUnitTypeBase
 {
-    public DaysDurationUnitType() : base(3, "Days") { }
+    public DaysDurationUnitType() : base("Days") { }
 
     /// <inheritdoc/>
     public override TimeSpan ToTimeSpan(double amount) => TimeSpan.FromDays(amount);

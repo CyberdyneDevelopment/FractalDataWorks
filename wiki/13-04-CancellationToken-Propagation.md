@@ -71,7 +71,7 @@ These do **not** need `CancellationToken`:
 | Category | Reason |
 |----------|--------|
 | SignalR hub client interfaces (`ICalculationHubClient`, etc.) | SignalR manages cancellation internally |
-| Blazor event handlers (`HandleChange`, `HandleInput`) | UI framework manages lifecycle |
+| UI event handlers (`HandleChange`, `HandleInput`) | UI framework manages lifecycle |
 | Synchronous methods | No async operations to cancel |
 | `Task.CompletedTask` returns | No actual async work |
 

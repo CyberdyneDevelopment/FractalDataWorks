@@ -15,9 +15,13 @@ public abstract class CreateScheduleRequestValidator : FdwEndpointValidator<Crea
     {
         ValidateName(x => x.Name);
 
+        RuleFor(x => x.PipelineId)
+            .NotEmpty()
+            .WithMessage("PipelineId is required");
+
         RuleFor(x => x.PipelineName)
             .NotEmpty()
-            .WithMessage("PipelineName is required");
+            .WithMessage("PipelineName is required with PipelineId");
 
         RuleFor(x => x.SchedulerType)
             .NotEmpty()

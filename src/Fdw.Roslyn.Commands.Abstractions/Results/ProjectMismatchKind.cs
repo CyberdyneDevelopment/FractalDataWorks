@@ -13,5 +13,5 @@ public sealed class ProjectMismatchKind : MismatchKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectMismatchKind"/> class.
     /// </summary>
-    public ProjectMismatchKind() : base(2, "Project") { }
+    public ProjectMismatchKind() : base("Project") { }
 }

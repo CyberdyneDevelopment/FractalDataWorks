@@ -17,7 +17,6 @@ public sealed class ScheduledStateType : ExecutionStateTypeBase
     /// </summary>
     public ScheduledStateType()
         : base(
-            id: 1,
             name: "Scheduled",
             displayName: "Scheduled",
             isTerminal: false,

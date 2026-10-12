@@ -81,7 +81,7 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
         }
 
         var tenant = tenantResult.Value;
-        var isAdmin = _systemRoleConfiguration.IsInRole(User, _systemRoleConfiguration.AdminRoleName);
+        var isAdmin = _systemRoleConfiguration.IsPlatformAdmin(User);
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (!isAdmin && !string.IsNullOrEmpty(userId))

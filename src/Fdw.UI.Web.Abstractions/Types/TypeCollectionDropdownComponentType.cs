@@ -13,5 +13,5 @@ public sealed class TypeCollectionDropdownComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="TypeCollectionDropdownComponentType"/> class.
     /// </summary>
-    public TypeCollectionDropdownComponentType() : base(12, "TypeCollectionDropdown", "TypeCollection Dropdown", "Complex", "TypeCollection reference dropdown") { }
+    public TypeCollectionDropdownComponentType() : base("TypeCollectionDropdown", "TypeCollection Dropdown", "Complex", "TypeCollection reference dropdown") { }
 }

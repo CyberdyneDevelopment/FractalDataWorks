@@ -14,5 +14,5 @@ public sealed class PausedExecutionStatus : WorkflowExecutionStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PausedExecutionStatus"/> class.
     /// </summary>
-    public PausedExecutionStatus() : base(2, "Paused", isTerminal: false, isSuccess: false, isFailure: false) { }
+    public PausedExecutionStatus() : base("Paused", isTerminal: false, isSuccess: false, isFailure: false) { }
 }

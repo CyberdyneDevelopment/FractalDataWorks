@@ -79,4 +79,9 @@ public interface IExecutionItem
     /// Gets the result message if execution completed with a message.
     /// </summary>
     string? ResultMessage { get; }
+
+    /// <summary>
+    /// Gets the tenant the execution belongs to. A child always belongs to its root's tenant.
+    /// </summary>
+    Guid TenantId { get; }
 }

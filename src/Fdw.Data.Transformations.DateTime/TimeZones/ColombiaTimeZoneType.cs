@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Colombia")]
 public sealed class ColombiaTimeZoneType : TimeZoneTypeBase
 {
-    public ColombiaTimeZoneType() : base(21, "Colombia", "SA Pacific Standard Time") { }
+    public ColombiaTimeZoneType() : base("Colombia", "SA Pacific Standard Time") { }
 }

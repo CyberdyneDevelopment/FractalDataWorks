@@ -52,9 +52,9 @@ public sealed class NullService : IGenericService
 
     /// <inheritdoc />
     /// <remarks>
-    /// <c>_Empty</c>, the same identity a TypeCollection's generated <c>NotFound</c> sentinel
+    /// <c>NotFound</c>, the same identity a TypeCollection's generated <c>NotFound</c> sentinel
     /// carries. Both answer the same question — "there is nothing here" — and reading the same way
-    /// is the point: an <c>_Empty</c> in a log or a diagnostic means a sentinel was reached, not
+    /// is the point: a <c>NotFound</c> in a log or a diagnostic means a sentinel was reached, not
     /// that a real thing was misnamed.
     /// </remarks>
     public string Id => SentinelName;
@@ -65,7 +65,7 @@ public sealed class NullService : IGenericService
     /// <summary>
     /// The identity every sentinel in the framework carries.
     /// </summary>
-    private const string SentinelName = "_Empty";
+    private const string SentinelName = "NotFound";
 
     /// <summary>
     /// Gets a value indicating whether this service is available. Always false.

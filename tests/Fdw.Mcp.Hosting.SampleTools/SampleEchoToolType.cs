@@ -13,7 +13,7 @@ namespace Fdw.Mcp.Hosting.SampleTools;
 public sealed class SampleEchoToolType : McpToolTypeBase
 {
     /// <summary>Initializes the sample tool declaration.</summary>
-    public SampleEchoToolType() : base(1, "SampleEcho") { }
+    public SampleEchoToolType() : base("SampleEcho") { }
 
     /// <inheritdoc />
     public override Type ToolClass => typeof(SampleEchoTool);

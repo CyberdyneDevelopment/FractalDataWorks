@@ -32,19 +32,6 @@ public class IEtlRowMapperConfigurationTests
         interfaces.ShouldContain(typeof(IGenericConfiguration));
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void IEtlRowMapperConfigurationHasMapperTypeProperty()
-    {
-        // Act
-        var property = typeof(EtlRowMapperConfiguration).GetProperty(nameof(EtlRowMapperConfiguration.MapperType));
-
-        // Assert
-        property.ShouldNotBeNull();
-        property.PropertyType.ShouldBe(typeof(string));
-        property.CanRead.ShouldBeTrue();
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -74,14 +61,4 @@ public class IEtlRowMapperConfigurationTests
         property.CanRead.ShouldBeTrue();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void IEtlRowMapperConfigurationHasCorrectNumberOfDeclaredProperties()
-    {
-        var properties = typeof(EtlRowMapperConfiguration).GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
-        properties.ShouldContain(p => p.Name == nameof(EtlRowMapperConfiguration.MapperType));
-        properties.ShouldContain(p => p.Name == nameof(EtlRowMapperConfiguration.EnablePooling));
-        properties.ShouldContain(p => p.Name == nameof(EtlRowMapperConfiguration.MaxPoolSize));
-    }
 }

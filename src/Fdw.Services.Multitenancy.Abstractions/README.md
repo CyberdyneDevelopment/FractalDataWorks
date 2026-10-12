@@ -11,7 +11,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IMutableOrgContext` | interface | Mutable org context for setting the current organization during request processing. Set by… |
 | `IMutableTenantContext` | interface | Mutable tenant context for setting the current tenant. |
 | `IOrgContext` | interface | Provides access to the current organization context. Scoped per-request. Resolved after tenant context… |
-| `IOrganizationProvider` | interface | Provides access to organization records backed by tenant.Organizations. |
+| `IOrganizationProvider` | interface | Provides access to organization records backed by tenant.Organization. |
 | `IRequestTenantInfo` | interface | Provides access to the current tenant context from HTTP request. |
 | `ITenant` | interface | Represents a tenant in a multi-tenant system. Tenants are registered via configuration and can have… |
 | `ITenantContext` | interface | Provides access to the current tenant context. Scoped per-request in web scenarios. |
@@ -36,7 +36,7 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `MutableTenantContext` | class | Request-scoped tenant context implementation. |
 | `NullOrganizationProvider` | class | Null-object implementation of . Registered when multitenancy is disabled. All queries return failure so… |
 | `NullTenantProvider` | class | Null-object implementation of , registered by the SingleTenant multitenancy option. All operations… |
-| `OrganizationConfiguration` | class | Configuration for an organization within a tenant. Maps to tenant.Organizations. Each tenant has one or… |
+| `OrganizationConfiguration` | class | Configuration for an organization within a tenant. Maps to tenant.Organization. Each tenant has one or… |
 | `SetDefaultTenantResponse` | class | Response confirming the new default tenant. |
 | `SwitchTenantRequest` | class | Request to switch the current user's active tenant. |
 | `SwitchTenantResponse` | class | Response for tenant switch operation. |

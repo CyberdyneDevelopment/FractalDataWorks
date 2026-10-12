@@ -13,7 +13,7 @@ public sealed class CompilationCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="CompilationCommandCategory"/> class.
     /// </summary>
     public CompilationCommandCategory()
-        : base(2, "Compilation", "Compilation commands for building, emitting assemblies, and syntax validation")
+        : base("Compilation", "Compilation commands for building, emitting assemblies, and syntax validation")
     {
     }
 }

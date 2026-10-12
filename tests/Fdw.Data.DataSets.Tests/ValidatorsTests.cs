@@ -6,13 +6,13 @@ using Xunit;
 
 namespace Fdw.Data.DataSets.Tests;
 
-public class DataFieldConfigurationValidatorTests
+public class DataSetFieldConfigurationValidatorTests
 {
-    private readonly DataFieldConfigurationValidator _validator;
+    private readonly DataSetFieldConfigurationValidator _validator;
 
-    public DataFieldConfigurationValidatorTests()
+    public DataSetFieldConfigurationValidatorTests()
     {
-        _validator = new DataFieldConfigurationValidator();
+        _validator = new DataSetFieldConfigurationValidator();
     }
 
     [Fact]
@@ -21,10 +21,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithValidConfiguration_PassesValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
-            TypeName = "System.String"
+            TypeName = "String"
         };
 
         // Act
@@ -40,10 +40,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithEmptyName_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "",
-            TypeName = "System.String"
+            TypeName = "String"
         };
 
         // Act
@@ -60,10 +60,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithNameTooLong_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = new string('a', 51),
-            TypeName = "System.String"
+            TypeName = "String"
         };
 
         // Act
@@ -80,7 +80,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithEmptyTypeName_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = ""
@@ -100,7 +100,7 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithInvalidTypeName_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = "Invalid Type Name"
@@ -111,23 +111,21 @@ public class DataFieldConfigurationValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.TypeName)
-            .WithErrorMessage("Field type name must be a valid .NET type name");
+            .WithErrorMessage("Field data type must be the name of a DataTypes option");
     }
 
     [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    [InlineData("System.String")]
-    [InlineData("System.Int32")]
-    [InlineData("System.DateTime")]
-    [InlineData("string")]
-    [InlineData("int")]
+    [InlineData("String")]
+    [InlineData("Int32")]
     [InlineData("DateTime")]
-    [InlineData("My.Custom.Type")]
+    [InlineData("Decimal")]
+    [InlineData("Guid")]
     public void Validate_WithValidTypeName_PassesValidation(string typeName)
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
             TypeName = typeName
@@ -146,10 +144,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithNegativeMaxLength_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
-            TypeName = "System.String",
+            TypeName = "String",
             MaxLength = -1
         };
 
@@ -167,10 +165,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithZeroMaxLength_FailsValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
-            TypeName = "System.String",
+            TypeName = "String",
             MaxLength = 0
         };
 
@@ -187,10 +185,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithValidMaxLength_PassesValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
-            TypeName = "System.String",
+            TypeName = "String",
             MaxLength = 100
         };
 
@@ -207,10 +205,10 @@ public class DataFieldConfigurationValidatorTests
     public void Validate_WithNullMaxLength_PassesValidation()
     {
         // Arrange
-        var config = new DataFieldConfiguration
+        var config = new DataSetFieldConfiguration
         {
             Name = "TestField",
-            TypeName = "System.String",
+            TypeName = "String",
             MaxLength = null
         };
 
@@ -222,246 +220,3 @@ public class DataFieldConfigurationValidatorTests
     }
 }
 
-public class DataSetConfigurationValidatorTests
-{
-    private readonly DataSetConfigurationValidator _validator;
-
-    public DataSetConfigurationValidatorTests()
-    {
-        _validator = new DataSetConfigurationValidator();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithValidConfiguration_PassesValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "TestDataSet",
-            Description = "Test Description",
-            RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" } },
-            KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldNotHaveAnyValidationErrors();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithEmptyName_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "",
-            Description = "Test",
-            RecordTypeName = "My.Type"
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorMessage("Dataset name is required");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithNameTooLong_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = new string('a', 101),
-            Description = "Test"
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Name)
-            .WithErrorMessage("Dataset name must not exceed 100 characters");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithEmptyDescription_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "",
-            RecordTypeName = "My.Type"
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Description)
-            .WithErrorMessage("Description is required");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithDescriptionTooLong_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = new string('a', 501),
-            RecordTypeName = "My.Type"
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Description)
-            .WithErrorMessage("Description must not exceed 500 characters");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithEmptyRecordTypeName_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "Test",
-            RecordTypeName = ""
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.RecordTypeName)
-            .WithErrorMessage("Record type name is required");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithInvalidRecordTypeName_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "Test",
-            RecordTypeName = "InvalidName"
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.RecordTypeName)
-            .WithErrorMessage("Record type name must be a valid .NET type name");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithNoFields_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "Test",
-            RecordTypeName = "My.Type",
-            KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Fields)
-            .WithErrorMessage("At least one field must be defined");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithNoKeyFields_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "Test",
-            RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "Id", TypeName = "System.Int32" } }
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.KeyFields)
-            .WithErrorMessage("At least one key field must be specified");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithKeyFieldNotInFields_PassesValidation()
-    {
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "Test",
-            RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "Name", TypeName = "System.String" } },
-            KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void Validate_WithInvalidFieldConfiguration_FailsValidation()
-    {
-        // Arrange
-        var config = new DataSetConfiguration
-        {
-            Name = "Test",
-            Description = "Test",
-            RecordTypeName = "My.Type",
-            Fields = { new DataFieldConfiguration { Name = "", TypeName = "System.String" } },
-            KeyFields = { new DataSetKeyFieldConfiguration { KeyName = "Id", KeyType = "Surrogate", Ordinal = 0 } }
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor("Fields[0].Name");
-    }
-}

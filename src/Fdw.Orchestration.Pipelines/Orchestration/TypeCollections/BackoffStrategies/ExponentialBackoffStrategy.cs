@@ -22,7 +22,6 @@ public sealed class ExponentialBackoffStrategy : BackoffStrategyBase
     /// </summary>
     public ExponentialBackoffStrategy()
         : base(
-            id: 3,
             name: "Exponential",
             initialDelay: TimeSpan.FromSeconds(1),
             maxDelay: TimeSpan.FromMinutes(2),

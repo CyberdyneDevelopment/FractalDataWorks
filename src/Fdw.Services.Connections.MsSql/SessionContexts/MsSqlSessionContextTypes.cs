@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Collections;
@@ -14,46 +15,44 @@ namespace Fdw.Services.Connections.MsSql;
 /// <para>
 /// <b>This is one scheme, not "the MsSql session contexts".</b> Connection <i>kind</i> and
 /// session-context <i>scheme</i> are separate axes: two consumers can both talk to SQL Server and
-/// disagree completely about what a session context carries. These three options are the reference
+/// disagree completely about what a session context carries. These four options are the reference
 /// design expressed as code, and each is a clause-level contract with
 /// <c>security.fn_TenantFilter</c> <b>as deployed</b> in <c>databases/ConfigurationDb/security/</c>:
 /// </para>
 /// <list type="bullet">
 ///   <item>
-///     <b><see cref="SystemContext"/></b> — sets <b>nothing at all</b>. It is elevation only because
-///     Mode 1 (<c>fn_TenantFilter.sql:44</c>) keys off <c>SESSION_CONTEXT('UserId') IS NULL</c>:
-///     the elevation <i>is</i> the absence of a key. There is no <c>SystemContext</c> key. This is
-///     also why "apply no session context" and "full system elevation" are indistinguishable on the
-///     wire — a fact any future per-connection participation rule has to reckon with.
+///     <b><see cref="SystemContext"/></b> — <c>System = '1'</c>, plus <c>TenantId</c> when the
+///     elevation is working for a tenant. System is a positive assertion: a connection that sets no
+///     keys at all sees nothing, so skipping this layer can never read as elevation (FDW-825).
 ///   </item>
 ///   <item>
-///     <b><see cref="ForUser"/></b> — the <c>UserId</c> / <c>TenantId</c> / <c>CrossTenant</c> /
-///     <c>CanReadSecrets</c> key set. Four names but at most three keys: <c>TenantId</c> XOR
-///     <c>CrossTenant</c>, because Modes 3 and 2 are alternatives, never both. The exclusion is part
-///     of the contract, not an implementation detail.
+///     <b><see cref="ForUser"/></b> — the <c>UserId</c> / <c>TenantId</c>
+///     key set. <c>TenantId</c> is the tenant the caller acts in; acting in the global tenant is what
+///     sees every tenant.
 ///   </item>
 ///   <item>
 ///     <b><see cref="Deny"/></b> — <c>UserId</c> = <see cref="AuthConstants.NoAccessPrincipalId"/>
 ///     and nothing else. Its deny-ness is <b>emergent, not declared</b>: that Guid appears nowhere in
 ///     <c>databases/</c> — no predicate, no policy, no seed row knows it. It denies because it holds
-///     zero rows in <c>tenant.TenantOrgAccess</c>. A different scheme gets a silently different
-///     verdict from the identical option.
+///     no membership in <c>tenant.UserTenantsConfiguration</c>. A different scheme gets a silently
+///     different verdict from the identical option.
 ///   </item>
 /// </list>
 /// <para>
-/// <b><see cref="Deny"/> is not deny-<i>everywhere</i>.</b> <c>fn_TenantFilter.sql:48-51</c> admits
-/// shared/system rows (<c>TenantId IS NULL AND VisibilityGroupId IS NULL</c>) with no session-context
-/// test at all. The deny principal sees exactly those, same as any other tenant-less caller. It is
-/// denied every <i>tenant-scoped</i> branch, which is a narrower claim.
+/// <b><see cref="Deny"/> is not deny-<i>everywhere</i>.</b> <c>fn_TenantFilter</c> admits shared rows
+/// (owned by the global or the default tenant, no visibility group) to any identified caller. The
+/// deny principal sees exactly those, same as any other tenant-less caller. It is denied every
+/// <i>tenant-scoped</i> branch and every write, which is a narrower claim.
 /// </para>
 /// <para>
-/// <b>Replacing this collection replaces that contract wholesale</b> — including the system-bypass
-/// behaviour, which is a property of Mode 1 specifically and not of session contexts in general. A
+/// <b>Replacing this collection replaces that contract wholesale</b> — including the system
+/// elevation, which is a property of the <c>System</c> key specifically and not of session
+/// contexts in general. A
 /// consumer running a different predicate, different key names, a tenancy model that is not
-/// tenant+org, or an approach that is not <c>SESSION_CONTEXT</c> at all does not want these three
+/// tenant+org, or an approach that is not <c>SESSION_CONTEXT</c> at all does not want these four
 /// options adjusted; they want a different list. So they point their connection type's
 /// <c>SessionContextTypes</c> at their own collection and inherit none of these assumptions, rather
-/// than adding a fourth option that must coexist with three that mean things they did not choose.
+/// than adding a fourth option that must coexist with four that mean things they did not choose.
 /// </para>
 /// <para>
 /// Correspondingly, <b>no code outside this package may read <c>SessionContextTypes</c> assuming
@@ -67,6 +66,12 @@ namespace Fdw.Services.Connections.MsSql;
 public abstract partial class MsSqlSessionContextTypes : TypeCollectionBase<MsSqlSessionContextBase, ISessionContext>
 {
     /// <summary>
+    /// The longest a result read under a user's session may be replayed from cache, which is how
+    /// long a revocation may take to bite. A deployment sets this before the host starts.
+    /// </summary>
+    public static TimeSpan RevocationCacheCeiling { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// Gets the session context that governs <paramref name="authenticationContext"/>.
     /// </summary>
     /// <remarks>
@@ -78,7 +83,7 @@ public abstract partial class MsSqlSessionContextTypes : TypeCollectionBase<MsSq
     /// Why <c>Single</c> and not <c>First</c>, and why there is no "nothing matched" branch:
     /// <see cref="MsSqlSessionContextBase.Governs"/> partitions the space of authentication contexts
     /// exhaustively and exclusively — <see cref="Deny"/>'s predicate is the explicit complement of
-    /// the other two, so exactly one option governs any input including <see langword="null"/>. The
+    /// the other three, so exactly one option governs any input including <see langword="null"/>. The
     /// selection is therefore order-independent (registration order of a TypeCollection is not a
     /// contract) and needs no fallback. <c>Single</c> states that invariant rather than quietly
     /// picking a winner if a future edit broke it.

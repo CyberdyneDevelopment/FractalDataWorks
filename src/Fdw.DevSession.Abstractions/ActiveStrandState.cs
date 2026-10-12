@@ -9,5 +9,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class ActiveStrandState : StrandStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="ActiveStrandState"/> class.</summary>
-    public ActiveStrandState() : base(1, "Active", isTerminal: false) { }
+    public ActiveStrandState() : base("Active", isTerminal: false) { }
 }

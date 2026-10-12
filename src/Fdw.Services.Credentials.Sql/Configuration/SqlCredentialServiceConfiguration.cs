@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -8,15 +9,15 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 
 /// <summary>
 /// Typed body configuration for the SQL credential service implementation.
-/// Persisted to <c>sec.SqlCredentialService</c> as a child of <c>sec.CredentialService</c>
-/// via <see cref="CredentialServiceId"/>.
+/// Persisted to <c>sec.SqlCredentialServiceConfiguration</c> as a child of <c>sec.CredentialService</c>
+/// via <c>CredentialServiceRowId</c>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Carries the credential policy that previously lived in the deleted
 /// <c>AuthenticationSql</c> / <c>PersonalAccessToken</c> appsettings sections:
 /// the credential vault name, the secret manager + HMAC key name for PAT hashing, the
-/// environment segment, and the per-user token limit. Nothing credential-related remains in
+/// minted credential prefix, the environment segment, and the per-user token limit. Nothing credential-related remains in
 /// appsettings — these values are runtime configuration rows inside ConfigurationDb.
 /// </para>
 /// </remarks>
@@ -25,6 +26,14 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 [ManagedConfiguration(ServiceCategory = "CredentialService", ServiceType = "Sql")]
 public partial class SqlCredentialServiceConfiguration : ICredentialServiceImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
     // IGenericConfiguration — typed body identity
     // ========================================
@@ -34,6 +43,13 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// </summary>
     public Guid Id { get; set; }
 
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether this is the current (active) version.
@@ -45,24 +61,9 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// </summary>
     public bool IsDeleted { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by CredentialServiceId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "CredentialServices";
-    string IGenericConfiguration.ServiceType => "CredentialService";
-    string? IGenericConfiguration.ServiceOptionType => "Sql";
-
     // ========================================
     // ICredentialServiceImplementationConfiguration
     // ========================================
-
-    /// <summary>
-    /// Gets or sets the FK to <c>sec.CredentialService.Id</c> (the parent header row).
-    /// </summary>
-    public Guid CredentialServiceId { get; set; }
 
     // ========================================
     // Credential policy (was AuthenticationSql / PersonalAccessToken appsettings)
@@ -85,6 +86,17 @@ public partial class SqlCredentialServiceConfiguration : ICredentialServiceImple
     /// Required — a missing value fails loud on first token hash/verify, no default.
     /// </summary>
     public string? HmacKeySecretName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the leading text of every agent key and personal access token this service mints
+    /// (e.g. <c>fdx_</c>). Agent keys continue with <c>agent_</c>, personal access tokens with
+    /// <see cref="Environment"/>. Required — a missing value fails loud on first credential operation, no default.
+    /// </summary>
+    /// <remarks>
+    /// A presented credential is told apart as an agent key by this prefix, so changing it stops every
+    /// credential minted under the old one from authenticating.
+    /// </remarks>
+    public string? CredentialPrefix { get; set; }
 
     /// <summary>
     /// Gets or sets the environment segment embedded in generated token values (e.g. <c>prod</c>, <c>dev</c>).

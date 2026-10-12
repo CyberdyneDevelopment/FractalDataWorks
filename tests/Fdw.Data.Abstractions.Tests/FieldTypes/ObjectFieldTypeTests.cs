@@ -19,7 +19,7 @@ public sealed class ObjectFieldTypeTests
             {
                 Name = "Name",
                 FieldType = new SimpleFieldType { TypeName = "String", ClrType = typeof(string) },
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             }
         };
 
@@ -118,19 +118,19 @@ public sealed class ObjectFieldTypeTests
             {
                 Name = "Id",
                 FieldType = new SimpleFieldType { TypeName = "Integer", ClrType = typeof(int) },
-                Role = PropertyRoles.Surrogate
+                Role = DatumTypes.DbKey
             },
             new Field
             {
                 Name = "Name",
                 FieldType = new SimpleFieldType { TypeName = "String", ClrType = typeof(string) },
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             },
             new Field
             {
                 Name = "Active",
                 FieldType = new SimpleFieldType { TypeName = "Boolean", ClrType = typeof(bool) },
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             }
         };
 
@@ -161,7 +161,7 @@ public sealed class ObjectFieldTypeTests
             {
                 Name = "Street",
                 FieldType = new SimpleFieldType { TypeName = "String", ClrType = typeof(string) },
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             }
         };
 
@@ -178,13 +178,13 @@ public sealed class ObjectFieldTypeTests
             {
                 Name = "Name",
                 FieldType = new SimpleFieldType { TypeName = "String", ClrType = typeof(string) },
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             },
             new Field
             {
                 Name = "Address",
                 FieldType = addressType,
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             }
         };
 
@@ -256,7 +256,7 @@ public sealed class ObjectFieldTypeTests
             {
                 Name = "TestField",
                 FieldType = new SimpleFieldType { TypeName = "String", ClrType = typeof(string) },
-                Role = PropertyRoles.Attribute
+                Role = DatumTypes.Attribute
             }
         };
 

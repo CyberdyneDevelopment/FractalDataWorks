@@ -23,8 +23,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void OAuth2AuthenticationMethodCarriesDeclaredData()
     {
         var sut = new OAuth2AuthenticationMethod();
-
-        sut.Id.ShouldBe(1);
         sut.Name.ShouldBe("OAuth2");
         sut.RequiresUserInteraction.ShouldBeTrue();
         sut.SupportsTokenRefresh.ShouldBeTrue();
@@ -39,8 +37,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void FormBasedAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new FormBasedAuthenticationMethod();
-
-        sut.Id.ShouldBe(2);
         sut.Name.ShouldBe("FormBased");
         sut.RequiresUserInteraction.ShouldBeTrue();
         sut.SupportsTokenRefresh.ShouldBeFalse();
@@ -55,8 +51,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void BearerTokenAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new BearerTokenAuthenticationMethod();
-
-        sut.Id.ShouldBe(3);
         sut.Name.ShouldBe("BearerToken");
         sut.RequiresUserInteraction.ShouldBeFalse();
         sut.SupportsTokenRefresh.ShouldBeTrue();
@@ -71,8 +65,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void ApiKeyAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new ApiKeyAuthenticationMethod();
-
-        sut.Id.ShouldBe(4);
         sut.Name.ShouldBe("ApiKey");
         sut.RequiresUserInteraction.ShouldBeFalse();
         sut.SupportsTokenRefresh.ShouldBeFalse();
@@ -87,8 +79,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void CertificateAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new CertificateAuthenticationMethod();
-
-        sut.Id.ShouldBe(5);
         sut.Name.ShouldBe("Certificate");
         sut.RequiresUserInteraction.ShouldBeFalse();
         sut.SupportsTokenRefresh.ShouldBeFalse();
@@ -103,8 +93,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void ManagedIdentityAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new ManagedIdentityAuthenticationMethod();
-
-        sut.Id.ShouldBe(6);
         sut.Name.ShouldBe("ManagedIdentity");
         sut.RequiresUserInteraction.ShouldBeFalse();
         sut.SupportsTokenRefresh.ShouldBeTrue();
@@ -119,8 +107,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void OpenIdConnectAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new OpenIDConnectAuthenticationMethod();
-
-        sut.Id.ShouldBe(7);
         sut.Name.ShouldBe("OpenIDConnect");
         sut.RequiresUserInteraction.ShouldBeTrue();
         sut.SupportsTokenRefresh.ShouldBeTrue();
@@ -135,8 +121,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void JwtAuthenticationMethodCarriesDeclaredData()
     {
         var sut = new JwtAuthenticationMethod();
-
-        sut.Id.ShouldBe(2);
         sut.Name.ShouldBe("JWT");
         sut.RequiresUserInteraction.ShouldBeFalse();
         sut.SupportsTokenRefresh.ShouldBeFalse();
@@ -153,8 +137,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void AuthorizationCodeFlowCarriesDeclaredData()
     {
         var sut = new AuthorizationCodeFlow();
-
-        sut.Id.ShouldBe(1);
         sut.Name.ShouldBe("AuthorizationCode");
         sut.RequiresUserInteraction.ShouldBeTrue();
         sut.SupportsRefreshTokens.ShouldBeTrue();
@@ -167,8 +149,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void ClientCredentialsFlowCarriesDeclaredData()
     {
         var sut = new ClientCredentialsFlow();
-
-        sut.Id.ShouldBe(2);
         sut.Name.ShouldBe("ClientCredentials");
         sut.RequiresUserInteraction.ShouldBeFalse();
         sut.SupportsRefreshTokens.ShouldBeFalse();
@@ -181,8 +161,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void InteractiveFlowCarriesDeclaredData()
     {
         var sut = new InteractiveFlow();
-
-        sut.Id.ShouldBe(3);
         sut.Name.ShouldBe("Interactive");
         sut.RequiresUserInteraction.ShouldBeTrue();
         sut.SupportsRefreshTokens.ShouldBeTrue();
@@ -195,8 +173,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void DeviceCodeFlowCarriesDeclaredData()
     {
         var sut = new DeviceCodeFlow();
-
-        sut.Id.ShouldBe(4);
         sut.Name.ShouldBe("DeviceCode");
         sut.RequiresUserInteraction.ShouldBeTrue();
         sut.SupportsRefreshTokens.ShouldBeTrue();
@@ -211,8 +187,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void OAuth2ProtocolCarriesDeclaredData()
     {
         var sut = new OAuth2Protocol();
-
-        sut.Id.ShouldBe(1);
         sut.Name.ShouldBe("OAuth2");
         sut.Version.ShouldBe("2.0");
         sut.RequiresSecureTransport.ShouldBeTrue();
@@ -225,8 +199,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void OpenIdConnectProtocolCarriesDeclaredData()
     {
         var sut = new OpenIDConnectProtocol();
-
-        sut.Id.ShouldBe(2);
         sut.Name.ShouldBe("OpenIDConnect");
         sut.Version.ShouldBe("1.0");
         sut.RequiresSecureTransport.ShouldBeTrue();
@@ -239,8 +211,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void Saml2ProtocolCarriesDeclaredData()
     {
         var sut = new SAML2Protocol();
-
-        sut.Id.ShouldBe(3);
         sut.Name.ShouldBe("SAML2");
         sut.Version.ShouldBe("2.0");
         sut.RequiresSecureTransport.ShouldBeTrue();
@@ -255,8 +225,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void AccessTokenCarriesDeclaredData()
     {
         var sut = new AccessToken();
-
-        sut.Id.ShouldBe(1);
         sut.Name.ShouldBe("AccessToken");
         sut.Format.ShouldBe("JWT");
         sut.CanBeRefreshed.ShouldBeFalse();
@@ -270,8 +238,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void IdTokenCarriesDeclaredData()
     {
         var sut = new IdToken();
-
-        sut.Id.ShouldBe(2);
         sut.Name.ShouldBe("IdToken");
         sut.Format.ShouldBe("JWT");
         sut.CanBeRefreshed.ShouldBeFalse();
@@ -285,8 +251,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void RefreshTokenCarriesDeclaredData()
     {
         var sut = new RefreshToken();
-
-        sut.Id.ShouldBe(3);
         sut.Name.ShouldBe("RefreshToken");
         sut.Format.ShouldBe("Opaque");
         sut.CanBeRefreshed.ShouldBeTrue();
@@ -300,8 +264,6 @@ public sealed class AuthenticationTypeOptionsTests
     public void BearerTokenTypeCarriesDeclaredData()
     {
         var sut = new BearerTokenType();
-
-        sut.Id.ShouldBe(4);
         sut.Name.ShouldBe("BearerToken");
         sut.Format.ShouldBe("JWT");
         sut.CanBeRefreshed.ShouldBeFalse();

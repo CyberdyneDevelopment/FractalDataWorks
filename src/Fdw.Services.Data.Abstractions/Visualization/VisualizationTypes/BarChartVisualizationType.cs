@@ -22,7 +22,7 @@ public sealed class BarChartVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="BarChartVisualizationType"/> class.
     /// </summary>
     public BarChartVisualizationType()
-        : base(2, "BarChart", "Bar Chart", "mdi-chart-bar", SupportedTypes)
+        : base("BarChart", "Bar Chart", "mdi-chart-bar", SupportedTypes)
     {
     }
 

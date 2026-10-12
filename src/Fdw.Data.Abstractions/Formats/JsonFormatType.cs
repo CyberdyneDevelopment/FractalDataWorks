@@ -16,7 +16,6 @@ public sealed class JsonFormatType : FormatTypeBase
     /// </summary>
     public JsonFormatType()
         : base(
-            id: 2,
             name: "Json",
             displayName: "JSON",
             description: "JavaScript Object Notation data format",

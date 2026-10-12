@@ -33,7 +33,6 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve type, build new file, remove from original
     public override async Task<IGenericResult<MutationResult>> Translate(
         MoveToFileCommand command,
         Solution solution,
@@ -188,5 +187,4 @@ public sealed class MoveToFileTranslator : RoslynCommandTranslatorBase<MoveToFil
                 symbolChanges,
                 Array.Empty<PathChange>()));
     }
-#pragma warning restore MA0051
 }

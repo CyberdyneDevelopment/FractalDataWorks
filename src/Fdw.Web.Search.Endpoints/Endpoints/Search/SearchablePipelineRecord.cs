@@ -14,8 +14,8 @@ public class SearchablePipelineRecord
     /// <summary>Gets or sets the pipeline name.</summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the pipeline type (maps to pipe.Pipeline.ServiceOptionType).</summary>
-    [Column("ServiceOptionType")]
+    /// <summary>Gets or sets the pipeline type (maps to pipe.Pipeline.Implementation).</summary>
+    [Column("Implementation")]
     public string PipelineType { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the pipeline description.</summary>

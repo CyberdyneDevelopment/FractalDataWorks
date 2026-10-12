@@ -16,7 +16,7 @@ public sealed class CronExpressionRequiredCode : SchedulingResultCodeBase
     /// </summary>
     public CronExpressionRequiredCode()
         : base(20000, "CronExpressionRequired",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Cron expression is required for Cron triggers",
             isRetryable: false)
     {

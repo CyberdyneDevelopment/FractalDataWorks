@@ -12,7 +12,7 @@ public sealed class ProdEnvironmentType : EnvironmentTypeBase
     /// <summary>
     /// Initializes a new instance of <see cref="ProdEnvironmentType"/>.
     /// </summary>
-    public ProdEnvironmentType() : base(4, "Prod")
+    public ProdEnvironmentType() : base("Prod")
     {
     }
 }

@@ -41,7 +41,7 @@ public sealed class SnapshotRoslynWorkspaceConnection
     /// <param name="configuration">The typed body configuration.</param>
     /// <param name="client">The snapshot workspace client.</param>
     /// <param name="mode">The workspace mode.</param>
-    /// <param name="connectionName">The connection name from the parent ConnectionConfiguration header.</param>
+    /// <param name="connectionName">The connection name from the parent IConnectionImplementationConfiguration header.</param>
     /// <param name="logger">Logger; falls back to NullLogger if null.</param>
     public SnapshotRoslynWorkspaceConnection(
         RoslynWorkspaceConnectionConfiguration configuration,
@@ -98,8 +98,7 @@ public sealed class SnapshotRoslynWorkspaceConnection
     private sealed class NullRoslynTranslator : IDataCommandTranslator<IRoslynWorkspaceCommand>
     {
         public int Id => 0;
-        object Fdw.Collections.ITypeOption.Id => 0;
-        public string Name => "_Empty";
+        public string Name => "NotFound";
         public string Category => "RoslynWorkspace";
         public string DomainName => "RoslynWorkspace";
 

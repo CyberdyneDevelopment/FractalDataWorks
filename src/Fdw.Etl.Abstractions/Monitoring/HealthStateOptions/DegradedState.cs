@@ -14,5 +14,5 @@ public sealed class DegradedState : HealthStateBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DegradedState"/> class.
     /// </summary>
-    public DegradedState() : base(1, "Degraded", isHealthy: false, requiresAttention: true) { }
+    public DegradedState() : base("Degraded", isHealthy: false, requiresAttention: true) { }
 }

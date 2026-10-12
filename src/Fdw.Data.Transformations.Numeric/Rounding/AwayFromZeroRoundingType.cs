@@ -8,7 +8,7 @@ namespace Fdw.Data.Transformations;
 public sealed class AwayFromZeroRoundingType : RoundingTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="AwayFromZeroRoundingType"/> class.</summary>
-    public AwayFromZeroRoundingType() : base(1, "AwayFromZero") { }
+    public AwayFromZeroRoundingType() : base("AwayFromZero") { }
 
     /// <inheritdoc/>
     public override decimal Round(decimal value, int precision) =>

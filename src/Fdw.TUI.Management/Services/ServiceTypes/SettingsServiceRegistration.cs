@@ -13,7 +13,6 @@ public sealed class SettingsServiceRegistration : ManagementServiceRegistrationB
     /// Creates the settings service registration.
     /// </summary>
     public SettingsServiceRegistration() : base(
-        id: 2,
         name: "SettingsService",
         serviceDescription: "Manages application settings and preferences",
         lifetime: ServiceLifetime.Singleton)

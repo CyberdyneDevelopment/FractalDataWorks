@@ -18,6 +18,9 @@ internal static partial class DataflowGraphConfigurationProviderLog
     [MessageLogging(EventId = 11015, Level = LogLevel.Information, Message = "Dataflow graph data loaded: {dataSetCount} dataSets, {dataStoreCount} dataStores, {sourceCount} sources")]
     public static partial IGenericMessage Loaded(ILogger logger, int dataSetCount, int dataStoreCount, int sourceCount);
 
+    [MessageLogging(EventId = 11037, Level = LogLevel.Information, Message = "Dataflow graph scoped to pipelines: {pipelineCount} pipelines reach {reachableDataSetCount} of {dataSetCount} data sets")]
+    public static partial IGenericMessage Scoped(ILogger logger, int pipelineCount, int reachableDataSetCount, int dataSetCount);
+
     [MessageLogging(EventId = 31002, Level = LogLevel.Warning, Message = "Pipeline '{pipelineName}' not found — returning 404")]
     public static partial IGenericMessage PipelineNotFound(ILogger logger, string pipelineName);
 

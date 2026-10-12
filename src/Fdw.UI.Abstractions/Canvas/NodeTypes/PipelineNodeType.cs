@@ -14,7 +14,7 @@ public sealed class PipelineNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="PipelineNodeType"/> class.
     /// </summary>
     public PipelineNodeType()
-        : base(6, "Pipeline", "Pipeline", "Processing", "git-branch")
+        : base("Pipeline", "Pipeline", "Processing", "git-branch")
     {
     }
 }

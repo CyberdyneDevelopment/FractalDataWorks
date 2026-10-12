@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class ConnectionLineageNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ConnectionLineageNodeType"/>.</summary>
-    public ConnectionLineageNodeType() : base(3, "Connection") { }
+    public ConnectionLineageNodeType() : base("Connection") { }
 }

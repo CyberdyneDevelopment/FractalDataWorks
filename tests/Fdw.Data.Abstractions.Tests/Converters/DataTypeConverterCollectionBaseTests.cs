@@ -34,45 +34,6 @@ public sealed class DataTypeConverterCollectionBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void AllThrowsNotSupportedException()
-    {
-        // Arrange
-        var collection = new TestConverterCollection();
-        IDataTypeConverters converters = collection;
-
-        // Act & Assert
-        Should.Throw<NotSupportedException>(() => converters.All());
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ByIdThrowsNotSupportedException()
-    {
-        // Arrange
-        var collection = new TestConverterCollection();
-        IDataTypeConverters converters = collection;
-
-        // Act & Assert
-        Should.Throw<NotSupportedException>(() => converters.ById(1));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ByNameThrowsNotSupportedException()
-    {
-        // Arrange
-        var collection = new TestConverterCollection();
-        IDataTypeConverters converters = collection;
-
-        // Act & Assert
-        Should.Throw<NotSupportedException>(() => converters.ByName("test"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void BySourceTypeThrowsNotSupportedException()
     {
         // Arrange
@@ -81,19 +42,6 @@ public sealed class DataTypeConverterCollectionBaseTests
 
         // Act & Assert
         Should.Throw<NotSupportedException>(() => converters.BySourceType("int"));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NotFoundThrowsNotSupportedException()
-    {
-        // Arrange
-        var collection = new TestConverterCollection();
-        IDataTypeConverters converters = collection;
-
-        // Act & Assert
-        Should.Throw<NotSupportedException>(() => _ = converters.NotFound);
     }
 
     [Fact]

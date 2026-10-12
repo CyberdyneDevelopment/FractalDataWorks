@@ -11,14 +11,6 @@ public sealed class InOperatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsIdToTwelve()
-    {
-        _sut.Id.ShouldBe(12);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ConstructorSetsNameToIn()
     {
         _sut.Name.ShouldBe("In");
@@ -46,14 +38,6 @@ public sealed class InOperatorTests
     public void RequiresValueIsTrue()
     {
         _sut.RequiresValue.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void FormatSqlParameterAddsAtPrefix()
-    {
-        _sut.FormatSqlParameter("Status").ShouldBe("@Status");
     }
 
     [Fact]

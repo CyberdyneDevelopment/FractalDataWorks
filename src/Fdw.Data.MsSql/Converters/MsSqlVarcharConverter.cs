@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlVarcharConverter()
     : DataTypeConverterBase(
-        id: 22,
         name: "Varchar",
         sourceType: "varchar",
         targetClrType: typeof(string),

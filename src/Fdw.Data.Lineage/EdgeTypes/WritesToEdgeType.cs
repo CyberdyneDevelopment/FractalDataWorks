@@ -14,5 +14,5 @@ public sealed class WritesToEdgeType : LineageEdgeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="WritesToEdgeType"/> class.
     /// </summary>
-    public WritesToEdgeType() : base(4, "WritesTo") { }
+    public WritesToEdgeType() : base("WritesTo") { }
 }

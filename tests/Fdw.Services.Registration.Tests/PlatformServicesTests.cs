@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Fdw.ServiceTypes;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Shouldly;
 using Xunit;
 using Fdw.Results;
@@ -91,11 +92,11 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void DeferExcludesDomainFromSweepsButKeepsEntryDotWalkDrivable()
+    public void DeferExcludesDomainFromPassesButKeepsEntryDotWalkDrivable()
     {
-        var swept = new CallCounter();
+        var included = new CallCounter();
         var deferred = new CallCounter();
-        PlatformServices.Add("Swept", swept.Descriptor("Swept", typeof(string)));
+        PlatformServices.Add("Included", included.Descriptor("Included", typeof(string)));
         var deferredEntry = PlatformServices.Add("Declared", deferred.Descriptor("Declared", typeof(int)));
 
         // Claiming the phase without running it: nothing has executed yet.
@@ -109,14 +110,14 @@ public sealed class PlatformServicesTests : IDisposable
         PlatformServices.Register(builder);
         PlatformServices.Initialize(builder.Build());
 
-        // The swept domain runs in the sweep; the deferred domain is skipped by it.
-        swept.RegisterCalls.ShouldBe(1);
-        swept.InitializeCalls.ShouldBe(1);
+        // The included domain runs in the pass; the deferred domain is skipped by it.
+        included.RegisterCalls.ShouldBe(1);
+        included.InitializeCalls.ShouldBe(1);
         deferred.RegisterCalls.ShouldBe(0);
         deferred.InitializeCalls.ShouldBe(0);
 
         // A deferred phase RUNS on the next explicit call — this is what distinguishes it from a phase
-        // that has already run, which the sweep skips identically but an explicit call no-ops.
+        // that has already run, which the pass skips identically but an explicit call no-ops.
         deferredEntry.Register(Host.CreateApplicationBuilder());
         deferred.RegisterCalls.ShouldBe(1);
 
@@ -139,7 +140,7 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void ConfigureSweepSkipsAlreadyManuallyConfiguredEntry()
+    public void ConfigurePassSkipsAlreadyManuallyConfiguredEntry()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
@@ -177,7 +178,7 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void RegisterSweepSkipsAlreadyManuallyRegisteredEntry()
+    public void RegisterPassSkipsAlreadyManuallyRegisteredEntry()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
@@ -188,7 +189,7 @@ public sealed class PlatformServicesTests : IDisposable
 
         PlatformServices.Register(Host.CreateApplicationBuilder());
 
-        // Register sweep must not re-run the already-registered entry.
+        // Register pass must not re-run the already-registered entry.
         counter.RegisterCalls.ShouldBe(1);
     }
 
@@ -250,6 +251,39 @@ public sealed class PlatformServicesTests : IDisposable
         replacementRan.ShouldBe(1);
         counter.RegisterCalls.ShouldBe(0); // descriptor default did NOT run
         entry.Registered.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void EntryInitializeRunsInSystemContextAndRestoresThePreviousOne()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
+        var host = EmptyHost();
+        var accessor = host.Services.GetRequiredService<IAuthenticationContextAccessor>();
+        var previous = accessor.Current;
+        bool? systemDuringInitialize = null;
+        entry.Initialization((h, _) =>
+        {
+            systemDuringInitialize = accessor.Current?.IsSystemContext;
+            return GenericResult<IHost>.Success(h);
+        });
+
+        entry.Initialize(host);
+
+        systemDuringInitialize.ShouldBe(true);
+        accessor.Current.ShouldBeSameAs(previous);
+    }
+
+    [Fact]
+    public void EntryRegisterAddsTheAuthenticationContextAccessor()
+    {
+        var counter = new CallCounter();
+        var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
+        var builder = Host.CreateApplicationBuilder();
+
+        entry.Register(builder);
+
+        builder.Build().Services.GetService<IAuthenticationContextAccessor>().ShouldNotBeNull();
     }
 
     [Fact]
@@ -327,7 +361,7 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void RegisterSweepUsesTheSelectedReplacement()
+    public void RegisterPassUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
@@ -341,7 +375,7 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void ConfigureSweepUsesTheSelectedReplacement()
+    public void ConfigurePassUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
@@ -355,7 +389,7 @@ public sealed class PlatformServicesTests : IDisposable
     }
 
     [Fact]
-    public void InitializeSweepUsesTheSelectedReplacement()
+    public void InitializePassUsesTheSelectedReplacement()
     {
         var counter = new CallCounter();
         var entry = PlatformServices.Add("Widget", counter.Descriptor("Widget", typeof(string)));
@@ -377,7 +411,14 @@ public sealed class PlatformServicesTests : IDisposable
         entry.Registration((builder, _) => GenericResult<IHostApplicationBuilder>.Success(builder)).ShouldBeSameAs(entry);
     }
 
-    private static IHost EmptyHost() => Host.CreateApplicationBuilder().Build();
+    // A host as the platform's Register phase leaves it: every such host carries the
+    // authentication-context accessor, which Initialize elevates through.
+    private static IHost EmptyHost()
+    {
+        var builder = Host.CreateApplicationBuilder();
+        builder.Services.AddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
+        return builder.Build();
+    }
 
-    private static IHostApplicationBuilder EmptyHostApplicationBuilder() => Host.CreateApplicationBuilder();
+    private static HostApplicationBuilder EmptyHostApplicationBuilder() => Host.CreateApplicationBuilder();
 }

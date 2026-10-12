@@ -36,7 +36,6 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `DisconnectionFailedCode` | class | Disconnection from SQL Server failed. |
 | `EntraIdConfiguration` | class | Microsoft Entra ID (Azure AD) Authentication. KVP keys: AzureAdMode, ClientId, TenantId,… |
 | `ExecutionExceptionCode` | class | General execution exception occurred. |
-| `InvalidBulkCopyDataTableCode` | class | Missing or invalid DataTable for bulk copy. |
 | `LoginFailedCode` | class | SQL login failed (error 18456). The database credentials are incorrect or the login does not exist. |
 | `LoginFailedHandler` | class | Handles SQL Server error 18456: login failed. The database credentials are invalid or the login is… |
 

@@ -9,13 +9,12 @@ public class ValidationRuleTypeBaseTests
     private sealed class TestValidationRuleType : ValidationRuleTypeBase
     {
         public TestValidationRuleType(
-            int id,
             string name,
             bool requiresFields,
             bool supportsMultipleFields,
             bool requiresParameters = false,
             IReadOnlyList<string>? requiredParameterNames = null)
-            : base(id, name, requiresFields, supportsMultipleFields, requiresParameters, requiredParameterNames)
+            : base(name, requiresFields, supportsMultipleFields, requiresParameters, requiredParameterNames)
         {
         }
 
@@ -33,22 +32,9 @@ public class ValidationRuleTypeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ConstructorSetsIdAndName()
-    {
-        var sut = new TestValidationRuleType(1, "NotNull",
-            requiresFields: true,
-            supportsMultipleFields: false);
-
-        sut.Id.ShouldBe(1);
-        sut.Name.ShouldBe("NotNull");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void ConstructorSetsRequiresFields()
     {
-        var sut = new TestValidationRuleType(1, "NotNull",
+        var sut = new TestValidationRuleType("NotNull",
             requiresFields: true,
             supportsMultipleFields: false);
 
@@ -60,7 +46,7 @@ public class ValidationRuleTypeBaseTests
     [Trait("Category", "Etl")]
     public void ConstructorSetsSupportsMultipleFields()
     {
-        var sut = new TestValidationRuleType(2, "CrossFieldCheck",
+        var sut = new TestValidationRuleType("CrossFieldCheck",
             requiresFields: true,
             supportsMultipleFields: true);
 
@@ -72,7 +58,7 @@ public class ValidationRuleTypeBaseTests
     [Trait("Category", "Etl")]
     public void RequiresParametersDefaultsToFalse()
     {
-        var sut = new TestValidationRuleType(1, "NotNull",
+        var sut = new TestValidationRuleType("NotNull",
             requiresFields: true,
             supportsMultipleFields: false);
 
@@ -84,7 +70,7 @@ public class ValidationRuleTypeBaseTests
     [Trait("Category", "Etl")]
     public void RequiresParametersCanBeSetToTrue()
     {
-        var sut = new TestValidationRuleType(3, "Range",
+        var sut = new TestValidationRuleType("Range",
             requiresFields: true,
             supportsMultipleFields: false,
             requiresParameters: true);
@@ -97,7 +83,7 @@ public class ValidationRuleTypeBaseTests
     [Trait("Category", "Etl")]
     public void RequiredParameterNamesDefaultsToEmpty()
     {
-        var sut = new TestValidationRuleType(1, "NotNull",
+        var sut = new TestValidationRuleType("NotNull",
             requiresFields: true,
             supportsMultipleFields: false);
 
@@ -111,7 +97,7 @@ public class ValidationRuleTypeBaseTests
     public void RequiredParameterNamesCanBeSpecified()
     {
         var paramNames = new List<string> { "Min", "Max" };
-        var sut = new TestValidationRuleType(3, "Range",
+        var sut = new TestValidationRuleType("Range",
             requiresFields: true,
             supportsMultipleFields: false,
             requiresParameters: true,
@@ -127,7 +113,7 @@ public class ValidationRuleTypeBaseTests
     [Trait("Category", "Etl")]
     public async Task ValidateCanBeInvoked()
     {
-        var sut = new TestValidationRuleType(1, "NotNull",
+        var sut = new TestValidationRuleType("NotNull",
             requiresFields: true,
             supportsMultipleFields: false);
 

@@ -11,7 +11,6 @@ public sealed class BackIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="BackIcon"/>.</summary>
     public BackIcon()
         : base(
-            10,
             "Back",
             "0 0 24 24",
             "none",

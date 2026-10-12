@@ -11,7 +11,6 @@ public sealed class BoltIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="BoltIcon"/>.</summary>
     public BoltIcon()
         : base(
-            49,
             "Bolt",
             "0 0 24 24",
             "none",

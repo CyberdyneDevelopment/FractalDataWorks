@@ -17,7 +17,6 @@ public sealed class FormBasedAuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="FormBasedAuthenticationMethod"/> class.
     /// </summary>
     public FormBasedAuthenticationMethod() : base(
-        id: 2,
         name: "FormBased",
         requiresUserInteraction: true,
         supportsTokenRefresh: false,

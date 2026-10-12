@@ -8,4 +8,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConnectionStates), "Executing", RestrictToCurrentCompilation = true)]
-public sealed class ExecutingConnectionState() : ConnectionStateBase(4, "Executing");
+public sealed class ExecutingConnectionState() : ConnectionStateBase("Executing");

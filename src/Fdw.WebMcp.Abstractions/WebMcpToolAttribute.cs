@@ -15,7 +15,7 @@ namespace Fdw.WebMcp.Abstractions;
 ///
 /// Carries no route. The route lives in the endpoint's FastEndpoints <c>Configure()</c> body, and a
 /// copy here would be a second source of truth free to drift from the one the router actually uses.
-/// It is resolved at <c>MapWebMcp</c> from the live endpoint data source instead.
+/// It is resolved at the WebMcp registrant's Initialize from the live endpoint data source instead.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 [ExcludeFromCodeCoverage]
@@ -38,6 +38,28 @@ public sealed class WebMcpToolAttribute : Attribute
 
     /// <summary>Gets or sets a value indicating whether the tool has no side effects.</summary>
     public bool ReadOnly { get; init; }
+
+    /// <summary>
+    /// Gets or sets the request property this tool implies a fixed value for, so the agent is never
+    /// asked to supply it.
+    /// </summary>
+    /// <remarks>
+    /// Set with <c>nameof(TheRequestType.ThatProperty)</c> so a rename breaks the build instead of
+    /// silently drifting. Leave both this and <see cref="PresetOptionType"/> unset for a tool whose
+    /// caller must supply every field itself.
+    /// </remarks>
+    public string? PresetFieldName { get; init; }
+
+    /// <summary>
+    /// Gets or sets the TypeOption whose own <c>Name</c> supplies the value for
+    /// <see cref="PresetFieldName"/>, resolved once when tools are built.
+    /// </summary>
+    /// <remarks>
+    /// A <c>Type</c> rather than a literal string: the value comes from the real registered option
+    /// (constructed and read via <c>ITypeOption.Name</c>), never retyped here where it could drift
+    /// from the name the option actually registers under.
+    /// </remarks>
+    public Type? PresetOptionType { get; init; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WebMcpToolAttribute"/> class.

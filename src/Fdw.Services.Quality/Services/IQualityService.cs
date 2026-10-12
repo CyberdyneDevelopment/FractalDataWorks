@@ -18,7 +18,7 @@ public interface IQualityService
     /// <param name="rule">The rule configuration to create.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the created rule configuration.</returns>
-    Task<IGenericResult<QualityRuleConfiguration>> CreateRule(QualityRuleConfiguration rule, CancellationToken ct = default);
+    Task<IGenericResult<QualityRuleImplementationConfiguration>> CreateRule(QualityRuleImplementationConfiguration rule, CancellationToken ct = default);
 
     /// <summary>
     /// Updates an existing quality rule.
@@ -27,7 +27,7 @@ public interface IQualityService
     /// <param name="rule">The updated rule configuration.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the updated rule configuration.</returns>
-    Task<IGenericResult<QualityRuleConfiguration>> UpdateRule(Guid id, QualityRuleConfiguration rule, CancellationToken ct = default);
+    Task<IGenericResult<QualityRuleImplementationConfiguration>> UpdateRule(Guid id, QualityRuleImplementationConfiguration rule, CancellationToken ct = default);
 
     /// <summary>
     /// Deletes a quality rule.
@@ -43,7 +43,7 @@ public interface IQualityService
     /// <param name="id">The rule identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the rule configuration.</returns>
-    Task<IGenericResult<QualityRuleConfiguration>> GetRule(Guid id, CancellationToken ct = default);
+    Task<IGenericResult<QualityRuleImplementationConfiguration>> GetRule(Guid id, CancellationToken ct = default);
 
     /// <summary>
     /// Gets all quality rules for a specific DataSet.
@@ -51,14 +51,14 @@ public interface IQualityService
     /// <param name="dataSetName">The DataSet name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the list of rule configurations.</returns>
-    Task<IGenericResult<IReadOnlyList<QualityRuleConfiguration>>> GetRulesForDataSet(string dataSetName, CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<QualityRuleImplementationConfiguration>>> GetRulesForDataSet(string dataSetName, CancellationToken ct = default);
 
     /// <summary>
     /// Gets all quality rules.
     /// </summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing the list of all rule configurations.</returns>
-    Task<IGenericResult<IReadOnlyList<QualityRuleConfiguration>>> GetAllRules(CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<QualityRuleImplementationConfiguration>>> GetAllRules(CancellationToken ct = default);
 
     /// <summary>
     /// Executes a specific quality check.

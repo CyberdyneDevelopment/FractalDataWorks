@@ -48,7 +48,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     /// <summary>
     /// The connection this domain's identity rows live in. The host must set it; there is no default.
@@ -95,17 +95,9 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             // SecretManager configuration, registered once for the domain here rather
             // than by every caller that needs it.
 
-            builder.Services.TryAddSingleton<ISecretManagerConfigurationProvider>(sp =>
-                new SecretManagerConfigurationProvider(
-                    sp.GetService<ILogger<SecretManagerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<SecretManagerConfigurationProvider>(
-                sp => (SecretManagerConfigurationProvider)sp.GetRequiredService<ISecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<SecretManagerConfiguration, SecretManagerConfigurationCommand>>(
-                sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<SecretManagerConfiguration>>(
-                sp => sp.GetRequiredService<SecretManagerConfigurationProvider>());
+            builder.Services.AddSingleton<ISecretManagerConfigurationProvider, SecretManagerConfigurationProvider>(sp => new SecretManagerConfigurationProvider(sp.GetRequiredService<ILogger<SecretManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SecretManagerTypes.ConfigurationConnection, "sec", "SecretManager"));
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISecretManagerImplementationConfiguration>>(
+                sp => sp.GetRequiredService<ISecretManagerConfigurationProvider>());
             var declaredOptions = Options;
             var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
 
@@ -113,16 +105,15 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
             ServiceTypeLog.DomainProviderDeclared(log, nameof(SecretManagerTypes), providerService);
 
             // Published under the closed generic as well as the domain interface. SecretManagerProvider
-            // is both, but a consumer resolving IPlatformServiceProvider<ISecretManager, …> — which is
+            // is both, but a consumer resolving IDomainServiceProvider<ISecretManager, …> — which is
             // what the generic call sites ask for — got nothing back, because only the domain name was
             // registered. Two names for one instance, and only one of them findable.
-            builder.Services.AddScoped<IPlatformServiceProvider<ISecretManager, ISecretManagerImplementationConfiguration>>(
+            builder.Services.AddSingleton<IDomainServiceProvider<ISecretManager, ISecretManagerImplementationConfiguration>>(
                 sp => sp.GetRequiredService<ISecretManagerProvider>());
 
-            builder.Services.AddScoped<ISecretManagerProvider>(sp =>
+            builder.Services.AddSingleton<ISecretManagerProvider>(sp =>
             {
                 var provider = new SecretManagerProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<SecretManagerProvider>()
                     ?? NullLogger<SecretManagerProvider>.Instance);
 
@@ -145,7 +136,7 @@ public partial class SecretManagerTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(SecretManagerTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<SecretManagerConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<ISecretManagerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)

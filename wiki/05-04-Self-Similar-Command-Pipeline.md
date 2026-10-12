@@ -16,7 +16,7 @@ Three consequences you can check in the source:
 
 1. **A Roslyn command and a data connection are virtually the same object.**
    `RoslynWorkspaceConnection` is a `ConnectionBase<IRoslynWorkspaceCommand, …>` registered with
-   `[ServiceTypeOption(typeof(ConnectionTypes), "RoslynWorkspace")]` — the *same* base class, the
+   `[Implementation(typeof(ConnectionTypes), "RoslynWorkspace")]` — the *same* base class, the
    *same* registry, the *same* translator seam as `MsSqlConnection`. A Roslyn workspace is not
    "integrated with" the data layer through a bridge; it *is* a connection. (See
    [What ships today](#what-ships-today-vs-what-the-seam-allows) for the honest current state of its
@@ -277,11 +277,11 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
 The public surface is `IDataConnection` — three `Execute` overloads (typed, untyped, and a
 `Type elementType` overload for rows whose CLR type is only known at runtime, so the config cascade
 never needs `MakeGenericMethod`). **There is no `IMsSqlConnection` in the abstraction.** Nothing above
-the connection layer can name a backend; the backend appears exactly once, as a `[ServiceTypeOption]`
+the connection layer can name a backend; the backend appears exactly once, as a `[Implementation]`
 name:
 
 ```csharp
-[ServiceTypeOption(typeof(ConnectionTypes), "FileSystem")]
+[Implementation(typeof(ConnectionTypes), "FileSystem")]
 public sealed class FileSystemConnectionType
     : ConnectionTypeBase<IGenericConnection, IFileSystemConnectionFactory, FileSystemConnectionConfiguration>
 ```

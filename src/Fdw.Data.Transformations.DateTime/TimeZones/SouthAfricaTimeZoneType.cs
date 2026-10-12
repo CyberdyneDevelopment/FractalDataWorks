@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "SouthAfrica")]
 public sealed class SouthAfricaTimeZoneType : TimeZoneTypeBase
 {
-    public SouthAfricaTimeZoneType() : base(29, "SouthAfrica", "South Africa Standard Time") { }
+    public SouthAfricaTimeZoneType() : base("SouthAfrica", "South Africa Standard Time") { }
 }

@@ -9,5 +9,5 @@ namespace Fdw.Services.Notifications.Abstractions;
 public sealed class SentNotificationStatus : NotificationStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="SentNotificationStatus"/>.</summary>
-    public SentNotificationStatus() : base(1, "Sent") { }
+    public SentNotificationStatus() : base("Sent") { }
 }

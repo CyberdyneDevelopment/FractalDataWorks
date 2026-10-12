@@ -30,7 +30,7 @@ public class AuthenticationContextAccessorTests
     {
         // Arrange
         var accessor = new AuthenticationContextAccessor();
-        var context = new WorkAuthenticationContext(Guid.NewGuid());
+        var context = new SystemAuthenticationContext(Guid.NewGuid());
 
         // Act
         accessor.Current = context;
@@ -53,14 +53,14 @@ public class AuthenticationContextAccessorTests
 
         var flowA = Task.Run(async () =>
         {
-            accessor.Current = new WorkAuthenticationContext(tenantA);
+            accessor.Current = new SystemAuthenticationContext(tenantA);
             await Task.Delay(50).ConfigureAwait(false);
         }, TestContext.Current.CancellationToken);
 
         var flowB = Task.Run(async () =>
         {
             await Task.Delay(10).ConfigureAwait(false);
-            accessor.Current = new WorkAuthenticationContext(tenantB);
+            accessor.Current = new SystemAuthenticationContext(tenantB);
             await Task.Delay(50).ConfigureAwait(false);
             seenInFlowB = accessor.Current;
         }, TestContext.Current.CancellationToken);
@@ -83,7 +83,7 @@ public class AuthenticationContextAccessorTests
 
         async Task SetInChildFlow()
         {
-            accessor.Current = new WorkAuthenticationContext(tenantId);
+            accessor.Current = new SystemAuthenticationContext(tenantId);
             await Task.Yield();
         }
 

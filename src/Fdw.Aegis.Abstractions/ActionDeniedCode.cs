@@ -16,7 +16,7 @@ public sealed class ActionDeniedCode : AegisResultCodeBase
     /// </summary>
     public ActionDeniedCode()
         : base(51000, "ActionDenied",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Action '{commandName}' was denied: {reason}",
             isRetryable: false)
     {

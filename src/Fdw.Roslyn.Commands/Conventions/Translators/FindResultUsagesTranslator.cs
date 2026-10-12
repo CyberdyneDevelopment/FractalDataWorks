@@ -31,7 +31,6 @@ public sealed class FindResultUsagesTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: find methods returning IGenericResult, collect usage data
     public override async Task<IGenericResult<QueryResult<ResultUsagesData>>> Translate(
         FindResultUsagesCommand command,
         Solution solution,
@@ -111,5 +110,4 @@ public sealed class FindResultUsagesTranslator
 
         return GenericResult<QueryResult<ResultUsagesData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

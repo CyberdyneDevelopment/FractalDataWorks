@@ -8,7 +8,7 @@ public sealed class ExternalClaimSource : ClaimSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="ExternalClaimSource"/> class.</summary>
     public ExternalClaimSource()
-        : base(2, "External")
+        : base("External")
     {
     }
 }

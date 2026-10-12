@@ -15,7 +15,7 @@ public sealed class MaxAggregationFunction : AggregationFunctionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MaxAggregationFunction"/> class.
     /// </summary>
-    public MaxAggregationFunction() : base(id: 4, name: "Max")
+    public MaxAggregationFunction() : base(name: "Max")
     {
     }
 

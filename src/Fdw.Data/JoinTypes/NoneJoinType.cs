@@ -17,7 +17,6 @@ public sealed class NoneJoinType : JoinTypeBase
     /// </summary>
     public NoneJoinType()
         : base(
-            id: 0,
             name: "None",
             sqlKeyword: "",
             description: "No join specified",

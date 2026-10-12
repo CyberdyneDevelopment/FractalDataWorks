@@ -13,11 +13,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that retrieves a DataSet annotation by DataSet name.</summary>
 public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationRequest, DataSetAnnotationPayload>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="GetDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected GetDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected GetDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -40,13 +40,11 @@ public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotat
     /// <summary>Retrieves the annotation for the specified DataSet, returning 404 if not found.</summary>
     public override async Task HandleAsync(DataSetAnnotationRequest req, CancellationToken ct)
     {
-        var result = await _provider.GetAnnotation(req.DataSetName, ct).ConfigureAwait(false);
+        var result = await _provider.Get(req.DataSetName, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to get annotation", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to get annotation", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -59,8 +57,8 @@ public abstract class GetDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotat
         await Send.OkAsync(MapToDto(result.Value), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a DataSetAnnotationConfiguration to its corresponding DTO.</summary>
-    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationConfiguration config)
+    /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
         return new DataSetAnnotationPayload
         {

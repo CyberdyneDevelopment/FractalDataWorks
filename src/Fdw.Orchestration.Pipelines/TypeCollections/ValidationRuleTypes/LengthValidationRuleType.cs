@@ -22,7 +22,6 @@ public sealed class LengthValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public LengthValidationRuleType()
         : base(
-            id: 4,
             name: "Length",
             requiresFields: true,
             supportsMultipleFields: true,

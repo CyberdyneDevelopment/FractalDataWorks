@@ -10,7 +10,7 @@ The complete catalogue of FractalDataWorks Roslyn analyzers, derived from the `D
 |---------|------|----------|
 | `Fdw.Analyzers` | FDW001–004, FDW012–016, FDW022–023 | Result/logging/exception patterns |
 | `Fdw.Conventions.Analyzers` | FDW005–011, FDW017–021 | File/method/type conventions |
-| `Fdw.ServiceTypes.Analyzers` | FDW024–034 | `[ServiceTypeCollection]` / `[ServiceTypeOption]` |
+| `Fdw.ServiceTypes.Analyzers` | FDW024–034 | `[ServiceTypeCollection]` / `[Implementation]` |
 | `Fdw.Collections.Analyzers` | FDW035–043, TC001–004 | `[TypeCollection]` / `[TypeOption]` / enum collections |
 
 Legacy `ENH`-prefixed analyzers were renumbered into the `FDW024`–`FDW043` band; `PLATSVC001` was deleted; the `Fdw.ServiceTypes.Analyzers` and `Fdw.Collections.Analyzers` projects are now wired globally in `public/Directory.Build.props`. `FDW044` is the newest rule.
@@ -50,14 +50,14 @@ Legacy `ENH`-prefixed analyzers were renumbered into the `FDW024`–`FDW043` ban
 
 Details and `[ConventionOverride]` thresholds for FDW005–011: [Code Conventions](13-03-Code-Conventions.md).
 
-## Fdw.ServiceTypes.Analyzers — ServiceTypeCollection / ServiceTypeOption
+## Fdw.ServiceTypes.Analyzers — ServiceTypeCollection / Implementation
 
 | ID | Enforces | Severity |
 |----|----------|----------|
 | FDW024 | Every `[ServiceTypeCollection]` must declare the three static PlatformServices phase methods (`Configure`/`Register`/`Initialize`) so PlatformServices discovers it (has a code fix) | Error |
 | FDW025 | Singleton/instance property pattern is forbidden on a service type | Error |
-| FDW026 | Duplicate `[ServiceTypeOption]` name | Error |
-| FDW027 | `[ServiceTypeOption]` missing a public parameterless constructor | Error |
+| FDW026 | Duplicate `[Implementation]` name | Error |
+| FDW027 | `[Implementation]` missing a public parameterless constructor | Error |
 | FDW028 | Abstract property in a service-type enhanced enum | Warning |
 | FDW029 | Abstract field in a service-type enhanced enum | Error |
 | FDW030 | Collection attribute must specify a collection name | Error |
@@ -87,7 +87,7 @@ Details and `[ConventionOverride]` thresholds for FDW005–011: [Code Convention
 | TC003 | `TBase` in the base class doesn't match `baseType` in the `[TypeCollection]` attribute | Error |
 | TC004 | Generic type-argument mismatch between the `[TypeOption]` attribute and the base class | Error |
 
-> The FDW026–FDW034 (ServiceTypes) and FDW035–FDW043 (Collections) families overlap in intent because the same structural checks exist for both the `[ServiceTypeCollection]`/`[ServiceTypeOption]` world and the `[TypeCollection]`/`[TypeOption]` world. `TC###` and `FDW####` are distinct diagnostic families; generator diagnostics (`ST###`, `SYSLIB100x`) are separate again.
+> The FDW026–FDW034 (ServiceTypes) and FDW035–FDW043 (Collections) families overlap in intent because the same structural checks exist for both the `[ServiceTypeCollection]`/`[Implementation]` world and the `[TypeCollection]`/`[TypeOption]` world. `TC###` and `FDW####` are distinct diagnostic families; generator diagnostics (`ST###`, `SYSLIB100x`) are separate again.
 
 ## Related Documentation
 

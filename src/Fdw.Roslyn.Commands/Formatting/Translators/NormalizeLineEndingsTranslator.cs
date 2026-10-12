@@ -31,7 +31,6 @@ public sealed class NormalizeLineEndingsTranslator : RoslynCommandTranslatorBase
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear text processing: count line endings, normalize to target, build result
     public override async Task<IGenericResult<MutationResult<LineEndingData>>> Translate(
         NormalizeLineEndingsCommand command,
         Solution solution,
@@ -171,5 +170,4 @@ public sealed class NormalizeLineEndingsTranslator : RoslynCommandTranslatorBase
                 fileChanges,
                 data));
     }
-#pragma warning restore MA0051
 }

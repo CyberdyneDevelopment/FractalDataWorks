@@ -2,110 +2,54 @@
 
 ## Purpose
 
-The UI domain provides a **headless component architecture** for FractalDataWorks management interfaces. Components contain all business logic and state management. Skins provide visual rendering with zero logic.
+The UI domain supplies framework-neutral UI building blocks: page and form models, navigation, themes, and a terminal renderer. It ships no web UI. The web console is the separate `reference-react-ui` repository, which calls the API over HTTP.
 
-## Sub-Domains
+The Blazor packages (`Fdw.UI.Components.Blazor`, the MudBlazor and Tailwind skins, the per-domain `*.Components` and `*.UI.Pages` packages, and the Blazor authentication packages) were removed in FDW-872.
 
-| Sub-Domain | Projects | Description |
-|------------|----------|-------------|
-| **UI.Components** | 7 | Headless Blazor components, TUI, RazorConsole |
-| **UI.Skins** | 3 | MudBlazor, Tailwind, Authentication renderers |
-| **UI.Services** | 12 | Providers, theme engine, UI-specific clients |
+## Projects
 
-## Key Types
-
-- **Headless Components** (`UI.Components.Blazor`) -- Contain state, validation, API calls. Expose `RenderFragment<TContext>` for rendering.
-- **Providers** (`UI.Services`) -- State management layer between components and API clients (e.g., `ConnectionProvider`, `DataSetProvider`).
-- **Skins** (`UI.Blazor.MudBlazor`, `UI.Blazor.Tailwind`) -- Pure rendering. Map `RenderFragment<TContext>` to framework-specific markup.
-- **Theme Engine** (`UI.Themes`) -- HSL-based tenant theming with CSS variable generation.
+| Project | What it holds |
+|---------|---------------|
+| `Fdw.UI.Abstractions` | CRTP abstractions for type-safe UI components; no UI technology dependency |
+| `Fdw.UI.Components` | Page models (`ListPageModel`, `DetailPageModel`, `WizardPageModel`, ...), form field models, icons, status variants |
+| `Fdw.UI` | Navigation (`NavSections`, `NavTree`, `PageTypes`) and component-type options |
+| `Fdw.UI.Web.Abstractions` | Render-mode and web-component metadata types |
+| `Fdw.UI.Services` | Client-side services: commands, formula, pipeline, undo/redo |
+| `Fdw.UI.Themes` (+ `.Abstractions`, `.Clients`, `.Endpoints`, `.Registration`) | Theme TypeCollections: `ColorPalettes`, `BorderStyles`, `IconSets`, `MenuThemes` |
+| `Fdw.UI.Rendering.Spectre` | Spectre.Console renderer for the models |
+| `Fdw.UI.Components.TUI` | Terminal implementation of the UI components |
+| `Fdw.UI.Components.RazorConsole` | Razor syntax that compiles to Spectre.Console output (terminal only) |
+| `Fdw.TUI.Management` | The terminal management UI |
+| `Fdw.UI.Pipelines.Clients` / `.Endpoints` | Pipeline designer API contract and endpoint bases |
 
 ## Patterns
 
-### Headless Component Pattern
+### Models, not components
 
-Components define behavior; skins define appearance:
+A screen is described by models from `Fdw.UI.Components`. A renderer draws them. The models carry state and field metadata and hold no rendering code, so the same model can be drawn by any renderer. Today `Fdw.UI.Rendering.Spectre` is the renderer.
 
-```csharp
-// Headless component -- all logic here
-public class FdwConnectionList : ComponentBase
-{
-    [Parameter] public RenderFragment<ConnectionListContext> ChildContent { get; set; }
+### Data comes from `*.Clients`
 
-    // State, loading, error handling, API calls
-    protected ConnectionListContext Context => new(Connections, IsLoading, OnEdit, OnDelete);
-}
+The terminal UI reads and writes through the per-domain `*.Clients` packages. It never uses `IDataGateway`. The bearer token is attached by `Web.Http.Authentication`'s `BearerTokenHandler`.
 
-// Skin -- pure rendering, zero logic
-<FdwConnectionList>
-    <MudTable Items="@context.Connections" Loading="@context.IsLoading">
-        ...
-    </MudTable>
-</FdwConnectionList>
-```
+### Theme engine
 
-### Provider Pattern (UI State Management)
-
-Providers manage state between components and API clients:
+Tenant themes use HSL tokens that map to CSS variables (`ThemeHelper` in `Fdw.Services.Multitenancy.Abstractions`):
 
 ```csharp
-public class ConnectionProvider
-{
-    private readonly IConnectionClient _client;
-
-    public IReadOnlyList<ConnectionDto> Connections { get; private set; }
-    public bool IsLoading { get; private set; }
-
-    public async Task LoadAsync() { ... }
-    public async Task CreateAsync(CreateConnectionRequest request) { ... }
-}
-```
-
-Each provider has its own MessageLog class (e.g., `ConnectionProviderLog`) with allocated EventId ranges.
-
-### RenderFragment<TContext> Contract
-
-The context object is the API contract between headless component and skin:
-
-```csharp
-public record ConnectionListContext(
-    IReadOnlyList<ConnectionDto> Connections,
-    bool IsLoading,
-    Func<ConnectionDto, Task> OnEdit,
-    Func<ConnectionDto, Task> OnDelete);
-```
-
-### Theme Engine
-
-Themes use HSL tokens that map to CSS variables:
-
-```csharp
-// FDW CSS variables
 theme.ToCssRootBlock()      // --fdw-primary-h, --fdw-primary-s, etc.
-
-// Scalar API docs variables
-theme.ToScalarCssBlock()    // --scalar-color-1, etc.
+theme.ToScalarCssBlock()    // --scalar-color-1, etc. (Scalar API docs)
 ```
 
 ## Rules
 
-1. **No logic in skins.** Skins receive context via `RenderFragment<TContext>` and render only. Event handlers, validation, API calls, state transitions -- all in the headless component.
-2. **One provider per domain.** Each service domain (Connections, DataSets, DataStores, etc.) has exactly one provider class.
-3. **Provider-specific MessageLog classes.** Use `ConnectionProviderLog`, `DataSetProviderLog`, etc. -- never generic `UiProviderLog`.
-4. **API clients must be un-sealed with virtual methods** for testability (Moq requires this).
-5. **Moq is the UI test framework.** Use `Mock<T>`, `.Setup().ReturnsAsync()`, `.Verify()`. Not NSubstitute.
-6. **Components must not reference specific skin packages.** A component in `UI.Components.Blazor` must not import `MudBlazor`.
-7. **Theme tokens are HSL-based.** Never use hex or RGB values directly. Use `ColorHelper` for conversions.
-
-## Testing
-
-- **Framework:** xUnit v3 + bunit 1.37.7 + Moq 4.20.72 + Shouldly 4.3.0
-- **Pattern:** Provider tests mock API clients, verify state transitions and API calls
-- **Traits:** `[Trait("Category", "Ui")]`, Priority P1/P2
-- **5 test suites** (63 tests): ConnectionProvider, DataSetProvider, ConfigurationProvider, DataStoreProvider, RoleProvider
+1. **Models hold no rendering code.** A model never references a renderer package.
+2. **UI code never touches data directly.** It calls a `*.Clients` package, which calls the API.
+3. **API clients are unsealed with virtual methods** so tests can mock them with Moq.
+4. **Theme tokens are HSL-based.** Never use hex or RGB values directly.
 
 ## Related Domains
 
-- **Services** -- UI providers call service clients (e.g., `IConnectionClient`)
-- **Web** -- `Web.Clients.Abstractions` defines the DTO contracts UI providers consume
-- **Configuration** -- Config UI components display ManagedConfiguration data
-- **Schema** -- Schema discovery UI for DataSet wizard
+- **Services**: the `*.Clients` packages the UI calls
+- **Web**: `Web.Clients.Abstractions` defines the shared DTO contracts
+- **Multitenancy**: tenant themes (`ITenantTheme`, `ThemeHelper`)

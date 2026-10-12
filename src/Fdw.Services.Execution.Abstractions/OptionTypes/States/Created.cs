@@ -13,7 +13,7 @@ public sealed class Created : ProcessStateBase
     /// <summary>
     /// Initializes a new instance of the Created state.
     /// </summary>
-    public Created() : base(1, "Created", isTerminal: false, isError: false, isActive: false, isInitial: true)
+    public Created() : base("Created", isTerminal: false, isError: false, isActive: false, isInitial: true)
     {
     }
 }

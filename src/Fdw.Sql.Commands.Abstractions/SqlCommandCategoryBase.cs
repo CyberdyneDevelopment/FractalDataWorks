@@ -3,7 +3,7 @@ using Fdw.Collections;
 namespace Fdw.Sql.Commands.Abstractions;
 
 /// <summary>Base class for SQL command categories.</summary>
-public abstract class SqlCommandCategoryBase : TypeOptionBase<int, SqlCommandCategoryBase>, ISqlCommandCategory
+public abstract class SqlCommandCategoryBase : TypeOptionBase<SqlCommandCategoryBase>, ISqlCommandCategory
 {
     /// <summary>Sentinel ctor.</summary>
     protected SqlCommandCategoryBase()
@@ -11,7 +11,7 @@ public abstract class SqlCommandCategoryBase : TypeOptionBase<int, SqlCommandCat
     { }
 
     /// <summary>Initializes a new category.</summary>
-    protected SqlCommandCategoryBase(int id, string name, string description)
-        : base(id, name, name, name, description, "SqlCommandCategory")
+    protected SqlCommandCategoryBase(string name, string description)
+        : base(name, name, name, description, "SqlCommandCategory")
     { }
 }

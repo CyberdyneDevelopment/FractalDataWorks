@@ -15,7 +15,7 @@ public sealed class AverageAggregationFunction : AggregationFunctionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AverageAggregationFunction"/> class.
     /// </summary>
-    public AverageAggregationFunction() : base(id: 2, name: "Average")
+    public AverageAggregationFunction() : base(name: "Average")
     {
     }
 

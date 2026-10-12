@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
+using Fdw.Commands.Data.Abstractions.Caching;
 using Fdw.Data.Lineage;
 using Fdw.Operations.Endpoints;
 using Fdw.Services.Data;
@@ -35,9 +36,6 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
     private const string NodePipelineContainer = "OrchestrationNodePipeline";
     private const string NodePipelinePrerequisiteContainer = "OrchestrationNodePipelinePrerequisite";
     private const string PipeSchemaPath = "pipe";
-    private const string ConfigurationDbConnection = "PlatformConfiguration";
-
-    private static readonly TimeSpan LineageCacheDuration = TimeSpan.FromMinutes(5);
 
     private static readonly string[] NodeInvalidationTags = ["pipe.OrchestrationNode"];
     private static readonly string[] NodePipelineInvalidationTags = ["pipe.OrchestrationNodePipeline"];
@@ -222,6 +220,6 @@ public abstract class ProjectLineageGraphEndpointBase : GetLineageGraphEndpointB
         CancellationToken ct) where T : class
     {
         return await Lineage.ReadCached<T>(
-            PipeSchemaPath, containerName, LineageCacheDuration, invalidationTags, ct).ConfigureAwait(false);
+            PipeSchemaPath, containerName, CachePolicy.DefaultDuration, invalidationTags, ct).ConfigureAwait(false);
     }
 }

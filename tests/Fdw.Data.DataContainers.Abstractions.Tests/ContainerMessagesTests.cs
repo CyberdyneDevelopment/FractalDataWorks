@@ -90,28 +90,6 @@ public class ContainerMessagesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void AllMessagesHaveUniqueIds()
-    {
-        // Arrange
-        var messages = new ContainerMessage[]
-        {
-            new ReadAccessValidationFailedMessage(),
-            new WriteAccessValidationFailedMessage(),
-            new SchemaDiscoveryFailedMessage(),
-            new ReaderCreationFailedMessage(),
-            new WriterCreationFailedMessage()
-        };
-
-        // Act
-        var uniqueIds = messages.Select(m => m.Id).Distinct().Count();
-
-        // Assert
-        uniqueIds.ShouldBe(messages.Length);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void AllMessagesHaveUniqueCodes()
     {
         // Arrange

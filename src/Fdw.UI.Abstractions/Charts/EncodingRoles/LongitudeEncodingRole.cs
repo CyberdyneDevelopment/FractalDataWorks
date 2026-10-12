@@ -14,7 +14,7 @@ public sealed class LongitudeEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="LongitudeEncodingRole"/> class.
     /// </summary>
     public LongitudeEncodingRole()
-        : base(8, "Longitude", "Longitude", isSpatial: true)
+        : base("Longitude", "Longitude", isSpatial: true)
     {
     }
 }

@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class TextConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="TextConfigurationPropertyType"/>.</summary>
-    public TextConfigurationPropertyType() : base(1, "Text") { }
+    public TextConfigurationPropertyType() : base("Text") { }
 }

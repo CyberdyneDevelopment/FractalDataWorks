@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,16 @@ public sealed class TimeDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="TimeDataType"/> class.</summary>
     public TimeDataType()
-        : base(id: 12, name: "Time")
+        : base(name: "Time")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(TimeSpan);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Duration(text);
+
+    /// <inheritdoc />
+    public override string Format(object value) => ((TimeSpan)value).ToString("c", System.Globalization.CultureInfo.InvariantCulture);
 }

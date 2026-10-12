@@ -115,16 +115,16 @@ services.AddHttpClient<IScheduleClient, ScheduleHttpClient>((sp, client) =>
 
 ### Proxy Endpoints
 
-All proxy endpoints are FastEndpoints classes that inject the typed client interfaces. The reference-api uses a route prefix of `api/v1`, and the proxy endpoints add a `proxy/` segment:
+All proxy endpoints are FastEndpoints classes that inject the typed client interfaces. The reference-api uses a route prefix of `api/v1`. A proxied route is served at the same path the service behind it uses (`/api/v1/schedules`, `/api/v1/pipelines`, `/api/v1/etl/...`); nothing in a route says it is proxied, because a caller has no reason to care (API-179):
 
 | Endpoint Class | Method | Route | Typed Client | Target Path |
 |---------------|--------|-------|--------------|-------------|
-| `GetSchedulesProxyEndpoint` | GET | `/api/v1/proxy/schedules` | `IScheduleClient` | `GET /api/v1/schedules` |
-| `CreateScheduleProxyEndpoint` | POST | `/api/v1/proxy/schedules` | `IScheduleClient` | `POST /api/v1/schedules` |
-| `TriggerEtlJobProxyEndpoint` | POST | `/api/v1/proxy/etl/trigger` | `IPipelineJobClient` | `POST /api/v1/etl/trigger` |
-| `EtlWebhookEndpoint` | POST | `/api/v1/proxy/etl/webhook/completion` | (receives inbound) | N/A |
+| `GetSchedulesProxyEndpoint` | GET | `/api/v1/schedules` | `IScheduleClient` | `GET /api/v1/schedules` |
+| `CreateScheduleProxyEndpoint` | POST | `/api/v1/schedules` | `IScheduleClient` | `POST /api/v1/schedules` |
+| `TriggerEtlJobProxyEndpoint` | POST | `/api/v1/etl/trigger` | `IPipelineJobClient` | `POST /api/v1/etl/trigger` |
+| `EtlWebhookEndpoint` | POST | `/api/v1/etl/webhook/completion` | (receives inbound) | N/A |
 
-**Note:** Pipeline configuration endpoints (`GET /api/v1/pipelines`, `GET /api/v1/pipelines/{name}`) are served directly by reference-api (not proxied) since pipeline configuration is stored in ConfigurationDb.
+**Note:** Pipelines (`GET /api/v1/pipelines`, `GET /api/v1/pipelines/{name}`) are proxied to the ETL host through `IPipelineClient`, the same way schedules are proxied to the scheduler (API-166, API-179).
 
 **Error handling:** When a typed client call fails, the endpoint returns HTTP 502 (Bad Gateway) with a JSON error body containing the upstream error details. All proxy operations are logged through `ProxyLog` (EventId range 1900-1905).
 
@@ -135,8 +135,8 @@ A typical schedule creation request flows as follows:
 ```
 reference-ui                reference-api                     reference-scheduler
     |                           |                                |
-    |  POST /api/v1/proxy/      |                                |
-    |       schedules           |                                |
+    |  POST /api/v1/schedules   |                                |
+    |                           |                                |
     |  { Name, PipelineName,    |                                |
     |    CronExpression, ... }  |                                |
     |-------------------------->|                                |
@@ -227,7 +227,7 @@ Configuration via `WebhookOptions` in `Reference.Etl.Server/Configuration/Webhoo
 ```json
 {
   "Webhooks": {
-    "CompletionUrl": "http://localhost:5001/api/v1/proxy/etl/webhook/completion",
+    "CompletionUrl": "http://localhost:5001/api/v1/etl/webhook/completion",
     "TimeoutSeconds": 30
   }
 }
@@ -242,7 +242,7 @@ When `CompletionUrl` is empty, the notifier logs `WebhookLog.NoWebhookUrlConfigu
 
 ### reference-api Side: EtlWebhookEndpoint
 
-The `EtlWebhookEndpoint` receives completion callbacks at `POST /api/v1/proxy/etl/webhook/completion`:
+The `EtlWebhookEndpoint` receives completion callbacks at `POST /api/v1/etl/webhook/completion`:
 
 **Request:**
 
@@ -275,7 +275,7 @@ reference-etl                          reference-api
     |                                   |
     |  Pipeline execution completes     |
     |                                   |
-    |  POST /api/v1/proxy/etl/          |
+    |  POST /api/v1/etl/          |
     |       webhook/completion          |
     |  { ExecutionId, PipelineName,     |
     |    Status, StartedAt,             |

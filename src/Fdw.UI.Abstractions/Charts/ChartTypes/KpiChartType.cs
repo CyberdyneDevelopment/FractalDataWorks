@@ -15,7 +15,6 @@ public sealed class KpiChartType : ChartTypeBase
     /// </summary>
     public KpiChartType()
         : base(
-            id: 6,
             name: "Kpi",
             displayName: "KPI",
             category: "Summary",

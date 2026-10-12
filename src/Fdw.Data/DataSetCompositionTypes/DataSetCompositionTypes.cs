@@ -19,9 +19,9 @@ namespace Fdw.Data.Abstractions;
 /// var singular = DataSetCompositionTypes.Singular;
 /// var join = DataSetCompositionTypes.Join;
 ///
-/// // Or lookup by name/id
+/// // Or look up by name, or by an id read from an option
 /// var type = DataSetCompositionTypes.ByName("Union");
-/// var type = DataSetCompositionTypes.ById(1);
+/// var same = DataSetCompositionTypes.ById(type.Id);
 ///
 /// // Get all composition types
 /// var all = DataSetCompositionTypes.All();

@@ -9,7 +9,7 @@ namespace Fdw.Roslyn.Commands.Abstractions;
 /// Base class for Roslyn commands.
 /// Commands are stateless data objects that describe an operation to perform.
 /// </summary>
-public abstract class RoslynCommandBase : TypeOptionBase<int, RoslynCommandBase>, IRoslynCommand
+public abstract class RoslynCommandBase : TypeOptionBase<RoslynCommandBase>, IRoslynCommand
 {
     /// <summary>
     /// Gets the command category.
@@ -33,7 +33,7 @@ public abstract class RoslynCommandBase : TypeOptionBase<int, RoslynCommandBase>
     /// <param name="commandCategory">The category of the command.</param>
     /// <param name="description">The description of the command.</param>
     protected RoslynCommandBase(string name, IRoslynCommandCategory commandCategory, string description)
-        : base(GenerateIdFromName(name), name, name, name, description, "RoslynCommand")
+        : base(name, name, name, description, "RoslynCommand")
     {
         CommandCategory = commandCategory ?? throw new ArgumentNullException(nameof(commandCategory));
     }
@@ -95,30 +95,5 @@ public abstract class RoslynCommandBase : TypeOptionBase<int, RoslynCommandBase>
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Generates a deterministic ID from a command name using FNV-1a hash.
-    /// </summary>
-    /// <param name="name">The command name.</param>
-    /// <returns>A deterministic ID based on the name.</returns>
-    private static int GenerateIdFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentNullException(nameof(name));
-
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-            return hash & 0x7FFFFFFF;
-        }
     }
 }

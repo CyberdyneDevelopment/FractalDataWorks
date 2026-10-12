@@ -14,5 +14,5 @@ public sealed class ViewRenderMode : RenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ViewRenderMode"/> class.
     /// </summary>
-    public ViewRenderMode() : base(0, "View", allowsEditing: false, showsView: true) { }
+    public ViewRenderMode() : base("View", allowsEditing: false, showsView: true) { }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -23,9 +23,9 @@ using Fdw.Abstractions;
 namespace Fdw.Services.Tests.Configuration;
 
 /// <summary>
-/// Smoke test for <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}.Get(Guid, CancellationToken)"/>
-/// verifying that when the container has a Foreign key (no Primary key), the emitted command
-/// uses the FK column rather than [Id].
+/// Smoke test for <see cref="ImplementationProviderBase{TConfiguration,TContract}.Get(Guid, CancellationToken)"/>
+/// verifying that the read joins to the domain container and filters on the domain's durable Id
+/// rather than the implementation row's own [Id].
 /// </summary>
 [Collection(nameof(ServicesTestCollection))]
 public class DefaultConfigurationProviderGetByIdTests
@@ -49,13 +49,12 @@ public class DefaultConfigurationProviderGetByIdTests
             fkColumn: "SecretManagerId");
 
 
-        var provider = new ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>(
-            NullLogger<ImplementationConfigurationProviderBase<TestChildConfig, TestChildCommand>>.Instance,
-            GatewayProviderFor(fakeGateway),
-            "PlatformConfiguration",
-            "sec");
-
         var domainConfigurationId = Guid.NewGuid();
+        var provider = new TestChildConfigProvider(GatewayProviderFor(fakeGateway));
+
+        // A domain provider names its container when it registers an implementation provider; the
+        // implementation joins to that container and no other.
+        ((IConfigurationWriteParticipant<ITestChildConfigImplementationConfiguration>)provider).AttachDomain("SecretManager");
         await provider.Get(domainConfigurationId, TestContext.Current.CancellationToken);
 
         // Assert: the FK join filters by the PARENT's durable Logical key ("SecretManager.Id"); the
@@ -139,11 +138,14 @@ public class DefaultConfigurationProviderGetByIdTests
         var mockKeyField = new Mock<IContainerKeyField>();
         mockKeyField.Setup(k => k.LocalField).Returns(mockPhysicalField.Object);
         mockKeyField.Setup(k => k.Ordinal).Returns(0);
-        mockKeyField.Setup(k => k.ReferencedField).Returns((IDataField?)null);
 
         var parentName = fkBase;
         var mockParentPhysicalField = new Mock<IDataField>();
         mockParentPhysicalField.Setup(f => f.Name).Returns("RowId");
+
+        // The Foreign key names the parent's Physical key field it holds; that is what makes it the
+        // key the child hangs from.
+        mockKeyField.Setup(k => k.ReferencedField).Returns(mockParentPhysicalField.Object);
         var mockParentPhysicalKeyField = new Mock<IContainerKeyField>();
         mockParentPhysicalKeyField.Setup(k => k.LocalField).Returns(mockParentPhysicalField.Object);
         var mockParentPhysicalKey = new Mock<IContainerKey>();
@@ -184,6 +186,10 @@ public class DefaultConfigurationProviderGetByIdTests
         mockContainer.Setup(c => c.Nodes).Returns(new List<IDataNode> { mockLogicalField.Object });
         mockContainer.Setup(c => c.Description).Returns((string?)null);
 
+        // The parent lists the keys referencing it; the child's owner key is found among them.
+        mockParentContainer.Setup(c => c.ReferencingKeys).Returns(
+            GenericResult<IReadOnlyList<ReferencingKeyBinding>>.Success([new ReferencingKeyBinding(mockKey.Object, mockContainer.Object)]));
+
         // Build IDataNodePath with Container() lookup — returns IGenericResult<IDataContainer>.
         var mockPath = new Mock<IDataNodePath>();
         mockPath.Setup(p => p.Name).Returns(pathName);
@@ -222,16 +228,30 @@ public class DefaultConfigurationProviderGetByIdTests
     // ========================================================================
 
     /// <summary>
-    /// Minimal test configuration type for child config scenario.
+    /// Minimal implementation configuration, reached through the SecretManager domain row.
     /// </summary>
-    public sealed class TestChildConfig : IGenericConfiguration
+    public sealed class TestChildConfig : ITestChildConfigImplementationConfiguration
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string SectionName => "TestChildSection";
-        public string ServiceType => "TestChild";
-        public string? ServiceOptionType => "Default";
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = "Default";
         public Guid SecretManagerId { get; set; }
+    }
+
+    /// <summary>The provider under test — an implementation provider over the child container.</summary>
+    private sealed class TestChildConfigProvider
+        : ImplementationProviderBase<TestChildConfig, ITestChildConfigImplementationConfiguration>
+    {
+        public TestChildConfigProvider(IConfigurationGatewayProvider gatewayProvider)
+            : base(
+                NullLogger<ImplementationProviderBase<TestChildConfig, ITestChildConfigImplementationConfiguration>>.Instance,
+                gatewayProvider,
+                "PlatformConfiguration",
+                "sec",
+                "AzureKeyVaultSecretManager")
+        {
+        }
     }
 
     /// <summary>
@@ -303,7 +323,12 @@ public class DefaultConfigurationProviderGetByIdTests
             => throw new System.NotImplementedException();
 
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
-            => Task.FromResult(GenericResult<IDataGatewayTransaction>.Failure(new GenericMessage("Transactions not supported in test double")));
+            => Task.FromResult(GenericResult<IDataGatewayTransaction>.Success(Transaction));
+
+        // Held so a test can assert whether the unit was committed or abandoned.
+        public RecordingTransaction Transaction => _transaction ??= new RecordingTransaction(this);
+
+        private RecordingTransaction? _transaction;
 
         // The fixture addresses every call; a gateway's generic command surface carries no address,
         // so nothing here routes one and reaching these would be the test lying about the seam.
@@ -320,7 +345,7 @@ public class DefaultConfigurationProviderGetByIdTests
             => throw new NotSupportedException("This fixture routes by target, never by a bare command.");
     }
 
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

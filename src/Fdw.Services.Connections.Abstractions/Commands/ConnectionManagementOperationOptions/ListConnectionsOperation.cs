@@ -14,5 +14,5 @@ public sealed class ListConnectionsOperation : ConnectionManagementOperationBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ListConnectionsOperation"/> class.
     /// </summary>
-    public ListConnectionsOperation() : base(0, "ListConnections", modifiesState: false, requiresExistingConnection: false) { }
+    public ListConnectionsOperation() : base("ListConnections", modifiesState: false, requiresExistingConnection: false) { }
 }

@@ -12,5 +12,5 @@ namespace Fdw.Services.Resiliency.Abstractions;
 public sealed class DatabaseResiliencyCategory : ResiliencyCategoryBase
 {
     /// <summary>Initializes a new instance of <see cref="DatabaseResiliencyCategory"/>.</summary>
-    public DatabaseResiliencyCategory() : base(1, "Database") { }
+    public DatabaseResiliencyCategory() : base("Database") { }
 }

@@ -11,7 +11,7 @@ namespace Fdw.Services.Calculations;
 public sealed record WindowedCalculationOrderFieldRow(
     Guid RowId,
     Guid Id,
-    Guid WindowedCalculationId,
+    Guid WindowedCalculationConfigurationId,
     string FieldName,
     string Direction,
     int Ordinal,

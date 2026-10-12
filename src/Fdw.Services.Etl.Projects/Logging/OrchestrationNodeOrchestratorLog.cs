@@ -178,10 +178,15 @@ public static partial class OrchestrationNodeOrchestratorLog
     public static partial IGenericMessage RootCompleteFailed(ILogger logger, Guid executionId, string? message);
 
     /// <summary>
-    /// Logs when a per-execution WorkAuthenticationContext is established on the background node
-    /// execution's DI scope, carrying the execution's TenantId for RLS SESSION_CONTEXT.
+    /// Logs that a background node execution's DI scope was elevated to the system authentication
+    /// context, which reads across every tenant.
     /// </summary>
+    /// <remarks>
+    /// Under system elevation the tenant is never enforced — this line says which tenant the run
+    /// BELONGS to, never which rows it can reach. It is also the tenant the rows the run writes
+    /// default to (FDW-825); a run with no tenant writes into the default tenant.
+    /// </remarks>
     [MessageLogging(EventId = 11027, Level = LogLevel.Information,
-        Message = "WorkAuthenticationContext established for node execution {executionId} with TenantId {tenantId}")]
-    public static partial IGenericMessage WorkAuthenticationContextEstablished(ILogger logger, Guid executionId, Guid tenantId);
+        Message = "Node execution {executionId} (tenant {tenantId}) elevated to the system authentication context; reads are not tenant-scoped")]
+    public static partial IGenericMessage ExecutionElevatedToSystemContext(ILogger logger, Guid executionId, Guid? tenantId);
 }

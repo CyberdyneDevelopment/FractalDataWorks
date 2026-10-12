@@ -14,5 +14,5 @@ public sealed class AlwaysConditionType : WorkflowConditionTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AlwaysConditionType"/> class.
     /// </summary>
-    public AlwaysConditionType() : base(0, "Always", alwaysTrue: true, requiresExpression: false) { }
+    public AlwaysConditionType() : base("Always", alwaysTrue: true, requiresExpression: false) { }
 }

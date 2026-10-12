@@ -12,13 +12,46 @@ namespace Fdw.Services.Connections.Sqlite;
 
 /// <summary>
 /// Configuration for SQLite connections.
-/// Persisted to <c>conn.SqliteConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
+/// Persisted to <c>conn.SqliteConnectionConfiguration</c> as a child of <c>conn.Connection</c> via <c>ConnectionRowId</c>.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "Sqlite")]
 public partial class SqliteConnectionConfiguration : IConnectionImplementationConfiguration
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    [ValuesFrom(typeof(SchemaDiscoveryTypes))]
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
     // IGenericConfiguration — typed body identity
     // ========================================
@@ -29,20 +62,13 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     /// </summary>
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the parent header row).
-    /// </summary>
-    public Guid ConnectionId { get; set; }
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — identified by ConnectionId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-    string IGenericConfiguration.ServiceType => "Connection";
-    string? IGenericConfiguration.ServiceOptionType => "Sqlite";
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
 
     // ========================================
     // SQLite-specific properties
@@ -100,4 +126,16 @@ public partial class SqliteConnectionConfiguration : IConnectionImplementationCo
     [NotMapped]
     [ConfigurationChildTable("SqliteConnectionProperty")]
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets the named default-value policy this connection resolves through
+    /// <c>DefaultValues.ByName("Sqlite").ByName(...)</c>.
+    /// </summary>
+    /// <remarks>
+    /// No <c>SqliteDefaults</c> child collection exists yet — this is the configuration slot,
+    /// ready for whenever one is registered. Null means "use the framework-shipped
+    /// <c>\"Default\"</c> policy" — an explicit, approved fallback resolved at the call site
+    /// (<c>DefaultValuePolicy ?? "Default"</c>), never baked in here.
+    /// </remarks>
+    public string? DefaultValuePolicy { get; set; }
 }

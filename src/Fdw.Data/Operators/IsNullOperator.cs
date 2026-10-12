@@ -15,18 +15,12 @@ public sealed class IsNullOperator : FilterOperatorBase
     /// </summary>
     public IsNullOperator()
         : base(
-            id: 10,
             name: "IsNull",
             sqlOperator: "IS NULL",
             odataOperator: "eq null",
             requiresValue: false)
     {
     }
-
-    /// <summary>
-    /// Returns empty string since IS NULL doesn't use parameters.
-    /// </summary>
-    public override string FormatSqlParameter(string paramName) => string.Empty;
 
     /// <summary>
     /// Returns empty string since OData handles "eq null" without formatting.

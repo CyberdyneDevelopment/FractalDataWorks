@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class ExecuteAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for execute action.
+    /// Material Symbols icon name for execute action.
     /// </summary>
-    public const string ExecuteIcon = "play_arrow"; // Icons.Material.Filled.PlayArrow
+    public const string ExecuteIcon = "play_arrow";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecuteAction"/> class.
     /// </summary>
     public ExecuteAction()
         : base(
-            id: 6,
             name: "Execute",
             icon: ExecuteIcon,
             color: "Warning",

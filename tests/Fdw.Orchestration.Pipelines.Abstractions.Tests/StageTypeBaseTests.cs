@@ -9,14 +9,13 @@ public class StageTypeBaseTests
     private sealed class TestStageType : StageTypeBase
     {
         public TestStageType(
-            int id,
             string name,
             bool requiresSource,
             bool requiresDestination,
             bool supportsParallel,
             bool producesOutput = true,
             bool consumesInput = true)
-            : base(id, name, requiresSource, requiresDestination, supportsParallel, producesOutput, consumesInput)
+            : base(name, requiresSource, requiresDestination, supportsParallel, producesOutput, consumesInput)
         {
         }
 
@@ -31,23 +30,9 @@ public class StageTypeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ConstructorSetsIdAndName()
-    {
-        var sut = new TestStageType(1, "Extract",
-            requiresSource: true,
-            requiresDestination: false,
-            supportsParallel: true);
-
-        sut.Id.ShouldBe(1);
-        sut.Name.ShouldBe("Extract");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void ConstructorSetsRequiresSource()
     {
-        var sut = new TestStageType(1, "Extract",
+        var sut = new TestStageType("Extract",
             requiresSource: true,
             requiresDestination: false,
             supportsParallel: false);
@@ -60,7 +45,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ConstructorSetsRequiresDestination()
     {
-        var sut = new TestStageType(3, "Load",
+        var sut = new TestStageType("Load",
             requiresSource: false,
             requiresDestination: true,
             supportsParallel: false);
@@ -73,7 +58,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ConstructorSetsSupportsParallel()
     {
-        var sut = new TestStageType(2, "Transform",
+        var sut = new TestStageType("Transform",
             requiresSource: false,
             requiresDestination: false,
             supportsParallel: true);
@@ -86,7 +71,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ProducesOutputDefaultsToTrue()
     {
-        var sut = new TestStageType(1, "Extract",
+        var sut = new TestStageType("Extract",
             requiresSource: true,
             requiresDestination: false,
             supportsParallel: false);
@@ -99,7 +84,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ConsumesInputDefaultsToTrue()
     {
-        var sut = new TestStageType(1, "Extract",
+        var sut = new TestStageType("Extract",
             requiresSource: true,
             requiresDestination: false,
             supportsParallel: false);
@@ -112,7 +97,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ProducesOutputCanBeSetToFalse()
     {
-        var sut = new TestStageType(4, "Sink",
+        var sut = new TestStageType("Sink",
             requiresSource: false,
             requiresDestination: true,
             supportsParallel: false,
@@ -126,7 +111,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ConsumesInputCanBeSetToFalse()
     {
-        var sut = new TestStageType(1, "Source",
+        var sut = new TestStageType("Source",
             requiresSource: true,
             requiresDestination: false,
             supportsParallel: false,
@@ -140,7 +125,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public async Task ValidateConfigurationCanBeInvoked()
     {
-        var sut = new TestStageType(1, "Test",
+        var sut = new TestStageType("Test",
             requiresSource: false,
             requiresDestination: false,
             supportsParallel: false);
@@ -156,7 +141,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void ExtractStageTypicalConfiguration()
     {
-        var sut = new TestStageType(1, "Extract",
+        var sut = new TestStageType("Extract",
             requiresSource: true,
             requiresDestination: false,
             supportsParallel: true,
@@ -175,7 +160,7 @@ public class StageTypeBaseTests
     [Trait("Category", "Etl")]
     public void LoadStageTypicalConfiguration()
     {
-        var sut = new TestStageType(3, "Load",
+        var sut = new TestStageType("Load",
             requiresSource: false,
             requiresDestination: true,
             supportsParallel: false,

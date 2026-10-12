@@ -15,7 +15,6 @@ public sealed class PieChartType : ChartTypeBase
     /// </summary>
     public PieChartType()
         : base(
-            id: 4,
             name: "Pie",
             displayName: "Pie Chart",
             category: "Part-to-Whole",

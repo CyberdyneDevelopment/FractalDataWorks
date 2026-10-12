@@ -28,7 +28,6 @@ public sealed class PrimaryBackupResiliencyType : ResiliencyTypeBase
     /// <summary>Initializes a new instance of <see cref="PrimaryBackupResiliencyType"/>.</summary>
     public PrimaryBackupResiliencyType()
         : base(
-            id: 3,
             name: "PrimaryBackup",
             displayName: "Primary/Backup",
             description: "On primary failure, route to backup data set and schedule refresh.")

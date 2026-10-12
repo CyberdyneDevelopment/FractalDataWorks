@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Notifications.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Notification API client.
+/// Implementation for the Notification API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "NotificationClient")]
+[Implementation(typeof(ApiClientTypes), "NotificationClient")]
 public sealed class NotificationClientType : ApiClientTypeBase<NotificationApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class NotificationClientType : ApiClientTypeBase<NotificationApiCl
         {
             builder.Services.AddScoped<NotificationApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<NotificationApiClient>>() ?? NullLogger<NotificationApiClient>.Instance;
-                return new NotificationApiClient(factory.CreateClient(Name), logger);
+                return new NotificationApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -11,14 +11,13 @@ namespace Fdw.Services.Execution.Abstractions.OptionTypes;
 /// Process types define what kinds of work can be executed.
 /// Examples: ETL, HealthCheck, DataSync, etc.
 /// </summary>
-public abstract class ProcessTypeBase : TypeOptionBase<int, IProcessType>, ITypeOption<int, ProcessTypeBase>, IProcessType
+public abstract class ProcessTypeBase : TypeOptionBase<IProcessType>, ITypeOption<int, ProcessTypeBase>, IProcessType
 {
     /// <summary>
     /// Initializes a new instance of the ProcessTypeBase class.
     /// </summary>
-    /// <param name="id">Unique identifier for this process type.</param>
     /// <param name="name">Name of the process type.</param>
-    protected ProcessTypeBase(int id, string name) : base(id, name)
+    protected ProcessTypeBase(string name) : base(name)
     {
     }
 

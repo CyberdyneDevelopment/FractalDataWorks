@@ -10,5 +10,5 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 public sealed class ConnectionDataSourceKind : DataSourceKindBase
 {
     /// <summary>Initializes a new instance of <see cref="ConnectionDataSourceKind"/>.</summary>
-    public ConnectionDataSourceKind() : base(1, "Connection") { }
+    public ConnectionDataSourceKind() : base("Connection") { }
 }

@@ -66,20 +66,16 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
             if (errorMessage.Contains("not found", System.StringComparison.OrdinalIgnoreCase))
             {
                 OnExecutionNotFound(req.Id);
-                HttpContext.Response.StatusCode = 404;
-                HttpContext.Response.ContentType = "application/json";
-                await HttpContext.Response.WriteAsJsonAsync(new
+                await Send.ResultAsync(TypedResults.Json(new
                 {
                     errorCode = "NotFound",
                     messages = new[] { $"Execution '{req.Id}' was not found." }
-                }, ct).ConfigureAwait(false);
+                }, statusCode: 404)).ConfigureAwait(false);
                 return;
             }
 
             OnExecutionFetchFailed(req.Id, errorMessage);
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch execution", Details = errorMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -87,13 +83,11 @@ public abstract class GetExecutionEndpointBase : Endpoint<ExecutionIdRequest, Ex
         if (execution == null)
         {
             OnExecutionNotFound(req.Id);
-            HttpContext.Response.StatusCode = 404;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new
+            await Send.ResultAsync(TypedResults.Json(new
             {
                 errorCode = "NotFound",
                 messages = new[] { $"Execution '{req.Id}' was not found." }
-            }, ct).ConfigureAwait(false);
+            }, statusCode: 404)).ConfigureAwait(false);
             return;
         }
 

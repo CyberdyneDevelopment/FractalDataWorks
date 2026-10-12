@@ -13,5 +13,5 @@ public sealed class EditWebRenderMode : WebRenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="EditWebRenderMode"/> class.
     /// </summary>
-    public EditWebRenderMode() : base(2, "Edit", "Edit Mode", "Editable input") { }
+    public EditWebRenderMode() : base("Edit", "Edit Mode", "Editable input") { }
 }

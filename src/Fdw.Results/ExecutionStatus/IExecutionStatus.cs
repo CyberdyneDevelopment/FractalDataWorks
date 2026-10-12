@@ -25,12 +25,12 @@ namespace Fdw.Results.ExecutionStatus;
 public interface IExecutionStatus : ITypeOption<int, ExecutionStatusBase>
 {
     /// <summary>
-    /// Gets the MudBlazor icon name for this status.
+    /// Gets the Material Symbols icon name for this status.
     /// </summary>
     string Icon { get; }
 
     /// <summary>
-    /// Gets the MudBlazor color for this status.
+    /// Gets the semantic color role for this status (Primary, Success, Warning, Error, Info, ...).
     /// </summary>
     /// <example>Primary, Success, Info, Warning, Error</example>
     string Color { get; }

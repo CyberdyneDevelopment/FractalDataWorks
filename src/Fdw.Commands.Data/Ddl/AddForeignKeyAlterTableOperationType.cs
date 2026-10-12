@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class AddForeignKeyAlterTableOperationType : AlterTableOperationTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="AddForeignKeyAlterTableOperationType"/>.</summary>
-    public AddForeignKeyAlterTableOperationType() : base(5, "AddForeignKey") { }
+    public AddForeignKeyAlterTableOperationType() : base("AddForeignKey") { }
 }

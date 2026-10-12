@@ -17,8 +17,7 @@ public sealed class ProcessCancellationRequestedMessage : ExecutionMessage, ISer
         : base(1003, "ProcessCancellationRequested", MessageSeverity.Information,
                "Process cancellation requested",
                "EXEC_PROCESS_CANCELLATION_REQUESTED",
-               "Process",
-               "https://docs.Fdw.io/execution/cancellation")
+               "Process")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class ProcessCancellationRequestedMessage : ExecutionMessage, ISer
         : base(1003, "ProcessCancellationRequested", MessageSeverity.Information,
                string.Format(CultureInfo.InvariantCulture, "Process cancellation requested for process: {0}", processId),
                "EXEC_PROCESS_CANCELLATION_REQUESTED",
-               "Process",
-               "https://docs.Fdw.io/execution/cancellation")
+               "Process")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class ProcessCancellationRequestedMessage : ExecutionMessage, ISer
                string.Format(CultureInfo.InvariantCulture, "Process cancellation requested for process: {0}, reason: {1}",
                            processId, reason),
                "EXEC_PROCESS_CANCELLATION_REQUESTED",
-               "Process",
-               "https://docs.Fdw.io/execution/cancellation")
+               "Process")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class ProcessCancellationRequestedMessage : ExecutionMessage, ISer
                string.Format(CultureInfo.InvariantCulture, "Process cancellation requested for process: {0}, operation: {1}, reason: {2}",
                            processId, operationName, reason),
                "EXEC_PROCESS_CANCELLATION_REQUESTED",
-               "Process",
-               "https://docs.Fdw.io/execution/cancellation")
+               "Process")
     { }
 }

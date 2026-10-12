@@ -228,6 +228,17 @@ public static partial class SignalRLog
         int hubCount);
 
     /// <summary>
+    /// Logs when <c>RealTimeHubs.Map</c> is called a second time and skips remapping — mapping a
+    /// hub route twice would register a duplicate endpoint and throw at the first real connection.
+    /// </summary>
+    [MessageLogging(
+        EventId = 11015,
+        Level = LogLevel.Warning,
+        Message = "Real-time hub endpoints were already mapped; skipping a second Map() call")]
+    public static partial IGenericMessage RealTimeHubsAlreadyMapped(
+        ILogger logger);
+
+    /// <summary>
     /// Logs when a single real-time hub endpoint is mapped.
     /// </summary>
     [MessageLogging(

@@ -99,16 +99,14 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
                 else
                 {
                     var orchMsg = EndpointLogger.EndpointError(Logger, new InvalidOperationException(orchestrationResult.Status.ToString()), GetType().Name);
-                    HttpContext.Response.StatusCode = 500;
-                    HttpContext.Response.ContentType = "application/json";
-                    await HttpContext.Response.WriteAsJsonAsync(new FdwErrorResponse
+                    await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
                     {
                         Code = orchMsg.Code ?? "INTERNAL_ERROR",
                         Message = orchMsg.Message,
                         ReferenceId = HttpContext.TraceIdentifier,
                         IsRetryable = false,
                         Action = "Contact your administrator"
-                    }, ct).ConfigureAwait(false);
+                    }, statusCode: 500)).ConfigureAwait(false);
                 }
             }
             else if (result is TResponse directResponse)
@@ -119,16 +117,14 @@ public abstract class GenericEndpointBase<TRequest, TResponse> : Endpoint<TReque
         catch (Exception ex)
         {
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new FdwErrorResponse
+            await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
                 Code = "INTERNAL_ERROR",
                 Message = "An unexpected error occurred",
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
                 Action = "Contact your administrator"
-            }, ct).ConfigureAwait(false);
+            }, statusCode: 500)).ConfigureAwait(false);
         }
     }
 

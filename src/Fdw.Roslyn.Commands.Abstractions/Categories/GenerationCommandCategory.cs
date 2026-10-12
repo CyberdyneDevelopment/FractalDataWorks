@@ -12,7 +12,7 @@ public sealed class GenerationCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="GenerationCommandCategory"/> class.
     /// </summary>
-    public GenerationCommandCategory() : base(5, "Generation", "Code generation operations")
+    public GenerationCommandCategory() : base("Generation", "Code generation operations")
     {
     }
 }

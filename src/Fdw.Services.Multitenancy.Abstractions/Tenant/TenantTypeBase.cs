@@ -21,6 +21,7 @@ public abstract class TenantTypeBase : TypeOptionBase<Guid, TenantTypeBase>, ITe
         OrgPrefix = configuration.OrgPrefix;
         IsActive = configuration.IsActive;
         IsGlobal = configuration.IsGlobal;
+        IsSelectable = configuration.IsSelectable;
         DisplayName = configuration.Name;
         ConnectionName = configuration.ConnectionName;
         Theme = configuration.Theme.ToTheme();
@@ -41,13 +42,15 @@ public abstract class TenantTypeBase : TypeOptionBase<Guid, TenantTypeBase>, ITe
         ITenantTheme? theme = null,
         ITenantOptions? options = null,
         IEnumerable<string>? availableRoles = null,
-        bool isGlobal = false)
+        bool isGlobal = false,
+        bool isSelectable = true)
         : base(id, name)
     {
         Slug = slug;
         OrgPrefix = orgPrefix;
         IsActive = true;
         IsGlobal = isGlobal;
+        IsSelectable = isSelectable;
         DisplayName = name;
         ConnectionName = connectionName;
         Theme = theme ?? TenantTheme.Default;
@@ -68,6 +71,9 @@ public abstract class TenantTypeBase : TypeOptionBase<Guid, TenantTypeBase>, ITe
 
     /// <inheritdoc />
     public bool IsGlobal { get; }
+
+    /// <inheritdoc />
+    public bool IsSelectable { get; }
 
     /// <inheritdoc />
     public new string DisplayName { get; }

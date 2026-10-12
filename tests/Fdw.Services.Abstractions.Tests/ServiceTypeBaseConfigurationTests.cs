@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 using Fdw.Abstractions;
 using Fdw.Configuration;
@@ -28,15 +29,17 @@ public class ServiceTypeBaseConfigurationTests
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "Test";
-        public string SectionName => "Test";
+        // CA1822 is wrong here: the member implements IGenericConfiguration, so it cannot be static.
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Implements IGenericConfiguration.")]
         public string ServiceType => "Test";
-        public string? ServiceOptionType => "Test";
     }
 
     [ExcludeFromCodeCoverage]
     private class SimpleService : IGenericService
     {
         public string Id => "test";
+        // CA1822 is wrong here: the member implements IGenericConfiguration, so it cannot be static.
+        [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Implements IGenericConfiguration.")]
         public string ServiceType => "Test";
         public bool IsAvailable => true;
 
@@ -76,7 +79,7 @@ public class ServiceTypeBaseConfigurationTests
                 // Inline, because binding from appsettings is three lines in the body that wants
                 // it rather than a helper on every service type that does not.
                 builder.Services.AddOptions<SimpleConfig>()
-                    .BindConfiguration(SectionName)
+                    .BindConfiguration(ConfigurationKey)
                     .ValidateDataAnnotations()
                     .ValidateOnStart();
 

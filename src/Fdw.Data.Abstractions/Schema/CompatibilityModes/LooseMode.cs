@@ -15,7 +15,6 @@ public sealed class LooseMode : SchemaCompatibilityModeBase
     /// </summary>
     public LooseMode()
         : base(
-            id: 5,
             name: "Loose",
             requiresExactTypes: false,
             allowsSourceExtras: true,

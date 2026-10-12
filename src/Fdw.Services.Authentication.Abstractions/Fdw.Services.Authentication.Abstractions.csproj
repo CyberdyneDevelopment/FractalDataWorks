@@ -11,6 +11,8 @@
     <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Services.TokenManagers.Abstractions\Fdw.Services.TokenManagers.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Claims.Abstractions\Fdw.Claims.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
   </ItemGroup>
 <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>

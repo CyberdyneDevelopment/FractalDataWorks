@@ -16,7 +16,7 @@ public sealed class DurationExceededCondition : NotificationConditionTypeBase
     /// Initializes a new instance of the <see cref="DurationExceededCondition"/> class.
     /// </summary>
     public DurationExceededCondition()
-        : base(3, "DurationExceeded", "timer_off", "Warning")
+        : base("DurationExceeded", "timer_off", "Warning")
     {
     }
 

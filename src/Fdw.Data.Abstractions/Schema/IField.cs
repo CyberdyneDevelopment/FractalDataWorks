@@ -9,12 +9,12 @@ namespace Fdw.Data.Abstractions;
 /// </summary>
 /// <remarks>
 /// Extends IPropertyDefinition from Schema.Abstractions for unified property handling.
-/// The Role property is inherited and typed as IPropertyRole.
+/// The Role property is inherited and typed as IDatumType.
 /// </remarks>
 public interface IField : IPropertyDefinition
 {
     // Name property inherited from IPropertyDefinition
-    // Role property inherited from IPropertyDefinition (IPropertyRole type)
+    // Role property inherited from IPropertyDefinition (IDatumType type)
     // IsRequired property inherited from IPropertyDefinition (inverse of IsNullable)
     // Description property inherited from IPropertyDefinition
     // Metadata property inherited from IPropertyDefinition
@@ -64,13 +64,13 @@ public interface IField : IPropertyDefinition
     bool IsSystemProvided { get; }
 
     /// <summary>
-    /// Gets whether this field may be projected into a dataset.
+    /// Whether the store declares a DEFAULT constraint on this column.
     /// </summary>
     /// <remarks>
-    /// Read from <c>data.DataContainerField.VisibilityId</c>. A physical key field is declared so the
-    /// key definition can name it and is NotVisible so no dataset can select it — the container
-    /// abstraction exists so a caller never sees a storage detail. Authoring surfaces read the whole
-    /// field list; only projection consults this.
+    /// Purely descriptive — an app-settable column can carry a DEFAULT and still accept an
+    /// explicit value. <see cref="IsSystemProvided"/> is the only flag translators consult to
+    /// exclude a column from INSERT/UPDATE; this property drives no write-path behavior.
     /// </remarks>
-    IFieldVisibility Visibility { get; }
+    bool HasDefault { get; }
+
 }

@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -35,7 +36,7 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
     /// messaging service and its store/path lives beside every other configured domain, even though
     /// the messages themselves live in whichever store that row names.
     /// </remarks>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     /// <summary>
     /// Sets this collection's Register body: the option collect, then this domain's configuration provider.
@@ -50,17 +51,18 @@ public partial class MessagingServiceTypes : ServiceTypeCollectionBase<
             if (registered.IsFailure)
                 return registered;
 
-            builder.Services.TryAddSingleton<IMessagingConfigurationProvider>(sp =>
-                new MessagingConfigurationProvider(
-                    sp.GetService<ILogger<MessagingConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<MessagingConfigurationProvider>(
-                sp => (MessagingConfigurationProvider)sp.GetRequiredService<IMessagingConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<MessagingConfiguration, MessagingConfigurationCommand>>(
-                sp => sp.GetRequiredService<MessagingConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<MessagingConfiguration>>(
-                sp => sp.GetRequiredService<MessagingConfigurationProvider>());
+            builder.Services.AddSingleton<IMessagingImplementationConfigurationProvider, MessagingImplementationConfigurationProvider>(sp => new MessagingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<MessagingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection, "msg", "MessagingConfiguration"));
+            builder.Services.TryAddSingleton<MessagingConfigurationProvider>(sp =>
+            {
+                var domain = new MessagingConfigurationProvider(
+                    sp.GetRequiredService<ILogger<MessagingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), MessagingServiceTypes.ConfigurationConnection, "msg", "Messaging");
+                domain.Register("Messaging", sp.GetRequiredService<IMessagingImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IMessagingConfigurationProvider>(sp => sp.GetRequiredService<MessagingConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IMessagingImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IMessagingConfigurationProvider>());
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -11,7 +11,6 @@ public sealed class WarningIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="WarningIcon"/>.</summary>
     public WarningIcon()
         : base(
-            46,
             "Warning",
             "0 0 24 24",
             "none",

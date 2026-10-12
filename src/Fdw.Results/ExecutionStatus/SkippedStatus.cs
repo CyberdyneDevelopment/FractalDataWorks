@@ -11,16 +11,15 @@ namespace Fdw.Results.ExecutionStatus;
 public sealed class SkippedStatus : ExecutionStatusBase
 {
     /// <summary>
-    /// MudBlazor icon for skipped status.
+    /// Material Symbols icon name for skipped status.
     /// </summary>
-    public const string SkippedIcon = "skip_next"; // Icons.Material.Filled.SkipNext
+    public const string SkippedIcon = "skip_next";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SkippedStatus"/> class.
     /// </summary>
     public SkippedStatus()
         : base(
-            id: 6,
             name: "Skipped",
             icon: SkippedIcon,
             color: "Default",

@@ -50,7 +50,7 @@ public class SystemAuthenticationContextScopeTests
     {
         // Arrange
         var accessor = new AuthenticationContextAccessor();
-        var previous = new WorkAuthenticationContext(Guid.NewGuid());
+        var previous = new SystemAuthenticationContext(Guid.NewGuid());
         accessor.Current = previous;
 
         // Act
@@ -84,5 +84,26 @@ public class SystemAuthenticationContextScopeTests
     public void ConstructorThrowsForNullAccessor()
     {
         Should.Throw<ArgumentNullException>(() => new SystemAuthenticationContextScope(null!));
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void TheTenantScopeCarriesItsTenantAndRestoresThePriorValue()
+    {
+        // Arrange: a caller acting in one tenant writes rows owned by another (FDW-1072).
+        var accessor = new AuthenticationContextAccessor();
+        var previous = new SystemAuthenticationContext(Guid.NewGuid());
+        accessor.Current = previous;
+        var owner = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+
+        // Act
+        var scope = new SystemAuthenticationContextScope(accessor, owner);
+        var inside = accessor.Current;
+        scope.Dispose();
+
+        // Assert
+        inside.ShouldBeOfType<SystemAuthenticationContext>().ActiveTenantId.ShouldBe(owner);
+        accessor.Current.ShouldBeSameAs(previous);
     }
 }

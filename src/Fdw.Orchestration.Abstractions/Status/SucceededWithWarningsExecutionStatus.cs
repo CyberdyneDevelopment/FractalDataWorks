@@ -14,5 +14,5 @@ public sealed class SucceededWithWarningsExecutionStatus : WorkflowExecutionStat
     /// <summary>
     /// Initializes a new instance of the <see cref="SucceededWithWarningsExecutionStatus"/> class.
     /// </summary>
-    public SucceededWithWarningsExecutionStatus() : base(4, "SucceededWithWarnings", isTerminal: true, isSuccess: true, isFailure: false) { }
+    public SucceededWithWarningsExecutionStatus() : base("SucceededWithWarnings", isTerminal: true, isSuccess: true, isFailure: false) { }
 }

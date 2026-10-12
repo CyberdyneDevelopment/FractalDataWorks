@@ -68,7 +68,7 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
     }
 
     /// <inheritdoc/>
-    public ExecutionPolicySnapshot ResolveForNode(OrchestrationNodeConfiguration node, ExecutionPolicySnapshot parentEffective)
+    public ExecutionPolicySnapshot ResolveForNode(IOrchestrationNodeImplementationConfiguration node, ExecutionPolicySnapshot parentEffective)
     {
         if (node == null) throw new ArgumentNullException(nameof(node));
         if (parentEffective == null) throw new ArgumentNullException(nameof(parentEffective));

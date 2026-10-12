@@ -45,9 +45,40 @@ public interface IUserCredentialService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Removes the user's current credential of the given type, so it can no longer be used to sign in.
+    /// </summary>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="secretType">The secret type.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <remarks>
+    /// The credential is disabled in the vault rather than deleted, so its history stays. The account
+    /// keeps every other way in: an external identity or an API key is untouched.
+    /// </remarks>
+    Task<IGenericResult> Remove(
+        Guid userId,
+        string secretType,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sets the MustChangePasswordOnLogin flag on a user.
     /// </summary>
     Task<IGenericResult> ForcePasswordChange(
         Guid userId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers whether the user currently holds a credential of the given type.
+    /// </summary>
+    /// <remarks>
+    /// Presence only. Granting a FIRST password and resetting an existing one are different acts
+    /// with different authority, so the caller has to be able to tell them apart without reading
+    /// anything the vault stores.
+    /// </remarks>
+    /// <param name="userId">The user ID.</param>
+    /// <param name="secretType">The secret type (currently only "Password" is vault-backed).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task<IGenericResult<bool>> HasCredential(
+        Guid userId,
+        string secretType,
         CancellationToken cancellationToken = default);
 }

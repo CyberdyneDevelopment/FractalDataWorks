@@ -8,4 +8,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConnectionStates), "Created", RestrictToCurrentCompilation = true)]
-public sealed class CreatedConnectionState() : ConnectionStateBase(1, "Created");
+public sealed class CreatedConnectionState() : ConnectionStateBase("Created");

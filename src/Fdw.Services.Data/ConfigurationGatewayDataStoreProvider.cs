@@ -10,6 +10,7 @@ using Fdw.Commands.Data;
 using Fdw.Data.Abstractions;
 using Fdw.MessageLogging;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Logging;
@@ -17,6 +18,7 @@ using Fdw.Services.Data.Results;
 using Fdw.ServiceTypes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -67,11 +69,6 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         builder.Services.Configure<List<DataContainerFieldConfiguration>>(
             builder.Configuration.GetSection("DataStores:DataContainerField"));
 
-        foreach (var type in DataStoreTypes.All())
-        {
-            type.Configure(builder.Services, builder.Configuration, loggerFactory);
-        }
-
         var logger = loggerFactory?.CreateLogger(typeof(ConfigurationGatewayDataStoreProvider)) ?? NullLogger.Instance;
         DataStoreTypesLog.ConfiguredOptionsBindings(logger);
 
@@ -103,7 +100,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             sp.GetRequiredService<DataStoreConfigurationProvider>(),
             sp.GetRequiredService<IDataStoreBuilderSelector>()));
 
-        services.AddScoped<ConfigurationGatewayDataStoreProvider>(sp =>
+        services.AddSingleton<ConfigurationGatewayDataStoreProvider>(sp =>
         {
             var providerLogger = sp.GetRequiredService<ILoggerFactory>().CreateLogger<ConfigurationGatewayDataStoreProvider>();
             var coreProvider = sp.GetRequiredService<ConfiguredDataStoreProvider>();
@@ -111,7 +108,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             var gatewayProvider = sp.GetRequiredService<IConfigurationGatewayProvider>();
             return new ConfigurationGatewayDataStoreProvider(providerLogger, coreProvider, configProvider, gatewayProvider);
         });
-        services.AddScoped<IDataStoreProvider>(sp => sp.GetRequiredService<ConfigurationGatewayDataStoreProvider>());
+        services.AddSingleton<IDataStoreProvider>(sp => sp.GetRequiredService<ConfigurationGatewayDataStoreProvider>());
 
 
 
@@ -149,9 +146,17 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
         var provider = scope.ServiceProvider.GetRequiredService<IDataStoreProvider>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<ConfigurationGatewayDataStoreProvider>>();
 
+        // The elevation is opened and closed around this read, by the domain that needs it: a
+        // boot-time load has no ClaimsPrincipal and no TenantId, so under the RLS predicates it
+        // resolves to the deny-everywhere principal and reads nothing. Scoping it here rather than
+        // in the host keeps the window to the load itself, and no host has to know to do it.
+        using (new SystemAuthenticationContextScope(
+            scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>()))
+        {
 #pragma warning disable VSTHRD002
-        LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
+            LoadStores(scope.ServiceProvider, provider, logger).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
+        }
     
         return GenericResult<IHost>.Success(host);
     }
@@ -171,7 +176,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
             return;
         }
 
-        var dataStores = new List<Fdw.Services.Connections.DataStoreConfiguration>();
+        var dataStores = new List<Fdw.Services.Connections.IDataStoreImplementationConfiguration>();
         foreach (var shallow in configResult.Value!)
         {
             if (string.IsNullOrWhiteSpace(shallow.Name)) continue;
@@ -193,28 +198,28 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
         foreach (var ds in dataStores.Where(d => !string.IsNullOrWhiteSpace(d.Name)))
         {
-            if (string.IsNullOrEmpty(ds.ServiceOptionType))
+            if (string.IsNullOrEmpty(ds.Implementation))
             {
-                DataStoreTypesLog.DataStoreMissingServiceOptionType(logger, ds.Name);
+                DataStoreTypesLog.DataStoreMissingImplementation(logger, ds.Name);
                 continue;
             }
 
-            DataStoreTypesLog.DataStoreLoaded(logger, ds.Id, ds.Name, ds.ServiceOptionType);
+            DataStoreTypesLog.DataStoreLoaded(logger, ds.Id, ds.Name, ds.Implementation);
         }
 
         foreach (var path in dataPaths.Where(p => !string.IsNullOrWhiteSpace(p.Name)))
         {
-            DataStoreTypesLog.DataPathLoaded(logger, path.Id, path.Name, path.DataStoreId);
+            DataStoreTypesLog.DataPathLoaded(logger, path.Id, path.Name);
         }
 
         foreach (var container in dataContainers.Where(c => !string.IsNullOrWhiteSpace(c.Name)))
         {
-            DataStoreTypesLog.DataContainerLoaded(logger, container.Id, container.Name, container.DataPathId);
+            DataStoreTypesLog.DataContainerLoaded(logger, container.Id, container.Name);
         }
 
         foreach (var field in dataContainerFields.Where(f => !string.IsNullOrWhiteSpace(f.Name)))
         {
-            DataStoreTypesLog.FieldLoaded(logger, field.Id, field.Name, field.DataContainerId, field.DataType ?? string.Empty);
+            DataStoreTypesLog.FieldLoaded(logger, field.Id, field.Name, field.DataType ?? string.Empty);
         }
 
         foreach (var ds in dataStores.Where(d => !string.IsNullOrWhiteSpace(d.Name)))
@@ -245,9 +250,9 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
 
     private readonly ConfiguredDataStoreProvider _coreProvider;
 
-    private readonly DataStoreConfigurationProvider _dataStoreConfigProvider;
+    private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _dataStoreConfigProvider;
 
-    private const string ConfigurationConnectionName = "PlatformConfiguration";
+    private static string ConfigurationConnectionName => PlatformConnection.Name;
 
     private readonly IConfigurationGatewayProvider? _gatewayProvider;
 
@@ -257,7 +262,7 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
     public ConfigurationGatewayDataStoreProvider(
         ILogger<ConfigurationGatewayDataStoreProvider> logger,
         ConfiguredDataStoreProvider coreProvider,
-        DataStoreConfigurationProvider dataStoreConfigProvider,
+        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> dataStoreConfigProvider,
         IConfigurationGatewayProvider? gatewayProvider = null)
     {
         _logger = logger ?? NullLogger<ConfigurationGatewayDataStoreProvider>.Instance;
@@ -282,10 +287,25 @@ public sealed class ConfigurationGatewayDataStoreProvider : IDataStoreProvider
                 DataStoreProviderLog.DataStoreRetrieved(_logger, name);
                 return GenericResult<IDataStore>.Success(gwStore);
             }
+
+            // Built once for the caller's partition and kept until a container the build read is written, not on
+            // every command (FDW-992). The build composes the store from reads through this same gateway, which
+            // is how it knows what to drop the store on. A host whose gateway offers no such cache, or that has
+            // no gateway at all, builds as it always did.
+            if (gw.IsSuccess && gw.Value is IDerivedConfigurationCache derived)
+            {
+                return await derived.Derive(
+                    name, () => _coreProvider.Get(name, cancellationToken), HasContainers, cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
 
         return await _coreProvider.Get(name, cancellationToken).ConfigureAwait(false);
     }
+
+    // A store built while the caller could see none of its configuration has no containers and describes
+    // nothing; kept, that would last as long as the cache does. The same reason an empty read is not kept.
+    private static bool HasContainers(IDataStore store) => store.Paths.Any(path => path.Containers.Count > 0);
 
     /// <inheritdoc/>
     public async Task<IGenericResult<IReadOnlyList<IDataStore>>> Get(CancellationToken cancellationToken = default)

@@ -32,7 +32,6 @@ public sealed class GenerateDocsTranslator : RoslynCommandTranslatorBase<Generat
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: find undocumented members, generate XML documentation
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateDocsCommand command,
         Solution solution,
@@ -156,7 +155,6 @@ public sealed class GenerateDocsTranslator : RoslynCommandTranslatorBase<Generat
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 
     private static bool HasDocumentation(SyntaxNode node)
     {

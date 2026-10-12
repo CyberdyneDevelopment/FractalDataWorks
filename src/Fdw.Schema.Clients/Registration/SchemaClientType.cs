@@ -14,10 +14,10 @@ using Fdw.Results;
 namespace Fdw.Schema.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Schema API client.
+/// Implementation for the Schema API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "SchemaClient")]
+[Implementation(typeof(ApiClientTypes), "SchemaClient")]
 public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
 {
     /// <summary>
@@ -36,9 +36,8 @@ public sealed class SchemaClientType : ApiClientTypeBase<SchemaApiClient>
             // TableWizardProvider [Inject]s ISchemaProvider — without this the schema wizard crashes.
             builder.Services.AddScoped<ISchemaProvider>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<SchemaApiClient>>() ?? NullLogger<SchemaApiClient>.Instance;
-                return new SchemaApiClient(factory.CreateClient(Name), logger);
+                return new SchemaApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

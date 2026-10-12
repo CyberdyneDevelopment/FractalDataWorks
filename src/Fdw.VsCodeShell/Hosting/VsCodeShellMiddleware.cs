@@ -16,7 +16,7 @@ namespace Fdw.VsCodeShell.Hosting;
 /// <summary>
 /// Middleware that serves the manifest at <c>GET /vscode/manifest</c> and dispatches
 /// command invocations at <c>POST /vscode/commands/{id}</c>. Every other path passes
-/// through to the host's own pipeline (Razor, Blazor, static files, etc).
+/// through to the host's own pipeline (Razor Pages, static files, etc).
 /// </summary>
 internal sealed class VsCodeShellMiddleware
 {

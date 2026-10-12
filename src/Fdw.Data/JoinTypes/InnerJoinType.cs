@@ -17,7 +17,6 @@ public sealed class InnerJoinType : JoinTypeBase
     /// </summary>
     public InnerJoinType()
         : base(
-            id: 1,
             name: "Inner",
             sqlKeyword: "INNER JOIN",
             description: "Returns only matching rows from both sources",

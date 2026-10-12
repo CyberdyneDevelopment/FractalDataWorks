@@ -14,5 +14,5 @@ public sealed class ParallelStepType : WorkflowStepTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ParallelStepType"/> class.
     /// </summary>
-    public ParallelStepType() : base(2, "Parallel", executesPipeline: false, supportsParallelism: true) { }
+    public ParallelStepType() : base("Parallel", executesPipeline: false, supportsParallelism: true) { }
 }

@@ -53,7 +53,7 @@ public sealed class GetConnectionEndpoint : GetConnectionEndpointBase<MsSqlConne
         {
             Id = connection.Id,
             Name = connection.Name,
-            ServiceType = connection.ServiceOptionType,
+            ServiceType = connection.Implementation,
             Server = body?.Server,
             Port = body?.Port,
             Database = body?.Database,
@@ -320,32 +320,32 @@ The reference-etl and reference-scheduler use standalone FastEndpoints that inje
 
 ### Pattern: Injecting Domain Services
 
-From `Reference.Etl.Server/Endpoints/TriggerJobEndpoint.cs`:
+An illustrative standalone endpoint:
 
 ```csharp
-public sealed class TriggerJobEndpoint : Endpoint<TriggerJobRequest, TriggerJobResponse>
+public sealed class StartJobEndpoint : Endpoint<StartJobRequest, StartJobResponse>
 {
     private readonly IJobExecutionService _jobService;
 
-    public TriggerJobEndpoint(IJobExecutionService jobService)
+    public StartJobEndpoint(IJobExecutionService jobService)
     {
         _jobService = jobService;
     }
 
     public override void Configure()
     {
-        Post("etl/trigger");
+        Post("etl/jobs/start");
         AllowAnonymous();  // Protected by InternalApiKeyMiddleware instead
         Summary(s =>
         {
-            s.Summary = "Trigger an ETL job";
+            s.Summary = "Start an ETL job";
             s.Description = "Triggers a pipeline execution and returns the execution ID.";
         });
     }
 
-    public override async Task HandleAsync(TriggerJobRequest req, CancellationToken ct)
+    public override async Task HandleAsync(StartJobRequest req, CancellationToken ct)
     {
-        var result = await _jobService.TriggerJob(
+        var result = await _jobService.StartJob(
             req.PipelineName, req.TriggerSource ?? "Api", req.ScheduleName, ct)
             .ConfigureAwait(false);
 
@@ -356,10 +356,10 @@ public sealed class TriggerJobEndpoint : Endpoint<TriggerJobRequest, TriggerJobR
             return;
         }
 
-        await Send.ResponseAsync(new TriggerJobResponse
+        await Send.ResponseAsync(new StartJobResponse
         {
             ExecutionId = result.Value,
-            Status = "Triggered"
+            Status = "Started"
         }, 202, ct).ConfigureAwait(false);
     }
 }
@@ -386,7 +386,7 @@ app.UseFastEndpoints(config =>
 });
 ```
 
-Endpoint routes in `Configure()` are relative to this prefix. For example, `Post("etl/trigger")` becomes `POST /api/v1/etl/trigger`.
+Endpoint routes in `Configure()` are relative to this prefix. For example, `Post("etl/jobs/start")` becomes `POST /api/v1/etl/jobs/start`.
 
 ## See Also
 

@@ -8,7 +8,7 @@ namespace Fdw.Data.Transformations;
 public sealed class ToNegativeInfinityRoundingType : RoundingTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="ToNegativeInfinityRoundingType"/> class.</summary>
-    public ToNegativeInfinityRoundingType() : base(5, "ToNegativeInfinity") { }
+    public ToNegativeInfinityRoundingType() : base("ToNegativeInfinity") { }
 
     /// <inheritdoc/>
     public override decimal Round(decimal value, int precision) =>

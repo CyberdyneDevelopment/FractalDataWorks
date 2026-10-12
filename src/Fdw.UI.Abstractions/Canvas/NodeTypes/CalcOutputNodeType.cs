@@ -14,7 +14,7 @@ public sealed class CalcOutputNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="CalcOutputNodeType"/> class.
     /// </summary>
     public CalcOutputNodeType()
-        : base(10, "CalcOutput", "Calc Output", "Calculation", "log-out")
+        : base("CalcOutput", "Calc Output", "Calculation", "log-out")
     {
     }
 }

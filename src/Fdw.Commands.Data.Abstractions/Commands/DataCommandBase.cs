@@ -20,7 +20,7 @@ namespace Fdw.Commands.Data.Abstractions;
 /// Properties must be set in constructor for TypeCollection source generators to read them.
 /// </para>
 /// </remarks>
-public abstract class DataCommandBase : IDataCommand
+public abstract class DataCommandBase : IDatabaseConnectionCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataCommandBase"/> class.
@@ -67,6 +67,10 @@ public abstract class DataCommandBase : IDataCommand
     /// Gets the metadata for this command.
     /// </summary>
     public IReadOnlyDictionary<string, object> Metadata { get; init; }
+
+    /// <inheritdoc/>
+    /// <remarks>No, for every command where bulk does nothing; a command that can use bulk overrides it (FDW-1152).</remarks>
+    public virtual bool ReroutesToBulk(int maxSerialInsert) => false;
 }
 
 /// <summary>

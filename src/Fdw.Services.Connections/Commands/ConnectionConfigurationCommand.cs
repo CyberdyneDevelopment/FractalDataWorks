@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Configuration;
 using Fdw.Services.Connections.Abstractions;
@@ -8,7 +9,7 @@ namespace Fdw.Services.Connections.Commands;
 /// ConfigurationCommands TypeOption for the Connection configuration domain.
 /// </summary>
 [TypeOption(typeof(ConfigurationCommands), "Connection")]
-public sealed class ConnectionConfigurationCommand : ConfigurationCommandBase<ConnectionConfiguration>
+public sealed class ConnectionConfigurationCommand : ConfigurationCommandBase<DomainConfiguration>
 {
     /// <inheritdoc/>
     public ConnectionConfigurationCommand() : base("Connection") { }

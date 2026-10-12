@@ -14,5 +14,5 @@ public sealed class TreeDisplayMode : CollectionDisplayModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="TreeDisplayMode"/> class.
     /// </summary>
-    public TreeDisplayMode() : base(4, "Tree", supportsExpandCollapse: true, supportsGrouping: true) { }
+    public TreeDisplayMode() : base("Tree", supportsExpandCollapse: true, supportsGrouping: true) { }
 }

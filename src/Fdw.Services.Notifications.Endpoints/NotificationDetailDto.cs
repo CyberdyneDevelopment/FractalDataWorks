@@ -14,7 +14,7 @@ public sealed class NotificationDetailDto
     public required string Name { get; set; }
 
     /// <summary>Gets or sets the service option type (e.g., Email, Webhook, Console).</summary>
-    public string? ServiceOptionType { get; set; }
+    public string? Implementation { get; set; }
 
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }

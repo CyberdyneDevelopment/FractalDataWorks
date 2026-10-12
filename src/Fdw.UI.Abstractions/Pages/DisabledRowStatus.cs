@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class DisabledRowStatus : RowStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="DisabledRowStatus"/>.</summary>
-    public DisabledRowStatus() : base(5, "Disabled") { }
+    public DisabledRowStatus() : base("Disabled") { }
 }

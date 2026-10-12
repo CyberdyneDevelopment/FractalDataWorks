@@ -5,7 +5,7 @@ namespace Fdw.Data.RowSources.Abstractions.Tests;
 
 public class RecordSchemaTests
 {
-    private static IReadOnlyList<IDataField> TwoFields()
+    private static List<IDataField> TwoFields()
     {
         var id = new Mock<IDataField>();
         id.Setup(f => f.Name).Returns("Id");

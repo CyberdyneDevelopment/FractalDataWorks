@@ -31,7 +31,6 @@ public sealed class KeyValueLayout : DataLayoutBase
     /// </summary>
     public KeyValueLayout()
         : base(
-            id: 4,
             name: "KeyValue",
             description: "Key-value pairs (Redis, config sections)",
             supportsNesting: false,

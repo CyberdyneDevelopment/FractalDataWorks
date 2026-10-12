@@ -26,7 +26,7 @@ public sealed class CountOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="CountOperation"/> class.
     /// </summary>
     public CountOperation()
-        : base(id: 14, name: "Count", category: "Aggregate", description: "Counts the number of values in a field")
+        : base(name: "Count", category: "Aggregate", description: "Counts the number of values in a field")
     {
         _logger = NullLogger<CountOperation>.Instance;
         Parameters =

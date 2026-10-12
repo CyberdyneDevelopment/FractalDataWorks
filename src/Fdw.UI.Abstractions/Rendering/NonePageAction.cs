@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Rendering;
 public sealed class NonePageAction : PageActionBase
 {
     /// <summary>Initializes a new instance of <see cref="NonePageAction"/>.</summary>
-    public NonePageAction() : base(0, "None") { }
+    public NonePageAction() : base("None") { }
 }

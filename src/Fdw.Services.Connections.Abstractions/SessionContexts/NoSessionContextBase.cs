@@ -15,7 +15,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// collection rather than an empty list, which would be indistinguishable from a kind that simply
 /// forgot to declare its contexts.
 /// </remarks>
-public abstract class NoSessionContextBase : TypeOptionBase<int, ISessionContext>, ISessionContext
+public abstract class NoSessionContextBase : TypeOptionBase<ISessionContext>, ISessionContext
 {
     /// <summary>
     /// The partition every caller through a kind with no session-context concept shares.
@@ -29,9 +29,8 @@ public abstract class NoSessionContextBase : TypeOptionBase<int, ISessionContext
     /// <summary>
     /// Initializes a new instance of the <see cref="NoSessionContextBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this session context.</param>
     /// <param name="name">The name of this session context.</param>
-    protected NoSessionContextBase(int id, string name) : base(id, name)
+    protected NoSessionContextBase(string name) : base(name)
     {
     }
 

@@ -29,7 +29,7 @@ public sealed class MsSqlQueryTranslatorTests
         var dbPath = new DatabasePath(database, schema, name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? new[] { CreateField("Id").Object });
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? new[] { CreateField("Id").Object });
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? new[] { CreateField("Id").Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -61,6 +61,7 @@ public sealed class MsSqlQueryTranslatorTests
     {
         var container = CreateContainer(fields: []);
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -85,6 +86,7 @@ public sealed class MsSqlQueryTranslatorTests
         var container = CreateContainer(fields: fields);
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -104,6 +106,17 @@ public sealed class MsSqlQueryTranslatorTests
         var domainConfigurationId = Guid.Parse("8383b1b2-c3d4-5e6f-7a8b-9c0d1e2f3a4b");
         var fields = new[] { CreateField("Id").Object, CreateField("ServerName").Object };
         var container = CreateContainer(name: "MsSqlConnection", schema: "conn", fields: fields);
+
+        // A JOIN target is found by name among the containers of the primary container's store, so
+        // the store declares both the child and the parent it joins to.
+        var parent = CreateContainer(name: "Connection", schema: "conn");
+        var path = new Mock<IDataNodePath>();
+        path.Setup(p => p.Containers).Returns([container.Object, parent.Object]);
+        var store = new Mock<IDataStore>();
+        store.Setup(s => s.Name).Returns("PlatformConfiguration");
+        store.Setup(s => s.Paths).Returns([path.Object]);
+        path.Setup(p => p.Store).Returns(store.Object);
+        container.Setup(c => c.Parent).Returns(path.Object);
 
         var call = new QueryCommandBuilder<object>("PlatformConfiguration", "conn", "MsSqlConnection")
             .Join("Connection", "ConnectionRowId", "RowId")
@@ -142,6 +155,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns(projection);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -170,6 +184,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -202,6 +217,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -234,6 +250,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -262,6 +279,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -291,6 +309,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns(ordering);
@@ -319,6 +338,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns(ordering);
@@ -341,6 +361,7 @@ public sealed class MsSqlQueryTranslatorTests
         var paging = new PagingExpression { Skip = 20, Take = 10 };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -364,6 +385,7 @@ public sealed class MsSqlQueryTranslatorTests
         var paging = new PagingExpression { Skip = 0, Take = 50 };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -381,6 +403,7 @@ public sealed class MsSqlQueryTranslatorTests
     public async Task TranslateReturnsFailureForNullContainer()
     {
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         var result = await _sut.Translate(queryCommand.Object, null!, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -394,13 +417,14 @@ public sealed class MsSqlQueryTranslatorTests
         var mockPath = new Mock<IPath>();
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns([]);
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns([]);
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Path).Returns(mockPath.Object);
         container.Setup(c => c.Schema).Returns(mockSchema.Object);
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
@@ -426,6 +450,7 @@ public sealed class MsSqlQueryTranslatorTests
     {
         var container = CreateContainer(fields: [CreateField("Id").Object]);
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -448,7 +473,7 @@ public sealed class MsSqlQueryTranslatorTests
         var fields = new[] { CreateField("Id").Object, CreateField("Name").Object };
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields);
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns("Customers");
@@ -459,6 +484,7 @@ public sealed class MsSqlQueryTranslatorTests
         container.Setup(c => c.Keys).Returns(new List<IContainerKey>());
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -498,6 +524,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -531,6 +558,7 @@ public sealed class MsSqlQueryTranslatorTests
         };
         var container = CreateContainer(fields: fields);
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -543,4 +571,70 @@ public sealed class MsSqlQueryTranslatorTests
         result.Value.CommandText.ShouldStartWith("SELECT [Id], [Name] FROM ");
     }
 
+    // ── FDW-996: pattern operators are LIKE patterns, through the T-SQL dialect ──
+
+    private async Task<(string Sql, object? Parameter)> TranslateOnly(FilterOperatorBase op, object? value)
+    {
+        var container = CreateContainer();
+        var filter = new FilterExpression
+        {
+            Root = new FilterCondition { PropertyName = "Name", Operator = op, Value = value },
+        };
+
+        var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
+        queryCommand.Setup(q => q.Filter).Returns(filter);
+        queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
+        queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
+        queryCommand.Setup(q => q.Paging).Returns((IPagingExpression?)null);
+
+        var result = await _sut.Translate(queryCommand.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters.Count.ShouldBe(1);
+        return (result.Value.CommandText, result.Value.Parameters[0].Value);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public async Task ContainsBecomesALikeWithWildcardsOnBothSidesAndAnEscapeClause()
+    {
+        var (sql, parameter) = await TranslateOnly(new ContainsOperator(), "afc");
+
+        sql.ShouldContain("WHERE [Name] LIKE @p0 ESCAPE '!'");
+        parameter.ShouldBe("%afc%");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public async Task StartsWithBecomesALikeWithATrailingWildcard()
+    {
+        var (sql, parameter) = await TranslateOnly(new StartsWithOperator(), "afc");
+
+        sql.ShouldContain("WHERE [Name] LIKE @p0 ESCAPE '!'");
+        parameter.ShouldBe("afc%");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public async Task EndsWithBecomesALikeWithALeadingWildcard()
+    {
+        var (sql, parameter) = await TranslateOnly(new EndsWithOperator(), "afc");
+
+        sql.ShouldContain("WHERE [Name] LIKE @p0 ESCAPE '!'");
+        parameter.ShouldBe("%afc");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public async Task ABracketUnderscorePercentAndTheEscapeCharacterAreEscapedForTSql()
+    {
+        var (_, parameter) = await TranslateOnly(new ContainsOperator(), "a[b]_c%d!");
+
+        parameter.ShouldBe("%a![b]!_c!%d!!%");
+    }
 }

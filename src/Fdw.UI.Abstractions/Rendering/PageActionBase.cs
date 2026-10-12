@@ -3,8 +3,8 @@ using Fdw.Collections;
 namespace Fdw.UI.Abstractions.Rendering;
 
 /// <summary>Base class for page actions.</summary>
-public abstract class PageActionBase : TypeOptionBase<int, PageActionBase>, IPageActionType
+public abstract class PageActionBase : TypeOptionBase<PageActionBase>, IPageActionType
 {
     /// <summary>Initializes a new instance of <see cref="PageActionBase"/>.</summary>
-    protected PageActionBase(int id, string name) : base(id, name) { }
+    protected PageActionBase(string name) : base(name) { }
 }

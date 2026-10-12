@@ -8,8 +8,11 @@ namespace Fdw.Services.Connections;
 
 /// <summary>
 /// Pure relationship row: which key, which field, ordinal in composite key.
-/// Maps to <c>data.DataContainerKeyField</c>. Key identity (Name, TypeId, ReferencedKeyId)
-/// lives on the parent <see cref="DataContainerKeyConfiguration"/>.
+/// Maps to <c>data.DataContainerKeyField</c>. Name and ReferencedKeyId live on the parent
+/// <see cref="DataContainerKeyConfiguration"/> only; <see cref="KeyType"/> is denormalized onto
+/// this row too, because <c>UX_DataContainerKeyField_Field_Key_KeyType_Current</c> is keyed on it
+/// -- a field can carry more than one key of the same field set (e.g. both a Surrogate and a
+/// Natural key) and the uniqueness constraint needs the type on the row to tell those apart.
 /// </summary>
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "DataContainerKeyField")]
@@ -19,9 +22,6 @@ public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration
     /// <inheritdoc />
     public Guid Id { get; set; }
 
-    /// <inheritdoc />
-    public Guid DataContainerKeyId { get; set; }
-
 
     /// <inheritdoc />
     public Guid DataContainerFieldId { get; set; }
@@ -29,6 +29,13 @@ public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration
 
     /// <inheritdoc />
     public int Ordinal { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owning key's KeyTypes option name, copied from
+    /// <see cref="DataContainerKeyConfiguration.TypeId"/>. Maps to
+    /// <c>data.DataContainerKeyField.KeyType</c>, a NOT NULL column the unique index above is keyed on.
+    /// </summary>
+    public string KeyType { get; set; } = string.Empty;
 
     /// <summary>Whether this is the current active version.</summary>
     public bool IsCurrent { get; set; } = true;
@@ -64,13 +71,5 @@ public partial class DataContainerKeyFieldConfiguration : IGenericConfiguration
     /// </summary>
     [NotMapped]
     public string Name { get; set; } = string.Empty;
-    /// <summary>Section name for binding.</summary>
-    public string SectionName { get; set; } = "DataContainerKeyFields";
-
-    /// <summary>Service type.</summary>
-    public string ServiceType { get; set; } = "DataContainerKeyField";
-
-    /// <summary>Optional service option type.</summary>
-    public string? ServiceOptionType { get; set; }
 
 }

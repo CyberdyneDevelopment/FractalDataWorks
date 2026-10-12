@@ -16,12 +16,11 @@ namespace Fdw.SignalR;
 /// <see cref="RealTimeHubs"/> via <c>[TypeOption]</c>. They supply the route and the broadcaster
 /// registration; the route and authorization policy are declared (never defaulted) on construction.
 /// </remarks>
-public abstract class RealTimeHubOptionBase : TypeOptionBase<int, RealTimeHubOptionBase>, IRealTimeHub
+public abstract class RealTimeHubOptionBase : TypeOptionBase<RealTimeHubOptionBase>, IRealTimeHub
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RealTimeHubOptionBase"/> class.
     /// </summary>
-    /// <param name="id">The unique option identifier.</param>
     /// <param name="name">The option name (must match the <c>[TypeOption]</c> attribute).</param>
     /// <param name="route">The endpoint route the hub is mapped at.</param>
     /// <param name="hubType">The concrete hub CLR type.</param>
@@ -33,8 +32,8 @@ public abstract class RealTimeHubOptionBase : TypeOptionBase<int, RealTimeHubOpt
     /// <exception cref="ArgumentNullException">
     /// <paramref name="route"/> or <paramref name="hubType"/> is <see langword="null"/>.
     /// </exception>
-    protected RealTimeHubOptionBase(int id, string name, string route, Type hubType, string? authorizationPolicy)
-        : base(id, name)
+    protected RealTimeHubOptionBase(string name, string route, Type hubType, string? authorizationPolicy)
+        : base(name)
     {
         Route = route ?? throw new ArgumentNullException(nameof(route));
         HubType = hubType ?? throw new ArgumentNullException(nameof(hubType));

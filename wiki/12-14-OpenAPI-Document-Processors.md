@@ -35,7 +35,7 @@ Any property decorated with `[ValuesFrom]` that appears in a request or response
 ```csharp
 // Type-safe reference (compile-time)
 [ValuesFrom(typeof(ConnectionTypes))]
-public string ServiceOptionType { get; set; } = string.Empty;
+public string Implementation { get; set; } = string.Empty;
 
 // String-based reference (cross-assembly, no direct dependency)
 [ValuesFrom("CalculationTypes")]
@@ -58,88 +58,58 @@ All three forms are resolved automatically. No per-endpoint configuration needed
 2. Ensure the TypeCollection is discoverable (loaded assembly at runtime)
 3. The processor picks it up automatically on next Swagger document generation
 
-## DataSetQueryDocumentProcessor
+## AuthorizationMetadataOperationProcessor
 
-Enriches the DataSet query endpoint with per-dataset documentation. Requires deferred initialization because `IDataSetProvider` isn't available until after the Phase 3 `PlatformServices.Initialize(app.Services, loggerFactory)` sweep — which runs `DataSetProvider`'s own `Initialize` in Group order.
+An operation processor, not a document processor. At generation it stamps every operation with who
+may call it, read from the endpoint's own authorization metadata:
 
-### How it works
+- `x-fdw-anonymous`: `true` when the endpoint carries `IAllowAnonymous`.
+- `x-fdw-policies`: the `IAuthorizeData` policy names, which in FDW are permission names
+  (`workspaces:query`). FastEndpoints' own `epPolicy:` policies are left out.
 
-1. Resolves `IDataSetProvider` from the service provider (set after `app.Build()`)
-2. Finds the query operation by path pattern (`/datasets/` + `/query`)
-3. Enriches the `DataSetName` path parameter with an enum of all dataset names
-4. Builds per-dataset markdown field tables in the operation description
-5. Clones the operation per dataset so each appears as its own Scalar sidebar entry with dataset-specific query parameters
-
-### Registration
+FastEndpoints writes only its bearer scheme (`JWTBearerAuth`) into an operation's `security`, never the
+policy, so without these stamps a generated document cannot say who may call what. An operation that
+was not described from an ASP.NET Core endpoint fails generation instead of going unstamped.
 
 ```csharp
-var dataSetQueryDocProcessor = new DataSetQueryDocumentProcessor();
 builder.Services.SwaggerDocument(o =>
 {
     o.DocumentSettings = s =>
     {
-        s.DocumentProcessors.Add(dataSetQueryDocProcessor);
+        s.DocumentName = "v1";
+        s.OperationProcessors.Add(new AuthorizationMetadataOperationProcessor());
     };
 });
-
-var app = builder.Build();
-// Phase 3 — one PlatformServices sweep runs every domain's Initialize (incl. DataSetProvider's).
-PlatformServices.Initialize(app.Services, loggerFactory);
-// Why: IDataSetProvider is only available after DataSetProvider's Initialize has run inside discovery.
-dataSetQueryDocProcessor.Initialize(app.Services);
 ```
 
-### What Scalar shows
+## API reference documents (FDW-919)
 
-Each dataset gets its own expandable entry:
+The document is **generated once per process** and never served as-is: `UseSwaggerGen()` is not
+called. NSwag's middleware kept the document its first caller got and handed it to every caller after:
+an admin opening the reference after an anonymous visitor saw the anonymous document.
 
-```
-GET /api/v1/datasets/NflPlayers/query
-  - PlayerId (integer) — Primary Key
-  - Name (string) — Indexed
-  - Position (string) — Indexed
-  - Team (string) — Indexed
-  - skip (integer)
-  - take (integer)
+Instead each reference is a document endpoint derived from `ApiReferenceDocumentEndpointBase<TRequest>`
+(`Fdw.Web.RestEndpoints.ApiReference`):
 
-GET /api/v1/datasets/NflGames/query
-  - GameId (integer) — Primary Key
-  - HomeTeam (string) — Indexed
-  - GameDate (string)
-  - skip (integer)
-  - take (integer)
-```
+1. Generates the document through `IOpenApiDocumentGenerator` the first time, and keeps the JSON.
+2. Parses a copy for this request into an `ApiReferenceDocument`.
+3. Calls the subclass's `Filter(document, caller, request, ct)`, where `ApiReferenceCaller` is read
+   from the request's claims (signed in, platform admin, `perm` claims).
+4. Drops tags and schemas no remaining operation uses, and removes the stamps.
 
-### Cascading multi-parameter cloning
+`ApiReferenceDocument` offers `KeepAdmitted(caller)` (the per-caller cut, from the stamps),
+`KeepPaths`, `Operation`/`AddOperation` (clone a template operation), `ReplaceTags`, `SetTitle` and
+`DescribeBearerSchemes`.
 
-When a route has multiple dependent path parameters (e.g., `/api/v1/{Organization}/{DataSetName}/query`), nest the clone loops. Each outer loop resolves the parent, each inner loop gets its children:
+| Document endpoint base | Route | Cut |
+|---|---|---|
+| `ServiceReferenceDocumentEndpointBase` | `/openapi/reference` | every operation the caller may call |
+| `DataReferenceDocumentEndpointBase` | `/openapi/data` | one `POST /{workspace}/{dataSet}` per data set of each workspace the caller may read |
+| `WorkspaceReferenceDocumentEndpointBase` | `/openapi/data/{WorkspaceName}` | the same, one workspace; 404 when unreadable |
 
-```csharp
-var organizations = GetAllOrganizations();
-foreach (var org in organizations)
-{
-    var orgDataSets = GetDataSetsForOrganization(org);
-    foreach (var dataSet in orgDataSets)
-    {
-        var path = genericPath
-            .Replace("{Organization}", org.Name, StringComparison.OrdinalIgnoreCase)
-            .Replace("{DataSetName}", dataSet.Name, StringComparison.OrdinalIgnoreCase);
-
-        var clonedOperation = new OpenApiOperation
-        {
-            Summary = $"Query {org.Name}/{dataSet.Name}",
-            OperationId = $"QueryDataSet_{org.Name}_{dataSet.Name}",
-            // ...
-        };
-
-        // Skip both {Organization} and {DataSetName} from original params
-        // Use Tags($"DataSets - {org.Name}") to group in Scalar sidebar
-        // Add field-specific query params for this dataset
-    }
-}
-```
-
-This generates `orgs x datasets` operations. Use tags to keep the Scalar sidebar organized. For 3+ parameters, add another nesting level following the same pattern.
+Pages are options of the `ApiReferencePages` TypeCollection (`ApiReferencePageBase`): a route, a title,
+who may open it, the document URL for a request, and the links it offers a caller.
+`ListApiReferencePagesEndpointBase` (`GET /reference/pages`) lists the links a caller may follow.
 
 ## Writing a custom document processor
 
@@ -193,27 +163,11 @@ builder.Services.SwaggerDocument(o =>
 });
 ```
 
-### Deferred initialization
+### Nothing caller- or configuration-specific during generation
 
-If the processor needs services that aren't available until after `app.Build()`:
-
-```csharp
-public sealed class MyProcessor : IDocumentProcessor
-{
-    private IServiceProvider? _serviceProvider;
-
-    public void Initialize(IServiceProvider sp) => _serviceProvider = sp;
-
-    public void Process(DocumentProcessorContext context)
-    {
-        if (_serviceProvider is null) return;
-        var myService = _serviceProvider.GetService<IMyService>();
-        // ...
-    }
-}
-```
-
-Call `processor.Initialize(app.Services)` after `app.Build()` and service initialization.
+The document is generated once per process and every API reference is cut from it, so a processor
+sees no caller and runs once. Anything that depends on who is asking, or on configuration that can
+change (data sets, workspaces), belongs in a reference's `Filter`, not in a processor.
 
 ## Key NSwag types
 

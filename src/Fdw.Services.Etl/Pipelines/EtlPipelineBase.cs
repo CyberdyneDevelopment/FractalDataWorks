@@ -28,7 +28,7 @@ public abstract class EtlPipelineBase : IEtlPipeline
     }
 
     /// <inheritdoc />
-    public abstract Guid Id { get; }
+    public abstract string Id { get; }
 
     /// <inheritdoc />
     public abstract string Name { get; }
@@ -49,9 +49,6 @@ public abstract class EtlPipelineBase : IEtlPipeline
     public abstract IGenericResult Validate();
 
     #region IGenericService Explicit Implementation
-
-    /// <inheritdoc />
-    string IPlatformService.Id => Id.ToString();
 
     /// <inheritdoc />
     string IPlatformService.ServiceType => PipelineType;

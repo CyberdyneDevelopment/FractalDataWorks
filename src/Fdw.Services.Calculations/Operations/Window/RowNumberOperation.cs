@@ -27,7 +27,7 @@ public sealed class RowNumberOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="RowNumberOperation"/> class.
     /// </summary>
     public RowNumberOperation()
-        : base(id: 30, name: "RowNumber", category: "Window", description: "Assigns a sequential row number within a partition")
+        : base(name: "RowNumber", category: "Window", description: "Assigns a sequential row number within a partition")
     {
         _logger = NullLogger<RowNumberOperation>.Instance;
         Parameters =

@@ -12,7 +12,7 @@ public sealed class Running : ProcessStateBase
     /// <summary>
     /// Initializes a new instance of the Running state.
     /// </summary>
-    public Running() : base(2, "Running", isTerminal: false, isError: false, isActive: true, isInitial: false)
+    public Running() : base("Running", isTerminal: false, isError: false, isActive: true, isInitial: false)
     {
     }
 }

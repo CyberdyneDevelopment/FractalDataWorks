@@ -13,6 +13,6 @@ public sealed class CountAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CountAggregationType"/> class.
     /// </summary>
-    public CountAggregationType() : base(2, "Count", values => values.Count)
+    public CountAggregationType() : base("Count", values => values.Count)
     { }
 }

@@ -15,7 +15,7 @@ namespace Fdw.UI.Abstractions.Canvas;
 /// </para>
 /// <para>
 /// All operations return <see cref="IGenericResult"/> so failures surface through the standard
-/// FDW result chain rather than exceptions. No Blazor EventCallback or ASP.NET types appear here —
+/// FDW result chain rather than exceptions. No UI-framework callback or ASP.NET types appear here —
 /// the canvas contract layer is render-agnostic.
 /// </para>
 /// </remarks>
@@ -97,7 +97,7 @@ public interface ICanvasEditContext
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A result indicating success or failure. Fails if the node is not found on the canvas.</returns>
     /// <remarks>
-    /// This method is render-agnostic — no Blazor or ASP.NET types are referenced here.
+    /// This method is render-agnostic — no UI-framework or ASP.NET types are referenced here.
     /// The caller is responsible for triggering any downstream re-render.
     /// </remarks>
     Task<IGenericResult> UpdateNodeMetadata(

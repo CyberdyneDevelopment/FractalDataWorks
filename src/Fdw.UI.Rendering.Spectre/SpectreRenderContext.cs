@@ -16,11 +16,11 @@ public sealed class SpectreRenderContext : IRenderContext
     /// Initializes a new instance of the <see cref="SpectreRenderContext"/> class.
     /// </summary>
     /// <param name="console">The Spectre.Console instance.</param>
-    /// <param name="theme">The theme to use.</param>
-    public SpectreRenderContext(IAnsiConsole? console = null, IMenuTheme? theme = null)
+    /// <param name="theme">The theme to use; the host picks it from its configuration.</param>
+    public SpectreRenderContext(IAnsiConsole? console, IMenuTheme theme)
     {
         Console = console ?? AnsiConsole.Console;
-        Theme = theme ?? MenuThemes.ById(1); // Dark theme default
+        Theme = theme ?? throw new ArgumentNullException(nameof(theme));
     }
 
     /// <summary>

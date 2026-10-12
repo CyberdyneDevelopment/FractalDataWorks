@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class DecimalDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DecimalDataType"/> class.</summary>
     public DecimalDataType()
-        : base(id: 6, name: "Decimal")
+        : base(name: "Decimal")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(decimal);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Decimal(text);
 }

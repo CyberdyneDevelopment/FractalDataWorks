@@ -39,7 +39,7 @@ public sealed class ConnectionBaseTests : IDisposable
     {
         // Arrange
         var emptyTranslator = new Mock<IDataCommandTranslator<TestNativeCommand>>();
-        emptyTranslator.Setup(t => t.Name).Returns("_Empty");
+        emptyTranslator.Setup(t => t.Name).Returns("NotFound");
 
         var sut = new TestConnection(
             NullLogger<TestConnection>.Instance,
@@ -174,7 +174,7 @@ public sealed class ConnectionBaseTests : IDisposable
     {
         // Arrange
         var emptyTranslator = new Mock<IDataCommandTranslator<TestNativeCommand>>();
-        emptyTranslator.Setup(t => t.Name).Returns("_Empty");
+        emptyTranslator.Setup(t => t.Name).Returns("NotFound");
 
         var sut = new TestConnection(
             NullLogger<TestConnection>.Instance,
@@ -401,11 +401,41 @@ public sealed class ConnectionBaseTests : IDisposable
         public string Sql { get; set; } = string.Empty;
     }
 
-    public class TestConnectionConfiguration : ConnectionConfiguration
+    public class TestConnectionConfiguration : IConnectionImplementationConfiguration
     {
-        public TestConnectionConfiguration() : base("Connection", "Test", "TestConnections")
-        {
-        }
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+        public Guid Id { get; set; }
+
+        public string Name { get; set; } = string.Empty;
+
+        public string Domain { get; set; } = string.Empty;
+
+        public string Implementation { get; set; } = string.Empty;
+
+        public Guid ConnectionId { get; set; }
     }
 
     public class TestConnection : ConnectionBase<TestNativeCommand, TestConnectionConfiguration, TestConnection>

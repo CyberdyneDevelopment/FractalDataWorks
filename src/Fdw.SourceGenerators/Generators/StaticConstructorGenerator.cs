@@ -31,7 +31,6 @@ public sealed class StaticConstructorGenerator<TId>
     /// <summary>
     /// Generates the static constructor that initializes _all and _empty fields.
     /// </summary>
-#pragma warning disable MA0051 // Sequential static constructor body building for TypeCollection registration
     public static IConstructorBuilder GenerateStaticConstructor(
         GenericTypeInfoModel<TId> definition,
         System.Collections.Generic.IList<GenericValueInfoModel<TId>> values,
@@ -200,5 +199,4 @@ public sealed class StaticConstructorGenerator<TId>
 
         return constructor;
     }
-#pragma warning restore MA0051
 }

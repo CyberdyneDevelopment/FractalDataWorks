@@ -14,5 +14,5 @@ public sealed class QueuedExecutionStatus : WorkflowExecutionStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="QueuedExecutionStatus"/> class.
     /// </summary>
-    public QueuedExecutionStatus() : base(0, "Queued", isTerminal: false, isSuccess: false, isFailure: false) { }
+    public QueuedExecutionStatus() : base("Queued", isTerminal: false, isSuccess: false, isFailure: false) { }
 }

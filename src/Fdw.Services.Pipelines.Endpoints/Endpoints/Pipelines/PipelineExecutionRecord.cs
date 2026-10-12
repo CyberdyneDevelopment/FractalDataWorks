@@ -18,9 +18,9 @@ public class PipelineExecutionRecord
     public required string PipelineName { get; set; }
 
     /// <summary>
-    /// Gets or sets when execution started.
+    /// Gets or sets when execution started. Null while the run is queued.
     /// </summary>
-    public DateTime StartedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
 
     /// <summary>
     /// Gets or sets when execution completed.

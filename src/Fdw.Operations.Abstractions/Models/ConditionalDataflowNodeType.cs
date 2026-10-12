@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class ConditionalDataflowNodeType : DataflowNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ConditionalDataflowNodeType"/>.</summary>
-    public ConditionalDataflowNodeType() : base(7, "Conditional") { }
+    public ConditionalDataflowNodeType() : base("Conditional") { }
 }

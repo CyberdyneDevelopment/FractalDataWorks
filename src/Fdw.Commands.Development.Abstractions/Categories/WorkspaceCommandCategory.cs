@@ -13,7 +13,7 @@ public sealed class WorkspaceCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="WorkspaceCommandCategory"/> class.
     /// </summary>
     public WorkspaceCommandCategory()
-        : base(9, "Workspace", "Workspace management commands for snapshots, baselines, and solution state")
+        : base("Workspace", "Workspace management commands for snapshots, baselines, and solution state")
     {
     }
 }

@@ -34,7 +34,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
         };
 
     private static void SetupQuery(
-        Mock<IDataGateway> gateway,
+        Mock<IConfigurationGateway> gateway,
         IGenericResult<IEnumerable<UserNotificationPreferenceConfiguration>> result)
     {
         gateway.Setup(g => g.Execute<IEnumerable<UserNotificationPreferenceConfiguration>>(
@@ -43,7 +43,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     }
 
     private static void SetupQuerySequence(
-        Mock<IDataGateway> gateway,
+        Mock<IConfigurationGateway> gateway,
         params IGenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>[] results)
     {
         var sequence = gateway.SetupSequence(g => g.Execute<IEnumerable<UserNotificationPreferenceConfiguration>>(
@@ -54,13 +54,13 @@ public sealed class SqlUserNotificationPreferenceServiceTests
         }
     }
 
-    private static void SetupWrite(Mock<IDataGateway> gateway, IGenericResult<int> result)
+    private static void SetupWrite(Mock<IConfigurationGateway> gateway, IGenericResult<int> result)
     {
         gateway.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
     }
 
-    private static void SetupWriteCapturingCommandType(Mock<IDataGateway> gateway, IGenericResult<int> result, List<string> capturedCommandTypes)
+    private static void SetupWriteCapturingCommandType(Mock<IConfigurationGateway> gateway, IGenericResult<int> result, List<string> capturedCommandTypes)
     {
         gateway.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .Callback<IDataCommand, DataStoreTarget, CancellationToken>((cmd, _, _) => capturedCommandTypes.Add(cmd.CommandType))
@@ -69,15 +69,23 @@ public sealed class SqlUserNotificationPreferenceServiceTests
 
     // A stub rather than the real provider: this fixture is about what the service does with a
     // gateway, not about how one is supplied.
-    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    private sealed class StubGatewayProvider(IConfigurationGateway gateway) : IConfigurationGatewayProvider
     {
-        public IDataGateway ByName(string name) => gateway;
+        public List<string> Asked { get; } = [];
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+        {
+            Asked.Add(connectionName);
+            return GenericResult<IConfigurationGateway>.Success(gateway);
+        }
+
+        public IGenericResult Register(IConfigurationGateway other) => throw new NotSupportedException();
     }
 
-    private static IDataGatewayProvider GatewayProviderFor(IDataGateway gateway) =>
-        new StubGatewayProvider(gateway);
+    private static StubGatewayProvider GatewayProviderFor(IConfigurationGateway gateway) =>
+        new(gateway);
 
-    private static SqlUserNotificationPreferenceService CreateService(Mock<IDataGateway> gateway) =>
+    private static SqlUserNotificationPreferenceService CreateService(Mock<IConfigurationGateway> gateway) =>
         new(GatewayProviderFor(gateway.Object), NullLogger<SqlUserNotificationPreferenceService>.Instance);
 
     // ──────────────────────────────────────────── Constructor ───────────────────────────────────────────
@@ -98,7 +106,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     public void ConstructorSucceedsWhenLoggerIsNull()
     {
         // Arrange
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
 
         // Act
         var sut = new SqlUserNotificationPreferenceService(GatewayProviderFor(gateway.Object), null);
@@ -116,7 +124,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
         [
             Row(userId, "PipelineFailure", "Email", true),
@@ -142,7 +150,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
             Array.Empty<UserNotificationPreferenceConfiguration>()));
         var sut = CreateService(gateway);
@@ -162,7 +170,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Failure(
             Mock.Of<Fdw.Messages.IGenericMessage>(m => m.Message == "connection lost")));
         var sut = CreateService(gateway);
@@ -183,7 +191,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         gateway.Setup(g => g.Execute<IEnumerable<UserNotificationPreferenceConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
@@ -205,7 +213,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         gateway.Setup(g => g.Execute<IEnumerable<UserNotificationPreferenceConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());
@@ -224,7 +232,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     public async Task SavePreferencesThrowsArgumentNullExceptionWhenPreferencesIsNull()
     {
         // Arrange
-        var sut = CreateService(new Mock<IDataGateway>());
+        var sut = CreateService(new Mock<IConfigurationGateway>());
 
         // Act & Assert
         await Should.ThrowAsync<ArgumentNullException>(
@@ -238,7 +246,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Failure(
             Mock.Of<Fdw.Messages.IGenericMessage>(m => m.Message == "connection lost")));
         var sut = CreateService(gateway);
@@ -266,7 +274,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuerySequence(
             gateway,
             GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(Array.Empty<UserNotificationPreferenceConfiguration>()),
@@ -301,7 +309,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuerySequence(
             gateway,
             GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
@@ -338,7 +346,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange — existing row is lowercase; the incoming preference uses different casing.
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuerySequence(
             gateway,
             GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
@@ -372,7 +380,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
         [
             Row(userId, "PipelineFailure", "Email", false),
@@ -400,7 +408,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
             Array.Empty<UserNotificationPreferenceConfiguration>()));
         SetupWrite(gateway, GenericResult<int>.Failure(Mock.Of<Fdw.Messages.IGenericMessage>(m => m.Message == "write failed")));
@@ -426,7 +434,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         SetupQuery(gateway, GenericResult<IEnumerable<UserNotificationPreferenceConfiguration>>.Success(
             Array.Empty<UserNotificationPreferenceConfiguration>()));
         gateway.Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -453,7 +461,7 @@ public sealed class SqlUserNotificationPreferenceServiceTests
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var gateway = new Mock<IDataGateway>();
+        var gateway = new Mock<IConfigurationGateway>();
         gateway.Setup(g => g.Execute<IEnumerable<UserNotificationPreferenceConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException());

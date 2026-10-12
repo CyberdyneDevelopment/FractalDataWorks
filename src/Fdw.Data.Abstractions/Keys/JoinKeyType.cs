@@ -15,7 +15,6 @@ public sealed class JoinKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="JoinKeyType"/> class.</summary>
     public JoinKeyType()
         : base(
-            id: 4,
             name: "Join",
             isPrimaryKey: false,
             hasConstraint: false,

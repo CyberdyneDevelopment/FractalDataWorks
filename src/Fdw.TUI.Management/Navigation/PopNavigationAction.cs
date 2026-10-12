@@ -9,5 +9,5 @@ namespace Fdw.TUI.Management.Navigation;
 public sealed class PopNavigationAction : NavigationActionBase
 {
     /// <summary>Initializes a new instance of <see cref="PopNavigationAction"/>.</summary>
-    public PopNavigationAction() : base(3, "Pop") { }
+    public PopNavigationAction() : base("Pop") { }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Collections.Attributes;
 using Microsoft.Extensions.Configuration;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.Http.Security.Types;
 
@@ -15,8 +16,8 @@ public sealed class UsernameTokenConfiguration : HttpAuthenticationConfiguration
 
     /// <summary>Initializes a new instance of the <see cref="UsernameTokenConfiguration"/> class.</summary>
     public UsernameTokenConfiguration()
-        : base(3, "UsernameToken", "Username Token", "WS-Security UsernameToken authentication",
-               ExpectedList, RequiredList)
+        : base("UsernameToken", "Username Token", "WS-Security UsernameToken authentication",
+               ExpectedList, RequiredList, requiresSecret: true)
     {
     }
 
@@ -59,4 +60,11 @@ public sealed class UsernameTokenConfiguration : HttpAuthenticationConfiguration
             new(nameof(PasswordSecretName), PasswordSecretName),
         ];
     }
+
+    /// <inheritdoc />
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("UsernameSecretName", "User name", secret: false), new("PasswordSecretName", "Password", secret: true)];
+
+    /// <inheritdoc/>
+    /// <remarks>The connection carries its own user name token.</remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;
 }

@@ -14,12 +14,11 @@ namespace Fdw.UI.Abstractions.Charts;
 /// type list, and the render component type are set via constructor arguments — no property overrides.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public abstract class ChartRendererTypeBase : TypeOptionBase<int, ChartRendererTypeBase>, IChartRendererType
+public abstract class ChartRendererTypeBase : TypeOptionBase<ChartRendererTypeBase>, IChartRendererType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ChartRendererTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique numeric identifier for this renderer type.</param>
     /// <param name="name">The registry name (used by <c>ChartRendererTypes.ByName()</c>).</param>
     /// <param name="displayName">The human-readable name shown in the dropdown.</param>
     /// <param name="supportsInteraction">Whether this renderer supports interactive user interactions.</param>
@@ -32,10 +31,9 @@ public abstract class ChartRendererTypeBase : TypeOptionBase<int, ChartRendererT
     /// <param name="renderComponentType">
     /// The CLR type of the UI component that renders this chart, or <see langword="null"/> for
     /// renderers with no component-tree representation (e.g. an SVG-export renderer implementing
-    /// <see cref="IChartRenderer"/> directly). A Blazor renderer passes its component type here.
+    /// <see cref="IChartRenderer"/> directly). A renderer passes its component type here.
     /// </param>
     protected ChartRendererTypeBase(
-        int id,
         string name,
         string displayName,
         bool supportsInteraction,
@@ -43,7 +41,7 @@ public abstract class ChartRendererTypeBase : TypeOptionBase<int, ChartRendererT
         bool supportsEditing,
         IReadOnlyList<string>? supportedChartTypes = null,
         Type? renderComponentType = null)
-        : base(id, name, name, displayName, displayName, category: null)
+        : base(name, name, displayName, displayName, category: null)
     {
         SupportsInteraction = supportsInteraction;
         SupportsLargeSeries = supportsLargeSeries;

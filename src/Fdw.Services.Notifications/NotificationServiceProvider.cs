@@ -11,7 +11,7 @@ namespace Fdw.Services.Notifications;
 /// </summary>
 /// <remarks>
 /// Inherits the whole resolution path from
-/// <see cref="PlatformServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
+/// <see cref="DomainServiceProviderBase{TService, TConfiguration, TFactory, TConfigurationProvider}"/>
 /// and overrides nothing — notifications resolve exactly the way the platform does. A domain that
 /// needs different behaviour overrides the virtual member here rather than reaching into the base.
 /// </remarks>
@@ -22,7 +22,7 @@ namespace Fdw.Services.Notifications;
 /// factory level, where the typed body actually matters.
 /// </remarks>
 public sealed class NotificationServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
         IPlatformNotification,
         INotificationImplementationConfiguration,
         INotificationFactory<IPlatformNotification, INotificationImplementationConfiguration>,
@@ -32,10 +32,9 @@ public sealed class NotificationServiceProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationServiceProvider"/> class.
     /// </summary>
-    /// <param name="services">The container this provider resolves its factories from.</param>
     /// <param name="logger">The logger for this provider.</param>
-    public NotificationServiceProvider(IServiceProvider services, ILogger<NotificationServiceProvider> logger)
-        : base(services, logger ?? NullLogger<NotificationServiceProvider>.Instance)
+    public NotificationServiceProvider(ILogger<NotificationServiceProvider> logger)
+        : base(logger ?? NullLogger<NotificationServiceProvider>.Instance)
     {
     }
 }

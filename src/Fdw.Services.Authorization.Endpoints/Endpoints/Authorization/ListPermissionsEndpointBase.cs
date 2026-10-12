@@ -7,96 +7,82 @@ using FastEndpoints;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
+using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
+using Fdw.Web.RestEndpoints.Crud;
+using Fdw.Web.RestEndpoints.Models;
 
 namespace Fdw.Services.Authorization.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing all permissions.
+/// Base endpoint for listing permissions, one page at a time in name order (FDW-951).
 /// </summary>
-public abstract class ListPermissionsEndpointBase : EndpointWithoutRequest<List<PermissionSummaryDto>>
+/// <remarks>
+/// A page is one read of the permissions domain table: a permission is nothing beyond the fields a list
+/// shows, and they all live on the domain row (FDW-1002).
+/// </remarks>
+public abstract class ListPermissionsEndpointBase : CrudPageEndpointBase<PermissionDomainConfiguration, PermissionSummaryDto>
 {
-    /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
-
-    /// <summary>
-    /// Gets the logger instance.
-    /// </summary>
-    protected ILogger EndpointLogger { get; }
-
+    private readonly IPermissionConfigurationProvider _permissionProvider;
     private readonly ITenantContext? _tenantContext;
 
     /// <summary>Initializes a new instance of the <see cref="ListPermissionsEndpointBase"/> class.</summary>
-    protected ListPermissionsEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider, ITenantContext? tenantContext = null)
+    /// <param name="logger">The logger.</param>
+    /// <param name="permissionProvider">Reads the page of permissions.</param>
+    /// <param name="tenantContext">The acting tenant, whose org prefix qualifies each permission's name.</param>
+    protected ListPermissionsEndpointBase(ILogger logger, IPermissionConfigurationProvider permissionProvider, ITenantContext? tenantContext = null) : base(logger)
     {
-        EndpointLogger = logger;
-        _roleProvider = roleProvider;
+        _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
         _tenantContext = tenantContext;
     }
 
-
-    /// <summary>
-    /// Gets the role configuration provider.
-    /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    /// <summary>Gets the resource name used for the route: <c>/permissions</c>.</summary>
+    protected override string ResourceName => "permissions";
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:read".
     /// </summary>
-    protected virtual string ReadPolicy => "settings/role:read";
+    protected override string ReadPolicy => "settings/role:read";
 
     /// <inheritdoc />
-    public override void Configure()
+    protected override Task<IGenericResult<ConfigurationPage<PermissionDomainConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
     {
-        Get("/permissions");
-        Policies(ReadPolicy);
-        ConfigureEndpoint();
+        AuthorizationEndpointLog.ListingPermissions(Logger);
+        return _permissionProvider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct);
     }
 
-    /// <summary>
-    /// Override to configure endpoint-specific settings (auth, summary, etc.).
-    /// </summary>
-    protected abstract void ConfigureEndpoint();
-
     /// <inheritdoc />
-    public override async Task HandleAsync(CancellationToken ct)
+    protected override Task<IGenericResult<PermissionSummaryDto>> ToSummary(PermissionDomainConfiguration item, CancellationToken ct)
     {
-        
-        AuthorizationEndpointLog.ListingPermissions(EndpointLogger);
-
-        var allPermissions = await _roleProvider.GetPermissions(ct).ConfigureAwait(false);
-
         var orgPrefix = _tenantContext?.CurrentTenant?.OrgPrefix;
-        var prefix = string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":";
-
-        var permissions = allPermissions
-            .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(p => MapToSummary(p, prefix))
-            .ToList();
-
-        AuthorizationEndpointLog.ListedPermissions(EndpointLogger, permissions.Count);
-
-        await Send.OkAsync(permissions, ct).ConfigureAwait(false);
+        return Task.FromResult(GenericResult<PermissionSummaryDto>.Success(
+            MapToSummary(item, string.IsNullOrEmpty(orgPrefix) ? null : orgPrefix + ":")));
     }
 
-    /// <summary>
-    /// Maps a <see cref="PermissionConfiguration"/> to a summary DTO. Override for custom mapping.
-    /// </summary>
-    /// <param name="permission">The permission row.</param>
-    /// <param name="orgPrefix">The current tenant's OrgPrefix already followed by ':' (e.g. "acme:"),
-    /// or null if no prefix should be applied.</param>
-    protected virtual PermissionSummaryDto MapToSummary(PermissionConfiguration permission, string? orgPrefix)
+    /// <summary>Maps a permission, as the permissions domain table holds it, to its summary, qualified by the acting tenant's org prefix when it has one.</summary>
+    /// <param name="permission">The permission's domain record.</param>
+    /// <param name="orgPrefix">The prefix to put before the permission's name, or none.</param>
+    /// <returns>The summary.</returns>
+    /// <remarks>
+    /// The summary's domain is the permission's OWN domain (for example "users"). It used to be the domain
+    /// row's <c>Domain</c>, which is "Permission" for every row, so a console that groups permissions by
+    /// domain saw one group; and the category, which the summary declares, was never set.
+    /// </remarks>
+    protected virtual PermissionSummaryDto MapToSummary(PermissionDomainConfiguration permission, string? orgPrefix)
     {
         return new PermissionSummaryDto
         {
             Id = permission.Id,
             Name = orgPrefix is null ? permission.Name : orgPrefix + permission.Name,
-            Domain = permission.Domain,
+            Domain = permission.PermissionDomain,
             Resource = permission.Resource,
             Action = permission.Action,
             Scope = permission.Scope,
             DisplayName = permission.DisplayName,
             Description = permission.Description,
-            SortOrder = permission.SortOrder
+            Category = permission.Category
         };
     }
 }

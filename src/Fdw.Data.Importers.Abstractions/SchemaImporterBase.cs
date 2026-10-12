@@ -12,18 +12,17 @@ namespace Fdw.Data.SchemaImporters.Abstractions;
 /// Base class for schema importer implementations.
 /// </summary>
 /// <typeparam name="TConfig">The strongly-typed importer configuration type.</typeparam>
-public abstract class SchemaImporterBase<TConfig> : TypeOptionBase<int, SchemaImporterBase<TConfig>>, ISchemaImporter
+public abstract class SchemaImporterBase<TConfig> : TypeOptionBase<SchemaImporterBase<TConfig>>, ISchemaImporter
     where TConfig : class
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SchemaImporterBase{TConfig}"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this importer.</param>
     /// <param name="name">Name of this importer.</param>
     /// <param name="description">Description of what this importer does.</param>
     /// <param name="dataStoreType">Type of DataStore this importer targets.</param>
-    protected SchemaImporterBase(int id, string name, string description, string dataStoreType)
-        : base(id, name, configurationKey: $"SchemaImporters:{name}", displayName: name, description: description, category: dataStoreType)
+    protected SchemaImporterBase(string name, string description, string dataStoreType)
+        : base(name, configurationKey: $"SchemaImporters:{name}", displayName: name, description: description, category: dataStoreType)
     {
         DataStoreType = dataStoreType;
     }
@@ -33,9 +32,9 @@ public abstract class SchemaImporterBase<TConfig> : TypeOptionBase<int, SchemaIm
 
     /// <summary>
     /// Implements the schema import logic. Derived classes must implement this.
-    /// Returns the discovered <see cref="DataStoreConfiguration"/> with its paths, containers, and fields.
+    /// Returns the discovered <see cref="DataStoreImplementationConfiguration"/> with its paths, containers, and fields.
     /// </summary>
-    public abstract Task<IGenericResult<DataStoreConfiguration>> Import(
+    public abstract Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default);

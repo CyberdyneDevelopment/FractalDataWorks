@@ -25,7 +25,6 @@ public sealed class UpsertWriteMode : WriteModeBase
     /// </summary>
     public UpsertWriteMode()
         : base(
-            id: 3,
             name: "Upsert",
             requiresExistenceCheck: true,
             preservesExistingData: true,

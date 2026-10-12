@@ -20,5 +20,5 @@ internal sealed class GenericContainerPath : IPath
     public string PathValue { get; }
 
     /// <inheritdoc />
-    public string Domain => "Generic";
+    public string Domain { get; set; } = string.Empty;
 }

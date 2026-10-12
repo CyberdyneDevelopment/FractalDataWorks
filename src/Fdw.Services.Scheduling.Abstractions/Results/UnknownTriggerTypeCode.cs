@@ -16,7 +16,7 @@ public sealed class UnknownTriggerTypeCode : SchedulingResultCodeBase
     /// </summary>
     public UnknownTriggerTypeCode()
         : base(21005, "UnknownTriggerType",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Unknown trigger type: {TriggerType}",
             isRetryable: false)
     {

@@ -13,7 +13,7 @@ public sealed class AnalysisCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="AnalysisCommandCategory"/> class.
     /// </summary>
     public AnalysisCommandCategory()
-        : base(1, "Analysis", "Code analysis commands for complexity, dependencies, diagnostics, and symbol information")
+        : base("Analysis", "Code analysis commands for complexity, dependencies, diagnostics, and symbol information")
     {
     }
 }

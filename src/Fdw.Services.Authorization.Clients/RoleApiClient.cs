@@ -30,11 +30,11 @@ public class RoleApiClient : ApiClientBase
         => GetList<RoleSummaryPayload>("roles", ct);
 
     /// <summary>
-    /// Gets a specific role by its name.
+    /// Gets a specific role by its name: <c>POST roles/get</c>.
     /// </summary>
     /// <returns>A result containing the role detail.</returns>
     public virtual Task<IGenericResult<RoleDetailPayload>> GetRole(string name, CancellationToken ct = default)
-        => Get<RoleDetailPayload>($"roles/{name}", ct);
+        => Post<GetRolePayload, RoleDetailPayload>("roles/get", new GetRolePayload { Name = name }, ct);
 
     /// <summary>
     /// Creates a new role.
@@ -105,4 +105,16 @@ public class RoleApiClient : ApiClientBase
     /// <returns>A result containing the user's roles.</returns>
     public virtual Task<IGenericResult<UserRolesPayload>> GetUserRoles(System.Guid userId, CancellationToken ct = default)
         => Get<UserRolesPayload>($"users/{userId}/roles", ct);
+
+    /// <summary>
+    /// Gets every user's role assignments in one read.
+    /// </summary>
+    /// <remarks>
+    /// For a list of users. Looping the per-user call over a page of rows is what this exists to
+    /// avoid, and the users list itself cannot answer it -- roles are stored by id and named by
+    /// this domain.
+    /// </remarks>
+    /// <returns>A result containing one entry per user holding at least one current role.</returns>
+    public virtual Task<IGenericResult<AllUserRolesPayload>> GetAllUserRoles(CancellationToken ct = default)
+        => Get<AllUserRolesPayload>("user-roles", ct);
 }

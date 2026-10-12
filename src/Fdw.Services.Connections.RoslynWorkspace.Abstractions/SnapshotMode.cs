@@ -14,7 +14,7 @@ public sealed class SnapshotMode : RoslynWorkspaceModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SnapshotMode"/> class.
     /// </summary>
-    public SnapshotMode() : base(2, "Snapshot")
+    public SnapshotMode() : base("Snapshot")
     {
     }
 }

@@ -19,7 +19,7 @@ public sealed class PermissionDeniedHandler : SqlErrorHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PermissionDeniedHandler"/> class.
     /// </summary>
-    public PermissionDeniedHandler() : base(1, "PermissionDenied") { }
+    public PermissionDeniedHandler() : base("PermissionDenied") { }
 
     /// <inheritdoc />
     public override IReadOnlyList<int> SqlErrorNumbers => [229];

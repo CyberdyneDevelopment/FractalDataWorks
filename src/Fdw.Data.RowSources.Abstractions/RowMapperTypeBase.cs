@@ -5,14 +5,13 @@ namespace Fdw.Data.RowSources.Abstractions;
 /// <summary>
 /// Base class for row mapper types using CRTP pattern.
 /// </summary>
-public abstract class RowMapperTypeBase : TypeOptionBase<int, RowMapperTypeBase>, IRowMapperType
+public abstract class RowMapperTypeBase : TypeOptionBase<RowMapperTypeBase>, IRowMapperType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RowMapperTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this type.</param>
     /// <param name="name">The name of this type.</param>
-    protected RowMapperTypeBase(int id, string name) : base(id, name)
+    protected RowMapperTypeBase(string name) : base(name)
     {
     }
 

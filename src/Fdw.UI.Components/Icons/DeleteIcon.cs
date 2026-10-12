@@ -11,7 +11,6 @@ public sealed class DeleteIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="DeleteIcon"/>.</summary>
     public DeleteIcon()
         : base(
-            7,
             "Delete",
             "0 0 24 24",
             "none",

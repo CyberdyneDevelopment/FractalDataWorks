@@ -2,18 +2,10 @@
 
 The headless component library — state and behaviour without a fixed skin.
 
-Headless Blazor components for this domain — 14 `.razor` component(s) plus their supporting types.
-
-Components are headless: a provider owns the state and the calls, a context carries them, and the consumer supplies the markup through a `RenderFragment<TContext>`. Nothing here renders a fixed skin, so a host can present the same component in any visual language.
-
-## Context, provider and log
-
-| Type | Kind | Purpose |
-|---|---|---|
-| `ApiErrorContext` | class | Context for rendering API error display. |
-| `ApiResultContext` | class | Context for rendering API result display (success or error). |
-| `ErrorDisplayContext` | class | Context for rendering a structured error display. |
-| `UiProviderLog` | class | MessageLogging methods for UI provider operations. Generic operation-level messages shared across all UI… |
+Framework-neutral UI models the renderers draw from: page models (`Pages`), form field models
+(`Models`), icon glyphs (`Icons`), status badge and colour variants (`Services`), and the
+TypeCollection select model (`TypeIntegration`). The Blazor components and their base classes were
+removed (FDW-872); this package carries no Razor or ASP.NET dependency.
 
 ## Installation
 

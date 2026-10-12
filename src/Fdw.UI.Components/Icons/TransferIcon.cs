@@ -11,7 +11,6 @@ public sealed class TransferIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="TransferIcon"/>.</summary>
     public TransferIcon()
         : base(
-            36,
             "Transfer",
             "0 0 24 24",
             "none",

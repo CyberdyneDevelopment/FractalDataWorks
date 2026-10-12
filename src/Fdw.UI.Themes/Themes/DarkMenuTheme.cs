@@ -14,13 +14,9 @@ public sealed class DarkMenuTheme : MenuThemeBase
     /// Creates the dark menu theme.
     /// </summary>
     public DarkMenuTheme() : base(
-        id: 1,
         name: "Dark",
         themeFamily: "Dark",
-        colorPaletteId: 1,
-        borderStyleId: 1,
-        iconSetId: 1,
-        colors: ColorPalettes.ById(1),
-        borders: BorderStyles.ById(1),
-        icons: IconSets.ById(1)) { }
+        colors: ColorPalettes.Dark,
+        borders: BorderStyles.Rounded,
+        icons: IconSets.Unicode) { }
 }

@@ -61,20 +61,6 @@ public sealed class TypeInstanceCollectionAttribute(Type baseType, Type defaultR
     public bool RestrictToCurrentCompilation { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether to generate a Blazor UI component for this TypeCollection.
-    /// When true, generates a {CollectionName}Selector.razor component with a dropdown/selector for all options.
-    /// Default is false (no UI component generated).
-    /// </summary>
-    public bool GenerateUIComponent { get; set; }
-
-    /// <summary>
-    /// Gets or sets the custom UI component type to use instead of the auto-generated component.
-    /// When specified, the generator will not create a default component and will instead
-    /// reference this custom component type in helper methods.
-    /// </summary>
-    public Type? UIComponent { get; set; }
-
-    /// <summary>
     /// Gets or sets the TypeOption attribute if this collection is a member of a parent collection.
     /// </summary>
     public Type? TypeOption { get; set; }

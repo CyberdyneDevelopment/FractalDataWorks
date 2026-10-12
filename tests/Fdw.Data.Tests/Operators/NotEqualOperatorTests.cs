@@ -11,14 +11,6 @@ public sealed class NotEqualOperatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsIdToTwo()
-    {
-        _sut.Id.ShouldBe(2);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
     public void ConstructorSetsNameToNotEqual()
     {
         _sut.Name.ShouldBe("NotEqual");

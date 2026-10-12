@@ -16,7 +16,6 @@ public sealed class OpenIDConnectAuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="OpenIDConnectAuthenticationMethod"/> class.
     /// </summary>
     public OpenIDConnectAuthenticationMethod() : base(
-        id: 7,
         name: "OpenIDConnect",
         requiresUserInteraction: true,
         supportsTokenRefresh: true,

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -111,4 +112,56 @@ public abstract partial class RealTimeHubs : TypeCollectionBase<RealTimeHubOptio
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
         => GenericResult<IHost>.Success(host);
+
+    // Map() is deliberately outside the Configure/Register/Initialize three-phase shape (see the
+    // method's own remarks), so it gets none of PlatformServiceEntry's Ran/Deferred tracking. A
+    // second call would re-map every hub route -- endpoints.MapHub<T> does not reject a duplicate
+    // pattern at mapping time, it adds a second endpoint entry, and a real connection then throws
+    // AmbiguousMatchException at request time. This guard is what actually prevents that, not
+    // caller discipline about how many places call Map().
+    private static volatile bool _mapped;
+
+    /// <summary>
+    /// Maps every discovered real-time hub's endpoint.
+    /// </summary>
+    /// <param name="endpoints">The endpoint route builder.</param>
+    /// <param name="loggerFactory">Optional logger factory for mapping logging.</param>
+    /// <remarks>
+    /// Call after <c>Build()</c>, in whichever host should actually serve hub connections. This is
+    /// deliberately not part of the Configure/Register/Initialize three-phase shape <see cref="Register"/>
+    /// runs through: a host that registers hub services (so a domain running in it can broadcast
+    /// through <c>IHubContext</c>) is not necessarily a host that should accept inbound hub
+    /// connections from it — e.g. FDW-809, where every hub option loads into every host (confirmed:
+    /// the package graph does not distinguish them — see each host's own generated
+    /// TypeOptionModuleInitializer), but only the api host should map the routes browsers connect to.
+    /// Calling this from a host that should not serve hubs would map every hub there too, so a host
+    /// calls it only when it is meant to be a hub endpoint. Safe to call more than once — only the
+    /// first call maps anything, the rest are a logged no-op.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException"><paramref name="endpoints"/> is <see langword="null"/>.</exception>
+    public static void Map(IEndpointRouteBuilder endpoints, ILoggerFactory? loggerFactory = null)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+
+        ILogger logger = loggerFactory?.CreateLogger("Fdw.SignalR") ?? NullLogger.Instance;
+
+        if (_mapped)
+        {
+            SignalRLog.RealTimeHubsAlreadyMapped(logger);
+            return;
+        }
+
+        _mapped = true;
+
+        List<IRealTimeHub> hubs = All().ToList();
+        SignalRLog.RealTimeHubsMapping(logger, hubs.Count);
+
+        foreach (var hub in hubs)
+        {
+            hub.Map(endpoints);
+            SignalRLog.RealTimeHubMapped(logger, hub.Name, hub.HubType.Name, hub.Route);
+        }
+
+        SignalRLog.RealTimeHubsMapped(logger, hubs.Count);
+    }
 }

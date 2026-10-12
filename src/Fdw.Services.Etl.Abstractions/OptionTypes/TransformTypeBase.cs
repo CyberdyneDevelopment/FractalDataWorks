@@ -14,28 +14,32 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 /// <summary>
 /// Abstract base class for transform types that define data transformations in ETL pipelines.
 /// </summary>
-public abstract class TransformTypeBase : TypeOptionBase<int, TransformTypeBase>, ITypeOption<int, TransformTypeBase>, ITransformType
+public abstract class TransformTypeBase : TypeOptionBase<TransformTypeBase>, ITypeOption<int, TransformTypeBase>, ITransformType, IStageMemberShape, IStagePipelineTypesShape
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TransformTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this transform type.</param>
     /// <param name="name">The name of this transform type.</param>
     /// <param name="displayName">The display name for UI presentation.</param>
     /// <param name="description">The description of what this transform does.</param>
     /// <param name="category">The category of this transform.</param>
     /// <param name="modifiesStructure">Whether this transform modifies the record structure.</param>
     /// <param name="canFilterRecords">Whether this transform can filter out records.</param>
+    /// <param name="inputPorts">The named inputs this kind reads.</param>
+    /// <param name="outputPorts">The named outputs this kind writes.</param>
     protected TransformTypeBase(
-        int id,
         string name,
         string displayName,
         string description,
         string category,
         bool modifiesStructure,
-        bool canFilterRecords)
-        : base(id, name)
+        bool canFilterRecords,
+        IReadOnlyList<string> inputPorts,
+        IReadOnlyList<string> outputPorts)
+        : base(name)
     {
+        InputPorts = inputPorts;
+        OutputPorts = outputPorts;
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         Description = description ?? throw new ArgumentNullException(nameof(description));
         Category = category ?? throw new ArgumentNullException(nameof(category));
@@ -57,6 +61,27 @@ public abstract class TransformTypeBase : TypeOptionBase<int, TransformTypeBase>
 
     /// <inheritdoc />
     public bool CanFilterRecords { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> InputPorts { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> OutputPorts { get; }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Row-at-a-time transforms (map, filter, calculate, lookup) keep this <see langword="false"/>; a
+    /// set-based one such as an aggregate overrides it.
+    /// </remarks>
+    public virtual bool RequiresCompleteInput => false;
+
+    /// <inheritdoc />
+    /// <remarks>A kind that owns body members overrides this; the default is none.</remarks>
+    public virtual IReadOnlyList<StageMember> Members => Array.Empty<StageMember>();
+
+    /// <inheritdoc />
+    /// <remarks>A kind that only some pipeline types can run overrides this; null, the default, is every pipeline type.</remarks>
+    public virtual IReadOnlyList<string>? PipelineTypes => null;
 
     /// <inheritdoc />
     [ExcludeFromCodeCoverage] // Abstract method - implementation coverage tested in derived classes

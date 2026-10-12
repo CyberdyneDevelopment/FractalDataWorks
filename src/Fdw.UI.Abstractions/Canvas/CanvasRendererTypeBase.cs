@@ -14,12 +14,11 @@ namespace Fdw.UI.Abstractions.Canvas;
 /// names are set via constructor arguments — no property overrides.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public abstract class CanvasRendererTypeBase : TypeOptionBase<int, CanvasRendererTypeBase>, ICanvasRendererType
+public abstract class CanvasRendererTypeBase : TypeOptionBase<CanvasRendererTypeBase>, ICanvasRendererType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CanvasRendererTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique numeric identifier for this renderer type.</param>
     /// <param name="name">The registry name (used by <c>CanvasRendererTypes.ByName()</c>).</param>
     /// <param name="displayName">The human-readable name shown in the dropdown.</param>
     /// <param name="supportsEditing">Whether this renderer handles edit-mode interactions.</param>
@@ -29,10 +28,9 @@ public abstract class CanvasRendererTypeBase : TypeOptionBase<int, CanvasRendere
     /// <param name="renderComponentType">
     /// The CLR type of the UI component that renders this canvas, or <see langword="null"/> for
     /// renderers with no component-tree representation (e.g. a TUI renderer implementing
-    /// <see cref="ICanvasRenderer"/> directly). A Blazor renderer passes its component type here.
+    /// <see cref="ICanvasRenderer"/> directly). A renderer passes its component type here.
     /// </param>
     protected CanvasRendererTypeBase(
-        int id,
         string name,
         string displayName,
         bool supportsEditing,
@@ -40,7 +38,7 @@ public abstract class CanvasRendererTypeBase : TypeOptionBase<int, CanvasRendere
         bool supportsLargeGraphs,
         IReadOnlyList<string> layoutAlgorithms,
         Type? renderComponentType = null)
-        : base(id, name, name, displayName, displayName, category: null)
+        : base(name, name, displayName, displayName, category: null)
     {
         SupportsEditing = supportsEditing;
         SupportsPorts = supportsPorts;

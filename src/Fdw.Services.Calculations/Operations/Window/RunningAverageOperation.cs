@@ -27,7 +27,7 @@ public sealed class RunningAverageOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="RunningAverageOperation"/> class.
     /// </summary>
     public RunningAverageOperation()
-        : base(id: 32, name: "RunningAverage", category: "Window", description: "Computes a running average over a field within a partition")
+        : base(name: "RunningAverage", category: "Window", description: "Computes a running average over a field within a partition")
     {
         _logger = NullLogger<RunningAverageOperation>.Instance;
         Parameters =

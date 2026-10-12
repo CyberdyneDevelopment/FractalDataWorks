@@ -23,13 +23,12 @@ namespace Fdw.Data.DataContainers.Abstractions;
 /// The source generator will create a static DataContainerTypes class with properties
 /// for each container type, along with lookup methods for runtime container discovery.
 /// </remarks>
-public abstract class DataContainerTypeBase : TypeOptionBase<int, DataContainerTypeBase>, IDataContainerType
+public abstract class DataContainerTypeBase : TypeOptionBase<DataContainerTypeBase>, IDataContainerType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DataContainerTypeBase"/> class.
     /// </summary>
     protected DataContainerTypeBase(
-        int id,
         string name,
         string? fileExtension,
         string? mimeType,
@@ -39,7 +38,7 @@ public abstract class DataContainerTypeBase : TypeOptionBase<int, DataContainerT
         bool supportsStreaming,
         IEnumerable<string> compatibleConnectionTypes,
         string? category = null)
-        : base(id, name, category)
+        : base(name, category)
     {
         FileExtension = fileExtension;
         MimeType = mimeType;

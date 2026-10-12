@@ -31,7 +31,6 @@ public sealed class GetSymbolInfoTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve symbol, extract type-specific info, build DTO
     public override async Task<IGenericResult<QueryResult<SymbolInfoData>>> Translate(
         GetSymbolInfoCommand command,
         Solution solution,
@@ -170,5 +169,4 @@ public sealed class GetSymbolInfoTranslator
 
         return GenericResult<QueryResult<SymbolInfoData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

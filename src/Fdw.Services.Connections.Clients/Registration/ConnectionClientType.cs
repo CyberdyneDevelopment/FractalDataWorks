@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Connections.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Connection API client.
+/// Implementation for the Connection API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "ConnectionClient")]
+[Implementation(typeof(ApiClientTypes), "ConnectionClient")]
 public sealed class ConnectionClientType : ApiClientTypeBase<ConnectionApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class ConnectionClientType : ApiClientTypeBase<ConnectionApiClient
         {
             builder.Services.AddScoped<ConnectionApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ConnectionApiClient>>() ?? NullLogger<ConnectionApiClient>.Instance;
-                return new ConnectionApiClient(factory.CreateClient(Name), logger);
+                return new ConnectionApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

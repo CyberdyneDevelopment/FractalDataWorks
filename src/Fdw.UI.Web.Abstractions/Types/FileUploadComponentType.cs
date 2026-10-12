@@ -13,5 +13,5 @@ public sealed class FileUploadComponentType : ComponentTypeBase
     /// <summary>
     /// Gets the singleton instance of the file upload component type.
     /// </summary>
-    public FileUploadComponentType() : base(16, "FileUpload", "File Upload", "Input", "Upload files") { }
+    public FileUploadComponentType() : base("FileUpload", "File Upload", "Input", "Upload files") { }
 }

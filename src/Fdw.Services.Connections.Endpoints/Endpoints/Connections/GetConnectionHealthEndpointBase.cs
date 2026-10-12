@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -66,7 +67,7 @@ public abstract class GetConnectionHealthEndpointBase : Endpoint<ConnectionNameR
         if (!result.IsSuccess)
         {
             ConnectionEndpointLog.HealthHistoryLoadFailed(_logger, req.Name, result.CurrentMessage ?? "Unknown error");
-            HttpContext.Response.StatusCode = 500;
+            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
             return;
         }
 

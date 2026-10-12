@@ -21,7 +21,7 @@ namespace Fdw.Services.Data.Abstractions;
 /// </para>
 /// <para>
 /// A true builder with ONE input source: <see cref="Configure"/> seeds it with a nested
-/// <c>DataStoreConfiguration</c> (Paths → Containers → Fields → Keys) — the shape both
+/// <c>DataStoreImplementationConfiguration</c> (Paths → Containers → Fields → Keys) — the shape both
 /// <c>ConfigurationSchema.DataStores</c> and the DB-loaded path already use — then <see cref="Build"/>
 /// assembles the tree. There is no alternative node-by-node source.
 /// </para>
@@ -36,11 +36,21 @@ public interface IDataStoreBuilder
     /// Seeds the builder from a nested store configuration (its Paths/Containers/Fields/Keys).
     /// </summary>
     /// <param name="storeConfig">
-    /// The store configuration — a <c>DataStoreConfiguration</c>. The concrete builder downcasts to
+    /// The store configuration — a <c>DataStoreImplementationConfiguration</c>. The concrete builder downcasts to
     /// the configuration shape it understands and fails loud if the type is unexpected.
     /// </param>
     /// <returns>Success when the configuration was accepted; Failure (with MessageLogging) otherwise.</returns>
     IGenericResult Configure(IGenericConfiguration storeConfig);
+
+    /// <summary>
+    /// Marks the store this builder builds as declared by the host in its <c>configurationSchema.json</c>
+    /// (<see cref="IDataStore.DeclaredByHost"/>).
+    /// </summary>
+    /// <remarks>
+    /// Called by the configuration gateway, which builds the host's declared stores, and by nothing else: whether a
+    /// store is the host's is a fact about where it was loaded from, so the code that loads it says so.
+    /// </remarks>
+    void DeclareByHost();
 
     /// <summary>
     /// Builds the assembled <see cref="IDataStore"/> tree. May fetch field/key metadata from the

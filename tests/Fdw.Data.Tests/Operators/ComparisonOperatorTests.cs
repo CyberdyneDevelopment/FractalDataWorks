@@ -12,7 +12,6 @@ public sealed class ComparisonOperatorTests
     public void GreaterThanHasCorrectProperties()
     {
         var sut = new GreaterThanOperator();
-        sut.Id.ShouldBe(6);
         sut.Name.ShouldBe("GreaterThan");
         sut.SqlOperator.ShouldBe(">");
         sut.ODataOperator.ShouldBe("gt");
@@ -25,7 +24,6 @@ public sealed class ComparisonOperatorTests
     public void GreaterThanOrEqualHasCorrectProperties()
     {
         var sut = new GreaterThanOrEqualOperator();
-        sut.Id.ShouldBe(7);
         sut.Name.ShouldBe("GreaterThanOrEqual");
         sut.SqlOperator.ShouldBe(">=");
         sut.ODataOperator.ShouldBe("ge");
@@ -38,7 +36,6 @@ public sealed class ComparisonOperatorTests
     public void LessThanHasCorrectProperties()
     {
         var sut = new LessThanOperator();
-        sut.Id.ShouldBe(8);
         sut.Name.ShouldBe("LessThan");
         sut.SqlOperator.ShouldBe("<");
         sut.ODataOperator.ShouldBe("lt");
@@ -51,7 +48,6 @@ public sealed class ComparisonOperatorTests
     public void LessThanOrEqualHasCorrectProperties()
     {
         var sut = new LessThanOrEqualOperator();
-        sut.Id.ShouldBe(9);
         sut.Name.ShouldBe("LessThanOrEqual");
         sut.SqlOperator.ShouldBe("<=");
         sut.ODataOperator.ShouldBe("le");
@@ -125,13 +121,13 @@ public sealed class ComparisonOperatorTests
     }
 
     [Fact]
-    [Trait("Priority", "P0")]
+    [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void AllComparisonOperatorsUseDefaultFormatSqlParameter()
+    public void NoComparisonOperatorIsAPatternMatch()
     {
-        new GreaterThanOperator().FormatSqlParameter("Age").ShouldBe("@Age");
-        new GreaterThanOrEqualOperator().FormatSqlParameter("Age").ShouldBe("@Age");
-        new LessThanOperator().FormatSqlParameter("Age").ShouldBe("@Age");
-        new LessThanOrEqualOperator().FormatSqlParameter("Age").ShouldBe("@Age");
+        new GreaterThanOperator().IsPatternMatch.ShouldBeFalse();
+        new GreaterThanOrEqualOperator().IsPatternMatch.ShouldBeFalse();
+        new LessThanOperator().IsPatternMatch.ShouldBeFalse();
+        new LessThanOrEqualOperator().IsPatternMatch.ShouldBeFalse();
     }
 }

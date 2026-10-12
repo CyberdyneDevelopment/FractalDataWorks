@@ -17,11 +17,9 @@ public sealed class CompoundQueryCapability : CommandCapabilityTypeBase
     /// </summary>
     public CompoundQueryCapability()
         : base(
-            id: 12,
             name: "CompoundQuery",
             displayName: "Compound (Pushed-Down JOIN) Query",
-            configurationFields: [],
-            builderComponentType: null)
+            configurationFields: [])
     {
     }
 }

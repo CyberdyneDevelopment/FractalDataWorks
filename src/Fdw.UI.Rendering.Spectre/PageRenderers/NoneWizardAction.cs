@@ -9,5 +9,5 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 public sealed class NoneWizardAction : WizardActionBase
 {
     /// <summary>Initializes a new instance of <see cref="NoneWizardAction"/>.</summary>
-    public NoneWizardAction() : base(0, "None") { }
+    public NoneWizardAction() : base("None") { }
 }

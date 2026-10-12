@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlInt64Converter()
     : DataTypeConverterBase(
-        id: 2,
         name: "Int64",
         sourceType: "bigint",
         targetClrType: typeof(long),

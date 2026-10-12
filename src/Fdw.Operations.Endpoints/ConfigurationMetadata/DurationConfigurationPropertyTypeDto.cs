@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class DurationConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="DurationConfigurationPropertyTypeDto"/>.</summary>
-    public DurationConfigurationPropertyTypeDto() : base(9, "Duration") { }
+    public DurationConfigurationPropertyTypeDto() : base("Duration") { }
 }

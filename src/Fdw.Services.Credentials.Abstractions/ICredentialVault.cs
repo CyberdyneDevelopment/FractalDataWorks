@@ -50,4 +50,16 @@ public interface ICredentialVault : IDataVault
     /// <param name="userId">The owning user.</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>
     Task<IGenericResult> Disable(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers whether the user currently holds a secret in this vault.
+    /// </summary>
+    /// <remarks>
+    /// Presence, not material: the vault still never returns what it stores. An administrator
+    /// needs this to know whether granting a first password would replace an existing one, which
+    /// is a different act with a different authority.
+    /// </remarks>
+    /// <param name="userId">The owning user.</param>
+    /// <param name="cancellationToken">Propagated cancellation token.</param>
+    Task<IGenericResult<bool>> Exists(Guid userId, CancellationToken cancellationToken = default);
 }

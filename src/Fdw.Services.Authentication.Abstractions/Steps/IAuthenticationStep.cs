@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Context;
+using Fdw.Services.Multitenancy.Abstractions;
 
 namespace Fdw.Services.Authentication.Abstractions.Steps;
 
@@ -59,7 +60,12 @@ public interface IAuthenticationStep
 
     /// <summary>Runs the step.</summary>
     /// <param name="context">What the flow has established so far.</param>
+    /// <param name="tenants">
+    /// This request's tenant provider. <see cref="ITenantProvider"/> is Scoped and the runner that
+    /// calls this is the one place in the chain genuinely Scoped itself -- a step is a singleton for
+    /// the process's life, so it must use this parameter rather than resolve or cache one of its own.
+    /// </param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     Task<IGenericResult<StepOutcome>> Execute(
-        AuthenticationContext context, CancellationToken cancellationToken = default);
+        AuthenticationContext context, ITenantProvider tenants, CancellationToken cancellationToken = default);
 }

@@ -17,7 +17,6 @@ public sealed class OptimizedStrategy : FederationStrategyBase
     /// </summary>
     public OptimizedStrategy()
         : base(
-            id: 3,
             name: "Optimized",
             description: "Analyzes query characteristics and chooses optimal execution approach",
             isParallel: true,

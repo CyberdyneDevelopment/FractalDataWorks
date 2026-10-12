@@ -15,6 +15,6 @@ public sealed class AverageAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AverageAggregationType"/> class.
     /// </summary>
-    public AverageAggregationType() : base(1, "Average", values => values.Count == 0 ? 0m : values.Average())
+    public AverageAggregationType() : base("Average", values => values.Count == 0 ? 0m : values.Average())
     { }
 }

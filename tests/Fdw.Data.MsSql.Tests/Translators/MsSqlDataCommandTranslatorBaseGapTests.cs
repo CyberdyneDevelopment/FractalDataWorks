@@ -36,7 +36,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         mockField.Setup(f => f.IsComputed).Returns(false);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(new[] { mockField.Object });
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(new[] { mockField.Object });
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new[] { mockField.Object });
 
         var container = new Mock<IDataContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -67,6 +67,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -97,6 +98,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -127,6 +129,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -158,6 +161,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -190,6 +194,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -222,6 +227,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -253,6 +259,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -289,6 +296,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns(ordering);
@@ -313,7 +321,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
 
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(new[] { fields.Object });
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(new[] { fields.Object });
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new[] { fields.Object });
 
         var dbPath = new DatabasePath("", "dbo", "Test");
         var container = new Mock<IDataContainer>();
@@ -327,6 +335,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         var paging = new PagingExpression { Skip = 100, Take = 50 };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns((IFilterExpression?)null);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);
@@ -358,6 +367,7 @@ public sealed class MsSqlDataCommandTranslatorBaseGapTests
         };
 
         var queryCommand = new Mock<IQueryCommand>();
+        queryCommand.Setup(q => q.Joins).Returns([]);
         queryCommand.Setup(q => q.Filter).Returns(filter);
         queryCommand.Setup(q => q.Projection).Returns((IProjectionExpression?)null);
         queryCommand.Setup(q => q.Ordering).Returns((IOrderingExpression?)null);

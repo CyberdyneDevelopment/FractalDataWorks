@@ -32,22 +32,6 @@ public abstract partial class SecretManagerConfigurationBase : IGenericConfigura
     /// </summary>
     public string Name { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Gets the section name for this configuration in appsettings or database.
-    /// Must be overridden by derived classes to specify binding path.
-    /// </summary>
-    public abstract string SectionName { get; }
-
-    /// <summary>
-    /// Gets the service type (domain) - always "SecretManager" for this configuration.
-    /// </summary>
-    public string ServiceType => "SecretManager";
-
-    /// <summary>
-    /// Gets the service option type (implementation variant) this configuration is for.
-    /// Alias for <see cref="SecretManagerType"/>.
-    /// </summary>
-    public string? ServiceOptionType => SecretManagerType;
 
     /// <summary>
     /// Gets the secret manager type name this configuration is for.

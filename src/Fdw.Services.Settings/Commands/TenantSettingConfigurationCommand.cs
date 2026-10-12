@@ -6,7 +6,7 @@ namespace Fdw.Services.Settings.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the TenantSetting configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "TenantSetting")]
-public sealed class TenantSettingConfigurationCommand : ConfigurationCommandBase<TenantSettingConfiguration>
+public sealed class TenantSettingConfigurationCommand : ConfigurationCommandBase<TenantSettingImplementationConfiguration>
 {
     /// <inheritdoc/>
     public TenantSettingConfigurationCommand() : base("TenantSetting") { }

@@ -9,6 +9,7 @@ using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -18,7 +19,7 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretManagerRequest, SecretManagerDetailResponse>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<CreateSecretManagerEndpointBase> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -30,7 +31,7 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
     /// Initializes a new instance of the <see cref="CreateSecretManagerEndpointBase"/> class.
     /// </summary>
     protected CreateSecretManagerEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<CreateSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;
@@ -41,7 +42,10 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
     public override void Configure()
     {
         Post("/secret-managers");
-        Policies("secretmanagers:delete");
+        // Secret managers are the platform's, owned by the system tenant: only a platform administrator lists, reads
+        // or changes one. A tenant never touches a secret manager or a secret; a connection's credentials are set
+        // through the connection (FDW-1086).
+        Policies(AuthConstants.PlatformAdminPolicy);
         Summary(s =>
         {
             s.Summary = "Create secret manager";
@@ -74,9 +78,8 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
         if (typedBody is null)
             return (null, $"Configuration body could not be parsed as {typedType.Name}");
 
-        if (typedBody.Id == Guid.Empty)
-            typedBody.Id = Guid.CreateVersion7();
-        typedBody.SecretManagerId = domainConfigurationId;
+        // The implementation's Id is its domain row's.
+        typedBody.Id = domainConfigurationId;
 
         return (typedBody, null);
     }
@@ -122,17 +125,13 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
                 return;
             }
 
-            var config = new SecretManagerConfiguration
-            {
-                Id = domainConfigurationId,
-                Name = req.Name,
-                ServiceOptionType = req.SecretManagerType,
-                Description = req.Description,
-                Environment = req.Environment,
-                Configuration = bodyResult.Body
-            };
+            // BuildTypedBody already produced the implementation this row is, so it is what gets
+            // saved. Description and Environment are sec.SecretManager domain-row columns a domain
+            // read does not carry; they are not set through the implementation.
+            var config = bodyResult.Body!;
+            config.Id = domainConfigurationId;
 
-            var saveResult = await _configProvider.Save(config, ct).ConfigureAwait(false);
+            var saveResult = await _configProvider.Save(config, "SecretManager", req.SecretManagerType, req.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
                 SecretManagerEndpointLog.SaveFailed(_logger, saveResult.CurrentMessage ?? "Unknown error");
@@ -146,10 +145,10 @@ public abstract class CreateSecretManagerEndpointBase : Endpoint<CreateSecretMan
             var detail = new SecretManagerDetailResponse
             {
                 Id = config.Id,
-                Name = config.Name,
-                SecretManagerType = config.SecretManagerType,
-                Description = config.Description,
-                ServiceOptionType = config.ServiceOptionType
+                Name = req.Name,
+                SecretManagerType = req.SecretManagerType,
+                Description = req.Description,
+                Implementation = req.SecretManagerType
             };
 
             await Send.ResponseAsync(detail, 201, ct).ConfigureAwait(false);

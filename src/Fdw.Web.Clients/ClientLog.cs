@@ -71,21 +71,6 @@ public static partial class ClientLog
         int statusCode);
 
     /// <summary>
-    /// Logged at Warning level when an HTTP request returns a non-success status code,
-    /// including the server's response body so the real failure reason is preserved.
-    /// </summary>
-    [MessageLogging(
-        EventId = 71001,
-        Level = LogLevel.Error,
-        Message = "{method} request to {uri} returned non-success status {statusCode}: {detail}")]
-    public static partial IGenericMessage RequestNonSuccessDetail(
-        ILogger logger,
-        string method,
-        string uri,
-        int statusCode,
-        string detail);
-
-    /// <summary>
     /// Logged at Error level when an HTTP request fails due to a network or protocol error —
     /// the flattened <paramref name="error"/> names the transport cause (connection refused,
     /// name resolution, TLS, timeout) in the message itself.
@@ -156,4 +141,38 @@ public static partial class ClientLog
         ILogger logger,
         string method,
         string uri);
+
+    /// <summary>
+    /// Logs a streamed page whose server reported, after its items, that it ended early. The items
+    /// received are not the whole page, so they are not handed back as if they were.
+    /// </summary>
+    /// <param name="logger">The logger instance to write to.</param>
+    /// <param name="method">The HTTP method.</param>
+    /// <param name="uri">The request URI.</param>
+    /// <param name="error">The error the server wrote after the items.</param>
+    /// <returns>A generic message containing the error information.</returns>
+    [MessageLogging(
+        EventId = 71003,
+        Level = LogLevel.Error,
+        Message = "{method} response from {uri} ended early: {error}")]
+    public static partial IGenericMessage PageEndedEarly(
+        ILogger logger,
+        string method,
+        string uri,
+        string error);
+
+    /// <summary>
+    /// Logged at Information level when an upstream answered a non-success status with a body that starts like a JSON object
+    /// but does not parse. The body gives no reason a caller may be shown; the coded failure for the status is kept.
+    /// </summary>
+    [MessageLogging(
+        EventId = 71004,
+        Level = LogLevel.Information,
+        Message = "{method} request to {uri} answered with an error body that is not valid JSON: {error}")]
+    public static partial IGenericMessage UpstreamBodyNotJson(
+        ILogger logger,
+        Exception ex,
+        string method,
+        string uri,
+        string error);
 }

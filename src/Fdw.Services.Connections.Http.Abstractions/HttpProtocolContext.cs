@@ -26,7 +26,8 @@ namespace Fdw.Services.Connections.Http.Abstractions;
 /// <param name="LoggerFactory">The logger factory for creating protocol loggers.</param>
 /// <param name="ResolvedCertificate">X.509 certificate resolved from secret manager (for WS-Security).</param>
 /// <param name="ResolvedPassword">Password resolved from secret manager.</param>
-/// <param name="ResolvedApiKey">API key resolved from secret manager.</param>
+/// <param name="ResolvedApiKey">The key credential resolved from the secret manager: an API key (ApiKey) or a
+/// bearer token (Bearer). The connection's AuthenticationType decides the header it is sent in.</param>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 public readonly record struct HttpProtocolContext(
     IGenericConfiguration Configuration,

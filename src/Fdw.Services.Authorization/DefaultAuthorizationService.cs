@@ -19,7 +19,7 @@ namespace Fdw.Services.Authorization;
 /// Default implementation of <see cref="IFrameworkAuthorizationService"/>.
 /// Enforces against the baked effective-permission set carried by the access token
 /// (the <c>perm</c> claims). The 3-tier union (global/tenant/org) is resolved ONCE at
-/// token-issue time by <see cref="EffectivePermissionResolver"/> and stamped into the token;
+/// token-issue time by <see cref="UserPermissions"/> and stamped into the token;
 /// per-request enforcement trusts those claims as authoritative and does not re-query the store.
 /// </summary>
 public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
@@ -29,18 +29,8 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultAuthorizationService"/> class.
     /// </summary>
-    public DefaultAuthorizationService(
-        IServiceConfigurationProvider<RoleConfiguration> roleProvider,
-        IServiceConfigurationProvider<PermissionConfiguration> permissionProvider,
-        IServiceConfigurationProvider<RolePermissionConfiguration> rolePermissionProvider,
-        ILogger<DefaultAuthorizationService>? logger,
-        Lazy<ITenantContext>? tenantContext = null,
-        Lazy<IOrgContext>? orgContext = null,
-        IOrgAccessProvider? orgAccessProvider = null)
+    public DefaultAuthorizationService(ILogger<DefaultAuthorizationService>? logger)
     {
-        ArgumentNullException.ThrowIfNull(roleProvider);
-        ArgumentNullException.ThrowIfNull(permissionProvider);
-        ArgumentNullException.ThrowIfNull(rolePermissionProvider);
         _logger = logger ?? NullLogger<DefaultAuthorizationService>.Instance;
     }
 
@@ -73,9 +63,7 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
 
         var permissionName = $"{resource}:{action}";
 
-        var hasPermission = userPermissions.Contains(permissionName, StringComparer.OrdinalIgnoreCase) ||
-                           userPermissions.Contains($"{resource}:*", StringComparer.OrdinalIgnoreCase) ||
-                           userPermissions.Contains("*:*", StringComparer.OrdinalIgnoreCase);
+        var hasPermission = PermissionCoverage.Covers(userPermissions, permissionName);
 
         if (hasPermission)
             AuthorizationLog.AuthorizationGranted(_logger, context.UserId, permissionName);
@@ -127,7 +115,7 @@ public sealed class DefaultAuthorizationService : IFrameworkAuthorizationService
         if (userPermissions is null)
             return GenericResult<bool>.Success(false);
 
-        return GenericResult<bool>.Success(userPermissions.Contains(permission, StringComparer.OrdinalIgnoreCase));
+        return GenericResult<bool>.Success(PermissionCoverage.Covers(userPermissions, permission));
     }
 
     /// <inheritdoc />

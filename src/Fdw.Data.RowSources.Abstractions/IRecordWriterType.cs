@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using Fdw.Collections;
 
@@ -23,6 +24,40 @@ public interface IRecordWriterType : ITypeOption<int, RecordWriterTypeBase>
     /// Gets the data format this writer handles (Json, Xml, Delimited, FixedWidth).
     /// </summary>
     string Format { get; }
+
+    /// <summary>
+    /// Gets the IANA media type this format is served as over HTTP (for example
+    /// <c>application/json</c>, <c>text/csv</c>).
+    /// </summary>
+    /// <remarks>
+    /// Why the format declares this rather than a lookup table beside the endpoints: a format knows
+    /// what it is. A table somewhere else has to be edited every time a format is added, and a format
+    /// whose entry was forgotten becomes unreachable over HTTP with nothing to say so.
+    /// </remarks>
+    string MediaType { get; }
+
+    /// <summary>
+    /// Gets the file extension this format is saved under, without the leading dot (for example <c>csv</c>).
+    /// </summary>
+    /// <remarks>
+    /// Declared by the format for the same reason as <see cref="MediaType"/>: a lookup kept beside the endpoints
+    /// has to be edited whenever a format is added, and a forgotten entry names downloads wrongly with nothing
+    /// to say so.
+    /// </remarks>
+    string FileExtension { get; }
+
+    /// <summary>
+    /// Builds this format's own writer options for the supplied ordered column names.
+    /// </summary>
+    /// <param name="columns">The ordered column names the writer emits.</param>
+    /// <returns>Options of the concrete type this format's writer expects.</returns>
+    /// <remarks>
+    /// Why the format builds them rather than the caller: <see cref="CreateWriter"/> casts the options
+    /// to its own concrete type, so base-class options arrive as null and the writer falls back to its
+    /// defaults — which, for a format that requires a column list, means failing on a caller that did
+    /// supply one. Only the format knows which type its writer will accept.
+    /// </remarks>
+    RowWriterOptions CreateOptions(IReadOnlyList<string> columns);
 
     /// <summary>
     /// Builds a record writer from the container's configuration (target + field schema + format options).

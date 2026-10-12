@@ -17,8 +17,7 @@ public sealed class ProcessTimeoutMessage : ExecutionMessage, IServiceMessage
         : base(1002, "ProcessTimeout", MessageSeverity.Warning,
                "Process operation timed out",
                "EXEC_PROCESS_TIMEOUT",
-               "Process",
-               "https://docs.Fdw.io/execution/timeouts")
+               "Process")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class ProcessTimeoutMessage : ExecutionMessage, IServiceMessage
         : base(1002, "ProcessTimeout", MessageSeverity.Warning,
                string.Format(CultureInfo.InvariantCulture, "Process operation timed out for process: {0}", processId),
                "EXEC_PROCESS_TIMEOUT",
-               "Process",
-               "https://docs.Fdw.io/execution/timeouts")
+               "Process")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class ProcessTimeoutMessage : ExecutionMessage, IServiceMessage
                string.Format(CultureInfo.InvariantCulture, "Process operation timed out for process: {0} after {1} seconds",
                            processId, timeoutSeconds),
                "EXEC_PROCESS_TIMEOUT",
-               "Process",
-               "https://docs.Fdw.io/execution/timeouts")
+               "Process")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class ProcessTimeoutMessage : ExecutionMessage, IServiceMessage
                string.Format(CultureInfo.InvariantCulture, "Process operation '{0}' timed out for process: {1} after {2} seconds",
                            operationName, processId, timeoutSeconds),
                "EXEC_PROCESS_TIMEOUT",
-               "Process",
-               "https://docs.Fdw.io/execution/timeouts")
+               "Process")
     { }
 }

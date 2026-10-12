@@ -4,23 +4,24 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
-using Fdw.Services.Abstractions;
 using Fdw.Services.Scheduling.Abstractions.Configuration;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Web.RestEndpoints.Models;
+using Fdw.Web.RestEndpoints.Pagination;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for listing all configured schedules with pagination and filtering.
-/// Uses the base <see cref="ScheduleConfiguration"/> type, which covers all schedule types.
+/// Uses the base <see cref="IScheduleImplementationConfiguration"/> type, which covers all schedule types.
 /// </summary>
 public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSchedulesRequest, ScheduleSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<ScheduleConfiguration> _provider;
+    private readonly IScheduleConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListSchedulesEndpointBase(ILogger<ListSchedulesEndpointBase> logger, IServiceConfigurationProvider<ScheduleConfiguration> provider) : base(logger)
+    protected ListSchedulesEndpointBase(ILogger<ListSchedulesEndpointBase> logger, IScheduleConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -31,13 +32,17 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     /// <summary>Loads all schedule configurations and maps them to summary DTOs.</summary>
     protected override async Task<IGenericResult<List<ScheduleSummaryDto>>> LoadItems(ListSchedulesRequest request, CancellationToken ct)
     {
-        var allResult = await _provider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
+        // Every schedule, read as deep as the summary needs (ScheduleDtoMapper.ReadLevels): a row shows its run parameters and run
+        // roles, which are child collections, and a collection below the depth read comes back empty, not absent (FDW-1168).
+        // The filters and sort run on implementation columns the paged read cannot filter on, so
+        // this list is filtered and paged here rather than by the provider (FDW-951).
+        var allResult = await _provider.Get(ScheduleDtoMapper.ReadLevels, ct).ConfigureAwait(false);
+        if (!allResult.IsSuccess || allResult.Value is null)
         {
             return allResult.ToNewResult<List<ScheduleSummaryDto>>();
         }
 
-        var allSchedules = (allResult.Value ?? (IReadOnlyList<ScheduleConfiguration>)[])
+        var allSchedules = allResult.Value
             .Where(config => !string.IsNullOrWhiteSpace(config.Name))
             .ToList();
 
@@ -51,8 +56,17 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
         return GenericResult<List<ScheduleSummaryDto>>.Success(items);
     }
 
+    /// <inheritdoc />
+    /// <remarks>
+    /// Why Page/PageSize rather than skip/take: they are the fields <see cref="ListSchedulesRequest"/>
+    /// declares, so they are the ones a caller reading the contract sends. They were bound and logged
+    /// but never applied, so every call returned every schedule.
+    /// </remarks>
+    protected override IGenericResult<PaginatedListRequest> ResolvePaging(ListSchedulesRequest request)
+        => PaginationQuery.ResolvePage(HttpContext, Logger, request.Page, request.PageSize);
+
     /// <summary>Applies filters from the request to the schedule list.</summary>
-    protected virtual IReadOnlyList<ScheduleConfiguration> ApplyFilters(IReadOnlyList<ScheduleConfiguration> schedules, ListSchedulesRequest request)
+    protected virtual IReadOnlyList<IScheduleImplementationConfiguration> ApplyFilters(IReadOnlyList<IScheduleImplementationConfiguration> schedules, ListSchedulesRequest request)
     {
         var filtered = schedules.AsEnumerable();
 
@@ -75,7 +89,7 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     }
 
     /// <summary>Applies sorting from the request to the schedule list.</summary>
-    protected virtual IEnumerable<ScheduleConfiguration> ApplySort(IReadOnlyList<ScheduleConfiguration> schedules, ListSchedulesRequest request)
+    protected virtual IEnumerable<IScheduleImplementationConfiguration> ApplySort(IReadOnlyList<IScheduleImplementationConfiguration> schedules, ListSchedulesRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.SortBy))
         {
@@ -100,25 +114,5 @@ public abstract class ListSchedulesEndpointBase : CrudListEndpointBase<ListSched
     }
 
     /// <summary>Maps a single schedule configuration to a summary DTO.</summary>
-    protected virtual ScheduleSummaryDto MapToSummary(ScheduleConfiguration config)
-    {
-        return new ScheduleSummaryDto
-        {
-            Id = config.Id,
-            Name = config.Name,
-            PipelineName = config.PipelineName,
-            SchedulerType = config.ScheduleType,
-            IsEnabled = config.IsEnabled,
-            NextRunTime = config.NextRunTime,
-            LastRunTime = config.LastRunTime,
-            CronExpression = config.CronExpression,
-            IntervalSeconds = config.IntervalSeconds,
-            TimeZoneId = config.TimeZoneId,
-            CreatedAt = config.CreateDate,
-            CreatedBy = config.CreateBy,
-            ModifiedBy = config.ModifyBy,
-            CreatedOnBehalfOf = config.CreateOnBehalfOf,
-            ModifiedOnBehalfOf = config.ModifyOnBehalfOf
-        };
-    }
+    protected virtual ScheduleSummaryDto MapToSummary(IScheduleImplementationConfiguration config) => ScheduleDtoMapper.Summary(config);
 }

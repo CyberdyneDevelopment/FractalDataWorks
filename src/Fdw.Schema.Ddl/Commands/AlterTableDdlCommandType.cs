@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Commands;
 public sealed class AlterTableDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="AlterTableDdlCommandType"/>.</summary>
-    public AlterTableDdlCommandType() : base(3, "AlterTable") { }
+    public AlterTableDdlCommandType() : base("AlterTable") { }
 }

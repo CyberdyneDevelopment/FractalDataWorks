@@ -29,7 +29,7 @@ public class DynamicStructMapperTests
         }
 
         schema.Setup(s => s.Fields).Returns(fields.AsReadOnly());
-        schema.Setup(s => s.GetProjectableFields()).Returns(fields.AsReadOnly());
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields.AsReadOnly());
         container.Setup(c => c.Schema).Returns(schema.Object);
         return container;
     }

@@ -8,7 +8,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `IBlazorTheme` | interface | Defines a Blazor CSS theme providing component and layout class tokens. Implementations map semantic… |
 | `IBorderStyle` | interface | Defines border styles for UI components. |
 | `IColorPalette` | interface | Defines a color palette for UI components. |
 | `IIconSet` | interface | Defines icons and indicators for UI components. Icons are string-based to support Unicode, ASCII, or… |
@@ -18,7 +17,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BlazorThemeBase` | class | Abstract base class for Blazor CSS themes. Subclasses populate in their constructor; provides null-safe… |
 | `BorderStyleBase` | class | Abstract base class for border styles. Inherit from this class and apply [TypeOption] attribute to… |
 | `ColorPaletteBase` | class | Abstract base class for color palettes. Inherit from this class and apply [TypeOption] attribute to… |
 | `IconSetBase` | class | Abstract base class for icon sets. Inherit from this class and apply [TypeOption] attribute to create… |

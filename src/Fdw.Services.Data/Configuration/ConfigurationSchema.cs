@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Fdw.Aegis.Configuration;
 using Fdw.Services.Connections;
-using Fdw.Services.SecretManagers;
+using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Data.Configuration;
 
@@ -12,7 +11,7 @@ namespace Fdw.Services.Data.Configuration;
 /// <remarks>
 /// The three child lists mirror the top-level JSON keys under the "ConfigurationSchema" wrapper.
 /// <c>DataStores</c> carries the full nested graph (Paths → Containers → Fields + Keys) because the
-/// existing <see cref="DataStoreConfiguration"/> already declares nested <see cref="DataStoreConfiguration.Paths"/>
+/// existing <see cref="DataStoreImplementationConfiguration"/> already declares nested <see cref="DataStoreImplementationConfiguration.Paths"/>
 /// using <c>List&lt;DataPathConfiguration&gt;</c>, which in turn nests Containers → Fields + Keys.
 /// No parallel POCO hierarchy is needed — IOptions binding uses the same types the rest of FDW uses.
 /// </remarks>
@@ -23,41 +22,35 @@ public sealed class ConfigurationSchema
     /// Corresponds to the <c>ConfigurationSchema:Connections</c> configuration section.
     /// </summary>
 #pragma warning disable MA0016 // Prefer collection abstraction — required for IOptions binding
-    public IList<ConnectionConfiguration> Connections { get; set; } = new List<ConnectionConfiguration>();
+    public IList<IConnectionImplementationConfiguration> Connections { get; set; } = new List<IConnectionImplementationConfiguration>();
 
-    /// <summary>
-    /// Gets or sets the secret managers available to the entry-point app.
-    /// Corresponds to the <c>ConfigurationSchema:SecretManagers</c> configuration section.
-    /// </summary>
-    public IList<SecretManagerConfiguration> SecretManagers { get; set; } = new List<SecretManagerConfiguration>();
 
     /// <summary>
     /// Gets or sets the data stores (with their full Paths → Containers → Fields + Keys hierarchy).
     /// Corresponds to the <c>ConfigurationSchema:DataStores</c> configuration section.
     /// </summary>
-    public IList<DataStoreConfiguration> DataStores { get; set; } = new List<DataStoreConfiguration>();
+    public IList<DataStoreImplementationConfiguration> DataStores { get; set; } = new List<DataStoreImplementationConfiguration>();
 
-    /// <summary>
-    /// Gets or sets the Aegis Gateway commands declared for this entry-point app.
-    /// Corresponds to the <c>ConfigurationSchema:Commands</c> configuration section.
-    /// </summary>
-    /// <remarks>
-    /// Why here rather than in the net10 <c>Fdw.Aegis</c> package (G2): <c>AegisCommandConfiguration</c>
-    /// lives in <c>Fdw.Aegis.Configuration</c>, a package this project can reference without a cycle —
-    /// mirrors how <see cref="ConnectionConfiguration"/> sits in <c>Fdw.Services.Connections</c> rather
-    /// than a hypothetical package that itself depends on <c>Fdw.Services.Data</c>.
-    /// </remarks>
-    public IList<AegisCommandConfiguration> Commands { get; set; } = new List<AegisCommandConfiguration>();
 #pragma warning restore MA0016
 
     /// <summary>
-    /// Gets or sets the <c>ServiceOptionType</c> name of the single Multitenancy option (e.g.
+    /// Gets or sets which of <see cref="Connections"/> plays the platform, server and auth roles in this host.
+    /// Corresponds to the <c>ConfigurationSchema:ConnectionRoles</c> configuration section.
+    /// </summary>
+    /// <remarks>
+    /// Declared by every host and never defaulted: <c>ConnectionRoleDeclaration.Declare</c> refuses a host whose schema
+    /// leaves the platform or server role out, or names a connection the file does not declare.
+    /// </remarks>
+    public ConnectionRolesConfiguration? ConnectionRoles { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>Implementation</c> name of the single Multitenancy option (e.g.
     /// "SingleTenant", "Sql") this host runs. Corresponds to the
     /// <c>ConfigurationSchema:Multitenancy</c> configuration key.
     /// </summary>
     /// <remarks>
     /// Which Multitenancy option a host runs is per-host topology — declared once here, alongside
-    /// <see cref="Connections"/>/<see cref="SecretManagers"/>/<see cref="DataStores"/>, not a shared
+    /// <see cref="Connections"/>/<see cref="DataStores"/>, not a shared
     /// ConfigurationDb row. <c>Fdw.Services.Multitenancy.MultitenancyTypes.Configure{TBuilder}</c> reads
     /// this value to resolve and drive exactly one option (NO FALLBACKS: null/whitespace or an
     /// unrecognized value is a startup failure, not a silent default).

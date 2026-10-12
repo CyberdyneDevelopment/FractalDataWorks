@@ -5,6 +5,7 @@ namespace Fdw.Data;
 
 /// <summary>
 /// EndsWith operator (LIKE '%value', endswith).
+/// A pattern operator: anything may precede the value.
 /// </summary>
 [TypeOption(typeof(FilterOperators), "EndsWith", RestrictToCurrentCompilation = true)]
 public sealed class EndsWithOperator : FilterOperatorBase
@@ -14,26 +15,14 @@ public sealed class EndsWithOperator : FilterOperatorBase
     /// </summary>
     public EndsWithOperator()
         : base(
-            id: 5,
             name: "EndsWith",
             sqlOperator: "LIKE",
             odataOperator: "endswith",
-            requiresValue: true)
+            requiresValue: true,
+            matchesAnythingBefore: true,
+            matchesAnythingAfter: false)
     {
     }
-
-    /// <summary>
-    /// Formats SQL parameter with leading wildcard.
-    /// </summary>
-    public override string FormatSqlParameter(string paramName) => $"'%' + @{paramName}";
-
-    /// <summary>
-    /// Escapes LIKE metacharacters so they are treated as literals.
-    /// </summary>
-    public override string PreprocessSqlValue(string value)
-        => value.Replace("[", "[[]", StringComparison.Ordinal)
-                .Replace("%", "[%]", StringComparison.Ordinal)
-                .Replace("_", "[_]", StringComparison.Ordinal);
 
     /// <inheritdoc/>
     public override string FormatODataValue(object? value)

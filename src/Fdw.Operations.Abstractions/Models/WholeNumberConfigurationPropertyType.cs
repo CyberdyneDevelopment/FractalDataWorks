@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class WholeNumberConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="WholeNumberConfigurationPropertyType"/>.</summary>
-    public WholeNumberConfigurationPropertyType() : base(2, "WholeNumber") { }
+    public WholeNumberConfigurationPropertyType() : base("WholeNumber") { }
 }

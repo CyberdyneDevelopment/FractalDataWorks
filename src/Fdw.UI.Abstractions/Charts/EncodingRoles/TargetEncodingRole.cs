@@ -14,7 +14,7 @@ public sealed class TargetEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="TargetEncodingRole"/> class.
     /// </summary>
     public TargetEncodingRole()
-        : base(11, "Target", "Target", isSpatial: false)
+        : base("Target", "Target", isSpatial: false)
     {
     }
 }

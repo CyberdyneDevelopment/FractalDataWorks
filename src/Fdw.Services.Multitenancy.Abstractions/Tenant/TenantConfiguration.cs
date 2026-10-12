@@ -37,16 +37,6 @@ public sealed class TenantConfiguration : IGenericConfiguration
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets the service type (domain) - always "Tenant" for this configuration.
-    /// </summary>
-    public string ServiceType => "Tenant";
-
-    /// <summary>
-    /// Gets the service option type. Tenants don't have subtypes.
-    /// </summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the tenant's slug for URLs.
     /// </summary>
     public string Slug { get; set; } = string.Empty;
@@ -69,6 +59,12 @@ public sealed class TenantConfiguration : IGenericConfiguration
     public bool IsGlobal { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a user can list or switch into this tenant.
+    /// Resolved from <c>tenant.Tenants.IsSelectable</c>; never hardcoded.
+    /// </summary>
+    public bool IsSelectable { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the connection name for tenant isolation.
     /// </summary>
     public string? ConnectionName { get; set; }
@@ -88,8 +84,5 @@ public sealed class TenantConfiguration : IGenericConfiguration
     /// Populated from the tenant record in ConfigurationDb; no default values are applied here.
     /// </summary>
     public ICollection<string> AvailableRoles { get; set; } = new List<string>();
-
-    /// <inheritdoc/>
-    public string SectionName => $"Tenants:{Slug}";
 
 }

@@ -32,10 +32,7 @@ public sealed class MonitoringMenuScreen : ScreenBase
     }
 
     /// <inheritdoc />
-    // MA0051: Method length acceptable - procedural menu rendering with connection check, table display, and prompt
-#pragma warning disable MA0051 // Method is too long
     public override Task<NavigationResult> Show()
-#pragma warning restore MA0051
     {
         RenderHeader();
 

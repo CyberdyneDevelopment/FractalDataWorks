@@ -14,7 +14,7 @@ public sealed class PooledRowMapperType : RowMapperTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PooledRowMapperType"/> class.
     /// </summary>
-    public PooledRowMapperType() : base(1, "Pooled")
+    public PooledRowMapperType() : base("Pooled")
     {
     }
 

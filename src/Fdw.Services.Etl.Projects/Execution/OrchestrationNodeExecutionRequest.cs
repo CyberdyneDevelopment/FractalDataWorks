@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Etl.Projects.Execution;
 
@@ -26,9 +27,15 @@ public sealed class OrchestrationNodeExecutionRequest
 
     /// <summary>
     /// Gets the tenant this execution belongs to, if known (mirrors
-    /// <c>OrchestrationNodeConfiguration.TenantId</c> on the root node). Null when no tenant scope
+    /// <c>OrchestrationNodeImplementationConfiguration.TenantId</c> on the root node). Null when no tenant scope
     /// applies. See <c>PipelineExecutionRequest.TenantId</c> remarks for why this must ride on the
     /// request rather than be resolved from ambient context after dequeue.
     /// </summary>
     public Guid? TenantId { get; init; }
+
+    /// <summary>
+    /// Gets the roles every pipeline this run starts acts with (FDW-1161): named by whoever started the run, not recorded on
+    /// the pipelines.
+    /// </summary>
+    public required IReadOnlyList<string> RunRoles { get; init; }
 }

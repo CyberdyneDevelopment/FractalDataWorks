@@ -14,7 +14,6 @@ public sealed class LessThanOrEqualOperator : FilterOperatorBase
     /// </summary>
     public LessThanOrEqualOperator()
         : base(
-            id: 9,
             name: "LessThanOrEqual",
             sqlOperator: "<=",
             odataOperator: "le",

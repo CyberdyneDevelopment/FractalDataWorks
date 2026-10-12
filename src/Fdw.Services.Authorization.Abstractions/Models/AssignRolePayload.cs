@@ -1,10 +1,10 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Fdw.Services.Authorization.Clients.Models;
 
 /// <summary>
-/// Data transfer object for assigning a role to a user.
+/// Data transfer object for assigning a role to a user. The role is granted in the tenant the
+/// caller's token is acting in; there is no tenant to send.
 /// </summary>
 public sealed class AssignRolePayload
 {
@@ -13,9 +13,4 @@ public sealed class AssignRolePayload
     /// </summary>
     [Required]
     public string RoleName { get; set; } = "";
-
-    /// <summary>
-    /// Gets or sets the optional tenant ID for tenant-scoped role assignment.
-    /// </summary>
-    public Guid? TenantId { get; set; }
 }

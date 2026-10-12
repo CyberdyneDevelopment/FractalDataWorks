@@ -11,7 +11,6 @@ public sealed class ServerIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ServerIcon"/>.</summary>
     public ServerIcon()
         : base(
-            38,
             "Server",
             "0 0 24 24",
             "none",

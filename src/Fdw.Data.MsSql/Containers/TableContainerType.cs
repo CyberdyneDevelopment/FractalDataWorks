@@ -16,7 +16,6 @@ public sealed class TableContainerType : ContainerTypeBase
     /// </summary>
     public TableContainerType()
         : base(
-            id: 1,
             name: "Table",
             displayName: "SQL Table",
             description: "SQL Server table container with full schema discovery support",

@@ -8,16 +8,15 @@ namespace Fdw.Operations.Clients.Models;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class ConfigurationIssueTypeBase : TypeOptionBase<int, ConfigurationIssueTypeBase>, IConfigurationIssueType
+public abstract class ConfigurationIssueTypeBase : TypeOptionBase<ConfigurationIssueTypeBase>, IConfigurationIssueType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationIssueTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this configuration issue type.</param>
     /// <param name="name">The name of this configuration issue type.</param>
     /// <param name="isHealable">Whether this issue can be automatically healed.</param>
-    protected ConfigurationIssueTypeBase(int id, string name, bool isHealable)
-        : base(id, name)
+    protected ConfigurationIssueTypeBase(string name, bool isHealable)
+        : base(name)
     {
         IsHealable = isHealable;
     }

@@ -25,7 +25,6 @@ public sealed class FileReadCapability : CommandCapabilityTypeBase
     /// </summary>
     public FileReadCapability()
         : base(
-            id: 6,
             name: "FileRead",
             displayName: "File Read",
             configurationFields:

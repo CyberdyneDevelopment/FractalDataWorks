@@ -6,9 +6,9 @@ using Fdw.Validation;
 namespace Fdw.Services.Settings.Validation;
 
 /// <summary>
-/// Validator for <see cref="TenantSettingConfiguration"/>.
+/// Validator for <see cref="TenantSettingImplementationConfiguration"/>.
 /// </summary>
-public sealed class TenantSettingConfigurationValidator : FdwConfigurationValidator<TenantSettingConfiguration>
+public sealed class TenantSettingConfigurationValidator : FdwConfigurationValidator<TenantSettingImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TenantSettingConfigurationValidator"/> class.

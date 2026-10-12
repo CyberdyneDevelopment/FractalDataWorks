@@ -16,7 +16,7 @@ public sealed class NoCommandsGeneratedCode : DdlResultCodeBase
     /// </summary>
     public NoCommandsGeneratedCode()
         : base(30000, "NoCommandsGenerated",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "No DDL commands were generated",
             isRetryable: false)
     {

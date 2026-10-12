@@ -39,6 +39,18 @@ public sealed class PlPgSqlDialect : ISqlDialect
     public string ParameterPrefix => "@";
 
     /// <inheritdoc/>
+    public char LikeEscapeCharacter => '!';
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// PostgreSQL reads <c>%</c> and <c>_</c> as wildcards.
+    /// </remarks>
+    public string LikeMetaCharacters => "%_";
+
+    /// <inheritdoc/>
+    public string PatternMatchOperator => "ILIKE";
+
+    /// <inheritdoc/>
     /// <remarks>
     /// PostgreSQL: <c>FALSE</c>.
     /// </remarks>

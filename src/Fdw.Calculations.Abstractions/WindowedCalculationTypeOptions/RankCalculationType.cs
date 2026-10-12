@@ -17,7 +17,6 @@ public sealed class RankCalculationType : WindowedCalculationTypeBase
     /// Initializes a new instance of the <see cref="RankCalculationType"/> class.
     /// </summary>
     public RankCalculationType() : base(
-        id: 3,
         name: "Rank",
         category: "Windowed",
         calculate: (rows, col, _) =>

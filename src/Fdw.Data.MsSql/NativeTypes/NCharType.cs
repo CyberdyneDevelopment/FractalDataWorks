@@ -14,7 +14,6 @@ public sealed class NCharType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="NCharType"/> class.</summary>
     public NCharType()
         : base(
-            id: 8,
             name: "nchar",
             description: "Fixed-length Unicode character data.",
             abstractType: DataTypes.String,

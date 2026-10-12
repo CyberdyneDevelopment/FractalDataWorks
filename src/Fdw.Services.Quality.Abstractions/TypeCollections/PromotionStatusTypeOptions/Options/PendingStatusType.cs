@@ -15,7 +15,6 @@ public sealed class PendingStatusType : PromotionStatusTypeBase
     /// </summary>
     public PendingStatusType()
         : base(
-            id: 1,
             name: "Pending",
             isTerminal: false,
             isSuccess: false,

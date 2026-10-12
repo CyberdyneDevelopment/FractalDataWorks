@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlDecimalConverter()
     : DataTypeConverterBase(
-        id: 7,
         name: "Decimal",
         sourceType: "numeric",
         targetClrType: typeof(decimal),

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class Int16DataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="Int16DataType"/> class.</summary>
     public Int16DataType()
-        : base(id: 3, name: "Int16")
+        : base(name: "Int16")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(short);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.WholeNumber(text, short.MinValue, short.MaxValue) is { } held ? (short)held : null;
 }

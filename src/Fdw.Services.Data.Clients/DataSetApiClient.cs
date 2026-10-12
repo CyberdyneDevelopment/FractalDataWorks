@@ -90,47 +90,67 @@ public class DataSetApiClient : ApiClientBase
         => GetList<FieldMappingTransformPayload>($"field-mappings/{fieldMappingId}/transforms", ct);
 
     /// <summary>
-    /// Creates a new field mapping transform.
+    /// Attaches an existing transformation to a field mapping.
     /// </summary>
-    /// <param name="request">The save transform request.</param>
+    /// <param name="request">The field mapping, transformation name and chain position.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A result containing the created transform.</returns>
+    /// <returns>A result containing the attachment.</returns>
     public virtual Task<IGenericResult<FieldMappingTransformPayload>> SaveTransform(SaveFieldMappingTransformRequest request, CancellationToken ct = default)
         => Post<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>($"field-mappings/{request.FieldMappingId}/transforms", request, ct);
 
     /// <summary>
-    /// Changes a transform already in a field mapping's chain.
+    /// Detaches a transformation from a field mapping. The transformation itself is not deleted.
     /// </summary>
-    /// <param name="fieldMappingId">The field mapping whose chain the transform belongs to.</param>
-    /// <param name="transformId">The transform being changed.</param>
-    /// <param name="request">The change to apply.</param>
+    /// <param name="fieldMappingId">The field mapping.</param>
+    /// <param name="transformationName">The attached transformation's name.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>A result containing the updated transform.</returns>
-    // This used to post to datasets/field-mappings/transforms/{id}, which no endpoint served, and
-    // carried a note saying so — the update endpoint did not exist and guessing a route would only
-    // move the 404 somewhere less obvious. It exists now, addressed the way delete already was.
-    public virtual Task<IGenericResult<FieldMappingTransformPayload>> UpdateTransform(Guid fieldMappingId, Guid transformId, UpdateFieldMappingTransformRequest request, CancellationToken ct = default)
-        => Patch<UpdateFieldMappingTransformRequest, FieldMappingTransformPayload>($"field-mappings/{fieldMappingId}/transforms/{transformId}", request, ct);
-
-    /// <summary>
-    /// Deletes a field mapping transform.
-    /// </summary>
-    /// <param name="fieldMappingId">The field mapping the transform belongs to.</param>
-    /// <param name="transformId">The transform identifier.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A result indicating whether the deletion succeeded.</returns>
-    public virtual Task<IGenericResult> DeleteTransform(Guid fieldMappingId, Guid transformId, CancellationToken ct = default)
-        => Delete($"field-mappings/{fieldMappingId}/transforms/{transformId}", ct);
+    /// <returns>A result indicating whether it was detached.</returns>
+    public virtual Task<IGenericResult> DeleteTransform(Guid fieldMappingId, string transformationName, CancellationToken ct = default)
+        => Delete($"field-mappings/{fieldMappingId}/transforms/{Uri.EscapeDataString(transformationName)}", ct);
 
     /// <summary>
     /// Reorders transforms for a field mapping.
     /// </summary>
     /// <param name="fieldMappingId">The field mapping identifier.</param>
-    /// <param name="request">The reorder request containing the ordered transform identifiers.</param>
+    /// <param name="request">Every attached transformation's name, in the new order.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether the reorder succeeded.</returns>
     public virtual Task<IGenericResult> ReorderTransforms(Guid fieldMappingId, ReorderTransformsRequest request, CancellationToken ct = default)
         => Post<ReorderTransformsRequest>($"field-mappings/{fieldMappingId}/transforms/reorder", request, ct);
+
+    /// <summary>Lists the transformations (defined once, attachable to field mappings).</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A result containing every transformation.</returns>
+    public virtual Task<IGenericResult<IReadOnlyList<TransformationPayload>>> ListTransformations(CancellationToken ct = default)
+        => GetList<TransformationPayload>("transforms", ct);
+
+    /// <summary>Gets one transformation by name.</summary>
+    /// <param name="name">The transformation's name.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A result containing the transformation.</returns>
+    public virtual Task<IGenericResult<TransformationPayload>> GetTransformation(string name, CancellationToken ct = default)
+        => Get<TransformationPayload>($"transforms/{Uri.EscapeDataString(name)}", ct);
+
+    /// <summary>Defines a transformation.</summary>
+    /// <param name="request">Its name, operation and parameter values.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A result containing the transformation as saved.</returns>
+    public virtual Task<IGenericResult<TransformationPayload>> CreateTransformation(CreateTransformationRequest request, CancellationToken ct = default)
+        => Post<CreateTransformationRequest, TransformationPayload>("transforms", request, ct);
+
+    /// <summary>Changes a transformation; omitted members keep their value.</summary>
+    /// <param name="request">The change, addressed by <see cref="UpdateTransformationRequest.Name"/>.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A result containing the transformation as saved.</returns>
+    public virtual Task<IGenericResult<TransformationPayload>> UpdateTransformation(UpdateTransformationRequest request, CancellationToken ct = default)
+        => Patch<UpdateTransformationRequest, TransformationPayload>($"transforms/{Uri.EscapeDataString(request.Name)}", request, ct);
+
+    /// <summary>Deletes a transformation. Refused while it is attached to a field mapping.</summary>
+    /// <param name="name">The transformation's name.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A result indicating whether it was deleted.</returns>
+    public virtual Task<IGenericResult> DeleteTransformation(string name, CancellationToken ct = default)
+        => Delete($"transforms/{Uri.EscapeDataString(name)}", ct);
 
     /// <summary>
     /// Gets all available transform types.

@@ -61,20 +61,23 @@ public sealed class UserApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task GetUserSendsGetRequestWithIdInPath()
+    public async Task GetUserSendsPostRequestWithIdInBody()
     {
         var expected = new UserDetailPayload { Id = TestUserId, Username = "admin", IsActive = true };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
-            Content = JsonContent.Create(expected)
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(expected) };
         });
 
         var sut = CreateClient(handler);
         var result = await sut.GetUser(TestUserId, TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe($"/users/{TestUserId}");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/users/get");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        body.ShouldBe($"{{\"idOrName\":\"{TestUserId}\"}}");
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Username.ShouldBe("admin");
@@ -143,7 +146,11 @@ public sealed class UserApiClientTests
             Content = JsonContent.Create(expected)
         });
         var sut = CreateClient(handler);
-        var request = new CreateUserRequest { Username = "newuser", Password = "Password123!" };
+        var request = new CreateUserRequest
+        {
+            Username = "newuser",
+            SignInMethods = new SignInMethodsRequest { Password = new PasswordSignInMethod { InitialPassword = "Password123!" } },
+        };
 
         var result = await sut.CreateUser(request, TestContext.Current.CancellationToken);
 
@@ -163,7 +170,11 @@ public sealed class UserApiClientTests
     {
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.BadRequest));
         var sut = CreateClient(handler);
-        var request = new CreateUserRequest { Username = "newuser", Password = "Password123!" };
+        var request = new CreateUserRequest
+        {
+            Username = "newuser",
+            SignInMethods = new SignInMethodsRequest { Password = new PasswordSignInMethod { InitialPassword = "Password123!" } },
+        };
 
         var result = await sut.CreateUser(request, TestContext.Current.CancellationToken);
 
@@ -179,7 +190,11 @@ public sealed class UserApiClientTests
         var handler = new MockHttpMessageHandler((_, _) =>
             throw new HttpRequestException("Connection refused"));
         var sut = CreateClient(handler);
-        var request = new CreateUserRequest { Username = "newuser", Password = "Password123!" };
+        var request = new CreateUserRequest
+        {
+            Username = "newuser",
+            SignInMethods = new SignInMethodsRequest { Password = new PasswordSignInMethod { InitialPassword = "Password123!" } },
+        };
 
         var result = await sut.CreateUser(request, TestContext.Current.CancellationToken);
 

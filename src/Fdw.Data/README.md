@@ -22,7 +22,7 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | Type | Kind | Purpose |
 |---|---|---|
 | `AscendingDirection` | class | Ascending sort direction (smallest to largest, A to Z). |
-| `ContainsOperator` | class | Contains operator (LIKE '%value%', contains). Overrides FormatSqlParameter to add wildcards for SQL LIKE. |
+| `ContainsOperator` | class | Contains operator (LIKE '%value%', contains). A pattern operator: it states that anything may precede and follow the value, and the SQL translator builds the pattern through the connection's dialect. |
 | `CrossJoinType` | class | Cross join - returns Cartesian product of both sources (all combinations). |
 | `DataSetCompositionTypes` | class | Collection of composition strategies that describe how a combines its sources. |
 | `DescendingDirection` | class | Descending sort direction (largest to smallest, Z to A). |

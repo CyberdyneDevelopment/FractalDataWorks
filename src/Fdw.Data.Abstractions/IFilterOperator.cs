@@ -34,19 +34,22 @@ public interface IFilterOperator : ITypeOption<int, IFilterOperator>
     bool RequiresValue { get; }
 
     /// <summary>
-    /// Formats the parameter placeholder for SQL.
+    /// Gets a value indicating whether this operator matches a pattern built around its value -- text that
+    /// contains, starts with or ends with it -- rather than comparing the value whole.
     /// </summary>
-    /// <param name="paramName">The parameter name.</param>
-    /// <returns>The formatted parameter placeholder.</returns>
-    string FormatSqlParameter(string paramName);
+    /// <remarks>
+    /// The operator states its shape once, here, and each connection decides how to express it: a SQL
+    /// dialect builds a LIKE pattern and says which characters it must escape, OData names a function,
+    /// a source that cannot filter natively evaluates <c>Matches</c>. What the shape is belongs to the
+    /// operator; how it is written belongs to the connection.
+    /// </remarks>
+    bool IsPatternMatch { get; }
 
-    /// <summary>
-    /// Preprocesses a string value before it is added as a SQL parameter.
-    /// Used to escape operator-specific metacharacters (e.g., LIKE metacharacters: %, _, [).
-    /// </summary>
-    /// <param name="value">The raw string value from the filter condition.</param>
-    /// <returns>The preprocessed value ready for parameterization.</returns>
-    string PreprocessSqlValue(string value);
+    /// <summary>Gets a value indicating whether any text may precede the value in a match (Contains, EndsWith).</summary>
+    bool MatchesAnythingBefore { get; }
+
+    /// <summary>Gets a value indicating whether any text may follow the value in a match (Contains, StartsWith).</summary>
+    bool MatchesAnythingAfter { get; }
 
     /// <summary>
     /// Formats the value for OData query strings.

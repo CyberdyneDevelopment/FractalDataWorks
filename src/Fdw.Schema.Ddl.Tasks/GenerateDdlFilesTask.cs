@@ -37,10 +37,7 @@ public sealed class GenerateDdlFilesTask : Task
     /// Executes the DDL generation task.
     /// </summary>
     /// <returns>True if successful, false otherwise.</returns>
-    // MA0051: Method length acceptable - MSBuild task orchestration (load assembly, discover types, generate files)
-#pragma warning disable MA0051 // Method is too long
     public override bool Execute()
-#pragma warning restore MA0051
     {
         try
         {

@@ -271,7 +271,8 @@ public sealed class TenantApiClientTests
     [Trait("Category", "Api")]
     public async Task SwitchTenantSendsPostRequestToCorrectPath()
     {
-        var expected = new SwitchTenantResponse { Success = true, AccessToken = "new-token", ExpiresIn = 3600 };
+        var expiresAt = new DateTimeOffset(2026, 9, 18, 12, 0, 0, TimeSpan.Zero);
+        var expected = new SwitchTenantResponse { Success = true, AccessToken = "new-token", ExpiresAt = expiresAt };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = JsonContent.Create(expected)
@@ -288,7 +289,7 @@ public sealed class TenantApiClientTests
         result.Value.ShouldNotBeNull();
         result.Value!.Success.ShouldBeTrue();
         result.Value!.AccessToken.ShouldBe("new-token");
-        result.Value!.ExpiresIn.ShouldBe(3600);
+        result.Value!.ExpiresAt.ShouldBe(expiresAt);
     }
 
     [Fact]

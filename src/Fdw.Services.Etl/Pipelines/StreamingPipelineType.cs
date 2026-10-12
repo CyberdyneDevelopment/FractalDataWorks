@@ -1,13 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Fdw.Services.Notifications.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Fdw.Collections;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Abstractions;
 using Fdw.Configuration;
 using Fdw.Services.Connections.Abstractions;
@@ -21,6 +25,7 @@ using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines.Commands;
 using Fdw.Services.Pipelines;
 using Fdw.Results;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -48,7 +53,7 @@ namespace Fdw.Services.Etl.Pipelines;
 /// </code>
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(EtlPipelineTypes), "Streaming")]
+[Implementation(typeof(EtlPipelineTypes), "Streaming")]
 public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IStreamingPipelineFactory, StreamingPipelineConfiguration>
 {
     /// <summary>
@@ -61,43 +66,17 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
         displayName: "Streaming",
         description: "Streaming pipeline for continuous ETL operations with buffering and rate limiting",
         category: "ETL",
-        defaultContainerName: "StreamingPipeline")
+        defaultContainerName: "StreamingPipelineConfiguration")
     {
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IEtlPipelineProvider>();
-            var log = loggerFactory?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance;
 
-            // Resolve factory from DI (registered in Phase 1)
-            var factory = services.GetRequiredService<IStreamingPipelineFactory>();
-
-            // Register factory instance with provider
-            var factoryResult = provider.Register(Name, factory);
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    log,
-                    nameof(StreamingPipelineType),
-                    Name,
-                    nameof(IStreamingPipelineFactory),
-                    factoryResult.CurrentMessage);
-                return GenericResult<IHost>.Success(host);
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(
-                log,
-                nameof(StreamingPipelineType),
-                Name,
-                nameof(IStreamingPipelineFactory));
-
-            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>();
-
-            var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.Register(Name, configProvider);
-
-            var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.Register("Etl", etlKindProvider);
+            // One domain, one implementation: the engine's provider registers under its own
+            // name on the Pipeline domain provider. There is no intermediate kind row to
+            // mint or resolve -- pipe.Pipeline already names the implementation.
+            services.GetRequiredService<PipelineServiceConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<StreamingPipelineConfigurationProvider>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -115,23 +94,51 @@ public sealed class StreamingPipelineType : EtlPipelineTypeBase<IEtlPipeline, IS
 
 
             // Factory - DI handles all constructor dependencies
-            builder.Services.AddScoped<IStreamingPipelineFactory>(sp => new StreamingPipelineFactory(
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IStreamingPipelineFactory),
+                sp => new StreamingPipelineFactory(
                 sp.GetRequiredService<ILogger<StreamingPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGatewayProvider>(),
-                sp.GetService<IConnectionProvider>()));
+                sp.GetService<IConnectionProvider>(),
+                transformations: sp.GetService<ITransformationConfigurationProvider>(),
+                sp.GetService<IRuleNotifier>(),
+                sp.GetService<IEffectiveSettingsProvider>()),
+                ServiceLifetime.Scoped));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IStreamingPipelineProvider),
+                sp => new StreamingPipelineProvider(sp.GetRequiredService<IStreamingPipelineFactory>()),
+                ServiceLifetime.Scoped));
 
-            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<StreamingPipelineConfiguration, StreamingPipelineConfigurationCommand>>(),
+            builder.Services.TryAddSingleton(sp => new StreamingPipelineConfigurationProvider(
+                sp.GetRequiredService<ILogger<StreamingPipelineConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                DataStore,
-                PathName));
+                EtlPipelineTypes.ConfigurationConnection, PathName, Container));
 
             EtlPipelineTypes.RegisterPipelineExecutionQueue(builder.Services);
             EtlPipelineTypes.RegisterAdditionalServices(builder.Services);
+
+            // Decorate the domain's own AddScoped<IEtlPipelineProvider> registration -- already in
+            // builder.Services by the time this runs, since EtlPipelineTypes' own Registration body
+            // sets it up before running the option collect.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IEtlPipelineProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
+            {
+                var provider = (IEtlPipelineProvider)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IStreamingPipelineProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        sp.GetService<ILoggerFactory>()?.CreateLogger<StreamingPipelineType>() ?? NullLogger<StreamingPipelineType>.Instance,
+                        nameof(StreamingPipelineType), Name, nameof(IStreamingPipelineFactory), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
-
     }
-
 }

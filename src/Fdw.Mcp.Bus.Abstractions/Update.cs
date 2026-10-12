@@ -9,5 +9,5 @@ namespace Fdw.Mcp.Bus;
 public sealed class Update : ViewIntentBase
 {
     /// <summary>Initializes the Update view intent.</summary>
-    public Update() : base(2, "Update") { }
+    public Update() : base("Update") { }
 }

@@ -13,5 +13,5 @@ public sealed class PathMismatchKind : MismatchKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PathMismatchKind"/> class.
     /// </summary>
-    public PathMismatchKind() : base(1, "Path") { }
+    public PathMismatchKind() : base("Path") { }
 }

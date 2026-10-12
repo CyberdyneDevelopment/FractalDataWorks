@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Services.Data.Endpoints;
@@ -21,11 +22,20 @@ public class DataStoreDetailResponse : ResourceDetail
     /// <summary>Gets or sets the connection identifier.</summary>
     public Guid ConnectionId { get; set; }
 
-    /// <summary>Gets or sets the name of the backing connection.</summary>
-    public string ConnectionName { get; set; } = string.Empty;
+    /// <summary>
+    /// Gets or sets the name of the backing connection. Left out (null) when the caller may not see connections
+    /// or the connection is not visible to them.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ConnectionName { get; set; }
 
     /// <summary>Gets or sets the data store description.</summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data store's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
 
     /// <summary>Gets or sets the write mode for ETL target operations.</summary>
     public string? WriteMode { get; set; }

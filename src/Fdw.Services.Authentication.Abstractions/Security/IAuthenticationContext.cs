@@ -266,11 +266,16 @@ public interface IAuthenticationContext
     DateTimeOffset? ExpiresAt { get; }
 
     /// <summary>
-    /// Gets the active tenant identifier for this authenticated request.
-    /// Set from the <c>tenant_id</c> JWT claim. Null when the token has no tenant scope
-    /// (e.g. cross-tenant mode, system connections, or unauthenticated state).
-    /// Used by <c>MsSqlConnection</c> to set <c>SESSION_CONTEXT('TenantId')</c> for RLS.
+    /// Gets the tenant this caller is acting in — for a user, the tenant their token was issued
+    /// for (the <c>tenantId</c> claim). It is the ONE active tenant: row-level security, tenant
+    /// resolution and every endpoint read it, and a user changes it only by switching tenant, which
+    /// issues a new token. Acting in the global tenant sees and operates on every tenant's data.
     /// </summary>
+    /// <remarks>
+    /// A system elevation may carry one too — a background run working for a tenant — which never
+    /// narrows what it sees and only decides the tenant the rows it writes default to. Null for a
+    /// system elevation that belongs to no tenant, and for an unauthenticated caller.
+    /// </remarks>
     Guid? ActiveTenantId { get; }
 
     /// <summary>
@@ -280,29 +285,19 @@ public interface IAuthenticationContext
     Guid? ActiveOrgId { get; }
 
     /// <summary>
-    /// Gets a value indicating whether this token was issued with cross-tenant scope.
-    /// When true, <c>MsSqlConnection</c> sets <c>SESSION_CONTEXT('CrossTenant')</c> = <c>N'1'</c>,
-    /// enabling the RLS cross-tenant mode. Requires the <c>tenants:view-all</c> permission.
-    /// Mutually exclusive with a non-null <see cref="ActiveTenantId"/>.
-    /// </summary>
-    bool IsCrossTenant { get; }
-
-    /// <summary>
     /// Gets a value indicating whether this context represents a deliberate, explicit system
     /// elevation (e.g. host bootstrap/startup reads, migrations, seed scripts) rather than an
     /// authenticated end user or a tenant-scoped unit of work.
     /// </summary>
     /// <remarks>
-    /// When <c>true</c>, <c>MsSqlConnection</c> sets NOTHING at all — no <c>SESSION_CONTEXT</c> keys
-    /// are set on the connection. <c>security.fn_TenantFilter</c> (unchanged) treats a NULL
-    /// <c>SESSION_CONTEXT('UserId')</c> as Mode 1 — the full-visibility system bypass — so leaving
-    /// the session context untouched IS the elevation; there is no dedicated
-    /// <c>SESSION_CONTEXT('SystemContext')</c> key. This is the ONLY path that leaves
-    /// <c>UserId</c> unset: every other case (no context, or a context whose <see cref="UserId"/>
-    /// is not a parseable <see cref="Guid"/>) resolves instead to the reserved
-    /// <see cref="AuthConstants.NoAccessPrincipalId"/> principal — a deliberate deny, never an
-    /// implicit "identity absent, therefore system" bypass. Every implementation except
-    /// <see cref="SystemAuthenticationContext"/> itself must return <c>false</c>.
+    /// When <c>true</c>, <c>MsSqlConnection</c> sets <c>SESSION_CONTEXT('System') = '1'</c>, which
+    /// <c>security.fn_TenantFilter</c> admits to every row. System is a positive assertion: a
+    /// connection carrying no keys at all sees nothing, so skipping the connection layer can never
+    /// read as elevation (FDW-825). Every other case (no context, or a context whose
+    /// <see cref="UserId"/> is not a parseable <see cref="Guid"/>) resolves to the reserved
+    /// <see cref="AuthConstants.NoAccessPrincipalId"/> principal — a deliberate deny. Every
+    /// implementation except <see cref="SystemAuthenticationContext"/> itself must return
+    /// <c>false</c>.
     /// </remarks>
     bool IsSystemContext { get; }
 }

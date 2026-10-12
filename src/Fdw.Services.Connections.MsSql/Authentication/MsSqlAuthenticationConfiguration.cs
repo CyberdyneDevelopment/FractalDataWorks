@@ -1,3 +1,5 @@
+using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Abstractions.Authentication;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -18,13 +20,13 @@ namespace Fdw.Services.Connections.MsSql.Authentication;
 /// loaded from the <c>conn.MsSqlConnectionAuthentication</c> KVP table.
 /// </summary>
 public abstract class MsSqlAuthenticationConfiguration
-    : TypeOptionBase<int, MsSqlAuthenticationConfiguration>
+    : ConnectionAuthenticationTypeBase<MsSqlAuthenticationConfiguration>
 {
     /// <summary>
     /// Parameterless constructor for the Empty/NotFound sentinel (source-generated).
     /// </summary>
     protected MsSqlAuthenticationConfiguration()
-        : base(0, string.Empty)
+        : base(string.Empty, string.Empty, string.Empty, string.Empty, null, requiresSecret: false)
     {
     }
 
@@ -32,14 +34,14 @@ public abstract class MsSqlAuthenticationConfiguration
     /// Constructor for concrete TypeOptions.
     /// </summary>
     protected MsSqlAuthenticationConfiguration(
-        int id,
         string name,
         string displayName,
         string description,
         IReadOnlyList<string> expectedProperties,
         IReadOnlyList<string> requiredProperties,
-        IReadOnlyList<string> secretPropertyNames)
-        : base(id, name, $"Authentication:{name}", displayName, description, "Authentication")
+        IReadOnlyList<string> secretPropertyNames,
+        bool requiresSecret)
+        : base(name, $"Authentication:{name}", displayName, description, "Authentication", requiresSecret)
     {
         ExpectedProperties = expectedProperties;
         RequiredProperties = requiredProperties;
@@ -86,10 +88,6 @@ public abstract class MsSqlAuthenticationConfiguration
     }
 
     /// <summary>
-    /// Gets a value indicating whether this authentication type needs a secret resolved before a
-    /// connection can be built.
-    /// </summary>
-    /// <summary>
     /// Reads one authentication property, failing loud when it is absent or empty.
     /// </summary>
     /// <param name="values">The authentication KVP values for this connection.</param>
@@ -103,36 +101,25 @@ public abstract class MsSqlAuthenticationConfiguration
                 ResultDetails.Create("Property", name, "AuthenticationType", Name));
 
     /// <inheritdoc />
-    public virtual bool UsesAccessToken => false;
-
-    /// <inheritdoc />
-    public virtual string? AcquireAccessToken() => null;
-
-    /// <inheritdoc />
     public abstract IGenericResult<string> BuildAuthFragment(IReadOnlyDictionary<string, string?> values, string? resolvedPassword);
 
-    /// <inheritdoc />
-    /// <summary>Builds the authentication fragment, resolving any secret this type needs.</summary>
+    /// <summary>Reports the secret this authentication type needs fetched before it can build.</summary>
     /// <param name="values">The connection's authentication properties.</param>
-    /// <param name="supplied">
-    /// A manager handed in directly, by a caller that cannot resolve one by name — the connection
-    /// that reaches the configuration store is in that position, since the provider that would
-    /// resolve it reads its own configuration out of the store being opened.
-    /// </param>
-    /// <param name="provider">Resolves a manager by the name this type's own properties declare.</param>
-    /// <param name="cancellationToken">A token to cancel the resolution.</param>
+    /// <returns>
+    /// The manager and key to read, or <see cref="SecretRequirement.None"/> when this type needs no
+    /// secret — which is the default, since most authentication types carry no password.
+    /// </returns>
     /// <remarks>
-    /// Whether a secret is needed, which manager holds it, and how to fetch it are all decided here,
+    /// Whether a secret is needed, which manager holds it and under which key are all decided here,
     /// because this type owns the property set those answers come from — SecretManagerName and
-    /// SecretKeyName are its keys, not the factory's. The default needs none: a type that declares no
-    /// secret-bearing properties ignores both arguments.
+    /// SecretKeyName are its keys, not the factory's. What changed is only that this type no longer
+    /// goes and FETCHES it: the provider does that and hands the value back to
+    /// <see cref="BuildAuthFragment(IReadOnlyDictionary{string, string}, string)"/>, which is where
+    /// this type builds the secret portion of the connection string. Deciding stays here; awaiting
+    /// moved out, so a factory never has to be asynchronous.
     /// </remarks>
-    public virtual Task<IGenericResult<string>> BuildAuthFragment(
-        IReadOnlyDictionary<string, string?> values,
-        ISecretManager? supplied,
-        ISecretManagerProvider? provider,
-        CancellationToken cancellationToken = default)
-        => Task.FromResult(BuildAuthFragment(values, resolvedPassword: null));
+    public virtual IGenericResult<SecretRequirement> RequiredSecret(IReadOnlyDictionary<string, string?> values)
+        => GenericResult<SecretRequirement>.Success(SecretRequirement.None);
 
     /// <inheritdoc />
     public abstract IGenericResult Validate(IReadOnlyDictionary<string, string?> values);

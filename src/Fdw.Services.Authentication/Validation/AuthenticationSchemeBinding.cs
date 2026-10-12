@@ -33,6 +33,24 @@ public sealed class AuthenticationSchemeBinding
         SchemeName = schemeName;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AuthenticationSchemeBinding"/> class for a scheme
+    /// whose credential arrives in a cookie rather than the <c>Authorization</c> header.
+    /// </summary>
+    /// <param name="serviceName">The authentication service's declared name, for diagnostics.</param>
+    /// <param name="issuer">The well-known issuer the scheme is routed under.</param>
+    /// <param name="schemeName">The ASP.NET authentication scheme that validates it.</param>
+    /// <param name="cookieName">The cookie the credential arrives in.</param>
+    /// <exception cref="ArgumentException">Thrown when any argument is null, empty or whitespace.</exception>
+    public AuthenticationSchemeBinding(string serviceName, string issuer, string schemeName, string cookieName)
+        : this(serviceName, issuer, schemeName)
+    {
+        if (string.IsNullOrWhiteSpace(cookieName))
+            throw new ArgumentException("A cookie-credential binding must name its cookie.", nameof(cookieName));
+
+        CookieName = cookieName;
+    }
+
     /// <summary>Gets the authentication service's declared name.</summary>
     public string ServiceName { get; }
 
@@ -41,4 +59,14 @@ public sealed class AuthenticationSchemeBinding
 
     /// <summary>Gets the ASP.NET authentication scheme that validates this issuer's tokens.</summary>
     public string SchemeName { get; }
+
+    /// <summary>
+    /// Gets the cookie this scheme's credential arrives in, or null for a scheme whose credential
+    /// arrives in the <c>Authorization</c> header.
+    /// </summary>
+    /// <remarks>
+    /// A session cookie names no issuer -- it is a random id -- so <see cref="IssuerSchemeSelector"/>
+    /// routes it by which declared cookie the request carries, through this same set of bindings.
+    /// </remarks>
+    public string? CookieName { get; }
 }

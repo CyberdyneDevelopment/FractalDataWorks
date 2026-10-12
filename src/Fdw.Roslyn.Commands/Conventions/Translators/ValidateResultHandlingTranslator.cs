@@ -35,7 +35,6 @@ public sealed class ValidateResultHandlingTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: walk every project, find IGenericResult-returning calls, classify
     public override async Task<IGenericResult<QueryResult<ResultHandlingValidationData>>> Translate(
         ValidateResultHandlingCommand command,
         Solution solution,
@@ -146,7 +145,6 @@ public sealed class ValidateResultHandlingTranslator
 
         return GenericResult<QueryResult<ResultHandlingValidationData>>.Success(result, summary);
     }
-#pragma warning restore MA0051
 
     private static async Task<IGenericResult> ScanProject(
         Microsoft.CodeAnalysis.Project project, List<ResultHandlingIssue> issues, CancellationToken cancellationToken)

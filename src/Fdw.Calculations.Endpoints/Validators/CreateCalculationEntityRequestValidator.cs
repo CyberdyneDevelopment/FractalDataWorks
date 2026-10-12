@@ -23,5 +23,9 @@ public sealed class CreateCalculationEntityRequestValidator : FdwEndpointValidat
         RuleFor(x => x.ResultDataTypeName)
             .NotEmpty()
             .WithMessage("ResultDataTypeName is required");
+
+        RuleFor(x => x.Configuration)
+            .NotNull()
+            .WithMessage("Configuration is required: the calculation type's own settings, e.g. FormulaLanguage and FormulaBody for Formula");
     }
 }

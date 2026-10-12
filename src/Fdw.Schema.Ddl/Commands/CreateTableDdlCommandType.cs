@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Commands;
 public sealed class CreateTableDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="CreateTableDdlCommandType"/>.</summary>
-    public CreateTableDdlCommandType() : base(2, "CreateTable") { }
+    public CreateTableDdlCommandType() : base("CreateTable") { }
 }

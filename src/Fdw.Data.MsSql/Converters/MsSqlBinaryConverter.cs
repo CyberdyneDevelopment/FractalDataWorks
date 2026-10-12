@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlBinaryConverter()
     : DataTypeConverterBase(
-        id: 24,
         name: "Binary",
         sourceType: "binary",
         targetClrType: typeof(byte[]),

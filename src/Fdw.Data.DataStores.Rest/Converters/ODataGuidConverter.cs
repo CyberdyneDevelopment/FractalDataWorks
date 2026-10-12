@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataGuidConverter()
     : DataTypeConverterBase(
-        id: 10,
         name: "Guid",
         sourceType: "Guid",
         targetClrType: typeof(Guid),

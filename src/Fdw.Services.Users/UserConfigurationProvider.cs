@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
@@ -14,248 +9,27 @@ using Fdw.Services.Users.Logging;
 using Fdw.Services.Users.Models;
 using Fdw.Services.Users.Results;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Users;
 
-/// <summary>
-/// Domain configuration provider for users. Sole owner of <c>usr.Users</c> gatewayProvider access.
-/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with
-/// by-id, by-username, and CRUD convenience methods.
-/// </summary>
-/// <remarks>
-/// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
-/// usage — usr.Users is ConfigurationDb data, and the schema-built ConfigurationDb store has no ConnectionId,
-/// so routing through IDataGateway produces "DataStore 'ConfigurationDb' has no ConnectionId".
-/// </remarks>
-public class UserConfigurationProvider : ImplementationConfigurationProviderBase<UserConfiguration, UserConfigurationCommand>
+/// <summary>Supplies the Users configuration.</summary>
+public sealed class UserConfigurationProvider
+    : DomainConfigurationProviderBase<IUserImplementationConfiguration, UserDomainConfiguration>,
+      IUserConfigurationProvider
 {
-    private readonly ILogger _logger;
-
     /// <summary>Initializes a new instance of the <see cref="UserConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public UserConfigurationProvider(
-        ILogger<UserConfigurationProvider>? logger,
+        ILogger<UserConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "usr")
-        : base(logger ?? NullLogger<UserConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        _logger = logger ?? NullLogger<UserConfigurationProvider>.Instance;
-    }
-
-    /// <summary>
-    /// Gets a user by their unique identifier.
-    /// </summary>
-    public virtual async Task<IGenericResult<UserConfiguration?>> GetUser(
-        Guid userId, CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.LoadByIdTrace(_logger, userId);
-        var result = await Get(userId, cancellationToken).ConfigureAwait(false);
-        return result.IsSuccess
-            ? GenericResult<UserConfiguration?>.Success(result.Value)
-            : result.ToNewResult<UserConfiguration?>();
-    }
-
-    /// <summary>
-    /// Gets a user by their username.
-    /// </summary>
-    public virtual async Task<IGenericResult<UserConfiguration?>> GetUser(
-        string username, CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.LoadByUsernameTrace(_logger, username);
-        var cmd = new QueryCommandBuilder<UserConfiguration>(DataStoreName, PathName, "Users")
-            .Where("Username", username)
-            .Where("IsCurrent", true)
-            .Where("IsDeleted", false)
-            .Build();
-        var result = await Execute<IEnumerable<UserConfiguration>>(cmd, cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess)
-            return GenericResult<UserConfiguration?>.Failure(
-                UserConfigurationProviderLog.GatewayQueryFailed(_logger));
-        return GenericResult<UserConfiguration?>.Success(result.Value?.FirstOrDefault());
-    }
-
-    /// <summary>
-    /// Resolves a user from a route segment that may carry either a Guid id or a username (API-66).
-    /// </summary>
-    /// <param name="idOrName">The route value: a Guid id, or a username.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The resolved user, or a failure carrying <c>UserNotFound</c> when no user matches.</returns>
-    public virtual async Task<IGenericResult<UserConfiguration>> ResolveUser(
-        string idOrName, CancellationToken cancellationToken = default)
-    {
-        var result = Guid.TryParse(idOrName, out var userId)
-            ? await GetUser(userId, cancellationToken).ConfigureAwait(false)
-            : await GetUser(idOrName, cancellationToken).ConfigureAwait(false);
-
-        if (!result.IsSuccess)
-            return result.ToNewResult<UserConfiguration>();
-
-        return result.Value is null
-            ? GenericResult<UserConfiguration>.Failure(UserResultCodes.ByName("UserNotFound"))
-            : GenericResult<UserConfiguration>.Success(result.Value);
-    }
-
-    /// <summary>
-    /// Gets all users.
-    /// </summary>
-    public virtual async Task<IGenericResult<IReadOnlyList<UserConfiguration>>> GetAllUsers(
-        CancellationToken cancellationToken = default)
-    {
-        var result = await Get(cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess || result.Value is null)
-        {
-            UserConfigurationProviderLog.LoadFailed(_logger);
-            return result.ToNewResult<IReadOnlyList<UserConfiguration>>();
-        }
-
-        UserConfigurationProviderLog.LoadAllLoaded(_logger, result.Value.Count);
-        return GenericResult<IReadOnlyList<UserConfiguration>>.Success(result.Value);
-    }
-
-    /// <summary>
-    /// Creates a new user record and returns the new user's ID on success.
-    /// Does NOT grant tenant membership — callers must call
-    /// <see cref="UserTenantConfigurationProvider.GrantTenantAccess"/> after this returns success.
-    /// </summary>
-    public virtual async Task<IGenericResult<Guid>> CreateUser(
-        string username,
-        string? email,
-        Guid tenantId,
-        CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.CreateUserTrace(_logger, username);
-
-        var existing = await GetUser(username, cancellationToken).ConfigureAwait(false);
-        if (existing.IsSuccess && existing.Value is not null)
-            return GenericResult<Guid>.Failure(
-                UserResultCodes.ByName("UserAlreadyExists"),
-                ResultDetails.Create("username", username));
-
-        var userId = Guid.CreateVersion7();
-        var record = new UserConfiguration
-        {
-            Id = userId,
-            Username = username,
-            Email = email,
-            IsActive = true,
-            IsCurrent = true,
-            IsDeleted = false,
-            TenantId = tenantId,
-        };
-
-        var saveResult = await Save(record, cancellationToken).ConfigureAwait(false);
-        if (!saveResult.IsSuccess)
-        {
-            return saveResult.Messages.Any()
-                ? saveResult.ToNewResult<Guid>()
-                : GenericResult<Guid>.Failure(
-                    UserLog.UserCreateFailed(_logger, new InvalidOperationException("Insert failed"), username));
-        }
-
-        UserLog.UserCreated(_logger, username, userId);
-        return GenericResult<Guid>.Success(userId);
-    }
-
-    /// <summary>
-    /// Updates an existing user record from the <see cref="IUser"/> contract.
-    /// </summary>
-    public virtual async Task<IGenericResult> UpdateUser(
-        IUser user, CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.UpdateUserTrace(_logger, user.Id);
-
-        var existing = await GetUser(user.Id, cancellationToken).ConfigureAwait(false);
-        if (!existing.IsSuccess || existing.Value is null)
-        {
-            return existing.Messages.Any()
-                ? (IGenericResult)existing
-                : GenericResult.Failure(
-                    UserLog.UserUpdateFailed(_logger, new InvalidOperationException("User not found"), user.Id));
-        }
-
-        var record = existing.Value;
-        record.Username = user.Username;
-        record.Email = user.Email;
-        record.IsActive = user.IsActive;
-        record.LastLoginAt = user.LastLoginAt;
-
-        var saveResult = await Save(record, cancellationToken).ConfigureAwait(false);
-        if (!saveResult.IsSuccess)
-        {
-            return saveResult.Messages.Any()
-                ? (IGenericResult)saveResult
-                : GenericResult.Failure(
-                    UserLog.UserUpdateFailed(_logger, new InvalidOperationException("Update failed"), user.Id));
-        }
-
-        return GenericResult.Success();
-    }
-
-    /// <summary>
-    /// Soft-deletes a user by setting <c>IsActive=false</c>, <c>IsCurrent=false</c>, and <c>IsDeleted=true</c>.
-    /// </summary>
-    public virtual async Task<IGenericResult> DeleteUser(
-        Guid userId, CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.DeleteUserTrace(_logger, userId);
-
-        var existing = await GetUser(userId, cancellationToken).ConfigureAwait(false);
-        if (!existing.IsSuccess || existing.Value is null)
-        {
-            return existing.Messages.Any()
-                ? (IGenericResult)existing
-                : GenericResult.Failure(
-                    UserLog.UserDeleteFailed(_logger, new InvalidOperationException("User not found"), userId));
-        }
-
-        var record = existing.Value;
-        record.IsActive = false;
-        record.IsCurrent = false;
-        record.IsDeleted = true;
-
-        var saveResult = await Save(record, cancellationToken).ConfigureAwait(false);
-        if (!saveResult.IsSuccess)
-        {
-            return saveResult.Messages.Any()
-                ? (IGenericResult)saveResult
-                : GenericResult.Failure(
-                    UserLog.UserDeleteFailed(_logger, new InvalidOperationException("Delete failed"), userId));
-        }
-
-        return GenericResult.Success();
-    }
-
-    /// <summary>
-    /// Updates the <c>LastLoginAt</c> timestamp for a user to the current UTC time.
-    /// </summary>
-    public virtual async Task<IGenericResult> UpdateLastLogin(
-        Guid userId, CancellationToken cancellationToken = default)
-    {
-        var existing = await GetUser(userId, cancellationToken).ConfigureAwait(false);
-        if (!existing.IsSuccess || existing.Value is null)
-        {
-            return existing.Messages.Any()
-                ? (IGenericResult)existing
-                : GenericResult.Failure(
-                    UserLog.LastLoginUpdateFailed(_logger, new InvalidOperationException("User not found"), userId));
-        }
-
-        var record = existing.Value;
-        record.LastLoginAt = DateTimeOffset.UtcNow;
-
-        var saveResult = await Save(record, cancellationToken).ConfigureAwait(false);
-        if (!saveResult.IsSuccess)
-        {
-            return saveResult.Messages.Any()
-                ? (IGenericResult)saveResult
-                : GenericResult.Failure(
-                    UserLog.LastLoginUpdateFailed(_logger, new InvalidOperationException("Update failed"), userId));
-        }
-
-        return GenericResult.Success();
     }
 }

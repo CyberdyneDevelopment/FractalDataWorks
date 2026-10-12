@@ -15,7 +15,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 
 /// <summary>
 /// Builds <see cref="ClientCredentialsIdentityService"/> instances from a resolved
-/// <see cref="IdentityServiceConfiguration"/> header whose <c>Configuration</c> property carries the
+/// <c>IIdentityServiceImplementationConfiguration</c> header whose <c>Configuration</c> property carries the
 /// composed <see cref="ClientCredentialsConfiguration"/> typed body.
 /// </summary>
 /// <remarks>
@@ -27,7 +27,7 @@ namespace Fdw.Services.Identity.ClientCredentials;
 /// than while this domain's own resolver lambda is still running.
 /// </remarks>
 internal sealed class ClientCredentialsIdentityFactory
-    : IIdentityServiceFactory<IIdentityService, IIdentityServiceImplementationConfiguration>
+    : IClientCredentialsIdentityFactory
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ClientCredentialsIdentityFactory> _logger;
@@ -58,7 +58,7 @@ internal sealed class ClientCredentialsIdentityFactory
 
         if (configuration is not ClientCredentialsConfiguration typed)
             return GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration.Name, "ClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration.GetType().Name, "ClientCredentials"));
 
         return GenericResult<IIdentityService>.Success(
             new ClientCredentialsIdentityService(
@@ -73,7 +73,7 @@ internal sealed class ClientCredentialsIdentityFactory
         => configuration is IIdentityServiceImplementationConfiguration implementation
             ? Create(implementation)
             : GenericResult<IIdentityService>.Failure(
-                IdentityLog.TypedBodyMissing(_logger, configuration?.Name ?? "(null)", "ClientCredentials"));
+                IdentityLog.TypedBodyMissing(_logger, configuration?.GetType().Name ?? "(null)", "ClientCredentials"));
 
     /// <inheritdoc />
     public IGenericResult<T> Create<T>(IGenericConfiguration configuration) where T : IGenericService

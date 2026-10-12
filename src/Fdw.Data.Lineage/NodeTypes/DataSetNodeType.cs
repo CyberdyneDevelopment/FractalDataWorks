@@ -14,5 +14,5 @@ public sealed class DataSetNodeType : LineageNodeTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetNodeType"/> class.
     /// </summary>
-    public DataSetNodeType() : base(2, "DataSet") { }
+    public DataSetNodeType() : base("DataSet") { }
 }

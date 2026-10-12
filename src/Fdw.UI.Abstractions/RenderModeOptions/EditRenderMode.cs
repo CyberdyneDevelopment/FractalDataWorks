@@ -14,5 +14,5 @@ public sealed class EditRenderMode : RenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="EditRenderMode"/> class.
     /// </summary>
-    public EditRenderMode() : base(1, "Edit", allowsEditing: true, showsView: false) { }
+    public EditRenderMode() : base("Edit", allowsEditing: true, showsView: false) { }
 }

@@ -7,32 +7,18 @@ namespace Fdw.Services.Quality.Configuration;
 
 /// <summary>
 /// Configuration for a data set annotation tag.
-/// Child of DataSetAnnotationConfiguration.
+/// Child of DataSetAnnotationImplementationConfiguration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Catalog")]
 public sealed partial class DataSetAnnotationTagConfiguration : IGenericConfiguration
 {
-    /// <inheritdoc/>
-    public string SectionName => "Catalogs";
-
-    /// <inheritdoc/>
-    public string ServiceType => "Catalog";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
 
     /// <summary>
     /// Gets or sets the unique identifier.
     /// </summary>
     public Guid Id { get; set; }
-
-    /// <summary>
-    /// Gets or sets the logical FK to the owning DataSetAnnotation (catalog.DataSetAnnotation.Id). The
-    /// configuration save translator resolves the physical DataSetAnnotationRowId from this via subquery.
-    /// </summary>
-    public Guid DataSetAnnotationId { get; set; }
 
     /// <summary>
     /// Gets or sets the name for display/binding.

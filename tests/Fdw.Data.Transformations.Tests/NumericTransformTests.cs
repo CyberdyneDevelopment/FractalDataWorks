@@ -1,4 +1,6 @@
+using System;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using Shouldly;
 using Xunit;
@@ -77,6 +79,63 @@ public sealed class NumericTransformTests
         result.Value.ShouldBe(expected);
     }
 
+    [Theory]
+    [InlineData(2.5, 2)]
+    [InlineData(3.5, 4)]
+    [InlineData(-2.5, -2)]
+    public async Task RoundToEvenTakesTheNearestEvenResultAtTheMidpoint(decimal input, decimal expected)
+    {
+        var result = await new RoundFieldTransformer().Transform(
+            input, TransformTestContext.With(("precision", "0"), ("mode", "ToEven")), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(expected);
+    }
+
+    [Fact]
+    public async Task RoundWithoutAModeGoesAwayFromZeroAsItAlwaysDid()
+    {
+        var withoutMode = await new RoundFieldTransformer().Transform(
+            2.5m, TransformTestContext.With(("precision", "0")), TestContext.Current.CancellationToken);
+        var withBlankMode = await new RoundFieldTransformer().Transform(
+            2.5m, TransformTestContext.With(("precision", "0"), ("mode", " ")), TestContext.Current.CancellationToken);
+
+        withoutMode.Value.ShouldBe(3m);
+        withBlankMode.Value.ShouldBe(3m);
+    }
+
+    [Fact]
+    public async Task RoundRefusesAnUnknownModeNamingIt()
+    {
+        var run = async () => await new RoundFieldTransformer().Transform(
+            2.5m, TransformTestContext.With(("precision", "0"), ("mode", "Banker")), TestContext.Current.CancellationToken);
+
+        var thrown = await Should.ThrowAsync<InvalidOperationException>(run);
+        thrown.Message.ShouldContain("Banker");
+    }
+
+    [Fact]
+    public void RoundDeclaresPrecisionRequiredAndModeOptional()
+    {
+        var declared = new RoundFieldTransformer().ExpectedParameters;
+
+        declared.Count.ShouldBe(2);
+        declared.Single(p => p.Name == "precision").IsRequired.ShouldBeTrue();
+        declared.Single(p => p.Name == "mode").IsRequired.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void RoundModeHelpNamesEveryRoundingType()
+    {
+        var help = new RoundFieldTransformer().ExpectedParameters.Single(p => p.Name == "mode").HelpText;
+
+        help.ShouldNotBeNull();
+        foreach (var rounding in RoundingTypes.All())
+        {
+            help.ShouldContain(rounding.Name);
+        }
+    }
+
     [Fact]
     public async Task DivideDividesByTheConfiguredDivisor()
     {
@@ -85,6 +144,18 @@ public sealed class NumericTransformTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(25m);
+    }
+
+    [Fact]
+    public async Task DivideFailsWhenTheConfiguredDivisorIsZero()
+    {
+        var result = await new DivideFieldTransformer().Transform(
+            100m, TransformTestContext.With(("divisor", "0")), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.CurrentMessage.ShouldNotBeNull();
+        result.CurrentMessage.ShouldContain("Division by zero");
+        result.CurrentMessage.ShouldContain("Divide");
     }
 
     [Fact]

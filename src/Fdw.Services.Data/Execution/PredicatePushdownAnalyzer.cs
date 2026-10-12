@@ -65,7 +65,7 @@ public sealed class PredicatePushdownAnalyzer
     /// </remarks>
     public IGenericResult<Dictionary<string, IFilterExpression>> DecomposeBySource(
         IFilterExpression? filter,
-        DataSetConfiguration dataset,
+        IDataSetImplementationConfiguration dataset,
         IReadOnlyList<DataSetSourceConfiguration> sources,
         IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource)
     {
@@ -104,7 +104,7 @@ public sealed class PredicatePushdownAnalyzer
     /// </summary>
     private IGenericResult<Dictionary<string, IFilterExpression>>? ValidateDecomposeInputs(
         IFilterExpression? filter,
-        DataSetConfiguration dataset,
+        IDataSetImplementationConfiguration dataset,
         IReadOnlyList<DataSetSourceConfiguration> sources)
     {
         if (filter == null || filter.Root == null)
@@ -153,7 +153,7 @@ public sealed class PredicatePushdownAnalyzer
         Dictionary<string, List<IFilterCondition>> sourceConditions,
         Dictionary<string, DataSetSourceConfiguration> sourcesByName,
         IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource,
-        DataSetConfiguration dataset)
+        IDataSetImplementationConfiguration dataset)
     {
         var sourceFilters = new Dictionary<string, IFilterExpression>(
             StringComparer.OrdinalIgnoreCase);
@@ -224,12 +224,40 @@ public sealed class PredicatePushdownAnalyzer
     }
 
     /// <summary>
+    /// Translates an ordering's logical field names to physical ones, the same way
+    /// <see cref="TranslateToPhysical"/> translates a filter.
+    /// </summary>
+    /// <param name="logicalOrdering">Ordering using logical field names, or null.</param>
+    /// <param name="fieldMappings">Dictionary mapping logical field names to physical field names.</param>
+    /// <returns>The ordering with physical names, or null when none was given.</returns>
+    /// <remarks>
+    /// A name with no mapping passes through unchanged, exactly as an unmapped filter field does, so
+    /// a filter and a sort on the same field always reach the store under the same column name.
+    /// </remarks>
+    public static IOrderingExpression? TranslateOrderingToPhysical(
+        IOrderingExpression? logicalOrdering,
+        IReadOnlyDictionary<string, string>? fieldMappings)
+    {
+        if (logicalOrdering is null || fieldMappings is null)
+            return logicalOrdering;
+
+        return new OrderingExpression
+        {
+            OrderedFields = [.. logicalOrdering.OrderedFields.Select(field => new OrderedField
+            {
+                PropertyName = fieldMappings.TryGetValue(field.PropertyName, out var physical) ? physical : field.PropertyName,
+                Direction = field.Direction,
+            })],
+        };
+    }
+
+    /// <summary>
     /// Extracts conditions from a filter node and routes them to appropriate sources.
     /// </summary>
     private void ExtractConditions(
         IFilterNode node,
         Dictionary<string, List<IFilterCondition>> sourceConditions,
-        DataSetConfiguration dataset,
+        IDataSetImplementationConfiguration dataset,
         IReadOnlyList<DataSetSourceConfiguration> sources,
         IDictionary<string, IReadOnlyDictionary<string, string>> fieldMappingsBySource)
     {

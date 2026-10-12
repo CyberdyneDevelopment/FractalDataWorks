@@ -49,7 +49,8 @@ public abstract class SqliteDataCommandTranslatorBase : SqlDataCommandTranslator
     /// <param name="value">Parameter value; <c>null</c> maps to <see cref="System.DBNull.Value"/>.</param>
     protected static void AddParameter(SqliteCommand command, string name, object? value)
     {
-        var materialized = value is IEnumerable enumerable && value is not string
+        // Why byte[] is excluded: it is one blob value, not a collection (FDW-889).
+        var materialized = value is IEnumerable enumerable && value is not string && value is not byte[]
             ? JsonSerializer.Serialize(enumerable)
             : value;
 

@@ -22,11 +22,16 @@ namespace Fdw.Web.Search.Endpoints;
 /// </summary>
 public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchResponse>
 {
-    private readonly IDataGatewayProvider _dataGateways;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    private static string PlatformConfigurationConnection => PlatformConnection.Name;
+
+    // The platform's own rows are read through the configuration gateway onto that store, never the request-facing
+    // Main gateway (FDW-1068): Main runs whatever data store a request names, and these rows are not a request's to name.
+    private IDataGateway Gateway => _configurationGateways.Get(PlatformConfigurationConnection) is { IsSuccess: true, Value: { } gateway }
+        ? gateway
+        : throw new InvalidOperationException(
+            $"No configuration gateway is available for connection '{PlatformConfigurationConnection}'. It must be declared in the host's configurationSchema.json.");
     private readonly ConnectionConfigurationProvider _configProvider;
     private readonly ILogger<SearchEndpointBase> _logger;
 
@@ -34,11 +39,11 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
     /// Initializes a new instance of the <see cref="SearchEndpointBase"/> class.
     /// </summary>
     protected SearchEndpointBase(
-        IDataGatewayProvider dataGateways,
+        IConfigurationGatewayProvider configurationGateways,
         ConnectionConfigurationProvider configProvider,
         ILogger<SearchEndpointBase> logger)
     {
-        _dataGateways = dataGateways;
+        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _configProvider = configProvider;
         _logger = logger;
     }
@@ -139,7 +144,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
 
         try
         {
-            var command = DataQuery.From<SearchablePipelineRecord>("PlatformConfiguration", "pipe", "Pipeline").Build();
+            var command = DataQuery.From<SearchablePipelineRecord>(PlatformConfigurationConnection, "pipe", "Pipeline").Build();
 
             var dbResult = await Gateway.Execute<IEnumerable<SearchablePipelineRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
@@ -184,7 +189,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
         }
 
         var results = allResult.Value
-            .Where(c => MatchesQuery(c.Name, query) || MatchesQuery(c.ConnectionType, query))
+            .Where(c => MatchesQuery(c.Name, query) || MatchesQuery(c.Implementation, query))
             .Take(limit)
             .Select(c => new SearchResultPayload
             {
@@ -195,7 +200,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
                 Url = $"/connections/{c.Name}",
                 Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
-                    ["ConnectionType"] = c.ConnectionType ?? "Unknown"
+                    ["ConnectionType"] = c.Implementation
                 }
             })
             .ToList();
@@ -212,7 +217,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
 
         try
         {
-            var command = DataQuery.From<SearchableDataSetRecord>("PlatformConfiguration", "data", "DataSet").Build();
+            var command = DataQuery.From<SearchableDataSetRecord>(PlatformConfigurationConnection, "data", "DataSet").Build();
 
             var dbResult = await Gateway.Execute<IEnumerable<SearchableDataSetRecord>>(command, ct).ConfigureAwait(false);
             if (dbResult.IsSuccess && dbResult.Value != null)
@@ -252,7 +257,7 @@ public abstract class SearchEndpointBase : Endpoint<SearchRequest, SearchRespons
 
         try
         {
-            var command = DataQuery.From<SearchableScheduleRecord>("PlatformConfiguration", "sched", "Schedule")
+            var command = DataQuery.From<SearchableScheduleRecord>(PlatformConfigurationConnection, "sched", "Schedule")
                 .Where("IsDeleted", false)
                 .Build();
 

@@ -154,27 +154,6 @@ public sealed class MessageTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void AllMessagesHaveUniqueIds()
-    {
-        // Arrange
-        var messages = new DataCommandMessage[]
-        {
-            new CommandRequiredMessage(),
-            new ContainerNameRequiredMessage(),
-            new TranslationFailedMessage(),
-            new TranslatorNotFoundMessage()
-        };
-
-        // Act
-        var ids = messages.Select(m => m.Id).ToList();
-
-        // Assert
-        ids.Distinct().Count().ShouldBe(ids.Count);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void AllMessagesHaveUniqueCodes()
     {
         // Arrange

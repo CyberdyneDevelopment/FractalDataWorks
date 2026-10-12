@@ -4,7 +4,7 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 
 /// <summary>
 /// Configuration for an organization within a tenant.
-/// Maps to <c>tenant.Organizations</c>. Each tenant has one or more orgs;
+/// Maps to <c>tenant.Organization</c>. Each tenant has one or more orgs;
 /// the default org (<see cref="IsDefault"/>=true) is the fallback when a request
 /// carries no org claim or header.
 /// </summary>
@@ -55,6 +55,11 @@ public sealed class OrganizationConfiguration
     /// Gets or sets whether this organization is active.
     /// </summary>
     public bool IsActive { get; set; }
+
+    /// <summary>
+    /// Gets or sets the durable id of the workspace this organization names as its default, or null when it names none.
+    /// </summary>
+    public Guid? DefaultWorkspaceId { get; set; }
 
     /// <summary>
     /// Gets or sets the optional visibility group identifier.

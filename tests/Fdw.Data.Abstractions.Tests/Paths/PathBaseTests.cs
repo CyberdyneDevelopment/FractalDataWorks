@@ -7,17 +7,6 @@ namespace Fdw.Data.Abstractions.Tests.Paths;
 
 public sealed class PathBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var path = new TestPath(1, "TestPath");
-
-        // Assert
-        path.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -25,7 +14,7 @@ public sealed class PathBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var path = new TestPath(1, "TestPath");
+        var path = new TestPath("TestPath");
 
         // Assert
         path.Name.ShouldBe("TestPath");
@@ -37,7 +26,7 @@ public sealed class PathBaseTests
     public void CategoryIsSetToPath()
     {
         // Arrange & Act
-        var path = new TestPath(1, "TestPath");
+        var path = new TestPath("TestPath");
 
         // Assert
         path.Category.ShouldBe("Path");
@@ -49,7 +38,7 @@ public sealed class PathBaseTests
     public void PathValueReturnsImplementationValue()
     {
         // Arrange & Act
-        var path = new TestPath(1, "SqlPath");
+        var path = new TestPath("SqlPath");
 
         // Assert
         path.PathValue.ShouldBe("/test/path/value");
@@ -61,7 +50,7 @@ public sealed class PathBaseTests
     public void DomainReturnsImplementationValue()
     {
         // Arrange & Act
-        var path = new TestPath(1, "SqlPath");
+        var path = new TestPath("SqlPath");
 
         // Assert
         path.Domain.ShouldBe("Sql");
@@ -73,7 +62,7 @@ public sealed class PathBaseTests
     public void ImplementsIPath()
     {
         // Arrange
-        var path = new TestPath(1, "TestPath");
+        var path = new TestPath("TestPath");
 
         // Act & Assert
         path.ShouldBeAssignableTo<IPath>();
@@ -85,30 +74,16 @@ public sealed class PathBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var path = new TestPath(1, "TestPath");
+        var path = new TestPath("TestPath");
 
         // Act & Assert
         path.ShouldBeAssignableTo<PathBase>();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void MultipleInstancesWithDifferentIds()
-    {
-        // Arrange
-        var path1 = new TestPath(1, "Path1");
-        var path2 = new TestPath(2, "Path2");
-
-        // Act & Assert
-        path1.Id.ShouldNotBe(path2.Id);
-        path1.Name.ShouldNotBe(path2.Name);
-    }
-
     [ExcludeFromCodeCoverage]
     private sealed class TestPath : PathBase
     {
-        public TestPath(int id, string name) : base(id, name)
+        public TestPath(string name) : base(name)
         {
         }
 

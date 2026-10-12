@@ -16,7 +16,7 @@ public sealed class StoredProceduresSkippedCode : SqlServerDataStoreResultCodeBa
     /// </summary>
     public StoredProceduresSkippedCode()
         : base(11000, "StoredProceduresSkipped",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Stored procedures skipped per options",
             isRetryable: false)
     {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Fdw.Collections;
 using Fdw.WebMcp.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -85,6 +86,8 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                 continue;
             }
 
+            var presetValue = ResolvePresetValue(declaration.PresetOptionType, declaration.Name);
+
             _tools.Add(new WebMcpToolDescriptor(
                 declaration.Name,
                 declaration.Description,
@@ -92,7 +95,9 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                 selected.Value.HttpMethod,
                 declaration.ReadOnly,
                 selected.Value.RequestType,
-                selected.Value.ResponseType));
+                selected.Value.ResponseType,
+                PresetFieldName: presetValue is null ? null : declaration.PresetFieldName,
+                PresetValue: presetValue));
 
             WebMcpLog.ToolDiscovered(logger, declaration.Name, selected.Value.Route, selected.Value.HttpMethod);
         }
@@ -192,6 +197,31 @@ internal sealed class WebMcpToolRegistry : IWebMcpToolRegistry
                 ParentListToolName = parentToolName,
             };
         }
+    }
+
+    /// <summary>
+    /// Resolves a declared <c>PresetOptionType</c> to the value it supplies, by constructing the
+    /// option and reading its own <see cref="ITypeOption.Name"/>.
+    /// </summary>
+    /// <remarks>
+    /// A misconfigured declaration (a type that is not a TypeOption) is a programming error, not a
+    /// runtime data problem, so it fails loud here at tool-registration time rather than being
+    /// swallowed into a tool that silently never presets anything.
+    /// </remarks>
+    private static string? ResolvePresetValue(Type? presetOptionType, string toolName)
+    {
+        if (presetOptionType is null)
+        {
+            return null;
+        }
+
+        if (Activator.CreateInstance(presetOptionType) is not ITypeOption option)
+        {
+            throw new InvalidOperationException(
+                $"WebMcpTool '{toolName}' declared PresetOptionType {presetOptionType.FullName}, which does not implement ITypeOption.");
+        }
+
+        return option.Name;
     }
 
     /// <summary>One route the application serves for a given endpoint class.</summary>

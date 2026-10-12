@@ -39,9 +39,6 @@ public sealed class ConfigurationAnalyzer
                     case "GenerateWeb":
                         model.GenerateWeb = namedArg.Value.Value is bool genWeb && genWeb;
                         break;
-                    case "GenerateBlazor":
-                        model.GenerateBlazor = namedArg.Value.Value is bool genBlazor && genBlazor;
-                        break;
                     case "GenerateTui":
                         model.GenerateTui = namedArg.Value.Value is bool genTui && genTui;
                         break;

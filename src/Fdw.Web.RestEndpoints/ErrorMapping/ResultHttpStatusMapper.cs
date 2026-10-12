@@ -44,6 +44,28 @@ public static class ResultHttpStatusMapper
                     referenceId,
                     category.IsRetryable,
                     category.ClientAction,
+                    httpContext,
+                    ClientReason(code, result, category),
+                    RelayedDetails(result, code)));
+            }
+        }
+
+        // Why the messages are read when the result carries no IResultCode: GenericResult.Failure(message)
+        // never sets result.Code, so a failure built from a [MessageLogging] message reaches here with
+        // only that message's Code ("PREFIX-31550"). Its number encodes the category exactly as a
+        // ResultCode's does; ignoring it answered 500 for every such NotFound/validation failure.
+        if (code is null && ExtractMessageCode(result) is { } messageCode)
+        {
+            var category = ResultCategories.ById(messageCode.Number / 10000);
+            if (!ReferenceEquals(category, ResultCategories.NotFound) && category.IsFailure)
+            {
+                return (category.HttpStatus, Build(
+                    category.HttpStatus,
+                    category.ClientMessage,
+                    messageCode.Code,
+                    referenceId,
+                    category.IsRetryable,
+                    category.ClientAction,
                     httpContext));
             }
         }
@@ -58,6 +80,22 @@ public static class ResultHttpStatusMapper
             "Contact your administrator",
             httpContext));
     }
+
+    // Why only a validation refusal whose code opted in: the reason is the caller's own input, named back to them. Every
+    // other failure answers with its category's generic text, because its message was written for the log. The details
+    // are the result's own, so the code must be the result's own code and not one found further down its chain.
+    private static string? ClientReason(IResultCode code, IGenericResult result, IResultCategory category)
+        => ReferenceEquals(category, ResultCategories.ByName("Validation")) && ReferenceEquals(result.Code, code)
+            ? code.FormatClientMessage(result.Details)
+            : null;
+
+    // Why only the result's own code: the details hold what the client captured from the downstream host's answer for THAT
+    // failure. A code found further down a chain belongs to a different failure, and its id would trace the wrong call.
+    private static IResultDetails? RelayedDetails(IGenericResult result, IResultCode code)
+        => ReferenceEquals(result.Code, code) ? result.Details : null;
+
+    private static string? RelayedText(IResultDetails? details, string key)
+        => details is not null && details.Data.TryGetValue(key, out var value) && value is string { Length: > 0 } text ? text : null;
 
     private static IResultCode? ExtractResultCode(IGenericResult result)
     {
@@ -82,6 +120,33 @@ public static class ResultHttpStatusMapper
         return null;
     }
 
+    /// <summary>
+    /// The first message code on <paramref name="result"/> whose number is in a failure category
+    /// (20000 and up), parsed from the generator's "PREFIX-NNNNN" form.
+    /// </summary>
+    /// <remarks>
+    /// Success and progress codes (10000-19999) are skipped: a failure that logged progress on its
+    /// way must not be answered as a success status.
+    /// </remarks>
+    private static (string Code, int Number)? ExtractMessageCode(IGenericResult result)
+    {
+        foreach (var message in result.Messages)
+        {
+            if (message?.Code is not { Length: > 0 } text)
+                continue;
+
+            var dash = text.LastIndexOf('-');
+            if (dash < 0 || !int.TryParse(text[(dash + 1)..], System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out var number))
+                continue;
+
+            if (number >= 20000)
+                return (text, number);
+        }
+
+        return null;
+    }
+
     /// <summary>Builds the RFC 7807 body, carrying FDW's own fields as extensions.</summary>
     /// <remarks>
     /// Why ProblemDetails and not a bespoke model: every HTTP client, OpenAPI generator and agent
@@ -96,20 +161,43 @@ public static class ResultHttpStatusMapper
         string referenceId,
         bool isRetryable,
         string? action,
-        HttpContext httpContext)
+        HttpContext httpContext,
+        string? reason = null,
+        IResultDetails? relayed = null)
     {
         var problem = new ProblemDetails
         {
             Status = status,
             Title = message,
-            Detail = message,
+            Detail = string.IsNullOrWhiteSpace(reason) ? message : reason,
             Instance = httpContext.Request.Path.HasValue ? httpContext.Request.Path.Value : null,
         };
 
         problem.Extensions["code"] = code;
-        problem.Extensions["referenceId"] = referenceId;
+        AddReferences(problem, referenceId, relayed);
         problem.Extensions["isRetryable"] = isRetryable;
         problem.Extensions["action"] = action;
         return problem;
+    }
+
+    // Why the downstream's id leads: a browser sees one failure, so one id must name it. When a downstream host answered with
+    // its own referenceId that id is reported as the referenceId, and this host's trace id travels beside it as
+    // proxyReferenceId so either log can be found. With nothing relayed, this host's trace id is the only id there is.
+    private static void AddReferences(ProblemDetails problem, string referenceId, IResultDetails? relayed)
+    {
+        if (RelayedText(relayed, ResultDetailKeys.UpstreamReferenceId) is { } upstreamReferenceId)
+        {
+            problem.Extensions["referenceId"] = upstreamReferenceId;
+            problem.Extensions["proxyReferenceId"] = referenceId;
+        }
+        else
+        {
+            problem.Extensions["referenceId"] = referenceId;
+        }
+
+        if (RelayedText(relayed, ResultDetailKeys.UpstreamCode) is { } upstreamCode)
+        {
+            problem.Extensions["upstreamCode"] = upstreamCode;
+        }
     }
 }

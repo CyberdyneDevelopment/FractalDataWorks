@@ -12,5 +12,5 @@ namespace Fdw.Services.Resiliency.Abstractions;
 public sealed class CriticalResiliencyCategory : ResiliencyCategoryBase
 {
     /// <summary>Initializes a new instance of <see cref="CriticalResiliencyCategory"/>.</summary>
-    public CriticalResiliencyCategory() : base(3, "Critical") { }
+    public CriticalResiliencyCategory() : base("Critical") { }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Security.Claims;
+using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Logging;
 using Fdw.Services.Authorization.Configuration;
@@ -79,4 +80,9 @@ public sealed class DefaultSystemRoleConfiguration : ISystemRoleConfiguration
     /// <inheritdoc />
     public bool IsInRole(ClaimsPrincipal user, string roleName)
         => user.IsInRole(roleName);
+
+    /// <inheritdoc />
+    public bool IsPlatformAdmin(ClaimsPrincipal user)
+        => user.IsInRole(_adminRoleName)
+           && string.Equals(user.FindFirst(ClaimDefinitions.globalTenant.Name)?.Value, "true", StringComparison.OrdinalIgnoreCase);
 }

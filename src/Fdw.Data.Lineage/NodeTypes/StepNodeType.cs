@@ -12,5 +12,5 @@ namespace Fdw.Data.Lineage.NodeTypes;
 public sealed class StepNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="StepNodeType"/> class.</summary>
-    public StepNodeType() : base(8, "Step") { }
+    public StepNodeType() : base("Step") { }
 }

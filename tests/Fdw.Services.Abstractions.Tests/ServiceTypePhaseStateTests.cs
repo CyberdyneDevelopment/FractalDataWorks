@@ -82,14 +82,14 @@ public sealed class ServiceTypePhaseStateTests
     }
 
     [Fact]
-    public void RunningAheadOfTheSweepMakesTheSweepSkip_OrderControl()
+    public void RunningAheadOfThePassMakesThePassSkip_OrderControl()
     {
         var scope = new object();
 
         // A caller runs a collection's phase early (to control order) → marks it.
         ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeTrue();
 
-        // The later sweep sees it already ran and skips.
+        // The later pass sees it already ran and skips.
         ServiceTypePhaseState.HasCollectionRun("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeTrue();
         ServiceTypePhaseState.TryMarkCollection("Widgets", scope, ServiceTypePhaseState.Phase.Initialize).ShouldBeFalse();
     }

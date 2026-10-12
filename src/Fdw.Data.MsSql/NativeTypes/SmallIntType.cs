@@ -14,7 +14,6 @@ public sealed class SmallIntType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="SmallIntType"/> class.</summary>
     public SmallIntType()
         : base(
-            id: 3,
             name: "smallint",
             description: "16-bit signed integer.",
             abstractType: DataTypes.Int16,

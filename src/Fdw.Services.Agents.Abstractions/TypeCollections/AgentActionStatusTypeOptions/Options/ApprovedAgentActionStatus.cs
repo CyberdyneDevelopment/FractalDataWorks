@@ -12,7 +12,7 @@ public sealed class ApprovedAgentActionStatus : AgentActionStatusTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ApprovedAgentActionStatus"/> class.
     /// </summary>
-    public ApprovedAgentActionStatus() : base(2, "Approved", isTerminal: true, isApproved: true)
+    public ApprovedAgentActionStatus() : base("Approved", isTerminal: true, isApproved: true)
     {
     }
 }

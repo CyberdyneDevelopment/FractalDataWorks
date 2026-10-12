@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlInt64Converter()
     : DataTypeConverterBase(
-        id: 4,
         name: "Int64",
         sourceType: "int8",
         targetClrType: typeof(long),

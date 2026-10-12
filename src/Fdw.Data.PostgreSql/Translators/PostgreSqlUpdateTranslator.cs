@@ -119,14 +119,12 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
     /// <summary>
     /// Builds a complete PostgreSQL UPDATE statement.
     /// </summary>
-#pragma warning disable MA0051 // Method is too long
     [ConventionOverride(MaxCyclomaticComplexity = 15)]
     private static NpgsqlCommand BuildUpdateStatement(
         IStorageContainer container,
         IDatabasePath dbPath,
         object data,
         IFilterExpression? filter)
-#pragma warning restore MA0051
     {
         var dialect = dbPath.Dialect;
 

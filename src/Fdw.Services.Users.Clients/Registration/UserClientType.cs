@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Users.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the User API client.
+/// Implementation for the User API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "UserClient")]
+[Implementation(typeof(ApiClientTypes), "UserClient")]
 public sealed class UserClientType : ApiClientTypeBase<UserApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class UserClientType : ApiClientTypeBase<UserApiClient>
         {
             builder.Services.AddScoped<UserApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<UserApiClient>>() ?? NullLogger<UserApiClient>.Instance;
-                return new UserApiClient(factory.CreateClient(Name), logger);
+                return new UserApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

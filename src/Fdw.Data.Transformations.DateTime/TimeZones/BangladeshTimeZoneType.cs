@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Bangladesh")]
 public sealed class BangladeshTimeZoneType : TimeZoneTypeBase
 {
-    public BangladeshTimeZoneType() : base(35, "Bangladesh", "Bangladesh Standard Time") { }
+    public BangladeshTimeZoneType() : base("Bangladesh", "Bangladesh Standard Time") { }
 }

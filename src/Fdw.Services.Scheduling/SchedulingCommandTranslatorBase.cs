@@ -28,7 +28,7 @@ public abstract class SchedulingCommandTranslatorBase<TNative> : ISchedulingComm
             throw new ArgumentNullException(nameof(name));
         }
 
-        Id = GenerateIdFromName(name);
+        Id = OptionId.DeriveInt(GetType().FullName!);
         Name = name;
         DomainName = domainName;
 
@@ -36,31 +36,8 @@ public abstract class SchedulingCommandTranslatorBase<TNative> : ISchedulingComm
             NullLogger<SchedulingCommandTranslatorBase<TNative>>.Instance, name, domainName);
     }
 
-    /// <summary>
-    /// Generates a deterministic ID from a translator name using FNV-1a hash.
-    /// </summary>
-    private static int GenerateIdFromName(string name)
-    {
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-
-            int hash = FnvOffsetBasis;
-            foreach (char c in name)
-            {
-                hash ^= c;
-                hash *= FnvPrime;
-            }
-            return hash & 0x7FFFFFFF;
-        }
-    }
-
     /// <inheritdoc />
     public int Id { get; }
-
-    /// <inheritdoc cref="ITypeOption.Id" />
-    object ITypeOption.Id => Id;
 
     /// <inheritdoc />
     public string Name { get; }

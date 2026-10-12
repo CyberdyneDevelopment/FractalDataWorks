@@ -1,9 +1,11 @@
 using System;
 using Fdw.Results;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.ServiceTypes;
 
@@ -47,9 +49,6 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <summary>Gets a value indicating whether the phase has run.</summary>
     public bool Registered => _register == PhaseState.Ran;
 
-    /// <summary>
-    /// Whether this domain is excluded from the <see cref="PlatformServices"/> collects
-    /// (<see cref="PlatformServices.Configure"/>/<see cref="PlatformServices.Register"/>/
     // ── Phase-delegate replacements (author-curated variant selection; the keyset stays frozen) ─────────
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _configurationMethod;
     private Func<IHostApplicationBuilder, ILoggerFactory?, IGenericResult<IHostApplicationBuilder>>? _registrationMethod;
@@ -113,15 +112,33 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// initialize it manually, in whatever order matters, before a later
     /// <see cref="PlatformServices.Initialize"/> collect skips anything already done.
     /// </summary>
-    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool defer = false)
+    /// <param name="host">The built host.</param>
+    /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
+    /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
+    /// <param name="force">
+    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// </param>
+    public IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (_initialize == PhaseState.Ran) return GenericResult<IHost>.Success(host);
+        if (!force && _initialize == PhaseState.Ran) return GenericResult<IHost>.Success(host);
 
-        if (defer)
+        if (defer && !force)
         {
             _initialize = PhaseState.Deferred;
             return GenericResult<IHost>.Success(host);
         }
+
+        // Why system context: Initialize is the platform reading its own configuration after Build,
+        // before any request exists -- nobody is acting for a user. Without an explicit elevation a
+        // connection opened here carries no identity and opens as the deny principal, which sees
+        // only shared rows: every startup read would quietly miss tenant-scoped and restricted
+        // configuration. Set here, per domain, because a host runs some domains' Initialize itself
+        // (SecretManager, Endpoints) ahead of the PlatformServices collect, and every one of them
+        // passes through this entry. The scope restores the previous context when the phase ends.
+        // Register puts the accessor in every host, so it is required here.
+        using var systemScope = new SystemAuthenticationContextScope(
+            host.Services.GetRequiredService<IAuthenticationContextAccessor>());
 
         var result = _initializationMethod is not null
             ? _initializationMethod(host, loggerFactory)
@@ -139,11 +156,18 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// <see cref="Initialize"/> — a host that configures a domain early, to put it ahead of the others,
     /// is not configured a second time by the later <see cref="PlatformServices.Configure"/> pass.
     /// </summary>
-    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false)
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
+    /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
+    /// <param name="force">
+    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// </param>
+    public IGenericResult<IHostApplicationBuilder> Configure(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (_configure == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (!force && _configure == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        if (defer)
+        if (defer && !force)
         {
             _configure = PhaseState.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
@@ -165,15 +189,28 @@ public sealed record PlatformServiceEntry(string CategoryName, IServiceTypeColle
     /// registers a domain explicitly and is then collected by <see cref="PlatformServices.Register"/>
     /// (or vice versa) does not double-register the domain's services.
     /// </summary>
-    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false)
+    /// <param name="builder">The host application builder.</param>
+    /// <param name="loggerFactory">The logger factory, or null for no logging.</param>
+    /// <param name="defer">Record the phase as deferred and do nothing, so a later caller runs it.</param>
+    /// <param name="force">
+    /// Run even if this phase is <see cref="PhaseState.Deferred"/> or has already
+    /// <see cref="PhaseState.Ran"/>. Overrides <paramref name="defer"/>.
+    /// </param>
+    public IGenericResult<IHostApplicationBuilder> Register(IHostApplicationBuilder builder, ILoggerFactory? loggerFactory = null, bool defer = false, bool force = false)
     {
-        if (_register == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
+        if (!force && _register == PhaseState.Ran) return GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        if (defer)
+        if (defer && !force)
         {
             _register = PhaseState.Deferred;
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         }
+
+        // Why every host gets one: the authentication-context accessor is what every connection
+        // reads to decide which identity it opens as, and Initialize elevates through it. It is
+        // platform infrastructure, not a feature of the domains that authenticate callers -- a host
+        // that authenticates nobody still runs as someone. Idempotent, so every entry may add it.
+        builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
 
         var result = _registrationMethod is not null
             ? _registrationMethod(builder, loggerFactory)

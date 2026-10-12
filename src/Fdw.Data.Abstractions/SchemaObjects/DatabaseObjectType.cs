@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class DatabaseObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for databases.
+    /// Material Symbols icon name for databases.
     /// </summary>
-    public const string DatabaseIcon = "database"; // Icons.Material.Filled.Storage
+    public const string DatabaseIcon = "database";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DatabaseObjectType"/> class.
     /// </summary>
     public DatabaseObjectType()
         : base(
-            id: 1,
             name: "Database",
             icon: DatabaseIcon,
             color: "Primary",

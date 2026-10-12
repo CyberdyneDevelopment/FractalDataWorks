@@ -1,54 +1,46 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
-using Fdw.Services.Data.Endpoints.Logging;
+using Fdw.Services.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Fdw.Web.RestEndpoints.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing all configured data sets.
-/// Delegates all reads to DataSetConfigurationProvider.
+/// Base endpoint for listing configured data sets, one page at a time.
 /// </summary>
-public abstract class ListDataSetsEndpointBase : CrudListEndpointBase<DataSetSummaryResponse>
+/// <remarks>
+/// Each data set is read as a record only: its fields, sources, joins and filters are not composed,
+/// so the summary carries no counts of them. The fields and sources routes read those on demand (FDW-951).
+/// </remarks>
+public abstract class ListDataSetsEndpointBase
+    : CrudPageEndpointBase<IDataSetImplementationConfiguration, DataSetSummaryResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
 
-    /// <inheritdoc />
-    protected ListDataSetsEndpointBase(ILogger<ListDataSetsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+    /// <summary>Initializes a new instance of the <see cref="ListDataSetsEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="dataSetProvider">Reads the page of data sets.</param>
+    protected ListDataSetsEndpointBase(ILogger<ListDataSetsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider)
+        : base(logger)
     {
-        _dataSetProvider = dataSetProvider;
+        _dataSetProvider = dataSetProvider ?? throw new ArgumentNullException(nameof(dataSetProvider));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datasets";
 
-    /// <summary>Loads all data sets and maps them to summary DTOs.</summary>
-    protected override Task<IGenericResult<List<DataSetSummaryResponse>>> LoadItems(CancellationToken ct)
-    {
-        return LoadDataSetSummaries(ct);
-    }
+    /// <inheritdoc />
+    protected override Task<IGenericResult<ConfigurationPage<IDataSetImplementationConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
+        => _dataSetProvider.Get(paging.Skip, paging.Take, ConfigurationLevels.RecordOnly, ct);
 
-    /// <summary>
-    /// Loads all data set configurations and returns as summary DTOs.
-    /// Override for custom behavior.
-    /// </summary>
-    protected virtual async Task<IGenericResult<List<DataSetSummaryResponse>>> LoadDataSetSummaries(CancellationToken ct)
-    {
-        DataSetEndpointLog.QueryingDataSets(Logger, string.Empty);
-
-        var result = await _dataSetProvider.Get(ct).ConfigureAwait(false);
-        if (result.IsFailure) return result.ToNewResult<List<DataSetSummaryResponse>>();
-
-        var summaries = result.Value?
-            .Select(c => DataSetQueryHelper.MapToSummary(c, (c.SourceIds ?? []).Count))
-            .ToList() ?? [];
-
-        DataSetEndpointLog.DataSetsLoaded(Logger, summaries.Count);
-        return GenericResult<List<DataSetSummaryResponse>>.Success(summaries);
-    }
+    /// <inheritdoc />
+    protected override Task<IGenericResult<DataSetSummaryResponse>> ToSummary(
+        IDataSetImplementationConfiguration item, CancellationToken ct)
+        => Task.FromResult(GenericResult<DataSetSummaryResponse>.Success(DataSetQueryHelper.MapToSummary(item)));
 }

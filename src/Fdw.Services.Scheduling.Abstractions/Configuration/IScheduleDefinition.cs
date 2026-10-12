@@ -26,9 +26,15 @@ public interface IScheduleDefinition : IGenericConfiguration
     string ScheduleType { get; }
 
     /// <summary>
-    /// Gets or sets the name of the pipeline to execute when this schedule triggers.
+    /// Gets or sets the logical id of the pipeline to execute when this schedule triggers (FDW-1088).
     /// </summary>
-    /// <value>The pipeline name that matches a configured pipeline definition.</value>
+    /// <value>The id the scheduler relays and the ETL resolves; never a name another tenant may share.</value>
+    Guid PipelineId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pipeline's name as it was when the schedule was saved, for display only.
+    /// </summary>
+    /// <value>A display name; <see cref="PipelineId"/> is what the schedule runs.</value>
     string PipelineName { get; set; }
 
     /// <summary>

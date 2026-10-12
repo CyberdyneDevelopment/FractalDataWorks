@@ -33,7 +33,6 @@ public sealed class GenerateMethodTranslator : RoslynCommandTranslatorBase<Gener
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear code generation: validate method, build via verbose SyntaxFactory calls
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateMethodCommand command,
         Solution solution,
@@ -214,5 +213,4 @@ public sealed class GenerateMethodTranslator : RoslynCommandTranslatorBase<Gener
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 }

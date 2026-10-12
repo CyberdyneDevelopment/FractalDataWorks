@@ -26,11 +26,6 @@ public class CreateRoleRequest
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the parent role name for inheritance.
-    /// </summary>
-    public string? ParentRoleName { get; set; }
-
-    /// <summary>
     /// Gets or sets whether this role is tenant-scoped.
     /// </summary>
     public bool IsTenantScoped { get; set; }

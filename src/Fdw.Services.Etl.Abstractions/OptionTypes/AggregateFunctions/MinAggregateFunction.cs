@@ -9,7 +9,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class MinAggregateFunction : AggregateFunctionBase
 {
     /// <summary>Initializes a new instance of the <see cref="MinAggregateFunction"/> class.</summary>
-    public MinAggregateFunction() : base(4, "Min")
+    public MinAggregateFunction() : base("Min")
     {
     }
 

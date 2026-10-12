@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Fdw.Services.Authentication.Clients.Models;
+namespace Fdw.Services.Authentication.Abstractions.Models;
 
 /// <summary>
 /// Client-side response model for the current authenticated user's information.

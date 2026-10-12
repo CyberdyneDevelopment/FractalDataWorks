@@ -82,6 +82,21 @@ public static partial class MsSqlBatchInsertTranslatorLog
         ILogger logger,
         string container);
 
+    /// <summary>
+    /// Logs the refusal of an insert that cannot be sent as one request: its rows carry more parameters than SQL Server accepts.
+    /// </summary>
+    [MessageLogging(
+        EventId = 22001,
+        Level = LogLevel.Error,
+        Message = "MsSqlBatchInsertTranslator: {rowCount} row(s) of {columnCount} column(s) for container '{container}' need {parameterCount} parameters; one request carries at most {maxParameters}")]
+    public static partial IGenericMessage TooManyParameters(
+        ILogger logger,
+        string container,
+        int rowCount,
+        int columnCount,
+        int parameterCount,
+        int maxParameters);
+
     [MessageLogging(
         EventId = 91000,
         Level = LogLevel.Error,

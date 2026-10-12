@@ -15,7 +15,7 @@ public sealed class DayOverDayPeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DayOverDayPeriodComparisonType"/> class.
     /// </summary>
-    public DayOverDayPeriodComparisonType() : base(5, "DayOverDay", isCumulative: false) { }
+    public DayOverDayPeriodComparisonType() : base("DayOverDay", isCumulative: false) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => TimeSpan.FromDays(-1);

@@ -11,7 +11,6 @@ public sealed class ZoomOutIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ZoomOutIcon"/>.</summary>
     public ZoomOutIcon()
         : base(
-            23,
             "ZoomOut",
             "0 0 24 24",
             "none",

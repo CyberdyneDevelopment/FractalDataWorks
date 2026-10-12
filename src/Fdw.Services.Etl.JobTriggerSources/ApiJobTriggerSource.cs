@@ -9,5 +9,5 @@ namespace Fdw.Services.Etl.JobTriggerSources;
 public sealed class ApiJobTriggerSource : JobTriggerSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="ApiJobTriggerSource"/> class.</summary>
-    public ApiJobTriggerSource() : base(4, "Api") { }
+    public ApiJobTriggerSource() : base("Api") { }
 }

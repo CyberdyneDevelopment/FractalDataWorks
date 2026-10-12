@@ -7,14 +7,13 @@ namespace Fdw.UI.Themes;
 /// Abstract base class for color palettes.
 /// Inherit from this class and apply [TypeOption] attribute to create custom palettes.
 /// </summary>
-public abstract class ColorPaletteBase : TypeOptionBase<int, ColorPaletteBase>, IColorPalette
+public abstract class ColorPaletteBase : TypeOptionBase<ColorPaletteBase>, IColorPalette
 {
     /// <summary>
     /// Creates a new color palette.
     /// </summary>
-    /// <param name="id">Unique identifier.</param>
     /// <param name="name">Display name.</param>
-    protected ColorPaletteBase(int id, string name) : base(id, name) { }
+    protected ColorPaletteBase(string name) : base(name) { }
 
     /// <inheritdoc />
     public abstract Color Primary { get; }

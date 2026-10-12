@@ -281,11 +281,8 @@ internal sealed class FormulaParser
 
     #region Tokenization
 
-    // MA0051: Method length acceptable - lexer/tokenizer with comprehensive operator handling (numbers, strings, identifiers, operators)
-#pragma warning disable MA0051 // Method is too long
     [ConventionOverride(MaxCyclomaticComplexity = 50, MaxMethodLines = 120)]  // Lexer/tokenizer with comprehensive character classification (numbers, strings, identifiers, operators, delimiters)
     private static Queue<Token> Tokenize(string formula)
-#pragma warning restore MA0051
     {
         var tokens = new List<Token>();
         var i = 0;

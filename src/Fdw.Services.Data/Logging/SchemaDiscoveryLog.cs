@@ -98,34 +98,10 @@ public static partial class SchemaDiscoveryLog
     public static partial IGenericMessage PersistingDataStore(ILogger logger, string dataStoreName, System.Guid connectionId);
 
     /// <summary>
-    /// Traces DataPath persistence.
-    /// </summary>
-    [MessageLogging(EventId = 11243, Level = LogLevel.Trace, Message = "Persisting DataPath '{pathName}' for DataStore '{dataStoreName}'")]
-    public static partial IGenericMessage PersistingDataPath(ILogger logger, string pathName, string dataStoreName);
-
-    /// <summary>
-    /// Traces container persistence.
-    /// </summary>
-    [MessageLogging(EventId = 11244, Level = LogLevel.Trace, Message = "Persisting container '{containerName}' in path '{pathName}'")]
-    public static partial IGenericMessage PersistingContainer(ILogger logger, string containerName, string pathName);
-
-    /// <summary>
-    /// Traces field persistence.
-    /// </summary>
-    [MessageLogging(EventId = 11245, Level = LogLevel.Trace, Message = "Persisting {fieldCount} fields for container '{containerName}'")]
-    public static partial IGenericMessage PersistingFields(ILogger logger, int fieldCount, string containerName);
-
-    /// <summary>
     /// Traces configuration writer resolution.
     /// </summary>
     [MessageLogging(EventId = 11246, Level = LogLevel.Trace, Message = "Resolving configuration writers for persistence")]
     public static partial IGenericMessage ResolvingConfigurationWriters(ILogger logger);
-
-    /// <summary>
-    /// Traces LastDiscoveredAt update.
-    /// </summary>
-    [MessageLogging(EventId = 11247, Level = LogLevel.Trace, Message = "Updating LastDiscoveredAt for DataStore '{dataStoreName}'")]
-    public static partial IGenericMessage UpdatingLastDiscoveredAt(ILogger logger, string dataStoreName);
 
     /// <summary>
     /// Logs when connection setup completes with timing.
@@ -194,12 +170,6 @@ public static partial class SchemaDiscoveryLog
     // ═══════════════════════════════════════════════════════════════════════════
     // Auto-Persist Operations (7090-7094)
     // ═══════════════════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Logs when discovery result persistence starts.
-    /// </summary>
-    [MessageLogging(EventId = 11249, Level = LogLevel.Information, Message = "Persisting discovery results for DataStore '{dataStoreName}': {containerCount} containers across {pathCount} paths")]
-    public static partial IGenericMessage PersistStarted(ILogger logger, string dataStoreName, int containerCount, int pathCount);
 
     /// <summary>
     /// Logs when discovery result persistence completes.

@@ -23,7 +23,7 @@ public class CreateIdentityRequest
     /// A member of <c>IdentityServiceTypes</c> — the route already implies it, and the two must
     /// agree.
     /// </remarks>
-    public string ServiceOptionType { get; set; } = string.Empty;
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>Gets or sets a description of what authenticates as this identity.</summary>
     public string? Description { get; set; }

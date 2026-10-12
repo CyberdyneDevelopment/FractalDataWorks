@@ -141,10 +141,12 @@ public sealed class MsSqlFindTranslator : MsSqlDataCommandTranslatorBase
             sql.Append("SELECT");
         }
 
-        // Project all fields from container schema or SELECT *
-        if (container.Schema.GetProjectableFields().Count > 0)
+        // A search returns the detail columns: each field's datum type decides, and a search includes no
+        // Metadata, Description or DbKey columns (FDW-988).
+        var returnedFields = container.Schema.GetReturnedFields(includeMetadata: false, includeDescriptions: false, includeKeys: false);
+        if (returnedFields.Count > 0)
         {
-            var fields = string.Join(", ", container.Schema.GetProjectableFields().Select(f => dialect.QuoteIdentifier(f.Name)));
+            var fields = string.Join(", ", returnedFields.Select(f => dialect.QuoteIdentifier(f.Name)));
             sql.Append(CultureInfo.InvariantCulture, $" {fields}");
         }
         else

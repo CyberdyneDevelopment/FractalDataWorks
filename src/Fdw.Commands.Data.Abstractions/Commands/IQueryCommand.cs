@@ -42,4 +42,23 @@ public interface IQueryCommand : IDataCommand
     /// Gets the join expressions (JOIN clauses).
     /// </summary>
     IReadOnlyList<IJoinExpression> Joins { get; }
+
+    /// <summary>
+    /// Gets whether a query that names no columns also returns the container's Metadata columns (who
+    /// created or changed a row and when, its tenant). Off by default: a read returns the detail (FDW-988).
+    /// </summary>
+    bool IncludeMetadata { get; }
+
+    /// <summary>
+    /// Gets whether a query that names no columns also returns the container's Descriptive columns.
+    /// Off by default (FDW-988).
+    /// </summary>
+    bool IncludeDescriptions { get; }
+
+    /// <summary>
+    /// Gets whether a query that names no columns also returns the container's DbKey columns (RowId and
+    /// the <c>*RowId</c> columns). Only server-side reads set it -- a configuration read that joins or
+    /// re-versions a row needs its physical key; no response ever shows one (FDW-988).
+    /// </summary>
+    bool IncludeKeys { get; }
 }

@@ -18,7 +18,7 @@ the shipped schema. Otherwise it's app config.
 `configurationSchema.json` ships in the content root of each entry-point app. The host loads
 it via `AddConfigurationGateway<TConnectionFactory, TSecretManager>(filename)`, which
 deserialises it with System.Text.Json — a custom `JsonConverter` dispatches the polymorphic
-`ConnectionConfiguration` / `SecretManagerConfiguration` bodies on the `ServiceOptionType`
+`ConnectionConfiguration` / `SecretManagerConfiguration` bodies on the `Implementation`
 discriminator — and feeds it to `IConfigurationGateway`.
 
 The JSON has three top-level lists under `ConfigurationSchema`: `Connections`,

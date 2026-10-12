@@ -3,10 +3,10 @@ using Fdw.Services.Configuration;
 
 namespace Fdw.Services.Calculations.Commands;
 
-/// <summary>ConfigurationCommands TypeOption for the calc.WindowedCalculation typed-body table.</summary>
-[TypeOption(typeof(ConfigurationCommands), "WindowedCalculation")]
+/// <summary>ConfigurationCommands TypeOption for the calc.WindowedCalculationConfiguration typed-body table.</summary>
+[TypeOption(typeof(ConfigurationCommands), "WindowedCalculationConfiguration")]
 public sealed class WindowedCalculationConfigurationCommand : ConfigurationCommandBase<WindowedCalculationConfiguration>
 {
     /// <inheritdoc/>
-    public WindowedCalculationConfigurationCommand() : base("WindowedCalculation") { }
+    public WindowedCalculationConfigurationCommand() : base("WindowedCalculationConfiguration") { }
 }

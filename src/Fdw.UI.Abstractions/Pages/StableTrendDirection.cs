@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class StableTrendDirection : TrendDirectionBase
 {
     /// <summary>Initializes a new instance of <see cref="StableTrendDirection"/>.</summary>
-    public StableTrendDirection() : base(4, "Stable") { }
+    public StableTrendDirection() : base("Stable") { }
 }

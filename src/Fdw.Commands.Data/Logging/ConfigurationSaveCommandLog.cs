@@ -15,8 +15,8 @@ public static partial class ConfigurationSaveCommandLog
         Message = "[ConfigurationSaveCommand] Created for entity type '{entityType}'")]
     public static partial IGenericMessage CommandCreated(ILogger logger, string entityType);
 
-    /// <summary>Logs when a save carries extra column=value pairs beyond the POCO's mapped columns.</summary>
-    [MessageLogging(EventId = 11004, Level = LogLevel.Debug,
-        Message = "[ConfigurationSaveCommand] Save for entity type '{entityType}' merges {columnCount} additional column(s)")]
-    public static partial IGenericMessage AdditionalColumnsIncluded(ILogger logger, string entityType, int columnCount);
+    /// <summary>Traces the field values a save writes beyond the record's mapped properties.</summary>
+    [MessageLogging(EventId = 11004, Level = LogLevel.Trace,
+        Message = "[ConfigurationSaveCommand] Save of '{entityType}' also writes fields [{fields}]")]
+    public static partial IGenericMessage FieldValuesIncluded(ILogger logger, string entityType, string fields);
 }

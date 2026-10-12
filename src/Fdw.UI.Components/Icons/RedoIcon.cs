@@ -11,7 +11,6 @@ public sealed class RedoIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="RedoIcon"/>.</summary>
     public RedoIcon()
         : base(
-            45,
             "Redo",
             "0 0 24 24",
             "none",

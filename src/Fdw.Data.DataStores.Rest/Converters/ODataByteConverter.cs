@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataByteConverter()
     : DataTypeConverterBase(
-        id: 5,
         name: "Byte",
         sourceType: "Byte",
         targetClrType: typeof(byte),

@@ -128,10 +128,7 @@ public sealed class WorkspaceManager : IWorkspaceManager
     }
 
     /// <inheritdoc/>
-    // MA0051: Method length acceptable - session save orchestration (capture snapshots, build session object, persist)
-#pragma warning disable MA0051 // Method is too long
     public async Task<IGenericResult<Guid>> SaveSession(Guid workspaceId, CancellationToken cancellationToken = default)
-#pragma warning restore MA0051
     {
         if (!_workspaces.TryGetValue(workspaceId, out var managed))
             return GenericResult<Guid>.Failure(

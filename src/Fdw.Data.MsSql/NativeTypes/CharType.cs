@@ -14,7 +14,6 @@ public sealed class CharType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="CharType"/> class.</summary>
     public CharType()
         : base(
-            id: 7,
             name: "Char",
             description: "Fixed-length non-Unicode character data.",
             abstractType: DataTypes.String,

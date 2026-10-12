@@ -126,6 +126,13 @@ internal static class CodeGeneration
         sb.AppendLine("        {");
         sb.AppendLine($"            public NotFound{collection.ClassName}() : base({baseArgs}) {{ }}");
 
+        // Why here: options derive their ids from their type names, so no base constructor parameter
+        // hands NotFound its 0 any more. NotFound is the one member of the collection whose id is fixed.
+        if (collection.SentinelHoldsZeroId && (userDeclaredMembers is null || !userDeclaredMembers.Contains("Id")))
+        {
+            sb.AppendLine("            public override int Id => 0;");
+        }
+
         // Generate stubs for abstract members
         if (abstractMembers.Length > 0)
         {
@@ -138,6 +145,30 @@ internal static class CodeGeneration
     /// <summary>
     /// Generates stub implementations for abstract members.
     /// </summary>
+    /// <summary>
+    /// Whether <paramref name="baseType"/> exposes an int <c>Id</c> that the NotFound sentinel can override.
+    /// </summary>
+    /// <param name="baseType">The collection's option base type, as named in its collection attribute.</param>
+    /// <returns><c>true</c> when the nearest <c>Id</c> up the chain is an int that is virtual or an
+    /// unsealed override; <c>false</c> otherwise, including when it is abstract (the member stubs cover that).</returns>
+    public static bool HasOverridableIntId(ITypeSymbol baseType)
+    {
+        for (var type = (baseType as INamedTypeSymbol)?.OriginalDefinition; type != null; type = type.BaseType)
+        {
+            var id = type.GetMembers("Id").OfType<IPropertySymbol>()
+                .FirstOrDefault(p => !p.IsStatic && p.Parameters.Length == 0 && p.ExplicitInterfaceImplementations.IsEmpty);
+            if (id != null)
+            {
+                return id.Type.SpecialType == SpecialType.System_Int32
+                    && (id.IsVirtual || id.IsOverride)
+                    && !id.IsSealed
+                    && !id.IsAbstract;
+            }
+        }
+
+        return false;
+    }
+
     public static void GenerateAbstractMemberStubs(
         StringBuilder sb,
         ImmutableArray<AbstractMemberModel> abstractMembers,
@@ -293,7 +324,6 @@ internal static class CodeGeneration
     /// <summary>
     /// Gets a default return expression for a given return type.
     /// </summary>
-#pragma warning disable MA0051 // Exhaustive type-mapping switch must cover all CLR types in one place
     private static string GetDefaultReturnForType(string typeName)
     {
         // Handle nullable types - return null
@@ -538,7 +568,6 @@ internal static class CodeGeneration
     /// <summary>
     /// Gets the appropriate default value for a type.
     /// </summary>
-#pragma warning disable MA0051 // Exhaustive type-mapping switch must cover all CLR types in one place
     private static string GetDefaultValueForType(string typeName)
     {
         // Handle nullable types
@@ -593,12 +622,12 @@ internal static class CodeGeneration
         }
 
         // Handle common types
-        // NOTE: Use "_Empty" for strings instead of string.Empty to avoid issues
+        // NOTE: Use "NotFound" for strings instead of string.Empty to avoid issues
         // with base classes that validate non-empty names (e.g., DataCommandTranslatorBase)
         return typeName switch
         {
-            "string" => "\"_Empty\"",
-            "System.String" => "\"_Empty\"",
+            "string" => "\"NotFound\"",
+            "System.String" => "\"NotFound\"",
             "int" => "0",
             "System.Int32" => "0",
             "long" => "0L",

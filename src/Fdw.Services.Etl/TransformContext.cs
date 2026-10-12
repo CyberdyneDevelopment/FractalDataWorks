@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Fdw.Services.Calculations.Abstractions.Runtime;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Logging;
 using Microsoft.Extensions.Logging;
@@ -14,8 +15,13 @@ namespace Fdw.Services.Etl;
 public sealed class TransformContext : ITransformContext
 {
     private readonly List<TransformError> _errors = [];
+    private readonly List<RejectedRecord> _rejections = [];
     private static readonly IReadOnlyDictionary<string, object?> EmptyParameters =
         new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+    private static readonly IReadOnlyDictionary<Guid, ICompiledCalculation> NoBuiltCalculations =
+        new Dictionary<Guid, ICompiledCalculation>();
+    private static readonly IReadOnlyDictionary<Guid, ICompiledCalculationSet> NoBuiltSets =
+        new Dictionary<Guid, ICompiledCalculationSet>();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransformContext"/> class.
@@ -23,19 +29,27 @@ public sealed class TransformContext : ITransformContext
     /// <param name="executionId">The parent pipeline execution ID.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="variables">Pipeline variables.</param>
+    /// <param name="fieldTransformChains">The transformer chains the run resolved for the field mappings of its Map stages, by mapping id. The caller states them: a run whose mappings state no chain passes an empty map, so what the run resolved is never assumed here.</param>
     /// <param name="calculationEngine">The calculation engine (optional).</param>
     /// <param name="connectionProvider">The connection provider (optional).</param>
     /// <param name="dataGateway">The data gateway for lookups (optional).</param>
     /// <param name="services">Optional service provider.</param>
+    /// <param name="parameters">The run's typed parameter values by name, including the last-successful watermark when there is one; none when the run has none.</param>
+    /// <param name="builtCalculations">The calculations the run compiled for its Compute stages, by stage id; none when it has no Compute stage.</param>
+    /// <param name="builtSets">The calculation sets the run compiled for its Compute stages that read and write tables, by stage id; none when it has none.</param>
     /// <param name="cancellationToken">Optional cancellation token.</param>
     public TransformContext(
         Guid executionId,
         ILogger logger,
         IReadOnlyDictionary<string, object?> variables,
+        IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>> fieldTransformChains,
         object? calculationEngine = null,
         object? connectionProvider = null,
         object? dataGateway = null,
         IServiceProvider? services = null,
+        IReadOnlyDictionary<string, object?>? parameters = null,
+        IReadOnlyDictionary<Guid, ICompiledCalculation>? builtCalculations = null,
+        IReadOnlyDictionary<Guid, ICompiledCalculationSet>? builtSets = null,
         CancellationToken cancellationToken = default)
     {
         ExecutionId = executionId;
@@ -46,6 +60,10 @@ public sealed class TransformContext : ITransformContext
         DataGateway = dataGateway;
         Services = services ?? EmptyServiceProvider.Instance;
         CancellationToken = cancellationToken;
+        Parameters = parameters is null ? EmptyParameters : parameters;
+        FieldTransformChains = fieldTransformChains;
+        BuiltCalculations = builtCalculations is null ? NoBuiltCalculations : builtCalculations;
+        BuiltSets = builtSets is null ? NoBuiltSets : builtSets;
     }
 
     /// <inheritdoc />
@@ -64,7 +82,16 @@ public sealed class TransformContext : ITransformContext
     public IServiceProvider Services { get; }
 
     /// <inheritdoc />
-    public IReadOnlyDictionary<string, object?> Parameters => EmptyParameters;
+    public IReadOnlyDictionary<string, object?> Parameters { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>> FieldTransformChains { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<Guid, ICompiledCalculation> BuiltCalculations { get; }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<Guid, ICompiledCalculationSet> BuiltSets { get; }
 
     /// <inheritdoc />
     public IDictionary<string, object?> SharedState { get; } =
@@ -92,6 +119,18 @@ public sealed class TransformContext : ITransformContext
     {
         _errors.Add(new TransformError(error, record));
         EtlLog.RecordProcessingFailed(Logger, ExecutionId.ToString(), error);
+    }
+
+    /// <summary>
+    /// Gets the records the stages rejected during transform execution, in the order they were rejected.
+    /// </summary>
+    public IReadOnlyList<RejectedRecord> Rejections => _rejections;
+
+    /// <inheritdoc />
+    public void Reject(string stage, string reason, IDictionary<string, object?> record)
+    {
+        ReportError(reason, record);
+        _rejections.Add(new RejectedRecord(stage, reason, record));
     }
 
     /// <summary>

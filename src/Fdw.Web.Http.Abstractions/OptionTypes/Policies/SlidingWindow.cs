@@ -13,7 +13,6 @@ public sealed class SlidingWindow : RateLimitPolicyBase
     /// Initializes a new instance of the <see cref="SlidingWindow"/> class.
     /// </summary>
     public SlidingWindow() : base(
-        id: 3,
         name: "SlidingWindow",
         maxRequests: 150,
         windowSizeInSeconds: 60,

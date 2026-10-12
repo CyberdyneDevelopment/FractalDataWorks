@@ -13,6 +13,6 @@ public sealed class FirstAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="FirstAggregationType"/> class.
     /// </summary>
-    public FirstAggregationType() : base(3, "First", values => values.Count == 0 ? 0m : values[0])
+    public FirstAggregationType() : base("First", values => values.Count == 0 ? 0m : values[0])
     { }
 }

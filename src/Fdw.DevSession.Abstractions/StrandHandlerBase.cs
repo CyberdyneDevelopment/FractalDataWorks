@@ -11,15 +11,14 @@ namespace Fdw.DevSession.Abstractions;
 /// name and its own <see cref="CanHandle"/> and <see cref="Handle"/> behavior.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class StrandHandlerBase : TypeOptionBase<int, StrandHandlerBase>, IStrandHandler
+public abstract class StrandHandlerBase : TypeOptionBase<StrandHandlerBase>, IStrandHandler
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="StrandHandlerBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The handler name.</param>
-    protected StrandHandlerBase(int id, string name)
-        : base(id, name)
+    protected StrandHandlerBase(string name)
+        : base(name)
     {
     }
 

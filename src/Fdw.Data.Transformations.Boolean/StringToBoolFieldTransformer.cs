@@ -20,7 +20,6 @@ public sealed class StringToBoolFieldTransformer : FieldTransformationBase
     /// </summary>
     public StringToBoolFieldTransformer()
         : base(
-            id: 400,
             name: "StringToBool",
             displayName: "String to Bool",
             description: "Converts a string value to a boolean by case-insensitive comparison against a configured true value.",

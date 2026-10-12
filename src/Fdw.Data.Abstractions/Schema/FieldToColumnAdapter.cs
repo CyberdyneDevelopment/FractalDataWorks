@@ -33,7 +33,7 @@ public sealed class FieldToColumnAdapter : IColumnDefinition
     public string Name => _field.Name;
 
     /// <inheritdoc/>
-    public IPropertyRole Role => _field.Role;
+    public IDatumType Role => _field.Role;
 
     /// <inheritdoc/>
     public bool IsRequired => _field.IsRequired;

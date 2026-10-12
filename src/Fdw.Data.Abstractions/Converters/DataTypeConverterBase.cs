@@ -10,11 +10,10 @@ namespace Fdw.Data.Abstractions;
 /// Always provides DbType metadata for parameter creation.
 /// </summary>
 public abstract class DataTypeConverterBase(
-    int id,
     string name,
     string sourceType,
     Type targetClrType,
-    DbType dbType) : TypeOptionBase<int, DataTypeConverterBase>(id, name), IDataTypeConverter
+    DbType dbType) : TypeOptionBase<DataTypeConverterBase>(name), IDataTypeConverter
 {
     /// <summary>
     /// Gets the source type name (e.g., "int" for SQL, "integer+int64" for JSON Schema).

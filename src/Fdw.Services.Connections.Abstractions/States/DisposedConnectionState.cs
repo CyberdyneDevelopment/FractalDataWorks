@@ -8,4 +8,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConnectionStates), "Disposed", RestrictToCurrentCompilation = true)]
-public sealed class DisposedConnectionState() : ConnectionStateBase(8, "Disposed");
+public sealed class DisposedConnectionState() : ConnectionStateBase("Disposed");

@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Fdw.Collections;
+using Fdw.Collections.Attributes;
+using Fdw.Services.Etl.Abstractions;
 
 namespace Fdw.Operations.Endpoints.TypeCollections;
 
@@ -45,6 +47,67 @@ internal static class TypeCollectionResolver
 
     private static Type? ScanForCollectionType(string collectionName)
     {
+        foreach (var type in LoadedClasses())
+        {
+            if (!string.Equals(type.Name, collectionName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (HasAll(type))
+                return type;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Lists every collection a loaded assembly declares, by class name, with its kind.
+    /// </summary>
+    /// <returns>The collections ordered by name; a name two assemblies share is listed once.</returns>
+    /// <remarks>
+    /// Why the collection attributes rather than "has a static All()": the by-name lookup above accepts any
+    /// class with an All(), which is right for answering a request for one named type but would list every
+    /// such class in the process. The attribute is what makes a class a collection.
+    /// </remarks>
+    public static IReadOnlyList<(string Name, string Kind, Type Type)> FindAll()
+    {
+        var found = new SortedDictionary<string, (string Kind, Type Type)>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var type in LoadedClasses())
+        {
+            var kind = KindOf(type);
+            if (kind is not null && HasAll(type))
+                found.TryAdd(type.Name, (kind, type));
+        }
+
+        return found.Select(entry => (entry.Key, entry.Value.Kind, entry.Value.Type)).ToList();
+    }
+
+    private static readonly Dictionary<Type, string> KindByAttribute = new()
+    {
+        [typeof(TypeCollectionAttribute)] = "type",
+        [typeof(MutableTypeCollectionAttribute)] = "type",
+        [typeof(TypeInstanceCollectionAttribute)] = "type",
+        [typeof(ServiceTypeCollectionAttribute)] = "service-type",
+        [typeof(MutableServiceTypeCollectionAttribute)] = "service-type",
+        [typeof(ServiceTypeInstanceCollectionAttribute)] = "service-type",
+    };
+
+    private static string? KindOf(Type type)
+    {
+        foreach (var attribute in type.GetCustomAttributes(inherit: false))
+        {
+            if (KindByAttribute.TryGetValue(attribute.GetType(), out var kind))
+                return kind;
+        }
+
+        return null;
+    }
+
+    private static bool HasAll(Type type) =>
+        type.GetMethod("All", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null) is not null;
+
+    private static IEnumerable<Type> LoadedClasses()
+    {
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             if (assembly.IsDynamic)
@@ -62,18 +125,10 @@ internal static class TypeCollectionResolver
 
             foreach (var type in types)
             {
-                if (!type.IsClass || type.IsGenericTypeDefinition)
-                    continue;
-
-                if (!string.Equals(type.Name, collectionName, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                if (type.GetMethod("All", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null) is not null)
-                    return type;
+                if (type.IsClass && !type.IsGenericTypeDefinition)
+                    yield return type;
             }
         }
-
-        return null;
     }
 
     /// <summary>
@@ -128,10 +183,41 @@ internal static class TypeCollectionResolver
     {
         return new TypeCollectionValueSummaryDto
         {
+            Id = IdOf(typeOption),
             Name = typeOption.Name,
+            DisplayName = GetStringProperty(typeOption, "DisplayName"),
+            Description = GetStringProperty(typeOption, "Description"),
+            Category = string.IsNullOrEmpty(typeOption.Category) ? null : typeOption.Category,
             ExpectedProperties = GetStringListProperty(typeOption, "ExpectedProperties"),
-            RequiredProperties = GetStringListProperty(typeOption, "RequiredProperties")
+            RequiredProperties = GetStringListProperty(typeOption, "RequiredProperties"),
+            Parameters = TypeCollectionParameters.For(typeOption),
+            MaxDepth = typeOption is INestedStageShape nested ? nested.MaxDepth : null,
+            PipelineTypes = typeOption is IStagePipelineTypesShape bound ? bound.PipelineTypes : null,
+            AcceptsRejectedRecords = typeOption is IAcceptsRejectedRecordsShape rejects ? rejects.AcceptsRejectedRecords : null,
+            ReservedColumns = typeOption is IReservedColumnsShape reserved ? reserved.ReservedColumns : null
         };
+    }
+
+    /// <summary>
+    /// Reads a type option's Id via reflection.
+    /// </summary>
+    /// <remarks>
+    /// A non-generic <see cref="ITypeOption"/> carries no Id: the Id's type is its collection's key type,
+    /// declared once on <c>ITypeOption&lt;TKey&gt;</c>. This summary spans collections of every key type,
+    /// so it reads the property the way it reads the others here.
+    /// </remarks>
+    private static object? IdOf(ITypeOption typeOption)
+        => typeOption.GetType().GetProperty("Id")?.GetValue(typeOption);
+
+    /// <summary>
+    /// Reads a string property from an object via reflection.
+    /// Returns null when the property does not exist or holds no text, so the caller reports absence
+    /// as absence rather than as an invented label.
+    /// </summary>
+    private static string? GetStringProperty(object obj, string propertyName)
+    {
+        var text = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)?.GetValue(obj) as string;
+        return string.IsNullOrEmpty(text) ? null : text;
     }
 
     /// <summary>

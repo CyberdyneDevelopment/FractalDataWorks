@@ -14,5 +14,5 @@ namespace Fdw.Services.Credentials.Sql.Outcomes;
 public sealed class ExpiredOutcome : CredentialOutcomeBase
 {
     /// <summary>Initializes a new instance of the <see cref="ExpiredOutcome"/> class.</summary>
-    public ExpiredOutcome() : base(3, "Expired", grantsAccess: false) { }
+    public ExpiredOutcome() : base("Expired", grantsAccess: false, provesSecret: true) { }
 }

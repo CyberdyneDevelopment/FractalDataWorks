@@ -8,7 +8,7 @@ public sealed class SubjectElement : ContextElementBase
 {
     /// <summary>Initializes a new instance of the <see cref="SubjectElement"/> class.</summary>
     public SubjectElement()
-        : base(1, "Subject")
+        : base("Subject")
     {
     }
 

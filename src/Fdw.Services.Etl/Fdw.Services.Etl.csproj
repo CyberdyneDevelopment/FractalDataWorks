@@ -32,6 +32,11 @@
     <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Notifications.Abstractions\Fdw.Services.Notifications.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Calculations\Fdw.Services.Calculations.csproj" />
     <!-- Why: IExecutionCompletionSignaler lives in Projects.Abstractions so the optional signaler
          hook in PipelineExecutionBackgroundService can call Signal without a circular reference.
          Services.Etl.Projects depends on Services.Etl, not the reverse. -->
@@ -47,7 +52,7 @@
 
   <ItemGroup>
     <!-- Why: lets Fdw.Services.Etl.Tests unit-test PipelineExecutionBackgroundService's internal
-         EstablishWorkAuthenticationContext seam directly, without standing up the full pipeline
+         EstablishSystemAuthenticationContext seam directly, without standing up the full pipeline
          execution dependency graph (IExecutionTracker, IDataGateway, etc.). -->
     <InternalsVisibleTo Include="Fdw.Services.Etl.Tests" />
   </ItemGroup>

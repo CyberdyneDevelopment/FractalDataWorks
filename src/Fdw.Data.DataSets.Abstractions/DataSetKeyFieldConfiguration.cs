@@ -9,8 +9,8 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Loaded from <c>data.DataSetKeyField</c> as a child of DataSetFieldConfiguration.
 /// </summary>
 /// <remarks>
-/// Why: Mirrors DataContainerKeyField pattern — references fields by RowId, not by name.
-/// ReferencedFieldRowId enables FK visualization in lineage graphs and join discovery.
+/// Why: Mirrors DataContainerKeyField — the table cites fields by Id (DataSetFieldId,
+/// ReferencedFieldId), which a field keeps across the data set's saves; a RowId does not survive one.
 /// </remarks>
 [GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "DataSetKeyField")]
@@ -21,23 +21,6 @@ public partial class DataSetKeyFieldConfiguration : IGenericConfiguration
 
     /// <summary>Gets or sets the name (mirrors <see cref="KeyName"/>; not a persisted column).</summary>
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>Gets the configuration section name (computed; not a persisted column).</summary>
-    public string SectionName => "DataSetKeyFields";
-
-    /// <summary>Gets the service type domain.</summary>
-    public string ServiceType => "DataSet";
-
-    /// <summary>Gets the service option type discriminator (none for key fields).</summary>
-    public string? ServiceOptionType => null;
-
-    /// <summary>Gets or sets the DataSet logical identifier (FK to data.DataSet.Id).</summary>
-    /// <remarks>
-    /// Why: Denormalized for efficient single-table query from DataSetConfigurationProvider
-    /// without a join through DataSetField. Matches the pattern on data.DataSetField and
-    /// data.DataSetSource which both carry DataSetId directly.
-    /// </remarks>
-    public Guid DataSetId { get; set; }
 
 
 

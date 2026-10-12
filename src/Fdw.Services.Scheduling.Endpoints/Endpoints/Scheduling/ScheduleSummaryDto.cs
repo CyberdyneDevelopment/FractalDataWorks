@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Fdw.Services.Pipelines.Clients.Abstractions;
 
 namespace Fdw.Services.Scheduling.Endpoints;
 
@@ -13,7 +15,10 @@ public class ScheduleSummaryDto
     /// <summary>Gets or sets the schedule name.</summary>
     public required string Name { get; set; }
 
-    /// <summary>Gets or sets the pipeline name.</summary>
+    /// <summary>Gets or sets the logical id of the pipeline the schedule runs (FDW-1088).</summary>
+    public required Guid PipelineId { get; set; }
+
+    /// <summary>Gets or sets the pipeline's name as it was when the schedule was saved, for display.</summary>
     public required string PipelineName { get; set; }
 
     /// <summary>Gets or sets the scheduler type.</summary>
@@ -51,4 +56,10 @@ public class ScheduleSummaryDto
 
     /// <summary>Gets or sets the application user on whose behalf the record was last modified.</summary>
     public string ModifiedOnBehalfOf { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the run parameter values the schedule passes to its pipeline on each run.</summary>
+    public IList<PipelineParameterValue>? Parameters { get; set; }
+
+    /// <summary>Gets or sets the names of the roles the schedule's runs act with (FDW-1161).</summary>
+    public IList<string>? RunRoles { get; set; }
 }

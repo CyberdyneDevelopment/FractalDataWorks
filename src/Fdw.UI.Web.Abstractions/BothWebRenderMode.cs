@@ -13,5 +13,5 @@ public sealed class BothWebRenderMode : WebRenderModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="BothWebRenderMode"/> class.
     /// </summary>
-    public BothWebRenderMode() : base(4, "Both", "Both Mode", "View and edit simultaneously") { }
+    public BothWebRenderMode() : base("Both", "Both Mode", "View and edit simultaneously") { }
 }

@@ -96,6 +96,28 @@ public static class CacheKeyBuilder
                 sb.Append(',');
                 sb.Append(query.Paging.Take);
             }
+
+            // Two reads of one container with the same filter but different joins are different questions: a
+            // child read filtered on its owner's key and one filtered on the same key through the domain row
+            // must not share an entry.
+            if (query.Joins.Count > 0)
+            {
+                var joins = new HashCode();
+                foreach (var join in query.Joins)
+                {
+                    joins.Add(join.TargetContainerName, StringComparer.Ordinal);
+                    joins.Add(join.SourceContainerName, StringComparer.Ordinal);
+                    joins.Add(join.JoinType, StringComparer.Ordinal);
+                    foreach (var (left, right) in join.JoinConditions)
+                    {
+                        joins.Add(left, StringComparer.Ordinal);
+                        joins.Add(right, StringComparer.Ordinal);
+                    }
+                }
+
+                sb.Append(":j=");
+                sb.Append(joins.ToHashCode().ToString("x8", CultureInfo.InvariantCulture));
+            }
         }
 
         return sb.ToString();

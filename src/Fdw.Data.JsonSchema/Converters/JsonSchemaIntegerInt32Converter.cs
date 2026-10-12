@@ -14,7 +14,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaIntegerInt32Converter()
     : DataTypeConverterBase(
-        id: 1,
         name: "IntegerInt32",
         sourceType: "integer+int32",
         targetClrType: typeof(int),

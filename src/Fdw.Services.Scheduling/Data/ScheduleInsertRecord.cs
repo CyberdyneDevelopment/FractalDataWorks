@@ -29,7 +29,7 @@ public sealed class ScheduleInsertRecord
     /// <summary>
     /// Gets or sets the service option type (e.g., "Cron", "Interval").
     /// </summary>
-    public string ServiceOptionType { get; set; } = string.Empty;
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the cron expression for cron-based schedules.

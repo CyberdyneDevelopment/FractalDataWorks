@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Fdw.Web.Clients.Abstractions.Contracts;
 
 namespace Fdw.Services.Data.Clients.Models;
@@ -14,6 +15,17 @@ public sealed class DataSetFieldPayload : IDataSetField
     public string Name { get; set; } = string.Empty;
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the field's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>DatumTypeId</c> of what the field's data is (see <c>GET /datum-types</c>);
+    /// <c>NotYetTyped</c> until someone picks one (FDW-988).
+    /// </summary>
+    public int DatumTypeId { get; set; }
     /// <summary>Gets or sets the data type.</summary>
     public string DataType { get; set; } = string.Empty;
     /// <summary>Gets or sets whether the field is a key.</summary>
@@ -22,6 +34,14 @@ public sealed class DataSetFieldPayload : IDataSetField
     public bool IsRequired { get; set; }
     /// <summary>Gets or sets whether the field is indexed.</summary>
     public bool IsIndexed { get; set; }
+    /// <summary>Gets or sets whether API callers may filter on the field.</summary>
+    public bool IsFilterable { get; set; }
+    /// <summary>
+    /// Gets or sets the operators a filter on the field may use, by name: the datum type's, narrowed to what the data type
+    /// carries. Empty when the field is not filterable or is not yet typed, so a console shows "filter by" only when it
+    /// has operators.
+    /// </summary>
+    public List<string> FilterOperators { get; set; } = [];
     /// <summary>Gets or sets the maximum length.</summary>
     public int? MaxLength { get; set; }
     /// <summary>Gets or sets the default value.</summary>

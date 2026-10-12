@@ -4,58 +4,63 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Abstractions;
+using Fdw.Web.RestEndpoints.Models;
 
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing all configured connections.
-/// Reads from the connection configuration provider (dual-source: ctrl + cfg),
-/// so newly created connections appear without requiring a server restart.
+/// Base endpoint for listing configured connections, one page at a time (FDW-951).
 /// </summary>
-public abstract class ListConnectionsEndpointBase : CrudListEndpointBase<ConnectionSummaryDto>
+/// <remarks>
+/// Each connection is read as a record only; nothing in the summary hangs from it.
+/// </remarks>
+public abstract class ListConnectionsEndpointBase
+    : CrudPageEndpointBase<IConnectionImplementationConfiguration, ConnectionSummaryDto>
 {
     private readonly ConnectionConfigurationProvider _configProvider;
 
     /// <inheritdoc />
     protected ListConnectionsEndpointBase(ILogger<ListConnectionsEndpointBase> logger, ConnectionConfigurationProvider configProvider) : base(logger)
     {
-        _configProvider = configProvider;
+        _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "connections";
 
-    /// <summary>Loads connection configurations filtered to the caller's permitted scope.</summary>
-    protected override async Task<IGenericResult<List<ConnectionSummaryDto>>> LoadItems(CancellationToken ct)
-    {
-        var allResult = await _configProvider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
-        {
-            return allResult.ToNewResult<List<ConnectionSummaryDto>>();
-        }
+    /// <inheritdoc />
+    protected override Task<IGenericResult<ConfigurationPage<IConnectionImplementationConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
+        => _configProvider.Get(paging.Skip, paging.Take, ConfigurationLevels.RecordOnly, ct);
 
-        var items = (allResult.Value ?? (IReadOnlyList<ConnectionConfiguration>)[])
-            .Where(config => !string.IsNullOrWhiteSpace(config.Name)
-                && !string.IsNullOrWhiteSpace(config.ServiceOptionType)
-                && !string.Equals(config.ServiceOptionType, "Connection", StringComparison.OrdinalIgnoreCase))
-            .GroupBy(config => config.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .Select(MapToSummary)
-            .ToList();
+    /// <summary>Leaves out connections with no name or implementation, and rows naming the domain as their implementation.</summary>
+    /// <param name="item">The connection.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>True to list the connection.</returns>
+    protected override ValueTask<bool> Include(IConnectionImplementationConfiguration item, CancellationToken ct)
+        => ValueTask.FromResult(!string.IsNullOrWhiteSpace(item.Name)
+            && !string.IsNullOrWhiteSpace(item.Implementation)
+            && !string.Equals(item.Implementation, "Connection", StringComparison.OrdinalIgnoreCase));
 
-        return GenericResult<List<ConnectionSummaryDto>>.Success(items);
-    }
+    /// <inheritdoc />
+    protected override Task<IGenericResult<ConnectionSummaryDto>> ToSummary(IConnectionImplementationConfiguration item, CancellationToken ct)
+        => Task.FromResult(GenericResult<ConnectionSummaryDto>.Success(MapToSummary(item)));
 
-    /// <summary>Maps a single connection configuration to a summary DTO.</summary>
-    protected virtual ConnectionSummaryDto MapToSummary(ConnectionConfiguration config)
+    /// <summary>Maps a connection to its summary.</summary>
+    /// <param name="config">The connection.</param>
+    /// <returns>The summary.</returns>
+    protected virtual ConnectionSummaryDto MapToSummary(IConnectionImplementationConfiguration config)
     {
         return new ConnectionSummaryDto
         {
             Id = config.Id,
             Name = config.Name,
-            ConnectionType = config.ConnectionType ?? config.ServiceOptionType ?? "Unknown",
+            ConnectionType = config.Implementation,
+            SchemaDiscovery = SchemaDiscoveryTypeInfo.Of(config.SchemaDiscovery),
         };
     }
 }

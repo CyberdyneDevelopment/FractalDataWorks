@@ -19,7 +19,7 @@ public sealed class ObjectNotFoundHandler : SqlErrorHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ObjectNotFoundHandler"/> class.
     /// </summary>
-    public ObjectNotFoundHandler() : base(2, "ObjectNotFound") { }
+    public ObjectNotFoundHandler() : base("ObjectNotFound") { }
 
     /// <inheritdoc />
     public override IReadOnlyList<int> SqlErrorNumbers => [208];

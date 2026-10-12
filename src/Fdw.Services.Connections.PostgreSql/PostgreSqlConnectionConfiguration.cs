@@ -12,8 +12,8 @@ namespace Fdw.Services.Connections.PostgreSql;
 
 /// <summary>
 /// Configuration for PostgreSQL connections.
-/// Standalone typed body POCO — no longer inherits from <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>.
-/// Persisted to <c>conn.PostgreSqlConnection</c> as a child of <c>conn.Connection</c> via <see cref="ConnectionId"/>.
+/// Standalone typed body POCO — no longer inherits from <c>IConnectionImplementationConfiguration</c>.
+/// Persisted to <c>conn.PostgreSqlConnection</c> as a child of <c>conn.Connection</c> via <c>ConnectionRowId</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -23,43 +23,68 @@ namespace Fdw.Services.Connections.PostgreSql;
 /// <c>TypeId='PropertyCollection', Name='Authentication'</c> → child container conn.PostgreSqlConnectionAuthentication).
 /// </para>
 /// <para>
-/// The endpoint creates a <see cref="Fdw.Services.Connections.ConnectionConfiguration"/>
-/// first (writing conn.Connection), then creates this record with <see cref="ConnectionId"/> pointing to
-/// the parent's <see cref="Fdw.Configuration.IGenericConfiguration.Id"/>.
+/// The endpoint creates a <c>IConnectionImplementationConfiguration</c>
+/// first (writing conn.Connection), then creates this record with <c>ConnectionRowId</c> pointing to
+/// the parent's <c>RowId</c>.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "PostgreSql")]
-public partial class PostgreSqlConnectionConfiguration : IConnectionImplementationConfiguration
+public partial class PostgreSqlConnectionConfiguration : IDatabaseConnectionConfiguration
 {
+    /// <inheritdoc/>
+    public string? Description { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset CreateDate { get; set; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset ModifyDate { get; set; }
+
+    /// <inheritdoc/>
+    public string? Environment { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckEnabled { get; set; }
+
+    /// <inheritdoc/>
+    public bool HealthCheckOnStartup { get; set; }
+
+    /// <inheritdoc/>
+    public int? HealthCheckIntervalSeconds { get; set; }
+
+    /// <inheritdoc/>
+    [ValuesFrom(typeof(SchemaDiscoveryTypes))]
+    public string SchemaDiscovery { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
     // IGenericConfiguration — typed body identity
     // ========================================
 
     /// <summary>
     /// Gets or sets the unique identifier for this typed body row (conn.PostgreSqlConnection.Id).
-    /// Minted by <see cref="Fdw.Services.Configuration.ImplementationConfigurationProviderBase{TConfig,TCommand}"/>
+    /// Minted by the implementation provider
     /// via <see cref="Guid.CreateVersion7()"/> when <see cref="Guid.Empty"/>.
     /// </summary>
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// Gets or sets the FK to <c>conn.Connection.Id</c> (the parent header row).
-    /// Set by the endpoint before calling Save on this provider.
-    /// </summary>
-    public Guid ConnectionId { get; set; }
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
 
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by ConnectionId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Connections";
-    string IGenericConfiguration.ServiceType => "Connection";
-    string? IGenericConfiguration.ServiceOptionType => "PostgreSql";
 
     #region PostgreSQL Specific Properties
 
@@ -91,6 +116,9 @@ public partial class PostgreSqlConnectionConfiguration : IConnectionImplementati
     /// Gets or sets the command timeout in seconds.
     /// </summary>
     public int CommandTimeout { get; set; } = 30;
+
+    /// <inheritdoc/>
+    public int MaxSerialInsert { get; set; }
 
     /// <summary>
     /// Gets or sets the connection timeout in seconds.
@@ -142,6 +170,18 @@ public partial class PostgreSqlConnectionConfiguration : IConnectionImplementati
     [NotMapped]
     [ConfigurationChildTable("PostgreSqlConnectionProperty")]
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets the named default-value policy this connection resolves through
+    /// <c>DefaultValues.ByName("PostgreSql").ByName(...)</c>.
+    /// </summary>
+    /// <remarks>
+    /// No <c>PostgreSqlDefaults</c> child collection exists yet — this is the configuration slot,
+    /// ready for whenever one is registered. Null means "use the framework-shipped
+    /// <c>\"Default\"</c> policy" — an explicit, approved fallback resolved at the call site
+    /// (<c>DefaultValuePolicy ?? "Default"</c>), never baked in here.
+    /// </remarks>
+    public string? DefaultValuePolicy { get; set; }
 
     #endregion
 }

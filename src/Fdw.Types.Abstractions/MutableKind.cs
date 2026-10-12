@@ -13,7 +13,7 @@ public sealed class MutableKind : CollectionKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MutableKind"/> class.
     /// </summary>
-    public MutableKind() : base(1, "Mutable")
+    public MutableKind() : base("Mutable")
     {
     }
 }

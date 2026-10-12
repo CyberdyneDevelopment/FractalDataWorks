@@ -14,5 +14,5 @@ public sealed class GetConnectionMetadataOperation : ConnectionManagementOperati
     /// <summary>
     /// Initializes a new instance of the <see cref="GetConnectionMetadataOperation"/> class.
     /// </summary>
-    public GetConnectionMetadataOperation() : base(2, "GetConnectionMetadata", modifiesState: false, requiresExistingConnection: true) { }
+    public GetConnectionMetadataOperation() : base("GetConnectionMetadata", modifiesState: false, requiresExistingConnection: true) { }
 }

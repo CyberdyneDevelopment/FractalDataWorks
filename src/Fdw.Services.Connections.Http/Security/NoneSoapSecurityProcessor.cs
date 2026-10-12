@@ -20,7 +20,7 @@ public sealed class NoneSoapSecurityProcessor : SoapSecurityProcessorBase
     /// Initializes a new instance of the <see cref="NoneSoapSecurityProcessor"/> class.
     /// </summary>
     public NoneSoapSecurityProcessor()
-        : base(1, "None", "No security applied")
+        : base("None", "No security applied")
     {
     }
 

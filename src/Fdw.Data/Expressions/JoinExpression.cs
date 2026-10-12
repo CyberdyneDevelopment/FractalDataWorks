@@ -26,4 +26,7 @@ public sealed class JoinExpression : IJoinExpression
     /// Gets or sets the join conditions.
     /// </summary>
     public required IReadOnlyList<(string LeftField, string RightField)> JoinConditions { get; init; }
+
+    /// <inheritdoc/>
+    public string? SourceContainerName { get; init; }
 }

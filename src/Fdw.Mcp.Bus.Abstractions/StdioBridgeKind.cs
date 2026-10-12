@@ -9,5 +9,5 @@ namespace Fdw.Mcp.Bus;
 public sealed class StdioBridgeKind : McpToolSourceKindBase
 {
     /// <summary>Initializes the StdioBridge kind.</summary>
-    public StdioBridgeKind() : base(2, "StdioBridge") { }
+    public StdioBridgeKind() : base("StdioBridge") { }
 }

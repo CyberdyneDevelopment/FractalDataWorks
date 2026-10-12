@@ -17,7 +17,7 @@ public sealed class InnerJoinExecutor : JoinExecutorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="InnerJoinExecutor"/> class.
     /// </summary>
-    public InnerJoinExecutor() : base(1, "Inner") { }
+    public InnerJoinExecutor() : base("Inner") { }
 
     /// <inheritdoc />
     public override IEnumerable<TResult> Execute<TLeft, TRight, TResult>(

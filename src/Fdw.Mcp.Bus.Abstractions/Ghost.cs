@@ -9,5 +9,5 @@ namespace Fdw.Mcp.Bus;
 public sealed class Ghost : ViewIntentBase
 {
     /// <summary>Initializes the Ghost view intent.</summary>
-    public Ghost() : base(4, "Ghost") { }
+    public Ghost() : base("Ghost") { }
 }

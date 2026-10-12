@@ -26,7 +26,6 @@ public sealed class ManualDiscovery : DiscoveryMethodBase
     /// <summary>Initializes a new instance of the <see cref="ManualDiscovery"/> class.</summary>
     public ManualDiscovery()
         : base(
-            id: 3,
             name: "Manual",
             displayName: "Manual Discovery",
             description: "Containers are defined explicitly by the user",

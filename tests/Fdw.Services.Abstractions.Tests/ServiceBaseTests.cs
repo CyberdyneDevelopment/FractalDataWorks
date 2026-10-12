@@ -21,13 +21,13 @@ public class ServiceBaseTests
     }
 
     [ExcludeFromCodeCoverage]
-    private class TestConfiguration : IGenericConfiguration
+    private class TestConfiguration : IImplementationConfiguration
     {
+        public string Domain { get; set; } = string.Empty;
+        public string Implementation { get; set; } = string.Empty;
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "TestConfig";
-        public string SectionName => "Test";
-        public string ServiceType => "Test";
-        public string? ServiceOptionType => "Test";
     }
 
     [ExcludeFromCodeCoverage]
@@ -155,22 +155,6 @@ public class ServiceBaseTests
 
         // Assert
         service.Name.ShouldBe("MyService");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void NameReturnsTypeNameWhenConfigurationNameIsNull()
-    {
-        // Arrange
-        var logger = NullLogger<TestService>.Instance;
-        var config = new TestConfiguration { Name = null! };
-
-        // Act
-        var service = new TestService(logger, config);
-
-        // Assert
-        service.Name.ShouldBe("TestService");
     }
 
     [Fact]

@@ -77,13 +77,13 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
 
         var tenant = tenantResult.Value;
 
-        var tokenResult = await GenerateNewTokens(userId, tenant, ct).ConfigureAwait(false);
+        var tokenResult = await GenerateNewToken(userId, tenant, ct).ConfigureAwait(false);
         if (!tokenResult.IsSuccess)
         {
             await Send.ResponseAsync(new SwitchTenantDto
             {
                 Success = false,
-                Message = "Failed to generate new tokens"
+                Message = "Failed to issue a token for the tenant"
             }, 500, ct).ConfigureAwait(false);
             return;
         }
@@ -94,8 +94,7 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
         {
             Success = true,
             AccessToken = tokenResult.Value.AccessToken,
-            RefreshToken = tokenResult.Value.RefreshToken,
-            ExpiresIn = tokenResult.Value.ExpiresIn,
+            ExpiresAt = tokenResult.Value.ExpiresAt,
             Message = "Tenant switched successfully",
             Tenant = MapTenant(tenant)
         };
@@ -104,10 +103,14 @@ public abstract class SwitchTenantEndpointBase : Endpoint<SwitchTenantRequest, S
     }
 
     /// <summary>
-    /// Generates new JWT tokens with updated tenant claim.
-    /// Override to customize token generation.
+    /// Issues the caller a new access token for <paramref name="tenant"/> — the tenant they will act
+    /// in from now on. It carries that tenant and only the roles the caller holds in it.
     /// </summary>
-    protected abstract Task<IGenericResult<(string AccessToken, string RefreshToken, int ExpiresIn)>> GenerateNewTokens(
+    /// <remarks>
+    /// Switching is re-issuing, never a header or a session flag: the tenant on the token is the ONE
+    /// active tenant, which row-level security and every endpoint read (FDW-825).
+    /// </remarks>
+    protected abstract Task<IGenericResult<(string AccessToken, DateTimeOffset ExpiresAt)>> GenerateNewToken(
         string userId,
         ITenant tenant,
         CancellationToken ct);

@@ -27,25 +27,18 @@ namespace Fdw.Services.Authentication.Validation;
 /// The token proves who called; the entry's declared roles say what that caller may do here.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(AuthenticationServiceTypes), "JwtBearer")]
+[Implementation(typeof(AuthenticationServiceTypes), "JwtBearer")]
 public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationType"/> class.</summary>
     public JwtBearerAuthenticationType()
         : base("JwtBearer",
                "JWT Bearer",
-               "Validates bearer tokens issued by a remote OpenID Connect provider against its published JWKS")
+               "Validates bearer tokens issued by a remote OpenID Connect provider against its published JWKS", defaultContainerName: "JwtBearerAuthenticationServiceConfiguration")
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<JwtBearerAuthenticationConfigurationProvider>(sp =>
-                new JwtBearerAuthenticationConfigurationProvider(
-                    sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    AuthenticationServiceTypes.ConfigurationConnection,
-                    AuthenticationServiceTypes.ServerConfigurationPath));
-            builder.Services.TryAddSingleton<IJwtBearerAuthenticationConfigurationProvider>(sp =>
-                sp.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+            builder.Services.AddSingleton<IJwtBearerAuthenticationConfigurationProvider, JwtBearerAuthenticationConfigurationProvider>(sp => new JwtBearerAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<JwtBearerAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection, PathName, Container));
 
             // Transient for the same reason LocalKey's is: the handler holds the scheme and the
             // request it was initialised for in fields, so one instance per resolution is required.
@@ -60,7 +53,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
         Initialization((host, loggerFactory) =>
         {
             host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                .Register(Name, host.Services.GetRequiredService<JwtBearerAuthenticationConfigurationProvider>());
+                .Register(Name, host.Services.GetRequiredService<IJwtBearerAuthenticationConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
     }
@@ -88,7 +81,7 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
 
     /// <inheritdoc />
     public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
-        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationServiceImplementationConfiguration configuration,
         IAuthenticationSchemeProvider schemes,
         IServiceProvider services,
         ILoggerFactory? loggerFactory)
@@ -103,9 +96,19 @@ public sealed class JwtBearerAuthenticationType : AuthenticationServiceTypeBase
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
 
-        if (configuration.Authority is not { Length: > 0 } authority)
+        if (configuration.Authority is not { Length: > 0 })
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
+
+        // Through IssuerName, which the options bridge also reads its ValidIssuer through: the
+        // selector matches the binding ordinally and the scheme checks ValidIssuer ordinally, so both
+        // have to derive from the same rule or a declared "https://host" routes a token minted against
+        // "https://host/" and is then refused by the scheme it was correctly routed to. Read here, by
+        // the kinds that validate an issuer, and not by the collection for every entry: a kind whose
+        // credential names no issuer (ApiKey, Session) has no Authority to read (FDW-903).
+        var read = IssuerName.Read(configuration.Authority, serviceName, log);
+        if (!read.IsSuccess || read.Value is not { } authority)
+            return read.ToNewResult<AuthenticationSchemeBinding>();
 
         schemes.AddScheme(new AuthenticationScheme(
             SchemeNameFor(serviceName), displayName: null, handlerType: typeof(JwtBearerAuthenticationHandler)));

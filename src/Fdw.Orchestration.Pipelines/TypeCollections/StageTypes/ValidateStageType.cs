@@ -25,7 +25,6 @@ public sealed class ValidateStageType : StageTypeBase
     /// </summary>
     public ValidateStageType()
         : base(
-            id: 4,
             name: "Validate",
             requiresSource: false,
             requiresDestination: false,

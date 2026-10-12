@@ -60,7 +60,7 @@ public interface IDataGateway
 
 ## Service Registration
 
-DataGateway is registered automatically by `DefaultDataGatewayServiceType` (a `ServiceTypeOption`) through the framework's ServiceTypeCollection three-phase registration — there is **no** standalone `services.AddDataGateway()` call. See [Creating a Server](12-01-Creating-A-Server.md).
+DataGateway is registered automatically by `DefaultDataGatewayServiceType` (a `Implementation`) through the framework's ServiceTypeCollection three-phase registration — there is **no** standalone `services.AddDataGateway()` call. See [Creating a Server](12-01-Creating-A-Server.md).
 
 ```csharp
 // DefaultDataGatewayServiceType.RegisterRequiredServices(...) wires this up:

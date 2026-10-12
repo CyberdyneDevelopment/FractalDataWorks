@@ -9,17 +9,6 @@ namespace Fdw.Services.Resiliency.Abstractions.Tests;
 /// </summary>
 public class HttpClientResiliencyPolicyTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorSetsIdCorrectly()
-    {
-        // Act
-        var policy = new HttpClientResiliencyPolicy();
-
-        // Assert
-        policy.Id.ShouldBe(2);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -184,19 +173,6 @@ public class HttpClientResiliencyPolicyTests
 
         // Assert
         policy.Name.ShouldBe("HttpClient");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void IdIsConsistentAcrossInstances()
-    {
-        // Arrange
-        var policy1 = new HttpClientResiliencyPolicy();
-        var policy2 = new HttpClientResiliencyPolicy();
-
-        // Assert
-        policy1.Id.ShouldBe(policy2.Id);
     }
 
     [Fact]

@@ -69,19 +69,19 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             if (container is not IDataContainer dataContainer)
                 return Task.FromResult(GenericResult<SqliteCommand>.Failure(SqliteDataResultCodes.ByName("ContainerNotDataContainer")));
 
-            List<string>? containerFieldNames = null;
-            var schemaFields = container.Schema.Fields;
-            if (schemaFields.Count > 0)
-            {
-                var names = new List<string>(schemaFields.Count);
-                for (var fi = 0; fi < schemaFields.Count; fi++)
-                    names.Add(schemaFields[fi].Name);
-                containerFieldNames = names;
-            }
+            // The fields this command returns: each field's datum type decides, given what the command
+            // includes (FDW-988). Null when the container declares no fields.
+            List<string>? returnedFieldNames = container.Schema.Fields.Count == 0
+                ? null
+                : container.Schema
+                    .GetReturnedFields(command.IncludeMetadata, command.IncludeDescriptions, command.IncludeKeys)
+                    .Select(f => f.Name)
+                    .ToList();
 
+            // Why no fall-back to every declared column: a container whose fields are all withheld has
+            // nothing to return, and selecting everything would hand back what the datum types withhold.
             if (command.Projection?.PropertyNames?.Any() != true
-                && container.Schema.Fields.Count == 0
-                && (containerFieldNames is null || containerFieldNames.Count == 0))
+                && (returnedFieldNames is null || returnedFieldNames.Count == 0))
             {
                 return Task.FromResult(GenericResult<SqliteCommand>.Failure(SqliteDataResultCodes.ByName("NoFieldsToProject")));
             }
@@ -89,8 +89,8 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             var dialect = dbPath.Dialect;
 
             var sqlCommand = command.Joins is { Count: > 0 }
-                ? BuildJoinedSelectStatement(container, dbPath, dialect, command.Joins, command.Filter, command.Projection, containerFieldNames)
-                : BuildSelectStatement(container, dbPath, dialect, command.Filter, command.Projection, command.Ordering, command.Paging, containerFieldNames);
+                ? BuildJoinedSelectStatement(container, dbPath, dialect, command.Joins, command.Filter, command.Projection, returnedFieldNames)
+                : BuildSelectStatement(container, dbPath, dialect, command.Filter, command.Projection, command.Ordering, command.Paging, returnedFieldNames);
 
             return Task.FromResult(GenericResult<SqliteCommand>.Success(sqlCommand));
         }
@@ -104,7 +104,6 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
         }
     }
 
-#pragma warning disable MA0051
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
     private static SqliteCommand BuildSelectStatement(
         IStorageContainer container,
@@ -114,10 +113,9 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
         IProjectionExpression? projection,
         IOrderingExpression? ordering,
         IPagingExpression? paging,
-        List<string>? containerFieldNames)
-#pragma warning restore MA0051
+        List<string>? returnedFieldNames)
     {
-        var selectClause = BuildSelectClause(container, projection, containerFieldNames, null, dialect);
+        var selectClause = BuildSelectClause(container, projection, returnedFieldNames, null, dialect);
         var fromClause = $"FROM {BuildQualifiedTableName(dbPath)}";
 
         var sql = new StringBuilder();
@@ -147,9 +145,9 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
                 var pkName = ((IDataContainer)container).GetPrimaryKeyFieldName();
                 orderByField = pkName ?? fields[0].Name;
             }
-            else if (containerFieldNames is { Count: > 0 })
+            else if (returnedFieldNames is { Count: > 0 })
             {
-                orderByField = containerFieldNames[0];
+                orderByField = returnedFieldNames[0];
             }
 
             command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(orderByField)}";
@@ -169,12 +167,12 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
         IReadOnlyList<IJoinExpression> joins,
         IFilterExpression? filter,
         IProjectionExpression? projection,
-        List<string>? containerFieldNames)
+        List<string>? returnedFieldNames)
     {
         var primaryTable = dbPath.ObjectName;
 
         var sql = new StringBuilder();
-        sql.Append(BuildSelectClause(container, projection, containerFieldNames, primaryTable, dialect));
+        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, primaryTable, dialect));
         sql.Append(" FROM ");
         sql.Append(BuildQualifiedTableName(dbPath));
 
@@ -190,6 +188,17 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             var targetQuoted = dialect.QuoteIdentifier(join.TargetContainerName);
             sql.Append(CultureInfo.InvariantCulture, $" {join.JoinType} JOIN {targetQuoted} ON ");
 
+            // The left side belongs to the primary container unless the join continues from an
+            // earlier join's target.
+            if (join.SourceContainerName is { } source && !IsValidColumnName(source))
+            {
+                throw new ArgumentException(
+                    $"Invalid JOIN source container name '{source}'.",
+                    nameof(joins));
+            }
+
+            var leftTable = join.SourceContainerName is { } joinedSource ? joinedSource : primaryTable;
+
             var conditions = join.JoinConditions.Select(c =>
             {
                 if (!IsValidColumnName(c.LeftField) || !IsValidColumnName(c.RightField))
@@ -198,7 +207,7 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
                         $"Invalid JOIN condition column ('{c.LeftField}', '{c.RightField}').",
                         nameof(joins));
                 }
-                return $"{dialect.QuoteIdentifier(primaryTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
+                return $"{dialect.QuoteIdentifier(leftTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
             });
             sql.Append(string.Join(" AND ", conditions));
         }
@@ -218,7 +227,7 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
     private static string BuildSelectClause(
         IStorageContainer container,
         IProjectionExpression? projection,
-        List<string>? containerFieldNames,
+        List<string>? returnedFieldNames,
         string? tableQualifier,
         ISqlDialect dialect)
     {
@@ -270,11 +279,8 @@ public sealed class SqliteQueryTranslator : SqliteDataCommandTranslatorBase
             return $"SELECT {string.Join(", ", projection.PropertyNames.Select(Col))}";
         }
 
-        if (container.Schema.GetProjectableFields().Count > 0)
-            return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
-
-        if (containerFieldNames is { Count: > 0 })
-            return $"SELECT {string.Join(", ", containerFieldNames.Select(Col))}";
+        if (returnedFieldNames is { Count: > 0 })
+            return $"SELECT {string.Join(", ", returnedFieldNames.Select(Col))}";
 
         throw new InvalidOperationException($"Cannot build SELECT for container '{container.Name}': no columns available.");
     }

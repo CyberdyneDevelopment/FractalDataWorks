@@ -70,7 +70,7 @@ public static partial class DataStoreTypesLog
     public static partial IGenericMessage TreeBuilderInputs(ILogger logger, int dataStoreCount, int dataPathCount, int dataContainerCount, int connectionCount, int msSqlDataContainerCount);
 
     /// <summary>
-    /// Logs each DataStoreConfiguration as fed into DataStoreBuilder.Build (Id+Name+TypeId).
+    /// Logs each DataStoreImplementationConfiguration as fed into DataStoreBuilder.Build (Id+Name+TypeId).
     /// </summary>
     [MessageLogging(
         EventId = 11204,
@@ -97,8 +97,8 @@ public static partial class DataStoreTypesLog
     [MessageLogging(
         EventId = 11206,
         Level = LogLevel.Debug,
-        Message = "[DataStoreTypes] DataStore: Id={id}, Name='{name}', Type='{serviceOptionType}'")]
-    public static partial IGenericMessage DataStoreLoaded(ILogger logger, Guid id, string name, string serviceOptionType);
+        Message = "[DataStoreTypes] DataStore: Id={id}, Name='{name}', Type='{implementation}'")]
+    public static partial IGenericMessage DataStoreLoaded(ILogger logger, Guid id, string name, string implementation);
 
     /// <summary>
     /// Logs an individual DataPath loaded from configuration.
@@ -106,8 +106,8 @@ public static partial class DataStoreTypesLog
     [MessageLogging(
         EventId = 11207,
         Level = LogLevel.Debug,
-        Message = "[DataStoreTypes] DataPath: Id={id}, Name='{name}', DataStoreId={dataStoreId}")]
-    public static partial IGenericMessage DataPathLoaded(ILogger logger, Guid id, string name, Guid dataStoreId);
+        Message = "[DataStoreTypes] DataPath: Id={id}, Name='{name}'")]
+    public static partial IGenericMessage DataPathLoaded(ILogger logger, Guid id, string name);
 
     /// <summary>
     /// Logs an individual DataContainer loaded from configuration.
@@ -115,8 +115,8 @@ public static partial class DataStoreTypesLog
     [MessageLogging(
         EventId = 11208,
         Level = LogLevel.Debug,
-        Message = "[DataStoreTypes] DataContainer: Id={id}, Name='{name}', DataPathId={dataPathId}")]
-    public static partial IGenericMessage DataContainerLoaded(ILogger logger, Guid id, string name, Guid dataPathId);
+        Message = "[DataStoreTypes] DataContainer: Id={id}, Name='{name}'")]
+    public static partial IGenericMessage DataContainerLoaded(ILogger logger, Guid id, string name);
 
     /// <summary>
     /// Logs an individual DataContainerField loaded from configuration.
@@ -124,8 +124,8 @@ public static partial class DataStoreTypesLog
     [MessageLogging(
         EventId = 11209,
         Level = LogLevel.Trace,
-        Message = "[DataStoreTypes] Field: Id={id}, Name='{name}', DataContainerId={dataContainerId}, DataType='{dataType}'")]
-    public static partial IGenericMessage FieldLoaded(ILogger logger, Guid id, string name, Guid dataContainerId, string dataType);
+        Message = "[DataStoreTypes] Field: Id={id}, Name='{name}', DataType='{dataType}'")]
+    public static partial IGenericMessage FieldLoaded(ILogger logger, Guid id, string name, string dataType);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // RegisterContainers Phase (5140-5149)
@@ -168,13 +168,13 @@ public static partial class DataStoreTypesLog
     public static partial IGenericMessage NoDataStoreTypeFound(ILogger logger, string storeType);
 
     /// <summary>
-    /// Logs when a DataStore configuration is missing ServiceOptionType during initialization.
+    /// Logs when a DataStore configuration is missing Implementation during initialization.
     /// </summary>
     [MessageLogging(
         EventId = 61020,
         Level = LogLevel.Error,
-        Message = "[DataStoreTypes] DataStore '{dataStoreName}' has no ServiceOptionType configured. Skipping.")]
-    public static partial IGenericMessage DataStoreMissingServiceOptionType(ILogger logger, string dataStoreName);
+        Message = "[DataStoreTypes] DataStore '{dataStoreName}' has no Implementation configured. Skipping.")]
+    public static partial IGenericMessage DataStoreMissingImplementation(ILogger logger, string dataStoreName);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Hierarchy Diagnostics (5144-5149) - Trace level

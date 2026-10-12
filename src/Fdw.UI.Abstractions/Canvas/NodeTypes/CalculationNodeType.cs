@@ -14,7 +14,7 @@ public sealed class CalculationNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="CalculationNodeType"/> class.
     /// </summary>
     public CalculationNodeType()
-        : base(4, "Calculation", "Calculation", "Processing", "calculator")
+        : base("Calculation", "Calculation", "Processing", "calculator")
     {
     }
 }

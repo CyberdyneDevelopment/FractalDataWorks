@@ -14,7 +14,7 @@ public sealed class RegionEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="RegionEncodingRole"/> class.
     /// </summary>
     public RegionEncodingRole()
-        : base(6, "Region", "Region", isSpatial: false)
+        : base("Region", "Region", isSpatial: false)
     {
     }
 }

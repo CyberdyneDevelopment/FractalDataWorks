@@ -1,51 +1,31 @@
-using System;
-using System.Collections.Generic;
+using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
-using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Scheduling.Abstractions;
 using Fdw.Services.Scheduling.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Scheduling;
 
-/// <summary>
-/// Configuration provider for SchedulerConfiguration rows in sched.Scheduler.
-/// Reads through IConfigurationGateway — no IConfiguration binding section.
-/// </summary>
-public class SchedulerConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          SchedulerConfiguration,
-          ISchedulerImplementationConfiguration,
-          SchedulerConfigurationCommand>,
+/// <summary>Supplies the Scheduler configuration.</summary>
+public sealed class SchedulerConfigurationProvider
+    : DomainConfigurationProviderBase<ISchedulerImplementationConfiguration>,
       ISchedulerConfigurationProvider
 {
-
     /// <summary>Initializes a new instance of the <see cref="SchedulerConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public SchedulerConfigurationProvider(
         ILogger<SchedulerConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "sched")
-        : base(logger ?? NullLogger<SchedulerConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
-
-    /// <inheritdoc />
-    protected override SchedulerConfiguration Compose<T>(
-        string serviceOptionType,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            ServiceOptionType = serviceOptionType,
-            Configuration = implementationConfiguration,
-        };
 }

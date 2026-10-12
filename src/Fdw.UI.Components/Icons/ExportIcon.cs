@@ -11,7 +11,6 @@ public sealed class ExportIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ExportIcon"/>.</summary>
     public ExportIcon()
         : base(
-            28,
             "Export",
             "0 0 24 24",
             "none",

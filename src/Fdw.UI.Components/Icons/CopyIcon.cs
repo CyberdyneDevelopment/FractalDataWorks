@@ -11,7 +11,6 @@ public sealed class CopyIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="CopyIcon"/>.</summary>
     public CopyIcon()
         : base(
-            11,
             "Copy",
             "0 0 24 24",
             "none",

@@ -14,5 +14,5 @@ public sealed class OnFailureConditionType : WorkflowConditionTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OnFailureConditionType"/> class.
     /// </summary>
-    public OnFailureConditionType() : base(2, "OnFailure", alwaysTrue: false, requiresExpression: false) { }
+    public OnFailureConditionType() : base("OnFailure", alwaysTrue: false, requiresExpression: false) { }
 }

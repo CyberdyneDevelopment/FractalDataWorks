@@ -15,7 +15,6 @@ public sealed class TimedOutStatus : ExecutionStatusBase
     /// </summary>
     public TimedOutStatus()
         : base(
-            id: 8,
             name: "TimedOut",
             isTerminal: true,
             isSuccess: false,

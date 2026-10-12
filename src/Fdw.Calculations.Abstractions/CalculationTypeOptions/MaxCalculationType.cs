@@ -14,7 +14,6 @@ public sealed class MaxCalculationType : CalculationTypeBase
     /// Initializes a new instance of the <see cref="MaxCalculationType"/> class.
     /// </summary>
     public MaxCalculationType() : base(
-        id: 4,
         name: "Max",
         category: "Aggregation",
         calculate: (rows, col, _) =>

@@ -17,6 +17,9 @@ using Fdw.Services.Pipelines;
 // DataSetRecord and DataSetSourceConfiguration now in this namespace
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Calculations;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Web.RestEndpoints.Logging;
 
@@ -30,15 +33,21 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     private readonly DataSetConfigurationProvider _dataSetProvider;
     private readonly ILogger<GetDataSetLineageEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly ICalculationConfigurationProvider _calculations;
+    private readonly LineageConfigurationProvider _lineage;
 
     /// <inheritdoc />
     protected GetDataSetLineageEndpointBase(
         DataSetConfigurationProvider dataSetProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
+        ICalculationConfigurationProvider calculations,
+        LineageConfigurationProvider lineage,
         ILogger<GetDataSetLineageEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
         _pipelineProvider = pipelineProvider;
+        _calculations = calculations;
+        _lineage = lineage;
         _logger = logger ?? NullLogger<GetDataSetLineageEndpointBase>.Instance;
     }
 
@@ -73,6 +82,22 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         var sources = GetSources(dataSet);
         var upstreamSources = BuildUpstreamSources(sources);
         var fieldLineage = await BuildFieldLineage(sources, ct).ConfigureAwait(false);
+
+        // Who reads each field (API-173). An unreadable relation fails the request: an empty
+        // consumer list must mean "nothing reads this field", never "the read broke".
+        var consumers = await FieldConsumerScanner.Scan(
+            req.Name, [.. fieldLineage.Select(f => f.LogicalField)],
+            _dataSetProvider, _pipelineProvider, _calculations, _logger, ct).ConfigureAwait(false);
+        if (consumers.IsFailure)
+        {
+            FieldConsumerScanLog.ScanFailed(_logger, req.Name);
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(consumers, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        foreach (var field in fieldLineage)
+            field.Consumers = consumers.Value![field.LogicalField];
         var downstreamConsumers = await BuildDownstreamConsumers(req.Name, ct).ConfigureAwait(false);
 
         await Send.OkAsync(new DataSetLineageResponse
@@ -90,7 +115,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     /// named here. It also composes the aggregate — sources, and each source's field mappings —
     /// which is why the three separate reads this endpoint used to issue are one call.
     /// </remarks>
-    protected virtual async Task<DataSetConfiguration?> FindDataSet(string name, CancellationToken ct)
+    protected virtual async Task<IDataSetImplementationConfiguration?> FindDataSet(string name, CancellationToken ct)
     {
         var result = await _dataSetProvider.Get(name, ct).ConfigureAwait(false);
         return result.IsSuccess ? result.Value : null;
@@ -98,7 +123,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
 
     /// <summary>The DataSet's sources, in priority order.</summary>
     /// <remarks>Ordered here rather than in a query: they arrive on the aggregate already.</remarks>
-    protected static IReadOnlyList<DataSetSourceConfiguration> GetSources(DataSetConfiguration dataSet) =>
+    protected static IReadOnlyList<DataSetSourceConfiguration> GetSources(IDataSetImplementationConfiguration dataSet) =>
         [.. (dataSet.Sources ?? []).OrderBy(s => s.Priority)];
 
     /// <summary>Builds upstream source DTOs from source records, classifying source types by their physical location.</summary>
@@ -195,7 +220,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             downstreamConsumers.Add(new LineageConsumerResponse
             {
                 Name = pipeline.Name,
-                ConsumerType = $"Pipeline ({pipeline.ServiceOptionType})"
+                ConsumerType = $"Pipeline ({pipeline.Implementation})"
             });
         }
 
@@ -205,7 +230,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             downstreamConsumers.Add(new LineageConsumerResponse
             {
                 Name = pipeline.Name,
-                ConsumerType = $"Pipeline Producer ({pipeline.ServiceOptionType})"
+                ConsumerType = $"Pipeline Producer ({pipeline.Implementation})"
             });
         }
 

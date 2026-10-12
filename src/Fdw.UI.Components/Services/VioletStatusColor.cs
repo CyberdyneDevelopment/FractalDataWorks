@@ -10,5 +10,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class VioletStatusColor : StatusColorBase
 {
     /// <summary>Initializes a new instance of <see cref="VioletStatusColor"/>.</summary>
-    public VioletStatusColor() : base(6, "Violet", "dot-violet", "var(--violet)", "var(--violet)") { }
+    public VioletStatusColor() : base("Violet", "dot-violet", "var(--violet)", "var(--violet)") { }
 }

@@ -31,7 +31,6 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
     /// </summary>
     public XPathDataSetSourceMapper()
         : base(
-            id: 1,
             name: "XPath",
             displayName: "XPath",
             description: "Extracts records from XML payloads using XPath expressions.",

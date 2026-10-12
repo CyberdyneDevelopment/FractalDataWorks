@@ -7,6 +7,8 @@ using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions.Caching;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Data;
@@ -32,15 +34,41 @@ namespace Fdw.Services.Data;
 public class LineageConfigurationProvider
 {
     /// <summary>The connection lineage rows are read from.</summary>
-    public const string DataStoreName = "PlatformConfiguration";
+    public static string DataStoreName => PlatformConnection.Name;
 
     private readonly IConfigurationGatewayProvider _gatewayProvider;
+    private readonly IDataSetConfigurationProvider _dataSets;
 
     /// <summary>Initializes a new instance of the <see cref="LineageConfigurationProvider"/> class.</summary>
     /// <param name="gatewayProvider">Resolves the gateway for this provider's store.</param>
-    public LineageConfigurationProvider(IConfigurationGatewayProvider gatewayProvider)
+    /// <param name="dataSets">Reads the data set aggregates field mappings are taken from.</param>
+    public LineageConfigurationProvider(IConfigurationGatewayProvider gatewayProvider, IDataSetConfigurationProvider dataSets)
     {
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
+        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
+    }
+
+    /// <summary>The data sets each logical field name is mapped into.</summary>
+    /// <remarks>
+    /// Read from the data set aggregates: a field mapping is a child of its source, which is a child of
+    /// the data set, so which data set a mapping belongs to is the aggregate's shape, not a column.
+    /// Empty when the data sets cannot be read, like every other read here.
+    /// </remarks>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns>Logical field name to the names of the data sets that map it.</returns>
+    public virtual async Task<IReadOnlyDictionary<string, IReadOnlySet<string>>> FieldDataSets(CancellationToken cancellationToken = default)
+    {
+        var dataSets = await _dataSets.Get(cancellationToken).ConfigureAwait(false);
+        if (!dataSets.IsSuccess || dataSets.Value is not { } all)
+            return new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase);
+
+        return all
+            .SelectMany(ds => ds.Sources.SelectMany(src => src.Mappings.Select(m => (Field: m.LogicalFieldName, DataSet: ds.Name))))
+            .GroupBy(x => x.Field, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlySet<string>)g.Select(x => x.DataSet).ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Reads every row of a container in the <c>data</c> schema.</summary>
@@ -125,13 +153,59 @@ public class LineageConfigurationProvider
     }
 
     /// <summary>
+    /// Reads the current, non-deleted rows of a container, failing when the read fails.
+    /// </summary>
+    /// <remarks>
+    /// Why beside <see cref="Read{T}"/>: that one answers an empty list when the gateway or the read
+    /// fails, which suits a graph that draws what it can. It does not suit a question whose empty
+    /// answer means something, such as "what reads this field" (API-173), where "nothing" and "the
+    /// read broke" must stay different answers.
+    /// </remarks>
+    /// <typeparam name="T">The row type.</typeparam>
+    /// <param name="pathName">The schema, e.g. <c>pipe</c> or <c>calc</c>.</param>
+    /// <param name="containerName">The container.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    public virtual async Task<IGenericResult<IReadOnlyList<T>>> ReadCurrent<T>(
+        string pathName, string containerName, CancellationToken cancellationToken = default)
+        where T : class
+    {
+        var gateway = _gatewayProvider.Get(DataStoreName);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<IReadOnlyList<T>>();
+
+        var equal = FilterOperators.ByName("Equal");
+        var rows = await gateway.Value!.Execute<IEnumerable<T>>(
+            new QueryCommand<T>
+            {
+                Filter = new FilterExpression
+                {
+                    Root = new FilterGroup
+                    {
+                        Operator = LogicalOperator.And,
+                        Nodes =
+                        [
+                            new FilterCondition { PropertyName = "IsCurrent", Operator = equal, Value = true },
+                            new FilterCondition { PropertyName = "IsDeleted", Operator = equal, Value = false },
+                        ]
+                    }
+                }
+            },
+            new DataStoreTarget(DataStoreName, pathName, containerName),
+            cancellationToken).ConfigureAwait(false);
+        if (rows.IsFailure)
+            return rows.ToNewResult<IReadOnlyList<T>>();
+
+        return GenericResult<IReadOnlyList<T>>.Success([.. rows.Value!]);
+    }
+
+    /// <summary>
     /// Reads the transitive closure of one DataSet's lineage from <c>data.DataSetLineageClosure</c>,
     /// filtered to one direction.
     /// </summary>
     /// <param name="dataSetId">The DataSet whose lineage is read.</param>
     /// <param name="direction">
-    /// <see cref="LineageClosureDirection.Downstream"/> filters on AncestorId, returning everything
-    /// downstream of <paramref name="dataSetId"/>; <see cref="LineageClosureDirection.Upstream"/>
+    /// <see cref="LineageClosureDirections.Downstream"/> filters on AncestorId, returning everything
+    /// downstream of <paramref name="dataSetId"/>; <see cref="LineageClosureDirections.Upstream"/>
     /// filters on DescendantId, returning everything upstream of it.
     /// </param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -142,16 +216,12 @@ public class LineageConfigurationProvider
     /// </remarks>
     public virtual async Task<IReadOnlyList<DataSetLineageClosureRow>> ReadLineageClosure(
         Guid dataSetId,
-        LineageClosureDirection direction,
+        LineageClosureDirectionBase direction,
         CancellationToken cancellationToken = default)
     {
         var gateway = _gatewayProvider.Get(DataStoreName);
         if (gateway.IsFailure || gateway.Value is not { } resolved)
             return [];
-
-        var propertyName = direction == LineageClosureDirection.Downstream
-            ? nameof(DataSetLineageClosureRow.AncestorId)
-            : nameof(DataSetLineageClosureRow.DescendantId);
 
         var command = new QueryCommand<DataSetLineageClosureRow>
         {
@@ -159,7 +229,7 @@ public class LineageConfigurationProvider
             {
                 Root = new FilterCondition
                 {
-                    PropertyName = propertyName,
+                    PropertyName = direction.ClosureIdPropertyName,
                     Operator = FilterOperators.ByName("Equal"),
                     Value = dataSetId,
                 },

@@ -26,11 +26,12 @@ public interface IPatVault : IDataVault
     /// </summary>
     /// <param name="userId">The owning user.</param>
     /// <param name="rawToken">The freshly-minted raw token, peppered and stored by the vault.</param>
+    /// <param name="prefix">The token's visible head, stored so a listing can identify it. Not secret.</param>
     /// <param name="label">The user-assigned label.</param>
     /// <param name="expiresAt">Optional UTC expiration; <c>null</c> for non-expiring.</param>
     /// <param name="maxActiveTokens">The per-user active-token limit the vault enforces before inserting.</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>
-    Task<IGenericResult<Guid>> Create(Guid userId, string rawToken, string label, DateTime? expiresAt, int maxActiveTokens, CancellationToken cancellationToken = default);
+    Task<IGenericResult<Guid>> Create(Guid userId, string rawToken, string prefix, string label, DateTime? expiresAt, int maxActiveTokens, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Peppers the candidate raw token and looks it up; on a live, non-revoked, non-expired match

@@ -12,5 +12,5 @@ public sealed class OperationsNavSection : NavSectionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OperationsNavSection"/> class.
     /// </summary>
-    public OperationsNavSection() : base(7, "Operations", "Operations", 70) { }
+    public OperationsNavSection() : base("Operations", "Operations", 70) { }
 }

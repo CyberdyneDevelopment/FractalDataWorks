@@ -21,7 +21,6 @@ public sealed class PhysicalKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="PhysicalKeyType"/> class.</summary>
     public PhysicalKeyType()
         : base(
-            id: 6,
             name: "Physical",
             isPrimaryKey: true,
             hasConstraint: true,

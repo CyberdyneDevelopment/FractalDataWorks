@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+using Fdw.Services.Identity;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Configuration;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Crud;
+using Fdw.Web.RestEndpoints.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Identity.Endpoints;
@@ -13,17 +15,21 @@ namespace Fdw.Services.Identity.Endpoints;
 /// Lists the managed identities configured in this deployment.
 /// </summary>
 /// <remarks>
-/// Returns no credential and no token — see <see cref="IdentitySummaryResponse"/>.
+/// Returns no credential and no token — see <see cref="IdentitySummaryResponse"/>. A page is one read of the
+/// identities domain table: a summary is the identity's id, its name and its mechanism (the domain row's
+/// implementation), so no identity is composed to list it (FDW-1006). It streams the page envelope
+/// <c>{skip, take, hasMore, items}</c> every domain list uses; it used to compose every identity and answer an
+/// in-memory <c>PaginatedResponse</c> (items and totalCount).
 /// </remarks>
-public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<IdentitySummaryResponse>
+public abstract class ListIdentitiesEndpointBase : CrudPageEndpointBase<DomainConfiguration, IdentitySummaryResponse>
 {
     /// <summary>Initializes a new instance of the <see cref="ListIdentitiesEndpointBase"/> class.</summary>
     protected ListIdentitiesEndpointBase(ILogger<ListIdentitiesEndpointBase> logger) : base(logger)
     {
     }
 
-    /// <summary>Gets the configuration provider identities are read through.</summary>
-    protected abstract IServiceConfigurationProvider<IdentityServiceConfiguration> Identities { get; }
+    /// <summary>Gets the configuration provider a page of identities is read through.</summary>
+    protected abstract IdentityServiceConfigurationProvider Identities { get; }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "identities";
@@ -36,28 +42,31 @@ public abstract class ListIdentitiesEndpointBase : CrudListEndpointBase<Identity
 
     /// <summary>Gets the OpenAPI description for this endpoint.</summary>
     protected override string EndpointDescription =>
-        "Returns every configured managed identity. Never returns credentials or tokens.";
+        "Streams one page of the configured managed identities in name order. Never returns credentials or tokens.";
 
-    /// <summary>Loads all configured identities.</summary>
+    /// <summary>Reads one page of identities from the identities domain table.</summary>
+    /// <param name="paging">The page the caller asked for.</param>
     /// <param name="ct">Propagated cancellation token.</param>
-    /// <returns>The configured identities.</returns>
-    protected override async Task<IGenericResult<List<IdentitySummaryResponse>>> LoadItems(CancellationToken ct)
-    {
-        var configured = await Identities.Get(ct).ConfigureAwait(false);
-        return configured.IsSuccess && configured.Value is { } identities
-            ? GenericResult<List<IdentitySummaryResponse>>.Success(identities.Select(MapToSummary).ToList())
-            : configured.ToNewResult<List<IdentitySummaryResponse>>();
-    }
+    /// <returns>The page, or a structured failure when its rows could not be read.</returns>
+    protected override Task<IGenericResult<ConfigurationPage<DomainConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
+        => Identities.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct);
 
-    /// <summary>Maps a configuration header to its summary view.</summary>
-    /// <param name="configuration">The identity configuration.</param>
+    /// <summary>Produces the summary written for one identity.</summary>
+    /// <param name="item">The identity, as the identities domain table holds it.</param>
+    /// <param name="ct">The cancellation token.</param>
     /// <returns>The summary.</returns>
-    protected virtual IdentitySummaryResponse MapToSummary(IdentityServiceConfiguration configuration)
+    protected override Task<IGenericResult<IdentitySummaryResponse>> ToSummary(DomainConfiguration item, CancellationToken ct)
+        => Task.FromResult(GenericResult<IdentitySummaryResponse>.Success(MapToSummary(item)));
+
+    /// <summary>Maps a domain row to its summary view.</summary>
+    /// <param name="configuration">The identity's domain row.</param>
+    /// <returns>The summary.</returns>
+    protected virtual IdentitySummaryResponse MapToSummary(DomainConfiguration configuration)
         => new()
         {
             Id = configuration.Id,
             Name = configuration.Name,
-            Mechanism = configuration.ServiceOptionType,
-            Description = configuration.Description,
+            Mechanism = configuration.Implementation,
         };
 }

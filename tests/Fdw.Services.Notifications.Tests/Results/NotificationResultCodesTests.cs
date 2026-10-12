@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Fdw.Results;
@@ -13,86 +14,6 @@ namespace Fdw.Services.Notifications.Tests.Results;
 [ExcludeFromCodeCoverage]
 public sealed class NotificationResultCodesTests
 {
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void AllReturnsAllResultCodes()
-    {
-        // Act
-        var all = NotificationResultCodes.All();
-
-        // Assert
-        all.ShouldNotBeNull();
-        all.ShouldNotBeEmpty();
-        all.Count.ShouldBeGreaterThan(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ByIdReturnsCorrectResultCode()
-    {
-        // Arrange — catalog numbers are renumber-prone, so resolve the Id from the name.
-        var expected = NotificationResultCodes.ByName("NoRecipients");
-
-        // Act
-        var result = NotificationResultCodes.ById(expected.Id);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Id.ShouldBe(expected.Id);
-        result.Name.ShouldBe("NoRecipients");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ByNameReturnsCorrectResultCode()
-    {
-        // Arrange
-        const string expectedName = "EmptyMessage";
-
-        // Act
-        var result = NotificationResultCodes.ByName(expectedName);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe(expectedName);
-        // Catalog invariant: Code == "{prefix}-{number}", Id == EventId == number, Domain == prefix.
-        result.Code.ShouldBe($"NOTIFICATION-{result.Id}");
-        result.EventId.ShouldBe(result.Id);
-        result.Domain.ShouldBe("NOTIFICATION");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ByNameWithInvalidNameReturnsNotFound()
-    {
-        // Act
-        var result = NotificationResultCodes.ByName("InvalidName");
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("NotFound");
-        result.Id.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void ByIdWithInvalidIdReturnsNotFound()
-    {
-        // Act
-        var result = NotificationResultCodes.ById(999999);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("NotFound");
-        result.Id.ShouldBe(0);
-        result.Code.ShouldBe("UNKNOWN");
-    }
-
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "CoreFramework")]
@@ -236,19 +157,6 @@ public sealed class NotificationResultCodesTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "CoreFramework")]
-    public void AllResultCodesHaveUniqueIds()
-    {
-        // Act
-        var all = NotificationResultCodes.All();
-        var ids = all.Select(rc => rc.Id).ToList();
-
-        // Assert
-        ids.ShouldBeUnique();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
     public void AllResultCodesHaveUniqueNames()
     {
         // Act
@@ -295,33 +203,13 @@ public sealed class NotificationResultCodesTests
         // hardcoding a (renumber-prone) EventId range.
         foreach (var resultCode in NotificationResultCodes.All())
         {
-            if (string.Equals(resultCode.Name, "NotFound", System.StringComparison.Ordinal))
+            if (string.Equals(resultCode.Name, "NotFound", StringComparison.Ordinal))
             {
                 continue;
             }
 
             resultCode.Code.ShouldBe($"NOTIFICATION-{resultCode.Id}");
             resultCode.EventId.ShouldBe(resultCode.Id);
-            resultCode.Domain.ShouldBe("NOTIFICATION");
-        }
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "CoreFramework")]
-    public void AllResultCodesHaveNotificationDomain()
-    {
-        // Act
-        var all = NotificationResultCodes.All();
-
-        // Assert — catalog Domain is the uppercase prefix token.
-        foreach (var resultCode in all)
-        {
-            if (string.Equals(resultCode.Name, "NotFound", System.StringComparison.Ordinal))
-            {
-                continue;
-            }
-
             resultCode.Domain.ShouldBe("NOTIFICATION");
         }
     }

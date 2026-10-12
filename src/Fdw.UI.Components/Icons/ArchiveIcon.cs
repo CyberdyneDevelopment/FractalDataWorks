@@ -11,7 +11,6 @@ public sealed class ArchiveIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ArchiveIcon"/>.</summary>
     public ArchiveIcon()
         : base(
-            20,
             "Archive",
             "0 0 24 24",
             "none",

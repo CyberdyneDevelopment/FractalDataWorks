@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class LastAggregateFunction : AggregateFunctionBase
 {
     /// <summary>Initializes a new instance of the <see cref="LastAggregateFunction"/> class.</summary>
-    public LastAggregateFunction() : base(7, "Last")
+    public LastAggregateFunction() : base("Last")
     {
     }
 

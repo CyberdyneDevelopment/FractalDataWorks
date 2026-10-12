@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlDateTimeConverter()
     : DataTypeConverterBase(
-        id: 5,
         name: "DateTime",
         sourceType: "datetime",
         targetClrType: typeof(DateTime),

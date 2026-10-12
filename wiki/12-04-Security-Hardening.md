@@ -86,7 +86,7 @@ In appsettings.json:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `AllowFraming` | `bool` | `false` | `false` sets `X-Frame-Options: DENY`. `true` sets `SAMEORIGIN` (needed for Blazor iframe hosting). |
+| `AllowFraming` | `bool` | `false` | `false` sets `X-Frame-Options: DENY`. `true` sets `SAMEORIGIN` (needed when the app frames its own pages). |
 | `EnableDefaultCsp` | `bool` | `true` | Whether to generate the default CSP directives. |
 | `ContentSecurityPolicy` | `string?` | `null` | Custom CSP string. Overrides the default when set. |
 | `SensitivePaths` | `string[]` | `["/api/v1/auth", "/api/v1/users", "/api/v1/tenants"]` | URL path prefixes that receive no-cache headers. |

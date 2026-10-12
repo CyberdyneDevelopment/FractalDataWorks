@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -17,7 +18,16 @@ public sealed class DateTimeOffsetDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DateTimeOffsetDataType"/> class.</summary>
     public DateTimeOffsetDataType()
-        : base(id: 10, name: "DateTimeOffset")
+        : base(name: "DateTimeOffset")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(DateTimeOffset);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => DataValueReader.Moment(text);
+
+    /// <inheritdoc />
+    public override string Format(object value) => ((DateTimeOffset)value).ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 }

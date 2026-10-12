@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class HealthyServiceStatus : ServiceStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="HealthyServiceStatus"/>.</summary>
-    public HealthyServiceStatus() : base(2, "Healthy") { }
+    public HealthyServiceStatus() : base("Healthy") { }
 }

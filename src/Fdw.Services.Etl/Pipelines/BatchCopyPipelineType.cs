@@ -1,13 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Fdw.Services.Notifications.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Fdw.Collections;
 using Fdw.Data.Abstractions;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Abstractions;
 using Fdw.Configuration;
 using Fdw.Services.Connections.Abstractions;
@@ -21,6 +26,7 @@ using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Pipelines.Commands;
 using Fdw.Services.Pipelines;
 using Fdw.Results;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -47,7 +53,7 @@ namespace Fdw.Services.Etl.Pipelines;
 /// </code>
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(EtlPipelineTypes), "BatchCopy")]
+[Implementation(typeof(EtlPipelineTypes), "BatchCopy")]
 public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IBatchCopyPipelineFactory, BatchCopyPipelineConfiguration>
 {
     /// <summary>
@@ -60,43 +66,17 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
         displayName: "Batch Copy",
         description: "Batch copy pipeline for ETL operations with configurable parallelism",
         category: "ETL",
-        defaultContainerName: "BatchCopyPipeline")
+        defaultContainerName: "BatchCopyPipelineConfiguration")
     {
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var provider = services.GetRequiredService<IEtlPipelineProvider>();
-            var log = loggerFactory?.CreateLogger<BatchCopyPipelineType>() ?? NullLogger<BatchCopyPipelineType>.Instance;
 
-            // Resolve factory from DI (registered in Phase 1)
-            var factory = services.GetRequiredService<IBatchCopyPipelineFactory>();
-
-            // Register factory instance with provider
-            var factoryResult = provider.Register(Name, factory);
-            if (!factoryResult.IsSuccess)
-            {
-                ServiceTypeLog.OptionFactoryRegistrationFailed(
-                    log,
-                    nameof(BatchCopyPipelineType),
-                    Name,
-                    nameof(IBatchCopyPipelineFactory),
-                    factoryResult.CurrentMessage);
-                return GenericResult<IHost>.Success(host);
-            }
-
-            ServiceTypeLog.OptionFactoryRegistered(
-                log,
-                nameof(BatchCopyPipelineType),
-                Name,
-                nameof(IBatchCopyPipelineFactory));
-
-            var configProvider = services.GetRequiredService<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>();
-
-            var etlKindProvider = services.GetRequiredService<EtlPipelineConfigurationProvider>();
-            etlKindProvider.Register(Name, configProvider);
-
-            var survivor = services.GetRequiredService<PipelineServiceConfigurationProvider>();
-            survivor.Register("Etl", etlKindProvider);
+            // One domain, one implementation: the engine's provider registers under its own
+            // name on the Pipeline domain provider. There is no intermediate kind row to
+            // mint or resolve -- pipe.Pipeline already names the implementation.
+            services.GetRequiredService<PipelineServiceConfigurationProvider>()
+                .Register(Name, services.GetRequiredService<BatchCopyPipelineConfigurationProvider>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -114,24 +94,54 @@ public sealed class BatchCopyPipelineType : EtlPipelineTypeBase<IEtlPipeline, IB
 
 
             // Factory - DI handles all constructor dependencies
-            builder.Services.AddScoped<IBatchCopyPipelineFactory>(sp => new BatchCopyPipelineFactory(
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IBatchCopyPipelineFactory),
+                sp => new BatchCopyPipelineFactory(
                 sp.GetRequiredService<ILogger<BatchCopyPipelineFactory>>(),
                 sp.GetRequiredService<ILoggerFactory>(),
                 sp.GetService<IDataGatewayProvider>(),
                 sp.GetService<IConnectionProvider>(),
-                sp.GetService<IDataStoreProvider>()));
+                sp.GetService<IDataStoreProvider>(),
+                sp.GetService<IDataSetConfigurationProvider>(),
+                sp.GetService<IConnectionConfigurationProvider>(),
+                sp.GetService<ITransformationConfigurationProvider>(),
+                sp.GetService<IRuleNotifier>(),
+                sp.GetService<IEffectiveSettingsProvider>()),
+                ServiceLifetime.Scoped));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IBatchCopyPipelineProvider),
+                sp => new BatchCopyPipelineProvider(sp.GetRequiredService<IBatchCopyPipelineFactory>()),
+                ServiceLifetime.Scoped));
 
-            builder.Services.AddSingleton(sp => new ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>(
-                sp.GetRequiredService<ILoggerFactory>().CreateLogger<ImplementationConfigurationProviderBase<BatchCopyPipelineConfiguration, BatchCopyPipelineConfigurationCommand>>(),
+            builder.Services.TryAddSingleton(sp => new BatchCopyPipelineConfigurationProvider(
+                sp.GetRequiredService<ILogger<BatchCopyPipelineConfigurationProvider>>(),
                 sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                DataStore,
-                PathName));
+                EtlPipelineTypes.ConfigurationConnection, PathName, Container));
 
             EtlPipelineTypes.RegisterPipelineExecutionQueue(builder.Services);
             EtlPipelineTypes.RegisterAdditionalServices(builder.Services);
+
+            // Decorate the domain's own AddScoped<IEtlPipelineProvider> registration -- already in
+            // builder.Services by the time this runs, since EtlPipelineTypes' own Registration body
+            // sets it up before running the option collect.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IEtlPipelineProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IEtlPipelineProvider>(sp =>
+            {
+                var provider = (IEtlPipelineProvider)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IBatchCopyPipelineProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        sp.GetService<ILoggerFactory>()?.CreateLogger<BatchCopyPipelineType>() ?? NullLogger<BatchCopyPipelineType>.Instance,
+                        nameof(BatchCopyPipelineType), Name, nameof(IBatchCopyPipelineFactory), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
-
     }
-
 }

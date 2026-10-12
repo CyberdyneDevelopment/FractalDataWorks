@@ -14,7 +14,6 @@ public sealed class QueryEndpointBase : EndpointTypeBase
     /// Initializes a new instance of the <see cref="QueryEndpointBase"/> class.
     /// </summary>
     public QueryEndpointBase() : base(
-        id: 2,
         name: "QueryEndpointBase",
         description: "Read-only data retrieval and query operations",
         defaultHttpMethods: ["GET"],

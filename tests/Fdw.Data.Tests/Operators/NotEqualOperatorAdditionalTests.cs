@@ -98,12 +98,4 @@ public sealed class NotEqualOperatorAdditionalTests
     {
         _sut.FormatODataValue(new object()).ShouldStartWith("'");
     }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void FormatSqlParameterUsesDefaultFormat()
-    {
-        _sut.FormatSqlParameter("Status").ShouldBe("@Status");
-    }
 }

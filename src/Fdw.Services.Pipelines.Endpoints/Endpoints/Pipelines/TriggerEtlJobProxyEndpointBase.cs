@@ -30,7 +30,7 @@ public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlR
     /// <inheritdoc />
     public override void Configure()
     {
-        Post("/proxy/etl/trigger");
+        Post("/etl/trigger");
 #if DEVELOP
         AllowAnonymous();
 #else
@@ -53,7 +53,9 @@ public abstract class TriggerEtlJobProxyEndpointBase : Endpoint<ProxyTriggerEtlR
         var request = new TriggerPipelineRequest
         {
             Name = req.PipelineName,
-            TriggerSource = req.TriggerSource
+            TriggerSource = req.TriggerSource,
+            Parameters = req.Parameters,
+            RunRoles = req.RunRoles,
         };
 
         var result = await _client.Trigger(request, ct).ConfigureAwait(false);

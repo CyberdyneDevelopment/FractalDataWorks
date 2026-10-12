@@ -23,7 +23,6 @@ public sealed class DecorrelatedJitterBackoffStrategy : BackoffStrategyBase
     /// </summary>
     public DecorrelatedJitterBackoffStrategy()
         : base(
-            id: 4,
             name: "DecorrelatedJitter",
             initialDelay: TimeSpan.FromSeconds(1),
             maxDelay: TimeSpan.FromMinutes(2),

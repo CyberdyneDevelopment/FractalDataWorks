@@ -22,7 +22,6 @@ public sealed class DynamicStructMapperType
     public DynamicStructMapperType()
         : base(
             name: "Dynamic",
-            sectionName: "EtlMappers:Dynamic",
             displayName: "Dynamic Struct Mapper",
             description: "Mapper using compiled expression trees for field access")
     {

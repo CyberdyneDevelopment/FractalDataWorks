@@ -39,13 +39,13 @@ public sealed class CachingSigningKeyProvider : ISigningKeyProvider
     /// <param name="logger">The logger.</param>
     public CachingSigningKeyProvider(
         HttpClient http,
-        TimeSpan? lifetime = null,
-        TimeSpan? minimumRefreshInterval = null,
+        TimeSpan lifetime,
+        TimeSpan minimumRefreshInterval,
         ILogger<CachingSigningKeyProvider>? logger = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
-        _lifetime = lifetime ?? TimeSpan.FromHours(1);
-        _minimumRefreshInterval = minimumRefreshInterval ?? TimeSpan.FromMinutes(5);
+        _lifetime = lifetime;
+        _minimumRefreshInterval = minimumRefreshInterval;
         _logger = logger ?? NullLogger<CachingSigningKeyProvider>.Instance;
     }
 

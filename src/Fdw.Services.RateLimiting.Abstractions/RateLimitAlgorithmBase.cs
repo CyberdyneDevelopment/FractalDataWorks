@@ -18,12 +18,12 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 /// ASP.NET's RateLimiterOptions, which keeps this package on netstandard2.0 — the host-side
 /// registrar wraps what this returns into a named policy.
 /// </remarks>
-public abstract class RateLimitAlgorithmBase : TypeOptionBase<int, RateLimitAlgorithmBase>, IRateLimitAlgorithm
+public abstract class RateLimitAlgorithmBase : TypeOptionBase<RateLimitAlgorithmBase>, IRateLimitAlgorithm
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RateLimitAlgorithmBase"/> class.
     /// </summary>
-    protected RateLimitAlgorithmBase(int id, string name) : base(id, name) { }
+    protected RateLimitAlgorithmBase(string name) : base(name) { }
 
     /// <summary>
     /// Builds the limiter this algorithm describes, configured from <paramref name="policy"/>.

@@ -13,5 +13,5 @@ public sealed class JsonEditorComponentType : ComponentTypeBase
     /// <summary>
     /// Gets the singleton instance of the JSON editor component type.
     /// </summary>
-    public JsonEditorComponentType() : base(15, "JsonEditor", "JSON Editor", "Complex", "Edit JSON data") { }
+    public JsonEditorComponentType() : base("JsonEditor", "JSON Editor", "Complex", "Edit JSON data") { }
 }

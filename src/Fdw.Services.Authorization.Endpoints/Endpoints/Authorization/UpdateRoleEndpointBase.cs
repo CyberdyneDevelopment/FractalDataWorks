@@ -13,8 +13,14 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
 {
+    // The domain and implementation a role row is written under. These are values the seed already
+    // writes (authz.Role Domain/Implementation = 'Role'), not names this endpoint gets to choose:
+    // a save under any other pair produces a row nothing composes on the next read.
+    private const string RoleDomain = "Role";
+    private const string RoleImplementation = "Role";
+
     /// <summary>Initializes a new instance of the <see cref="UpdateRoleEndpointBase"/> class.</summary>
-        private readonly RoleConfigurationProvider _roleProvider;
+        private readonly IRoleConfigurationProvider _roleProvider;
 
     /// <summary>
     /// Gets the logger instance.
@@ -22,7 +28,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="UpdateRoleEndpointBase"/> class.</summary>
-    protected UpdateRoleEndpointBase(ILogger logger, RoleConfigurationProvider roleProvider)
+    protected UpdateRoleEndpointBase(ILogger logger, IRoleConfigurationProvider roleProvider)
     {
         EndpointLogger = logger;
         _roleProvider = roleProvider;
@@ -32,7 +38,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
     /// <summary>
     /// Gets the role configuration provider.
     /// </summary>
-    protected RoleConfigurationProvider RoleProvider => _roleProvider;
+    protected IRoleConfigurationProvider RoleProvider => _roleProvider;
 
     /// <summary>
     /// Gets the RBAC policy required by this endpoint. Defaults to "settings/role:write".
@@ -55,25 +61,38 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
     /// <inheritdoc />
     public override async Task HandleAsync(UpdateRoleRequest req, CancellationToken ct)
     {
-        
-        var existing = await _roleProvider.GetRole(req.Name, ct).ConfigureAwait(false);
+        AuthorizationEndpointLog.UpdatingRole(EndpointLogger, req.Name);
 
-        if (existing is null)
+        var existing = await _roleProvider.Get(req.Name, ct).ConfigureAwait(false);
+
+        // A failed read is not an absent role -- 404 here would tell the caller the role is gone.
+        if (!existing.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 404;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new { errorCode = "NotFound", messages = new[] { $"roles \u0027{req.Name}\u0027 was not found." } }, ct).ConfigureAwait(false);
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.Name, existing.CurrentMessage);
+            await Send.ResponseAsync(null, 500, ct).ConfigureAwait(false);
             return;
         }
 
-        var updated = ApplyUpdates(existing, req);
+        if (existing.Value is null)
+        {
+            AuthorizationEndpointLog.RoleNotFound(EndpointLogger, req.Name);
+            await Send.ResultAsync(TypedResults.Json(new { errorCode = "NotFound", messages = new[] { $"roles \u0027{req.Name}\u0027 was not found." } }, statusCode: 404)).ConfigureAwait(false);
+            return;
+        }
 
-        var result = await _roleProvider.Save(updated, ct).ConfigureAwait(false);
+        AuthorizationEndpointLog.RoleResolved(EndpointLogger, req.Name, existing.Value.Id);
+
+        var updated = ApplyUpdates(existing.Value, req);
+
+        var result = await _roleProvider.Save(updated, RoleDomain, RoleImplementation, updated.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
+            AuthorizationEndpointLog.RoleWriteFailed(EndpointLogger, "update", req.Name, result.CurrentMessage);
             await Send.ResponseAsync(null, 400, ct).ConfigureAwait(false);
             return;
         }
+
+        AuthorizationEndpointLog.RoleUpdated(EndpointLogger, req.Name);
 
         await Send.NoContentAsync(ct).ConfigureAwait(false);
     }
@@ -82,7 +101,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
     /// Applies updates from the request to the existing configuration.
     /// Override to customize update logic.
     /// </summary>
-    protected virtual RoleConfiguration ApplyUpdates(RoleConfiguration existing, UpdateRoleRequest request)
+    protected virtual IRoleImplementationConfiguration ApplyUpdates(IRoleImplementationConfiguration existing, UpdateRoleRequest request)
     {
         if (request.DisplayName is not null)
         {
@@ -92,11 +111,6 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
         if (request.Description is not null)
         {
             existing.Description = request.Description;
-        }
-
-        if (request.SortOrder.HasValue)
-        {
-            existing.SortOrder = request.SortOrder.Value;
         }
 
         return existing;

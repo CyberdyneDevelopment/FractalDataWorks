@@ -21,20 +21,27 @@ namespace Fdw.Data.Abstractions;
 /// </para>
 /// </remarks>
 [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-public sealed class LogicalOperator : TypeOptionBase<int, LogicalOperator>, ILogicalOperator
+public abstract class LogicalOperator : TypeOptionBase<LogicalOperator>, ILogicalOperator
 {
     /// <summary>
     /// AND logical operator.
     /// </summary>
-    public static readonly LogicalOperator And = new(1, "And", "AND", "and");
+    public static readonly LogicalOperator And = new AndLogicalOperator();
 
     /// <summary>
     /// OR logical operator.
     /// </summary>
-    public static readonly LogicalOperator Or = new(2, "Or", "OR", "or");
+    public static readonly LogicalOperator Or = new OrLogicalOperator();
 
-    private LogicalOperator(int id, string name, string sqlOperator, string odataOperator)
-        : base(id, name)
+    /// <summary>
+    /// Initializes a logical operator. Each operator is its own class because an option's id derives
+    /// from its type: two operators sharing one class would share one id and compare equal.
+    /// </summary>
+    /// <param name="name">The operator name.</param>
+    /// <param name="sqlOperator">The SQL representation.</param>
+    /// <param name="odataOperator">The OData representation.</param>
+    private protected LogicalOperator(string name, string sqlOperator, string odataOperator)
+        : base(name)
     {
         SqlOperator = sqlOperator;
         ODataOperator = odataOperator;

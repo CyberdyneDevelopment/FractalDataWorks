@@ -129,6 +129,8 @@ public sealed class PooledDictionaryMapperFactoryTests
 
     private sealed class TestEtlRowMapperConfig : EtlRowMapperConfiguration
     {
-        public TestEtlRowMapperConfig() : base("EtlMapper", null, "EtlMappers") { }
+        public TestEtlRowMapperConfig()
+    {
+    }
     }
 }

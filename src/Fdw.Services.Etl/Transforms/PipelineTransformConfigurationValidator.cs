@@ -14,8 +14,6 @@ public sealed class PipelineTransformConfigurationValidator : AbstractValidator<
     public PipelineTransformConfigurationValidator()
     {
         RuleFor(x => x.Name).NotEmpty();
-        RuleFor(x => x.SectionName).NotEmpty();
-        RuleFor(x => x.ServiceType).NotEmpty();
         RuleFor(x => x.OperationType).NotEmpty();
     }
 }

@@ -11,7 +11,6 @@ public sealed class ResumeIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ResumeIcon"/>.</summary>
     public ResumeIcon()
         : base(
-            24,
             "Resume",
             "0 0 24 24",
             "currentColor",

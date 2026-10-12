@@ -22,4 +22,16 @@ public static partial class TenantOrgAccessConfigurationProviderLog
     [MessageLogging(EventId = 71009, Level = LogLevel.Error,
         Message = "Failed to read org access grants for userId={userId} orgId={orgId}")]
     public static partial IGenericMessage GetFailed(ILogger logger, System.Guid userId, System.Guid orgId, System.Exception ex);
+
+    [MessageLogging(EventId = 11022, Level = LogLevel.Trace,
+        Message = "Reading all org access grants for userId={userId}")]
+    public static partial IGenericMessage GetByUserTrace(ILogger logger, System.Guid userId);
+
+    [MessageLogging(EventId = 11023, Level = LogLevel.Debug,
+        Message = "All org access grants loaded for userId={userId}: {count} grants")]
+    public static partial IGenericMessage GetByUserLoaded(ILogger logger, System.Guid userId, int count);
+
+    [MessageLogging(EventId = 71011, Level = LogLevel.Error,
+        Message = "Failed to read all org access grants for userId={userId}")]
+    public static partial IGenericMessage GetByUserFailed(ILogger logger, System.Guid userId, System.Exception ex);
 }

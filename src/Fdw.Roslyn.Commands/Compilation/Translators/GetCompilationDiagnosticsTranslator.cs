@@ -32,7 +32,6 @@ public sealed class GetCompilationDiagnosticsTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve target, get diagnostics, filter and map results
     public override async Task<IGenericResult<QueryResult<CompilationDiagnosticsData>>> Translate(
         GetCompilationDiagnosticsCommand command,
         Solution solution,
@@ -150,5 +149,4 @@ public sealed class GetCompilationDiagnosticsTranslator
 
         return GenericResult<QueryResult<CompilationDiagnosticsData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

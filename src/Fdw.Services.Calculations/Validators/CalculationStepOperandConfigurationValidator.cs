@@ -5,9 +5,9 @@ using Fdw.Services.Calculations.Configuration;
 namespace Fdw.Services.Calculations.Validators;
 
 /// <summary>
-/// Validator for <see cref="CalculationStepOperandConfiguration"/>.
+/// Validator for every implementation's step operand (<see cref="CalculationStepOperandConfigurationBase"/>).
 /// </summary>
-public sealed class CalculationStepOperandConfigurationValidator : FdwConfigurationValidator<CalculationStepOperandConfiguration>
+public sealed class CalculationStepOperandConfigurationValidator : FdwConfigurationValidator<CalculationStepOperandConfigurationBase>
 {
     private static readonly string[] ValidOperandTypes = ["Input", "StepReference", "Literal"];
 

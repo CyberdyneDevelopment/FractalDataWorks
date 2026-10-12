@@ -14,5 +14,5 @@ public sealed class DataSetKind : DataSourceKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetKind"/> class.
     /// </summary>
-    public DataSetKind() : base(2, "DataSet") { }
+    public DataSetKind() : base("DataSet") { }
 }

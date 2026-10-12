@@ -17,7 +17,7 @@ public partial class WindowedCalculationPartitionFieldRecord
     public Guid Id { get; set; }
 
     /// <summary>Gets or sets the parent windowed calculation identifier.</summary>
-    public Guid WindowedCalculationId { get; set; }
+    public Guid WindowedCalculationConfigurationId { get; set; }
 
 
 

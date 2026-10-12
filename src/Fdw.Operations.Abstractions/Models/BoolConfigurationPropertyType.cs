@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class BoolConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="BoolConfigurationPropertyType"/>.</summary>
-    public BoolConfigurationPropertyType() : base(4, "Bool") { }
+    public BoolConfigurationPropertyType() : base("Bool") { }
 }

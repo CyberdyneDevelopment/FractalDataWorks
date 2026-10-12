@@ -18,7 +18,7 @@ namespace Fdw.UI.Abstractions.Charts;
 /// </para>
 /// <para>
 /// This package (Fdw.UI.Abstractions) ships NO renderer implementations —
-/// renderer packages (e.g. Fdw.UI.Charts.Blazor.ApexCharts) register their own
+/// renderer packages register their own
 /// <c>[TypeOption]</c> against this TypeCollection in their own assembly, loaded by the
 /// entry-point app's <c>Registration.SourceGenerators</c> module initialiser.
 /// </para>

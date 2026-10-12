@@ -11,14 +11,6 @@ public sealed class EndsWithOperatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsIdToFive()
-    {
-        _sut.Id.ShouldBe(5);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ConstructorSetsNameToEndsWith()
     {
         _sut.Name.ShouldBe("EndsWith");
@@ -43,14 +35,6 @@ public sealed class EndsWithOperatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void FormatSqlParameterAddsLeadingWildcard()
-    {
-        _sut.FormatSqlParameter("Name").ShouldBe("'%' + @Name");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void FormatODataValueWrapsStringInSingleQuotes()
     {
         _sut.FormatODataValue("Corp").ShouldBe("'Corp'");
@@ -62,5 +46,15 @@ public sealed class EndsWithOperatorTests
     public void FormatODataValueEscapesSingleQuotes()
     {
         _sut.FormatODataValue("Inc's").ShouldBe("'Inc''s'");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void StatesItsPatternShapeOnce()
+    {
+        _sut.IsPatternMatch.ShouldBeTrue();
+        _sut.MatchesAnythingBefore.ShouldBe(true);
+        _sut.MatchesAnythingAfter.ShouldBe(false);
     }
 }

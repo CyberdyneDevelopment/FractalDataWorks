@@ -19,9 +19,4 @@ public sealed class UpdateRolePayload
     /// </summary>
     [StringLength(500)]
     public string? Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets the updated parent role name for the role.
-    /// </summary>
-    public string? ParentRoleName { get; set; }
 }

@@ -15,17 +15,23 @@ namespace Fdw.Services.Settings;
 /// </summary>
 public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvider
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IServerSettingConfigurationProvider _server;
+    private readonly ITenantSettingConfigurationProvider _tenant;
+    private readonly IRoleSettingConfigurationProvider _role;
     private readonly ILogger<DefaultEffectiveSettingsProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultEffectiveSettingsProvider"/> class.
     /// </summary>
     public DefaultEffectiveSettingsProvider(
-        SettingsConfigurationProvider provider,
+        IServerSettingConfigurationProvider server,
+        ITenantSettingConfigurationProvider tenant,
+        IRoleSettingConfigurationProvider role,
         ILogger<DefaultEffectiveSettingsProvider>? logger)
     {
-        _provider = provider;
+        _server = server;
+        _tenant = tenant;
+        _role = role;
         _logger = logger ?? NullLogger<DefaultEffectiveSettingsProvider>.Instance;
     }
 
@@ -43,14 +49,27 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
         return ConvertValue<T>(settingName, clampedValue, serverSetting.DataType);
     }
 
+    /// <inheritdoc/>
+    public bool TryGetEffectiveValue<T>(string settingName, out T value, Guid? tenantId = null, string? roleName = null)
+    {
+        value = default!;
+        var (settingValue, serverSetting) = ResolveSettingValue(settingName, tenantId, roleName);
+        if (serverSetting is null)
+        {
+            return false;
+        }
+
+        return TryConvertValue(settingName, ClampIfNumeric(settingName, settingValue, serverSetting), out value);
+    }
+
 #pragma warning disable VSTHRD002 // Synchronously waiting on tasks
 #pragma warning disable FDW007 // Why: Sequential layered resolution (server -> tenant -> role) is inherently branchy but straightforward
-    private (string Value, ServerSettingConfiguration? ServerSetting) ResolveSettingValue(
+    private (string Value, IServerSettingImplementationConfiguration? ServerSetting) ResolveSettingValue(
         string settingName,
         Guid? tenantId,
         string? roleName)
     {
-        var serverSettingResult = _provider.GetServerSetting(settingName).GetAwaiter().GetResult();
+        var serverSettingResult = _server.Get(settingName).GetAwaiter().GetResult();
         var serverSetting = serverSettingResult.IsSuccess ? serverSettingResult.Value : null;
 
         if (serverSetting is null || !serverSetting.IsActive)
@@ -64,8 +83,8 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
 
         if (tenantId.HasValue)
         {
-            var tenantSettingsResult = _provider.GetTenantSettings().GetAwaiter().GetResult();
-            var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<TenantSettingConfiguration>)[];
+            var tenantSettingsResult = _tenant.Get().GetAwaiter().GetResult();
+            var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<ITenantSettingImplementationConfiguration>)[];
 
             foreach (var ts in tenantSettings)
             {
@@ -81,8 +100,8 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
 
             if (roleName is not null)
             {
-                var roleSettingsResult = _provider.GetRoleSettings().GetAwaiter().GetResult();
-                var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingConfiguration>)[];
+                var roleSettingsResult = _role.Get().GetAwaiter().GetResult();
+                var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<IRoleSettingImplementationConfiguration>)[];
 
                 foreach (var rs in roleSettings)
                 {
@@ -107,7 +126,7 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
     private string ClampIfNumeric(
         string settingName,
         string value,
-        ServerSettingConfiguration serverSetting)
+        IServerSettingImplementationConfiguration serverSetting)
     {
         if (serverSetting.MinValue is null && serverSetting.MaxValue is null)
         {
@@ -153,7 +172,11 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
     }
 
     private T ConvertValue<T>(string settingName, string value, string dataType)
+        => TryConvertValue<T>(settingName, value, out var converted) ? converted : default!;
+
+    private bool TryConvertValue<T>(string settingName, string value, out T result)
     {
+        result = default!;
         try
         {
             var targetType = typeof(T);
@@ -162,23 +185,30 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
 
             if (underlyingType == typeof(string))
             {
-                return (T)(object)value;
+                result = (T)(object)value;
+                return true;
             }
 
             var converter = TypeDescriptor.GetConverter(underlyingType);
             if (converter.CanConvertFrom(typeof(string)))
             {
                 var converted = converter.ConvertFromInvariantString(value);
-                return converted is null ? default! : (T)converted;
+                if (converted is null)
+                {
+                    return false;
+                }
+
+                result = (T)converted;
+                return true;
             }
 
             SettingsLog.SettingConversionFailed(_logger, settingName, value, targetType.Name);
-            return default!;
+            return false;
         }
         catch (Exception ex)
         {
             SettingsLog.SettingConversionException(_logger, ex, settingName, value, typeof(T).Name, ex.Message);
-            return default!;
+            return false;
         }
     }
 

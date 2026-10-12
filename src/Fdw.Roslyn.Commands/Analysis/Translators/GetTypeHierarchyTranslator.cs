@@ -31,7 +31,6 @@ public sealed class GetTypeHierarchyTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve type, walk base types, collect interfaces
     public override async Task<IGenericResult<QueryResult<TypeHierarchyData>>> Translate(
         GetTypeHierarchyCommand command,
         Solution solution,
@@ -118,7 +117,6 @@ public sealed class GetTypeHierarchyTranslator
 
         return GenericResult<QueryResult<TypeHierarchyData>>.Success(result);
     }
-#pragma warning restore MA0051
 
     private static TypeHierarchyEntry CreateTypeInfo(INamedTypeSymbol type, string relationship, int depth)
     {

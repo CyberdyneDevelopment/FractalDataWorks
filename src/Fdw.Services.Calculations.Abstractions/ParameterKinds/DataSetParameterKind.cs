@@ -14,7 +14,7 @@ public sealed class DataSetParameterKind : OperationParameterKindBase
     /// Initializes a new instance of the <see cref="DataSetParameterKind"/> class.
     /// </summary>
     public DataSetParameterKind()
-        : base(id: 4, name: "DataSet", description: "A DataSet reference")
+        : base(name: "DataSet", description: "A DataSet reference")
     {
     }
 }

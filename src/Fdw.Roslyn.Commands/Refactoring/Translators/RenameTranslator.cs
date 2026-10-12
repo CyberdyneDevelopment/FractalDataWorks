@@ -31,7 +31,6 @@ public sealed class RenameTranslator : RoslynCommandTranslatorBase<RenameCommand
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve symbol, perform rename, calculate changes
     public override async Task<IGenericResult<MutationResult>> Translate(
         RenameCommand command,
         Solution solution,
@@ -147,5 +146,4 @@ public sealed class RenameTranslator : RoslynCommandTranslatorBase<RenameCommand
                 symbolChanges,
                 Array.Empty<PathChange>()));
     }
-#pragma warning restore MA0051
 }

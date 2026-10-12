@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
@@ -27,7 +27,7 @@ namespace Fdw.Services.Calculations;
 /// the gateway-backed CalculationConfigurationProvider.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(CalculationServiceTypes), "Default")]
+[Implementation(typeof(CalculationServiceTypes), "Default")]
 public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 {
     /// <summary>
@@ -43,15 +43,9 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
         Initialization((host, loggerFactory) =>
         {
             var services = host.Services;
-            var header = services.GetRequiredService<CalculationConfigurationProvider>();
-
-            header.Register(
-                "Formula",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>>());
-
-            header.Register(
-                "Windowed",
-                services.GetRequiredService<ImplementationConfigurationProviderBase<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>>());
+            var domain = services.GetRequiredService<ICalculationConfigurationProvider>();
+            domain.Register("Formula", services.GetRequiredService<IFormulaCalculationConfigurationProvider>());
+            domain.Register("Windowed", services.GetRequiredService<IWindowedCalculationConfigurationProvider>());
     
             return GenericResult<IHost>.Success(host);
         });
@@ -67,35 +61,12 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             builder.Services.AddDistributedMemoryCache();
 
-            builder.Services.TryAddSingleton<CalculationConfigurationProvider>(sp =>
-                new CalculationConfigurationProvider(
-                    sp.GetService<ILogger<CalculationConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        CalculationServiceTypes.ConfigurationConnection));
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CalculationEntityConfiguration, CalculationEntityConfigurationCommand>>(
-                sp => sp.GetRequiredService<CalculationConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<CalculationEntityConfiguration>>(
-                sp => sp.GetRequiredService<CalculationConfigurationProvider>());
+            builder.Services.AddSingleton<ICalculationConfigurationProvider, CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationEntity"));
 
-            RegisterTypedBodyProvider<FormulaCalculationConfiguration, FormulaCalculationConfigurationCommand>(builder.Services);
-            RegisterTypedBodyProvider<WindowedCalculationConfiguration, WindowedCalculationConfigurationCommand>(builder.Services);
+            builder.Services.AddSingleton<IFormulaCalculationConfigurationProvider, FormulaCalculationConfigurationProvider>(sp => new FormulaCalculationConfigurationProvider(sp.GetRequiredService<ILogger<FormulaCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "FormulaCalculationConfiguration"));
+            builder.Services.AddSingleton<IWindowedCalculationConfigurationProvider, WindowedCalculationConfigurationProvider>(sp => new WindowedCalculationConfigurationProvider(sp.GetRequiredService<ILogger<WindowedCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "WindowedCalculationConfiguration"));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 
-    }
-
-    /// <inheritdoc />
-
-    private static void RegisterTypedBodyProvider<TConfig, TCommand>(IServiceCollection services)
-        where TConfig : class, IGenericConfiguration
-        where TCommand : ConfigurationCommandBase<TConfig>
-    {
-        services.AddOptions<List<TConfig>>();
-        services.TryAddSingleton<ImplementationConfigurationProviderBase<TConfig, TCommand>>(sp =>
-            new ImplementationConfigurationProviderBase<TConfig, TCommand>(
-                sp.GetService<ILogger<ImplementationConfigurationProviderBase<TConfig, TCommand>>>(),
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                "PlatformConfiguration",
-                "calc"));
     }
 }

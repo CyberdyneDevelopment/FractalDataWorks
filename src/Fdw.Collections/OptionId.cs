@@ -32,4 +32,32 @@ public static class OptionId
         return new Guid(md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(name)));
     }
 #pragma warning restore CA5351, SCS0006, CA1850
+
+    /// <summary>Derives the int identity for <paramref name="name"/> using FNV-1a.</summary>
+    /// <param name="name">A type's fully qualified name.</param>
+    /// <returns>The same id for the same name in every process, from 0 to 2,147,483,647 (fits a SQL Server INT).</returns>
+    /// <remarks>
+    /// The int twin of <see cref="Derive"/>: <c>TypeOptionBase&lt;TBase&gt;</c> derives every int-keyed
+    /// option's id through it, and code that implements a type option by hand uses it the same way.
+    /// </remarks>
+    public static int DeriveInt(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            throw new ArgumentNullException(nameof(name));
+        }
+
+        unchecked
+        {
+            const int offset = (int)2166136261;
+            const int prime = 16777619;
+            var hash = offset;
+            foreach (var c in name)
+            {
+                hash = (hash ^ c) * prime;
+            }
+
+            return hash & 0x7FFFFFFF;
+        }
+    }
 }

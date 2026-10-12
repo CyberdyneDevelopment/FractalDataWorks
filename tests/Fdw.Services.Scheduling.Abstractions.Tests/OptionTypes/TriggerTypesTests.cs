@@ -11,116 +11,6 @@ public class TriggerTypesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Scheduling")]
-    public void AllReturnsAllTriggerTypes()
-    {
-        var all = TriggerTypes.All();
-
-        all.ShouldNotBeEmpty();
-        all.Count.ShouldBeGreaterThanOrEqualTo(4); // Cron, Interval, Manual, Once
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByIdReturnsCorrectTriggerType()
-    {
-        var cron = TriggerTypes.Cron;
-        var result = TriggerTypes.ById(cron.Id);
-
-        result.ShouldNotBeNull();
-        result.Id.ShouldBe(cron.Id);
-        result.Name.ShouldBe("Cron");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByIdReturnsNotFoundForUnknownId()
-    {
-        var result = TriggerTypes.ById(99999);
-
-        result.ShouldNotBeNull();
-        result.ShouldBe(TriggerTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameReturnsCronTriggerType()
-    {
-        var result = TriggerTypes.ByName("Cron");
-
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("Cron");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameReturnsIntervalTriggerType()
-    {
-        var result = TriggerTypes.ByName("Interval");
-
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("Interval");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameReturnsManualTriggerType()
-    {
-        var result = TriggerTypes.ByName("Manual");
-
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("Manual");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameReturnsOnceTriggerType()
-    {
-        var result = TriggerTypes.ByName("Once");
-
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("Once");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameIsCaseSensitive()
-    {
-        TriggerTypes.ByName("Cron").ShouldNotBeNull();
-        TriggerTypes.ByName("cron").ShouldBe(TriggerTypes.NotFound);
-        TriggerTypes.ByName("CRON").ShouldBe(TriggerTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameReturnsNotFoundForUnknownName()
-    {
-        var result = TriggerTypes.ByName("UnknownTriggerType");
-
-        result.ShouldNotBeNull();
-        result.ShouldBe(TriggerTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void NotFoundReturnsEmptyInstance()
-    {
-        var result = TriggerTypes.NotFound;
-
-        result.ShouldNotBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
     public void CronPropertyReturnsInstance()
     {
         var result = TriggerTypes.Cron;
@@ -171,28 +61,6 @@ public class TriggerTypesTests
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void AllTriggerTypesHaveUniqueIds()
-    {
-        var all = TriggerTypes.All();
-        var ids = all.Select(t => t.Id).ToList();
-
-        ids.Distinct().Count().ShouldBe(ids.Count);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void AllTriggerTypesHaveUniqueNames()
-    {
-        var all = TriggerTypes.All();
-        var names = all.Select(t => t.Name).ToList();
-
-        names.Distinct().Count().ShouldBe(names.Count);
-    }
-
-    [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Scheduling")]
     public void IntervalIsDueWithNullLastExecutionIsDueImmediately()
@@ -231,18 +99,6 @@ public class TriggerTypesTests
     {
         TriggerTypes.Interval.IsDue(Trigger.CreateManual("Broken"), lastExecution: null, DateTimeOffset.UtcNow)
             .ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Scheduling")]
-    public void ByNameReturnsEventTriggerType()
-    {
-        var result = TriggerTypes.ByName("Event");
-
-        result.ShouldNotBeNull();
-        result.ShouldNotBe(TriggerTypes.NotFound);
-        result.Name.ShouldBe("Event");
     }
 
     [Fact]

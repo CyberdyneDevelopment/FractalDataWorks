@@ -8,13 +8,13 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata.PropertyTypes;
 /// Base class for configuration property type options.
 /// Uses CRTP pattern with TypeLookup on DataType for O(1) type-based resolution.
 /// </summary>
-public abstract class ConfigurationPropertyTypeBaseResponse : TypeOptionBase<int, ConfigurationPropertyTypeBaseResponse>, IConfigurationPropertyType
+public abstract class ConfigurationPropertyTypeBaseResponse : TypeOptionBase<ConfigurationPropertyTypeBaseResponse>, IConfigurationPropertyType
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigurationPropertyTypeBaseResponse"/> class.
     /// </summary>
-    protected ConfigurationPropertyTypeBaseResponse(int id, string name, Type dataType, IConfigurationPropertyTypeDto dtoValue)
-        : base(id, name)
+    protected ConfigurationPropertyTypeBaseResponse(string name, Type dataType, IConfigurationPropertyTypeDto dtoValue)
+        : base(name)
     {
         DataType = dataType;
         DtoValue = dtoValue;

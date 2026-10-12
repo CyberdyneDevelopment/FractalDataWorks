@@ -15,12 +15,6 @@ namespace Fdw.Services.Connections.Abstractions;
 public interface IGenericConnection : IDisposable, IServiceOption
 {
     /// <summary>
-    /// Gets a value indicating whether this connection is stale and should be recreated.
-    /// A connection is stale when it has been disposed or its underlying resources have been released.
-    /// </summary>
-    bool IsStale { get; }
-
-    /// <summary>
     /// Tests connectivity to the underlying resource.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token for the operation.</param>

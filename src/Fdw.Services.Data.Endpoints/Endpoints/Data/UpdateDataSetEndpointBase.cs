@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data.Abstractions.Results;
+using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.DataSets.Results;
 using Fdw.Results;
@@ -82,35 +85,35 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
 
         var existing = loadResult.Value;
 
-        var mergedServiceOptionType = request.ServiceOptionType ?? existing.ServiceOptionType;
-        if (string.IsNullOrWhiteSpace(mergedServiceOptionType)
-            || ReferenceEquals(DataSetTypes.ByName(mergedServiceOptionType), DataSetTypes.NotFound))
+        var mergedImplementation = request.Implementation ?? existing.Implementation;
+        if (string.IsNullOrWhiteSpace(mergedImplementation)
+            || ReferenceEquals(DataSetTypes.ByName(mergedImplementation), DataSetTypes.NotFound))
         {
             return GenericResult<DataSetDetailResponse>.Failure(
-                DataSetsResultCodes.ServiceOptionTypeInvalid, Logger,
-                ResultDetails.Create("name", request.Name, "serviceOptionType", mergedServiceOptionType ?? string.Empty));
+                DataSetsResultCodes.ImplementationInvalid, Logger,
+                ImplementationInvalidCode.Describe(request.Name, mergedImplementation));
         }
 
-        var mergedFederationStrategy = request.FederationStrategy ?? existing.FederationStrategy;
+        var kindValidation = ValidateKind(request, existing, mergedImplementation);
+        if (kindValidation.IsFailure) return kindValidation.ToNewResult<DataSetDetailResponse>();
+
+        var mergedFederationStrategy = request.FederationStrategy ?? existing.FederationStrategyOrNone();
         var federationValidation = DataSetQueryHelper.ValidateFederationStrategy(
-            mergedServiceOptionType, mergedFederationStrategy, request.Name, Logger);
+            mergedImplementation, mergedFederationStrategy, request.Name, Logger);
         if (federationValidation.IsFailure) return federationValidation.ToNewResult<DataSetDetailResponse>();
 
-        var aggregatesValidation = ValidateRequestedAggregates(request);
-        if (aggregatesValidation.IsFailure) return aggregatesValidation.ToNewResult<DataSetDetailResponse>();
+        var childrenValidation = ValidateRequestedChildren(request);
+        if (childrenValidation.IsFailure) return childrenValidation.ToNewResult<DataSetDetailResponse>();
 
         // Merge updates
-        existing.Description = request.Description ?? existing.Description;
-        existing.Category = request.Category ?? existing.Category;
+        ApplyRequestedValues(existing, request);
         existing.Version = request.Version;
         existing.RecordTypeName = request.RecordTypeName;
-        existing.ServiceOptionType = mergedServiceOptionType;
-        existing.FederationStrategy = mergedFederationStrategy;
-        existing.TransformExpression = request.TransformExpression ?? existing.TransformExpression;
-        existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
+        if (existing is IFederatedDataSetConfiguration federated)
+            federated.FederationStrategy = mergedFederationStrategy;
         ApplyRequestedChildren(existing, request);
 
-        var saveResult = await _dataSetProvider.Save(existing, ct).ConfigureAwait(false);
+        var saveResult = await _dataSetProvider.Save(existing, "DataSet", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             DataSetEndpointLog.DataSetUpdateFailed(Logger, request.Name, "Save failed");
@@ -121,12 +124,62 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         return GenericResult<DataSetDetailResponse>.Success(DataSetQueryHelper.MapToDetail(existing));
     }
 
-    private IGenericResult<bool> ValidateRequestedAggregates(UpdateDataSetRequest request)
-        => request.Aggregates is null
-            ? GenericResult<bool>.Success(true)
-            : DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
+    // Each kind is its own implementation (FDW-1031): a data set cannot become another kind, and carries only
+    // what its kind has.
+    private IGenericResult<bool> ValidateKind(
+        UpdateDataSetRequest request, IDataSetImplementationConfiguration existing, string mergedImplementation)
+    {
+        if (!string.Equals(mergedImplementation, existing.Implementation, StringComparison.Ordinal))
+        {
+            return GenericResult<bool>.Failure(
+                DataSetsResultCodes.ImplementationChangeNotAllowed, Logger,
+                ResultDetails.Create("name", request.Name, "implementation", existing.Implementation, "requested", mergedImplementation));
+        }
 
-    private static void ApplyRequestedChildren(DataSetConfiguration existing, UpdateDataSetRequest request)
+        return DataSetQueryHelper.ValidateKindParts(
+            mergedImplementation, request.Joins is { Count: > 0 }, request.Aggregates is { Count: > 0 }, request.Name, Logger);
+    }
+
+    // The child lists the request carries, each validated only when present (a null list leaves
+    // the stored one alone). The first failure is the answer.
+    private IGenericResult<bool> ValidateRequestedChildren(UpdateDataSetRequest request)
+    {
+        // The data set's classification when the PATCH names one and, when fields are replaced, each field's.
+        IEnumerable<int> fieldClassifications = request.Fields is null ? [] : request.Fields.Select(f => f.ClassificationId);
+        var classified = DataClassificationValidator.Validate(
+            request.ClassificationId is { } named ? fieldClassifications.Prepend(named) : fieldClassifications, Logger);
+        if (classified.IsFailure) return classified.ToNewResult<bool>();
+
+        // Each replaced field's datum type and data type, when fields are replaced.
+        var typed = DataSetQueryHelper.ValidateFieldTypes(request.Fields, Logger);
+        if (typed.IsFailure) return typed.ToNewResult<bool>();
+
+        if (request.Aggregates is not null)
+        {
+            var aggregates = DataSetQueryHelper.ValidateAggregates(request.Aggregates, request.Name, Logger);
+            if (aggregates.IsFailure) return aggregates;
+        }
+
+        return request.Sources is null
+            ? GenericResult<bool>.Success(true)
+            : DataSetQueryHelper.ValidateFieldMappings(request.Sources, request.Name, Logger);
+    }
+
+    // The values the request carries; a value left out leaves the stored one unchanged.
+    private static void ApplyRequestedValues(IDataSetImplementationConfiguration existing, UpdateDataSetRequest request)
+    {
+        existing.Description = request.Description ?? existing.Description;
+        if (request.ClassificationId is { } classificationId)
+        {
+            existing.ClassificationId = classificationId;
+        }
+
+        existing.Category = request.Category ?? existing.Category;
+        existing.TransformExpression = request.TransformExpression ?? existing.TransformExpression;
+        existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
+    }
+
+    private static void ApplyRequestedChildren(IDataSetImplementationConfiguration existing, UpdateDataSetRequest request)
     {
             if (request.KeyFields is not null)
             {
@@ -164,9 +217,9 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
                 existing.Sources = DataSetQueryHelper.MapSources(request.Sources, existing.Sources);
             }
 
-            if (request.Joins is not null)
+            if (request.Joins is not null && existing is IJoinedDataSetConfiguration joined)
             {
-                existing.Joins = DataSetQueryHelper.MapJoins(request.Joins);
+                joined.Joins = DataSetQueryHelper.MapJoins(request.Joins);
             }
 
             if (request.Caching is not null)
@@ -174,9 +227,9 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
                 existing.Caching = DataSetQueryHelper.MapCaching(request.Caching);
             }
 
-            if (request.Aggregates is not null)
+            if (request.Aggregates is not null && existing is ISimpleDataSetConfiguration simple)
             {
-                existing.Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates);
+                simple.Aggregates = DataSetQueryHelper.MapAggregates(request.Aggregates);
             }
     }
 

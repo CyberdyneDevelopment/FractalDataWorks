@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Brazil")]
 public sealed class BrazilTimeZoneType : TimeZoneTypeBase
 {
-    public BrazilTimeZoneType() : base(19, "Brazil", "E. South America Standard Time") { }
+    public BrazilTimeZoneType() : base("Brazil", "E. South America Standard Time") { }
 }

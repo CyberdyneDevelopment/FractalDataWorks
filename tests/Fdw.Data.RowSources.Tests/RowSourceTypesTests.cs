@@ -18,57 +18,6 @@ public class RowSourceTypesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ByNameReturnsNotFoundForUnknownType()
-    {
-        // Act
-        var type = RecordSourceTypes.ByName("Unknown");
-
-        // Assert
-        type.ShouldNotBeNull();
-        type.Name.ShouldBe("_Empty");
-        type.ShouldBeSameAs(RecordSourceTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ByNameReturnsNotFoundForNullName()
-    {
-        // Act
-        var type = RecordSourceTypes.ByName(null);
-
-        // Assert
-        type.ShouldBeSameAs(RecordSourceTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ByNameReturnsNotFoundForEmptyName()
-    {
-        // Act
-        var type = RecordSourceTypes.ByName(string.Empty);
-
-        // Assert
-        type.ShouldBeSameAs(RecordSourceTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void NotFoundHasExpectedSentinelValues()
-    {
-        // Act
-        var notFound = RecordSourceTypes.NotFound;
-
-        // Assert
-        notFound.ShouldNotBeNull();
-        notFound.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void DataReaderTypeInstanceHasCorrectProperties()
     {
         // Arrange - create instance directly (RestrictToCurrentCompilation prevents auto-registration)

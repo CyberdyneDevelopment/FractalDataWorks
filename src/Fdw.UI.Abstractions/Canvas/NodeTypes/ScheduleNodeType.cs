@@ -14,7 +14,7 @@ public sealed class ScheduleNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="ScheduleNodeType"/> class.
     /// </summary>
     public ScheduleNodeType()
-        : base(7, "Schedule", "Schedule", "Orchestration", "clock")
+        : base("Schedule", "Schedule", "Orchestration", "clock")
     {
     }
 }

@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class ExternalSystemLineageNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ExternalSystemLineageNodeType"/>.</summary>
-    public ExternalSystemLineageNodeType() : base(4, "ExternalSystem") { }
+    public ExternalSystemLineageNodeType() : base("ExternalSystem") { }
 }

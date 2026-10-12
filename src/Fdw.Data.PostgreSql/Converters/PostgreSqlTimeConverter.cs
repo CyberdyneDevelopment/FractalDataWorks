@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlTimeConverter()
     : DataTypeConverterBase(
-        id: 17,
         name: "Time",
         sourceType: "time",
         targetClrType: typeof(TimeSpan),

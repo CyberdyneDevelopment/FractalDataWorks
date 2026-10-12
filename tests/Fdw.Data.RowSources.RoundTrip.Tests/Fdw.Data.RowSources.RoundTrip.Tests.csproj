@@ -16,5 +16,6 @@
     <ProjectReference Include="..\..\src\Fdw.Data.RowSources.FixedWidth\Fdw.Data.RowSources.FixedWidth.csproj" />
     <!-- Registration generator scans referenced assemblies and generates module initializers in this entry point -->
     <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Data.DataContainers.Abstractions\Fdw.Data.DataContainers.Abstractions.csproj" />
   </ItemGroup>
 </Project>

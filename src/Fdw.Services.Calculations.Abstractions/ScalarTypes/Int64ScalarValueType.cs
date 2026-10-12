@@ -14,7 +14,7 @@ public sealed class Int64ScalarValueType : ScalarValueTypeBase
     /// Initializes a new instance of the <see cref="Int64ScalarValueType"/> class.
     /// </summary>
     public Int64ScalarValueType()
-        : base(id: 3, name: "Int64")
+        : base(name: "Int64")
     {
     }
 }

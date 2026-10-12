@@ -50,7 +50,7 @@ public sealed class GraphQLProtocol : GraphQLProtocolBase
     /// Initializes a new instance of the <see cref="GraphQLProtocol"/> class.
     /// </summary>
     public GraphQLProtocol()
-        : base(3, "GraphQL", "GraphQL API protocol with query/mutation support")
+        : base("GraphQL", "GraphQL API protocol with query/mutation support")
     {
     }
 }

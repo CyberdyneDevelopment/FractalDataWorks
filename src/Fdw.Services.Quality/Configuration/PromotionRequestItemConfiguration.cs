@@ -7,7 +7,7 @@ namespace Fdw.Services.Quality.Configuration;
 
 /// <summary>
 /// Configuration for an individual promotion request item.
-/// Child of PromotionRequestConfiguration.
+/// Child of PromotionRequestImplementationConfiguration.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]

@@ -28,7 +28,7 @@ public sealed class LagOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="LagOperation"/> class.
     /// </summary>
     public LagOperation()
-        : base(id: 34, name: "Lag", category: "Window", description: "Accesses a field value from a preceding row within a partition")
+        : base(name: "Lag", category: "Window", description: "Accesses a field value from a preceding row within a partition")
     {
         _logger = NullLogger<LagOperation>.Instance;
         Parameters =

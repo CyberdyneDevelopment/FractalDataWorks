@@ -13,7 +13,7 @@ public sealed class ProjectCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="ProjectCommandCategory"/> class.
     /// </summary>
     public ProjectCommandCategory()
-        : base(6, "Project", "Project management commands for documents, references, and project information")
+        : base("Project", "Project management commands for documents, references, and project information")
     {
     }
 }

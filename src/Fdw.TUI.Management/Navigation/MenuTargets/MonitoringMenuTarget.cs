@@ -13,7 +13,6 @@ public sealed class MonitoringMenuTarget : MenuTargetBase
     /// Creates the monitoring menu target.
     /// </summary>
     public MonitoringMenuTarget() : base(
-        id: 3,
         name: "monitoring",
         label: "Monitoring & Logs",
         group: "Main",

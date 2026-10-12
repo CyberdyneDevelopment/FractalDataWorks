@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.Abstractions.Results;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,26 +19,26 @@ namespace Fdw.Services.Connections;
 
 /// <summary>
 /// Periodic background worker that probes <c>conn.Connection</c> rows with
-/// <see cref="ConnectionConfiguration.HealthCheckEnabled"/> set, honoring each row's own
-/// <see cref="ConnectionConfiguration.HealthCheckOnStartup"/> and
-/// <see cref="ConnectionConfiguration.HealthCheckIntervalSeconds"/>, and persisting results.
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckEnabled"/> set, honoring each row's own
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckOnStartup"/> and
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckIntervalSeconds"/>, and persisting results.
 /// </summary>
 /// <remarks>
 /// Why this exists alongside <see cref="ConnectionsHealthCheckable"/>: that class is a pull-only
 /// aggregate snapshot for <c>GET /api/v1/health/system</c> — it never persists anything and ignores
 /// <c>HealthCheckOnStartup</c>/<c>HealthCheckIntervalSeconds</c>. This worker is the actual engine
 /// those two columns were designed for: it runs unattended, writes <c>LastTested*</c> back through
-/// <c>ConnectionConfigurationProvider.Save(ConnectionConfiguration, CancellationToken)</c> (inherited,
+/// <c>ConnectionConfigurationProvider.Save(IConnectionImplementationConfiguration, CancellationToken)</c> (inherited,
 /// generic-closed; not a resolvable cref target),
 /// and records history through <see cref="IConnectionHealthService"/> — the same two writes
 /// <c>TestConnectionEndpointBase</c> performs for a manual test, just on a timer instead of a click.
 /// <para>
-/// Why a fixed internal scan tick rather than a config value: each row's own
-/// <see cref="ConnectionConfiguration.HealthCheckIntervalSeconds"/> is the domain value that governs
-/// how often THAT connection is actually probed (never defaulted — NO FALLBACKS). <see cref="ScanTick"/>
-/// is only the resolution at which this worker re-evaluates "has enough time elapsed" against every
-/// enabled row, analogous to a file-watcher's poll granularity — it is not standing in for a missing
-/// domain value.
+/// Why a scan interval separate from each row's own interval: each row's own
+/// <see cref="IConnectionImplementationConfiguration.HealthCheckIntervalSeconds"/> is the domain value that governs
+/// how often THAT connection is actually probed (never defaulted — NO FALLBACKS). The wait between scans
+/// is only when this worker next re-evaluates "has enough time elapsed" against every enabled row: it
+/// waits until the soonest of them falls due, kept between the shortest and longest scan waits it is
+/// registered with. Neither bound stands in for a missing domain value.
 /// </para>
 /// <para>
 /// Why <see cref="IServiceScopeFactory"/> in the constructor, not <see cref="IConnectionProvider"/> or
@@ -49,9 +51,9 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public sealed class ConnectionHealthMonitorWorker : BackgroundService
 {
-    private static readonly TimeSpan ScanTick = TimeSpan.FromSeconds(15);
-
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeSpan _shortestScan;
+    private readonly TimeSpan _longestScan;
     private readonly ILogger<ConnectionHealthMonitorWorker> _logger;
 
     private readonly Dictionary<Guid, DateTimeOffset> _lastChecked = new();
@@ -61,10 +63,22 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     /// Initializes a new instance of the <see cref="ConnectionHealthMonitorWorker"/> class.
     /// </summary>
     /// <param name="scopeFactory">Factory used to create one DI scope per collect.</param>
+    /// <param name="shortestScan">The shortest wait between scans, and the wait before the first scheduled one.</param>
+    /// <param name="longestScan">
+    /// The longest wait between scans: the longest a health check enabled after a scan waits to be noticed.
+    /// </param>
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger{T}"/>.</param>
-    public ConnectionHealthMonitorWorker(IServiceScopeFactory scopeFactory, ILogger<ConnectionHealthMonitorWorker>? logger = null)
+    public ConnectionHealthMonitorWorker(
+        IServiceScopeFactory scopeFactory,
+        TimeSpan shortestScan,
+        TimeSpan longestScan,
+        ILogger<ConnectionHealthMonitorWorker>? logger = null)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(shortestScan, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfLessThan(longestScan, shortestScan);
+        _shortestScan = shortestScan;
+        _longestScan = longestScan;
         _logger = logger ?? NullLogger<ConnectionHealthMonitorWorker>.Instance;
     }
 
@@ -79,16 +93,18 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
             return;
         }
 
-        using var timer = new PeriodicTimer(ScanTick);
+        using var timer = new PeriodicTimer(_shortestScan);
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
             {
-                if (!await RunScheduledProbes(stoppingToken).ConfigureAwait(false))
+                if (await RunScheduledProbes(stoppingToken).ConfigureAwait(false) is not { } nextScan)
                 {
                     ConnectionHealthMonitorWorkerLog.MonitoringIdleNoConnectionContainer(_logger);
                     return;
                 }
+
+                timer.Period = nextScan;
             }
         }
         catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
@@ -111,8 +127,18 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            var configProvider = scope.ServiceProvider.GetRequiredService<ConnectionConfigurationProvider>();
-            var allResult = await configProvider.Get(ct).ConfigureAwait(false);
+            // This worker runs on its own internal timer, never inside an HTTP request, so it has
+            // no caller identity to read a context from -- without this elevation every probe (and
+            // the config read above it) lands on DenySessionContext instead of the intended system
+            // bypass. Same remediation FDW-767 applied to PipelineExecutionBackgroundService /
+            // OrchestrationNodeOrchestratorBackgroundService.
+            using var elevation = new SystemAuthenticationContextScope(
+                scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>());
+
+            // The rows alone: whether a connection is probed is decided by fields of its row, and Probe
+            // reads the one it probes whole (FDW-970).
+            var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
+            var allResult = await configProvider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
             {
                 if (IsConnectionContainerAbsent(allResult))
@@ -141,29 +167,39 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
     /// <summary>Runs one scan-tick collect, probing every enabled connection whose own interval is due.</summary>
     /// <param name="ct">Token observed for host shutdown.</param>
     /// <returns>
-    /// <c>false</c> when this host's configuration store registers no connection container — the caller
-    /// must stop monitoring. <c>true</c> in every other case, including a genuine load failure (which is
-    /// reported at Error here and retried on the next tick).
+    /// How long to wait before the next scan; <see langword="null"/> when this host's configuration store
+    /// registers no connection container, and the caller must stop monitoring. A genuine load failure is
+    /// reported at Error here and retried after the shortest scan wait.
     /// </returns>
-    private async Task<bool> RunScheduledProbes(CancellationToken ct)
+    private async Task<TimeSpan?> RunScheduledProbes(CancellationToken ct)
     {
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            var configProvider = scope.ServiceProvider.GetRequiredService<ConnectionConfigurationProvider>();
-            var allResult = await configProvider.Get(ct).ConfigureAwait(false);
+            // Same elevation as RunStartupProbes, and for the same reason: this fires on the
+            // worker's own internal timer, never inside an HTTP request, so without
+            // it every tick's config read (and any due probe) lands on DenySessionContext instead
+            // of the intended system bypass -- observed live as a deny-principal warning burst every
+            // 15 seconds, unattributed to any real request.
+            using var elevation = new SystemAuthenticationContextScope(
+                scope.ServiceProvider.GetRequiredService<IAuthenticationContextAccessor>());
+
+            // The rows alone, as in RunStartupProbes: every scan read every connection whole (FDW-970).
+            var configProvider = scope.ServiceProvider.GetRequiredService<IConnectionConfigurationProvider>();
+            var allResult = await configProvider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
             if (!allResult.IsSuccess)
             {
                 if (IsConnectionContainerAbsent(allResult))
-                    return false;
+                    return null;
 
                 ConnectionHealthMonitorWorkerLog.LoadConnectionsFailed(_logger, allResult.CurrentMessage ?? "Unknown error");
-                return true;
+                return _shortestScan;
             }
 
+            var connections = allResult.Value ?? [];
             var now = DateTimeOffset.UtcNow;
 
-            var dueConnections = (allResult.Value ?? [])
+            var dueConnections = connections
                 .Where(c => c.HealthCheckEnabled
                     && c.HealthCheckIntervalSeconds.HasValue
                     && (!_lastChecked.TryGetValue(c.Id, out var last)
@@ -177,57 +213,110 @@ public sealed class ConnectionHealthMonitorWorker : BackgroundService
                 ct.ThrowIfCancellationRequested();
                 await ProbeAndPersist(scope.ServiceProvider, connection, ct).ConfigureAwait(false);
             }
+
+            return NextScanIn(connections, DateTimeOffset.UtcNow);
+        }
+    }
+
+    // Why the next scan waits for the soonest enabled connection to fall due: every scan reads every
+    // connection's row, and a fixed 15-second scan re-read them all on a host whose connections were
+    // nowhere near due, or had no health check at all. Waiting for the soonest one probes nothing
+    // later than before. The wait is kept between the shortest and longest scan waits, so a health
+    // check enabled after this scan is noticed within the longest (FDW-970).
+    private TimeSpan NextScanIn(IReadOnlyList<IConnectionImplementationConfiguration> connections, DateTimeOffset now)
+    {
+        var wait = _longestScan;
+        foreach (var connection in connections)
+        {
+            if (!connection.HealthCheckEnabled || connection.HealthCheckIntervalSeconds is not { } seconds)
+                continue;
+
+            var due = _lastChecked.TryGetValue(connection.Id, out var last)
+                ? last.AddSeconds(seconds) - now
+                : TimeSpan.Zero;
+            if (due < wait)
+                wait = due;
         }
 
-        return true;
+        var next = wait < _shortestScan ? _shortestScan : wait;
+        ConnectionHealthMonitorWorkerLog.NextScanScheduled(_logger, next.TotalSeconds);
+        return next;
     }
 
     private static bool IsConnectionContainerAbsent(IGenericResult result) =>
         result.CodeChain.Any(code => code is DataPathNotFoundCode or ContainerNotFoundInPathCode);
 
-    private async Task ProbeAndPersist(IServiceProvider services, ConnectionConfiguration connection, CancellationToken ct)
+    // Why nothing that happens to one connection can end the pass: the pass probes connection after
+    // connection, so a probe or a write that threw used to leave every connection after it unprobed
+    // for that tick -- and, out of ExecuteAsync, end monitoring for the life of the host. Each
+    // connection is its own boundary: what it cannot answer is recorded against it, and the pass goes
+    // on. Host shutdown is the one thing let through, and it is never recorded as a result.
+    private async Task ProbeAndPersist(IServiceProvider services, IConnectionImplementationConfiguration connection, CancellationToken ct)
     {
         ConnectionHealthMonitorWorkerLog.ProbingConnection(_logger, connection.Name);
 
         _lastChecked[connection.Id] = DateTimeOffset.UtcNow;
 
-        var connectionProvider = services.GetRequiredService<IConnectionProvider>();
-        var healthService = services.GetRequiredService<IConnectionHealthService>();
-
-        var getResult = await connectionProvider.Get(connection.Name, ct).ConfigureAwait(false);
-        if (!getResult.IsSuccess || getResult.Value is null)
-        {
-            var reason = getResult.CurrentMessage ?? "Connection could not be resolved";
-            ConnectionHealthMonitorWorkerLog.ConnectionResolutionFailed(_logger, connection.Name, reason);
-            await PersistResult(healthService, connection, false, reason, null, ct).ConfigureAwait(false);
+        // A probe cut short by shutdown measured nothing; recording it would mark a healthy
+        // connection unhealthy on every restart.
+        if (await Probe(services, connection, ct).ConfigureAwait(false) is not { } outcome || ct.IsCancellationRequested)
             return;
-        }
 
-        if (getResult.Value is not ISupportsHealthProbe probe)
+        try
         {
-            ConnectionHealthMonitorWorkerLog.NoProbeCapability(_logger, connection.Name);
-            return;
+            await PersistResult(services.GetRequiredService<IConnectionHealthService>(), connection,
+                outcome.Success, outcome.Message, outcome.ResponseTimeMs, ct).ConfigureAwait(false);
         }
-
-        var stopwatch = Stopwatch.StartNew();
-        var probeResult = await probe.Probe(ct).ConfigureAwait(false);
-        stopwatch.Stop();
-        var responseTimeMs = (int)stopwatch.ElapsedMilliseconds;
-
-        var success = probeResult.IsSuccess;
-        var message = success ? null : (probeResult.CurrentMessage ?? "Probe failed");
-
-        if (!success)
+        catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            ConnectionHealthMonitorWorkerLog.ProbeFailed(_logger, connection.Name, message!);
+            ConnectionHealthMonitorWorkerLog.PersistHistoryThrew(_logger, ex, connection.Name, ex.Message);
         }
+    }
 
-        await PersistResult(healthService, connection, success, message, responseTimeMs, ct).ConfigureAwait(false);
+    // Null when the connection's type has no probe: there is nothing to record for it.
+    private async Task<(bool Success, string? Message, int? ResponseTimeMs)?> Probe(
+        IServiceProvider services, IConnectionImplementationConfiguration connection, CancellationToken ct)
+    {
+        try
+        {
+            // By Id, which reads the connection whole and builds it: the scan read rows alone, and a
+            // connection is built from its children too (AdditionalProperties, Limits) (FDW-970).
+            var getResult = await services.GetRequiredService<IConnectionProvider>().Get(connection.Id, ct).ConfigureAwait(false);
+            if (!getResult.IsSuccess || getResult.Value is null)
+            {
+                var reason = getResult.CurrentMessage ?? "Connection could not be resolved";
+                ConnectionHealthMonitorWorkerLog.ConnectionResolutionFailed(_logger, connection.Name, reason);
+                return (false, reason, null);
+            }
+
+            if (getResult.Value is not ISupportsHealthProbe probe)
+            {
+                ConnectionHealthMonitorWorkerLog.NoProbeCapability(_logger, connection.Name);
+                return null;
+            }
+
+            var stopwatch = Stopwatch.StartNew();
+            var probeResult = await probe.Probe(ct).ConfigureAwait(false);
+            stopwatch.Stop();
+            var responseTimeMs = (int)stopwatch.ElapsedMilliseconds;
+
+            if (probeResult.IsSuccess)
+                return (true, null, responseTimeMs);
+
+            var message = probeResult.CurrentMessage ?? "Probe failed";
+            ConnectionHealthMonitorWorkerLog.ProbeFailed(_logger, connection.Name, message);
+            return (false, message, responseTimeMs);
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            ConnectionHealthMonitorWorkerLog.ProbeThrew(_logger, ex, connection.Name, ex.Message);
+            return (false, ex.Message, null);
+        }
     }
 
     private async Task PersistResult(
         IConnectionHealthService healthService,
-        ConnectionConfiguration connection,
+        IConnectionImplementationConfiguration connection,
         bool success,
         string? message,
         int? responseTimeMs,

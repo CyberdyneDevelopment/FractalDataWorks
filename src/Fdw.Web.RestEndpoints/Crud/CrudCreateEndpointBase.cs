@@ -47,6 +47,18 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     protected virtual string WritePolicy => $"{ResourceName}:write";
 
     /// <summary>
+    /// Gets whether the resource this endpoint acts on decides who may use it, instead of a platform permission.
+    /// </summary>
+    /// <remarks>
+    /// When true the endpoint requires only a signed-in caller, and the endpoint itself asks the
+    /// resource's own access policy. A workspace is the case this exists for: ownership, an
+    /// in-effect membership or a platform permission can each grant access to one, so the platform
+    /// permission cannot be the gate in front of it (FDW-936). False keeps the platform permission
+    /// as the gate, which is what every other resource does.
+    /// </remarks>
+    protected virtual bool ResourceDecidesAccess => false;
+
+    /// <summary>
     /// Gets the route for this endpoint. Defaults to "/{ResourceName}".
     /// </summary>
     protected virtual string Route => $"/{ResourceName}";
@@ -73,7 +85,8 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
 #if DEVELOP
         AllowAnonymous();
 #else
-        Policies(WritePolicy);
+        if (!ResourceDecidesAccess)
+            Policies(WritePolicy);
 #endif
         Summary(s =>
         {
@@ -113,7 +126,7 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
             if (existsResult.Value)
             {
                 OnAlreadyExists(resourceName);
-                ThrowError($"A {ResourceName} with this name already exists", 409);
+                ThrowError(DuplicateMessage(req), 409);
                 return;
             }
 
@@ -139,16 +152,14 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
         catch (Exception ex) when (ex is not ValidationFailureException)
         {
             var msg = EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
-            HttpContext.Response.ContentType = "application/json";
-            await HttpContext.Response.WriteAsJsonAsync(new FdwErrorResponse
+            await Send.ResultAsync(TypedResults.Json(new FdwErrorResponse
             {
                 Code = msg.Code ?? "INTERNAL_ERROR",
                 Message = msg.Message,
                 ReferenceId = HttpContext.TraceIdentifier,
                 IsRetryable = false,
                 Action = "Contact your administrator"
-            }, ct).ConfigureAwait(false);
+            }, statusCode: 500)).ConfigureAwait(false);
         }
     }
 
@@ -161,6 +172,13 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     /// Checks whether a resource with the same name already exists. Return true for conflict.
     /// </summary>
     protected abstract Task<IGenericResult<bool>> CheckExists(TCreateRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Gets the 409 body sent when <see cref="CheckExists"/> reports a conflict. Override when the
+    /// generic wording doesn't name what actually collided — a duplicate that CheckExists already
+    /// identified (a specific row, a specific value) reads better named than left generic.
+    /// </summary>
+    protected virtual string DuplicateMessage(TCreateRequest request) => $"A {ResourceName} with this name already exists";
 
     /// <summary>
     /// Performs the actual resource creation. Returns the created detail DTO.
@@ -207,7 +225,6 @@ public abstract class CrudCreateEndpointBase<TCreateRequest, TDetail> : Endpoint
     protected virtual Task SendErrorResponse(IGenericResult result, string operation, CancellationToken ct)
     {
         var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
-        HttpContext.Response.StatusCode = statusCode;
-        return HttpContext.Response.WriteAsJsonAsync(errorResponse, ct);
+        return Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode));
     }
 }

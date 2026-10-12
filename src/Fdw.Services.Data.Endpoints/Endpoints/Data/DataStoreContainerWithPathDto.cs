@@ -22,6 +22,8 @@ public class DataStoreContainerWithPathDto
     /// <summary>Gets or sets the container type (e.g., Table, View).</summary>
     public string ContainerType { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the number of fields in the container.</summary>
-    public int FieldCount { get; set; }
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the container's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
 }

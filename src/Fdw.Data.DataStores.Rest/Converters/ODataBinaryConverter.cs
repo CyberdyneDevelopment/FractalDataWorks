@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataBinaryConverter()
     : DataTypeConverterBase(
-        id: 15,
         name: "Binary",
         sourceType: "Binary",
         targetClrType: typeof(byte[]),

@@ -84,7 +84,7 @@ public abstract class ListPromotionsEndpointBase : EndpointWithoutRequest<IReadO
     }
 
     /// <summary>Maps a promotion request configuration to a DTO.</summary>
-    public static PromotionResponse MapToDto(Configuration.PromotionRequestConfiguration p)
+    public static PromotionResponse MapToDto(Configuration.PromotionRequestImplementationConfiguration p)
     {
         return new PromotionResponse
         {

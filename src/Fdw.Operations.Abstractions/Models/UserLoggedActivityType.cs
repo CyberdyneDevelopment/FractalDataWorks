@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class UserLoggedActivityType : ActivityTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="UserLoggedActivityType"/>.</summary>
-    public UserLoggedActivityType() : base(5, "UserLogged") { }
+    public UserLoggedActivityType() : base("UserLogged") { }
 }

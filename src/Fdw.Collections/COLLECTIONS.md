@@ -114,8 +114,6 @@ public partial class ConnectionStates : TypeCollectionBase<IConnectionState> { }
 |---|---|---|
 | `UseMethods` | `false` | emit members as methods rather than properties |
 | `RestrictToCurrentCompilation` | `false` | suppress cross-assembly registration for this collection |
-| `GenerateUIComponent` | `false` | emit a picker component for the collection |
-| `UIComponent` | `null` | use this component instead of a generated one |
 | `TypeOption` + `TypeOptionName` | `null` | **child collection** — this collection is itself an option of a parent collection. Both must be set together; setting them makes `IsChildCollection` true |
 
 ---
@@ -158,7 +156,7 @@ a type nothing declares is `TC011`.
 
 This is the most consequential difference between the two families and the easiest to get wrong.
 
-| | `[TypeOption]` | `[ServiceTypeOption]` |
+| | `[TypeOption]` | `[Implementation]` |
 |---|---|---|
 | base | `TypeOptionBase<int, T>` | `TypeOptionBase<Guid, IServiceType<Guid>>` |
 | key type | `int` | `Guid` |
@@ -182,7 +180,7 @@ Eight names in this codebase are shared that way.
 
 - **Renaming a plain option's type or namespace changes its Id.** Moving the *project* never does.
 - **That costs nothing.** Option Ids are not persisted: a configuration row stores a NAME —
-  `ConnectionConfiguration.ServiceType` and `.ServiceOptionType` are both `string` — and the provider
+  `ConnectionConfiguration.ServiceType` and `.Implementation` are both `string` — and the provider
   dispatches on that string. An Id is an in-memory lookup key, recomputed every run.
   Even when Ids do get persisted, the databases are rebuilt from an idempotent seed, so a changed Id
   costs a reseed rather than a migration. **Namespace moves and type renames are ordinary work.** Use
@@ -212,9 +210,9 @@ from the host.
 | generator | emits for | scope |
 |---|---|---|
 | `TypeOptionModuleInitializerGenerator` | **executables only** — returns early for `DynamicallyLinkedLibrary` | scans every referenced assembly |
-| `ServiceTypeOptionModuleInitializerGenerator` | executables **and libraries** | DLL mode scans the DLL's own types for options targeting a collection in a *different* assembly |
+| `ImplementationModuleInitializerGenerator` | executables **and libraries** | DLL mode scans the DLL's own types for options targeting a collection in a *different* assembly |
 
-**A plain `[TypeOption]` in a library has no self-registration path.** A `[ServiceTypeOption]` does.
+**A plain `[TypeOption]` in a library has no self-registration path.** A `[Implementation]` does.
 That asymmetry is what makes an option package viable for service types and not for plain options.
 
 **Requirement:** an option package that must register itself references
@@ -391,7 +389,7 @@ public partial class ThingTypes : ServiceTypeCollectionBase<ThingTypeBase<...>, 
     }
 }
 
-[ServiceTypeOption(typeof(ThingTypes), "MsSql")]
+[Implementation(typeof(ThingTypes), "MsSql")]
 public sealed class MsSqlThingType : ThingTypeBase<...>
 {
     public MsSqlThingType() : base(name: "MsSql", ...)
@@ -425,7 +423,7 @@ The child is simultaneously a collection and an option of its parent. Both `Type
 Read for this document: `Fdw.Collections/Attributes/{TypeOption,TypeCollection,TypeLookup,Replaces}Attribute.cs`,
 `Fdw.Collections/{TypeOptionBase,TypeCollectionBase,OptionId}.cs`,
 `Fdw.Collections.SourceGenerators/{TypeCollectionGenerator,ServiceTypeCollectionGenerator,TypeOptionExtensionGenerator}.cs`,
-`Fdw.Collections.SourceGenerators/Shared/{LookupPropertyModel,TypeOptionDiscovery,ServiceTypeOptionDiscovery,TypeCollectionGeneratorDiagnostics,ReservedMemberNames}.cs`,
-`Fdw.Registration.SourceGenerators/{TypeOptionModuleInitializerGenerator,ServiceTypeOptionModuleInitializerGenerator}.cs`,
+`Fdw.Collections.SourceGenerators/Shared/{LookupPropertyModel,TypeOptionDiscovery,ImplementationDiscovery,TypeCollectionGeneratorDiagnostics,ReservedMemberNames}.cs`,
+`Fdw.Registration.SourceGenerators/{TypeOptionModuleInitializerGenerator,ImplementationModuleInitializerGenerator}.cs`,
 `Fdw.Services.Abstractions/{ServiceTypeBase,IServiceType}.cs`, and the generated
 `ConnectionStates.TypeCollection.g.cs` plus ReferenceApi's `TypeOptionModuleInitializer.g.cs`.

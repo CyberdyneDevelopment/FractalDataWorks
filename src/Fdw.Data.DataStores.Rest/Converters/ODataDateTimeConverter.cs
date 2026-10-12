@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataDateTimeConverter()
     : DataTypeConverterBase(
-        id: 11,
         name: "DateTime",
         sourceType: "DateTime",
         targetClrType: typeof(DateTime),

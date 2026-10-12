@@ -14,10 +14,10 @@ namespace Fdw.Services.Authorization.Abstractions;
 /// Each action includes visual properties (icon, color) for consistent rendering.
 /// </para>
 /// <para>
-/// Usage in Blazor:
+/// Usage:
 /// <code>
 /// var action = PermissionActions.ByName("Read");
-/// &lt;MudIcon Icon="@action.Icon" Color="@action.Color" /&gt;
+/// // a renderer draws action.Icon in action.Color
 /// </code>
 /// </para>
 /// </remarks>

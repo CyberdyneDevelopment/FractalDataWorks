@@ -6,7 +6,7 @@ namespace Fdw.Calculations.Endpoints;
 
 /// <summary>
 /// MessageLogging definitions for Calculation endpoint base classes.
-/// EventId range: 1530-1545
+/// EventId range: 1530-1545; 21530-21532 (Validation category, answered as 400); 91002 (Internal category).
 /// </summary>
 [MessageLoggingTypeCode("ENDPOINTS")]
 public static partial class CalculationEndpointLog
@@ -68,4 +68,36 @@ public static partial class CalculationEndpointLog
     /// <summary>Logs that an unknown calculation type was requested.</summary>
     [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "Unknown calculation type '{calculationType}'")]
     public static partial IGenericMessage UnknownCalculationType(ILogger logger, string calculationType);
+
+    /// <summary>A calculation request named a calculation entity type that is not registered.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="calculationEntityType">The type name that was sent.</param>
+    [MessageLogging(EventId = 21530, Level = LogLevel.Warning,
+        Message = "Unknown calculation entity type '{calculationEntityType}'")]
+    public static partial IGenericMessage TypedConfigurationUnknownType(ILogger logger, string calculationEntityType);
+
+    /// <summary>A calculation request's configuration could not be read as its type's configuration class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="calculationEntityType">The calculation entity type.</param>
+    /// <param name="configurationType">The configuration class the body was read as.</param>
+    /// <param name="reason">Why it could not be read.</param>
+    [MessageLogging(EventId = 21531, Level = LogLevel.Warning,
+        Message = "The configuration for calculation type '{calculationEntityType}' could not be read as {configurationType}: {reason}")]
+    public static partial IGenericMessage TypedConfigurationUnreadable(
+        ILogger logger, string calculationEntityType, string configurationType, string reason);
+
+    /// <summary>An update changed a calculation's type without sending the new type's configuration.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="fromType">The calculation's current type.</param>
+    /// <param name="toType">The type the update asked for.</param>
+    [MessageLogging(EventId = 21532, Level = LogLevel.Warning,
+        Message = "Changing a calculation from '{fromType}' to '{toType}' needs the new type's configuration; none was sent")]
+    public static partial IGenericMessage TypedConfigurationRequiredForTypeChange(ILogger logger, string fromType, string toType);
+
+    /// <summary>A persisted calculation entity has no type, which a calculation cannot be without.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="entityName">The calculation entity's name.</param>
+    [MessageLogging(EventId = 91002, Level = LogLevel.Error,
+        Message = "Calculation entity '{entityName}' has no type (Implementation)")]
+    public static partial IGenericMessage CalculationEntityMissingType(ILogger logger, string entityName);
 }

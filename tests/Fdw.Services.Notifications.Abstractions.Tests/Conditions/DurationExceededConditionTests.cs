@@ -124,9 +124,6 @@ public class DurationExceededConditionTests
     {
         // Arrange & Act
         var condition = new DurationExceededCondition();
-
-        // Assert
-        condition.Id.ShouldBe(3);
         condition.Name.ShouldBe("DurationExceeded");
         condition.Icon.ShouldBe("timer_off");
         condition.Color.ShouldBe("Warning");

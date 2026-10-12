@@ -26,7 +26,7 @@ public sealed class AddOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="AddOperation"/> class.
     /// </summary>
     public AddOperation()
-        : base(id: 1, name: "Add", category: "Arithmetic", description: "Adds two values (left + right)")
+        : base(name: "Add", category: "Arithmetic", description: "Adds two values (left + right)")
     {
         _logger = NullLogger<AddOperation>.Instance;
         Parameters =

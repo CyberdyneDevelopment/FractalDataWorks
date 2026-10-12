@@ -88,33 +88,30 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             if (container == null)
             {
                 return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("ContainerNull")));
+                    GenericResult<SqlCommand>.Failure(
+                        MsSqlTranslatorLog.QueryContainerNull(NullLogger<MsSqlQueryTranslator>.Instance)));
             }
 
             // Validate container path is a database path
             if (container.Path is not IDatabasePath dbPath)
             {
                 return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("InvalidContainerPath")));
+                    GenericResult<SqlCommand>.Failure(
+                        MsSqlTranslatorLog.QueryPathNotDatabase(
+                            NullLogger<MsSqlQueryTranslator>.Instance, container.Name, container.Path.GetType().Name)));
             }
 
             if (container is not IDataContainer dataContainer)
                 return Task.FromResult(GenericResult<SqlCommand>.Failure(
                     MsSqlTranslatorLog.ContainerNotDataContainer(NullLogger<MsSqlQueryTranslator>.Instance, container.Name)));
 
-            List<string>? containerFieldNames = null;
-            var schemaFields = container.Schema.Fields;
-            if (schemaFields.Count > 0)
-            {
-                var names = new List<string>(schemaFields.Count);
-                for (var fi = 0; fi < schemaFields.Count; fi++)
-                    names.Add(schemaFields[fi].Name);
-                containerFieldNames = names;
-            }
+            var returnedFieldNames = ReturnedFieldNames(command, container);
 
+            // Why no fall-back to every declared column: a container whose fields are all withheld
+            // (Metadata, Descriptive, DbKey the command did not include) has nothing to return, and
+            // selecting everything instead would hand back exactly what the datum types withhold.
             if (command.Projection?.PropertyNames?.Any() != true
-                && container.Schema.Fields.Count == 0
-                && (containerFieldNames is null || containerFieldNames.Count == 0))
+                && (returnedFieldNames is null || returnedFieldNames.Count == 0))
             {
                 return Task.FromResult(
                     GenericResult<SqlCommand>.Failure(
@@ -125,53 +122,87 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
 
             var dialect = dbPath.Dialect;
 
-            SqlCommand sqlCommand;
-            if (command.Aggregation is not null)
-            {
-                if (command.Joins is { Count: > 0 })
-                {
-                    return Task.FromResult(GenericResult<SqlCommand>.Failure(
-                        MsSqlDataResultCodes.ByName("QueryTranslationFailed"),
-                        ResultDetails.Create("ErrorMessage", "Aggregation combined with JOINs is not supported by the MsSql query translator.")));
-                }
+            MsSqlTranslatorLog.TranslatingQuery(
+                NullLogger<MsSqlQueryTranslator>.Instance,
+                container.Name,
+                command.Aggregation is not null ? "aggregate" : command.Joins is { Count: > 0 } ? "joined" : "single-table",
+                command.Joins.Count);
 
-                sqlCommand = BuildAggregateSelectStatement(container, dbPath, dialect, command.Aggregation, command.Filter, command.Ordering);
-            }
-            else if (command.Joins is { Count: > 0 })
-            {
-                sqlCommand = BuildJoinedSelectStatement(
-                    container, dbPath, dialect, command.Joins, command.Filter, command.Projection, containerFieldNames);
-            }
-            else
-            {
-                // No JOIN → the single-table path (bare column names).
-                sqlCommand = BuildSelectStatement(
-                    container,
-                    dbPath,
-                    dialect,
-                    command.Filter,
-                    command.Projection,
-                    command.Ordering,
-                    command.Paging,
-                    containerFieldNames);
-            }
-
-            return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
+            return Task.FromResult(BuildStatement(command, dataContainer, dbPath, dialect, returnedFieldNames));
         }
         catch (Exception ex)
         {
             return Task.FromResult(
                 GenericResult<SqlCommand>.Failure(
-                    MsSqlDataResultCodes.ByName("QueryTranslationFailed"),
-                    ResultDetails.Create("ErrorMessage", ex.Message)));
+                    MsSqlTranslatorLog.QueryTranslationThrew(
+                        NullLogger<MsSqlQueryTranslator>.Instance, ex, container.Name, ex.Message)));
         }
+    }
+
+    /// <summary>
+    /// The SELECT for the query's shape: an aggregate over one container, a joined read, or a
+    /// single-table read.
+    /// </summary>
+    private static IGenericResult<SqlCommand> BuildStatement(
+        IQueryCommand command,
+        IDataContainer container,
+        IDatabasePath dbPath,
+        ISqlDialect dialect,
+        List<string>? returnedFieldNames)
+    {
+        SqlCommand sqlCommand;
+        if (command.Aggregation is not null)
+        {
+            if (command.Joins is { Count: > 0 })
+            {
+                return GenericResult<SqlCommand>.Failure(
+                    MsSqlTranslatorLog.AggregationWithJoins(
+                        NullLogger<MsSqlQueryTranslator>.Instance, container.Name, command.Joins.Count));
+            }
+
+            sqlCommand = BuildAggregateSelectStatement(
+                container, dbPath, dialect, command.Aggregation, command.Filter, command.Ordering, command.Paging);
+        }
+        else if (command.Joins is { Count: > 0 })
+        {
+            sqlCommand = BuildJoinedSelectStatement(
+                container, dbPath, dialect, command.Joins, command.Filter, command.Projection, returnedFieldNames);
+        }
+        else
+        {
+            // No JOIN → the single-table path (bare column names).
+            sqlCommand = BuildSelectStatement(
+                container,
+                dbPath,
+                dialect,
+                command.Filter,
+                command.Projection,
+                command.Ordering,
+                command.Paging,
+                returnedFieldNames);
+        }
+
+        return GenericResult<SqlCommand>.Success(sqlCommand);
+    }
+
+    /// <summary>
+    /// The names of the container's fields this command returns, or null when the container declares
+    /// no fields. Each field's datum type decides, given what the command includes (FDW-988).
+    /// </summary>
+    private static List<string>? ReturnedFieldNames(IQueryCommand command, IStorageContainer container)
+    {
+        if (container.Schema.Fields.Count == 0)
+            return null;
+
+        return container.Schema
+            .GetReturnedFields(command.IncludeMetadata, command.IncludeDescriptions, command.IncludeKeys)
+            .Select(f => f.Name)
+            .ToList();
     }
 
     /// <summary>
     /// Builds a complete T-SQL SELECT statement.
     /// </summary>
-    // MA0051: Method length acceptable - sequential SQL SELECT generation (SELECT, FROM, WHERE, ORDER BY with fallback, OFFSET/FETCH)
-#pragma warning disable MA0051 // Method is too long
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // SQL SELECT builder with conditional clauses (projection, WHERE, ORDER BY fallback logic, paging)
     private static SqlCommand BuildSelectStatement(
         IStorageContainer container,
@@ -181,10 +212,9 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         IProjectionExpression? projection,
         IOrderingExpression? ordering,
         IPagingExpression? paging,
-        List<string>? containerFieldNames)
-#pragma warning restore MA0051
+        List<string>? returnedFieldNames)
     {
-        var selectClause = BuildSelectClause(container, projection, containerFieldNames, null, dialect);
+        var selectClause = BuildSelectClause(container, projection, returnedFieldNames, null, dialect);
         var fromClause = $"FROM {BuildQualifiedTableName(dbPath)}";
 
         var sql = new StringBuilder();
@@ -218,9 +248,9 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                 var pkName = ((IDataContainer)container).GetPrimaryKeyFieldName();
                 orderByField = pkName ?? fields[0].Name;
             }
-            else if (containerFieldNames is { Count: > 0 })
+            else if (returnedFieldNames is { Count: > 0 })
             {
-                orderByField = containerFieldNames[0];
+                orderByField = returnedFieldNames[0];
             }
 
             command.CommandText += $" ORDER BY {dialect.QuoteIdentifier(orderByField)}";
@@ -235,6 +265,25 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         return command;
     }
 
+    /// <summary>The database path of a JOIN target, found by name among the containers of the primary container's data store.</summary>
+    /// <remarks>Container names are unique within a data store; none, or more than one, refuses the join.</remarks>
+    private static IDatabasePath JoinTargetPath(IDataContainer primary, string targetContainerName)
+    {
+        var store = primary.Parent.Store;
+        var matches = store.Paths
+            .SelectMany(p => p.Containers)
+            .Where(c => string.Equals(c.Name, targetContainerName, StringComparison.Ordinal))
+            .ToList();
+        if (matches.Count != 1)
+            throw new ArgumentException(
+                $"JOIN target container '{targetContainerName}' is declared {matches.Count} times in data store '{store.Name}'; it must be declared exactly once.",
+                nameof(targetContainerName));
+        if (matches[0].Path is not IDatabasePath path)
+            throw new ArgumentException(
+                $"JOIN target container '{targetContainerName}' is not in a database path.", nameof(targetContainerName));
+        return path;
+    }
+
     /// <summary>
     /// Builds a JOIN read: the primary (child) container's columns SELECTed and table-qualified,
     /// FROM the child, joined to each target container on the supplied column pairs, with a
@@ -244,18 +293,18 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
     /// </summary>
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // JOIN iteration + condition validation + WHERE.
     private static SqlCommand BuildJoinedSelectStatement(
-        IStorageContainer container,
+        IDataContainer container,
         IDatabasePath dbPath,
         ISqlDialect dialect,
         IReadOnlyList<IJoinExpression> joins,
         IFilterExpression? filter,
         IProjectionExpression? projection,
-        List<string>? containerFieldNames)
+        List<string>? returnedFieldNames)
     {
         var primaryTable = dbPath.ObjectName;
 
         var sql = new StringBuilder();
-        sql.Append(BuildSelectClause(container, projection, containerFieldNames, primaryTable, dialect));
+        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, primaryTable, dialect));
         sql.Append(" FROM ");
         sql.Append(BuildQualifiedTableName(dbPath));
 
@@ -268,17 +317,31 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                     nameof(joins));
             }
 
-            // Build the join target's qualified name using the same schema as the primary path
-            var targetQuoted = string.IsNullOrEmpty(dbPath.Database)
-                ? $"{dialect.QuoteIdentifier(dbPath.Schema!)}.{dialect.QuoteIdentifier(join.TargetContainerName)}"
-                : $"{dialect.QuoteIdentifier(dbPath.Database)}.{dialect.QuoteIdentifier(dbPath.Schema!)}.{dialect.QuoteIdentifier(join.TargetContainerName)}";
+            // The join target is qualified with its own path's schema: a child and its owner can be
+            // declared in different paths (transform.FieldMappingTransformation hangs from
+            // data.DataSetFieldMapping), so the primary path's schema is not the target's.
+            var targetPath = JoinTargetPath(container, join.TargetContainerName);
+            var targetQuoted = string.IsNullOrEmpty(targetPath.Database)
+                ? $"{dialect.QuoteIdentifier(targetPath.Schema!)}.{dialect.QuoteIdentifier(join.TargetContainerName)}"
+                : $"{dialect.QuoteIdentifier(targetPath.Database)}.{dialect.QuoteIdentifier(targetPath.Schema!)}.{dialect.QuoteIdentifier(join.TargetContainerName)}";
 
             sql.Append(CultureInfo.InvariantCulture, $" {join.JoinType} JOIN {targetQuoted} ON ");
 
+            // The left side belongs to the primary container unless the join continues from an
+            // earlier join's target.
+            if (join.SourceContainerName is { } source && !IsValidColumnName(source))
+            {
+                throw new ArgumentException(
+                    $"Invalid JOIN source container name '{source}'. Only alphanumeric characters and underscores allowed.",
+                    nameof(joins));
+            }
+
+            var leftTable = join.SourceContainerName is { } joinedSource ? joinedSource : primaryTable;
+
             var conditions = join.JoinConditions.Select(c =>
             {
-                // SQL INJECTION PREVENTION: validate both identifiers. Left = primary (child) column,
-                // Right = the join target's column.
+                // SQL INJECTION PREVENTION: validate both identifiers. Left = the source container's
+                // column, Right = the join target's column.
                 if (!IsValidColumnName(c.LeftField) || !IsValidColumnName(c.RightField))
                 {
                     throw new ArgumentException(
@@ -286,7 +349,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
                         nameof(joins));
                 }
 
-                return $"{dialect.QuoteIdentifier(primaryTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
+                return $"{dialect.QuoteIdentifier(leftTable)}.{dialect.QuoteIdentifier(c.LeftField)} = {dialect.QuoteIdentifier(join.TargetContainerName)}.{dialect.QuoteIdentifier(c.RightField)}";
             });
             sql.Append(string.Join(" AND ", conditions));
         }
@@ -300,9 +363,9 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             var whereClause = BuildWhereClause(filter, dialect, (n, v) => AddParameter(command, n, v), primaryTable);
             command.CommandText += $" WHERE {whereClause}";
         }
-
         return command;
     }
+
 
     /// <summary>
     /// Builds the SELECT clause for a query — explicit projection, schema fields, or container
@@ -313,7 +376,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
     private static string BuildSelectClause(
         IStorageContainer container,
         IProjectionExpression? projection,
-        List<string>? containerFieldNames,
+        List<string>? returnedFieldNames,
         string? tableQualifier,
         ISqlDialect dialect)
     {
@@ -379,16 +442,10 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             return $"SELECT {string.Join(", ", projection.PropertyNames.Select(Col))}";
         }
 
-        // Root container with a populated Schema (TableContainer flow).
-        if (container.Schema.GetProjectableFields().Count > 0)
+        // The fields the command returns, decided by each field's datum type (FDW-988).
+        if (returnedFieldNames is { Count: > 0 })
         {
-            return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
-        }
-
-        // Adapter flow with empty Schema — use container field names from IDataNode.Fields.
-        if (containerFieldNames is { Count: > 0 })
-        {
-            return $"SELECT {string.Join(", ", containerFieldNames.Select(Col))}";
+            return $"SELECT {string.Join(", ", returnedFieldNames.Select(Col))}";
         }
 
         throw new InvalidOperationException(
@@ -397,7 +454,7 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
 
     /// <summary>
     /// SQL-aggregate function keywords this translator will emit. The producer (a DataSet strategy
-    /// building an <see cref="IAggregationExpression"/> from <c>DataSetConfiguration.Aggregates</c>) is
+    /// building an <see cref="IAggregationExpression"/> from <c>ISimpleDataSetConfiguration.Aggregates</c>) is
     /// responsible for mapping domain function names to one of these; anything else fails loud here.
     /// </summary>
     private static readonly HashSet<string> AllowedAggregateFunctions =
@@ -415,7 +472,8 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
         ISqlDialect dialect,
         IAggregationExpression aggregation,
         IFilterExpression? filter,
-        IOrderingExpression? ordering)
+        IOrderingExpression? ordering,
+        IPagingExpression? paging)
     {
         if (aggregation.GroupByFields.Count == 0 && aggregation.Aggregations.Count == 0)
         {
@@ -449,6 +507,10 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             selectCols.Add($"{BuildAggregateExpression(measure.Value, dialect)} AS {dialect.QuoteIdentifier(measure.Key)}");
         }
 
+        // The window runs after GROUP BY and before OFFSET/FETCH, so it counts every group, not the page.
+        if (aggregation.IncludeGroupCount && aggregation.GroupByFields.Count > 0)
+            selectCols.Add($"COUNT(*) OVER () AS {dialect.QuoteIdentifier(AggregationExpression.GroupCountColumn)}");
+
         var sql = new StringBuilder();
         sql.Append("SELECT ");
         sql.Append(string.Join(", ", selectCols));
@@ -469,13 +531,46 @@ public sealed class MsSqlQueryTranslator : MsSqlDataCommandTranslatorBase
             command.CommandText += $" GROUP BY {string.Join(", ", aggregation.GroupByFields.Select(dialect.QuoteIdentifier))}";
         }
 
-        if (ordering?.OrderedFields?.Any() == true
-            && ordering.OrderedFields.All(o => aggregation.GroupByFields.Contains(o.PropertyName, StringComparer.OrdinalIgnoreCase)))
-        {
-            command.CommandText += $" ORDER BY {BuildOrderByClause(ordering, dialect)}";
-        }
+        AppendAggregateOrderAndPaging(command, dialect, aggregation, ordering, paging);
 
         return command;
+    }
+
+    /// <summary>
+    /// Orders and pages a grouped read. An ordering may name a group-by column or an aggregate's output
+    /// column; anything else is left out, as it always was. A page needs an order that never ties, so the
+    /// group-by columns follow whatever the caller asked for.
+    /// </summary>
+    private static void AppendAggregateOrderAndPaging(
+        SqlCommand command,
+        ISqlDialect dialect,
+        IAggregationExpression aggregation,
+        IOrderingExpression? ordering,
+        IPagingExpression? paging)
+    {
+        var orderable = aggregation.GroupByFields.Concat(aggregation.Aggregations.Keys).ToList();
+        var callerOrder = ordering?.OrderedFields is { } fields
+            && fields.Any()
+            && fields.All(o => orderable.Contains(o.PropertyName, StringComparer.OrdinalIgnoreCase));
+        var pages = paging is not null && aggregation.GroupByFields.Count > 0;
+        if (!callerOrder && !pages)
+            return;
+
+        var clauses = new List<string>();
+        if (callerOrder)
+            clauses.Add(BuildOrderByClause(ordering!, dialect));
+
+        if (pages)
+        {
+            var named = ordering?.OrderedFields.Select(o => o.PropertyName).ToList() ?? [];
+            clauses.AddRange(aggregation.GroupByFields
+                .Where(g => !callerOrder || !named.Contains(g, StringComparer.OrdinalIgnoreCase))
+                .Select(dialect.QuoteIdentifier));
+        }
+
+        command.CommandText += $" ORDER BY {string.Join(", ", clauses)}";
+        if (pages)
+            command.CommandText += $" {dialect.BuildPagingClause(paging!)}";
     }
 
     /// <summary>

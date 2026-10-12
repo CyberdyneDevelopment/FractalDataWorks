@@ -14,5 +14,5 @@ public sealed class HealthyStatus : LineageNodeStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthyStatus"/> class.
     /// </summary>
-    public HealthyStatus() : base(1, "Healthy") { }
+    public HealthyStatus() : base("Healthy") { }
 }

@@ -32,7 +32,6 @@ public sealed class ExtractMethodTranslator : RoslynCommandTranslatorBase<Extrac
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: analyze data flow, build extracted method, replace with call
     public override async Task<IGenericResult<MutationResult>> Translate(
         ExtractMethodCommand command,
         Solution solution,
@@ -209,7 +208,6 @@ public sealed class ExtractMethodTranslator : RoslynCommandTranslatorBase<Extrac
                 symbolChanges,
                 Array.Empty<PathChange>()));
     }
-#pragma warning restore MA0051
 
     private static string GetSymbolType(ISymbol symbol)
     {

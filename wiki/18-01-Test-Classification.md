@@ -68,7 +68,7 @@ Tests that verify **polish, edge cases, and convenience features**. A P3 failure
 | Theme/styling | CSS variable generation, color parsing |
 | Analytics/profiling | Metric collection, dashboard data |
 | SignalR notifications | Broadcast formatting, connection lifecycle |
-| UI components | Blazor rendering, component state |
+| UI components | Page/form model state, terminal rendering |
 | Formatting | Display formatting, string helpers |
 | Documentation validation | Wiki link integrity, code example correctness |
 | Performance benchmarks | Throughput, latency (informational only) |
@@ -86,7 +86,7 @@ In addition to priority, tests are tagged by functional category for selective f
 | `Etl` | Pipelines, transforms, row sources, data quality |
 | `Scheduling` | Triggers, schedules, dispatch |
 | `Configuration` | ManagedConfiguration, IOptions binding, config writers |
-| `Ui` | Blazor components, themes, SignalR |
+| `Ui` | UI models, terminal rendering, themes, SignalR |
 | `SourceGen` | Source generators, analyzers, code fixes |
 
 ## Usage

@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Tds.Endpoints\Fdw.Tds.Endpoints.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Workspaces\Fdw.Services.Workspaces.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data.Abstractions\Fdw.Services.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data.DataSets.Abstractions\Fdw.Data.DataSets.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Results\Fdw.Results.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Fdw.Services.Workspaces.Tds</RootNamespace>
+    <AssemblyName>Fdw.Services.Workspaces.Tds</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+  </PropertyGroup>
+
+</Project>

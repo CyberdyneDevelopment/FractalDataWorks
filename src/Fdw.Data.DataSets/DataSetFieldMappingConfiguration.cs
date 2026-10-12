@@ -18,15 +18,6 @@ public sealed partial class DataSetFieldMappingConfiguration : IGenericConfigura
     /// <summary>Gets or sets the durable logical identity for this field mapping.</summary>
     public Guid Id { get; set; }
 
-    /// <inheritdoc/>
-    public string SectionName => "DataSetFieldMappings";
-
-    /// <inheritdoc/>
-    public string ServiceType => "DataSet";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
-
     /// <summary>Gets or sets the name this mapping is known by within its source.</summary>
     /// <remarks>
     /// A mapping is identified by the field it fills, so the name is the logical field name. The
@@ -34,10 +25,6 @@ public sealed partial class DataSetFieldMappingConfiguration : IGenericConfigura
     /// is not a second identifier.
     /// </remarks>
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the parent DataSet source logical identifier (FK to data.DataSetSource.Id).</summary>
-    public Guid DataSetSourceId { get; set; }
-
 
     /// <summary>
     /// Gets or sets the logical field name from the DataSet schema.
@@ -59,9 +46,6 @@ public sealed partial class DataSetFieldMappingConfiguration : IGenericConfigura
     /// </summary>
     /// <value>The column/property name in the physical source (e.g., "customer_id", "CUST_ID").</value>
     public string? PhysicalFieldName { get; set; }
-
-
-
 
     /// <summary>
     /// Gets or sets the name of a <c>TransformationTypes</c> entry that combines inputs when

@@ -33,7 +33,7 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
         string schema,
         string objectName,
         IEnumerable<IStorageContainer>? containers = null)
-        : base(1, "DatabasePath")
+        : base("DatabasePath")
     {
         Database = database ?? string.Empty;
         Schema = schema ?? throw new ArgumentNullException(nameof(schema));

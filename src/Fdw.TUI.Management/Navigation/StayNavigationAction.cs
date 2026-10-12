@@ -9,5 +9,5 @@ namespace Fdw.TUI.Management.Navigation;
 public sealed class StayNavigationAction : NavigationActionBase
 {
     /// <summary>Initializes a new instance of <see cref="StayNavigationAction"/>.</summary>
-    public StayNavigationAction() : base(1, "Stay") { }
+    public StayNavigationAction() : base("Stay") { }
 }

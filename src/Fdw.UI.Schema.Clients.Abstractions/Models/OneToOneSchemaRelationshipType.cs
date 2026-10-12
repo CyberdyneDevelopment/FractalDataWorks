@@ -9,5 +9,5 @@ namespace Fdw.UI.Schema.Clients.Models;
 public sealed class OneToOneSchemaRelationshipType : SchemaRelationshipTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="OneToOneSchemaRelationshipType"/>.</summary>
-    public OneToOneSchemaRelationshipType() : base(1, "OneToOne") { }
+    public OneToOneSchemaRelationshipType() : base("OneToOne") { }
 }

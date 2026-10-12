@@ -8,7 +8,7 @@ namespace Fdw.UI.Abstractions.Composition;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Deliberately separate from the Blazor host that drives it. Arranging a view is real logic —
+/// Deliberately separate from the host that drives it. Arranging a view is real logic —
 /// bounds, minimum sizes, finding somewhere to put a new component — and logic buried in a
 /// <c>.razor</c> file cannot be unit-tested, so it ends up verified only by clicking. Keeping it
 /// here means the rules are tested directly and any host (drag-and-drop, keyboard, an API) enforces

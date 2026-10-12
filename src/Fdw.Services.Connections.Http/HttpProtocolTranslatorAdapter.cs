@@ -49,9 +49,6 @@ public sealed class HttpProtocolTranslatorAdapter : IDataCommandTranslator<HttpR
     public int Id => _protocol.Id;
 
     /// <inheritdoc/>
-    object Fdw.Collections.ITypeOption.Id => _protocol.Id;
-
-    /// <inheritdoc/>
     public string Name => _protocol.Name;
 
     /// <inheritdoc/>

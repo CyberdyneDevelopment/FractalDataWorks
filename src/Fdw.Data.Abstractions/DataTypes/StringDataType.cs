@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,13 @@ public sealed class StringDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="StringDataType"/> class.</summary>
     public StringDataType()
-        : base(id: 5, name: "String")
+        : base(name: "String")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(string);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => text;
 }

@@ -21,7 +21,7 @@ public abstract class ComponentBase<TSelf, TModel>
 
     /// <summary>
     /// Callback invoked when the value changes.
-    /// Framework-specific: Blazor uses EventCallback, React uses Action, etc.
+    /// Framework-specific: each renderer supplies its own callback shape.
     /// </summary>
     public Action<TModel>? ValueChanged { get; set; }
 

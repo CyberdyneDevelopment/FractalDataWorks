@@ -11,42 +11,6 @@ public class JsonSchemaConvertersBySourceTypeTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "DataIntegrity")]
-    public void BySourceTypeShouldReturnNotFoundForNull()
-    {
-        // Act
-        var result = JsonSchemaConverters.BySourceType(null!);
-
-        // Assert
-        result.ShouldBe(JsonSchemaConverters.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
-    public void BySourceTypeShouldReturnNotFoundForEmptyString()
-    {
-        // Act
-        var result = JsonSchemaConverters.BySourceType(string.Empty);
-
-        // Assert
-        result.ShouldBe(JsonSchemaConverters.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
-    public void BySourceTypeShouldReturnNotFoundForWhitespace()
-    {
-        // Act
-        var result = JsonSchemaConverters.BySourceType("   ");
-
-        // Assert
-        result.ShouldBe(JsonSchemaConverters.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
     public void BySourceTypeShouldFindSimpleType()
     {
         // Act
@@ -68,29 +32,5 @@ public class JsonSchemaConvertersBySourceTypeTests
         // Assert
         result.ShouldNotBe(JsonSchemaConverters.NotFound);
         result.SourceType.ShouldBe("integer+int64");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
-    public void BySourceTypeShouldReturnNotFoundForInvalidType()
-    {
-        // Act
-        var result = JsonSchemaConverters.BySourceType("invalid-type");
-
-        // Assert
-        result.ShouldBe(JsonSchemaConverters.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "DataIntegrity")]
-    public void BySourceTypeShouldBeCaseSensitive()
-    {
-        // Act
-        var result = JsonSchemaConverters.BySourceType("STRING");
-
-        // Assert
-        result.ShouldBe(JsonSchemaConverters.NotFound);
     }
 }

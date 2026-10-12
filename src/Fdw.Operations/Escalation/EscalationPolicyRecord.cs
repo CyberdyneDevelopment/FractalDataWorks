@@ -8,14 +8,14 @@ using Fdw.Operations.Configuration;
 namespace Fdw.Operations.Escalation;
 
 /// <summary>
-/// Internal adapter mapping <see cref="EscalationPolicyConfiguration"/> to <see cref="IEscalationPolicy"/>.
+/// Internal adapter mapping <see cref="EscalationPolicyImplementationConfiguration"/> to <see cref="IEscalationPolicy"/>.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed class EscalationPolicyRecord : IEscalationPolicy
 {
-    private readonly EscalationPolicyConfiguration _config;
+    private readonly IEscalationPolicyImplementationConfiguration _config;
 
-    internal EscalationPolicyRecord(EscalationPolicyConfiguration config)
+    internal EscalationPolicyRecord(IEscalationPolicyImplementationConfiguration config)
     {
         _config = config;
     }

@@ -1,31 +1,39 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Etl;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Pipelines;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Fdw.Services.Pipelines.Abstractions;
+using Fdw.Services.Pipelines.Clients.Abstractions;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
-/// Endpoint to get detailed pipeline configuration by name.
+/// Endpoint to get detailed pipeline configuration by name or id.
 /// </summary>
-public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameRequest, PipelineDetailResponse>
+public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineRequest, PipelineDetailResponse>
 {
-    /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
-        private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly PipelineServiceConfigurationProvider _pipelineProvider;
+    private readonly ITransformationConfigurationProvider _transformations;
 
     /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
-    protected GetPipelineDetailEndpointBase(ILogger logger, PipelineServiceConfigurationProvider pipelineProvider)
+    /// <param name="logger">The logger.</param>
+    /// <param name="pipelineProvider">Reads the pipeline.</param>
+    /// <param name="transformations">Reads the names of the Transformations the pipeline's field mappings chain.</param>
+    protected GetPipelineDetailEndpointBase(
+        ILogger logger,
+        PipelineServiceConfigurationProvider pipelineProvider,
+        ITransformationConfigurationProvider transformations)
     {
         EndpointLogger = logger;
         _pipelineProvider = pipelineProvider;
+        _transformations = transformations ?? throw new ArgumentNullException(nameof(transformations));
     }
 
 
@@ -35,7 +43,8 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     /// <inheritdoc/>
     public override void Configure()
     {
-        Get("/pipelines/{Name}");
+        // A read of one record is a POST, its name in the body: a GET is a plain paged list and nothing else (FDW-978).
+        Post("/pipelines/get");
 #if DEVELOP
         AllowAnonymous();
 #else
@@ -49,175 +58,56 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<PipelineNameReque
     }
 
     /// <inheritdoc/>
-    public override async Task HandleAsync(PipelineNameRequest req, CancellationToken ct)
+    public override async Task HandleAsync(GetPipelineRequest req, CancellationToken ct)
     {
-        
-        OnFetchingPipeline(req.Name);
+        // Exactly one of id and name: both would leave which one wins to chance, neither names nothing.
+        var byName = !string.IsNullOrWhiteSpace(req.Name);
+        if (byName == req.Id.HasValue)
+        {
+            AddError("Name exactly one of 'id' or 'name'.");
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
 
-        var result = await _pipelineProvider.Get(req.Name, ct).ConfigureAwait(false);
+        var asked = byName ? req.Name! : req.Id!.Value.ToString("D", System.Globalization.CultureInfo.InvariantCulture);
+        OnFetchingPipeline(asked);
+
+        var result = byName
+            ? await _pipelineProvider.Get(req.Name!, ct).ConfigureAwait(false)
+            : await _pipelineProvider.Get(req.Id!.Value, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
-            OnPipelineFetchFailed(req.Name, result.CurrentMessage);
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to fetch pipeline", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            OnPipelineFetchFailed(asked, result.CurrentMessage);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch pipeline", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
         var pipeline = result.Value;
         if (pipeline is null)
         {
-            OnPipelineNotFound(req.Name);
-            await HttpContext.WriteNotFound("Pipeline", req.Name, ct).ConfigureAwait(false);
+            OnPipelineNotFound(asked);
+            await HttpContext.WriteNotFound("Pipeline", asked, ct).ConfigureAwait(false);
             return;
         }
 
-        if (string.IsNullOrEmpty(pipeline.ServiceOptionType))
+        if (string.IsNullOrEmpty(pipeline.Implementation))
         {
-            OnPipelineFetchFailed(req.Name, $"Pipeline '{req.Name}' has no kind (ServiceOptionType).");
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Invalid pipeline", Details = $"Pipeline '{req.Name}' has no kind (ServiceOptionType)." }, ct).ConfigureAwait(false);
+            OnPipelineFetchFailed(asked, $"Pipeline '{asked}' has no kind (Implementation).");
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Invalid pipeline", Details = $"Pipeline '{asked}' has no kind (Implementation)." }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
-        OnPipelineRetrieved(req.Name);
-
-        await Send.OkAsync(MapToDetailDto(pipeline, ExtractTransforms(pipeline)), ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Extracts the transform DTOs from the composed pipeline aggregate's ETL-kind typed body.
-    /// Returns an empty list when the pipeline is not an ETL kind or has no transforms.
-    /// </summary>
-    protected virtual IList<PipelineTransformDto> ExtractTransforms(PipelineConfiguration pipeline)
-    {
-        var transforms = new List<PipelineTransformDto>();
-        if (pipeline.Configuration is EtlPipelineConfiguration etlBody && etlBody.Transforms is { } operations)
+        var mapped = await PipelineDetailMapper.Detail(pipeline, _transformations, ct).ConfigureAwait(false);
+        if (mapped.IsFailure)
         {
-            foreach (var op in operations)
-                transforms.Add(MapTransformToDto(op));
-        }
-        return transforms;
-    }
-
-    /// <summary>
-    /// Maps the domain pipeline configuration to a detail DTO.
-    /// </summary>
-    protected virtual PipelineDetailResponse MapToDetailDto(PipelineConfiguration pipeline, IList<PipelineTransformDto> transforms)
-    {
-        var engine = (pipeline.Configuration as EtlPipelineConfiguration)?.Configuration;
-
-        return new PipelineDetailResponse
-        {
-            Id = pipeline.Id,
-            Name = pipeline.Name,
-            PipelineType = pipeline.PipelineType!,
-            SourceConnectionName = engine?.SourceConnectionName ?? string.Empty,
-            DestinationConnectionName = engine?.DestinationConnectionName ?? string.Empty,
-            SourceDataSet = engine?.SourceDataSet,
-            DestinationDataSet = engine?.DestinationDataSet,
-            Description = pipeline.Description,
-            IsEnabled = !pipeline.IsScheduled || pipeline.ScheduleId.HasValue,
-            CreatedAt = default,
-            UpdatedAt = default,
-            Transforms = transforms
-        };
-    }
-
-    /// <summary>Maps a transform configuration to its DTO.</summary>
-    protected virtual PipelineTransformDto MapTransformToDto(PipelineTransformConfiguration transform)
-    {
-        return new PipelineTransformDto
-        {
-            Id = transform.Id,
-            Name = transform.Name,
-            OperationType = transform.OperationType,
-            ExecutionOrder = transform.ExecutionOrder,
-            IsEnabled = transform.IsEnabled,
-            FilterExpression = transform.FilterExpression,
-            Aggregation = MapAggregationDto(transform),
-            Lookup = MapLookupDto(transform),
-            Calculation = MapCalculationDto(transform),
-            FieldMappings = MapFieldMappingsDto(transform),
-        };
-    }
-
-    /// <summary>Maps the typed FieldMappings children to a list of <see cref="PipelineFieldMappingDto"/>.</summary>
-    private static List<PipelineFieldMappingDto> MapFieldMappingsDto(PipelineTransformConfiguration transform)
-    {
-        return transform.FieldMappings
-            .Select(m => new PipelineFieldMappingDto
-            {
-                Name = m.Name,
-                SourceField = m.SourceField,
-                DestinationField = m.DestinationField,
-                TransformExpression = m.TransformExpression,
-                TargetType = m.TargetType,
-                IsEnabled = m.IsEnabled,
-                IsRequired = m.IsRequired,
-                DefaultValue = m.DefaultValue,
-            })
-            .ToList();
-    }
-
-    /// <summary>Maps the typed GroupByFields/Aggregations children to an <see cref="AggregationDto"/>, or null when absent.</summary>
-    private static AggregationDto? MapAggregationDto(PipelineTransformConfiguration transform)
-    {
-        if (transform.GroupByFields.Count == 0 && transform.Aggregations.Count == 0)
-        {
-            return null;
+            OnPipelineFetchFailed(asked, mapped.CurrentMessage);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to read the Transformations the pipeline chains", Details = mapped.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            return;
         }
 
-        return new AggregationDto
-        {
-            GroupByFields = transform.GroupByFields
-                .OrderBy(f => f.Ordinal)
-                .Select(f => f.FieldName)
-                .ToList(),
-            Aggregations = transform.Aggregations
-                .OrderBy(a => a.ExecutionOrder)
-                .Select(a => new AggregationItemDto { SourceField = a.SourceField, Function = a.AggregateFunction, OutputField = a.OutputField })
-                .ToList(),
-        };
-    }
+        OnPipelineRetrieved(asked);
 
-    /// <summary>Maps the typed Lookups children (one row per brought-across column) to a <see cref="LookupDto"/>, or null when absent.</summary>
-    private static LookupDto? MapLookupDto(PipelineTransformConfiguration transform)
-    {
-        if (transform.Lookups.Count == 0)
-        {
-            return null;
-        }
-
-        var first = transform.Lookups[0];
-        return new LookupDto
-        {
-            LookupConnectionName = first.LookupConnectionName,
-            LookupDataSet = first.LookupDataSet,
-            LookupKeyField = first.LookupKeyField,
-            SourceKeyField = first.SourceKeyField,
-            OutputFieldPrefix = first.OutputFieldPrefix,
-            LookupColumns = transform.Lookups.Select(l => l.LookupValueField).ToList(),
-            JoinType = first.JoinType,
-        };
-    }
-
-    /// <summary>Maps the typed Calculations children to a <see cref="CalculationDto"/>, or null when absent.</summary>
-    private static CalculationDto? MapCalculationDto(PipelineTransformConfiguration transform)
-    {
-        if (transform.Calculations.Count == 0)
-        {
-            return null;
-        }
-
-        return new CalculationDto
-        {
-            ComputedColumns = transform.Calculations
-                .OrderBy(c => c.ExecutionOrder)
-                .Select(c => new ComputedColumnDto { OutputField = c.OutputField, Formula = c.Expression })
-                .ToList(),
-        };
+        await Send.OkAsync(mapped.Value!, ct).ConfigureAwait(false);
     }
 
     /// <summary>Called when fetching pipeline. Override for custom logging.</summary>

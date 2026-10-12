@@ -20,7 +20,7 @@ namespace Fdw.Services.Identity.JwtAssertion.Assertions;
 public sealed class FileAssertionSource : FederatedAssertionSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="FileAssertionSource"/> class.</summary>
-    public FileAssertionSource() : base(2, "File")
+    public FileAssertionSource() : base("File")
     {
     }
 

@@ -14,7 +14,7 @@ public sealed class DarkColorPalette : ColorPaletteBase
     /// <summary>
     /// Creates the dark color palette.
     /// </summary>
-    public DarkColorPalette() : base(1, "Dark") { }
+    public DarkColorPalette() : base("Dark") { }
 
     /// <inheritdoc />
     public override Color Primary => Color.DodgerBlue1;

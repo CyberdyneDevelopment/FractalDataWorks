@@ -14,7 +14,6 @@ public sealed class QueryTimeoutLimitType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="QueryTimeoutLimitType"/>.</summary>
     public QueryTimeoutLimitType()
         : base(
-            2,
             "QueryTimeout",
             "Query Timeout",
             "Cancels queries that exceed the specified duration.",

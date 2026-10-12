@@ -9,7 +9,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 /// Defines the state machine: Scheduled → Triggered → Initialized → Running → Completed/Failed
 /// with additional states: Paused, Compensating, Cancelled.
 /// </summary>
-public abstract class ExecutionStateTypeBase : TypeOptionBase<int, ExecutionStateTypeBase>, IExecutionStateType
+public abstract class ExecutionStateTypeBase : TypeOptionBase<ExecutionStateTypeBase>, IExecutionStateType
 {
     /// <summary>
     /// Initializes a new instance for the Empty sentinel.
@@ -27,7 +27,6 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<int, ExecutionStat
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionStateTypeBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this state.</param>
     /// <param name="name">Name of the state (must match TypeOption attribute).</param>
     /// <param name="displayName">Display name for UI presentation.</param>
     /// <param name="isTerminal">Whether this is a terminal state.</param>
@@ -36,7 +35,6 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<int, ExecutionStat
     /// <param name="canTriggerEscalation">Whether escalation can be triggered from this state.</param>
     /// <param name="validTransitions">Valid state transitions from this state.</param>
     protected ExecutionStateTypeBase(
-        int id,
         string name,
         string displayName,
         bool isTerminal,
@@ -44,7 +42,7 @@ public abstract class ExecutionStateTypeBase : TypeOptionBase<int, ExecutionStat
         bool isFailure,
         bool canTriggerEscalation,
         IReadOnlyList<string> validTransitions)
-        : base(id, name, $"TypeOptions:{name}", displayName, $"Execution state: {name}", null)
+        : base(name, $"TypeOptions:{name}", displayName, $"Execution state: {name}", null)
     {
         IsTerminal = isTerminal;
         IsSuccess = isSuccess;

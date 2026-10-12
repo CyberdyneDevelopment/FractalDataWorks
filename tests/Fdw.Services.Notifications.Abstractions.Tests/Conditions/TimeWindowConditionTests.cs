@@ -124,9 +124,6 @@ public class TimeWindowConditionTests
     {
         // Arrange & Act
         var condition = new TimeWindowCondition();
-
-        // Assert
-        condition.Id.ShouldBe(6);
         condition.Name.ShouldBe("TimeWindow");
         condition.Icon.ShouldBe("schedule");
         condition.Color.ShouldBe("Info");

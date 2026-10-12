@@ -9,14 +9,13 @@ public class WriteModeBaseTests
     private sealed class TestWriteMode : WriteModeBase
     {
         public TestWriteMode(
-            int id,
             string name,
             bool requiresExistenceCheck,
             bool preservesExistingData,
             bool canCreate = true,
             bool canUpdate = false,
             bool canDelete = false)
-            : base(id, name, requiresExistenceCheck, preservesExistingData, canCreate, canUpdate, canDelete)
+            : base(name, requiresExistenceCheck, preservesExistingData, canCreate, canUpdate, canDelete)
         {
         }
 
@@ -31,22 +30,9 @@ public class WriteModeBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void ConstructorSetsIdAndName()
-    {
-        var sut = new TestWriteMode(1, "Insert",
-            requiresExistenceCheck: false,
-            preservesExistingData: true);
-
-        sut.Id.ShouldBe(1);
-        sut.Name.ShouldBe("Insert");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void ConstructorSetsRequiresExistenceCheck()
     {
-        var sut = new TestWriteMode(2, "Upsert",
+        var sut = new TestWriteMode("Upsert",
             requiresExistenceCheck: true,
             preservesExistingData: true);
 
@@ -58,7 +44,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void ConstructorSetsPreservesExistingData()
     {
-        var sut = new TestWriteMode(3, "Truncate",
+        var sut = new TestWriteMode("Truncate",
             requiresExistenceCheck: false,
             preservesExistingData: false);
 
@@ -70,7 +56,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void CanCreateDefaultsToTrue()
     {
-        var sut = new TestWriteMode(1, "Insert",
+        var sut = new TestWriteMode("Insert",
             requiresExistenceCheck: false,
             preservesExistingData: true);
 
@@ -82,7 +68,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void CanUpdateDefaultsToFalse()
     {
-        var sut = new TestWriteMode(1, "Insert",
+        var sut = new TestWriteMode("Insert",
             requiresExistenceCheck: false,
             preservesExistingData: true);
 
@@ -94,7 +80,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void CanDeleteDefaultsToFalse()
     {
-        var sut = new TestWriteMode(1, "Insert",
+        var sut = new TestWriteMode("Insert",
             requiresExistenceCheck: false,
             preservesExistingData: true);
 
@@ -106,7 +92,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void UpsertModeAllowsCreateAndUpdate()
     {
-        var sut = new TestWriteMode(2, "Upsert",
+        var sut = new TestWriteMode("Upsert",
             requiresExistenceCheck: true,
             preservesExistingData: true,
             canCreate: true,
@@ -123,7 +109,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void SyncModeAllowsAllOperations()
     {
-        var sut = new TestWriteMode(4, "FullSync",
+        var sut = new TestWriteMode("FullSync",
             requiresExistenceCheck: true,
             preservesExistingData: false,
             canCreate: true,
@@ -142,7 +128,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public async Task ValidateCanBeInvoked()
     {
-        var sut = new TestWriteMode(1, "Insert",
+        var sut = new TestWriteMode("Insert",
             requiresExistenceCheck: false,
             preservesExistingData: true);
 
@@ -157,7 +143,7 @@ public class WriteModeBaseTests
     [Trait("Category", "Etl")]
     public void InsertModeTypicalConfiguration()
     {
-        var sut = new TestWriteMode(1, "Insert",
+        var sut = new TestWriteMode("Insert",
             requiresExistenceCheck: false,
             preservesExistingData: true,
             canCreate: true,

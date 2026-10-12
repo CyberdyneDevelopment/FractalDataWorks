@@ -39,6 +39,18 @@ public sealed class TSqlDialect : ISqlDialect
     public string ParameterPrefix => "@";
 
     /// <inheritdoc/>
+    public char LikeEscapeCharacter => '!';
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// T-SQL reads <c>%</c> and <c>_</c> as wildcards and <c>[</c> as the start of a character set.
+    /// </remarks>
+    public string LikeMetaCharacters => "%_[";
+
+    /// <inheritdoc/>
+    public string PatternMatchOperator => "LIKE";
+
+    /// <inheritdoc/>
     /// <remarks>
     /// T-SQL: <c>1 = 0</c>.
     /// </remarks>

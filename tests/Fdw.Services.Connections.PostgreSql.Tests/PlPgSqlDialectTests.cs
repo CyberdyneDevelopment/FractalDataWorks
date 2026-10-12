@@ -9,7 +9,7 @@ namespace Fdw.Data.PostgreSql.Tests;
 
 public sealed class PlPgSqlDialectTests
 {
-    private readonly ISqlDialect _sut = PlPgSqlDialect.Instance;
+    private readonly PlPgSqlDialect _sut = PlPgSqlDialect.Instance;
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -110,5 +110,32 @@ public sealed class PlPgSqlDialectTests
     public void SupportsSchemaNamespaceIsTrue()
     {
         _sut.SupportsSchemaNamespace.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public void TheLikeEscapeCharacterIsAnExclamationMark()
+    {
+        _sut.LikeEscapeCharacter.ShouldBe('!');
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public void PostgreSqlReadsPercentAndUnderscoreAsPatternSyntaxAndNotTheBracket()
+    {
+        // PostgreSQL's LIKE has no character sets, so a bracket in the caller's text is only text.
+        _sut.LikeMetaCharacters.ShouldBe("%_");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataGateway")]
+    public void PostgreSqlMatchesPatternsIgnoringCaseWithIlike()
+    {
+        // PostgreSQL's LIKE is case-sensitive; the filter operators' in-memory Matches ignores case, so the
+        // dialect names the operator that does, and Contains means one thing on every connection kind.
+        _sut.PatternMatchOperator.ShouldBe("ILIKE");
     }
 }

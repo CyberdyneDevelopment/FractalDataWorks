@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Fdw.Data.Abstractions;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -46,9 +47,18 @@ public class AddDataStoreContainerRequest
     public string? FlattenSeparator { get; set; }
 
     /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the container's data classification level (see
+    /// <c>GET /data-classifications</c>). Left out, it is <c>NotYetClassified</c>. An id that is not a level is refused.
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
+
+    /// <summary>
     /// Gets or sets the field (column) definitions for the new container. Without these, the container
     /// persists with zero <c>data.DataContainerField</c> rows and bulk-insert later fails with
     /// "Container X has no insertable fields" (FDW-548).
     /// </summary>
     public IList<CreateDataStoreContainerFieldRequest> Fields { get; set; } = [];
+
+    /// <summary>Gets or sets the keys (PrimaryKey, Surrogate, Natural, Foreign) for the new container.</summary>
+    public IList<CreateDataStoreContainerKeyRequest> Keys { get; set; } = [];
 }

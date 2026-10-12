@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlPointConverter()
     : DataTypeConverterBase(
-        id: 28,
         name: "Point",
         sourceType: "point",
         targetClrType: typeof(NpgsqlPoint),

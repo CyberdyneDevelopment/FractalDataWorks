@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fdw.Services.Connections.Abstractions;
 
 namespace Fdw.Services.Connections.Clients.Models;
 
@@ -48,6 +49,6 @@ public sealed class ConnectionDetailResponse
     public DateTimeOffset CreatedAt { get; set; }
     /// <summary>Gets or sets when the connection was last updated.</summary>
     public DateTimeOffset UpdatedAt { get; set; }
-    /// <summary>Gets or sets the connection setup summary, populated when auto-discover is available.</summary>
-    public ConnectionSetupSummaryPayload? SetupSummary { get; set; }
+    /// <summary>Gets or sets the schema discovery option the connection uses.</summary>
+    public SchemaDiscoveryTypeInfo? SchemaDiscovery { get; set; }
 }

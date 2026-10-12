@@ -22,7 +22,6 @@ public sealed class RetryNotifyResiliencyType : ResiliencyTypeBase
     /// <summary>Initializes a new instance of <see cref="RetryNotifyResiliencyType"/>.</summary>
     public RetryNotifyResiliencyType()
         : base(
-            id: 4,
             name: "RetryNotify",
             displayName: "Retry with Notification",
             description: "N retries with backoff, then notify on terminal failure.")

@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class ViewObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for views.
+    /// Material Symbols icon name for views.
     /// </summary>
-    public const string ViewIcon = "view_module"; // Icons.Material.Filled.ViewModule
+    public const string ViewIcon = "view_module";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ViewObjectType"/> class.
     /// </summary>
     public ViewObjectType()
         : base(
-            id: 4,
             name: "View",
             icon: ViewIcon,
             color: "Info",

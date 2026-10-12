@@ -10,8 +10,7 @@ The deployment story is owned by each reference repo and the `infrastructure` re
 | Reference API server | `reference-api` repo | Published .NET app (e.g. on VM 104) |
 | Reference ETL server | `reference-etl` repo | Published .NET app |
 | Reference Scheduler server | `reference-scheduler` repo | Published .NET app |
-| Reference UI (Server) | `reference-ui` repo | Published .NET app + Tailwind static assets |
-| Reference UI (Auto) | `reference-aui` repo | Published .NET app + MudBlazor assets |
+| Web console | `reference-react-ui` repo | Vite build (static assets) |
 | Databases | `databases` repo | dacpacs (ConfigurationDb, OpsDb, AuthDb, DataDb) |
 | Infrastructure config | `infrastructure` repo | Proxmox / nginx / Caddy / preview-slot config |
 

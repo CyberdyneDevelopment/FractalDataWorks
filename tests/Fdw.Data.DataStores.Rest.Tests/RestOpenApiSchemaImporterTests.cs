@@ -46,9 +46,6 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
     {
         // Act
         var importer = CreateImporter();
-
-        // Assert
-        importer.Id.ShouldBe(2);
         importer.Name.ShouldBe("OpenApi");
         importer.Description.ShouldBe("Imports schema from OpenAPI 3.0/Swagger specifications");
         importer.DataStoreType.ShouldBe("Rest");
@@ -186,8 +183,6 @@ public sealed class RestOpenApiSchemaImporterTests : IDisposable
         result.IsSuccess.ShouldBeTrue();
         var dataStore = result.Value!;
         dataStore.Name.ShouldBe("Test Pet Store");
-        dataStore.ServiceType.ShouldBe("DataStore");
-        dataStore.ServiceOptionType.ShouldBe("Rest");
         dataStore.Paths.Count.ShouldBe(2);
         dataStore.Paths.Select(p => p.Name).ShouldBe(["listPets", "createPet"], ignoreOrder: true);
         dataStore.Paths.ShouldAllBe(p => p.PathValue == "http://api.example.com/pets");

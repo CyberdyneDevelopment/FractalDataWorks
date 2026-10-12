@@ -13,5 +13,5 @@ public sealed class None : SecurityMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="None"/> class.
     /// </summary>
-    public None() : base(1, "None", requiresAuthentication: false, authenticationScheme: null, supportsTokenRefresh: false) { }
+    public None() : base("None", requiresAuthentication: false, authenticationScheme: null, supportsTokenRefresh: false) { }
 }

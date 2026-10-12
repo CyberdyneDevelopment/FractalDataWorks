@@ -27,7 +27,7 @@ public sealed class DivideOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="DivideOperation"/> class.
     /// </summary>
     public DivideOperation()
-        : base(id: 4, name: "Divide", category: "Arithmetic", description: "Divides the left value by the right (left / right)")
+        : base(name: "Divide", category: "Arithmetic", description: "Divides the left value by the right (left / right)")
     {
         _logger = NullLogger<DivideOperation>.Instance;
         Parameters =
@@ -52,7 +52,7 @@ public sealed class DivideOperation : CalculationOperationBase
             if (right == 0m)
             {
                 return Task.FromResult(GenericResult<object>.Failure(
-                    CalculationOperationLog.DivisionByZero(_logger, Name)));
+                    CalculationOperationLog.DivisionByZero(_logger, Name, "Left / Right")));
             }
 
             var result = left / right;

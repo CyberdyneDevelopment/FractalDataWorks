@@ -11,5 +11,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class DoneState : SessionStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="DoneState"/> class.</summary>
-    public DoneState() : base(6, "Done", isTerminal: true, isReclaimable: false) { }
+    public DoneState() : base("Done", isTerminal: true, isReclaimable: false) { }
 }

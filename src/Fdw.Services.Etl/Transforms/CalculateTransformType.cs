@@ -43,15 +43,24 @@ public sealed class CalculateTransformType : TransformTypeBase
     /// Initializes a new instance of the <see cref="CalculateTransformType"/> class.
     /// </summary>
     public CalculateTransformType() : base(
-        id: 4,
         name: "Calculate",
         displayName: "Calculated Field",
         description: "Creates new fields by evaluating expressions or formulas",
         category: "Transform",
         modifiesStructure: true,
-        canFilterRecords: false)
+        canFilterRecords: false,
+        inputPorts: ["input"],
+        outputPorts: ["output"])
     {
     }
+
+    private static readonly StageMember[] OwnedMembers =
+    [
+        new("calculation", "Calculation", true, "Computed columns added to each record")
+    ];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<StageMember> Members => OwnedMembers;
 
     /// <inheritdoc />
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
@@ -74,11 +83,23 @@ public sealed class CalculateTransformType : TransformTypeBase
 
         var output = new Dictionary<string, object?>(input, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var calc in config.Calculations.OrderBy(c => c.ExecutionOrder))
+        // Ordering one calculation is a no-op, and this runs once per row, so the sort is skipped
+        // rather than rebuilt for every record.
+        foreach (var calc in config.Calculations.Count > 1
+                     ? config.Calculations.OrderBy(c => c.ExecutionOrder)
+                     : (IEnumerable<PipelineTransformCalculationConfiguration>)config.Calculations)
         {
             try
             {
-                output[calc.OutputField] = EvaluateExpression(calc.Expression, output, context);
+                var evaluated = EvaluateExpression(calc, output, context);
+                if (evaluated.IsFailure)
+                {
+                    // The record fails as a whole, so the batch reports it and skips the record: a zero divisor never
+                    // becomes an empty column.
+                    return Task.FromResult(evaluated.ToNewResult<IDictionary<string, object?>>());
+                }
+
+                output[calc.OutputField] = evaluated.Value;
             }
             catch (Exception ex)
             {
@@ -142,7 +163,6 @@ public sealed class CalculateTransformType : TransformTypeBase
         config.Calculations = spec.ComputedColumns
             .Select((calc, executionOrder) => new PipelineTransformCalculationConfiguration
             {
-                PipelineTransformId = config.Id,
                 Name = calc.OutputField,
                 OutputField = calc.OutputField,
                 Expression = calc.Formula,
@@ -159,35 +179,46 @@ public sealed class CalculateTransformType : TransformTypeBase
     /// Evaluates a simple expression against a record.
     /// Supports basic arithmetic (+, -, *, /) and field references.
     /// For complex expressions, use the CalculationEngine from context.
+    /// A division whose divisor is zero returns a failed result (<see cref="EtlLog.DivisionByZero"/>), never an empty value.
     /// </summary>
-    private static object? EvaluateExpression(
-        string expression,
+    private static IGenericResult<object?> EvaluateExpression(
+        PipelineTransformCalculationConfiguration calculation,
         Dictionary<string, object?> record,
         ITransformContext context)
     {
+        var expression = calculation.Expression;
+
         // Concatenation: "Field1 + ' ' + Field2"
         if (expression.Contains(" + ", StringComparison.Ordinal))
         {
-            return EvaluateConcatenation(expression, record);
+            return GenericResult<object?>.Success(EvaluateConcatenation(expression, record));
         }
 
         // Arithmetic operations: *, /, -
-        if (TryEvaluateArithmetic(expression, MultiplicationSeparator, record, (a, b) => a * b, out var mulResult))
+        if (TryEvaluateArithmetic(expression, MultiplicationSeparator, record, (a, b) => a * b, out var mulResult, out _))
         {
-            return mulResult;
+            return GenericResult<object?>.Success(mulResult);
         }
 
-        if (TryEvaluateArithmetic(expression, DivisionSeparator, record, (a, b) => b != 0 ? a / b : (decimal?)null, out var divResult))
+        if (TryEvaluateArithmetic(expression, DivisionSeparator, record, (a, b) => b != 0 ? a / b : (decimal?)null, out var divResult, out var zeroDivisor))
         {
-            return divResult;
+            return GenericResult<object?>.Success(divResult);
         }
 
-        if (TryEvaluateArithmetic(expression, SubtractionSeparator, record, (a, b) => a - b, out var subResult))
+        if (zeroDivisor)
         {
-            return subResult;
+            // Why: both operands were present and the divisor was zero. There is no result to store, so this fails
+            // with the expression text (field names and operators, never record values) instead of storing an empty value.
+            return GenericResult<object?>.Failure(
+                EtlLog.DivisionByZero(context.Logger, calculation.OutputField, expression));
         }
 
-        return EvaluateLiteralOrFieldReference(expression, record);
+        if (TryEvaluateArithmetic(expression, SubtractionSeparator, record, (a, b) => a - b, out var subResult, out _))
+        {
+            return GenericResult<object?>.Success(subResult);
+        }
+
+        return GenericResult<object?>.Success(EvaluateLiteralOrFieldReference(expression, record));
     }
 
     private static string? EvaluateConcatenation(string expression, Dictionary<string, object?> record)
@@ -214,9 +245,11 @@ public sealed class CalculateTransformType : TransformTypeBase
         string[] separator,
         Dictionary<string, object?> record,
         Func<decimal, decimal, decimal?> operation,
-        out object? result)
+        out object? result,
+        out bool undefined)
     {
         result = null;
+        undefined = false;
         var separatorString = separator[0];
         if (!expression.Contains(separatorString, StringComparison.Ordinal))
         {
@@ -234,6 +267,10 @@ public sealed class CalculateTransformType : TransformTypeBase
         if (left.HasValue && right.HasValue)
         {
             result = operation(left.Value, right.Value);
+
+            // An operation answers null only when it is undefined for these operands (a zero divisor); the caller decides
+            // what that means, so it is reported apart from "this expression is not this operation".
+            undefined = result == null;
             return result != null;
         }
 

@@ -31,31 +31,35 @@ namespace Fdw.Services.Etl.Transforms;
 [TypeOption(typeof(OptionTransformTypes), "Lookup")]
 public sealed class LookupTransformType : TransformTypeBase
 {
-    // Cache of pre-loaded full lookup records, keyed by "{Connection}:{DataSet}:{KeyField}:{SourceKeyField}"
-    // then by the string-formatted source key value. Static + process-wide, cleared by ClearCache() in
-    // BatchCopyPipeline's finally block after each pipeline execution.
-    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>> RecordCache =
-        new(StringComparer.OrdinalIgnoreCase);
+    // Where a run's pre-loaded lookup records live on its ITransformContext.SharedState. This option is a
+    // module-init singleton shared by every pipeline in the process, so it cannot hold them itself: a
+    // static cache here was emptied by whichever pipeline finished first, under one still running, and the
+    // record it was enriching came back without its lookup column (FDW-952). The context belongs to one
+    // run, so the cache lives exactly as long as the run does and every page of that run shares it.
+    private const string RecordCacheKey = "Fdw.Services.Etl.Transforms.LookupTransformType.RecordCache";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LookupTransformType"/> class.
     /// </summary>
     public LookupTransformType() : base(
-        id: 5,
         name: "Lookup",
         displayName: "Data Lookup",
         description: "Performs lookups against external data sources to enrich records",
         category: "Enrich",
         modifiesStructure: true,
-        canFilterRecords: false)
+        canFilterRecords: false,
+        inputPorts: ["input", "lookup"],
+        outputPorts: ["output"])
     {
     }
 
-    /// <summary>
-    /// Clears all cached lookup data. Call this after pipeline execution completes
-    /// to prevent unbounded memory growth across multiple pipeline runs.
-    /// </summary>
-    public static void ClearCache() => RecordCache.Clear();
+    private static readonly StageMember[] OwnedMembers =
+    [
+        new("lookup", "Lookup", true, "The reference data set joined to each record")
+    ];
+
+    /// <inheritdoc />
+    public override IReadOnlyList<StageMember> Members => OwnedMembers;
 
     /// <inheritdoc />
     public override Task<IGenericResult<IDictionary<string, object?>>> Transform(
@@ -122,12 +126,10 @@ public sealed class LookupTransformType : TransformTypeBase
 
         var groups = config.Lookups.GroupBy(CacheKey, StringComparer.Ordinal).ToList();
 
-        if (context.DataGateway is IDataGateway gateway)
+        var preloaded = await Preload(groups, inputList, context, config.Name, cancellationToken).ConfigureAwait(false);
+        if (!preloaded.IsSuccess)
         {
-            foreach (var group in groups)
-            {
-                await PreloadGroup(gateway, group.Key, group.First(), inputList, context, config.Name, cancellationToken).ConfigureAwait(false);
-            }
+            return preloaded.ToNewResult<IEnumerable<IDictionary<string, object?>>>();
         }
 
         var results = new List<IDictionary<string, object?>>();
@@ -172,7 +174,6 @@ public sealed class LookupTransformType : TransformTypeBase
         config.Lookups = lookup.LookupColumns
             .Select(column => new PipelineTransformLookupConfiguration
             {
-                PipelineTransformId = config.Id,
                 Name = column,
                 LookupConnectionName = lookup.LookupConnectionName,
                 LookupDataSet = lookup.LookupDataSet,
@@ -191,7 +192,50 @@ public sealed class LookupTransformType : TransformTypeBase
     private static string CacheKey(PipelineTransformLookupConfiguration lookup) =>
         $"{lookup.LookupConnectionName}:{lookup.LookupDataSet}:{lookup.LookupKeyField}:{lookup.SourceKeyField}";
 
-    private static async Task PreloadGroup(
+    private static ConcurrentDictionary<string, ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>> RecordCacheOf(ITransformContext context)
+    {
+        // SharedState is a plain Dictionary and every Lookup transform in the run reads it, so the get-or-create
+        // is done under a lock on it; the cache it returns is itself a ConcurrentDictionary.
+        lock (context.SharedState)
+        {
+            if (!context.SharedState.TryGetValue(RecordCacheKey, out var existing))
+            {
+                var created = new ConcurrentDictionary<string, ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>>(StringComparer.OrdinalIgnoreCase);
+                context.SharedState[RecordCacheKey] = created;
+                return created;
+            }
+
+            return (ConcurrentDictionary<string, ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>>)existing!;
+        }
+    }
+
+    // A lookup that cannot load its reference data cannot tell a missing key from a key it never looked up, so the
+    // stage fails: StageRunner.RunBatch returns the first stage failure and the run stops with the reason.
+    private static async Task<IGenericResult> Preload(
+        List<IGrouping<string, PipelineTransformLookupConfiguration>> groups,
+        List<IDictionary<string, object?>> inputList,
+        ITransformContext context,
+        string transformName,
+        CancellationToken cancellationToken)
+    {
+        if (context.DataGateway is not IDataGateway gateway)
+        {
+            return GenericResult.Failure(EtlLog.LookupGatewayMissing(context.Logger, transformName));
+        }
+
+        foreach (var group in groups)
+        {
+            var preloaded = await PreloadGroup(gateway, group.Key, group.First(), inputList, context, transformName, cancellationToken).ConfigureAwait(false);
+            if (!preloaded.IsSuccess)
+            {
+                return preloaded;
+            }
+        }
+
+        return GenericResult.Success();
+    }
+
+    private static async Task<IGenericResult> PreloadGroup(
         IDataGateway gateway,
         string cacheKey,
         PipelineTransformLookupConfiguration sample,
@@ -200,7 +244,7 @@ public sealed class LookupTransformType : TransformTypeBase
         string transformName,
         CancellationToken cancellationToken)
     {
-        var recordCache = RecordCache.GetOrAdd(cacheKey, _ => new ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.OrdinalIgnoreCase));
+        var recordCache = RecordCacheOf(context).GetOrAdd(cacheKey, _ => new ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>(StringComparer.OrdinalIgnoreCase));
 
         var keysToLookup = inputList
             .Select(r => r.TryGetValue(sample.SourceKeyField, out var v) ? v?.ToString() : null)
@@ -210,23 +254,24 @@ public sealed class LookupTransformType : TransformTypeBase
 
         if (keysToLookup.Count == 0)
         {
-            return;
+            return GenericResult.Success();
         }
 
         var batchResult = await PerformBatchLookup(gateway, sample, keysToLookup!, cancellationToken).ConfigureAwait(false);
-        if (batchResult.IsSuccess && batchResult.Value != null)
+        if (!batchResult.IsSuccess)
         {
-            foreach (var kvp in batchResult.Value)
-            {
-                recordCache.TryAdd(kvp.Key, kvp.Value);
-            }
+            return GenericResult.Failure(EtlLog.LookupPreloadFailed(
+                context.Logger, transformName, sample.LookupConnectionName, sample.LookupDataSet,
+                string.Join("; ", batchResult.Messages.Select(message => message.Message))));
+        }
 
-            EtlLog.LookupBatchPreloaded(context.Logger, transformName, batchResult.Value.Count, sample.LookupConnectionName, sample.LookupDataSet);
-        }
-        else if (!batchResult.IsSuccess)
+        foreach (var kvp in batchResult.Value!)
         {
-            context.ReportError(batchResult.CurrentMessage ?? "Batch lookup failed", null);
+            recordCache.TryAdd(kvp.Key, kvp.Value);
         }
+
+        EtlLog.LookupBatchPreloaded(context.Logger, transformName, batchResult.Value!.Count, sample.LookupConnectionName, sample.LookupDataSet);
+        return GenericResult.Success();
     }
 
     private static async Task<IGenericResult<Dictionary<string, IReadOnlyDictionary<string, object?>>>> PerformBatchLookup(
@@ -251,7 +296,7 @@ public sealed class LookupTransformType : TransformTypeBase
             };
 
             var result = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
-                queryCommand, new DataStoreTarget(lookup.LookupConnectionName, null, lookup.LookupDataSet), cancellationToken).ConfigureAwait(false);
+                queryCommand, new DataSetTarget(lookup.LookupDataSet), cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -279,7 +324,7 @@ public sealed class LookupTransformType : TransformTypeBase
 
     /// <summary>
     /// Enriches <paramref name="output"/> with every brought-across column for one lookup group
-    /// (shared connection/dataset/keys), reading matched records from the pre-loaded <see cref="RecordCache"/>.
+    /// (shared connection/dataset/keys), reading matched records from the run's pre-loaded record cache on <c>ITransformContext.SharedState</c>.
     /// A missing key reports a soft error via <see cref="ITransformContext.ReportError"/> only when the
     /// group's join type is Inner (<c>FailOnMissing</c>); a Left join silently leaves the field unset.
     /// </summary>
@@ -300,7 +345,7 @@ public sealed class LookupTransformType : TransformTypeBase
 
         var keyString = keyValue.ToString() ?? "";
         IReadOnlyDictionary<string, object?>? matchedRecord = null;
-        var found = RecordCache.TryGetValue(cacheKey, out var recordCache) &&
+        var found = RecordCacheOf(context).TryGetValue(cacheKey, out var recordCache) &&
             recordCache.TryGetValue(keyString, out matchedRecord);
 
         foreach (var lookup in lookupList)

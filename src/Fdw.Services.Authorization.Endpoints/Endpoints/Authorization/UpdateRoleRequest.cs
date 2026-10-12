@@ -24,14 +24,4 @@ public class UpdateRoleRequest
     /// </summary>
     [StringLength(500)]
     public string? Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets the parent role name for inheritance, if updating.
-    /// </summary>
-    public string? ParentRoleName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the sort order, if updating.
-    /// </summary>
-    public int? SortOrder { get; set; }
 }

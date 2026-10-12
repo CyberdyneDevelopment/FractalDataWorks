@@ -1,8 +1,11 @@
 using Fdw.Abstractions;
 using Fdw.Configuration;
+using Fdw.Messages;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Steps;
+using Fdw.Services.Authentication.Logging;
 using Fdw.ServiceTypes;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Authentication.Flow;
 
@@ -33,4 +36,13 @@ public abstract class AuthenticationStepTypeBase<TService, TFactory> :
         : base(name, sectionName, displayName, description, category: "AuthenticationStep")
     {
     }
+
+    /// <summary>Reports that this step was asked to run before the host gave it what it needs.</summary>
+    /// <param name="logger">The logger to report through.</param>
+    /// <returns>The logged message, for the failed result.</returns>
+    /// <remarks>
+    /// Here rather than in each step's own log so that every step reports the same failure with the same
+    /// code, and so a step in another package does not need access to an internal log.
+    /// </remarks>
+    protected IGenericMessage NotInitialized(ILogger logger) => StepLog.NotInitialized(logger, Name);
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
@@ -27,6 +28,14 @@ public sealed record ContextContribution
 
     /// <summary>Gets the claims this step gathered.</summary>
     public IReadOnlyList<Claim> Claims { get; init; } = [];
+
+    /// <summary>Gets when the claims this step gathered stop being true, or null when nothing ends them.</summary>
+    /// <remarks>
+    /// Part of the claims contribution, not an element of its own: it says how long those claims hold,
+    /// so it is kept only when the step declared it contributes claims. The runner keeps the earliest
+    /// any step reports, and the token never outlives it (FDW-862).
+    /// </remarks>
+    public DateTimeOffset? ClaimsValidUntil { get; init; }
 
     /// <summary>Gets the decision this step reached, if it reached one.</summary>
     public Decision? Decision { get; init; }

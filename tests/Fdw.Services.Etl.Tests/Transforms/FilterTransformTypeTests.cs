@@ -21,7 +21,7 @@ public sealed class FilterTransformTypeTests
     private readonly FilterTransformType _sut = new();
 
     private static TransformContext CreateContext(object? calculationEngine = null) =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), calculationEngine: calculationEngine);
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>(), calculationEngine: calculationEngine);
 
     private static PipelineTransformConfiguration CreateConfig(string? filterExpression) =>
         new() { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter", FilterExpression = filterExpression };
@@ -154,7 +154,7 @@ public sealed class FilterTransformTypeTests
         result.Value.ShouldBeSameAs(input);
     }
 
-    private static Fdw.Messages.IGenericMessage EvaluatorFailureMessage() =>
+    private static Fdw.Messages.GenericMessage EvaluatorFailureMessage() =>
         Fdw.Messages.GenericMessage.Create(Fdw.Messages.MessageSeverity.Error, "evaluator exploded", null, null);
 
     // ── TransformBatch: pass-through / empty / cancellation ─────────────────────────────
@@ -278,7 +278,7 @@ public sealed class FilterTransformTypeTests
     [InlineData("Age >= 99 || Name == 'Alice'", true)]
     [InlineData("Age >= 99 AND Name == 'Alice'", false)]
     [InlineData("Age >= 99 and Name == 'Alice'", false)]
-    [InlineData("UnknownField", true)]
+    [InlineData("UnknownField", false)]
     [InlineData("MissingField == null", true)]
     [InlineData("MissingField != null", false)]
     [InlineData("Active == true", true)]
@@ -441,6 +441,104 @@ public sealed class FilterTransformTypeTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeSameAs(record);
+    }
+
+    // ── A condition that cannot be read fails loud (FDW-1120): it never passes every record ──
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData("garbage expression")]
+    [InlineData("Age >")]
+    [InlineData("(Age > 1")]
+    [InlineData("Age = 5")]
+    public async Task TransformFailsLoudWhenTheConditionCannotBeRead(string expression)
+    {
+        // Arrange
+        var input = new Dictionary<string, object?> { ["Age"] = 20 };
+
+        // Act
+        var result = await _sut.Transform(input, CreateConfig(expression), CreateContext(), TestContext.Current.CancellationToken);
+
+        // Assert: the stage used to pass the record; now it refuses and names the text
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Id.ShouldBe(21000);
+        result.Details!.GetValue<string>("Expression").ShouldBe(expression);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TransformBatchFailsLoudBeforeAnyRecordWhenTheConditionCannotBeRead()
+    {
+        // Arrange
+        var inputs = new List<IDictionary<string, object?>>
+        {
+            new Dictionary<string, object?> { ["Age"] = 20 },
+            new Dictionary<string, object?> { ["Age"] = 30 },
+        };
+
+        // Act
+        var result = await _sut.TransformBatch(inputs, CreateConfig("Age >= "), CreateContext(), TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Id.ShouldBe(21000);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnEvaluatorThatFailsLeavesAConditionThatCannotBeReadFailing()
+    {
+        // Arrange
+        var input = new Dictionary<string, object?> { ["Age"] = 20 };
+        var evaluator = new Mock<IExpressionEvaluator>();
+        evaluator
+            .Setup(e => e.EvaluatePredicate(It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, object?>>()))
+            .Returns(GenericResult<bool>.Failure(EvaluatorFailureMessage()));
+
+        // Act
+        var result = await _sut.Transform(input, CreateConfig("garbage expression"), CreateContext(evaluator.Object), TestContext.Current.CancellationToken);
+
+        // Assert: the evaluator was asked first and failed; the strict reader then refuses the text, it does not pass the record
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Id.ShouldBe(21000);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void MapSpecToConfigurationRefusesAConditionThatCannotBeRead()
+    {
+        // Arrange
+        var spec = new FakeTransformOperationSpec { Name = "Filter1", OperationType = "Filter", FilterExpression = "garbage expression" };
+        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
+
+        // Act
+        var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
+
+        // Assert: refused when the pipeline is saved, so a run never meets it
+        result.IsSuccess.ShouldBeFalse();
+        result.Code!.Id.ShouldBe(21000);
+        target.FilterExpression.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void MapSpecToConfigurationAcceptsAConditionWithAParameterPlaceholder()
+    {
+        // Arrange
+        var spec = new FakeTransformOperationSpec { Name = "Filter1", OperationType = "Filter", FilterExpression = "Points >= {{MinPoints}}" };
+        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter" };
+
+        // Act
+        var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
+
+        // Assert: a placeholder is read as a value; the run replaces it before the condition is evaluated
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
+        target.FilterExpression.ShouldBe("Points >= {{MinPoints}}");
     }
 
     // ── MapSpecToConfiguration: request-spec → typed config dispatch (FDW-556 Part 2.2) ─

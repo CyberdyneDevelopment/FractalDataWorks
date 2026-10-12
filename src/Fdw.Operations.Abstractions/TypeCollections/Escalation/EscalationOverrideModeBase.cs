@@ -8,7 +8,7 @@ namespace Fdw.Operations.Abstractions.TypeCollections.Escalation;
 /// Defines how escalation policy overrides are applied: Default, Replace, Merge, or Suppress.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class EscalationOverrideModeBase : TypeOptionBase<int, EscalationOverrideModeBase>, IEscalationOverrideMode
+public abstract class EscalationOverrideModeBase : TypeOptionBase<EscalationOverrideModeBase>, IEscalationOverrideMode
 {
     /// <summary>
     /// Initializes a new instance for the Empty sentinel.
@@ -21,10 +21,9 @@ public abstract class EscalationOverrideModeBase : TypeOptionBase<int, Escalatio
     /// <summary>
     /// Initializes a new instance of the <see cref="EscalationOverrideModeBase"/> class.
     /// </summary>
-    /// <param name="id">Unique identifier for this mode.</param>
     /// <param name="name">Name of the mode (must match TypeOption attribute).</param>
-    protected EscalationOverrideModeBase(int id, string name)
-        : base(id, name, $"TypeOptions:{name}", name, $"Escalation override mode: {name}", null)
+    protected EscalationOverrideModeBase(string name)
+        : base(name, $"TypeOptions:{name}", name, $"Escalation override mode: {name}", null)
     {
     }
 }

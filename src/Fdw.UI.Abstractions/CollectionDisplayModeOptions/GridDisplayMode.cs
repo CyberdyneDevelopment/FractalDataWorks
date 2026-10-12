@@ -14,5 +14,5 @@ public sealed class GridDisplayMode : CollectionDisplayModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="GridDisplayMode"/> class.
     /// </summary>
-    public GridDisplayMode() : base(3, "Grid", supportsExpandCollapse: false, supportsGrouping: true) { }
+    public GridDisplayMode() : base("Grid", supportsExpandCollapse: false, supportsGrouping: true) { }
 }

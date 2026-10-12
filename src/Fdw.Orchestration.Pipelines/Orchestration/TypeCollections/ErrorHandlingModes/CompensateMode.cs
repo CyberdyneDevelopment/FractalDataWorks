@@ -29,7 +29,6 @@ public sealed class CompensateMode : ErrorHandlingModeBase
     /// </summary>
     public CompensateMode()
         : base(
-            id: 5,
             name: "Compensate",
             continuesExecution: false,  // Stops to execute compensation
             supportsRetry: false,

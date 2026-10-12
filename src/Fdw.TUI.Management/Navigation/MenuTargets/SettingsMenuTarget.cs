@@ -13,7 +13,6 @@ public sealed class SettingsMenuTarget : MenuTargetBase
     /// Creates the settings menu target.
     /// </summary>
     public SettingsMenuTarget() : base(
-        id: 4,
         name: "settings",
         label: "Application Settings",
         group: "System",

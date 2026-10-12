@@ -9,47 +9,47 @@ public static class BuiltInSqlCommandCategories
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Analysis")]
     public sealed class AnalysisCategory : SqlCommandCategoryBase
-    { public AnalysisCategory() : base(1, "Analysis", "Static analysis over .sqlproj scripts.") { } }
+    { public AnalysisCategory() : base("Analysis", "Static analysis over .sqlproj scripts.") { } }
 
     /// <summary>Build / compile / emit DACPAC.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Build")]
     public sealed class BuildCategory : SqlCommandCategoryBase
-    { public BuildCategory() : base(2, "Build", "Build / compile / emit DACPAC.") { } }
+    { public BuildCategory() : base("Build", "Build / compile / emit DACPAC.") { } }
 
     /// <summary>Generate new tables / views / procedures / tests.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Generation")]
     public sealed class GenerationCategory : SqlCommandCategoryBase
-    { public GenerationCategory() : base(3, "Generation", "Generate new tables / views / procedures / tests.") { } }
+    { public GenerationCategory() : base("Generation", "Generate new tables / views / procedures / tests.") { } }
 
     /// <summary>Find references / dependencies / definitions.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Navigation")]
     public sealed class NavigationCategory : SqlCommandCategoryBase
-    { public NavigationCategory() : base(4, "Navigation", "Find references / dependencies / definitions.") { } }
+    { public NavigationCategory() : base("Navigation", "Find references / dependencies / definitions.") { } }
 
     /// <summary>Project structure: objects, files, references.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Project")]
     public sealed class ProjectCategory : SqlCommandCategoryBase
-    { public ProjectCategory() : base(5, "Project", "Project structure: objects, files, references.") { } }
+    { public ProjectCategory() : base("Project", "Project structure: objects, files, references.") { } }
 
     /// <summary>Rename / extract / move with cascading edits.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Refactoring")]
     public sealed class RefactoringCategory : SqlCommandCategoryBase
-    { public RefactoringCategory() : base(6, "Refactoring", "Rename / extract / move with cascading edits.") { } }
+    { public RefactoringCategory() : base("Refactoring", "Rename / extract / move with cascading edits.") { } }
 
     /// <summary>Search across scripts: text / symbols / duplicates.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Search")]
     public sealed class SearchCategory : SqlCommandCategoryBase
-    { public SearchCategory() : base(7, "Search", "Search across scripts: text / symbols / duplicates.") { } }
+    { public SearchCategory() : base("Search", "Search across scripts: text / symbols / duplicates.") { } }
 
     /// <summary>Workspace state: snapshot / baseline / apply.</summary>
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [TypeOption(typeof(SqlCommandCategories), "Workspace")]
     public sealed class WorkspaceCategory : SqlCommandCategoryBase
-    { public WorkspaceCategory() : base(8, "Workspace", "Workspace state: snapshot / baseline / apply.") { } }
+    { public WorkspaceCategory() : base("Workspace", "Workspace state: snapshot / baseline / apply.") { } }
 }

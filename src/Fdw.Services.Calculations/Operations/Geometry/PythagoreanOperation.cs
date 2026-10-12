@@ -28,7 +28,7 @@ public sealed class PythagoreanOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="PythagoreanOperation"/> class.
     /// </summary>
     public PythagoreanOperation()
-        : base(id: 50, name: "Pythagorean", category: "Geometry", description: "Euclidean length sqrt(A^2 + B^2 + C^2); C optional")
+        : base(name: "Pythagorean", category: "Geometry", description: "Euclidean length sqrt(A^2 + B^2 + C^2); C optional")
     {
         _logger = NullLogger<PythagoreanOperation>.Instance;
         Parameters =

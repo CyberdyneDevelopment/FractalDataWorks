@@ -42,6 +42,10 @@ public sealed class DetachedDataStore : IDataStore
     public Guid ConnectionId => Guid.Empty;
 
     /// <inheritdoc />
+    /// <remarks>A detached store describes a schema walked from a live connection; the host never declares one.</remarks>
+    public bool DeclaredByHost => false;
+
+    /// <inheritdoc />
     public IReadOnlyList<IDataNodePath> Paths => [];
 
     /// <inheritdoc />

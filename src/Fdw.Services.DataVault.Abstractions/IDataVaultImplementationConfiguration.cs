@@ -16,8 +16,6 @@ namespace Fdw.Services.DataVault.Abstractions;
 /// </remarks>
 public interface IDataVaultImplementationConfiguration : IImplementationConfiguration
 {
-    /// <summary>Gets or sets the FK to <c>sec.DataVault.Id</c>.</summary>
-    Guid DataVaultId { get; set; }
 
 
     /// <summary>Gets or sets the name of the configurationSchema-declared connection the vault rides.</summary>

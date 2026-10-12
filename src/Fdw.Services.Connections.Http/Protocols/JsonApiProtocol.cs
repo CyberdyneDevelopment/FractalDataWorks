@@ -32,7 +32,7 @@ public sealed class JsonApiProtocol : RestProtocolBase
     /// Initializes a new instance of the <see cref="JsonApiProtocol"/> class.
     /// </summary>
     public JsonApiProtocol()
-        : base(6, "JsonApi", "JSON:API specification with page[number], filter[field], sort conventions")
+        : base("JsonApi", "JSON:API specification with page[number], filter[field], sort conventions")
     {
     }
 
@@ -81,6 +81,15 @@ public sealed class JsonApiProtocol : RestProtocolBase
 
         return string.Empty;
     }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The group loop above only enumerates <see cref="IFilterCondition"/> children directly -- a
+    /// nested <see cref="FilterGroup"/> child is silently skipped, not rendered, so a request built
+    /// from And[And[A,B], C] would go out carrying only C's filter. Refusing here keeps that from
+    /// happening quietly; teaching the loop to recurse into a nested group is a separate change.
+    /// </remarks>
+    protected override bool SupportsNestedGroups => false;
 
     /// <inheritdoc/>
     protected override RestPaginationInfo? ExtractPaginationInfo(

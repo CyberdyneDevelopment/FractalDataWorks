@@ -48,7 +48,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
     private const string ColumnConnection = "connection";
     private const string ColumnLastDiscovered = "lastDiscovered";
     private const string ColumnCategory = "category";
-    private const string ColumnFields = "fields";
     private const string ColumnDescription = "description";
     private const string ColumnEnabled = "enabled";
     private const string ColumnSeverity = "severity";
@@ -151,10 +150,7 @@ public sealed class ConfigurationMenuScreen : ScreenBase
     }
 
     /// <inheritdoc />
-    // MA0051: Method length acceptable - procedural menu rendering with connection check, table display, and prompt
-#pragma warning disable MA0051 // Method is too long
     public override async Task<NavigationResult> Show()
-#pragma warning restore MA0051
     {
         RenderHeader();
 
@@ -417,10 +413,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         page.AddColumn(ListColumnDefinition.Create(ColumnName, "Name"));
         page.AddColumn(ListColumnDefinition.Create(ColumnCategory, "Category"));
 
-        var fieldsColumn = ListColumnDefinition.Create(ColumnFields, "Fields");
-        fieldsColumn.Alignment = ColumnAlignments.Right;
-        page.AddColumn(fieldsColumn);
-
         var createdColumn = ListColumnDefinition.Create(ColumnCreated, "Created");
         createdColumn.Alignment = ColumnAlignments.Right;
         page.AddColumn(createdColumn);
@@ -430,7 +422,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             var row = new ListRowModel { Id = dataSet.Name };
             row.SetValue(ColumnName, dataSet.Name);
             row.SetValue(ColumnCategory, dataSet.Category);
-            row.SetValue(ColumnFields, dataSet.FieldCount.ToString(CultureInfo.CurrentCulture));
             row.SetValue(
                 ColumnCreated,
                 dataSet.CreatedAt.ToString("g", CultureInfo.CurrentCulture));
@@ -590,7 +581,7 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         {
             var row = new ListRowModel { Id = notification.Name };
             row.SetValue(ColumnName, notification.Name);
-            row.SetValue(ColumnType, notification.ServiceOptionType);
+            row.SetValue(ColumnType, notification.Implementation);
             row.SetValue(ColumnEnabled, DescribeEnabled(notification.IsEnabled));
             row.SetValue(ColumnDescription, notification.Description);
             row.Status = DescribeEnabledStatus(notification.IsEnabled);
@@ -711,7 +702,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
 
         page.AddColumn(ListColumnDefinition.Create(ColumnName, "Username"));
         page.AddColumn(ListColumnDefinition.Create(ColumnEmail, "Email"));
-        page.AddColumn(ListColumnDefinition.Create(ColumnRoles, "Roles"));
         page.AddColumn(ListColumnDefinition.Create(ColumnActive, "Active"));
 
         var lastLoginColumn = ListColumnDefinition.Create(ColumnLastLogin, "Last Login");
@@ -723,7 +713,6 @@ public sealed class ConfigurationMenuScreen : ScreenBase
             var row = new ListRowModel { Id = user.Username };
             row.SetValue(ColumnName, user.Username);
             row.SetValue(ColumnEmail, user.Email);
-            row.SetValue(ColumnRoles, string.Join(", ", user.Roles));
             row.SetValue(ColumnActive, DescribeEnabled(user.IsActive));
             row.SetValue(
                 ColumnLastLogin,
@@ -900,13 +889,13 @@ public sealed class ConfigurationMenuScreen : ScreenBase
     /// through the render-agnostic seam.
     /// </summary>
     private Task ShowEtlNodesList() =>
-        LoadAndRenderList<OrchestrationNodeConfiguration>(
+        LoadAndRenderList<OrchestrationNodeImplementationConfiguration>(
             "ETL Node",
             "Loading root orchestration nodes from the instance...",
             _nodeApiClient.ListRootNodes,
             BuildEtlNodesPage);
 
-    private static ListPageModel BuildEtlNodesPage(IReadOnlyList<OrchestrationNodeConfiguration> nodes)
+    private static ListPageModel BuildEtlNodesPage(IReadOnlyList<OrchestrationNodeImplementationConfiguration> nodes)
     {
         var page = new ListPageModel
         {

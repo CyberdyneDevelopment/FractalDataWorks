@@ -543,9 +543,6 @@ public class ValueConditionTests
     {
         // Arrange & Act
         var condition = new ValueCondition();
-
-        // Assert
-        condition.Id.ShouldBe(5);
         condition.Name.ShouldBe("ValueCondition");
         condition.Icon.ShouldBe("compare");
         condition.Color.ShouldBe("Primary");

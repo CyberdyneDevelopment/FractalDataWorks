@@ -32,24 +32,6 @@ public sealed partial class PipelineTransformFieldMappingConfiguration : IFieldM
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent operation (column pipe.PipelineTransformFieldMapping.PipelineTransformId).
-    /// </summary>
-    /// <remarks>
-    /// Why: set by the configuration cascade-save to the parent operation's logical Id; the configuration
-    /// save translator resolves the physical PipelineTransformRowId via FK subquery on insert.
-    /// </remarks>
-    public Guid PipelineTransformId { get; set; }
-
-    /// <inheritdoc/>
-    public string SectionName => string.Empty;
-
-    /// <inheritdoc/>
-    public string ServiceType => "Pipeline";
-
-    /// <inheritdoc/>
-    public string? ServiceOptionType => null;
-
-    /// <summary>
     /// Gets or sets the source field name.
     /// </summary>
     public string SourceField { get; set; } = string.Empty;
@@ -84,6 +66,18 @@ public sealed partial class PipelineTransformFieldMappingConfiguration : IFieldM
     /// </summary>
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Gets or sets the transformer chain of this mapping: the named Transformations its value goes through, in
+    /// <see cref="PipelineTransformFieldMappingTransformationConfiguration.Ordinal"/> order. Cascade child
+    /// (pipe.PipelineTransformFieldMappingTransformation). Empty when the mapping states none.
+    /// </summary>
+    /// <remarks>
+    /// Why this is not <see cref="Transforms"/>: a step names a Transformation by id, and turning that id into a transformation
+    /// type and its parameters needs the Transformation domain, which a configuration row cannot reach. The run resolves the
+    /// chain when it starts (<see cref="FieldTransformChains"/>) and hands the result to the Map stage through its context.
+    /// </remarks>
+    public IList<PipelineTransformFieldMappingTransformationConfiguration> TransformationChain { get; set; } = [];
+
     /// <inheritdoc/>
     /// <remarks>
     /// Why this projects <see cref="TransformExpression"/> instead of reading its own rows: a pipeline
@@ -91,8 +85,8 @@ public sealed partial class PipelineTransformFieldMappingConfiguration : IFieldM
     /// stores an ordered chain with parameters. This reports what is actually stored - a one-step chain
     /// when a name is set, and no chain when it is not. It never invents parameters: a transform that
     /// needs them and is reached from here is reported as an error rather than run unconfigured, which
-    /// is the behaviour this replaces. Giving pipeline mappings their own parameter rows is a schema
-    /// change and is filed separately.
+    /// is the behaviour this replaces. A mapping that states a chain of named Transformations
+    /// (<see cref="TransformationChain"/>) is run from the chain the run resolved, not from this projection.
     /// </remarks>
     public IReadOnlyList<IFieldMappingTransform> Transforms =>
         string.IsNullOrEmpty(TransformExpression)

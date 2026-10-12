@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.PostgreSql.Results;
 using Fdw.Data.PostgreSql.Translators;
 using Fdw.Results;
@@ -39,7 +40,12 @@ namespace Fdw.Data.PostgreSql;
 public sealed class PostgreSqlBatchInsertTranslator : PostgreSqlDataCommandTranslatorBase
 {
     private const int MaxParametersPerStatement = 32767; // PostgreSQL limit (Int16.MaxValue)
-    private const int DefaultMaxRowsPerBatch = 1000; // Conservative default
+
+    /// <summary>
+    /// The most rows one INSERT statement carries, before the parameter limit lowers it further. A
+    /// deployment sets this before the host starts.
+    /// </summary>
+    public static int MaxRowsPerBatch { get; set; } = 1000;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgreSqlBatchInsertTranslator"/> class.
@@ -102,22 +108,45 @@ public sealed class PostgreSqlBatchInsertTranslator : PostgreSqlDataCommandTrans
     }
 
     /// <summary>
+    /// The columns an insert writes: all but the ones the database provides (identity and computed).
+    /// </summary>
+    /// <param name="container">The container the rows are inserted into.</param>
+    /// <returns>The insertable fields, in schema order.</returns>
+    internal static List<IField> InsertableFields(IStorageContainer container)
+        => container.Schema.Fields
+            .Where(f => !f.IsIdentity && !f.IsComputed)
+            .ToList();
+
+    /// <summary>
+    /// The most rows of <paramref name="container"/> that one command can insert, which is as many as keep it within the
+    /// parameter limit (one parameter per value).
+    /// </summary>
+    /// <remarks>
+    /// The connection chooses between the serial route and the COPY with this, as well as with its configured
+    /// <c>MaxSerialInsert</c>: a bulk insert of more rows than a command can carry goes to the COPY, which has no such limit. A
+    /// container with no insertable column has no command to size, so its limit is unbounded here and the translator refuses it
+    /// with its own coded failure.
+    /// </remarks>
+    /// <param name="container">The container the rows are inserted into.</param>
+    /// <returns>The row limit of one command.</returns>
+    public static int RowsPerRequest(IStorageContainer container)
+    {
+        var columns = InsertableFields(container).Count;
+        return columns == 0 ? int.MaxValue : MaxParametersPerStatement / columns;
+    }
+
+    /// <summary>
     /// Builds batched multi-row INSERT statements for PostgreSQL.
     /// </summary>
-#pragma warning disable MA0051 // Method is too long
-    private static NpgsqlCommand BuildBatchedInsertStatements(
+    internal static NpgsqlCommand BuildBatchedInsertStatements(
         IStorageContainer container,
         IDatabasePath dbPath,
         IEnumerable collection)
-#pragma warning restore MA0051
     {
         var dialect = dbPath.Dialect;
         var p = dialect.ParameterPrefix;
 
-        // Get insertable fields (exclude identity/computed)
-        var fields = container.Schema.Fields
-            .Where(f => !f.IsIdentity && !f.IsComputed)
-            .ToList();
+        var fields = InsertableFields(container);
 
         if (fields.Count == 0)
         {
@@ -130,7 +159,7 @@ public sealed class PostgreSqlBatchInsertTranslator : PostgreSqlDataCommandTrans
         // Calculate safe batch size
         var columnsPerRow = fieldNames.Count;
         var maxRowsPerBatch = Math.Min(
-            DefaultMaxRowsPerBatch,
+            MaxRowsPerBatch,
             MaxParametersPerStatement / columnsPerRow);
 
         if (maxRowsPerBatch < 1)
@@ -144,6 +173,16 @@ public sealed class PostgreSqlBatchInsertTranslator : PostgreSqlDataCommandTrans
         if (entities.Count == 0)
         {
             throw new InvalidOperationException("Cannot insert empty collection");
+        }
+
+        // One command carries at most MaxParametersPerStatement parameters however many statements it holds, so rows beyond
+        // that cannot be sent as this command. They are refused here with the reason; the connection routes a bulk insert of more
+        // rows than this to its COPY before it translates (RowsPerRequest).
+        if (entities.Count * columnsPerRow > MaxParametersPerStatement)
+        {
+            throw new InvalidOperationException(
+                $"{entities.Count} rows of {columnsPerRow} columns need {entities.Count * columnsPerRow} parameters; "
+                + $"one PostgreSQL command carries at most {MaxParametersPerStatement}, which is {RowsPerRequest(container)} rows of this container");
         }
 
         // Build multi-statement SQL for all batches
@@ -164,7 +203,9 @@ public sealed class PostgreSqlBatchInsertTranslator : PostgreSqlDataCommandTrans
                     var paramName = $"{p}p{parameterIndex++}";
                     paramNames.Add(paramName);
 
-                    var value = entity.GetType().GetProperty(fieldName)?.GetValue(entity);
+                    // The row is read the one way every bulk route reads it (RowValues): a dictionary row, which is what a
+                    // pipeline load carries, binds its values as an entity row does.
+                    RowValues.TryRead(entity, fieldName, out var value, out _);
                     allParameters.Add(new NpgsqlParameter(paramName, value ?? System.DBNull.Value));
                 }
 

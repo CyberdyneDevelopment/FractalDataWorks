@@ -32,7 +32,7 @@ public sealed class NegateOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="NegateOperation"/> class.
     /// </summary>
     public NegateOperation()
-        : base(id: 6, name: "Negate", category: "Arithmetic", description: "Reverses the sign of a value (-value)")
+        : base(name: "Negate", category: "Arithmetic", description: "Reverses the sign of a value (-value)")
     {
         _logger = NullLogger<NegateOperation>.Instance;
         Parameters =

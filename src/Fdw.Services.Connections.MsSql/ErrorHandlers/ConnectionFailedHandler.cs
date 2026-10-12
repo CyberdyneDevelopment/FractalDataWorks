@@ -19,7 +19,7 @@ public sealed class ConnectionFailedHandler : SqlErrorHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionFailedHandler"/> class.
     /// </summary>
-    public ConnectionFailedHandler() : base(4, "ConnectionFailed") { }
+    public ConnectionFailedHandler() : base("ConnectionFailed") { }
 
     /// <inheritdoc />
     public override IReadOnlyList<int> SqlErrorNumbers => [-1, 2, 53];

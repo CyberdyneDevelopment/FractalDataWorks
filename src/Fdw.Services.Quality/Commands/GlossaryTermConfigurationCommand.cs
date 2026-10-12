@@ -6,7 +6,7 @@ namespace Fdw.Services.Quality.Commands;
 
 /// <summary>ConfigurationCommands TypeOption for the GlossaryTerm configuration domain.</summary>
 [TypeOption(typeof(ConfigurationCommands), "GlossaryTerm")]
-public sealed class GlossaryTermConfigurationCommand : ConfigurationCommandBase<GlossaryTermConfiguration>
+public sealed class GlossaryTermConfigurationCommand : ConfigurationCommandBase<GlossaryTermImplementationConfiguration>
 {
     /// <inheritdoc/>
     public GlossaryTermConfigurationCommand() : base("GlossaryTerm") { }

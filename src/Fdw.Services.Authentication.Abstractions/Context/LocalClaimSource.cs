@@ -8,7 +8,7 @@ public sealed class LocalClaimSource : ClaimSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="LocalClaimSource"/> class.</summary>
     public LocalClaimSource()
-        : base(1, "Local")
+        : base("Local")
     {
     }
 }

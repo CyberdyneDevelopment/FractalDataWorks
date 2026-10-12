@@ -13,11 +13,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that resolves (marks as reviewed/approved) a DataSet annotation.</summary>
 public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationIdRequest, DataSetAnnotationPayload>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="ResolveDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ResolveDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected ResolveDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -43,13 +43,11 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
     /// </summary>
     public override async Task HandleAsync(DataSetAnnotationIdRequest req, CancellationToken ct)
     {
-        var getResult = await _provider.GetAnnotation(req.AnnotationId, ct).ConfigureAwait(false);
+        var getResult = await _provider.Get(req.AnnotationId, ct).ConfigureAwait(false);
 
         if (!getResult.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to query annotation", Details = getResult.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to query annotation", Details = getResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
@@ -59,21 +57,22 @@ public abstract class ResolveDataSetAnnotationEndpointBase : Endpoint<DataSetAnn
             return;
         }
 
-        var saveResult = await _provider.SaveAnnotation(getResult.Value, ct).ConfigureAwait(false);
+        var annotation = getResult.Value;
+        var saveResult = await _provider
+            .Save(annotation, annotation.Domain, annotation.Implementation, annotation.Name, ct)
+            .ConfigureAwait(false);
 
         if (!saveResult.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to resolve annotation", Details = saveResult.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to resolve annotation", Details = saveResult.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 
         await Send.OkAsync(MapToDto(getResult.Value), ct).ConfigureAwait(false);
     }
 
-    /// <summary>Maps a DataSetAnnotationConfiguration to its corresponding DTO.</summary>
-    protected virtual DataSetAnnotationPayload MapToDto(DataSetAnnotationConfiguration config)
+    /// <summary>Maps a DataSetAnnotationImplementationConfiguration to its corresponding DTO.</summary>
+    protected virtual DataSetAnnotationPayload MapToDto(IDataSetAnnotationImplementationConfiguration config)
     {
         return new DataSetAnnotationPayload
         {

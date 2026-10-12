@@ -5,27 +5,25 @@ namespace Fdw.Results.ExecutionStatus;
 /// <summary>
 /// Base class for execution status type definitions with UI properties.
 /// </summary>
-public abstract class ExecutionStatusBase : TypeOptionBase<int, ExecutionStatusBase>, IExecutionStatus
+public abstract class ExecutionStatusBase : TypeOptionBase<ExecutionStatusBase>, IExecutionStatus
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ExecutionStatusBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this status.</param>
     /// <param name="name">The name of this status.</param>
-    /// <param name="icon">The MudBlazor icon name.</param>
-    /// <param name="color">The MudBlazor color.</param>
+    /// <param name="icon">The Material Symbols icon name.</param>
+    /// <param name="color">The semantic color role (Primary, Secondary, Success, Warning, Error, Info, ...).</param>
     /// <param name="isTerminal">Whether this is a terminal state.</param>
     /// <param name="isSuccess">Whether this status indicates success.</param>
     /// <param name="isInProgress">Whether execution is still in progress.</param>
     protected ExecutionStatusBase(
-        int id,
         string name,
         string icon,
         string color,
         bool isTerminal,
         bool isSuccess,
         bool isInProgress)
-        : base(id, name)
+        : base(name)
     {
         Icon = icon;
         Color = color;

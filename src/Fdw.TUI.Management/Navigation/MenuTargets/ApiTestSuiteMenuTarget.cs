@@ -18,7 +18,6 @@ public sealed class ApiTestSuiteMenuTarget : MenuTargetBase
     /// Initializes a new instance of the <see cref="ApiTestSuiteMenuTarget"/> class.
     /// </summary>
     public ApiTestSuiteMenuTarget() : base(
-        id: 6,
         name: "apitests",
         label: "API Test Suite",
         group: "Main",

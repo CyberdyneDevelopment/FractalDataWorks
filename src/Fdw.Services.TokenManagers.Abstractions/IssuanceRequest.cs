@@ -60,4 +60,12 @@ public sealed record IssuanceRequest
     /// </remarks>
     public IReadOnlyDictionary<string, IReadOnlyList<string>> Claims { get; init; }
         = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+    /// <summary>Gets the moment the claims stop being true, or null when nothing ends them.</summary>
+    /// <remarks>
+    /// A token asserts its claims until it expires, so a token may not outlive them. The issuer mints
+    /// an expiry no later than this (FDW-862): a role assignment that expires in ten minutes cannot be
+    /// carried by a token that lives for an hour.
+    /// </remarks>
+    public DateTimeOffset? ValidUntil { get; init; }
 }

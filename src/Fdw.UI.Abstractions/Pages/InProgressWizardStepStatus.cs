@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class InProgressWizardStepStatus : WizardStepStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="InProgressWizardStepStatus"/>.</summary>
-    public InProgressWizardStepStatus() : base(2, "InProgress") { }
+    public InProgressWizardStepStatus() : base("InProgress") { }
 }

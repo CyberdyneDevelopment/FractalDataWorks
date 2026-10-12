@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -51,9 +52,22 @@ public abstract class DeleteConnectionEndpointBase : CrudDeleteEndpointBase<Conn
         return GenericResult<bool>.Success(existingResult.IsSuccess && existingResult.Value != null);
     }
 
-    /// <summary>Soft-deletes the connection aggregate.</summary>
+    /// <summary>Soft-deletes the connection aggregate, then deletes the secrets it owned.</summary>
     protected override async Task<IGenericResult> Delete(ConnectionNameRequest request, CancellationToken ct)
     {
-        return await _connectionProvider.Delete(request.Name, ct).ConfigureAwait(false);
+        var existing = await _connectionProvider.Get(request.Name, ct).ConfigureAwait(false);
+        if (existing.IsFailure)
+            return existing;
+        if (existing.Value is null)
+            return GenericResult.Failure(ConnectionEndpointLog.ConnectionNotFound(_logger, request.Name));
+
+        // The connection owns the secrets its credentials name (FDW-1202): they are read before the delete and removed after it.
+        return await ConnectionCredentialStore.DeleteConnection(
+            ConnectionTypes.ByName(existing.Value.Implementation),
+            existing.Value,
+            token => _connectionProvider.Delete(request.Name, token),
+            HttpContext.RequestServices,
+            _logger,
+            ct).ConfigureAwait(false);
     }
 }

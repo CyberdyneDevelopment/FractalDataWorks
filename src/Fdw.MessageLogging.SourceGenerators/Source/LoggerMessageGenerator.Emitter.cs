@@ -147,7 +147,6 @@ namespace {lc.Namespace}
                 }
             }
 
-#pragma warning disable MA0051 // Source generator emits complete log struct — splitting scatters the template
             private void GenStruct(LoggerMethod lm, string nestedIndentation)
             {
                 _builder.AppendLine($@"
@@ -389,7 +388,6 @@ namespace {lc.Namespace}
                 _builder.Append(')');
             }
 
-#pragma warning disable MA0051 // Source generator emits complete log method with all overloads — splitting scatters the template
             [ConventionOverride(MaxCyclomaticComplexity = 17, MaxMethodLines = 142)]  // Code generation template for log methods — sequential string building
             private void GenLogMethod(LoggerMethod lm, string nestedIndentation)
             {

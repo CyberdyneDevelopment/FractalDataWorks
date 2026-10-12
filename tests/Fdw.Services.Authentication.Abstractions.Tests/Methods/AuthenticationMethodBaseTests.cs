@@ -15,16 +15,12 @@ public class AuthenticationMethodBaseTests
     {
         // Arrange & Act
         var method = new TestAuthenticationMethod(
-            id: 1,
             name: "TestMethod",
             requiresUserInteraction: true,
             supportsTokenRefresh: true,
             supportsMultiTenant: false,
             authenticationScheme: "Bearer",
             priority: 10);
-
-        // Assert
-        method.Id.ShouldBe(1);
         method.Name.ShouldBe("TestMethod");
         method.RequiresUserInteraction.ShouldBeTrue();
         method.SupportsTokenRefresh.ShouldBeTrue();
@@ -40,7 +36,6 @@ public class AuthenticationMethodBaseTests
     {
         // Arrange & Act
         var method = new TestAuthenticationMethod(
-            id: 2,
             name: "TestMethod2",
             requiresUserInteraction: false,
             supportsTokenRefresh: false,
@@ -59,7 +54,6 @@ public class AuthenticationMethodBaseTests
     {
         // Arrange
         var method = new TestAuthenticationMethod(
-            id: 1,
             name: "Test",
             requiresUserInteraction: true,
             supportsTokenRefresh: true,
@@ -82,7 +76,7 @@ public class AuthenticationMethodBaseTests
     public void MethodImplementsIAuthenticationMethod()
     {
         // Arrange
-        var method = new TestAuthenticationMethod(1, "Test", true, true, true, "Test", 1);
+        var method = new TestAuthenticationMethod("Test", true, true, true, "Test", 1);
 
         // Assert
         method.ShouldBeAssignableTo<IAuthenticationMethod>();
@@ -95,14 +89,13 @@ public class AuthenticationMethodBaseTests
     private sealed class TestAuthenticationMethod : AuthenticationMethodBase
     {
         public TestAuthenticationMethod(
-            int id,
             string name,
             bool requiresUserInteraction,
             bool supportsTokenRefresh,
             bool supportsMultiTenant,
             string? authenticationScheme,
             int priority)
-            : base(id, name, requiresUserInteraction, supportsTokenRefresh, supportsMultiTenant, authenticationScheme, priority)
+            : base(name, requiresUserInteraction, supportsTokenRefresh, supportsMultiTenant, authenticationScheme, priority)
         {
         }
     }

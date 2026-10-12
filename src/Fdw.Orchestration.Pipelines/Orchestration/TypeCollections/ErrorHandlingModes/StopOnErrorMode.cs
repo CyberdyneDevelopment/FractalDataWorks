@@ -27,7 +27,6 @@ public sealed class StopOnErrorMode : ErrorHandlingModeBase
     /// </summary>
     public StopOnErrorMode()
         : base(
-            id: 1,
             name: "StopOnError",
             continuesExecution: false,
             supportsRetry: false,

@@ -27,7 +27,7 @@ public sealed class EqualOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="EqualOperation"/> class.
     /// </summary>
     public EqualOperation()
-        : base(id: 22, name: "Equal", category: "Comparison", description: "Returns true if the left value equals the right value")
+        : base(name: "Equal", category: "Comparison", description: "Returns true if the left value equals the right value")
     {
         _logger = NullLogger<EqualOperation>.Instance;
         Parameters =

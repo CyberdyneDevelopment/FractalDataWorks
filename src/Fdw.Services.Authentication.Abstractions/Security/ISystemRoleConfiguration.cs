@@ -40,4 +40,17 @@ public interface ISystemRoleConfiguration
     /// the runtime-configured role name.
     /// </summary>
     bool IsInRole(ClaimsPrincipal user, string roleName);
+
+    /// <summary>
+    /// Returns <c>true</c> if <paramref name="user"/> administers the PLATFORM: holds
+    /// <see cref="AdminRoleName"/> while acting in the global tenant.
+    /// </summary>
+    /// <remarks>
+    /// Roles are held per tenant, so holding <see cref="AdminRoleName"/> says only that the caller
+    /// administers the tenant their token was issued for. An Admin of any other tenant manages that
+    /// tenant's users and settings and nothing else — they must never be treated as the platform's
+    /// administrator (FDW-825). Use this, never <see cref="IsInRole"/> with the admin role, wherever
+    /// the question is "may this caller act on every tenant".
+    /// </remarks>
+    bool IsPlatformAdmin(ClaimsPrincipal user);
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -26,6 +27,10 @@ public sealed record AuthenticationContext
 
     /// <summary>Gets the claims gathered so far.</summary>
     public ClaimSet Claims { get; init; } = ClaimSet.Empty;
+
+    /// <summary>Gets when the claims gathered so far stop being true: the earliest any step reported.</summary>
+    /// <remarks>Null when no step reported an end. The token minted from this context expires no later.</remarks>
+    public DateTimeOffset? ClaimsValidUntil { get; init; }
 
     /// <summary>Gets the issuance decision, once some step has reached one.</summary>
     public Decision? Decision { get; init; }

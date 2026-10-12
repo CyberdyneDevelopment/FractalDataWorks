@@ -13,12 +13,11 @@ namespace Fdw.Orchestration.Pipelines.Abstractions.TypeCollections.WriteModeOpti
 /// Provides common functionality for write modes used in pipeline load stages.
 /// Derived classes implement specific write behaviors.
 /// </remarks>
-public abstract class WriteModeBase : TypeOptionBase<int, WriteModeBase>, IWriteMode
+public abstract class WriteModeBase : TypeOptionBase<WriteModeBase>, IWriteMode
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="WriteModeBase"/> class.
     /// </summary>
-    /// <param name="id">Unique numeric identifier.</param>
     /// <param name="name">Human-readable name.</param>
     /// <param name="requiresExistenceCheck">Whether this mode requires checking if data exists.</param>
     /// <param name="preservesExistingData">Whether this mode preserves existing data.</param>
@@ -26,14 +25,13 @@ public abstract class WriteModeBase : TypeOptionBase<int, WriteModeBase>, IWrite
     /// <param name="canUpdate">Whether this mode can update existing data.</param>
     /// <param name="canDelete">Whether this mode can delete existing data.</param>
     protected WriteModeBase(
-        int id,
         string name,
         bool requiresExistenceCheck,
         bool preservesExistingData,
         bool canCreate = true,
         bool canUpdate = false,
         bool canDelete = false)
-        : base(id, name)
+        : base(name)
     {
         RequiresExistenceCheck = requiresExistenceCheck;
         PreservesExistingData = preservesExistingData;

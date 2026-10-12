@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataStringConverter()
     : DataTypeConverterBase(
-        id: 1,
         name: "String",
         sourceType: "String",
         targetClrType: typeof(string),

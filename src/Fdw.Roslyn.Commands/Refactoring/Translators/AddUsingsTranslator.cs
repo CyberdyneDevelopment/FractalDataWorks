@@ -31,7 +31,6 @@ public sealed class AddUsingsTranslator : RoslynCommandTranslatorBase<AddUsingsC
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: find unresolved types, search assemblies, add using directives
     public override async Task<IGenericResult<MutationResult>> Translate(
         AddUsingsCommand command,
         Solution solution,
@@ -150,7 +149,6 @@ public sealed class AddUsingsTranslator : RoslynCommandTranslatorBase<AddUsingsC
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 
     private static List<INamedTypeSymbol> FindMatchingTypes(MsCompilation compilation, string typeName)
     {

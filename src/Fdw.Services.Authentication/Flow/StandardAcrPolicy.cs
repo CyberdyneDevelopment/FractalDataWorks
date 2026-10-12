@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Steps;
+using Fdw.Services.Authentication.Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Authentication.Flow;
 
@@ -12,21 +16,16 @@ namespace Fdw.Services.Authentication.Flow;
 /// <para>
 /// NIST SP 800-63 defines assurance by how many independent factors were used, not how many times
 /// someone authenticated. Two passwords are one factor twice, so the count here is of distinct
-/// <em>kinds</em> — something known, something held, something inherent.
+/// <em>kinds</em> - something known, something held, something inherent.
 /// </para>
 /// <para>
-/// A deployment that recognises different rungs replaces this. What must not move is where it lives:
-/// the runner owns the policy, so no step can raise the level it reports.
+/// The levels are the deployment's, not this class's: it is handed the declared
+/// <see cref="AssuranceLevels"/> and reports the highest one the proved kinds reach. The runner owns the
+/// policy, so no step can raise the level it reports (FDW-954).
 /// </para>
 /// </remarks>
 public sealed class StandardAcrPolicy : IAcrPolicy
 {
-    /// <summary>The level reached by a single factor.</summary>
-    public const string SingleFactor = "urn:fdw:acr:single-factor";
-
-    /// <summary>The level reached by two or more distinct factor kinds.</summary>
-    public const string MultiFactor = "urn:fdw:acr:multi-factor";
-
     // RFC 8176 method values, grouped by the kind of factor each represents. A method not listed
     // counts as its own kind rather than being ignored: an unrecognised proof is still a proof, and
     // silently discarding it would understate assurance rather than overstate it.
@@ -46,32 +45,64 @@ public sealed class StandardAcrPolicy : IAcrPolicy
         ["retina"] = "inherence",
     };
 
-    /// <inheritdoc />
-    public string? Evaluate(IReadOnlyList<string> achievedMethods)
-    {
-        ArgumentNullException.ThrowIfNull(achievedMethods);
+    private readonly IReadOnlyCollection<IAssuranceLevel> _levels;
+    private readonly ILogger<StandardAcrPolicy> _logger;
 
-        return achievedMethods
-            .Select(m => FactorKinds.TryGetValue(m, out var kind) ? kind : m)
-            .Distinct(StringComparer.Ordinal)
-            .Count() switch
-        {
-            0 => null,
-            1 => SingleFactor,
-            _ => MultiFactor,
-        };
+    /// <summary>Initializes a new instance of the <see cref="StandardAcrPolicy"/> class.</summary>
+    /// <param name="levels">The levels the deployment declares; the registration passes <see cref="AssuranceLevels"/>.</param>
+    /// <param name="logger">The logger.</param>
+    public StandardAcrPolicy(IReadOnlyCollection<IAssuranceLevel> levels, ILogger<StandardAcrPolicy>? logger)
+    {
+        _levels = levels;
+        _logger = logger ?? NullLogger<StandardAcrPolicy>.Instance;
     }
 
     /// <inheritdoc />
     /// <remarks>
-    /// A flow demanding nothing is satisfied by anything, including nothing — the terminal check
-    /// separately refuses a flow that proved no one, so this cannot be the only gate.
+    /// The highest declared level whose factor kinds the proof reaches. No proof, or a proof short of
+    /// every declared level, reaches none; so does a deployment that declares no levels at all.
     /// </remarks>
-    public bool Meets(string? achieved, string? required) => required switch
+    public string? Evaluate(IReadOnlyList<string> achievedMethods)
     {
-        null => true,
-        SingleFactor => achieved is SingleFactor or MultiFactor,
-        MultiFactor => achieved == MultiFactor,
-        _ => string.Equals(achieved, required, StringComparison.Ordinal),
-    };
+        var kinds = achievedMethods
+            .Select(m => FactorKinds.TryGetValue(m, out var kind) ? kind : m)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+
+        // Nothing proved reaches nothing, whatever a level claims to need.
+        if (kinds == 0)
+            return null;
+
+        return _levels
+            .Where(level => level.FactorKinds <= kinds)
+            .OrderByDescending(level => level.FactorKinds)
+            .Select(level => level.AcrValue)
+            .FirstOrDefault();
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A flow demanding nothing is satisfied by anything, including nothing - the terminal check
+    /// separately refuses a flow that proved no one, so this cannot be the only gate. A level that no
+    /// declared level answers to is a misconfigured flow, and is refused as one rather than read as a
+    /// proof that fell short.
+    /// </remarks>
+    public IGenericResult<bool> Meets(string? achieved, string? required)
+    {
+        if (required is null)
+            return GenericResult<bool>.Success(true);
+
+        if (Level(required) is not { } demanded)
+            return GenericResult<bool>.Failure(AcrPolicyLog.LevelNotDeclared(_logger, required));
+
+        if (achieved is null)
+            return GenericResult<bool>.Success(false);
+
+        return Level(achieved) is { } reached
+            ? GenericResult<bool>.Success(reached.FactorKinds >= demanded.FactorKinds)
+            : GenericResult<bool>.Failure(AcrPolicyLog.LevelNotDeclared(_logger, achieved));
+    }
+
+    private IAssuranceLevel? Level(string acrValue)
+        => _levels.FirstOrDefault(level => string.Equals(level.AcrValue, acrValue, StringComparison.Ordinal));
 }

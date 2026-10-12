@@ -31,14 +31,14 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             .Where(static m => m != null)
             .Select(static (m, _) => m!.Value);
 
-        // Discover all ServiceTypeOptions
+        // Discover all Implementations
         var optionsProvider = context.CompilationProvider
             .Combine(collectionsProvider.Collect())
             .Select(static (pair, _) =>
             {
                 var (compilation, collections) = pair;
                 var restrictToCurrentCompilation = collections.Any(c => c.RestrictToCurrentCompilation);
-                return ServiceTypeOptionDiscovery.DiscoverAll(compilation, restrictToCurrentCompilation);
+                return ImplementationDiscovery.DiscoverAll(compilation, restrictToCurrentCompilation);
             });
 
         // Combine collections, options, and compilation for abstract member extraction
@@ -49,7 +49,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(combinedProvider, Execute);
     }
 
-#pragma warning disable MA0051 // Source generator model extraction requires cohesive Roslyn symbol inspection
     // Attribute parameter extraction via Roslyn — sequential symbol inspection
 #pragma warning disable FDW006, FDW007
     private static ServiceTypeCollectionModel? ExtractCollectionModel(
@@ -100,10 +99,10 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             FullName: classSymbol.ToDisplayString(),
             BaseTypeName: resolvedBaseType,
             InterfaceTypeName: resolvedInterfaceType,
-            MatchKey: ServiceTypeOptionDiscovery.GetMatchKey(collectionType),
+            MatchKey: ImplementationDiscovery.GetMatchKey(collectionType),
             Kind: CollectionKind.Immutable,
             RestrictToCurrentCompilation: restrictToCurrentCompilation,
-            ParentCollectionMatchKey: parentCollection != null ? ServiceTypeOptionDiscovery.GetMatchKey(parentCollection) : null,
+            ParentCollectionMatchKey: parentCollection != null ? ImplementationDiscovery.GetMatchKey(parentCollection) : null,
             ChildName: childName,
             ServiceInterfaceTypeName: serviceInterface?.ToDisplayString(),
             ConfigurationInterfaceTypeName: configurationInterface?.ToDisplayString(),
@@ -172,7 +171,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
 
     private static void Execute(
         SourceProductionContext context,
-        ((ImmutableArray<ServiceTypeCollectionModel> Collections, ImmutableArray<ServiceTypeOptionModel> Options) Data, Compilation Compilation) source)
+        ((ImmutableArray<ServiceTypeCollectionModel> Collections, ImmutableArray<ImplementationModel> Options) Data, Compilation Compilation) source)
     {
         var (collections, allOptions) = source.Data;
         var compilation = source.Compilation;
@@ -185,7 +184,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
                 .Where(o => string.Equals(o.CollectionMatchKey, collection.MatchKey, StringComparison.Ordinal))
                 .ToImmutableArray();
 
-            options = ReplacesDiscovery.FilterReplacedServiceTypeOptions(options, replacementMap, context);
+            options = ReplacesDiscovery.FilterReplacedImplementations(options, replacementMap, context);
 
             // Find child collections for this parent
             var childCollections = collections
@@ -218,9 +217,9 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
     private static void ValidateOptions(
         SourceProductionContext context,
         ServiceTypeCollectionModel collection,
-        ImmutableArray<ServiceTypeOptionModel> options)
+        ImmutableArray<ImplementationModel> options)
     {
-        // Empty collections are valid - ServiceTypeOptions may be added in other packages
+        // Empty collections are valid - Implementations may be added in other packages
         if (options.Length == 0)
         {
             return;
@@ -231,7 +230,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         foreach (var reserved in options.Where(o => ReservedMemberNames.IsReserved(o.OptionName)))
         {
             context.ReportDiagnostic(Diagnostic.Create(
-                TypeCollectionGeneratorDiagnostics.ReservedServiceTypeOptionName,
+                TypeCollectionGeneratorDiagnostics.ReservedImplementationName,
                 Location.None,
                 reserved.FullTypeName,
                 reserved.OptionName));
@@ -275,7 +274,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
     private static void ValidateLookupPropertyValues(
         SourceProductionContext context,
         string collectionName,
-        ImmutableArray<ServiceTypeOptionModel> options)
+        ImmutableArray<ImplementationModel> options)
     {
         if (options.Length == 0)
             return;
@@ -311,10 +310,9 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         }
     }
 
-#pragma warning disable MA0051 // Source generator emits complete ServiceTypeCollection class — splitting scatters the template
     private static string GenerateCode(
         ServiceTypeCollectionModel collection,
-        ImmutableArray<ServiceTypeOptionModel> options,
+        ImmutableArray<ImplementationModel> options,
         ImmutableArray<ChildCollectionModel> childCollections,
         ImmutableArray<AbstractMemberModel> abstractMembers,
         HashSet<string>? userDeclaredMembers = null)
@@ -354,6 +352,14 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("{");
         bodySb.AppendLine($"    partial class {collection.ClassName}");
         bodySb.AppendLine("    {");
+
+        // Hands the base class this collection's own name, since a static base method has no way to
+        // ask which concrete class called it. A field initializer runs for every partial declaration
+        // of the type, so this is set before the type's own static constructor -- and so before any
+        // phase can run -- regardless of which file declares that constructor.
+        bodySb.AppendLine("        [System.Diagnostics.CodeAnalysis.SuppressMessage(\"Style\", \"IDE0052\", Justification = \"The call, not the value, is what matters here.\")]");
+        bodySb.AppendLine($"        private static readonly string _collectionTypeNameRegistration = RegisterCollectionTypeName(\"{collection.ClassName}\");");
+        bodySb.AppendLine();
 
         // Lookup dictionaries from [TypeLookup] attributes
         var lookupGroups = options
@@ -415,7 +421,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine($"                var items = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Cast<{collection.InterfaceTypeName}>(Options));");
         bodySb.AppendLine();
         bodySb.AppendLine("#if NETSTANDARD2_0");
-        bodySb.AppendLine("                _all = items.ToImmutableDictionary(x => x.Id);");
+        bodySb.AppendLine("                _all = items.ToImmutableDictionary(x => KeyOf(x));");
         foreach (var group in lookupGroups)
         {
             var prop = group.First();
@@ -423,7 +429,7 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             bodySb.AppendLine($"                {fieldName} = items.ToImmutableDictionary(x => x.{prop.PropertyName});");
         }
         bodySb.AppendLine("#else");
-        bodySb.AppendLine("                _all = items.ToFrozenDictionary(x => x.Id);");
+        bodySb.AppendLine("                _all = items.ToFrozenDictionary(x => KeyOf(x));");
         foreach (var group in lookupGroups)
         {
             var prop = group.First();
@@ -433,6 +439,16 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine("#endif");
         bodySb.AppendLine("            }");
         bodySb.AppendLine("        }");
+        bodySb.AppendLine();
+
+        // A member is keyed by a Guid hashed from its fully-qualified type name - the same derivation
+        // ServiceTypeBase uses for its own Id - rather than by reading the member's Id property. A member
+        // of a ServiceTypeCollection need not be a service type (an endpoint collection is keyed by int as
+        // a TypeOption), and reading its Id forced such members to carry a second, Guid identity (FDW-919).
+        bodySb.AppendLine("        /// <summary>The key a member is stored under: a Guid hashed from its fully-qualified type name.</summary>");
+        bodySb.AppendLine($"        private static System.Guid KeyOf({collection.InterfaceTypeName} member)");
+        bodySb.AppendLine("            => global::Fdw.Collections.OptionId.Derive(member.GetType().FullName");
+        bodySb.AppendLine($"                ?? throw new System.InvalidOperationException(\"A member of {collection.ClassName} has no fully-qualified type name to key it by.\"));");
         bodySb.AppendLine();
 
         // Find the ById lookup for static accessors
@@ -450,7 +466,9 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
             bodySb.AppendLine("            get");
             bodySb.AppendLine("            {");
             bodySb.AppendLine("                EnsureLookups();");
-            bodySb.AppendLine($"                return {fieldName} ??= ({option.FullTypeName}){byIdFieldName}![new {option.FullTypeName}().Id];");
+            // _all is keyed by KeyOf; a [TypeLookup("ById")] dictionary is keyed by the members' own Id.
+            var accessorKey = byIdLookup != null ? $"new {option.FullTypeName}().Id" : $"KeyOf(new {option.FullTypeName}())";
+            bodySb.AppendLine($"                return {fieldName} ??= ({option.FullTypeName}){byIdFieldName}![{accessorKey}];");
             bodySb.AppendLine("            }");
             bodySb.AppendLine("        }");
             bodySb.AppendLine();
@@ -683,7 +701,6 @@ public class ServiceTypeCollectionGenerator : IIncrementalGenerator
         bodySb.AppendLine();
     }
 
-#pragma warning disable MA0051 // Source generator emits complete provider class — splitting scatters the template
     private static string? GetNamespaceFromFullTypeName(string fullTypeName)
     {
         if (string.IsNullOrEmpty(fullTypeName))

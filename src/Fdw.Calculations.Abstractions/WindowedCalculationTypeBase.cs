@@ -9,7 +9,7 @@ namespace Fdw.Calculations.Abstractions;
 /// Base class for all windowed calculation types.
 /// Accepts injected funcs for in-memory execution and SQL window function expression building.
 /// </summary>
-public abstract class WindowedCalculationTypeBase : TypeOptionBase<int, WindowedCalculationTypeBase>, IWindowedCalculationType
+public abstract class WindowedCalculationTypeBase : TypeOptionBase<WindowedCalculationTypeBase>, IWindowedCalculationType
 {
     private readonly Func<IReadOnlyList<IDataRow>, string, double?, IReadOnlyList<decimal>> _calculate;
     private readonly Func<string, double?, string> _toSql;
@@ -27,18 +27,16 @@ public abstract class WindowedCalculationTypeBase : TypeOptionBase<int, Windowed
     /// <summary>
     /// Initializes a new instance of the <see cref="WindowedCalculationTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the windowed calculation type.</param>
     /// <param name="name">The name of the windowed calculation type.</param>
     /// <param name="category">The category (e.g., "Windowed").</param>
     /// <param name="calculate">In-memory execution func: (rows, columnName, parameter) → one decimal per row.</param>
     /// <param name="toSql">SQL window function builder: (columnName, parameter) → SQL string.</param>
     protected WindowedCalculationTypeBase(
-        int id,
         string name,
         string category,
         Func<IReadOnlyList<IDataRow>, string, double?, IReadOnlyList<decimal>> calculate,
         Func<string, double?, string> toSql)
-        : base(id, name, category)
+        : base(name, category)
     {
         _calculate = calculate;
         _toSql = toSql;

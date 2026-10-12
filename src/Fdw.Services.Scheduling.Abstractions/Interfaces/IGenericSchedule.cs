@@ -33,10 +33,10 @@ public interface IGenericSchedule
     string ProcessId { get; }
 
     /// <summary>
-    /// Gets the cron expression that defines when this schedule should trigger.
+    /// Gets the cron expression that defines when a Cron schedule triggers.
     /// </summary>
-    /// <value>A valid cron expression string.</value>
-    string CronExpression { get; }
+    /// <value>A valid cron expression for a Cron trigger; null for any other kind (see <see cref="TriggerType"/>).</value>
+    string? CronExpression { get; }
 
     /// <summary>
     /// Gets the next scheduled execution time based on the cron expression.
@@ -55,6 +55,27 @@ public interface IGenericSchedule
     /// </summary>
     /// <value>A valid time zone identifier, defaults to UTC if not specified.</value>
     string TimeZoneId { get; }
+
+    /// <summary>
+    /// Gets the kind of trigger that decides when this schedule fires: the name of a TriggerTypes
+    /// option (Cron, Interval, Once, Window, Event, Manual).
+    /// </summary>
+    /// <remarks>
+    /// Why an engine needs it (FDW-902): <see cref="CronExpression"/> alone describes only a Cron
+    /// schedule, so an engine given this interface could register nothing else, and an Interval or
+    /// Once schedule reached it as an empty cron expression.
+    /// </remarks>
+    string TriggerType { get; }
+
+    /// <summary>
+    /// Gets the interval between fires, in seconds, for an Interval trigger; null for any other kind.
+    /// </summary>
+    int? IntervalSeconds { get; }
+
+    /// <summary>
+    /// Gets the instant a Once trigger fires, in UTC; null for any other kind.
+    /// </summary>
+    DateTime? ExecuteAtUtc { get; }
 
     /// <summary>
     /// Gets optional metadata associated with this schedule.

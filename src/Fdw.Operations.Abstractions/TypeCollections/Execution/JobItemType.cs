@@ -15,7 +15,6 @@ public sealed class JobItemType : ExecutionItemTypeBase
     /// </summary>
     public JobItemType()
         : base(
-            id: 2,
             name: "Job",
             displayName: "Job",
             hierarchyLevel: 1,

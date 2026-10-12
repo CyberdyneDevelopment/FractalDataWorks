@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataDoubleConverter()
     : DataTypeConverterBase(
-        id: 8,
         name: "Double",
         sourceType: "Double",
         targetClrType: typeof(double),

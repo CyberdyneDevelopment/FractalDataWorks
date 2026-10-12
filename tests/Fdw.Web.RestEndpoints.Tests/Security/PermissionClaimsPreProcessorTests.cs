@@ -204,4 +204,24 @@ public sealed class PermissionClaimsPreProcessorTests
         // Assert — unauthenticated skipped (handled by bearer middleware)
         context.HttpContext.Response.StatusCode.ShouldNotBe(403);
     }
+
+    // The platform-admin policy is not a permission; no token carries it as a perm claim. Left to the
+    // policy provider, which answers it from the Admin role and the global-tenant claim.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task PreProcessAsync_PlatformAdminPolicy_IsLeftToThePolicyProvider()
+    {
+        var context = BuildContext(
+            policyName: "system:admin",
+            userClaims:
+            [
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, "42"),
+                new Claim("perm", "users:read")
+            ]);
+
+        await new PermissionClaimsPreProcessor().PreProcessAsync(context, CancellationToken.None);
+
+        context.HttpContext.Response.StatusCode.ShouldNotBe(403);
+    }
 }

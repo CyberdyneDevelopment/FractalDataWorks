@@ -27,7 +27,7 @@ public sealed class CoalesceOperation : CalculationOperationBase
     /// Initializes a new instance of the <see cref="CoalesceOperation"/> class.
     /// </summary>
     public CoalesceOperation()
-        : base(id: 41, name: "Coalesce", category: "Conditional", description: "Returns the first non-null value from a list of fields")
+        : base(name: "Coalesce", category: "Conditional", description: "Returns the first non-null value from a list of fields")
     {
         _logger = NullLogger<CoalesceOperation>.Instance;
         Parameters =

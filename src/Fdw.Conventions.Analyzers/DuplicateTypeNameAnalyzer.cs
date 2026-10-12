@@ -153,7 +153,7 @@ public sealed class DuplicateTypeNameAnalyzer : DiagnosticAnalyzer
 
     private static bool IsTypeCollectionMember(INamedTypeSymbol typeSymbol)
     {
-        // Check for [TypeOption], [ServiceTypeOption], [TypeCollection], or [ServiceTypeCollection] attributes
+        // Check for [TypeOption], [Implementation], [TypeCollection], or [ServiceTypeCollection] attributes
         foreach (var attr in typeSymbol.GetAttributes())
         {
             var attrName = attr.AttributeClass?.Name;
@@ -161,10 +161,10 @@ public sealed class DuplicateTypeNameAnalyzer : DiagnosticAnalyzer
                 continue;
 
             if (attrName.StartsWith("TypeOption", StringComparison.Ordinal)
-                || attrName.StartsWith("ServiceTypeOption", StringComparison.Ordinal)
+                || attrName.StartsWith("Implementation", StringComparison.Ordinal)
                 || attrName.StartsWith("TypeCollection", StringComparison.Ordinal)
                 || attrName.StartsWith("ServiceTypeCollection", StringComparison.Ordinal)
-                || attrName.StartsWith("ServiceServiceTypeOption", StringComparison.Ordinal)
+                || attrName.StartsWith("ServiceImplementation", StringComparison.Ordinal)
                 || attrName.StartsWith("EnhancedEnumBase", StringComparison.Ordinal)
                 || attrName.StartsWith("EnumOption", StringComparison.Ordinal))
             {

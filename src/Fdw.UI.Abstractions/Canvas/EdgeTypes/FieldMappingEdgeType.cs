@@ -14,7 +14,7 @@ public sealed class FieldMappingEdgeType : CanvasEdgeTypeBase
     /// Initializes a new instance of the <see cref="FieldMappingEdgeType"/> class.
     /// </summary>
     public FieldMappingEdgeType()
-        : base(3, "FieldMapping", "Field Mapping", "git-merge")
+        : base("FieldMapping", "Field Mapping", "git-merge")
     {
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 
 namespace Fdw.Services.Data.Endpoints;
@@ -14,6 +15,12 @@ public class CreateDataSetRequest
 
     /// <summary>Gets or sets the data set description.</summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data set's data classification level (see
+    /// <c>GET /data-classifications</c>). Left out, it is <c>NotYetClassified</c>. An id that is not a level is refused.
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
     /// <summary>Gets or sets the data set category.</summary>
     public string? Category { get; set; }
@@ -32,15 +39,15 @@ public class CreateDataSetRequest
 
     /// <summary>
     /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", or "Federated"
-    /// (a registered <c>DataSetTypes</c> member). Bound from the wizard's <c>serviceOptionType</c> field.
+    /// (a registered <c>DataSetTypes</c> member). Bound from the wizard's <c>implementation</c> field.
     /// </summary>
-    [JsonPropertyName("serviceOptionType")]
-    public string? ServiceOptionType { get; set; }
+    [JsonPropertyName("implementation")]
+    public string Implementation { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the federation strategy used to combine sources for a Federated dataset (e.g.
     /// "Sequential", "Parallel", "Optimized" — a registered <c>FederationStrategies</c> member).
-    /// Required when <see cref="ServiceOptionType"/> is "Federated"; must be null otherwise.
+    /// Required when <see cref="Implementation"/> is "Federated"; must be null otherwise.
     /// </summary>
     public string? FederationStrategy { get; set; }
 

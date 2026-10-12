@@ -13,7 +13,7 @@ namespace Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
 public sealed class HaltStagePolicy : StepFailurePolicyBase
 {
     /// <summary>Initializes a new instance of the <see cref="HaltStagePolicy"/> class.</summary>
-    public HaltStagePolicy() : base(1, "HaltStage")
+    public HaltStagePolicy() : base("HaltStage")
     {
     }
 }

@@ -25,7 +25,7 @@ public sealed class AuthenticatedRateLimitPolicy : RateLimitPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AuthenticatedRateLimitPolicy"/> class.
     /// </summary>
-    public AuthenticatedRateLimitPolicy() : base(2, "Authenticated")
+    public AuthenticatedRateLimitPolicy() : base("Authenticated")
     {
     }
 

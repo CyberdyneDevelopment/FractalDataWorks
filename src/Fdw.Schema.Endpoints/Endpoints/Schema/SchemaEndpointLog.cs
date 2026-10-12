@@ -136,15 +136,6 @@ public static partial class SchemaEndpointLog
         string connectionName,
         string operation);
 
-    /// <summary>Logs a warning when a connection type does not support schema discovery.</summary>
-    [MessageLogging(
-        EventId = 61001,
-        Level = LogLevel.Warning,
-        Message = "Connection '{connectionName}' does not support schema discovery")]
-    public static partial IGenericMessage SchemaDiscoveryNotSupported(
-        ILogger logger,
-        string connectionName);
-
     /// <summary>Logs a warning when data preview validation fails.</summary>
     [MessageLogging(
         EventId = 21001,
@@ -162,4 +153,15 @@ public static partial class SchemaEndpointLog
     public static partial IGenericMessage PreviewContainerAddressMissing(
         ILogger logger,
         string missingField);
+
+    /// <summary>Logs that a data preview was answered with its failure instead of rows.</summary>
+    // Why Information: the gateway already logged why the read failed, at that failure's own level. This line only
+    // records that the endpoint answered it once, with that status, and reported no rows.
+    [MessageLogging(
+        EventId = 11021,
+        Level = LogLevel.Information,
+        Message = "Data preview of '{source}' was answered with its failure; no rows were returned")]
+    public static partial IGenericMessage PreviewNotAnswered(
+        ILogger logger,
+        string source);
 }

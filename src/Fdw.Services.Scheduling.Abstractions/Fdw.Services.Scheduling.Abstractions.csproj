@@ -32,6 +32,7 @@
     <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Services.SecretManagers.Abstractions\Fdw.Services.SecretManagers.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Abstractions\Fdw.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines.Abstractions\Fdw.Services.Pipelines.Abstractions.csproj" />
   </ItemGroup>
 <ItemGroup>
     <Folder Include="Messages\" />

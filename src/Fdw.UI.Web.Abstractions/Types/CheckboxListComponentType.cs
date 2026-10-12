@@ -13,5 +13,5 @@ public sealed class CheckboxListComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckboxListComponentType"/> class.
     /// </summary>
-    public CheckboxListComponentType() : base(10, "CheckboxList", "Checkbox List", "Selection", "Checkbox list") { }
+    public CheckboxListComponentType() : base("CheckboxList", "Checkbox List", "Selection", "Checkbox list") { }
 }

@@ -16,10 +16,6 @@ public sealed class DataContainerConfigurationValidator : FdwConfigurationValida
         RuleFor(x => x.Name)
             .IsValidName(200);
 
-        RuleFor(x => x.DataPathId)
-            .NotEqual(System.Guid.Empty)
-            .WithMessage("DataPathId is required");
-
         When(x => x.Description is not null, () =>
         {
             RuleFor(x => x.Description!)

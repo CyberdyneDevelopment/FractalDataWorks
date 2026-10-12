@@ -29,6 +29,7 @@
     <ProjectReference Include="..\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\Fdw.Services.Notifications.Abstractions\Fdw.Services.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Notifications\Fdw.Services.Notifications.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

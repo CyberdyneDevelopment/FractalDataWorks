@@ -1,41 +1,29 @@
-using System;
 using Fdw.Services.Configuration;
-using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Identity.Abstractions;
 using Fdw.Services.Identity.ClientCredentials.Commands;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Identity.ClientCredentials;
 
-/// <summary>
-/// Reads and writes the <c>sec.ClientCredentialsIdentity</c> typed body.
-/// </summary>
-/// <remarks>
-/// The header provider composes the aggregate by dispatching on ServiceOptionType to whichever
-/// typed provider was registered for it, so a mechanism with no provider registered loads its
-/// header and leaves Configuration null — which the factory reports as "typed configuration body
-/// did not load", several layers from the missing registration.
-/// </remarks>
-public class ClientCredentialsConfigurationProvider
-    : ImplementationConfigurationProvider<
-          IIdentityServiceImplementationConfiguration,
-          ClientCredentialsConfiguration,
-          ClientCredentialsConfigurationCommand>
+/// <summary>Supplies the ClientCredentialsIdentity configuration.</summary>
+public sealed class ClientCredentialsConfigurationProvider
+    : ImplementationProviderBase<ClientCredentialsConfiguration, IIdentityServiceImplementationConfiguration>,
+      IClientCredentialsConfigurationProvider
 {
-    /// <summary>Initializes a new instance of the class.</summary>
-    /// <param name="logger">The logger.</param>
-    /// <param name="gatewayProvider">Supplies the gateway onto the named connection.</param>
-    /// <param name="dataStoreName">The store holding the table.</param>
-    /// <param name="pathName">The schema the table lives in.</param>
+    /// <summary>Initializes a new instance of the <see cref="ClientCredentialsConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public ClientCredentialsConfigurationProvider(
         ILogger<ClientCredentialsConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "sec")
-        : base(logger ?? NullLogger<ClientCredentialsConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
 }

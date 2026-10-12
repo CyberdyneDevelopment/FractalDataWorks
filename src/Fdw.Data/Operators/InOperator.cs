@@ -17,21 +17,11 @@ public sealed class InOperator : FilterOperatorBase
     /// </summary>
     public InOperator()
         : base(
-            id: 12,
             name: "In",
             sqlOperator: "IN",
             odataOperator: "in",
             requiresValue: true)
     {
-    }
-
-    /// <summary>
-    /// Formats SQL parameter for IN clause.
-    /// Value should be enumerable - translator will expand to multiple parameters.
-    /// </summary>
-    public override string FormatSqlParameter(string paramName)
-    {
-        return $"@{paramName}";
     }
 
     /// <inheritdoc/>

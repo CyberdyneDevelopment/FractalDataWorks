@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Pakistan")]
 public sealed class PakistanTimeZoneType : TimeZoneTypeBase
 {
-    public PakistanTimeZoneType() : base(34, "Pakistan", "Pakistan Standard Time") { }
+    public PakistanTimeZoneType() : base("Pakistan", "Pakistan Standard Time") { }
 }

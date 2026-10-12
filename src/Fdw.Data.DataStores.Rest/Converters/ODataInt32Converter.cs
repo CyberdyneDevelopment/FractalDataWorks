@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataInt32Converter()
     : DataTypeConverterBase(
-        id: 2,
         name: "Int32",
         sourceType: "Int32",
         targetClrType: typeof(int),

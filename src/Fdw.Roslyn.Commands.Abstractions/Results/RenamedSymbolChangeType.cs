@@ -9,5 +9,5 @@ namespace Fdw.Roslyn.Commands.Abstractions.Results;
 public sealed class RenamedSymbolChangeType : SymbolChangeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="RenamedSymbolChangeType"/>.</summary>
-    public RenamedSymbolChangeType() : base(1, "Renamed") { }
+    public RenamedSymbolChangeType() : base("Renamed") { }
 }

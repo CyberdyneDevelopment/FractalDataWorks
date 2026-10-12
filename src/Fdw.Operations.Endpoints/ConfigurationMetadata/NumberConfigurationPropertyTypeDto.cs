@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class NumberConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="NumberConfigurationPropertyTypeDto"/>.</summary>
-    public NumberConfigurationPropertyTypeDto() : base(3, "Number") { }
+    public NumberConfigurationPropertyTypeDto() : base("Number") { }
 }

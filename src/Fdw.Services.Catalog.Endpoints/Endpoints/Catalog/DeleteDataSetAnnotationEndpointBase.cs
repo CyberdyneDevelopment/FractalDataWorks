@@ -10,11 +10,11 @@ namespace Fdw.Services.Catalog.Endpoints;
 /// <summary>Endpoint that deletes a DataSet annotation.</summary>
 public abstract class DeleteDataSetAnnotationEndpointBase : Endpoint<DataSetAnnotationIdRequest>
 {
-    private readonly QualityConfigurationProvider _provider;
+    private readonly IDataSetAnnotationConfigurationProvider _provider;
 
     /// <summary>Initializes a new instance of the <see cref="DeleteDataSetAnnotationEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected DeleteDataSetAnnotationEndpointBase(QualityConfigurationProvider provider)
+    protected DeleteDataSetAnnotationEndpointBase(IDataSetAnnotationConfigurationProvider provider)
     {
         _provider = provider;
     }
@@ -37,13 +37,11 @@ public abstract class DeleteDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
     /// <summary>Deletes the annotation identified by the request ID and returns 204 No Content on success.</summary>
     public override async Task HandleAsync(DataSetAnnotationIdRequest req, CancellationToken ct)
     {
-        var result = await _provider.DeleteAnnotation(req.AnnotationId, ct).ConfigureAwait(false);
+        var result = await _provider.Delete(req.AnnotationId, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            HttpContext.Response.StatusCode = 500;
-            await HttpContext.Response.WriteAsJsonAsync(
-                new { Error = "Failed to delete annotation", Details = result.CurrentMessage }, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to delete annotation", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
             return;
         }
 

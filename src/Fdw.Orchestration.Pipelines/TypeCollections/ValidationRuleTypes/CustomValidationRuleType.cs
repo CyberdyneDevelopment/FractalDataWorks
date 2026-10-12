@@ -27,7 +27,6 @@ public sealed class CustomValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public CustomValidationRuleType()
         : base(
-            id: 8,
             name: "Custom",
             requiresFields: false,
             supportsMultipleFields: true,

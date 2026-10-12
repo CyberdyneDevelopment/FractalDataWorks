@@ -12,7 +12,7 @@ public sealed class PendingAgentActionStatus : AgentActionStatusTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PendingAgentActionStatus"/> class.
     /// </summary>
-    public PendingAgentActionStatus() : base(1, "Pending", isTerminal: false, isApproved: false)
+    public PendingAgentActionStatus() : base("Pending", isTerminal: false, isApproved: false)
     {
     }
 }

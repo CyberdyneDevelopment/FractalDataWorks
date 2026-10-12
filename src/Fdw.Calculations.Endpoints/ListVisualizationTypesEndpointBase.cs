@@ -48,7 +48,7 @@ public abstract class ListVisualizationTypesEndpointBase : EndpointWithoutReques
         CalculationEndpointLog.ListingCalculationTypes(EndpointLogger);
 
         var types = VisualizationTypes.All()
-            .Where(t => !string.Equals(t.Name, "_Empty", StringComparison.Ordinal))
+            .Where(t => !string.Equals(t.Name, "NotFound", StringComparison.Ordinal))
             .Select(t => new VisualizationTypeItem
             {
                 Name = t.Name,

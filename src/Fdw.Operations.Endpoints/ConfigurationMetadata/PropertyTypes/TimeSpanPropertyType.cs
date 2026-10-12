@@ -12,5 +12,5 @@ public sealed class TimeSpanPropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeSpanPropertyType"/> class.
     /// </summary>
-    public TimeSpanPropertyType() : base(11, "TimeSpan", typeof(TimeSpan), ConfigurationPropertyTypeDtos.Duration) { }
+    public TimeSpanPropertyType() : base("TimeSpan", typeof(TimeSpan), ConfigurationPropertyTypeDtos.Duration) { }
 }

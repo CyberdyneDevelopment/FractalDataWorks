@@ -20,7 +20,7 @@ namespace Fdw.Services.Quality;
 /// with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(QualityServiceTypes), "Default")]
+[Implementation(typeof(QualityServiceTypes), "Default")]
 public sealed class DefaultQualityServiceType : QualityServiceTypeBase
 {
     /// <summary>
@@ -36,21 +36,71 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
         Configuration(builder =>
         {
 
-            builder.Services.Configure<List<QualityRuleConfiguration>>(builder.Configuration.GetSection("Quality:QualityRule"));
-            builder.Services.Configure<List<DataSetAnnotationConfiguration>>(builder.Configuration.GetSection("Catalog:DataSetAnnotation"));
-            builder.Services.Configure<List<GlossaryTermConfiguration>>(builder.Configuration.GetSection("Catalog:GlossaryTerm"));
+            builder.Services.Configure<List<QualityRuleImplementationConfiguration>>(builder.Configuration.GetSection("Quality:QualityRule"));
+            builder.Services.Configure<List<DataSetAnnotationImplementationConfiguration>>(builder.Configuration.GetSection("Catalog:DataSetAnnotation"));
+            builder.Services.Configure<List<GlossaryTermImplementationConfiguration>>(builder.Configuration.GetSection("Catalog:GlossaryTerm"));
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
 
         Registration((builder, loggerFactory) =>
         {
+            builder.Services.AddSingleton<IGlossaryTermImplementationConfigurationProvider, GlossaryTermImplementationConfigurationProvider>(sp => new GlossaryTermImplementationConfigurationProvider(sp.GetRequiredService<ILogger<GlossaryTermImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "GlossaryTermConfiguration"));
+            builder.Services.TryAddSingleton<GlossaryTermConfigurationProvider>(sp =>
+            {
+                var domain = new GlossaryTermConfigurationProvider(
+                    sp.GetRequiredService<ILogger<GlossaryTermConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "GlossaryTerm");
+                domain.Register("GlossaryTerm", sp.GetRequiredService<IGlossaryTermImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IGlossaryTermConfigurationProvider>(sp => sp.GetRequiredService<GlossaryTermConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<QualityConfigurationProvider>(sp =>
-                new QualityConfigurationProvider(
-                    sp.GetService<ILogger<QualityConfigurationProvider>>() ?? NullLogger<QualityConfigurationProvider>.Instance,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        QualityServiceTypes.ConfigurationConnection));
+            builder.Services.AddSingleton<IDataSetAnnotationImplementationConfigurationProvider, DataSetAnnotationImplementationConfigurationProvider>(sp => new DataSetAnnotationImplementationConfigurationProvider(sp.GetRequiredService<ILogger<DataSetAnnotationImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "DataSetAnnotationConfiguration"));
+            builder.Services.TryAddSingleton<DataSetAnnotationConfigurationProvider>(sp =>
+            {
+                var domain = new DataSetAnnotationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<DataSetAnnotationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "DataSetAnnotation");
+                domain.Register("DataSetAnnotation", sp.GetRequiredService<IDataSetAnnotationImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IDataSetAnnotationConfigurationProvider>(sp => sp.GetRequiredService<DataSetAnnotationConfigurationProvider>());
+
+            builder.Services.AddSingleton<IPromotionRequestImplementationConfigurationProvider, PromotionRequestImplementationConfigurationProvider>(sp => new PromotionRequestImplementationConfigurationProvider(sp.GetRequiredService<ILogger<PromotionRequestImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "PromotionRequestConfiguration"));
+            builder.Services.TryAddSingleton<PromotionRequestConfigurationProvider>(sp =>
+            {
+                var domain = new PromotionRequestConfigurationProvider(
+                    sp.GetRequiredService<ILogger<PromotionRequestConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "PromotionRequest");
+                domain.Register("PromotionRequest", sp.GetRequiredService<IPromotionRequestImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IPromotionRequestConfigurationProvider>(sp => sp.GetRequiredService<PromotionRequestConfigurationProvider>());
+
+            builder.Services.AddSingleton<IEnvironmentImplementationConfigurationProvider, EnvironmentImplementationConfigurationProvider>(sp => new EnvironmentImplementationConfigurationProvider(sp.GetRequiredService<ILogger<EnvironmentImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "EnvironmentConfiguration"));
+            builder.Services.TryAddSingleton<EnvironmentConfigurationProvider>(sp =>
+            {
+                var domain = new EnvironmentConfigurationProvider(
+                    sp.GetRequiredService<ILogger<EnvironmentConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "Environment");
+                domain.Register("Environment", sp.GetRequiredService<IEnvironmentImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IEnvironmentConfigurationProvider>(sp => sp.GetRequiredService<EnvironmentConfigurationProvider>());
+
+            builder.Services.AddSingleton<IQualityRuleImplementationConfigurationProvider, QualityRuleImplementationConfigurationProvider>(sp => new QualityRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<QualityRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "QualityRuleConfiguration"));
+            builder.Services.TryAddSingleton<QualityRuleConfigurationProvider>(sp =>
+            {
+                var domain = new QualityRuleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<QualityRuleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "QualityRule");
+                domain.Register("QualityRule", sp.GetRequiredService<IQualityRuleImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IQualityRuleConfigurationProvider>(sp => sp.GetRequiredService<QualityRuleConfigurationProvider>());
+
+
 
             builder.Services.TryAddScoped<IQualityService, QualityService>();
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();

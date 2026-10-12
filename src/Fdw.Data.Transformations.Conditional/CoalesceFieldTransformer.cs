@@ -21,7 +21,6 @@ public sealed class CoalesceFieldTransformer : FieldTransformationBase
     /// </summary>
     public CoalesceFieldTransformer()
         : base(
-            id: 602,
             name: "Coalesce",
             displayName: "Coalesce",
             description: "When the input is null, returns the value of a fallback field from the current record.",

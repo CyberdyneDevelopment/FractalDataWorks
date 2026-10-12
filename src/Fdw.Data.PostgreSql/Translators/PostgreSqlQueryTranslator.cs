@@ -92,9 +92,16 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
+            // The fields this command returns: each field's datum type decides, given what the command
+            // includes (FDW-988).
+            var returnedFieldNames = container.Schema
+                .GetReturnedFields(command.IncludeMetadata, command.IncludeDescriptions, command.IncludeKeys)
+                .Select(f => f.Name)
+                .ToList();
+
             if (command.Projection?.PropertyNames?.Any() != true
                 && command.Projection?.Fields.Any(f => f.SourceContainer != null) != true
-                && container.Schema.Fields.Count == 0
+                && returnedFieldNames.Count == 0
                 && command.Joins is not { Count: > 0 })
             {
                 return Task.FromResult(
@@ -102,8 +109,8 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
             }
 
             var npgsqlCommand = command.Joins is { Count: > 0 }
-                ? BuildJoinedSelectStatement(container, dbPath, command.Joins, command.Filter, command.Projection)
-                : BuildSelectStatement(container, dbPath, command.Filter, command.Projection, command.Ordering, command.Paging);
+                ? BuildJoinedSelectStatement(container, dbPath, command.Joins, command.Filter, command.Projection, returnedFieldNames)
+                : BuildSelectStatement(container, dbPath, command.Filter, command.Projection, command.Ordering, command.Paging, returnedFieldNames);
 
             return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
         }
@@ -119,7 +126,6 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
     /// <summary>
     /// Builds a complete PostgreSQL SELECT statement.
     /// </summary>
-#pragma warning disable MA0051 // Method is too long
     [ConventionOverride(MaxCyclomaticComplexity = 20)]
     private static NpgsqlCommand BuildSelectStatement(
         IStorageContainer container,
@@ -127,13 +133,13 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         IFilterExpression? filter,
         IProjectionExpression? projection,
         IOrderingExpression? ordering,
-        IPagingExpression? paging)
-#pragma warning restore MA0051
+        IPagingExpression? paging,
+        IReadOnlyList<string> returnedFieldNames)
     {
         var dialect = dbPath.Dialect;
         var sql = new StringBuilder();
 
-        sql.Append(BuildSelectClause(container, projection, null, dialect));
+        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, null, dialect));
 
         // FROM clause
         sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
@@ -191,13 +197,14 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
         IDatabasePath dbPath,
         IReadOnlyList<IJoinExpression> joins,
         IFilterExpression? filter,
-        IProjectionExpression? projection)
+        IProjectionExpression? projection,
+        IReadOnlyList<string> returnedFieldNames)
     {
         var primaryTable = dbPath.ObjectName;
         var dialect = dbPath.Dialect;
 
         var sql = new StringBuilder();
-        sql.Append(BuildSelectClause(container, projection, primaryTable, dialect));
+        sql.Append(BuildSelectClause(container, projection, returnedFieldNames, primaryTable, dialect));
         sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
 
         foreach (var join in joins)
@@ -247,6 +254,7 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
     private static string BuildSelectClause(
         IStorageContainer container,
         IProjectionExpression? projection,
+        IReadOnlyList<string> returnedFieldNames,
         string? tableQualifier,
         ISqlDialect dialect)
     {
@@ -306,9 +314,9 @@ public sealed class PostgreSqlQueryTranslator : PostgreSqlDataCommandTranslatorB
             return $"SELECT {string.Join(", ", projection.PropertyNames.Select(Col))}";
         }
 
-        // Schema-driven — root container with a populated Schema.
-        if (container.Schema.GetProjectableFields().Count > 0)
-            return $"SELECT {string.Join(", ", container.Schema.GetProjectableFields().Select(f => Col(f.Name)))}";
+        // The fields the command returns, decided by each field's datum type (FDW-988).
+        if (returnedFieldNames.Count > 0)
+            return $"SELECT {string.Join(", ", returnedFieldNames.Select(Col))}";
 
         throw new InvalidOperationException(
             $"Cannot build SELECT for container '{container.Name}': no columns available.");

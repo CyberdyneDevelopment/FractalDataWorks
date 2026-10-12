@@ -4,22 +4,26 @@ using System.Collections.Generic;
 namespace Fdw.Services.Data.Clients.Models;
 
 /// <summary>
-/// Represents a single transform step in a field mapping's transform chain.
+/// A transformation attached to a field mapping, in chain order (FDW-846). The attachment itself is
+/// only the field mapping, the transformation and the position; the rest describes the transformation.
 /// </summary>
 public sealed class FieldMappingTransformPayload
 {
-    /// <summary>Gets or sets the transform identifier.</summary>
-    public Guid Id { get; set; }
-
-    /// <summary>Gets or sets the parent field mapping identifier.</summary>
+    /// <summary>Gets or sets the field mapping.</summary>
     public Guid FieldMappingId { get; set; }
 
-    /// <summary>Gets or sets the transform type name from TransformationTypes.</summary>
-    public string TransformType { get; set; } = string.Empty;
+    /// <summary>Gets or sets the attached transformation's name.</summary>
+    public string TransformationName { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the execution order within the transform chain.</summary>
+    /// <summary>Gets or sets the attached transformation's operation.</summary>
+    public string TransformationType { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the position in the chain; applied in ascending order.</summary>
     public int Ordinal { get; set; }
 
-    /// <summary>Gets or sets the parameters for this transform step.</summary>
-    public IReadOnlyList<FieldMappingTransformParameterPayload> Parameters { get; set; } = [];
+    /// <summary>Gets or sets whether the attached transformation is a seeded standard one.</summary>
+    public bool IsSystemProvided { get; set; }
+
+    /// <summary>Gets or sets the attached transformation's parameter values.</summary>
+    public IReadOnlyList<TransformationParameterPayload> Parameters { get; set; } = [];
 }

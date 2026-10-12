@@ -13,7 +13,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 /// <remarks>
 /// It is not an <see cref="IConnectionProvider"/>. A platform provider resolves a configuration and
-/// dispatches on its ServiceOptionType to a registered factory; this one is a name-to-instance registry
+/// dispatches on its Implementation to a registered factory; this one is a name-to-instance registry
 /// whose entries are handed to it pre-built. Declaring it as a connection provider obliged it to answer
 /// factory registration, configuration registration and build-from-configuration calls that have no
 /// meaning for a fixed registry, which it did by returning failures and no-ops — a contract it appeared

@@ -9,5 +9,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class OpenState : SessionStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="OpenState"/> class.</summary>
-    public OpenState() : base(1, "Open", isTerminal: false, isReclaimable: false) { }
+    public OpenState() : base("Open", isTerminal: false, isReclaimable: false) { }
 }

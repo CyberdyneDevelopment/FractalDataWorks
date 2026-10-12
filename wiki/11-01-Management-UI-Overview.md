@@ -1,100 +1,55 @@
 # Management UI Overview
 
-FractalDataWorks ships two reference Management UI implementations, each demonstrating a different Blazor hosting model on top of the shared FDW UI packages. Both connect to the same REST API backend and surface the same domain pages.
+FDW has two management UIs. Both talk to the same REST API; neither contains domain logic.
 
-For a deep dive into the hosting models, see [Blazor Hosting Models](11-02-Blazor-Hosting-Models.md).
+| UI | Where it lives | Technology | How it reaches the API |
+|----|----------------|------------|------------------------|
+| Web console | `reference-react-ui` repository | React + TypeScript (Vite) | Its own HTTP calls, from one endpoint table (`src/core/endpoints.ts`) |
+| Terminal UI | `Fdw.TUI.Management` in this repo | Spectre.Console | The typed `*.Clients` packages |
 
-## UI Implementations
-
-The reference UI projects live in their own repositories — they are not part of this repo.
-
-| Repo | Hosting Model | Component Library | Styling |
-|------|---------------|-------------------|---------|
-| `reference-ui` | InteractiveServer | Custom (Tailwind) | Tailwind CSS v4 |
-| `reference-aui` | InteractiveAuto | MudBlazor | MudBlazor + custom theme |
-
-Both UIs:
-- Reference FDW packages (`Fdw.UI.*`, per-domain `*.UI.Pages`, per-domain `*.Clients`)
-- Use the headless-UI pattern (logic in framework providers, rendering in the skin)
-- Discover pages via the `PageTypes` TypeCollection (see [13-06 UI Skin Assembly Discovery](13-06-UI-Skin-Assembly-Discovery.md))
-- Talk to the same REST API backend over typed `*.Clients` packages
+FDW itself ships no web UI. The Blazor skins (`reference-ui`, `reference-aui`) and the FDW Blazor packages they used (`*.Components`, `*.UI.Pages`, `Fdw.UI.Components.Blazor`, the Blazor authentication packages) were removed in FDW-872.
 
 ## Architecture
 
 ```
-┌───────────────────────────────────────────────────────────────────────────┐
-│                              UI Layer                                      │
-│   ┌──────────────────────────┐  ┌──────────────────────────┐              │
-│   │  reference-ui (Tailwind) │  │  reference-aui (Mud)     │              │
-│   │  InteractiveServer        │  │  InteractiveAuto         │              │
-│   └────────────┬──────────────┘  └────────────┬─────────────┘              │
-│                └──────────────────┬───────────┘                            │
-│                                   ▼                                        │
-│              ┌────────────────────────────────────────┐                    │
-│              │  FDW *.UI.Pages packages (PageTypes)   │                    │
-│              │  + headless providers in *.Components  │                    │
-│              └────────────────────┬───────────────────┘                    │
-│                                   ▼                                        │
-│              ┌────────────────────────────────────────┐                    │
-│              │  Per-Domain API Clients (*.Clients)    │                    │
-│              └────────────────────┬───────────────────┘                    │
-│                                   ▼                                        │
-│                            ┌─────────────┐                                 │
-│                            │  REST API   │                                 │
-│                            └─────────────┘                                 │
-└───────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────┐        ┌───────────────────────────────────┐
+│  reference-react-ui      │        │  Fdw.TUI.Management               │
+│  (web console)           │        │  Fdw.UI.Components models         │
+│                          │        │  drawn by Fdw.UI.Rendering.Spectre│
+└────────────┬─────────────┘        └─────────────────┬─────────────────┘
+             │                                        │
+             │                           ┌────────────▼────────────┐
+             │                           │  {Domain}.Clients       │
+             │                           └────────────┬────────────┘
+             │  HTTP + bearer token                   │  HTTP + bearer token
+             ▼                                        ▼
+┌───────────────────────────────────────────────────────────────────────┐
+│  REST API (reference-api): FDW *.Endpoints closed by the host         │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
-## Quick Start
+## Web console (`reference-react-ui`)
 
-Refer to each reference repo's README for the canonical run instructions:
+- Every route the console calls is declared once in `src/core/endpoints.ts`, with an `expected` state of `live`, `proposed` or `absent`. The same table drives the fetcher's URL, the marker a panel shows when a call does not answer, and the console's gap report.
+- The console is theme-independent: shape, type and spacing come from tokens, never from theme names.
+- Run and deploy instructions are in that repository's README.
 
-- `reference-ui`
-- `reference-aui`
+## Terminal UI (`Fdw.TUI.Management`)
 
-Both skins require the Reference.Api backend (from the `reference-api` repository) for authentication and configuration CRUD.
+- Screens are built from the framework-neutral page and form models in `Fdw.UI.Components` (`ListPageModel`, `DetailPageModel`, `WizardPageModel`, `TextInputModel`, and so on).
+- `Fdw.UI.Rendering.Spectre` draws those models in the terminal.
+- Data comes from the per-domain `*.Clients` packages, which attach the bearer token through `Web.Http.Authentication`'s `BearerTokenHandler`.
 
-## Pages
+## Adding a screen
 
-Each FDW domain ships a `*.UI.Pages` package that contributes:
+The UI owns no domain logic, so a new screen needs no new FDW service code.
 
-- A `[ServiceTypeOption(typeof(PageTypes), "...")]` registration carrying the page assembly and `NavDescriptor` entries
-- The page implementations themselves (`@page "/route"` Razor components)
-- A headless provider in the matching `*.Components` package
-
-A skin gets that domain's pages by adding the `*.UI.Pages` package reference. The Router discovers all referenced `PageType` assemblies via `PageTypes.All()` in `Routes.razor` (see [13-06 UI Skin Assembly Discovery](13-06-UI-Skin-Assembly-Discovery.md)).
-
-## Shared Logic (Headless Architecture)
-
-Both reference UI variants are **rendering-only skins** — they contain zero business logic. All state management, API orchestration, and workflow logic lives in the FDW framework's `*.Components` packages as headless logic providers. This is the thin-client pattern applied to Blazor: the UI projects provide HTML/CSS rendering, and the framework provides everything else.
-
-### What the Framework Provides
-
-- **Logic providers** (per-domain `*.Components` packages) — headless Blazor components that manage state, error handling, loading states, and complex workflows via `RenderFragment<TContext>`.
-- **Per-domain API clients** (`*.Clients` packages) — typed HTTP clients registered via `ApiClientTypes` TypeCollection. Application code never instantiates `HttpClient` directly.
-- **Page packages** (`*.UI.Pages`) — default page implementations and the `[ServiceTypeOption(typeof(PageTypes), "...")]` registration.
-
-### What the Reference UI Skins Provide
-
-- HTML/CSS layout and styling (Tailwind utility classes or MudBlazor components + custom theme)
-- UI-specific interactions (drag-drop, tooltips, animations)
-- Blazor hosting-model configuration (`AddInteractiveServerComponents` / `AddInteractiveWebAssemblyComponents`)
-- `Program.cs` wiring for the FDW packages and authentication
-
-## Creating a New Management UI Skin
-
-Because the skins are rendering-only, creating a new one requires no domain logic.
-
-1. **Create a Blazor project** with your chosen hosting model and component library.
-2. **Reference the FDW page packages** for the domains you want surfaced (`Fdw.Services.Connections.UI.Pages`, `Fdw.Services.Pipelines.UI.Pages`, etc.). Each transitively pulls its `*.Components` and `*.Clients` packages.
-3. **Wire `Routes.razor`** to enumerate `PageTypes.All()` and pass the assemblies into `<Router AdditionalAssemblies="...">`.
-4. **Wire the FDW logic** in `Program.cs` (see the reference-ui / reference-aui Program.cs for the canonical startup).
-5. **Render pages** by wrapping content in the relevant headless provider — the provider exposes state and callbacks via `RenderFragment<TContext>`; your skin renders the markup.
-
-See either reference repo for the complete shape.
+1. Confirm the API route exists: a concrete endpoint class **and** its `[TypeOption]` declaration in the host's endpoint collection. Endpoint auto-discovery is off, so a class with no option returns 404.
+2. **Web console:** add the route to `src/core/endpoints.ts`, then build the screen from the console's shared components.
+3. **Terminal UI:** call the domain's `*.Clients` method and build the screen from `Fdw.UI.Components` models.
 
 ## See Also
 
-- [11-02 Blazor Hosting Models](11-02-Blazor-Hosting-Models.md) — hosting-model trade-offs
-- [13-01 Headless UI Pattern](13-01-Headless-UI-Pattern.md) — provider / context / log triple
-- [13-06 UI Skin Assembly Discovery](13-06-UI-Skin-Assembly-Discovery.md) — `PageTypes` router wiring
+- [13-05 UI Layer Anatomy](13-05-UI-Layer-Anatomy.md): object types at each layer
+- [16-01 API Clients Reference](16-01-API-Clients-Reference.md): all `*.Clients` packages
+- [12-11 JWT Authentication Architecture](12-11-JWT-Authentication-Architecture.md): client-side token handling

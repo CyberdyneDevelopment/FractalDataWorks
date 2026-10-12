@@ -10,25 +10,23 @@ namespace Fdw.Orchestration.Abstractions.TypeCollections.BackoffStrategyOptions;
 /// Provides common functionality for backoff strategies used in retry policies.
 /// Derived classes implement specific delay calculation algorithms.
 /// </remarks>
-public abstract class BackoffStrategyBase : TypeOptionBase<int, BackoffStrategyBase>, IBackoffStrategy
+public abstract class BackoffStrategyBase : TypeOptionBase<BackoffStrategyBase>, IBackoffStrategy
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BackoffStrategyBase"/> class.
     /// </summary>
-    /// <param name="id">Unique numeric identifier.</param>
     /// <param name="name">Human-readable name.</param>
     /// <param name="initialDelay">Initial delay before first retry.</param>
     /// <param name="maxDelay">Maximum delay between retries.</param>
     /// <param name="multiplier">Multiplier for delay calculation.</param>
     /// <param name="jitterFactor">Jitter factor (0.0 to 1.0).</param>
     protected BackoffStrategyBase(
-        int id,
         string name,
         TimeSpan initialDelay,
         TimeSpan maxDelay,
         double multiplier = 2.0,
         double jitterFactor = 0.0)
-        : base(id, name)
+        : base(name)
     {
         InitialDelay = initialDelay;
         MaxDelay = maxDelay;

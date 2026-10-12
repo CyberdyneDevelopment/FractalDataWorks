@@ -17,7 +17,6 @@ public sealed class InitializedStateType : ExecutionStateTypeBase
     /// </summary>
     public InitializedStateType()
         : base(
-            id: 3,
             name: "Initialized",
             displayName: "Initialized",
             isTerminal: false,

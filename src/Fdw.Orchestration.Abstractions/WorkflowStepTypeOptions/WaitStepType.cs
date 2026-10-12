@@ -14,5 +14,5 @@ public sealed class WaitStepType : WorkflowStepTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="WaitStepType"/> class.
     /// </summary>
-    public WaitStepType() : base(3, "Wait", executesPipeline: false, supportsParallelism: false) { }
+    public WaitStepType() : base("Wait", executesPipeline: false, supportsParallelism: false) { }
 }

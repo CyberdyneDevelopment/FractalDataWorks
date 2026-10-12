@@ -7,17 +7,6 @@ namespace Fdw.Data.Abstractions.Tests.Operators;
 
 public sealed class SortDirectionBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
-
-        // Assert
-        direction.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -25,7 +14,7 @@ public sealed class SortDirectionBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Assert
         direction.Name.ShouldBe("Ascending");
@@ -37,7 +26,7 @@ public sealed class SortDirectionBaseTests
     public void ConstructorSetsSqlKeyword()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Assert
         direction.SqlKeyword.ShouldBe("ASC");
@@ -49,7 +38,7 @@ public sealed class SortDirectionBaseTests
     public void ConstructorSetsIsAscending()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending", isAscending: true);
+        var direction = new TestSortDirection("Ascending", isAscending: true);
 
         // Assert
         direction.IsAscending.ShouldBeTrue();
@@ -61,7 +50,7 @@ public sealed class SortDirectionBaseTests
     public void ConstructorSetsDescription()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Assert
         direction.Description.ShouldBe("Sort in ascending order");
@@ -73,7 +62,7 @@ public sealed class SortDirectionBaseTests
     public void ConstructorSetsConfigurationKey()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Assert
         direction.ConfigurationKey.ShouldBe("Data:Operators:Sort:Ascending");
@@ -85,7 +74,7 @@ public sealed class SortDirectionBaseTests
     public void ConstructorSetsDisplayName()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Assert
         direction.DisplayName.ShouldBe("Ascending Sort Direction");
@@ -97,7 +86,7 @@ public sealed class SortDirectionBaseTests
     public void CategoryDefaultsToSort()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Assert
         direction.Category.ShouldBe("Sort");
@@ -109,7 +98,7 @@ public sealed class SortDirectionBaseTests
     public void CategoryCanBeCustomized()
     {
         // Arrange & Act
-        var direction = new TestSortDirection(2, "Custom", category: "CustomSort");
+        var direction = new TestSortDirection("Custom", category: "CustomSort");
 
         // Assert
         direction.Category.ShouldBe("CustomSort");
@@ -122,7 +111,6 @@ public sealed class SortDirectionBaseTests
     {
         // Arrange & Act
         var direction = new TestSortDirection(
-            2,
             "Descending",
             "Sort in descending order",
             isAscending: false,
@@ -141,7 +129,7 @@ public sealed class SortDirectionBaseTests
     public void ImplementsISortDirection()
     {
         // Arrange
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Act & Assert
         direction.ShouldBeAssignableTo<ISortDirection>();
@@ -153,7 +141,7 @@ public sealed class SortDirectionBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var direction = new TestSortDirection(1, "Ascending");
+        var direction = new TestSortDirection("Ascending");
 
         // Act & Assert
         direction.ShouldBeAssignableTo<SortDirectionBase>();
@@ -165,8 +153,8 @@ public sealed class SortDirectionBaseTests
     public void MultipleSortDirectionsWithDifferentSettings()
     {
         // Arrange
-        var asc = new TestSortDirection(1, "Ascending", isAscending: true, sqlKeyword: "ASC");
-        var desc = new TestSortDirection(2, "Descending", isAscending: false, sqlKeyword: "DESC");
+        var asc = new TestSortDirection("Ascending", isAscending: true, sqlKeyword: "ASC");
+        var desc = new TestSortDirection("Descending", isAscending: false, sqlKeyword: "DESC");
 
         // Act & Assert
         asc.IsAscending.ShouldBeTrue();
@@ -179,14 +167,12 @@ public sealed class SortDirectionBaseTests
     private sealed class TestSortDirection : SortDirectionBase
     {
         public TestSortDirection(
-            int id,
             string name,
             string? description = null,
             bool isAscending = true,
             string? sqlKeyword = null,
             string? category = null)
             : base(
-                id,
                 name,
                 description ?? (isAscending ? "Sort in ascending order" : "Sort in descending order"),
                 isAscending,

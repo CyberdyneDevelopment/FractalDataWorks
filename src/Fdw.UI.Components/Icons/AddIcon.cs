@@ -11,7 +11,6 @@ public sealed class AddIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="AddIcon"/>.</summary>
     public AddIcon()
         : base(
-            2,
             "Add",
             "0 0 24 24",
             "none",

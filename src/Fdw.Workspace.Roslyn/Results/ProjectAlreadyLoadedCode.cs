@@ -16,7 +16,7 @@ public sealed class ProjectAlreadyLoadedCode : WorkspaceResultCodeBase
     /// </summary>
     public ProjectAlreadyLoadedCode()
         : base(40001, "ProjectAlreadyLoaded",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Project '{ProjectName}' is already loaded",
             isRetryable: false)
     {

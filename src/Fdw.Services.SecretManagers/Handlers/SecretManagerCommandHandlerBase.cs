@@ -29,9 +29,8 @@ public abstract class SecretManagerCommandHandlerBase<TCommand, TResult>
     /// <summary>
     /// Initializes the base handler with identifier, name, and execution delegate.
     /// </summary>
-    /// <param name="id">The unique identifier for this handler.</param>
     /// <param name="name">The command type name (e.g., "GetSecret").</param>
-    protected SecretManagerCommandHandlerBase(int id, string name) : base(id, name)
+    protected SecretManagerCommandHandlerBase(string name) : base(name)
     {
         ExecuteFunc = new Func<TCommand, ISecretManagerExecutionContext, CancellationToken, Task<IGenericResult<TResult>>>(Execute);
     }

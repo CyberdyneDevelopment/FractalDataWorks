@@ -39,6 +39,26 @@ public interface ITransformType : ITypeOption<int>
     bool CanFilterRecords { get; }
 
     /// <summary>
+    /// Gets whether this transform's output depends on seeing every record at once, so that handing it
+    /// the input a batch at a time would give a different answer than handing it the whole set.
+    /// </summary>
+    /// <remarks>
+    /// An aggregate is the case: its groups span the whole input. A pipeline that contains such a step
+    /// has to gather its records before transforming; a pipeline whose steps all leave this
+    /// <see langword="false"/> can pass records through batch by batch.
+    /// </remarks>
+    bool RequiresCompleteInput { get; }
+
+    /// <summary>
+    /// Gets the named inputs this kind reads. A pipeline stage binds each one to a data set, a data
+    /// store container, or an earlier stage's output (FDW-962).
+    /// </summary>
+    IReadOnlyList<string> InputPorts { get; }
+
+    /// <summary>Gets the named outputs this kind writes, each bound to a destination or left for later stages.</summary>
+    IReadOnlyList<string> OutputPorts { get; }
+
+    /// <summary>
     /// Transforms a single record.
     /// </summary>
     /// <param name="input">The input record.</param>

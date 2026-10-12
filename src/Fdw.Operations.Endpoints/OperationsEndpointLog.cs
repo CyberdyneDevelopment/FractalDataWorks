@@ -175,4 +175,8 @@ public static partial class OperationsEndpointLog
     /// <summary>Logs a successful escalation policy deletion.</summary>
     [MessageLogging(EventId = 11035, Level = LogLevel.Information, Message = "Deleted escalation policy {policyId}")]
     public static partial IGenericMessage EscalationPolicyDeleted(ILogger logger, Guid policyId);
+
+    /// <summary>Logs that the loaded TypeCollections were listed.</summary>
+    [MessageLogging(EventId = 11036, Level = LogLevel.Trace, Message = "Listing {count} loaded TypeCollections")]
+    public static partial IGenericMessage TypeCollectionsListed(ILogger logger, int count);
 }

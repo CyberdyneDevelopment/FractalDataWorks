@@ -33,7 +33,7 @@ public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContain
         string schema,
         string objectName,
         IEnumerable<IStorageContainer>? containers = null)
-        : base(1, "PostgreSqlDatabasePath")
+        : base("PostgreSqlDatabasePath")
     {
         Database = database ?? string.Empty;
         Schema = schema ?? throw new ArgumentNullException(nameof(schema));

@@ -29,15 +29,15 @@ public static class PostgreSqlSchemaConversion
                 TypeName = clrType.Name,
                 ClrType = clrType
             },
-            Role = discovered.IsPrimaryKey
-                ? PropertyRoles.ByName("Surrogate")
-                : PropertyRoles.ByName("Attribute"),
+            // Why a primary key is Identifier and never DbKey: the catalog cannot tell a meaningless row
+            // number from a business id the database happens to assign (an OrderId IDENTITY), and DbKey
+            // withholds the column from every default read. Hiding a key is a person's decision, not
+            // discovery's. Every other column stays NotYetTyped: the catalog cannot tell a measure from an
+            // attribute (FDW-988).
+            Role = discovered.IsPrimaryKey ? DatumTypes.Identifier : DatumTypes.NotYetTyped,
             IsNullable = discovered.IsNullable,
             IsIdentity = discovered.IsIdentity,
             IsComputed = discovered.IsComputed,
-            Visibility = discovered.IsPrimaryKey && discovered.IsIdentity
-                ? FieldVisibilities.ByName("NotVisible")
-                : FieldVisibilities.ByName("Visible"),
             TypeSystemId = "PostgreSql",
             ConverterTypeId = 0
         };

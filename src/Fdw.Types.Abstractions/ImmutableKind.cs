@@ -13,7 +13,7 @@ public sealed class ImmutableKind : CollectionKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ImmutableKind"/> class.
     /// </summary>
-    public ImmutableKind() : base(0, "Immutable")
+    public ImmutableKind() : base("Immutable")
     {
     }
 }

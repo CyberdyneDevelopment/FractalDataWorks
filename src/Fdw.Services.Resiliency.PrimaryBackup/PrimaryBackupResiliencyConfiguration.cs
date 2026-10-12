@@ -10,11 +10,7 @@ namespace Fdw.Services.Resiliency.PrimaryBackup;
 /// </summary>
 public sealed class PrimaryBackupResiliencyConfiguration : ResiliencyConfiguration
 {
-    /// <inheritdoc/>
-    public override string SectionName => "Resiliency:PrimaryBackup";
 
-    /// <inheritdoc/>
-    public override string StrategyType => "PrimaryBackup";
 
     /// <summary>
     /// Gets or sets the backup data set identifier to use when primary fails.

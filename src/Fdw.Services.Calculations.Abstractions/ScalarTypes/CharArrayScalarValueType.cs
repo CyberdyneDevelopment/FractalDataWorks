@@ -14,7 +14,7 @@ public sealed class CharArrayScalarValueType : ScalarValueTypeBase
     /// Initializes a new instance of the <see cref="CharArrayScalarValueType"/> class.
     /// </summary>
     public CharArrayScalarValueType()
-        : base(id: 5, name: "CharArray")
+        : base(name: "CharArray")
     {
     }
 }

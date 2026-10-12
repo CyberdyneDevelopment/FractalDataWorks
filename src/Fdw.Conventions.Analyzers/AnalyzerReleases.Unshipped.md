@@ -14,6 +14,4 @@ FDW018 | Design | Warning | TypeCollectionOpportunityAnalyzer - Switch on enum t
 FDW019 | Design | Warning | TypeCollectionOpportunityAnalyzer - If/else chain comparing enum values suggests TypeCollection ByName dispatch
 FDW020 | Design | Info | UnimplementedAbstractTypeAnalyzer - Abstract type has no implementation in the compilation
 FDW021 | Design | Info | UnusedTypeAnalyzer - Type is not referenced anywhere in the compilation
-FDW046 | Design | Warning | InlineStyleAttributeAnalyzer - Inline style declaration the host theme cannot override
-FDW047 | Design | Warning | RawSvgMarkupAnalyzer - Raw svg icon glyph in Razor markup
 FDW048 | Design | Warning | LocalStatusClassMapperAnalyzer - Component-local value-to-CSS-class mapper

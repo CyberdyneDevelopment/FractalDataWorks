@@ -13,7 +13,7 @@ public sealed class TextType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="TextType"/> class.</summary>
     public TextType()
-        : base(id: 4, name: "text")
+        : base(name: "text")
     {
     }
 

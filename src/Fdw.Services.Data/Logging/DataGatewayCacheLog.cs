@@ -26,6 +26,14 @@ public static partial class DataGatewayCacheLog
         Message = "DataGateway cache miss for key '{cacheKey}', caching for {cacheDuration}")]
     public static partial IGenericMessage CacheMiss(ILogger logger, string cacheKey, TimeSpan cacheDuration);
 
+    /// <summary>Logs a read that waited for the same read already running, instead of running it again.</summary>
+    // Why Debug: a per-read outcome, like the cache hit it stands in for; 10001 is the catalog's Informational.
+    [MessageLogging(
+        EventId = 10001,
+        Level = LogLevel.Debug,
+        Message = "DataGateway read for key '{cacheKey}' joined the read already in flight")]
+    public static partial IGenericMessage InFlightJoined(ILogger logger, string cacheKey);
+
     /// <summary>Logs tag-based cache invalidation with eviction count.</summary>
     [MessageLogging(
         EventId = 11029,

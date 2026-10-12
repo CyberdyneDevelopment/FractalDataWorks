@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataInt16Converter()
     : DataTypeConverterBase(
-        id: 4,
         name: "Int16",
         sourceType: "Int16",
         targetClrType: typeof(short),

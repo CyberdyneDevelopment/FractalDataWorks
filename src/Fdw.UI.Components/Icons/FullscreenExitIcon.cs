@@ -11,7 +11,6 @@ public sealed class FullscreenExitIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="FullscreenExitIcon"/>.</summary>
     public FullscreenExitIcon()
         : base(
-            47,
             "FullscreenExit",
             "0 0 24 24",
             "none",

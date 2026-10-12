@@ -8,7 +8,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `ISchemaImportPersister` | interface | Persists discovered schema to the configuration database. Maps the discovered hierarchy… |
 | `ISchemaImporter` | interface | Base interface for schema importers that discover schema from external sources. Implementations… |
 | `ISchemaImporter<TConfiguration>` | interface | Generic schema importer interface with strongly-typed importer configuration. |
 | `ISchemaImporterResultCode` | interface | Interface for Schema Importer result codes. |
@@ -31,7 +30,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `ImportedDataStore` | class | Imported DataStore configuration. |
 | `ImportedField` | class | Imported Field (column, property, etc.). |
 | `SchemaImportResult` | class | Result of a schema import operation. |
-| `SchemaImportSyncResult` | class | Result of a schema sync operation. |
 | `SchemaImporterOptions` | class | Options for schema import operations. |
 | `SourceRequiredCode` | class | Source was null or empty. |
 

@@ -1,4 +1,5 @@
 using System;
+using Fdw.Services.Connections.Abstractions;
 using Fdw.Web.Endpoints.Contracts;
 
 namespace Fdw.Services.Connections.Endpoints;
@@ -19,4 +20,10 @@ public class ConnectionSummaryDto : ResourceSummary
 
     /// <summary>Gets or sets whether the last connection test succeeded, false if it failed, or null if never tested.</summary>
     public bool? LastTestSuccess { get; set; }
+
+    /// <summary>
+    /// Gets or sets the schema discovery option the connection uses. A client asks whether to discover
+    /// only when it discovers (<see cref="SchemaDiscoveryTypeInfo.DiscoversSchema"/>).
+    /// </summary>
+    public required SchemaDiscoveryTypeInfo SchemaDiscovery { get; set; }
 }

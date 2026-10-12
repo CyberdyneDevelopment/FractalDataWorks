@@ -6,14 +6,13 @@ namespace Fdw.Calculations.Aggregations;
 /// <summary>
 /// Base class for all aggregation functions.
 /// </summary>
-public abstract class AggregationFunctionBase : TypeOptionBase<int, AggregationFunctionBase>, IAggregationFunction
+public abstract class AggregationFunctionBase : TypeOptionBase<AggregationFunctionBase>, IAggregationFunction
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AggregationFunctionBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the aggregation function.</param>
     /// <param name="name">The name of the aggregation function.</param>
-    protected AggregationFunctionBase(int id, string name) : base(id, name)
+    protected AggregationFunctionBase(string name) : base(name)
     {
     }
 

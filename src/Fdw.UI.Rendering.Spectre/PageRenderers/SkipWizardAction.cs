@@ -9,5 +9,5 @@ namespace Fdw.UI.Rendering.Spectre.PageRenderers;
 public sealed class SkipWizardAction : WizardActionBase
 {
     /// <summary>Initializes a new instance of <see cref="SkipWizardAction"/>.</summary>
-    public SkipWizardAction() : base(3, "Skip") { }
+    public SkipWizardAction() : base("Skip") { }
 }

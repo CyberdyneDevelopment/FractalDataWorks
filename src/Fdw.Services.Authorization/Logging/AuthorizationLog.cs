@@ -208,4 +208,20 @@ public static partial class AuthorizationLog
     [MessageLogging(EventId = 11012, Level = LogLevel.Debug,
         Message = "Expanded {roleCount} role(s) to {permissionCount} permission(s): {roleNames}")]
     public static partial IGenericMessage RolePermissionsExpanded(ILogger logger, int roleCount, int permissionCount, string roleNames);
+
+    /// <summary>Logs a role/permission grant that is not owned by the role's own tenant, and so is not counted.</summary>
+    /// <remarks>
+    /// A role's grants are the ones its owning tenant wrote. A grant owned by any other tenant was written by a
+    /// tenant that did not own the role; counting it would let one tenant change what a shared role grants in
+    /// every other tenant.
+    /// </remarks>
+    [MessageLogging(EventId = 41000, Level = LogLevel.Warning,
+        Message = "Role '{roleName}' (tenant '{roleTenantId}') has a grant of permission id '{permissionId}' owned by tenant '{grantTenantId}'; it is not counted")]
+    public static partial IGenericMessage RolePermissionOutsideRoleTenant(
+        ILogger logger, string roleName, string roleTenantId, string permissionId, string grantTenantId);
+
+    /// <summary>Logs a role whose owning tenant is not recorded, so none of its grants can be counted.</summary>
+    [MessageLogging(EventId = 61000, Level = LogLevel.Error,
+        Message = "Role '{roleName}' has no owning tenant recorded; none of its grants are counted")]
+    public static partial IGenericMessage RoleTenantNotRecorded(ILogger logger, string roleName);
 }

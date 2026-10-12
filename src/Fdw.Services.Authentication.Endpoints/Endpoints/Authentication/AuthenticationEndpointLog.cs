@@ -43,7 +43,7 @@ public static partial class AuthenticationEndpointLog
         Message = "Authentication failed for user '{username}'")]
     public static partial IGenericMessage AuthenticationFailed(
         ILogger logger,
-        string username);
+        string? username);
 
     /// <summary>
     /// Logged at Debug level when a token refresh is requested.
@@ -85,7 +85,7 @@ public static partial class AuthenticationEndpointLog
         Message = "Logging out user '{username}'")]
     public static partial IGenericMessage LoggingOut(
         ILogger logger,
-        string username);
+        string? username);
 
     /// <summary>
     /// Logged at Information level when a logout completes.
@@ -96,7 +96,7 @@ public static partial class AuthenticationEndpointLog
         Message = "Logout completed for user '{username}'")]
     public static partial IGenericMessage LogoutCompleted(
         ILogger logger,
-        string username);
+        string? username);
 
     /// <summary>
     /// Logged at Debug level when user info is being retrieved.
@@ -333,4 +333,38 @@ public static partial class AuthenticationEndpointLog
     public static partial IGenericMessage UpdatingUserPreferences(
         ILogger logger,
         string username);
+
+    /// <summary>
+    /// Logged at Trace level when the configured sign-in flows are listed for an administrator (FDW-912).
+    /// </summary>
+    [MessageLogging(
+        EventId = 11022,
+        Level = LogLevel.Trace,
+        Message = "Listed {count} sign-in flows for administration")]
+    public static partial IGenericMessage FlowsListed(
+        ILogger logger,
+        int count);
+
+    /// <summary>
+    /// Logged at Information level when an administrator changes who may use a sign-in flow (FDW-912).
+    /// </summary>
+    [MessageLogging(
+        EventId = 11023,
+        Level = LogLevel.Information,
+        Message = "Administrator asked to {change} sign-in flow '{flowName}'")]
+    public static partial IGenericMessage FlowChangeRequested(
+        ILogger logger,
+        string change,
+        string flowName);
+
+    /// <summary>
+    /// Logged at Warning level when a sign-in flow change is asked for by a token that names no user (FDW-912).
+    /// </summary>
+    [MessageLogging(
+        EventId = 51005,
+        Level = LogLevel.Warning,
+        Message = "Change to sign-in flow '{flowName}' refused: the calling token names no user to answer for it")]
+    public static partial IGenericMessage FlowChangeCallerUnknown(
+        ILogger logger,
+        string flowName);
 }

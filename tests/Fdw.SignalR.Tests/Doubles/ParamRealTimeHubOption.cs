@@ -13,7 +13,7 @@ public sealed class ParamRealTimeHubOption : RealTimeHubOptionBase
 {
     /// <summary>Initializes a new instance with caller-supplied route and hub type.</summary>
     public ParamRealTimeHubOption(string route, Type hubType)
-        : base(1, "Param", route, hubType, authorizationPolicy: null)
+        : base("Param", route, hubType, authorizationPolicy: null)
     {
     }
 

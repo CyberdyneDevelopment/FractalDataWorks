@@ -33,11 +33,6 @@ public sealed class ConfigurationModel
     public bool GenerateWeb { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets whether to generate Blazor components. Defaults to true.
-    /// </summary>
-    public bool GenerateBlazor { get; set; } = true;
-
-    /// <summary>
     /// Gets or sets whether to generate TUI components. Defaults to true.
     /// </summary>
     public bool GenerateTui { get; set; } = true;

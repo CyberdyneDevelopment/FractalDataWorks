@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class DeleteAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for delete action.
+    /// Material Symbols icon name for delete action.
     /// </summary>
-    public const string DeleteIcon = "delete"; // Icons.Material.Filled.Delete
+    public const string DeleteIcon = "delete";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteAction"/> class.
     /// </summary>
     public DeleteAction()
         : base(
-            id: 5,
             name: "Delete",
             icon: DeleteIcon,
             color: "Error",

@@ -535,4 +535,16 @@ public static partial class SchedulingLog
         Level = LogLevel.Error,
         Message = "[SchedulingCommandTranslatorBase] Translator name is required and was null or empty")]
     public static partial IGenericMessage TranslatorNameMissing(ILogger logger);
+
+    [MessageLogging(
+        EventId = 61001,
+        Level = LogLevel.Critical,
+        Message = "Scheduler '{schedulerName}' has no scheduled execution handler registered; reference exactly one ScheduledExecutionHandlerTypes registration package")]
+    public static partial IGenericMessage NoScheduledExecutionHandler(ILogger logger, string schedulerName);
+
+    [MessageLogging(
+        EventId = 61002,
+        Level = LogLevel.Critical,
+        Message = "Scheduler '{schedulerName}' has {count} scheduled execution handlers registered ({handlers}); reference exactly one")]
+    public static partial IGenericMessage MultipleScheduledExecutionHandlers(ILogger logger, string schedulerName, int count, string handlers);
 }

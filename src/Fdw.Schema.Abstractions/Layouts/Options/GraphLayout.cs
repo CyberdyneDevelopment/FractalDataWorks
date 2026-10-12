@@ -31,7 +31,6 @@ public sealed class GraphLayout : DataLayoutBase
     /// </summary>
     public GraphLayout()
         : base(
-            id: 5,
             name: "Graph",
             description: "Nodes and edges (Neo4j, relationships)",
             supportsNesting: true,

@@ -31,7 +31,7 @@ public abstract class GetSchedulesProxyEndpointBase : EndpointWithoutRequest<IRe
     /// <inheritdoc />
     public override void Configure()
     {
-        Get("/proxy/schedules");
+        Get("/schedules");
 #if DEVELOP
         AllowAnonymous();
 #else

@@ -97,7 +97,7 @@ public sealed class Window : TriggerTypeBase
     /// Window triggers require schedule persistence to track window state and
     /// do not execute immediately — they wait for the next window open time.
     /// </remarks>
-    public Window(ILogger<Window>? logger = null) : base(5, "Window", requiresSchedule: true, isImmediate: false)
+    public Window(ILogger<Window>? logger = null) : base("Window", requiresSchedule: true, isImmediate: false)
     {
         _logger = logger ?? NullLogger<Window>.Instance;
     }
@@ -126,7 +126,6 @@ public sealed class Window : TriggerTypeBase
     ///   <item><description>Otherwise, calculate the next window open time from cron</description></item>
     /// </list>
     /// </remarks>
-#pragma warning disable MA0051 // Linear window calculation with cron parsing and timezone conversion
     [ConventionOverride(MaxCyclomaticComplexity = 20)]  // Window calculation with cron parsing, timezone handling, and window boundary checks
     public override DateTime? CalculateNextExecution(IGenericTrigger trigger, DateTime? lastExecution)
     {
@@ -186,7 +185,6 @@ public sealed class Window : TriggerTypeBase
             return null;
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Returns the next run time for this window trigger.

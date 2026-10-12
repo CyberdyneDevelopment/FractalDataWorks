@@ -20,7 +20,6 @@ public sealed class ConstantFieldTransformer : FieldTransformationBase
     /// </summary>
     public ConstantFieldTransformer()
         : base(
-            id: 500,
             name: "Constant",
             displayName: "Constant",
             description: "Returns a literal constant value, ignoring the input.",

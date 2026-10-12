@@ -15,7 +15,7 @@ public sealed class NonePeriodComparisonType : PeriodComparisonTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="NonePeriodComparisonType"/> class.
     /// </summary>
-    public NonePeriodComparisonType() : base(0, "None", isCumulative: false) { }
+    public NonePeriodComparisonType() : base("None", isCumulative: false) { }
 
     /// <inheritdoc />
     public override TimeSpan? ComparisonOffset => null;

@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using Fdw.Collections.Attributes;
 using Microsoft.Extensions.Configuration;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.Http.Security.Types;
 
 /// <summary>
 /// API key authentication configuration.
-/// The API key is passed in a request header (default: X-API-Key).
+/// The API key is passed in a request header (default: <see cref="HttpAuthenticationTypes.ApiKeyHeaderName"/>).
 /// </summary>
 [TypeOption(typeof(HttpAuthenticationTypes), "ApiKey")]
 public sealed class ApiKeySecurityConfiguration : HttpAuthenticationConfiguration
@@ -16,8 +17,8 @@ public sealed class ApiKeySecurityConfiguration : HttpAuthenticationConfiguratio
 
     /// <summary>Initializes a new instance of the <see cref="ApiKeySecurityConfiguration"/> class.</summary>
     public ApiKeySecurityConfiguration()
-        : base(4, "ApiKey", "API Key", "API key passed in a request header",
-               ExpectedList, RequiredList)
+        : base("ApiKey", "API Key", "API key passed in a request header",
+               ExpectedList, RequiredList, requiresSecret: true)
     {
     }
 
@@ -28,7 +29,7 @@ public sealed class ApiKeySecurityConfiguration : HttpAuthenticationConfiguratio
 
     /// <summary>
     /// Gets or sets the header name for the API key.
-    /// When null, consumers default to "X-API-Key".
+    /// When null, the key is sent in <see cref="HttpAuthenticationTypes.ApiKeyHeaderName"/>.
     /// </summary>
     public string? ApiKeyHeaderName { get; set; }
 
@@ -61,4 +62,11 @@ public sealed class ApiKeySecurityConfiguration : HttpAuthenticationConfiguratio
             new(nameof(ApiKeyHeaderName), ApiKeyHeaderName),
         ];
     }
+
+    /// <inheritdoc />
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("ApiKeySecretName", "API key", secret: true)];
+
+    /// <inheritdoc/>
+    /// <remarks>The connection carries its own API key.</remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;
 }

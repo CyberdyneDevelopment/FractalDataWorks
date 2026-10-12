@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
@@ -12,61 +7,27 @@ using Fdw.Services.Users.Commands;
 using Fdw.Services.Users.Logging;
 using Fdw.Services.Users.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Users;
 
-/// <summary>
-/// Domain configuration provider for user preferences. Sole owner of <c>usr.UserPreferences</c> gatewayProvider access.
-/// Thin wrapper over <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/> with a by-userId query.
-/// </summary>
-/// <remarks>
-/// All reads and writes go through <see cref="IConfigurationGateway"/>. No <see cref="Fdw.Services.Data.Abstractions.IDataGateway"/>
-/// usage — usr.UserPreferences is ConfigurationDb data accessed through the config gatewayProvider, same as usr.Users.
-/// </remarks>
-public class UserPreferenceConfigurationProvider
-    : ImplementationConfigurationProviderBase<UserPreferencesConfiguration, UserPreferenceConfigurationCommand>
+/// <summary>Supplies the UserPreferences configuration.</summary>
+public sealed class UserPreferenceConfigurationProvider
+    : DomainConfigurationProviderBase<IUserPreferencesImplementationConfiguration>,
+      IUserPreferenceConfigurationProvider
 {
-    private readonly ILogger _logger;
-
     /// <summary>Initializes a new instance of the <see cref="UserPreferenceConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public UserPreferenceConfigurationProvider(
-        ILogger<UserPreferenceConfigurationProvider>? logger,
+        ILogger<UserPreferenceConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "usr")
-        : base(logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
-        _logger = logger ?? NullLogger<UserPreferenceConfigurationProvider>.Instance;
-    }
-
-    /// <summary>
-    /// Gets the preferences for the specified user (returns null when none exist yet).
-    /// </summary>
-    public virtual async Task<IGenericResult<UserPreferencesConfiguration?>> GetPreferences(
-        Guid userId, CancellationToken cancellationToken = default)
-    {
-        UserConfigurationProviderLog.LoadPreferencesTrace(_logger, userId);
-
-        var command = new QueryCommandBuilder<UserPreferencesConfiguration>(
-                DataStoreName, PathName, "UserPreferences")
-            .Where(nameof(UserPreferencesConfiguration.UserId), userId)
-            .Where(nameof(UserPreferencesConfiguration.IsCurrent), true)
-            .Where(nameof(UserPreferencesConfiguration.IsDeleted), false)
-            .Build();
-
-        var result = await Execute<IEnumerable<UserPreferencesConfiguration>>(command, cancellationToken).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            UserConfigurationProviderLog.LoadPreferencesFailed(_logger, userId);
-            return result.Messages.Any()
-                ? result.ToNewResult<UserPreferencesConfiguration?>()
-                : GenericResult<UserPreferencesConfiguration?>.Failure(UserConfigurationProviderLog.LoadPreferencesFailed(_logger, userId));
-        }
-
-        return GenericResult<UserPreferencesConfiguration?>.Success(result.Value?.FirstOrDefault());
     }
 }

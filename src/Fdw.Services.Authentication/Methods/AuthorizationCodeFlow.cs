@@ -16,7 +16,6 @@ public sealed class AuthorizationCodeFlow : AuthenticationFlowBase
     /// Initializes a new instance of the <see cref="AuthorizationCodeFlow"/> class.
     /// </summary>
     public AuthorizationCodeFlow() : base(
-        id: 1,
         name: "AuthorizationCode",
         requiresUserInteraction: true,
         supportsRefreshTokens: true,

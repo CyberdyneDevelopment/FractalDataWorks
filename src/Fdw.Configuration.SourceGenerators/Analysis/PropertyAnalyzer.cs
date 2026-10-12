@@ -183,10 +183,7 @@ public static class PropertyAnalyzer
                string.Equals(fullName, "byte[]", StringComparison.Ordinal);
     }
 
-    // MA0051: Method length acceptable - comprehensive attribute analysis covering validation, mapping, and custom attributes
-#pragma warning disable MA0051 // Method is too long
     private static void AnalyzeAttributes(IPropertySymbol propertySymbol, PropertyModel model)
-#pragma warning restore MA0051
     {
         foreach (var attribute in propertySymbol.GetAttributes())
         {

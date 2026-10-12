@@ -19,17 +19,22 @@ public abstract class CreateConnectionRequestValidator : FdwEndpointValidator<Cr
             .NotEmpty()
             .WithMessage("ServiceType is required");
 
-        RuleFor(x => x.Server)
-            .NotEmpty()
-            .WithMessage("Server is required")
-            .MaximumLength(256)
-            .WithMessage("Server must not exceed 256 characters");
+        // Why only when supplied: these are the deprecated flat fields, and most connection types have no
+        // server or database at all. What a type requires is the type's own rule, checked when its
+        // configuration is bound (IConnectionType.EndpointBehavior), not here.
+        When(x => !string.IsNullOrEmpty(x.Server), () =>
+        {
+            RuleFor(x => x.Server)
+                .MaximumLength(256)
+                .WithMessage("Server must not exceed 256 characters");
+        });
 
-        RuleFor(x => x.Database)
-            .NotEmpty()
-            .WithMessage("Database is required")
-            .MaximumLength(128)
-            .WithMessage("Database must not exceed 128 characters");
+        When(x => !string.IsNullOrEmpty(x.Database), () =>
+        {
+            RuleFor(x => x.Database)
+                .MaximumLength(128)
+                .WithMessage("Database must not exceed 128 characters");
+        });
 
         RuleFor(x => x.Port)
             .InclusiveBetween(1, 65535)

@@ -29,7 +29,6 @@ public sealed class PollyRetryResiliencyType : ResiliencyTypeBase
     /// <summary>Initializes a new instance of <see cref="PollyRetryResiliencyType"/>.</summary>
     public PollyRetryResiliencyType()
         : base(
-            id: 2,
             name: "PollyRetry",
             displayName: "Polly Retry",
             description: "Retry with configurable backoff, optional circuit-breaker, and timeout.")

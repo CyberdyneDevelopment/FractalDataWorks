@@ -7,10 +7,10 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Authentication.Logging;
 
 /// <summary>
-/// MessageLogging for the in-memory execution store.
+/// MessageLogging for the execution store implementations and the ContextData mapper.
 /// </summary>
 /// <remarks>
-/// EventId range: 91130–91135. A resume token never appears here at any level. The token is the
+/// EventId range: 91130–91136. A resume token never appears here at any level. The token is the
 /// credential for a half-finished login, and a log is the wrong place for one — an execution is
 /// identified by its own id instead, which correlates just as well and grants nothing.
 /// </remarks>
@@ -61,4 +61,12 @@ internal static partial class ExecutionStoreLog
     [MessageLogging(EventId = 91135, Level = LogLevel.Error,
         Message = "A resume token must be supplied to consume an execution")]
     internal static partial IGenericMessage TokenMissing(ILogger<InMemoryExecutionStore> logger);
+
+    /// <summary>A persisted claim named a <c>ClaimSources</c> option that no longer exists.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="sourceName">The unrecognized source name.</param>
+    [MessageLogging(EventId = 91136, Level = LogLevel.Error,
+        Message = "Claim source '{sourceName}' is not a known ClaimSources option")]
+    internal static partial IGenericMessage UnknownClaimSource(
+        ILogger<AuthenticationContextData> logger, string sourceName);
 }

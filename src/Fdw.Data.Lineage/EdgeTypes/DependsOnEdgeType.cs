@@ -12,5 +12,5 @@ namespace Fdw.Data.Lineage.EdgeTypes;
 public sealed class DependsOnEdgeType : LineageEdgeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="DependsOnEdgeType"/> class.</summary>
-    public DependsOnEdgeType() : base(9, "DependsOn") { }
+    public DependsOnEdgeType() : base("DependsOn") { }
 }

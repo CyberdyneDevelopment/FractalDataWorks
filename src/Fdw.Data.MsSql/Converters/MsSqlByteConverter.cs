@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlByteConverter()
     : DataTypeConverterBase(
-        id: 16,
         name: "Byte",
         sourceType: "tinyint",
         targetClrType: typeof(byte),

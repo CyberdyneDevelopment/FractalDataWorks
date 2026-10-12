@@ -14,7 +14,7 @@ public sealed class LessThanOperator : ComparisonOperatorBase
     /// <summary>
     /// Initializes a new instance of the <see cref="LessThanOperator"/> class.
     /// </summary>
-    public LessThanOperator() : base(4, "LessThan", "<") { }
+    public LessThanOperator() : base("LessThan", "<") { }
 
     /// <inheritdoc />
     public override bool Evaluate(double left, double right) => left < right;

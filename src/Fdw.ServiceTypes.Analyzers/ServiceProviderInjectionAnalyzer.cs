@@ -10,7 +10,7 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// <c>IServiceOption</c>-derived interface — i.e. the <c>ServiceInterface</c> of a
 /// <c>[ServiceTypeCollection]</c>) never injects another such service directly through its
 /// constructor. It must instead depend on the other service's
-/// <c>IPlatformServiceProvider&lt;TService, TConfiguration&gt;</c> and resolve the concrete instance by
+/// <c>IDomainServiceProvider&lt;TService, TConfiguration&gt;</c> and resolve the concrete instance by
 /// name at call time.
 /// </summary>
 /// <remarks>
@@ -20,14 +20,14 @@ namespace Fdw.ServiceTypes.Analyzers;
 /// <c>AllInterfaces</c> flattens the entire interface graph). Each instance constructor parameter is
 /// then checked the same way; a parameter typed as an <c>IServiceOption</c>-derived interface (or as
 /// <c>IServiceOption</c> itself) is flagged UNLESS the parameter's type is one of the
-/// <c>IPlatformServiceProvider</c> generic arities, which is the correct indirection shape.
+/// <c>IDomainServiceProvider</c> generic arities, which is the correct indirection shape.
 /// </remarks>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
 {
     /// <summary>
     /// Diagnostic ID for a service-option service that injects another service-option service
-    /// directly instead of injecting its <c>IPlatformServiceProvider&lt;TService, TConfiguration&gt;</c>.
+    /// directly instead of injecting its <c>IDomainServiceProvider&lt;TService, TConfiguration&gt;</c>.
     /// </summary>
     public const string DirectServiceInjectionDiagnosticId = "FDW044";
 
@@ -36,17 +36,17 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
 
     private static readonly string[] ServiceProviderMetadataNames =
     [
-        "Fdw.ServiceTypes.IPlatformServiceProvider`1",
-        "Fdw.ServiceTypes.IPlatformServiceProvider`2",
-        "Fdw.ServiceTypes.IPlatformServiceProvider`4",
+        "Fdw.ServiceTypes.IDomainServiceProvider`1",
+        "Fdw.ServiceTypes.IDomainServiceProvider`2",
+        "Fdw.ServiceTypes.IDomainServiceProvider`4",
     ];
 
     private static readonly LocalizableString Title =
         "Service-option service must inject another service-option service through its provider";
     private static readonly LocalizableString MessageFormat =
-        "'{0}' is a service-option service but injects the service '{1}' directly. Inject IPlatformServiceProvider<{1}, TConfiguration> and resolve it by name instead.";
+        "'{0}' is a service-option service but injects the service '{1}' directly. Inject IDomainServiceProvider<{1}, TConfiguration> and resolve it by name instead.";
     private static readonly LocalizableString Description =
-        "A service-type-option service (a class implementing an IServiceOption-derived interface) must depend on another such service through its IPlatformServiceProvider<TService, TConfiguration>, resolving the instance by name — never by injecting the service interface or implementation directly through the constructor.";
+        "A service-type-option service (a class implementing an IServiceOption-derived interface) must depend on another such service through its IDomainServiceProvider<TService, TConfiguration>, resolving the instance by name — never by injecting the service interface or implementation directly through the constructor.";
 
     private const string Category = "Usage";
 
@@ -71,8 +71,8 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
 
         context.RegisterCompilationStartAction(compilationContext =>
         {
-            var serviceOptionType = compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionMetadataName);
-            if (serviceOptionType == null)
+            var implementation = compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionMetadataName);
+            if (implementation == null)
                 return;
 
             var serviceProviderTypes = ServiceProviderMetadataNames
@@ -85,20 +85,20 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
                 compilationContext.Compilation.GetTypeByMetadataName(ServiceOptionDependencyAttributeMetadataName);
 
             compilationContext.RegisterSymbolAction(
-                symbolContext => AnalyzeNamedType(symbolContext, serviceOptionType, serviceProviderTypes, serviceOptionDependencyAttributeType),
+                symbolContext => AnalyzeNamedType(symbolContext, implementation, serviceProviderTypes, serviceOptionDependencyAttributeType),
                 SymbolKind.NamedType);
         });
     }
 
     private static void AnalyzeNamedType(
         SymbolAnalysisContext context,
-        INamedTypeSymbol serviceOptionType,
+        INamedTypeSymbol implementation,
         ImmutableArray<INamedTypeSymbol> serviceProviderTypes,
         INamedTypeSymbol? serviceOptionDependencyAttributeType)
     {
         var classSymbol = (INamedTypeSymbol)context.Symbol;
 
-        if (classSymbol.TypeKind != TypeKind.Class || !IsServiceOptionType(classSymbol, serviceOptionType))
+        if (classSymbol.TypeKind != TypeKind.Class || !IsImplementation(classSymbol, implementation))
             return;
 
         foreach (var constructor in classSymbol.GetMembers().OfType<IMethodSymbol>()
@@ -106,7 +106,7 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
         {
             foreach (var parameter in constructor.Parameters)
             {
-                if (!IsServiceOptionType(parameter.Type, serviceOptionType))
+                if (!IsImplementation(parameter.Type, implementation))
                     continue;
 
                 if (IsServiceProviderType(parameter.Type, serviceProviderTypes))
@@ -128,9 +128,9 @@ public class ServiceProviderInjectionAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static bool IsServiceOptionType(ITypeSymbol type, INamedTypeSymbol serviceOptionType)
-        => SymbolEqualityComparer.Default.Equals(type, serviceOptionType)
-            || type.AllInterfaces.Contains(serviceOptionType, SymbolEqualityComparer.Default);
+    private static bool IsImplementation(ITypeSymbol type, INamedTypeSymbol implementation)
+        => SymbolEqualityComparer.Default.Equals(type, implementation)
+            || type.AllInterfaces.Contains(implementation, SymbolEqualityComparer.Default);
 
     private static bool IsServiceProviderType(ITypeSymbol type, ImmutableArray<INamedTypeSymbol> serviceProviderTypes)
         => type is INamedTypeSymbol namedType

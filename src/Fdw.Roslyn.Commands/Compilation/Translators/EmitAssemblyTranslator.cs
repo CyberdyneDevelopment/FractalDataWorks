@@ -34,7 +34,6 @@ public sealed class EmitAssemblyTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: compile project, check errors, emit assembly to file
     public override async Task<IGenericResult<QueryResult<EmitAssemblyData>>> Translate(
         EmitAssemblyCommand command,
         Solution solution,
@@ -156,5 +155,4 @@ public sealed class EmitAssemblyTranslator
 
         return GenericResult<QueryResult<EmitAssemblyData>>.Success(successResult);
     }
-#pragma warning restore MA0051
 }

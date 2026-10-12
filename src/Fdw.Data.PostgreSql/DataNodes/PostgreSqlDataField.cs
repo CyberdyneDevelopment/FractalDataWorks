@@ -18,7 +18,7 @@ public sealed class PostgreSqlDataField : IPostgreSqlDataField, IField
     private readonly bool _isComputed;
     private readonly SimpleFieldType _fieldType;
 
-    private static readonly IPropertyRole AttributeRole = PropertyRoles.ByName("Attribute");
+    private readonly IDatumType _datumType;
 
     /// <inheritdoc />
     public string Name { get; }
@@ -64,7 +64,11 @@ public sealed class PostgreSqlDataField : IPostgreSqlDataField, IField
     // IField / IPropertyDefinition implementation
     // -------------------------------------------------------
 
-    IPropertyRole IPropertyDefinition.Role => AttributeRole;
+    // Why the stored type rather than one derived from IsSystemProvided or IsIdentity: an identity or
+    // computed column is not automatically a column a query must withhold, and deciding that here would
+    // change what every existing query returns without anyone asking. The container declaration
+    // (DatumTypeId) says what the column is, and the builder that reads it passes it in (FDW-988).
+    IDatumType IPropertyDefinition.Role => _datumType;
     bool IPropertyDefinition.IsRequired => !IsNullable;
     IReadOnlyDictionary<string, object>? IPropertyDefinition.Metadata => null;
 
@@ -74,15 +78,7 @@ public sealed class PostgreSqlDataField : IPostgreSqlDataField, IField
     bool IField.IsIdentity => _isIdentity;
     bool IField.IsComputed => _isComputed;
     bool IField.IsSystemProvided => _isIdentity || _isComputed;
-
-    /// <inheritdoc />
-    /// <remarks>
-    /// Why Visible here rather than derived from IsSystemProvided: an identity or computed column is
-    /// not automatically a column a dataset must not see, and deciding that here would change what
-    /// every existing query returns without anyone asking for it. The value belongs to the container
-    /// declaration (VisibilityId) and is supplied by the builder that reads it.
-    /// </remarks>
-    IFieldVisibility IField.Visibility => FieldVisibilities.ByName("Visible");
+    bool IField.HasDefault => false;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgreSqlDataField"/> class.
@@ -96,6 +92,7 @@ public sealed class PostgreSqlDataField : IPostgreSqlDataField, IField
         int? precision,
         int? scale,
         int? maxLength,
+        IDatumType datumType,
         bool isIdentity = false,
         bool isComputed = false)
     {
@@ -107,6 +104,7 @@ public sealed class PostgreSqlDataField : IPostgreSqlDataField, IField
         Precision = precision;
         Scale = scale;
         MaxLength = maxLength;
+        _datumType = datumType;
         _isIdentity = isIdentity;
         _isComputed = isComputed;
         _fieldType = new SimpleFieldType

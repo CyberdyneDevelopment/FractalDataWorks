@@ -10,7 +10,7 @@ public sealed class MsSqlConnectionAuthKvp
 {
 
     /// <summary>Gets or sets the parent FK.</summary>
-    public Guid MsSqlConnectionId { get; set; }
+    public Guid MsSqlConnectionConfigurationId { get; set; }
 
     /// <summary>Gets or sets the key name.</summary>
     public string Name { get; set; } = string.Empty;

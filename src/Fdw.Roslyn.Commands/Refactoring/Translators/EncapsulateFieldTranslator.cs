@@ -33,7 +33,6 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: resolve field, rename references, replace declaration with property
     public override async Task<IGenericResult<MutationResult>> Translate(
         EncapsulateFieldCommand command,
         Solution solution,
@@ -189,7 +188,6 @@ public sealed class EncapsulateFieldTranslator : RoslynCommandTranslatorBase<Enc
                 symbolChanges,
                 Array.Empty<PathChange>()));
     }
-#pragma warning restore MA0051
 
     private static string GeneratePropertyName(string fieldName)
     {

@@ -84,13 +84,13 @@ public static partial class CredentialServiceLog
     public static partial IGenericMessage CredentialServiceResolveFailed(ILogger logger, string serviceName);
 
     /// <summary>
-    /// Logs that the typed credential service body is missing even though the ServiceOptionType resolved.
+    /// Logs that the typed credential service body is missing even though the Implementation resolved.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="serviceName">The name of the credential service whose typed body was not populated.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61001, Level = LogLevel.Error,
-        Message = "Typed credential service body is missing for service '{serviceName}' — ServiceOptionType resolved but the typed configuration was not populated")]
+        Message = "Typed credential service body is missing for service '{serviceName}' — Implementation resolved but the typed configuration was not populated")]
     public static partial IGenericMessage TypedBodyMissing(ILogger logger, string serviceName);
 
     /// <summary>
@@ -126,35 +126,35 @@ public static partial class CredentialServiceLog
     public static partial IGenericMessage CredentialVaultResolved(ILogger logger, string vaultName, string serviceName);
 
     /// <summary>
-    /// Logs that a typed cache was registered for a credential service ServiceOptionType.
+    /// Logs that a typed cache was registered for a credential service Implementation.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceOptionType">The service option type the typed cache was registered for.</param>
+    /// <param name="implementation">The service option type the typed cache was registered for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11003, Level = LogLevel.Debug,
-        Message = "Registered typed cache for credential service ServiceOptionType '{serviceOptionType}'")]
-    public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string serviceOptionType);
+        Message = "Registered typed cache for credential service Implementation '{implementation}'")]
+    public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string implementation);
 
     /// <summary>
-    /// Logs that a credential service has no ServiceOptionType, so its typed configuration cannot be resolved.
+    /// Logs that a credential service has no Implementation, so its typed configuration cannot be resolved.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceName">The name of the credential service missing a ServiceOptionType.</param>
+    /// <param name="serviceName">The name of the credential service missing a Implementation.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61003, Level = LogLevel.Warning,
-        Message = "Credential service '{serviceName}' has no ServiceOptionType — cannot resolve typed configuration")]
-    public static partial IGenericMessage NoServiceOptionType(ILogger logger, string serviceName);
+        Message = "Credential service '{serviceName}' has no Implementation — cannot resolve typed configuration")]
+    public static partial IGenericMessage NoImplementation(ILogger logger, string serviceName);
 
     /// <summary>
     /// Logs that no typed credential service provider is registered for the requested service option type.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
-    /// <param name="serviceOptionType">The service option type for which no typed provider was found.</param>
+    /// <param name="implementation">The service option type for which no typed provider was found.</param>
     /// <param name="serviceName">The name of the credential service that could not be loaded.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61004, Level = LogLevel.Error,
-        Message = "No typed credential service provider registered for service option type '{serviceOptionType}' (service '{serviceName}')")]
-    public static partial IGenericMessage NoTypedProviderForServiceOptionType(ILogger logger, string serviceOptionType, string serviceName);
+        Message = "No typed credential service provider registered for service option type '{implementation}' (service '{serviceName}')")]
+    public static partial IGenericMessage NoTypedProviderForImplementation(ILogger logger, string implementation, string serviceName);
 
     /// <summary>
     /// Logs that loading the typed credential service body failed.
@@ -162,22 +162,22 @@ public static partial class CredentialServiceLog
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="exception">The exception that caused the typed body load to fail.</param>
     /// <param name="serviceName">The name of the credential service whose typed body failed to load.</param>
-    /// <param name="serviceOptionType">The service option type used when the load failed.</param>
+    /// <param name="implementation">The service option type used when the load failed.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 71001, Level = LogLevel.Error,
-        Message = "Failed to load typed credential service body for '{serviceName}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string serviceName, string serviceOptionType);
+        Message = "Failed to load typed credential service body for '{serviceName}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string serviceName, string implementation);
 
     /// <summary>
     /// Logs that the typed credential service body was successfully loaded.
     /// </summary>
     /// <param name="logger">The logger that records the event.</param>
     /// <param name="serviceName">The name of the credential service whose typed body was loaded.</param>
-    /// <param name="serviceOptionType">The service option type used to load the typed body.</param>
+    /// <param name="implementation">The service option type used to load the typed body.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11004, Level = LogLevel.Trace,
-        Message = "Typed credential service body loaded for '{serviceName}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string serviceName, string serviceOptionType);
+        Message = "Typed credential service body loaded for '{serviceName}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string serviceName, string implementation);
 
     /// <summary>
     /// Logs that lookup of the typed configuration for a credential service has started.

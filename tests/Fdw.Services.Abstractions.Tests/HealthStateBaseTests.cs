@@ -7,25 +7,10 @@ public class HealthStateBaseTests
     [ExcludeFromCodeCoverage]
     private sealed class TestHealthState : HealthStateBase
     {
-        public TestHealthState(int id, string name, bool isHealthy)
-            : base(id, name, isHealthy)
+        public TestHealthState(string name, bool isHealthy)
+            : base(name, isHealthy)
         {
         }
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorSetsId()
-    {
-        // Arrange
-        var id = 99;
-
-        // Act
-        var result = new TestHealthState(id, "Test", true);
-
-        // Assert
-        result.Id.ShouldBe(id);
     }
 
     [Fact]
@@ -37,7 +22,7 @@ public class HealthStateBaseTests
         var name = "TestState";
 
         // Act
-        var result = new TestHealthState(1, name, true);
+        var result = new TestHealthState(name, true);
 
         // Assert
         result.Name.ShouldBe(name);
@@ -49,7 +34,7 @@ public class HealthStateBaseTests
     public void ConstructorSetsIsHealthyTrue()
     {
         // Act
-        var result = new TestHealthState(1, "Test", true);
+        var result = new TestHealthState("Test", true);
 
         // Assert
         result.IsHealthy.ShouldBeTrue();
@@ -61,7 +46,7 @@ public class HealthStateBaseTests
     public void ConstructorSetsIsHealthyFalse()
     {
         // Act
-        var result = new TestHealthState(1, "Test", false);
+        var result = new TestHealthState("Test", false);
 
         // Assert
         result.IsHealthy.ShouldBeFalse();
@@ -73,7 +58,7 @@ public class HealthStateBaseTests
     public void ImplementsIHealthState()
     {
         // Act
-        var result = new TestHealthState(1, "Test", true);
+        var result = new TestHealthState("Test", true);
 
         // Assert
         result.ShouldBeAssignableTo<IHealthState>();
@@ -85,7 +70,7 @@ public class HealthStateBaseTests
     public void ConfigurationKeyFollowsPattern()
     {
         // Act
-        var result = new TestHealthState(1, "TestState", true);
+        var result = new TestHealthState("TestState", true);
 
         // Assert
         result.ConfigurationKey.ShouldBe("HealthStates:TestState");
@@ -100,7 +85,7 @@ public class HealthStateBaseTests
         var name = "TestState";
 
         // Act
-        var result = new TestHealthState(1, name, true);
+        var result = new TestHealthState(name, true);
 
         // Assert
         result.DisplayName.ShouldBe(name);
@@ -115,7 +100,7 @@ public class HealthStateBaseTests
         var name = "TestState";
 
         // Act
-        var result = new TestHealthState(1, name, true);
+        var result = new TestHealthState(name, true);
 
         // Assert
         result.Description.ShouldContain(name);
@@ -127,7 +112,7 @@ public class HealthStateBaseTests
     public void CategoryIsHealthChecks()
     {
         // Act
-        var result = new TestHealthState(1, "Test", true);
+        var result = new TestHealthState("Test", true);
 
         // Assert
         result.Category.ShouldBe("HealthChecks");

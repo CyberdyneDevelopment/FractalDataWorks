@@ -8,17 +8,6 @@ namespace Fdw.Data.Abstractions.Tests.Converters;
 
 public sealed class DataTypeConverterBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter");
-
-        // Assert
-        converter.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -26,7 +15,7 @@ public sealed class DataTypeConverterBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Assert
         converter.Name.ShouldBe("IntConverter");
@@ -38,7 +27,7 @@ public sealed class DataTypeConverterBaseTests
     public void ConstructorSetsSourceType()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter", sourceType: "int");
+        var converter = new TestDataTypeConverter("IntConverter", sourceType: "int");
 
         // Assert
         converter.SourceType.ShouldBe("int");
@@ -50,7 +39,7 @@ public sealed class DataTypeConverterBaseTests
     public void ConstructorSetsTargetClrType()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter", targetClrType: typeof(int));
+        var converter = new TestDataTypeConverter("IntConverter", targetClrType: typeof(int));
 
         // Assert
         converter.TargetClrType.ShouldBe(typeof(int));
@@ -62,7 +51,7 @@ public sealed class DataTypeConverterBaseTests
     public void ConstructorSetsDbType()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter", dbType: DbType.Int32);
+        var converter = new TestDataTypeConverter("IntConverter", dbType: DbType.Int32);
 
         // Assert
         converter.DbType.ShouldBe(DbType.Int32);
@@ -74,7 +63,7 @@ public sealed class DataTypeConverterBaseTests
     public void SizeDefaultsToNull()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Assert
         converter.Size.ShouldBeNull();
@@ -86,7 +75,7 @@ public sealed class DataTypeConverterBaseTests
     public void PrecisionDefaultsToNull()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Assert
         converter.Precision.ShouldBeNull();
@@ -98,7 +87,7 @@ public sealed class DataTypeConverterBaseTests
     public void ScaleDefaultsToNull()
     {
         // Arrange & Act
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Assert
         converter.Scale.ShouldBeNull();
@@ -110,7 +99,7 @@ public sealed class DataTypeConverterBaseTests
     public void ToClrConvertsDbValueToClr()
     {
         // Arrange
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
         var dbValue = "42";
 
         // Act
@@ -126,7 +115,7 @@ public sealed class DataTypeConverterBaseTests
     public void ToDbConvertsClrValueToDb()
     {
         // Arrange
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
         var clrValue = 42;
 
         // Act
@@ -142,7 +131,7 @@ public sealed class DataTypeConverterBaseTests
     public void ToClrHandlesNullValue()
     {
         // Arrange
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Act
         var result = converter.ToClr(null);
@@ -157,7 +146,7 @@ public sealed class DataTypeConverterBaseTests
     public void ToDbHandlesNullValue()
     {
         // Arrange
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Act
         var result = converter.ToDb(null);
@@ -172,7 +161,7 @@ public sealed class DataTypeConverterBaseTests
     public void ImplementsIDataTypeConverter()
     {
         // Arrange
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Act & Assert
         converter.ShouldBeAssignableTo<IDataTypeConverter>();
@@ -184,7 +173,7 @@ public sealed class DataTypeConverterBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var converter = new TestDataTypeConverter(1, "IntConverter");
+        var converter = new TestDataTypeConverter("IntConverter");
 
         // Act & Assert
         converter.ShouldBeAssignableTo<DataTypeConverterBase>();
@@ -197,7 +186,6 @@ public sealed class DataTypeConverterBaseTests
     {
         // Arrange & Act
         var converter = new TestDataTypeConverter(
-            2,
             "StringConverter",
             sourceType: "nvarchar",
             targetClrType: typeof(string),
@@ -213,12 +201,11 @@ public sealed class DataTypeConverterBaseTests
     private sealed class TestDataTypeConverter : DataTypeConverterBase
     {
         public TestDataTypeConverter(
-            int id,
             string name,
             string sourceType = "int",
             Type? targetClrType = null,
             DbType dbType = DbType.Int32)
-            : base(id, name, sourceType, targetClrType ?? typeof(int), dbType)
+            : base(name, sourceType, targetClrType ?? typeof(int), dbType)
         {
         }
 

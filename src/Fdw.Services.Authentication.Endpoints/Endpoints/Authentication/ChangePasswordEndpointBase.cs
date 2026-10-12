@@ -3,9 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Results;
-using Fdw.Services.Authentication.Endpoints.Models;
 using Microsoft.Extensions.Logging;
-using Fdw.Services.Authentication.Clients.Models;
+using Fdw.Services.Authentication.Abstractions.Models;
 
 namespace Fdw.Services.Authentication.Endpoints;
 

@@ -27,7 +27,6 @@ public sealed class AutoDiscovery : DiscoveryMethodBase
     /// <summary>Initializes a new instance of the <see cref="AutoDiscovery"/> class.</summary>
     public AutoDiscovery()
         : base(
-            id: 1,
             name: "Auto",
             displayName: "Automatic Discovery",
             description: "Discovers the data store schema to automatically discover containers",

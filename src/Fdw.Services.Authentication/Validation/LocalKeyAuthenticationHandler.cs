@@ -1,7 +1,8 @@
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Claims.Abstractions;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.TokenManagers.Abstractions;
@@ -77,7 +78,7 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
         if (_scheme is null || _context is null)
             return AuthenticateResult.NoResult();
 
-        if (ReadBearerToken(_context) is not { Length: > 0 } token)
+        if (BearerTokenReader.Read(_context) is not { Length: > 0 } token)
             return AuthenticateResult.NoResult();
 
         var parameters = await ResolveParameters(_context.RequestAborted).ConfigureAwait(false);
@@ -92,7 +93,7 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
                 _log, ServiceName, validated.Exception?.Message ?? "no reason given")));
 
-        if (await CheckRevocation(validated.ClaimsIdentity, _context.RequestAborted).ConfigureAwait(false) is { } rejected)
+        if (await CheckRevocation(validated, _context.RequestAborted).ConfigureAwait(false) is { } rejected)
             return rejected;
 
         // The inbound claim map is not applied: JsonWebTokenHandler does not rewrite claim types the
@@ -103,27 +104,45 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
             new AuthenticationTicket(new ClaimsPrincipal(validated.ClaimsIdentity), _scheme.Name));
     }
 
-    /// <summary>Rejects a presented token whose <c>jti</c> is missing, unparseable, or on this host's deny-list.</summary>
-    /// <param name="identity">The already signature-validated token's claims.</param>
+    /// <summary>
+    /// Rejects a presented token whose <c>jti</c>, <c>sub</c> or <c>iat</c> is missing or unparseable, whose
+    /// <c>jti</c> is on this host's deny-list, or whose subject's sessions were ended after it was issued.
+    /// </summary>
+    /// <param name="validated">The already signature-validated token and its claims.</param>
     /// <param name="cancellationToken">A token to cancel the check.</param>
     /// <returns>A failure to return from <see cref="AuthenticateAsync"/>, or <see langword="null"/> to continue.</returns>
     /// <remarks>
-    /// <c>JwtTokenIssuer</c> mints <c>jti</c> unconditionally, so a token with none or an unparseable
-    /// one did not come from this host's own issuer — fail loud rather than let it through unchecked.
+    /// <c>JwtTokenIssuer</c> mints <c>jti</c>, <c>sub</c> and <c>iat</c> unconditionally, so a token missing
+    /// any of them did not come from this host's own issuer — fail loud rather than let it through unchecked.
     /// </remarks>
-    private async Task<AuthenticateResult?> CheckRevocation(ClaimsIdentity identity, CancellationToken cancellationToken)
+    private async Task<AuthenticateResult?> CheckRevocation(TokenValidationResult validated, CancellationToken cancellationToken)
     {
-        if (identity.FindFirst(ClaimDefinitions.jti.Name)?.Value is not { Length: > 0 } jtiClaim
+        if (validated.ClaimsIdentity.FindFirst(ClaimDefinitions.jti.Name)?.Value is not { Length: > 0 } jtiClaim
             || !Guid.TryParse(jtiClaim, out var jti))
         {
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
                 _log, ServiceName, "missing or unparseable jti claim")));
         }
 
-        var revoked = await _revocations.IsRevoked(jti, cancellationToken).ConfigureAwait(false);
+        if (validated.ClaimsIdentity.FindFirst(ClaimDefinitions.sub.Name)?.Value is not { Length: > 0 } subClaim
+            || !Guid.TryParse(subClaim, out var userId))
+        {
+            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
+                _log, ServiceName, "missing or unparseable sub claim")));
+        }
+
+        if (validated.SecurityToken is not JsonWebToken { IssuedAt: var issuedAt } || issuedAt == DateTime.MinValue)
+        {
+            return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
+                _log, ServiceName, "missing iat claim")));
+        }
+
+        var revoked = await _revocations
+            .IsRevoked(jti, userId, new DateTimeOffset(DateTime.SpecifyKind(issuedAt, DateTimeKind.Utc)), cancellationToken)
+            .ConfigureAwait(false);
         if (revoked.IsFailure)
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
-                _log, ServiceName, revoked.CurrentMessage ?? "revocation check failed")));
+                _log, ServiceName, "revocation check failed")));
 
         return revoked.Value
             ? AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(_log, ServiceName, "token revoked")))
@@ -131,16 +150,22 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
     }
 
     /// <summary>Builds what this scheme checks a token against, from the entry it was taken for.</summary>
-    /// <param name="cancellationToken">A token to cancel the reads.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <remarks>
+    /// This runs on every authenticated request, so it reads one entry: the one the scheme was taken
+    /// for, by the name the scheme carries, and only its row. The issuer and the audience are both
+    /// fields of that row, and nothing built here hangs below it. It used to read every declared
+    /// service whole, then this one again by Id (FDW-970).
+    /// </remarks>
     private async Task<IGenericResult<TokenValidationParameters>> ResolveParameters(CancellationToken cancellationToken)
     {
-        var headers = await _configuration.GetHeaders(cancellationToken).ConfigureAwait(false);
-        if (!headers.IsSuccess || headers.Value is null)
-            return headers.ToNewResult<TokenValidationParameters>();
+        var record = await _configuration.Get(ServiceName, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+        if (!record.IsSuccess)
+            return record.ToNewResult<TokenValidationParameters>();
 
-        // The issuer is on the domain row: every kind has one, and it is what routed the token here.
-        if (headers.Value.FirstOrDefault(
-                e => string.Equals(e.Name, ServiceName, StringComparison.OrdinalIgnoreCase)) is not { } header)
+        // Get returns the implementation the domain row names, so the LocalKey contract is what tells
+        // this entry from one of another kind. A name with no entry is a success carrying no value.
+        if (record.Value is not ILocalKeyAuthenticationConfiguration body)
         {
             return GenericResult<TokenValidationParameters>.Failure(
                 AuthenticationValidationLog.LocalKeyEntryUnreadable(_log, ServiceName));
@@ -148,18 +173,9 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
 
         // Through the same rule the binding was built with, so the string the selector matched and the
         // string checked here cannot differ - see IssuerName.
-        var issuer = IssuerName.Read(header.Authority, ServiceName, _log);
+        var issuer = IssuerName.Read(body.Authority, ServiceName, _log);
         if (!issuer.IsSuccess || issuer.Value is null)
             return issuer.ToNewResult<TokenValidationParameters>();
-
-        // The audience is on the implementation row, which the provider dispatches to by the kind the
-        // domain row names.
-        var implementation = await _configuration.Get(header.Id, cancellationToken).ConfigureAwait(false);
-        if (!implementation.IsSuccess || implementation.Value is not ILocalKeyAuthenticationConfiguration body)
-        {
-            return GenericResult<TokenValidationParameters>.Failure(
-                AuthenticationValidationLog.LocalKeyEntryUnreadable(_log, ServiceName));
-        }
 
         // Checked like every other input this method needs. A blank audience is not a null: the
         // column is nullable and the generated mapper converts DBNull to string.Empty, so an unset
@@ -182,7 +198,10 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
         return GenericResult<TokenValidationParameters>.Success(new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = issuer.Value,
+
+            // Both spellings — see JwtBearerAuthenticationHandler. The comparison is the JWT
+            // handler's and ordinal, so the issuer is expressed in both forms rather than rewritten.
+            ValidIssuers = IssuerName.Spellings(issuer.Value),
             ValidateAudience = true,
             ValidAudience = body.Audience,
             ValidateLifetime = true,
@@ -230,13 +249,4 @@ internal sealed class LocalKeyAuthenticationHandler : IAuthenticationHandler
         return Task.CompletedTask;
     }
 
-    private static string? ReadBearerToken(HttpContext context)
-    {
-        const string prefix = "Bearer ";
-        var header = context.Request.Headers.Authorization.ToString();
-
-        return header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            ? header[prefix.Length..].Trim()
-            : null;
-    }
 }

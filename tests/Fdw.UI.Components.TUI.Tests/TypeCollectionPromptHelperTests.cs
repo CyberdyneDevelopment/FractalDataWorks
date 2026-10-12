@@ -24,7 +24,6 @@ internal sealed class TestTypeOption : ITypeOption<int, TestTypeOption>
     public int Id { get; }
     public string Name { get; }
     public string Category { get; }
-    object ITypeOption.Id => Id;
 }
 
 public sealed class TypeCollectionPromptHelperTests
@@ -126,7 +125,7 @@ public sealed class TypeCollectionPromptHelperTests
         var constraints = typeParam.GetGenericParameterConstraints();
 
         // TOption must be class and implement ITypeOption
-        constraints.ShouldContain(t => t == typeof(ITypeOption));
+        constraints.ShouldContain(t => t == typeof(ITypeOption<int>));
     }
 
     [Fact]

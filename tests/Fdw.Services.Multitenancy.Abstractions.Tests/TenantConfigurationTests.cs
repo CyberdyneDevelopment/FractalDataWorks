@@ -24,35 +24,7 @@ public class TenantConfigurationTests
         result.AvailableRoles.ShouldNotBeNull();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ServiceTypeReturnsTenant()
-    {
-        // Arrange
-        var config = new TenantConfiguration();
 
-        // Act
-        var result = config.ServiceType;
-
-        // Assert
-        result.ShouldBe("Tenant");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void ServiceOptionTypeReturnsNull()
-    {
-        // Arrange
-        var config = new TenantConfiguration();
-
-        // Act
-        var result = config.ServiceOptionType;
-
-        // Assert
-        result.ShouldBeNull();
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -209,35 +181,7 @@ public class TenantConfigurationTests
         config.AvailableRoles.Count.ShouldBe(0);
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void SectionNameUsesSlug()
-    {
-        // Arrange
-        var config = new TenantConfiguration { Slug = "acme" };
 
-        // Act
-        var result = config.SectionName;
-
-        // Assert
-        result.ShouldBe("Tenants:acme");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void SectionNameUpdatesWithSlugChange()
-    {
-        // Arrange
-        var config = new TenantConfiguration { Slug = "acme" };
-
-        // Act
-        config.Slug = "contoso";
-
-        // Assert
-        config.SectionName.ShouldBe("Tenants:contoso");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

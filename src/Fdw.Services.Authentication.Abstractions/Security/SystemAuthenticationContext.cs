@@ -11,32 +11,45 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Why this type exists: <c>security.fn_TenantFilter</c> is unchanged and reads
-/// <c>SESSION_CONTEXT('UserId') IS NULL</c> as Mode 1 — a deliberate full-visibility system bypass.
-/// The application NEVER sends a null <c>UserId</c> itself: an established context with no
-/// Guid-parseable <see cref="UserId"/> resolves instead to the reserved deny-everywhere
-/// <see cref="AuthConstants.NoAccessPrincipalId"/> principal (see
-/// <c>MsSqlConnection.BuildSessionContextPlan</c>). Host bootstrap/startup reads (resolving
-/// <c>IConfigurationGateway</c> before the first request is served), migrations, and seed scripts
-/// run outside any HTTP request or tenant-scoped unit of work, so they have no
-/// <see cref="System.Security.Claims.ClaimsPrincipal"/> and no per-run <c>TenantId</c> — without
-/// this type, those reads would resolve to the deny-everywhere principal above and the application
-/// could not read its own connection/data-store catalog to boot. <c>SystemAuthenticationContext</c>
-/// gives those call sites a real, explicit <see cref="IAuthenticationContext"/> whose only effect is
-/// that <c>MsSqlConnection.SetUserSessionContext</c> sets NOTHING at all — no <c>SESSION_CONTEXT</c>
-/// keys whatsoever — which is exactly what the unchanged Mode 1 predicate above requires.
+/// System context sees and writes every tenant's rows. It is what host startup reads, platform
+/// lookups made on a caller's behalf (permissions, signing keys, revocation), and background runs
+/// execute as. <c>MsSqlConnection</c> expresses it as <c>SESSION_CONTEXT('System') = '1'</c> — a
+/// positive assertion, so a connection that sets no keys at all sees nothing (FDW-825).
+/// </para>
+/// <para>
+/// A system context may carry the tenant it is working for (<see cref="ActiveTenantId"/>): a
+/// background run belongs to the tenant that owns its pipeline. That tenant never narrows what the
+/// run sees — it decides only which tenant the rows the run writes default to, so a tenant's
+/// execution records and outputs land in that tenant rather than in the default tenant.
 /// </para>
 /// <para>
 /// This is NOT a fallback: it is never constructed implicitly when an identity is merely absent —
-/// that case resolves to the deny-everywhere principal, not this elevation. It must be constructed
-/// and assigned to <see cref="IAuthenticationContextAccessor.Current"/> explicitly, at a well-defined
-/// point in host bootstrap, and cleared before the host starts accepting requests — see
+/// that case resolves to the deny-everywhere <see cref="AuthConstants.NoAccessPrincipalId"/>
+/// principal. It must be constructed and assigned to
+/// <see cref="IAuthenticationContextAccessor.Current"/> explicitly — see
 /// <see cref="SystemAuthenticationContextScope"/> for the sanctioned set/restore mechanism.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
 public sealed class SystemAuthenticationContext : IAuthenticationContext
 {
+    /// <summary>
+    /// Initializes a system context that belongs to no tenant — host startup, platform lookups.
+    /// </summary>
+    public SystemAuthenticationContext()
+    {
+    }
+
+    /// <summary>
+    /// Initializes a system context working for <paramref name="tenantId"/> — a background run of
+    /// that tenant's work. Rows it writes default to that tenant; what it sees is not narrowed.
+    /// </summary>
+    /// <param name="tenantId">The tenant the work belongs to.</param>
+    public SystemAuthenticationContext(Guid tenantId)
+    {
+        ActiveTenantId = tenantId;
+    }
+
     /// <inheritdoc/>
     public string UserId => "system";
 
@@ -62,13 +75,10 @@ public sealed class SystemAuthenticationContext : IAuthenticationContext
     public DateTimeOffset? ExpiresAt => null;
 
     /// <inheritdoc/>
-    public Guid? ActiveTenantId => null;
+    public Guid? ActiveTenantId { get; }
 
     /// <inheritdoc/>
     public Guid? ActiveOrgId => null;
-
-    /// <inheritdoc/>
-    public bool IsCrossTenant => false;
 
     /// <inheritdoc/>
     public bool IsSystemContext => true;

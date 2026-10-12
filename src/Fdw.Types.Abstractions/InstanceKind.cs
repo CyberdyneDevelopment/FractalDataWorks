@@ -13,7 +13,7 @@ public sealed class InstanceKind : CollectionKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="InstanceKind"/> class.
     /// </summary>
-    public InstanceKind() : base(2, "Instance")
+    public InstanceKind() : base("Instance")
     {
     }
 }

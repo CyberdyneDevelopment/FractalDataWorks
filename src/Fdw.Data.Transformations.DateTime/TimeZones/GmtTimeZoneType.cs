@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "GMT")]
 public sealed class GmtTimeZoneType : TimeZoneTypeBase
 {
-    public GmtTimeZoneType() : base(8, "GMT", "GMT Standard Time") { }
+    public GmtTimeZoneType() : base("GMT", "GMT Standard Time") { }
 }

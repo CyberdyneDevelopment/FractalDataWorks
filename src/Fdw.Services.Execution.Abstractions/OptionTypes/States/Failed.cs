@@ -13,7 +13,7 @@ public sealed class Failed : ProcessStateBase
     /// <summary>
     /// Initializes a new instance of the Failed state.
     /// </summary>
-    public Failed() : base(4, "Failed", isTerminal: true, isError: true, isActive: false, isInitial: false)
+    public Failed() : base("Failed", isTerminal: true, isError: true, isActive: false, isInitial: false)
     {
     }
 }

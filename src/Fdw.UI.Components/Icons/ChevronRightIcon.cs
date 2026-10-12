@@ -11,7 +11,6 @@ public sealed class ChevronRightIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="ChevronRightIcon"/>.</summary>
     public ChevronRightIcon()
         : base(
-            5,
             "ChevronRight",
             "0 0 24 24",
             "none",

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Fdw.Services.Data.Clients.Models;
+using Fdw.Data.Abstractions;
 
 namespace Fdw.Services.Data.Endpoints;
 
@@ -21,6 +21,18 @@ public class CreateDataStoreRequest
     /// <summary>Gets or sets the data store description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the data store type the new store has, one of the types the connection's kind can back (the
+    /// connection type's <c>SupportedDataStoreTypes</c>). Left out, it is the kind's first.
+    /// </summary>
+    public string? StoreType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data store's data classification level (see
+    /// <c>GET /data-classifications</c>). Left out, it is <c>NotYetClassified</c>. An id that is not a level is refused.
+    /// </summary>
+    public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
+
     /// <summary>Gets or sets the write mode for ETL target operations.</summary>
     public string? WriteMode { get; set; }
 
@@ -30,12 +42,18 @@ public class CreateDataStoreRequest
     /// <summary>Gets or sets whether this data store is active.</summary>
     public bool IsActive { get; set; }
 
-    /// <summary>Gets or sets the paths the new store exposes.</summary>
+    /// <summary>Gets or sets the paths the new store exposes, each with its containers, fields and keys.</summary>
     /// <remarks>
-    /// The provider's Save cascades an aggregate's children, so paths supplied here are written with
-    /// the store rather than needing a second call per path. The client has sent these since it was
-    /// written; the request it binds to had nowhere to put them, so a store created with paths came
-    /// back with none and nothing said so.
+    /// The provider's Save cascades an aggregate's children, so the whole tree supplied here is written
+    /// with the store in one call. Containers used to be dropped here silently - only a path's name,
+    /// physical path and description were read - so each had to be added afterwards (FDW-920).
     /// </remarks>
-    public IList<DataPathRequest>? Paths { get; set; }
+    public IList<CreateDataStorePathRequest>? Paths { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the new store's schema is read from its connection and
+    /// saved with it: every path and container the connection's schema discovery finds, with fields
+    /// and keys, alongside whatever <see cref="Paths"/> supplies.
+    /// </summary>
+    public bool Discover { get; set; }
 }

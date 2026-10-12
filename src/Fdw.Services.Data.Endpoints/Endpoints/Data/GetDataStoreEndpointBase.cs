@@ -3,46 +3,46 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Base endpoint for retrieving a specific data store by name, including paths and containers.
+/// Base endpoint for retrieving a specific data store by name, including paths and containers:
+/// <c>POST /datastores/get</c>, its name in the body (FDW-978).
 /// </summary>
 public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNameRequest, DataStoreDetailResponse>
 {
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
-    private readonly ConnectionConfigurationProvider? _connectionProvider;
+    private readonly ConnectionNames _connectionNames;
 
-    /// <inheritdoc />
-    protected GetDataStoreEndpointBase(ILogger<GetDataStoreEndpointBase> logger, DataStoreConfigurationProvider dataStoreProvider)
-        : this(logger, dataStoreProvider, null)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="GetDataStoreEndpointBase"/> class
-    /// with connection resolution support.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="GetDataStoreEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataStoreProvider">The data store configuration provider.</param>
     /// <param name="connectionProvider">The connection configuration provider for resolving ConnectionName.</param>
+    /// <param name="authorization">Asks whether the caller may read connections, before the response names one.</param>
     protected GetDataStoreEndpointBase(
         ILogger<GetDataStoreEndpointBase> logger,
         DataStoreConfigurationProvider dataStoreProvider,
-        ConnectionConfigurationProvider? connectionProvider)
+        ConnectionConfigurationProvider connectionProvider,
+        IAuthorizationService authorization)
         : base(logger)
     {
-        _dataStoreProvider = dataStoreProvider;
-        _connectionProvider = connectionProvider;
+        _dataStoreProvider = dataStoreProvider ?? throw new ArgumentNullException(nameof(dataStoreProvider));
+        _connectionNames = new ConnectionNames(connectionProvider, authorization, logger);
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datastores";
+
+    /// <summary>Gets whether the data store is read by POST with its name in the body: it is.</summary>
+    protected override bool ReadByBody => true;
 
     /// <summary>Returns the data store name as the resource identifier.</summary>
     protected override string GetResourceIdentifier(DataStoreNameRequest request) => request.Name;
@@ -50,33 +50,54 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
     /// <summary>Finds a data store by name and maps it to a detail DTO.</summary>
     protected override async Task<IGenericResult<DataStoreDetailResponse?>> FindByIdentifier(DataStoreNameRequest request, CancellationToken ct)
     {
-        var configResult = await _dataStoreProvider.Get(request.Name, ct).ConfigureAwait(false);
+        // The store and its paths, each path a record only: its containers are read when that
+        // path is opened (/datastores/{name}/paths), not with the store (FDW-951).
+        var configResult = await _dataStoreProvider.Get(request.Name, ConfigurationLevels.Children, ct).ConfigureAwait(false);
+        if (configResult.IsFailure)
+            return configResult.ToNewResult<DataStoreDetailResponse?>();
 
-        if (!configResult.IsSuccess || configResult.Value is null)
-        {
-            // Not-found is not an error at this level -- return null to trigger 404
+        // Not configured answers 404; a read that failed says why instead of answering 404.
+        if (configResult.Value is null)
             return GenericResult<DataStoreDetailResponse?>.Success(null);
+
+        if (string.IsNullOrEmpty(configResult.Value.Implementation))
+        {
+            return GenericResult<DataStoreDetailResponse?>.Failure(
+                DataStoreEndpointLog.ImplementationMissing(Logger, request.Name));
         }
 
-        DataStoreDetailResponse? detail = MapToDetail(configResult.Value);
+        // Connections are for administrators to see: the name is there only when this caller may read
+        // connections and the row is visible to them. A connection that could not be READ is a fault to
+        // report, not an absence, so it still fails.
+        var connectionNames = await _connectionNames.Read(
+            [configResult.Value.ConnectionId], HttpContext.User, ct).ConfigureAwait(false);
+        if (connectionNames.IsFailure)
+        {
+            return GenericResult<DataStoreDetailResponse?>.Failure(
+                DataStoreEndpointLog.ConnectionNameUnresolved(Logger, configResult.Value.ConnectionId, configResult.Value.Name));
+        }
+
+        var detail = MapToDetail(configResult.Value);
+        detail.ConnectionName = connectionNames.Value!.Of(configResult.Value.ConnectionId, configResult.Value.Name);
         return GenericResult<DataStoreDetailResponse?>.Success(detail);
     }
 
     /// <summary>Maps a data store configuration to a detail DTO. Override for type-specific fields.</summary>
-    protected virtual DataStoreDetailResponse MapToDetail(DataStoreConfiguration config)
+    protected virtual DataStoreDetailResponse MapToDetail(IDataStoreImplementationConfiguration config)
     {
         return new DataStoreDetailResponse
         {
             Id = config.Id,
             Name = config.Name,
-            StoreType = config.ServiceOptionType ?? "Unknown",
+            IsActive = config.IsActive,
+            StoreType = config.Implementation,
             ConnectionId = config.ConnectionId,
-            ConnectionName = ResolveConnectionName(config.ConnectionId),
             Description = config.Description,
+            ClassificationId = config.ClassificationId,
             WriteMode = config.WriteMode,
             Paths = (config.Paths ?? []).Select(MapPath).ToList(),
             LastDiscoveredAt = config.LastDiscoveredAt,
-            CreatedAt = config.CreateDate,
+            CreatedAt = config.CreatedAt,
             ModifiedAt = config.ModifyDate,
             CreatedBy = config.CreateBy,
             ModifiedBy = config.ModifyBy,
@@ -85,7 +106,13 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
         };
     }
 
-    /// <summary>Maps a path configuration to a path DTO.</summary>
+    /// <summary>
+    /// Maps a path configuration to a path DTO -- shallow: no nested containers or fields. A
+    /// store's detail is the store plus its list of paths; a path's containers are fetched
+    /// separately (GetDataStorePathsEndpointBase, /datastores/{name}/paths) only when that
+    /// store's Containers view is actually opened, and a container's fields only when that
+    /// container is (RUI perf fix: lazy-load hierarchies, not everything in one response).
+    /// </summary>
     protected virtual DataStorePathResponse MapPath(DataPathConfiguration path)
     {
         return new DataStorePathResponse
@@ -95,53 +122,9 @@ public abstract class GetDataStoreEndpointBase : CrudGetEndpointBase<DataStoreNa
             PathType = path.PathType ?? string.Empty,
             PathValue = path.PathValue,
             Description = path.Description,
+            ClassificationId = path.ClassificationId,
             SourceDescription = path.SourceDescription,
-            Containers = (path.Containers ?? []).Select(MapContainer).ToList()
+            Containers = []
         };
     }
-
-    /// <summary>Maps a container configuration to a container DTO including fields.</summary>
-    protected virtual DataStoreContainerResponse MapContainer(DataContainerConfiguration container)
-    {
-        return new DataStoreContainerResponse
-        {
-            Id = container.Id,
-            Name = container.Name,
-            ContainerType = container.TypeId ?? string.Empty,
-            FieldCount = (container.Fields ?? []).Count,
-            SourceDescription = null,
-            SurrogateKeyFields = [],
-            NaturalKeyFields = [],
-            Fields = (container.Fields ?? []).Select(MapField).ToList()
-        };
-    }
-
-    /// <summary>Maps a field configuration to a field DTO.</summary>
-    protected virtual DataStoreFieldResponse MapField(DataContainerFieldConfiguration field)
-    {
-        return new DataStoreFieldResponse
-        {
-            Id = field.Id,
-            Name = field.Name,
-            NativeDataType = field.DataType,
-            IsNullable = false,
-            IsKey = false,
-            Ordinal = 0,
-            Description = field.Description
-        };
-    }
-
-#pragma warning disable VSTHRD002
-    private string ResolveConnectionName(Guid connectionId)
-    {
-        if (_connectionProvider is null)
-        {
-            return string.Empty;
-        }
-
-        var connectionResult = _connectionProvider.Get(connectionId).GetAwaiter().GetResult();
-        var connection = connectionResult.IsSuccess ? connectionResult.Value : null;
-        return connection?.Name ?? string.Empty;
-    }
-#pragma warning restore VSTHRD002
 }

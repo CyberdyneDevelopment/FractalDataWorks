@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Commands;
 using Fdw.Services.Authorization.Configuration;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,11 +26,7 @@ public sealed class DefaultAuthorizationServiceTests
 
     public DefaultAuthorizationServiceTests()
     {
-        _sut = new DefaultAuthorizationService(
-            CreateProviderMock<RoleConfiguration, RoleConfigurationCommand>(),
-            CreateProviderMock<PermissionConfiguration, PermissionConfigurationCommand>(),
-            CreateProviderMock<RolePermissionConfiguration, RolePermissionConfigurationCommand>(),
-            NullLogger<DefaultAuthorizationService>.Instance);
+        _sut = new DefaultAuthorizationService(NullLogger<DefaultAuthorizationService>.Instance);
     }
 
     [Fact]
@@ -87,11 +84,27 @@ public sealed class DefaultAuthorizationServiceTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public async Task Authorize_Grants_WhenGlobalWildcardPresent()
+    public async Task Authorize_Denies_WhenOnlyTheEverythingWildcardIsHeld()
     {
+        // FDW-1082: one rule for every check, and the endpoint pre-processor never honoured *:*. Nothing seeds it,
+        // so a super-grant that appears can only be a direct write to the catalogue -- not something to trust.
         var context = CreateAuthenticatedContext("user-1", ["*:*"]);
 
         var result = await _sut.Authorize(context, "anything", "read", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task HasPermission_Grants_WhenTheResourceWildcardIsHeld()
+    {
+        // HasPermission answers through the same rule as Authorize; it used to accept the exact name only.
+        var context = CreateAuthenticatedContext("user-1", ["users:*"]);
+
+        var result = await _sut.HasPermission(context, "users:read", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBeTrue();
@@ -378,21 +391,7 @@ public sealed class DefaultAuthorizationServiceTests
         return mock.Object;
     }
 
-    private static ImplementationConfigurationProviderBase<T, TCommand> CreateProviderMock<T, TCommand>()
-        where T : class, Fdw.Configuration.IGenericConfiguration
-        where TCommand : Fdw.Services.Configuration.ConfigurationCommandBase<T>
-    {
-        return new Mock<ImplementationConfigurationProviderBase<T, TCommand>>(
-            MockBehavior.Loose,
-            NullLogger<ImplementationConfigurationProviderBase<T, TCommand>>.Instance,
-            GatewayProviderFor(Mock.Of<IConfigurationGateway>(
-                g => g.DataStores == (System.Collections.Generic.IReadOnlyList<Fdw.Data.Abstractions.IDataStore>)System.Array.Empty<Fdw.Data.Abstractions.IDataStore>())),
-            "TestStore",
-            "cfg") // invalidator
-            .Object;
-    }
-
-    private static IConfigurationGatewayProvider GatewayProviderFor(IConfigurationGateway gateway)
+    private static AnyConnectionGateways GatewayProviderFor(IConfigurationGateway gateway)
         => new AnyConnectionGateways(gateway);
 
     private sealed class AnyConnectionGateways : IConfigurationGatewayProvider

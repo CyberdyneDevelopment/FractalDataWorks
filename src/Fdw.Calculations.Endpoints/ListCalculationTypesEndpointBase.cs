@@ -58,8 +58,7 @@ public abstract class ListCalculationTypesEndpointBase : EndpointWithoutRequest<
         {
             CalculationEndpointLog.ListCalculationTypesFailed(EndpointLogger);
             var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(result, HttpContext);
-            HttpContext.Response.StatusCode = statusCode;
-            await HttpContext.Response.WriteAsJsonAsync(errorResponse, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
             return;
         }
 

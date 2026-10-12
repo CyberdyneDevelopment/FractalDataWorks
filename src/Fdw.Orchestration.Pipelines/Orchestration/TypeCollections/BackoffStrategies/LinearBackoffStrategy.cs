@@ -22,7 +22,6 @@ public sealed class LinearBackoffStrategy : BackoffStrategyBase
     /// </summary>
     public LinearBackoffStrategy()
         : base(
-            id: 2,
             name: "Linear",
             initialDelay: TimeSpan.FromSeconds(1),
             maxDelay: TimeSpan.FromSeconds(30),

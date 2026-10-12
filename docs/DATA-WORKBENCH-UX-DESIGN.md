@@ -1,5 +1,7 @@
 # FDW Reference UI — "Data Workbench" UX Design
 
+> **FDW-872 (2026-09-22):** the Blazor packages this document names (`Fdw.UI.Components.Blazor`, the `*.razor` components, `Fdw.Web.Http.Authentication.Blazor`, the Blazor skins and renderers) were removed. The web console is now the separate `reference-react-ui` repository. Read the Blazor parts below as history.
+
 **Status:** Approved design, in execution (branch `feature/data-workbench-ux`, based on the reorganized `feature/1.5.0-development`).
 **Scope:** Redesign reference-ui (and the FDW UI packages it consumes) into a commercial-grade, end-to-end ETL authoring + exploration + visualization tool — built entirely on the existing render-mode-agnostic UI architecture.
 
@@ -113,10 +115,10 @@ ICanvasModel : IPageModel                  (UI.Abstractions — zero lib refs)
 ServiceTypeCollection<ICanvasRenderer>     (renderer registry — SAME pattern as charts)
   ICanvasRenderer.Render(ICanvasModel, IRenderContext) → RenderResult
   + capability flags: SupportsEditing, SupportsPorts, SupportsLargeGraphs, LayoutAlgorithms
-  [ServiceTypeOption] BlazorDiagramsRenderer  (Blazor-native node/port/link editor — default for Edit)
-  [ServiceTypeOption] CytoscapeRenderer       (JS interop — large lineage + layout algorithms; default for big View)
-  [ServiceTypeOption] SvgCanvasRenderer       (hand-rolled SVG — zero-dep, fully themeable baseline)
-  [ServiceTypeOption] SpectreCanvasRenderer   (TUI — tree/adjacency view of the same model)
+  [Implementation] BlazorDiagramsRenderer  (Blazor-native node/port/link editor — default for Edit)
+  [Implementation] CytoscapeRenderer       (JS interop — large lineage + layout algorithms; default for big View)
+  [Implementation] SvgCanvasRenderer       (hand-rolled SVG — zero-dep, fully themeable baseline)
+  [Implementation] SpectreCanvasRenderer   (TUI — tree/adjacency view of the same model)
 ```
 
 - **Default by capability/mode:** Edit → an editor-capable renderer (Blazor.Diagrams); large View → a layout/perf renderer (Cytoscape); a **renderer dropdown** switches per-canvas to showcase interop (same UX as the chart-renderer dropdown).
@@ -216,11 +218,11 @@ ServiceTypeCollection<IChartRenderer>      (the renderer registry — FDW plugin
   + capability flags (SupportsGeo, SupportsLargeSeries, SupportsCrossfilter…)
   + SupportedChartTypes  (which ChartTypes this renderer can draw)
 
-  [ServiceTypeOption] ApexChartsRenderer   (Blazor — polished default)
-  [ServiceTypeOption] EChartsRenderer      (Blazor — large data / exotic)
-  [ServiceTypeOption] RadzenChartRenderer  (Blazor — zero-JS)
-  [ServiceTypeOption] SyncfusionRenderer   (Blazor — max breadth)
-  [ServiceTypeOption] SpectreChartRenderer (TUI — bar/breakdown)
+  [Implementation] ApexChartsRenderer   (Blazor — polished default)
+  [Implementation] EChartsRenderer      (Blazor — large data / exotic)
+  [Implementation] RadzenChartRenderer  (Blazor — zero-JS)
+  [Implementation] SyncfusionRenderer   (Blazor — max breadth)
+  [Implementation] SpectreChartRenderer (TUI — bar/breakdown)
 ```
 
 **UI: two coupled, data-driven pickers**

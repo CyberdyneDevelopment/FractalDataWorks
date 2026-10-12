@@ -11,7 +11,7 @@ namespace Fdw.Data.Abstractions;
 /// <para>
 /// Distinct from <c>Foreign</c>, which means the row belongs to a parent and is meaningless without
 /// it — a typed body under its header, or a child under its owner. A ValuesFrom column cites a lookup
-/// and the row stands on its own: <c>data.DataSet.CategoryRowId</c> names a category, and a dataset
+/// and the row stands on its own: <c>data.DataSetConfiguration.CategoryId</c> names a category, and a dataset
 /// with no category is still a dataset.
 /// </para>
 /// <para>
@@ -30,7 +30,6 @@ public sealed class ValuesFromKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="ValuesFromKeyType"/> class.</summary>
     public ValuesFromKeyType()
         : base(
-            id: 8,
             name: "ValuesFrom",
             isPrimaryKey: false,
             hasConstraint: true,

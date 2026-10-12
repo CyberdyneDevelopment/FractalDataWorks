@@ -11,16 +11,15 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 public sealed class IndexObjectType : SchemaObjectTypeBase
 {
     /// <summary>
-    /// MudBlazor icon for indexes.
+    /// Material Symbols icon name for indexes.
     /// </summary>
-    public const string IndexIcon = "flash_on"; // Icons.Material.Filled.FlashOn
+    public const string IndexIcon = "flash_on";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="IndexObjectType"/> class.
     /// </summary>
     public IndexObjectType()
         : base(
-            id: 7,
             name: "Index",
             icon: IndexIcon,
             color: "Secondary",

@@ -6,8 +6,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Fdw.Commands.Data;
+using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.ServiceTypes;
@@ -19,11 +22,16 @@ using Fdw.Services.Etl.Results;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
+using Fdw.Services.Etl.Execution;
 using Fdw.Services.Etl.Logging;
+using Fdw.Services.Etl.Pipelines.Loads;
+using Fdw.Services.Etl.Pipelines.Loads.Builders;
 using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Pipelines.Abstractions.DataDestination;
+using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Pipelines.Abstractions.DataSource;
 using Fdw.Services.Pipelines.Notifications;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.Etl.Pipelines;
 
@@ -39,6 +47,11 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     private readonly IConnectionProvider? _connectionProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly IPipelineStatusBroadcaster? _broadcaster;
+    private readonly IDataSetConfigurationProvider? _dataSets;
+    private readonly IConnectionTypeResolver? _connectionTypes;
+    private readonly ITransformationConfigurationProvider? _transformations;
+    private readonly IRuleNotifier? _ruleNotifier;
+    private readonly IEffectiveSettingsProvider? _settings;
     private int _isExecuting;
 
     /// <summary>
@@ -51,6 +64,11 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     /// <param name="connectionProvider">The connection provider for feature-detecting write capabilities (optional).</param>
     /// <param name="dataStoreProvider">The data store provider for resolving container metadata (optional; required for HTTP record writer path).</param>
     /// <param name="broadcaster">Optional broadcaster for live status updates (optional).</param>
+    /// <param name="dataSets">The data set configuration provider that resolves the destination and source of load steps (optional; required to run load steps).</param>
+    /// <param name="connectionTypes">Finds a connection's type, so load steps are checked against the capabilities the type lists (optional; required to run load steps).</param>
+    /// <param name="transformations">The Transformation provider that resolves the named Transformations a field mapping's chain applies (optional; required to run a pipeline whose mappings state a chain).</param>
+    /// <param name="ruleNotifier">Sends a Notify stage's notification through its rule (optional; required to run a pipeline that has a Notify stage).</param>
+    /// <param name="settings">The settings provider the calculation limits of a Compute stage are read from when a run starts (optional; required to run a pipeline that has a Compute stage).</param>
     public BatchCopyPipeline(
         BatchCopyPipelineConfiguration configuration,
         ILogger<BatchCopyPipeline> logger,
@@ -58,7 +76,12 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         object? calculationEngine = null,
         IConnectionProvider? connectionProvider = null,
         IDataStoreProvider? dataStoreProvider = null,
-        IPipelineStatusBroadcaster? broadcaster = null)
+        IPipelineStatusBroadcaster? broadcaster = null,
+        IDataSetConfigurationProvider? dataSets = null,
+        IConnectionTypeResolver? connectionTypes = null,
+        ITransformationConfigurationProvider? transformations = null,
+        IRuleNotifier? ruleNotifier = null,
+        IEffectiveSettingsProvider? settings = null)
         : base(logger)
     {
         _configuration = configuration;
@@ -68,10 +91,15 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         _connectionProvider = connectionProvider;
         _dataStoreProvider = dataStoreProvider;
         _broadcaster = broadcaster;
+        _dataSets = dataSets;
+        _connectionTypes = connectionTypes;
+        _transformations = transformations;
+        _ruleNotifier = ruleNotifier;
+        _settings = settings;
     }
 
     /// <inheritdoc />
-    public override Guid Id => _configuration.Id;
+    public override string Id => _configuration.Id.ToString();
 
     /// <inheritdoc />
     public override string Name => _configuration.Name;
@@ -155,8 +183,41 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         finally
         {
             Interlocked.Exchange(ref _isExecuting, 0);
-            LookupTransformType.ClearCache();
         }
+    }
+
+    // What the three whole-set phases used to keep in locals, now that a run moves page by page. A run
+    // is one Execute call and Execute is not re-entrant (_isExecuting), so this is never shared.
+    private sealed class RunState(
+        TransformContext transformContext,
+        List<PipelineTransformConfiguration> transforms,
+        bool streams,
+        PipelineLoadPlan plan,
+        PipelineRunParameterBinder parameters,
+        DateTimeOffset startedAt)
+    {
+        // What the run does to load its output: the load mode or the ordered load steps.
+        public PipelineLoadPlan Plan { get; } = plan;
+
+        // The run's typed parameter values and the watermark row it moves forward on success.
+        public PipelineRunParameterBinder Parameters { get; } = parameters;
+
+        // When the run began: the watermark a successful run stores, and the moment a value source stamps.
+        public DateTimeOffset StartedAt { get; } = startedAt;
+
+        public TransformContext TransformContext { get; } = transformContext;
+
+        public List<PipelineTransformConfiguration> Transforms { get; } = transforms;
+
+        // True when each page can be transformed and loaded as it arrives. False when the result would
+        // differ from handling the whole set at once, in which case pages are gathered first.
+        public bool Streams { get; } = streams;
+
+        public int Batches { get; set; }
+
+        public int StepErrors { get; set; }
+
+        public bool Truncated { get; set; }
     }
 
     private async Task<IGenericResult<IEtlPipelineExecutionResult>> ExecutePhases(
@@ -166,121 +227,418 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
-        var extractResult = await ExtractRecords(gateway, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
-        if (!extractResult.IsSuccess)
+        // The Notify stages are gathered and checked before anything is read: a stage that cannot send fails the run at
+        // once, and its OnFailure hooks are not trusted to fire.
+        var hooks = NotifyHooks.Collect(_configuration.Transforms);
+        var checkedHooks = await hooks.Check(_ruleNotifier, Name, _logger, cancellationToken).ConfigureAwait(false);
+        if (!checkedHooks.IsSuccess)
         {
             result.Complete();
-            return extractResult.ToNewResult<IEtlPipelineExecutionResult>();
+            return checkedHooks.ToNewResult<IEtlPipelineExecutionResult>();
         }
 
-        var records = extractResult.Value!;
-
-        var transformResult = await TransformRecords(gateway, records, result, cancellationToken).ConfigureAwait(false);
-        if (!transformResult.IsSuccess)
+        var phases = await RunPhasesObserved(hooks, gateway, options, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
+        if (!phases.IsSuccess)
         {
+            await FireHooks(hooks, options, point => point.FiresOnFailure, result, cancellationToken).ConfigureAwait(false);
             result.Complete();
-            return transformResult.ToNewResult<IEtlPipelineExecutionResult>();
-        }
-
-        var transformedRecords = transformResult.Value!;
-
-        if (options.IsTestMode && options.SkipDestinationWrites)
-        {
-            EtlLog.TestModeWriteSkipped(_logger, Name, transformedRecords.Count);
-            result.RecordsLoaded = transformedRecords.Count;
-            result.Complete();
-            return GenericResult<IEtlPipelineExecutionResult>.Success(result);
-        }
-
-        var loadResult = await LoadRecords(gateway, transformedRecords, result, cancellationToken).ConfigureAwait(false);
-        if (!loadResult.IsSuccess)
-        {
-            result.Complete();
-            return loadResult.ToNewResult<IEtlPipelineExecutionResult>();
+            return phases.ToNewResult<IEtlPipelineExecutionResult>();
         }
 
         result.Complete();
         return GenericResult<IEtlPipelineExecutionResult>.Success(result);
     }
 
-    private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractRecords(
+    // An unexpected exception fails the run exactly as Execute reports it, but here, so the OnFailure hooks still fire.
+    private async Task<IGenericResult> RunPhasesObserved(
+        NotifyHooks hooks,
         IDataGateway gateway,
+        PipelineExecutionOptions options,
         int effectiveBatchSize,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
+        try
+        {
+            return await RunPhases(hooks, gateway, options, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            result.AddError(ex.Message);
+            return GenericResult.Failure(EtlLog.ExecutionFailed(_logger, Name, result.ExecutionId, ex.Message));
+        }
+    }
+
+    private async Task<IGenericResult> RunPhases(
+        NotifyHooks hooks,
+        IDataGateway gateway,
+        PipelineExecutionOptions options,
+        int effectiveBatchSize,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        var prepared = await PrepareRun(gateway, options, result, cancellationToken).ConfigureAwait(false);
+        if (!prepared.IsSuccess)
+        {
+            return prepared;
+        }
+
+        var streamed = await StreamBatches(gateway, options, effectiveBatchSize, prepared.Value!, result, cancellationToken).ConfigureAwait(false);
+        if (!streamed.IsSuccess)
+        {
+            return streamed;
+        }
+
+        var afterStage = await FireHooks(hooks, options, point => point.FiresAfterStage, result, cancellationToken).ConfigureAwait(false);
+        if (!afterStage.IsSuccess)
+        {
+            return afterStage;
+        }
+
+        var rejected = await RunRejectSteps(options, prepared.Value!, cancellationToken).ConfigureAwait(false);
+        if (!rejected.IsSuccess)
+        {
+            return rejected;
+        }
+
+        var advanced = await RecordWatermark(gateway, options, prepared.Value!, result, cancellationToken).ConfigureAwait(false);
+        if (!advanced.IsSuccess)
+        {
+            return advanced;
+        }
+
+        LogRunCompleted(options, result);
+        return await FireHooks(hooks, options, point => point.FiresAfterLoad, result, cancellationToken).ConfigureAwait(false);
+    }
+
+    // A dry run (test mode that skips destination writes) has no side effects, so it sends nothing; the stages were
+    // still checked at the start of the run.
+    private async Task<IGenericResult> FireHooks(
+        NotifyHooks hooks,
+        PipelineExecutionOptions options,
+        Func<IRunPoint, bool> firesAt,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        if (hooks.IsEmpty || SkipsDestinationWrites(options))
+        {
+            return GenericResult.Success();
+        }
+
+        return await hooks.Fire(
+            firesAt, NotifyRunFacts.Of(_configuration.Id, Name, result), _ruleNotifier!, _logger, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<RunState>> PrepareRun(
+        IDataGateway gateway,
+        PipelineExecutionOptions options,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        if (_configuration.SourceKind == null || _configuration.SourceKind == DataSourceKinds.NotFound)
+        {
+            return GenericResult<RunState>.Failure(EtlLog.SourceKindRequired(_logger, Name));
+        }
+
+        var plan = PipelineLoadPlan.Create(_configuration, _logger);
+        if (!plan.IsSuccess)
+        {
+            return plan.ToNewResult<RunState>();
+        }
+
+        var parameters = await PipelineRunParameterBinder.Bind(
+            gateway, EtlPipelineTypes.OperationalConnection, _configuration, options, _logger, cancellationToken).ConfigureAwait(false);
+        if (!parameters.IsSuccess)
+        {
+            return parameters.ToNewResult<RunState>();
+        }
+
+        var writesWholeSet = await DestinationWritesWholeSet(options, cancellationToken).ConfigureAwait(false);
+        if (!writesWholeSet.IsSuccess)
+        {
+            return writesWholeSet.ToNewResult<RunState>();
+        }
+
+        var context = await NewTransformContext(gateway, result, parameters.Value!, cancellationToken).ConfigureAwait(false);
+        if (!context.IsSuccess)
+        {
+            return context.ToNewResult<RunState>();
+        }
+
+        var transforms = StageRunner.Ordered(_configuration.Transforms);
+        return GenericResult<RunState>.Success(new RunState(
+            context.Value!,
+            transforms,
+            streams: !writesWholeSet.Value
+                && !plan.Value!.NeedsCompleteSet
+                && !StageRunner.RequiresCompleteInput(transforms),
+            plan.Value!,
+            parameters.Value!,
+            DateTimeOffset.UtcNow));
+    }
+
+    // Why the chains are resolved here, before any record moves: a Map stage's field mapping names its Transformations by id,
+    // and a Transformation that no longer resolves must fail the run naming it, not be skipped halfway through the data.
+    private async Task<IGenericResult<TransformContext>> NewTransformContext(
+        IDataGateway gateway,
+        EtlPipelineExecutionResult result,
+        PipelineRunParameterBinder parameters,
+        CancellationToken cancellationToken)
+    {
+        var chains = await FieldTransformChains.Resolve(StageRunner.Ordered(_configuration.Transforms), _transformations, _logger, cancellationToken).ConfigureAwait(false);
+        if (!chains.IsSuccess)
+        {
+            return chains.ToNewResult<TransformContext>();
+        }
+
+        var built = await BuiltCalculationResolver.Resolve(StageRunner.Ordered(_configuration.Transforms), _transformations, _settings, _logger, cancellationToken).ConfigureAwait(false);
+        if (!built.IsSuccess)
+        {
+            return built.ToNewResult<TransformContext>();
+        }
+
+        return GenericResult<TransformContext>.Success(new TransformContext(
+            executionId: result.ExecutionId,
+            logger: _logger,
+            variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
+            calculationEngine: _calculationEngine,
+            connectionProvider: _connectionProvider,
+            dataGateway: gateway,
+            parameters: parameters.Values,
+            fieldTransformChains: chains.Value!,
+            builtCalculations: built.Value!.Calculations,
+            builtSets: built.Value.Sets));
+    }
+
+    // An HTTP record writer sends the whole set in one WriteRecords call, so it has to be handed the
+    // whole set; every other destination takes batches.
+    private async Task<IGenericResult<bool>> DestinationWritesWholeSet(
+        PipelineExecutionOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (SkipsDestinationWrites(options)
+            || _connectionProvider == null
+            || _configuration.DestinationKind == null
+            || !string.Equals(_configuration.DestinationKind.Name, "Connection", StringComparison.Ordinal)
+            || string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
+        {
+            return GenericResult<bool>.Success(false);
+        }
+
+        var connectionResult = await _connectionProvider.Get(
+            _configuration.DestinationConnectionName, cancellationToken).ConfigureAwait(false);
+        return connectionResult.IsSuccess
+            ? GenericResult<bool>.Success(connectionResult.Value is IHttpRecordWriterConnection)
+            : connectionResult.ToNewResult<bool>();
+    }
+
+    private static bool SkipsDestinationWrites(PipelineExecutionOptions options)
+        => options.IsTestMode && options.SkipDestinationWrites;
+
+    // Reads the source a page at a time. When the run streams, each page is transformed and loaded before
+    // the next is read, so memory is bounded by one page. Otherwise pages are gathered and handled as one
+    // batch after the last, which is exactly what the whole-set phases did.
+    private async Task<IGenericResult> StreamBatches(
+        IDataGateway gateway,
+        PipelineExecutionOptions options,
+        int effectiveBatchSize,
+        RunState run,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
         EtlLog.ExtractStarted(_logger, Name);
+        EtlLog.TransformStarted(_logger, run.Transforms.Count);
+        if (!SkipsDestinationWrites(options))
+        {
+            EtlLog.LoadStarted(_logger, Name);
+        }
+
+        var pending = new List<IDictionary<string, object?>>();
+        var skip = 0;
+        var hasMore = true;
+
+        while (hasMore)
+        {
+            var page = await ExtractPage(gateway, skip, effectiveBatchSize, result, cancellationToken).ConfigureAwait(false);
+            if (!page.IsSuccess)
+            {
+                return page;
+            }
+
+            skip += page.Value!.Count;
+            hasMore = page.Value.Count > 0 && page.Value.Count == effectiveBatchSize;
+            pending.AddRange(page.Value);
+
+            if (pending.Count > 0 && (run.Streams || !hasMore))
+            {
+                var processed = await ProcessBatch(gateway, options, pending, run, result, cancellationToken).ConfigureAwait(false);
+                if (!processed.IsSuccess)
+                {
+                    return processed;
+                }
+
+                pending.Clear();
+            }
+        }
+
+        // An empty source still runs the transforms once, as it always did, so a misconfigured step is
+        // reported instead of passing silently because there happened to be nothing to feed it.
+        return run.Batches == 0
+            ? await ProcessBatch(gateway, options, pending, run, result, cancellationToken).ConfigureAwait(false)
+            : GenericResult.Success();
+    }
+
+    private async Task<IGenericResult> ProcessBatch(
+        IDataGateway gateway,
+        PipelineExecutionOptions options,
+        List<IDictionary<string, object?>> records,
+        RunState run,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        run.Batches++;
+
+        var transformed = await TransformRecords(records, run, result, cancellationToken).ConfigureAwait(false);
+        if (!transformed.IsSuccess)
+        {
+            return transformed;
+        }
+
+        if (SkipsDestinationWrites(options))
+        {
+            result.RecordsLoaded += transformed.Value!.Count;
+            return GenericResult.Success();
+        }
+
+        return await LoadRecords(gateway, transformed.Value!, run, result, cancellationToken).ConfigureAwait(false);
+    }
+
+    private void LogRunCompleted(PipelineExecutionOptions options, EtlPipelineExecutionResult result)
+    {
+        EtlLog.ExtractCompleted(_logger, result.RecordsExtracted, result.ExtractDuration.TotalMilliseconds);
+        EtlLog.TransformCompleted(_logger, result.RecordsTransformed, result.TransformDuration.TotalMilliseconds);
+
+        if (SkipsDestinationWrites(options))
+        {
+            EtlLog.TestModeWriteSkipped(_logger, Name, result.RecordsLoaded);
+            return;
+        }
+
+        EtlLog.LoadCompleted(_logger, result.RecordsLoaded, result.LoadDuration.TotalMilliseconds);
+    }
+
+    private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractPage(
+        IDataGateway gateway,
+        int skip,
+        int effectiveBatchSize,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
         var extractStopwatch = Stopwatch.StartNew();
 
-        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
 
-        if (_configuration.SourceKind == null || _configuration.SourceKind == DataSourceKinds.NotFound)
+            var page = await ReadPage(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
+            if (page.IsSuccess)
+            {
+                result.RecordsExtracted += page.Value!.Count;
+            }
+
+            return page;
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<List<IDictionary<string, object?>>>.Failure(
+                EtlLog.ExtractFailed(_logger, ex, Name));
+        }
+        finally
+        {
+            result.ExtractDuration += extractStopwatch.Elapsed;
+        }
+    }
+
+    private async Task<IGenericResult<List<IDictionary<string, object?>>>> ReadPage(
+        IDataGateway gateway,
+        int skip,
+        int effectiveBatchSize,
+        CancellationToken cancellationToken)
+    {
+        if (_configuration.SourceKind is not { } sourceKind)
         {
             return GenericResult<List<IDictionary<string, object?>>>.Failure(
                 EtlLog.SourceKindRequired(_logger, Name));
         }
 
-        try
+        if (string.Equals(sourceKind.Name, "DataSet", StringComparison.Ordinal))
         {
-            var allRecords = new List<IDictionary<string, object?>>();
-            var skip = 0;
-            var hasMore = true;
-
-            while (hasMore)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                IGenericResult<List<IDictionary<string, object?>>> batchResult;
-
-                if (string.Equals(_configuration.SourceKind.Name, "DataSet", StringComparison.Ordinal))
-                {
-                    // ELT path: resolve via dataset dispatch (carries store→path→container + RecordSelector).
-                    batchResult = await ExtractBatchFromDataSet(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
-                }
-                else if (string.Equals(_configuration.SourceKind.Name, "Connection", StringComparison.Ordinal))
-                {
-                    // ETL path: read directly from the physical connection + container. B3 HTTP branch
-                    // will add its own logic inside ExtractBatchFromConnection when the HTTP connection
-                    // type is detected. This method is the single extension point for connection-based reads.
-                    batchResult = await ExtractBatchFromConnection(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
-                }
-                else
-                {
-                    return GenericResult<List<IDictionary<string, object?>>>.Failure(
-                        EtlLog.UnknownSourceKind(_logger, Name, _configuration.SourceKind.Name));
-                }
-
-                if (!batchResult.IsSuccess)
-                {
-                    return batchResult;
-                }
-
-                var batch = batchResult.Value!;
-                if (batch.Count == 0)
-                {
-                    hasMore = false;
-                }
-                else
-                {
-                    allRecords.AddRange(batch);
-                    skip += batch.Count;
-                    hasMore = batch.Count == effectiveBatchSize;
-                }
-            }
-
-            extractStopwatch.Stop();
-            result.RecordsExtracted = allRecords.Count;
-            result.ExtractDuration = extractStopwatch.Elapsed;
-            EtlLog.ExtractCompleted(_logger, allRecords.Count, extractStopwatch.Elapsed.TotalMilliseconds);
-
-            return GenericResult<List<IDictionary<string, object?>>>.Success(allRecords);
+            // ELT path: resolve via dataset dispatch (carries store→path→container + RecordSelector).
+            return await ExtractBatchFromDataSet(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+
+        if (string.Equals(sourceKind.Name, "Connection", StringComparison.Ordinal))
         {
-            extractStopwatch.Stop();
+            // ETL path: read directly from the physical connection + container. B3 HTTP branch
+            // will add its own logic inside ExtractBatchFromConnection when the HTTP connection
+            // type is detected. This method is the single extension point for connection-based reads.
+            return await ExtractBatchFromConnection(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (string.Equals(sourceKind.Name, "DataStore", StringComparison.Ordinal))
+        {
+            // ETL path: read one container of a configured data store, addressed by store, path and container.
+            return await ExtractBatchFromDataStore(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
+        }
+
+        return GenericResult<List<IDictionary<string, object?>>>.Failure(
+            EtlLog.UnknownSourceKind(_logger, Name, sourceKind.Name));
+    }
+
+    // ETL path: source is one container of a configured data store (FDW-1103). The gateway resolves the store as
+    // the run's tenant-run principal, so row-level security and the refusal of host-declared stores apply exactly
+    // as they do to any other read; nothing here names a connection type.
+    private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatchFromDataStore(
+        IDataGateway gateway,
+        int skip,
+        int effectiveBatchSize,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_configuration.SourceDataStoreName)
+            || string.IsNullOrWhiteSpace(_configuration.SourceDataStorePath)
+            || string.IsNullOrWhiteSpace(_configuration.SourceContainerName))
+        {
             return GenericResult<List<IDictionary<string, object?>>>.Failure(
-                EtlLog.ExtractFailed(_logger, ex, Name));
+                EtlLog.ExtractFailed(_logger, Name, "SourceDataStoreName, SourceDataStorePath and SourceContainerName are all required when SourceKind is DataStore"));
         }
+
+        var queryCommand = new QueryCommand<Dictionary<string, object?>>
+        {
+            Paging = new PagingExpression
+            {
+                Skip = skip,
+                Take = effectiveBatchSize
+            }
+        };
+
+        var queryResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+            queryCommand,
+            new DataStoreTarget(_configuration.SourceDataStoreName, _configuration.SourceDataStorePath, _configuration.SourceContainerName),
+            cancellationToken).ConfigureAwait(false);
+
+        if (!queryResult.IsSuccess)
+        {
+            return queryResult.ToNewResult<List<IDictionary<string, object?>>>();
+        }
+
+        if (queryResult.Value is not { } rows)
+        {
+            return GenericResult<List<IDictionary<string, object?>>>.Failure(
+                EtlLog.ExtractFailed(_logger, Name, "the data store read succeeded but returned no row set"));
+        }
+
+        return GenericResult<List<IDictionary<string, object?>>>.Success(
+            rows.Cast<IDictionary<string, object?>>().ToList());
     }
 
     // ELT path: source is a pre-defined logical DataSet — resolved through the DataSet dispatch,
@@ -371,74 +729,45 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     }
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> TransformRecords(
-        IDataGateway gateway,
         List<IDictionary<string, object?>> records,
+        RunState run,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
-        var transformCount = _configuration.Transforms?.Count ?? 0;
-        EtlLog.TransformStarted(_logger, transformCount);
         var transformStopwatch = Stopwatch.StartNew();
-
-        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
-            if (_configuration.Transforms == null || _configuration.Transforms.Count == 0)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (run.Transforms.Count == 0)
             {
-                transformStopwatch.Stop();
-                result.RecordsTransformed = records.Count;
-                result.TransformDuration = transformStopwatch.Elapsed;
-                EtlLog.TransformCompleted(_logger, records.Count, transformStopwatch.Elapsed.TotalMilliseconds);
+                result.RecordsTransformed += records.Count;
                 return GenericResult<List<IDictionary<string, object?>>>.Success(records);
             }
 
-            var orderedTransforms = _configuration.Transforms
-                .Where(t => t.IsEnabled)
-                .OrderBy(t => t.ExecutionOrder)
-                .ToList();
-
-            var transformContext = new TransformContext(
-                executionId: result.ExecutionId,
-                logger: _logger,
-                variables: new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase),
-                calculationEngine: _calculationEngine,
-                connectionProvider: _connectionProvider,
-                dataGateway: gateway);
-
-            var loopResult = await TransformStepFold(
-                records, orderedTransforms, transformContext, result, cancellationToken).ConfigureAwait(false);
-
-            transformStopwatch.Stop();
-            if (!loopResult.IsSuccess)
-            {
-                return loopResult;
-            }
-
-            result.TransformDuration = transformStopwatch.Elapsed;
-            EtlLog.TransformCompleted(_logger, result.RecordsTransformed, transformStopwatch.Elapsed.TotalMilliseconds);
-
-            return loopResult;
+            return await TransformStepFold(records, run, result, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            transformStopwatch.Stop();
             return GenericResult<List<IDictionary<string, object?>>>.Failure(
                 EtlLog.TransformFailed(_logger, ex, Name));
+        }
+        finally
+        {
+            result.TransformDuration += transformStopwatch.Elapsed;
         }
     }
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> TransformStepFold(
         List<IDictionary<string, object?>> records,
-        List<PipelineTransformConfiguration> orderedTransforms,
-        TransformContext transformContext,
+        RunState run,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
         var currentRecords = records;
-        var stepErrorCount = 0;
 
-        foreach (var step in orderedTransforms)
+        foreach (var step in run.Transforms)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -452,16 +781,16 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             var inCount = currentRecords.Count;
             EtlLog.TransformStepStarted(_logger, step.Name, step.OperationType, inCount);
 
-            var stepResult = await transformType.TransformBatch(currentRecords, step, transformContext, cancellationToken).ConfigureAwait(false);
+            var stepResult = await transformType.TransformBatch(currentRecords, step, run.TransformContext, cancellationToken).ConfigureAwait(false);
 
             if (!stepResult.IsSuccess)
             {
-                if (!_configuration.ContinueOnError)
+                if (!_configuration.ContinueOnError || StageFailures.StopsRun(stepResult))
                 {
                     return stepResult.ToNewResult<List<IDictionary<string, object?>>>();
                 }
 
-                stepErrorCount++;
+                run.StepErrors++;
             }
             else
             {
@@ -470,15 +799,15 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
             EtlLog.TransformStepCompleted(_logger, step.Name, currentRecords.Count, inCount);
 
-            if (stepErrorCount + transformContext.Errors.Count >= _configuration.MaxErrors)
+            if (run.StepErrors + run.TransformContext.Errors.Count >= _configuration.MaxErrors)
             {
                 return GenericResult<List<IDictionary<string, object?>>>.Failure(
-                    EtlLog.ExecutionFailed(_logger, Name, result.ExecutionId, $"Maximum error count ({_configuration.MaxErrors}) exceeded"));
+                    EtlLog.ExecutionFailed(_logger, Name, run.TransformContext.ExecutionId, $"Maximum error count ({_configuration.MaxErrors}) exceeded"));
             }
         }
 
-        result.RecordsTransformed = currentRecords.Count;
-        result.RecordsFailed = stepErrorCount + transformContext.Errors.Count;
+        result.RecordsTransformed += currentRecords.Count;
+        result.RecordsFailed = run.StepErrors + run.TransformContext.Errors.Count;
 
         return GenericResult<List<IDictionary<string, object?>>>.Success(currentRecords);
     }
@@ -486,95 +815,89 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     private async Task<IGenericResult> LoadRecords(
         IDataGateway gateway,
         List<IDictionary<string, object?>> records,
+        RunState run,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
-        EtlLog.LoadStarted(_logger, Name);
         var loadStopwatch = Stopwatch.StartNew();
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (_configuration.DestinationKind == null || _configuration.DestinationKind == DataDestinationKinds.NotFound)
-        {
-            loadStopwatch.Stop();
-            return GenericResult.Failure(EtlLog.DestinationKindRequired(_logger, Name));
-        }
 
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (run.Plan.NeedsCompleteSet)
+            {
+                return await LoadThroughUnitOfWork(records, run, result, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (_configuration.DestinationKind == null || _configuration.DestinationKind == DataDestinationKinds.NotFound)
+            {
+                return GenericResult.Failure(EtlLog.DestinationKindRequired(_logger, Name));
+            }
+
             if (records.Count == 0)
             {
-                loadStopwatch.Stop();
-                result.RecordsLoaded = 0;
-                result.LoadDuration = loadStopwatch.Elapsed;
-                EtlLog.LoadCompleted(_logger, 0, loadStopwatch.Elapsed.TotalMilliseconds);
                 return GenericResult.Success();
             }
 
-            if (string.Equals(_configuration.DestinationKind.Name, "DataSet", StringComparison.Ordinal))
+            var toDataSet = string.Equals(_configuration.DestinationKind.Name, "DataSet", StringComparison.Ordinal);
+            if (!toDataSet && !string.Equals(_configuration.DestinationKind.Name, "Connection", StringComparison.Ordinal))
             {
-                // ELT path: write via DataSet dispatch (carries store→path→container address).
-                if (_configuration.TruncateBeforeLoad)
-                {
-                    var truncateResult = await TruncateDataSet(gateway, cancellationToken).ConfigureAwait(false);
-                    if (!truncateResult.IsSuccess)
-                    {
-                        loadStopwatch.Stop();
-                        return truncateResult;
-                    }
-                }
-
-                var totalLoaded = await LoadToDataSet(gateway, records, result, cancellationToken).ConfigureAwait(false);
-                if (!totalLoaded.IsSuccess)
-                {
-                    loadStopwatch.Stop();
-                    return totalLoaded;
-                }
-
-                loadStopwatch.Stop();
-                result.RecordsLoaded = totalLoaded.Value;
-                result.LoadDuration = loadStopwatch.Elapsed;
-                EtlLog.LoadCompleted(_logger, totalLoaded.Value, loadStopwatch.Elapsed.TotalMilliseconds);
-                return GenericResult.Success();
-            }
-            else if (string.Equals(_configuration.DestinationKind.Name, "Connection", StringComparison.Ordinal))
-            {
-                // ETL path: write directly to the physical connection + container.
-                if (_configuration.TruncateBeforeLoad)
-                {
-                    var truncateResult = await TruncateConnection(gateway, cancellationToken).ConfigureAwait(false);
-                    if (!truncateResult.IsSuccess)
-                    {
-                        loadStopwatch.Stop();
-                        return truncateResult;
-                    }
-                }
-
-                var totalLoaded = await LoadToConnection(gateway, records, result, cancellationToken).ConfigureAwait(false);
-                if (!totalLoaded.IsSuccess)
-                {
-                    loadStopwatch.Stop();
-                    return totalLoaded;
-                }
-
-                loadStopwatch.Stop();
-                result.RecordsLoaded = totalLoaded.Value;
-                result.LoadDuration = loadStopwatch.Elapsed;
-                EtlLog.LoadCompleted(_logger, totalLoaded.Value, loadStopwatch.Elapsed.TotalMilliseconds);
-                return GenericResult.Success();
-            }
-            else
-            {
-                loadStopwatch.Stop();
                 return GenericResult.Failure(EtlLog.UnknownDestinationKind(_logger, Name, _configuration.DestinationKind.Name));
             }
+
+            var truncated = await TruncateOnce(gateway, toDataSet, run, cancellationToken).ConfigureAwait(false);
+            if (!truncated.IsSuccess)
+            {
+                return truncated;
+            }
+
+            // DataSet is the ELT path (written through DataSet dispatch, which carries the store→path→
+            // container address); Connection is the ETL path (written straight to the physical
+            // connection + container).
+            var loaded = toDataSet
+                ? await LoadToDataSet(gateway, records, run, result, cancellationToken).ConfigureAwait(false)
+                : await LoadToConnection(gateway, records, run, result, cancellationToken).ConfigureAwait(false);
+            if (!loaded.IsSuccess)
+            {
+                return loaded;
+            }
+
+            result.RecordsLoaded += loaded.Value;
+            return GenericResult.Success();
         }
         catch (Exception ex)
         {
-            loadStopwatch.Stop();
-            return GenericResult.Failure(
-                EtlLog.LoadFailed(_logger, ex, Name));
+            return GenericResult.Failure(EtlLog.LoadFailed(_logger, ex, Name));
         }
+        finally
+        {
+            result.LoadDuration += loadStopwatch.Elapsed;
+        }
+    }
+
+    // Truncation happens once per run, immediately before the first batch is written -- after that batch
+    // has been extracted and transformed, so an empty or unreadable source never empties the destination.
+    private async Task<IGenericResult> TruncateOnce(
+        IDataGateway gateway,
+        bool toDataSet,
+        RunState run,
+        CancellationToken cancellationToken)
+    {
+        if (!run.Plan.TruncatesFirst || run.Truncated)
+        {
+            return GenericResult.Success();
+        }
+
+        var truncateResult = toDataSet
+            ? await TruncateDataSet(gateway, cancellationToken).ConfigureAwait(false)
+            : await TruncateConnection(gateway, cancellationToken).ConfigureAwait(false);
+        if (truncateResult.IsSuccess)
+        {
+            run.Truncated = true;
+        }
+
+        return truncateResult;
     }
 
     // ELT path: destination is a single-source DataSet sink. Truncate is forwarded through the DataSet
@@ -600,10 +923,11 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         return GenericResult.Success();
     }
 
-    // ELT path: bulk insert via DataSet dispatch.
+    // ELT path: the pipeline's own load via DataSet dispatch.
     private async Task<IGenericResult<int>> LoadToDataSet(
         IDataGateway gateway,
         List<IDictionary<string, object?>> records,
+        RunState run,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
@@ -613,6 +937,20 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 EtlLog.LoadFailed(_logger, Name, "DestinationDataSet is required when DestinationKind is DataSet"));
         }
 
+        var target = new DataSetTarget(_configuration.DestinationDataSet);
+        return await LoadBatches(
+            records, run, result, (command, token) => gateway.Execute<int>(command, target, token), cancellationToken).ConfigureAwait(false);
+    }
+
+    // Splits the output into batches, builds the load command of each (an insert, or an upsert) and runs it through
+    // execute; a failed batch fails the load unless the pipeline continues on error.
+    private async Task<IGenericResult<int>> LoadBatches(
+        List<IDictionary<string, object?>> records,
+        RunState run,
+        EtlPipelineExecutionResult result,
+        Func<IDataCommand, CancellationToken, Task<IGenericResult<int>>> execute,
+        CancellationToken cancellationToken)
+    {
         var totalLoaded = 0;
         var batches = records
             .Select((record, index) => new { record, index })
@@ -624,24 +962,25 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var insertResult = await gateway.Execute<int>(
-                new BulkInsertCommand<IDictionary<string, object?>>(batch),
-                new DataSetTarget(_configuration.DestinationDataSet),
-                cancellationToken).ConfigureAwait(false);
-
-            if (!insertResult.IsSuccess)
+            var command = OwnLoadCommand(run, batch);
+            if (!command.IsSuccess)
             {
-                if (!_configuration.ContinueOnError)
-                {
-                    return GenericResult<int>.Failure(
-                        EtlLog.LoadFailed(_logger, Name, GetFirstMessageText(insertResult.Messages) ?? "Unknown error"));
-                }
+                return command.ToNewResult<int>();
+            }
 
+            var insertResult = await execute(command.Value!, cancellationToken).ConfigureAwait(false);
+            if (insertResult.IsSuccess)
+            {
+                totalLoaded += insertResult.Value;
+            }
+            else if (_configuration.ContinueOnError)
+            {
                 result.AddError($"Batch load failed: {GetFirstMessageText(insertResult.Messages)}");
             }
             else
             {
-                totalLoaded += insertResult.Value;
+                return GenericResult<int>.Failure(
+                    EtlLog.LoadFailed(_logger, Name, GetFirstMessageText(insertResult.Messages) ?? "Unknown error"));
             }
         }
 
@@ -689,6 +1028,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     private async Task<IGenericResult<int>> LoadToConnection(
         IDataGateway gateway,
         List<IDictionary<string, object?>> records,
+        RunState run,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
@@ -717,45 +1057,21 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
             if (connectionResult.Value is IHttpRecordWriterConnection httpWriter)
             {
+                if (run.Plan.Keyed)
+                {
+                    return GenericResult<int>.Failure(PipelineRunLog.LoadModeNotForDestination(
+                        _logger, Name, _configuration.LoadMode!, "an HTTP record writer sends rows and cannot match them on keys"));
+                }
+
                 return await LoadToHttpRecordWriter(httpWriter, records, result, cancellationToken)
                     .ConfigureAwait(false);
             }
         }
 
-        // BulkInsert path: SQL/tabular connections, or when connection provider is not wired.
-        var totalLoaded = 0;
-        var batches = records
-            .Select((record, index) => new { record, index })
-            .GroupBy(x => x.index / _configuration.BatchSize)
-            .Select(g => g.Select(x => x.record).ToList())
-            .ToList();
-
-        foreach (var batch in batches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var insertResult = await gateway.Execute<int>(
-                new BulkInsertCommand<IDictionary<string, object?>>(batch),
-                new DataStoreTarget(_configuration.DestinationConnectionName, null, _configuration.DestinationContainerPath!),
-                cancellationToken).ConfigureAwait(false);
-
-            if (!insertResult.IsSuccess)
-            {
-                if (!_configuration.ContinueOnError)
-                {
-                    return GenericResult<int>.Failure(
-                        EtlLog.LoadFailed(_logger, Name, GetFirstMessageText(insertResult.Messages) ?? "Unknown error"));
-                }
-
-                result.AddError($"Batch load failed: {GetFirstMessageText(insertResult.Messages)}");
-            }
-            else
-            {
-                totalLoaded += insertResult.Value;
-            }
-        }
-
-        return GenericResult<int>.Success(totalLoaded);
+        // Insert or upsert path: SQL/tabular connections, or when connection provider is not wired.
+        var destination = new DataStoreTarget(_configuration.DestinationConnectionName, null, _configuration.DestinationContainerPath!);
+        return await LoadBatches(
+            records, run, result, (command, token) => gateway.Execute<int>(command, destination, token), cancellationToken).ConfigureAwait(false);
     }
 
     // HTTP record writer path: serializes rows through the container's configured format and POSTs/PUTs
@@ -818,6 +1134,112 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         return GenericResult<int>.Success(writeResult.Value);
     }
 
+    // The command that loads one batch of the pipeline's own load: an insert for Append and Replace, an upsert for Upsert,
+    // built by the builder of that kind from the load's options and value sources.
+    private IGenericResult<IDataCommand> OwnLoadCommand(RunState run, List<IDictionary<string, object?>> batch)
+    {
+        var unit = run.Plan.OwnLoad!;
+        var built = LoadStepCommandBuilders.ByName(unit.Kind.Name)
+            .Build(new LoadCommandInput(unit.Owner, unit.Row, batch, null, run.StartedAt, _logger));
+        if (!built.IsSuccess)
+        {
+            return built.ToNewResult<IDataCommand>();
+        }
+
+        return built.Value!.Count == 1
+            ? GenericResult<IDataCommand>.Success(built.Value[0])
+            : GenericResult<IDataCommand>.Failure(PipelineRunLog.LoadOptionsRefused(
+                _logger, unit.Owner, unit.Kind.Name, "the load builds more than one command, which only the unit of work can run"));
+    }
+
+    // Load steps, and an own load that flags the keys absent from the source, run through the unit of work on the whole
+    // output: one transaction per connection, rolled back when a step fails.
+    private async Task<IGenericResult> LoadThroughUnitOfWork(
+        List<IDictionary<string, object?>> records,
+        RunState run,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<LoadUnit> units = run.Plan.HasSteps ? run.Plan.Steps : [run.Plan.OwnLoad!];
+        var executor = NewLoadExecutor();
+        var loaded = await executor.Run(Name, units, records, run.Parameters.Values, run.StartedAt, cancellationToken).ConfigureAwait(false);
+        if (!loaded.IsSuccess)
+        {
+            return GenericResult.Failure(EtlLog.LoadFailed(_logger, Name, LoadFailureText.Of(loaded)));
+        }
+
+        result.RecordsLoaded += loaded.Value;
+        return GenericResult.Success();
+    }
+
+    private PipelineLoadExecutor NewLoadExecutor() => new(
+        new LoadTargetResolver(_dataSets, _dataStoreProvider),
+        _connectionProvider,
+        _connectionTypes,
+        _logger);
+
+    // Reject steps write the records the stages rejected, after the main load committed and in a unit of work of their own
+    // (FDW-1142). A failure fails the run, so its watermark does not move; the main load stays committed, as one connection's
+    // commit cannot be undone by another's failure.
+    private async Task<IGenericResult> RunRejectSteps(
+        PipelineExecutionOptions options,
+        RunState run,
+        CancellationToken cancellationToken)
+    {
+        if (run.Plan.RejectSteps.Count == 0 || SkipsDestinationWrites(options))
+        {
+            return GenericResult.Success();
+        }
+
+        if (run.TransformContext.Rejections.Count == 0)
+        {
+            PipelineRunLog.RejectStepsSkippedNoRejections(_logger, Name);
+            return GenericResult.Success();
+        }
+
+        var rows = RejectedRows.Of(Name, run.TransformContext.Rejections, _logger);
+        if (!rows.IsSuccess)
+        {
+            return rows;
+        }
+
+        var written = await NewLoadExecutor()
+            .Run(Name, run.Plan.RejectSteps, rows.Value!, run.Parameters.Values, run.StartedAt, cancellationToken)
+            .ConfigureAwait(false);
+        if (!written.IsSuccess)
+        {
+            return GenericResult.Failure(EtlLog.LoadFailed(_logger, Name, LoadFailureText.Of(written)));
+        }
+
+        PipelineRunLog.RejectedRecordsWritten(_logger, Name, run.TransformContext.Rejections.Count);
+        return GenericResult.Success();
+    }
+
+    // A successful run moves the pipeline's watermark to the moment it began, after its load committed and never before.
+    // A run that recorded errors (continue-on-error) leaves it where it was, so what failed is read again next time.
+    private async Task<IGenericResult> RecordWatermark(
+        IDataGateway gateway,
+        PipelineExecutionOptions options,
+        RunState run,
+        EtlPipelineExecutionResult result,
+        CancellationToken cancellationToken)
+    {
+        if (SkipsDestinationWrites(options) || options.TenantId is not { } tenantId)
+        {
+            return GenericResult.Success();
+        }
+
+        if (!result.IsSuccess)
+        {
+            PipelineRunLog.WatermarkHeldForErrors(_logger, Name);
+            return GenericResult.Success();
+        }
+
+        return await PipelineWatermarks.Record(
+            gateway, EtlPipelineTypes.OperationalConnection, run.Parameters.Watermark, _configuration.Id, tenantId,
+            run.StartedAt, result.ExecutionId, Name, _logger, cancellationToken).ConfigureAwait(false);
+    }
+
     private static string? GetFirstMessageText(IEnumerable<IGenericMessage> messages)
     {
         using var enumerator = messages.GetEnumerator();
@@ -841,6 +1263,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         ValidateSourceKind(messages);
         ValidateDestinationKind(messages);
+        ValidateLoadDefinition(messages);
 
         if (messages.Count > 0)
         {
@@ -848,6 +1271,15 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         }
 
         return GenericResult.Success();
+    }
+
+    private void ValidateLoadDefinition(List<IGenericMessage> messages)
+    {
+        var plan = PipelineLoadPlan.Create(_configuration, _logger);
+        if (!plan.IsSuccess)
+        {
+            messages.AddRange(plan.Messages);
+        }
     }
 
     private void ValidateSourceKind(List<IGenericMessage> messages)
@@ -863,6 +1295,18 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             if (string.IsNullOrWhiteSpace(_configuration.SourceDataSet))
             {
                 messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "SourceDataSet is required when SourceKind is DataSet"));
+            }
+        }
+        else if (string.Equals(_configuration.SourceKind.Name, "DataStore", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(_configuration.SourceDataStorePath))
+            {
+                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "SourceDataStorePath is required when SourceKind is DataStore"));
+            }
+
+            if (string.IsNullOrWhiteSpace(_configuration.SourceContainerName))
+            {
+                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "SourceContainerName is required when SourceKind is DataStore"));
             }
         }
         else if (string.Equals(_configuration.SourceKind.Name, "Connection", StringComparison.Ordinal))

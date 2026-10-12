@@ -9,5 +9,5 @@ namespace Fdw.Orchestration.Abstractions.Caching;
 public sealed class NeverRemoveCachePriority : CachePriorityBase
 {
     /// <summary>Initializes a new instance of <see cref="NeverRemoveCachePriority"/>.</summary>
-    public NeverRemoveCachePriority() : base(3, "NeverRemove") { }
+    public NeverRemoveCachePriority() : base("NeverRemove") { }
 }

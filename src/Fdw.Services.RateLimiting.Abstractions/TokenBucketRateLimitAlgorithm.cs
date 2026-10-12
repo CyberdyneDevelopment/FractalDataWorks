@@ -13,7 +13,7 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 public sealed class TokenBucketRateLimitAlgorithm : RateLimitAlgorithmBase
 {
     /// <summary>Initializes a new instance of <see cref="TokenBucketRateLimitAlgorithm"/>.</summary>
-    public TokenBucketRateLimitAlgorithm() : base(3, "TokenBucket") { }
+    public TokenBucketRateLimitAlgorithm() : base("TokenBucket") { }
 
     /// <inheritdoc />
     public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>

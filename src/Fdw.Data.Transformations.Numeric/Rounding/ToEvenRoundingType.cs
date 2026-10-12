@@ -8,7 +8,7 @@ namespace Fdw.Data.Transformations;
 public sealed class ToEvenRoundingType : RoundingTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="ToEvenRoundingType"/> class.</summary>
-    public ToEvenRoundingType() : base(2, "ToEven") { }
+    public ToEvenRoundingType() : base("ToEven") { }
 
     /// <inheritdoc/>
     public override decimal Round(decimal value, int precision) =>

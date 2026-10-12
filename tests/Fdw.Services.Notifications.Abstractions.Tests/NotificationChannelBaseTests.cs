@@ -11,14 +11,13 @@ public class NotificationChannelBaseTests
     private sealed class TestChannel : NotificationChannelBase
     {
         public TestChannel(
-            int id,
             string name,
             string description,
             bool supportsBatchSend = true,
             bool supportsRichContent = true,
             bool supportsAttachments = false,
             int? maxMessageLength = null)
-            : base(id, name, description, supportsBatchSend, supportsRichContent, supportsAttachments, maxMessageLength)
+            : base(name, description, supportsBatchSend, supportsRichContent, supportsAttachments, maxMessageLength)
         {
         }
     }
@@ -30,16 +29,12 @@ public class NotificationChannelBaseTests
     {
         // Arrange & Act
         var channel = new TestChannel(
-            id: 1,
             name: "TestChannel",
             description: "Test channel description",
             supportsBatchSend: true,
             supportsRichContent: false,
             supportsAttachments: true,
             maxMessageLength: 5000);
-
-        // Assert
-        channel.Id.ShouldBe(1);
         channel.Name.ShouldBe("TestChannel");
         channel.Description.ShouldBe("Test channel description");
         channel.SupportsBatchSend.ShouldBeTrue();
@@ -55,12 +50,8 @@ public class NotificationChannelBaseTests
     {
         // Arrange & Act
         var channel = new TestChannel(
-            id: 2,
             name: "DefaultChannel",
             description: "Default test channel");
-
-        // Assert
-        channel.Id.ShouldBe(2);
         channel.Name.ShouldBe("DefaultChannel");
         channel.SupportsBatchSend.ShouldBeTrue();
         channel.SupportsRichContent.ShouldBeTrue();
@@ -75,9 +66,6 @@ public class NotificationChannelBaseTests
     {
         // Arrange & Act
         var channel = new EmailChannel();
-
-        // Assert
-        channel.Id.ShouldBe(1);
         channel.Name.ShouldBe("Email");
         channel.Description.ShouldBe("SMTP email notifications");
         channel.SupportsBatchSend.ShouldBeTrue();
@@ -94,9 +82,6 @@ public class NotificationChannelBaseTests
     {
         // Arrange & Act
         var channel = new WebhookChannel();
-
-        // Assert
-        channel.Id.ShouldBe(3);
         channel.Name.ShouldBe("Webhook");
         channel.Description.ShouldBe("Generic HTTP webhook notifications");
         channel.SupportsBatchSend.ShouldBeTrue();

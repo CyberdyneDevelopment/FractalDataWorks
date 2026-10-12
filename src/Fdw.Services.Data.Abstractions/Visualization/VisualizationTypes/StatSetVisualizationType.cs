@@ -22,7 +22,7 @@ public sealed class StatSetVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="StatSetVisualizationType"/> class.
     /// </summary>
     public StatSetVisualizationType()
-        : base(7, "StatSet", "Statistical Summary", "mdi-sigma", SupportedTypes)
+        : base("StatSet", "Statistical Summary", "mdi-sigma", SupportedTypes)
     {
     }
 

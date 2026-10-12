@@ -136,7 +136,7 @@ public static partial class AegisLog
     [MessageLogging(
         EventId = 61000,
         Level = LogLevel.Critical,
-        Message = "Aegis host phase '{phase}' FAILED — secret managers are not registered and no secret can be resolved: {reason}")]
+        Message = "Aegis host phase '{phase}' FAILED — the host cannot serve: {reason}")]
     public static partial IGenericMessage HostPhaseFailed(ILogger logger, string phase, string? reason);
 
     /// <summary>Logs that a submitted parameter is not permitted by the command's allow-list.</summary>
@@ -173,4 +173,11 @@ public static partial class AegisLog
         Level = LogLevel.Error,
         Message = "Injection failed for command '{commandName}': {reason}")]
     public static partial IGenericMessage InjectionFailed(ILogger logger, string commandName, string reason);
+
+    /// <summary>Logs that a tool could not read the declared Aegis commands.</summary>
+    [MessageLogging(
+        EventId = 71002,
+        Level = LogLevel.Error,
+        Message = "Tool '{toolName}' could not read the declared Aegis commands.")]
+    public static partial IGenericMessage CommandsNotRead(ILogger logger, string toolName);
 }

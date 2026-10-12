@@ -25,7 +25,6 @@ public sealed class TransformStageType : StageTypeBase
     /// </summary>
     public TransformStageType()
         : base(
-            id: 2,
             name: "Transform",
             requiresSource: false,
             requiresDestination: false,

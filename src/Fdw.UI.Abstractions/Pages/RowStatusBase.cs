@@ -7,10 +7,10 @@ namespace Fdw.UI.Abstractions.Pages;
 /// Base class for row status for visual indicators.
 /// </summary>
 [ExcludeFromCodeCoverage]
-public abstract class RowStatusBase : TypeOptionBase<int, RowStatusBase>, IRowStatus
+public abstract class RowStatusBase : TypeOptionBase<RowStatusBase>, IRowStatus
 {
     /// <summary>
     /// Initializes a new instance of <see cref="RowStatusBase"/>.
     /// </summary>
-    protected RowStatusBase(int id, string name) : base(id, name) { }
+    protected RowStatusBase(string name) : base(name) { }
 }

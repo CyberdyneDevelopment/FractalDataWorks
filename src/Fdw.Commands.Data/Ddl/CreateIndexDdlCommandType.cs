@@ -9,5 +9,5 @@ namespace Fdw.Commands.Data.Ddl;
 public sealed class CreateIndexDdlCommandType : DdlCommandTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="CreateIndexDdlCommandType"/>.</summary>
-    public CreateIndexDdlCommandType() : base(4, "CreateIndex") { }
+    public CreateIndexDdlCommandType() : base("CreateIndex") { }
 }

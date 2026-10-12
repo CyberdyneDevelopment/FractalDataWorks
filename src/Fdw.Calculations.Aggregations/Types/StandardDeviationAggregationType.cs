@@ -15,7 +15,7 @@ public sealed class StandardDeviationAggregationType : AggregationTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="StandardDeviationAggregationType"/> class.
     /// </summary>
-    public StandardDeviationAggregationType() : base(8, "StandardDeviation", values =>
+    public StandardDeviationAggregationType() : base("StandardDeviation", values =>
     {
         if (values.Count == 0) return 0m;
         var average = values.Average();

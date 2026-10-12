@@ -22,4 +22,9 @@ namespace Fdw.Services.Connections.Http.Security;
 public abstract partial class HttpAuthenticationTypes
     : TypeCollectionBase<HttpAuthenticationConfiguration, HttpAuthenticationConfiguration>
 {
+    /// <summary>
+    /// The header an API key is sent in when the connection's <c>ApiKeyHeaderName</c> is not set.
+    /// A deployment whose APIs expect another header sets this before the host registers services.
+    /// </summary>
+    public static string ApiKeyHeaderName { get; set; } = "X-API-Key";
 }

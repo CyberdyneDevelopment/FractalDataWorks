@@ -50,7 +50,7 @@ public sealed class RoslynWorkspaceConnection
     /// <param name="configuration">The typed body configuration for this Roslyn workspace connection.</param>
     /// <param name="workspace">The resident Roslyn workspace.</param>
     /// <param name="mode">The workspace mode (Live, Snapshot, etc.).</param>
-    /// <param name="connectionName">The connection name from the parent ConnectionConfiguration header.</param>
+    /// <param name="connectionName">The connection name from the parent IConnectionImplementationConfiguration header.</param>
     /// <param name="logger">Logger; falls back to NullLogger if null.</param>
     public RoslynWorkspaceConnection(
         RoslynWorkspaceConnectionConfiguration configuration,
@@ -110,8 +110,7 @@ public sealed class RoslynWorkspaceConnection
     private sealed class NullRoslynWorkspaceTranslator : IDataCommandTranslator<IRoslynWorkspaceCommand>
     {
         public int Id => 0;
-        object Fdw.Collections.ITypeOption.Id => 0;
-        public string Name => "_Empty";
+        public string Name => "NotFound";
         public string Category => "RoslynWorkspace";
         public string DomainName => "RoslynWorkspace";
 

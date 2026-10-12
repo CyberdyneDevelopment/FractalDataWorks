@@ -26,11 +26,6 @@ public sealed class CreateRolePayload
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the parent role for the new role.
-    /// </summary>
-    public string? ParentRoleName { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the new role is scoped to a tenant.
     /// </summary>
     public bool IsTenantScoped { get; set; }

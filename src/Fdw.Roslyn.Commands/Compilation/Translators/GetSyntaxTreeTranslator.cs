@@ -34,7 +34,6 @@ public sealed class GetSyntaxTreeTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: get syntax tree, collect type and method info
     public override async Task<IGenericResult<QueryResult<SyntaxTreeData>>> Translate(
         GetSyntaxTreeCommand command,
         Solution solution,
@@ -114,5 +113,4 @@ public sealed class GetSyntaxTreeTranslator
 
         return GenericResult<QueryResult<SyntaxTreeData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

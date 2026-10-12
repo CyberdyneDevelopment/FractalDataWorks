@@ -9,17 +9,6 @@ namespace Fdw.Services.Resiliency.Abstractions.Tests;
 /// </summary>
 public class DatabaseResiliencyPolicyTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorSetsIdCorrectly()
-    {
-        // Act
-        var policy = new DatabaseResiliencyPolicy();
-
-        // Assert
-        policy.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -184,19 +173,6 @@ public class DatabaseResiliencyPolicyTests
 
         // Assert
         policy.Name.ShouldBe("Database");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void IdIsConsistentAcrossInstances()
-    {
-        // Arrange
-        var policy1 = new DatabaseResiliencyPolicy();
-        var policy2 = new DatabaseResiliencyPolicy();
-
-        // Assert
-        policy1.Id.ShouldBe(policy2.Id);
     }
 
     [Fact]

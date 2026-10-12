@@ -59,8 +59,10 @@ public sealed class SessionReattachTests : IDisposable
         // A brand new manager over the same store — the stand-in for a reconnecting process.
         using var reconnected = NewManager(NewStore());
 
+#pragma warning disable xUnit1051 // sync overload has no CancellationToken parameter
         reconnected.FindSessionByConversationId("agent-alpha")
             .ShouldBeNull("the sync overload only sees sessions this process created");
+#pragma warning restore xUnit1051
 
         var found = await reconnected.FindSessionByConversationId("agent-alpha", TestContext.Current.CancellationToken);
 

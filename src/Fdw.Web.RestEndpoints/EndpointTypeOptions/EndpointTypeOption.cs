@@ -14,12 +14,13 @@ namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 ///     : EndpointTypeOption&lt;ListServerSettingsEndpoint&gt;;
 /// </code>
 /// The type comes from <typeparamref name="TEndpoint"/>, the name from its type name, and the id
-/// from the name. Nothing is repeated, so nothing can disagree — the failure this replaces is an
-/// option whose name says one endpoint and whose <c>typeof</c> says another, which compiles.
+/// from the option's own fully qualified type name. Nothing is repeated, so nothing can disagree —
+/// the failure this replaces is an option whose name says one endpoint and whose <c>typeof</c>
+/// says another, which compiles.
 ///
-/// TypeCollectionBase already derives its own id and name this way
-/// (<c>GenerateIdFromTypeName</c>/<c>GenerateNameFromTypeName</c>); this is the same idea one level
-/// down, on the member.
+/// TypeCollectionBase takes its own id and name from types too - its id is the hash of its
+/// fully-qualified type name, its name that of the member base it collects; this is the same idea
+/// one level down, on the member.
 ///
 /// The generic parameter also lets the compiler reject an option pointed at something that is not
 /// an endpoint. A <c>Type</c> property could not: a wrong <c>typeof(...)</c> would build cleanly

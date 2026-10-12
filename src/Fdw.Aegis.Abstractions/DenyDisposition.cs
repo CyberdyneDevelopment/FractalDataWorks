@@ -14,7 +14,7 @@ public sealed class DenyDisposition : VerdictDispositionBase
     /// Initializes a new instance of the <see cref="DenyDisposition"/> class.
     /// </summary>
     public DenyDisposition()
-        : base(id: 2, name: "Deny", isTerminal: true, allowsInjection: false)
+        : base(name: "Deny", isTerminal: true, allowsInjection: false)
     {
     }
 }

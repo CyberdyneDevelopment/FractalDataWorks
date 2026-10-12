@@ -24,7 +24,6 @@ public sealed class OverwriteWriteMode : WriteModeBase
     /// </summary>
     public OverwriteWriteMode()
         : base(
-            id: 2,
             name: "Overwrite",
             requiresExistenceCheck: false,
             preservesExistingData: false,

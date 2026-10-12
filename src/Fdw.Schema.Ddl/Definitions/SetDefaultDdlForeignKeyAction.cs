@@ -9,5 +9,5 @@ namespace Fdw.Schema.Ddl.Definitions;
 public sealed class SetDefaultDdlForeignKeyAction : DdlForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="SetDefaultDdlForeignKeyAction"/>.</summary>
-    public SetDefaultDdlForeignKeyAction() : base(4, "SetDefault") { }
+    public SetDefaultDdlForeignKeyAction() : base("SetDefault") { }
 }

@@ -20,7 +20,7 @@ namespace Fdw.Services.Resiliency;
 /// </remarks>
 [ExcludeFromCodeCoverage] // Excluded: concrete strategies are tested individually
 public abstract class ResiliencyTypeBase
-    : TypeOptionBase<int, ResiliencyTypeBase>
+    : TypeOptionBase<ResiliencyTypeBase>
     , IResiliencyType
 {
     /// <summary>
@@ -34,16 +34,14 @@ public abstract class ResiliencyTypeBase
     /// <summary>
     /// Constructor for concrete TypeOptions.
     /// </summary>
-    /// <param name="id">Unique integer identifier within ResiliencyTypes.</param>
-    /// <param name="name">The TypeOption name — matches the StrategyType discriminator in the database.</param>
+    /// <param name="name">The TypeOption name — matches the Implementation discriminator in the database.</param>
     /// <param name="displayName">Human-readable display name.</param>
     /// <param name="description">Description of this strategy's behavior.</param>
     protected ResiliencyTypeBase(
-        int id,
         string name,
         string displayName,
         string description)
-        : base(id, name, $"Resiliency:{name}", displayName, description, "Resiliency")
+        : base(name, $"Resiliency:{name}", displayName, description, "Resiliency")
     {
     }
 

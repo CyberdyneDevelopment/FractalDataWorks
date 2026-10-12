@@ -13,7 +13,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlCharConverter()
     : DataTypeConverterBase(
-        id: 11,
         name: "Char",
         sourceType: "Char",
         targetClrType: typeof(string),

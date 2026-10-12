@@ -7,6 +7,7 @@ using Fdw.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Web.RestEndpoints.EndpointTypeOptions;
 
@@ -81,22 +82,10 @@ public abstract class EndpointTypeCollectionBase<TBase> : TypeCollectionBase<TBa
     /// <summary>Gets the data store this collection's configuration rows live in.</summary>
     /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
     /// guessing from a name.</remarks>
-    /// <summary>Gets this collection's identity as a parent collection sees it.</summary>
-    /// <remarks>
-    /// A TypeCollection is keyed by an int derived from its type name; a ServiceTypeCollection keys
-    /// its members by Guid. This collection is both - a collection of options, and a member of one -
-    /// so it carries the Guid the parent needs alongside the int its own members are found by.
-    ///
-    /// Derived from the name rather than generated: the same collection must be the same
-    /// identity in every process that loads it, and Guid.NewGuid() would give a different answer on
-    /// each start - so a configuration row written against one run would not be found by the next.
-    /// </remarks>
-    public new Guid Id => OptionId.Derive(Name);
-
     /// <summary>Gets the data store this collection's configuration rows live in.</summary>
     /// <remarks>Virtual so a resource that lives elsewhere says so, rather than the framework
     /// guessing from a name.</remarks>
-    public virtual string DataStore => "PlatformConfiguration";
+    public virtual string DataStore => PlatformConnection.Name;
 
     /// <summary>Gets the schema within that store.</summary>
     public virtual string PathName => "web";

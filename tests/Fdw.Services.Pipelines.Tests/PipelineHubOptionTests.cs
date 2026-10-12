@@ -23,9 +23,6 @@ public sealed class PipelineHubOptionTests
     {
         // Act
         var option = new PipelineHubOption();
-
-        // Assert
-        option.Id.ShouldBe(1);
         option.Name.ShouldBe("Pipeline");
         option.Route.ShouldBe("/hubs/pipelines");
         option.HubType.ShouldBe(typeof(PipelineStatusHub));

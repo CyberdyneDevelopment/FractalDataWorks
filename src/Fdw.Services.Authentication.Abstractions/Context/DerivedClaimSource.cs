@@ -8,7 +8,7 @@ public sealed class DerivedClaimSource : ClaimSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="DerivedClaimSource"/> class.</summary>
     public DerivedClaimSource()
-        : base(3, "Derived")
+        : base("Derived")
     {
     }
 }

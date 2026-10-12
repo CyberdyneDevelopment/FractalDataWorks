@@ -3,7 +3,7 @@ using Fdw.Collections;
 namespace Fdw.Services.Connections.RoslynWorkspace;
 
 /// <summary>Base class for <see cref="ISymbolKindScore"/> TypeOptions.</summary>
-public abstract class SymbolKindScoreBase : TypeOptionBase<int, ISymbolKindScore>, ISymbolKindScore
+public abstract class SymbolKindScoreBase : TypeOptionBase<ISymbolKindScore>, ISymbolKindScore
 {
     /// <summary>
     /// Required protected parameterless constructor for the TypeCollection Empty sentinel.
@@ -15,10 +15,9 @@ public abstract class SymbolKindScoreBase : TypeOptionBase<int, ISymbolKindScore
     }
 
     /// <summary>Initializes a kind score.</summary>
-    /// <param name="id">Unique id within <see cref="SymbolKindScores"/>.</param>
     /// <param name="name">Roslyn <c>SymbolKind</c> name (matches <c>SymbolKind.ToString()</c>).</param>
     /// <param name="weight">Scoring weight for this kind.</param>
-    protected SymbolKindScoreBase(int id, string name, int weight) : base(id, name)
+    protected SymbolKindScoreBase(string name, int weight) : base(name)
     {
         Weight = weight;
     }

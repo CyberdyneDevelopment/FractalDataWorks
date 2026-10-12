@@ -11,16 +11,15 @@ namespace Fdw.Services.Authorization.Abstractions;
 public sealed class ApproveAction : PermissionActionBase
 {
     /// <summary>
-    /// MudBlazor icon for approve action.
+    /// Material Symbols icon name for approve action.
     /// </summary>
-    public const string ApproveIcon = "check_circle"; // Icons.Material.Filled.CheckCircle
+    public const string ApproveIcon = "check_circle";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ApproveAction"/> class.
     /// </summary>
     public ApproveAction()
         : base(
-            id: 9,
             name: "Approve",
             icon: ApproveIcon,
             color: "Tertiary",

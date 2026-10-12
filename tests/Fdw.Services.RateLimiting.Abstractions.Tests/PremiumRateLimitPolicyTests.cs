@@ -9,17 +9,6 @@ namespace Fdw.Services.RateLimiting.Abstractions.Tests;
 /// </summary>
 public class PremiumRateLimitPolicyTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ConstructorSetsCorrectId()
-    {
-        // Act
-        var policy = new PremiumRateLimitPolicy();
-
-        // Assert
-        policy.Id.ShouldBe(3);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

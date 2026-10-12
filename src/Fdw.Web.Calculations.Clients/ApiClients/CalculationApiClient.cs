@@ -59,13 +59,13 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
         => GetList<CalculationSummaryPayload>("calculation-entities", ct);
 
     /// <summary>
-    /// Gets a specific calculation definition by identifier.
+    /// Gets a specific calculation definition by identifier: <c>POST calculation-entities/get</c>.
     /// </summary>
     /// <param name="id">The unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the calculation details.</returns>
     public virtual Task<IGenericResult<CalculationDetailPayload>> GetCalculation(Guid id, CancellationToken ct = default)
-        => Get<CalculationDetailPayload>($"calculation-entities/{id}", ct);
+        => Post<GetCalculationEntityRequest, CalculationDetailPayload>("calculation-entities/get", new GetCalculationEntityRequest { Id = id }, ct);
 
     /// <summary>
     /// Creates a new calculation definition.
@@ -159,13 +159,13 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
         => GetList<CalculationEntitySummaryModel>("calculation-entities", ct);
 
     /// <summary>
-    /// Gets a calculation entity detail by its identifier.
+    /// Gets a calculation entity detail by its identifier: <c>POST calculation-entities/get</c>.
     /// </summary>
     /// <param name="id">The unique identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the calculation entity detail.</returns>
     public virtual Task<IGenericResult<CalculationEntityDetailModel>> GetCalculationEntity(Guid id, CancellationToken ct = default)
-        => Get<CalculationEntityDetailModel>($"calculation-entities/{id}", ct);
+        => Post<GetCalculationEntityRequest, CalculationEntityDetailModel>("calculation-entities/get", new GetCalculationEntityRequest { Id = id }, ct);
 
     /// <summary>
     /// Creates a new calculation entity.

@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class UpTrendDirection : TrendDirectionBase
 {
     /// <summary>Initializes a new instance of <see cref="UpTrendDirection"/>.</summary>
-    public UpTrendDirection() : base(2, "Up") { }
+    public UpTrendDirection() : base("Up") { }
 }

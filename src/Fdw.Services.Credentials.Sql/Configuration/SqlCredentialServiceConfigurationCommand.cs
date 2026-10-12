@@ -7,9 +7,9 @@ namespace Fdw.Services.Credentials.Sql.Configuration;
 /// ConfigurationCommands TypeOption for the SqlCredentialService typed body.
 /// Produces IDataCommand instances against the SqlCredentialService configuration table.
 /// </summary>
-[TypeOption(typeof(ConfigurationCommands), "SqlCredentialService")]
+[TypeOption(typeof(ConfigurationCommands), "SqlCredentialServiceConfiguration")]
 public sealed class SqlCredentialServiceConfigurationCommand : ConfigurationCommandBase<SqlCredentialServiceConfiguration>
 {
     /// <inheritdoc/>
-    public SqlCredentialServiceConfigurationCommand() : base("SqlCredentialService") { }
+    public SqlCredentialServiceConfigurationCommand() : base("SqlCredentialServiceConfiguration") { }
 }

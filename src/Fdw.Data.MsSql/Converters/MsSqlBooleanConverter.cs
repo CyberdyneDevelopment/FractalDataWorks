@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlBooleanConverter()
     : DataTypeConverterBase(
-        id: 4,
         name: "Boolean",
         sourceType: "bit",
         targetClrType: typeof(bool),

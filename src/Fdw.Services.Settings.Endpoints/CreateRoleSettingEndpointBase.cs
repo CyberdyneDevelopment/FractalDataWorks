@@ -17,10 +17,10 @@ namespace Fdw.Services.Settings.Endpoints;
 /// </summary>
 public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<CreateRoleSettingRequest, RoleSettingSummaryDto>
 {
-    private readonly SettingsConfigurationProvider _provider;
+    private readonly IRoleSettingConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected CreateRoleSettingEndpointBase(ILogger<CreateRoleSettingEndpointBase> logger, SettingsConfigurationProvider provider) : base(logger)
+    protected CreateRoleSettingEndpointBase(ILogger<CreateRoleSettingEndpointBase> logger, IRoleSettingConfigurationProvider provider) : base(logger)
     {
         _provider = provider;
     }
@@ -37,8 +37,8 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
     /// <inheritdoc />
     protected override async Task<IGenericResult<bool>> CheckExists(CreateRoleSettingRequest request, CancellationToken ct)
     {
-        var roleSettingsResult = await _provider.GetRoleSettings(ct).ConfigureAwait(false);
-        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingConfiguration>)[];
+        var roleSettingsResult = await _provider.Get(ct).ConfigureAwait(false);
+        var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<RoleSettingImplementationConfiguration>)[];
         var existing = roleSettings
             .FirstOrDefault(s => s.TenantId == request.TenantId
                                  && string.Equals(s.RoleName, request.RoleName, StringComparison.OrdinalIgnoreCase)
@@ -49,9 +49,15 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
     /// <inheritdoc />
     protected override async Task<IGenericResult<RoleSettingSummaryDto>> Create(CreateRoleSettingRequest request, CancellationToken ct)
     {
-        var config = new RoleSettingConfiguration
+        var config = new RoleSettingImplementationConfiguration
         {
-            Id = Guid.NewGuid(),
+            // Why: Save()'s name param is the domain-row lookup key -- an existing row carrying
+            // it is the row a save hangs from, and only its absence mints a new one. Left unset
+            // (defaults to ""), every create resolved the SAME single domain row regardless of
+            // tenant, role or setting name, so a second create silently overwrote the first.
+            // TenantId+RoleName+SettingName together identify a member, the same composite
+            // UpdateRoleSettingEndpointBase.GetResourceIdentifier uses.
+            Name = $"{request.TenantId}/{request.RoleName}/{request.SettingName}",
             TenantId = request.TenantId,
             RoleName = request.RoleName,
             SettingName = request.SettingName,
@@ -59,7 +65,7 @@ public abstract class CreateRoleSettingEndpointBase : CrudCreateEndpointBase<Cre
             IsActive = true
         };
 
-        var saveResult = await _provider.SaveRoleSetting(config, ct).ConfigureAwait(false);
+        var saveResult = await _provider.Save(config, "RoleSetting", "RoleSetting", config.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             return saveResult.ToNewResult<RoleSettingSummaryDto>();

@@ -14,10 +14,10 @@ namespace Fdw.Data.SchemaObjects.Abstractions;
 /// Each type includes visual properties (icon, color, CSS class) for consistent rendering.
 /// </para>
 /// <para>
-/// Usage in Blazor:
+/// Usage:
 /// <code>
 /// var objectType = SchemaObjectTypes.ByName("Table");
-/// &lt;MudIcon Icon="@objectType.Icon" Color="@objectType.Color" /&gt;
+/// // a renderer draws objectType.Icon in objectType.Color
 /// </code>
 /// </para>
 /// </remarks>

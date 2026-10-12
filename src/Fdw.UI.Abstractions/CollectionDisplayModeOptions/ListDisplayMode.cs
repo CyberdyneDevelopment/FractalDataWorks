@@ -14,5 +14,5 @@ public sealed class ListDisplayMode : CollectionDisplayModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ListDisplayMode"/> class.
     /// </summary>
-    public ListDisplayMode() : base(2, "List", supportsExpandCollapse: false, supportsGrouping: false) { }
+    public ListDisplayMode() : base("List", supportsExpandCollapse: false, supportsGrouping: false) { }
 }

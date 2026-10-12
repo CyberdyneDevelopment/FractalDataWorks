@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class ConsumesLineageEdgeType : LineageEdgeTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ConsumesLineageEdgeType"/>.</summary>
-    public ConsumesLineageEdgeType() : base(2, "Consumes") { }
+    public ConsumesLineageEdgeType() : base("Consumes") { }
 }

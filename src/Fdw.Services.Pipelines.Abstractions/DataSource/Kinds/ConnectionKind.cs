@@ -14,5 +14,5 @@ public sealed class ConnectionKind : DataSourceKindBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionKind"/> class.
     /// </summary>
-    public ConnectionKind() : base(1, "Connection") { }
+    public ConnectionKind() : base("Connection") { }
 }

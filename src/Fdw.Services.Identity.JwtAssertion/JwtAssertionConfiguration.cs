@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -36,30 +37,29 @@ namespace Fdw.Services.Identity.JwtAssertion;
 [ManagedConfiguration(ServiceCategory = "Identity", ServiceType = "JwtAssertion")]
 public partial class JwtAssertionConfiguration : IIdentityServiceImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="JwtAssertionConfiguration"/> class.
     /// </summary>
     public JwtAssertionConfiguration()
     {
-        ServiceType = "Identity";
-        SectionName = "Identities";
-        ServiceOptionType = "JwtAssertion";
     }
 
     /// <summary>Gets or sets the durable logical identity across versions. No default — the database assigns identity.</summary>
     public Guid Id { get; set; }
 
-    /// <summary>Gets or sets the name this identity is resolved by.</summary>
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
     public string Name { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the IConfiguration section name used for bootstrap binding.</summary>
-    public string SectionName { get; set; }
-
-    /// <summary>Gets or sets the service-type domain — always <c>"Identity"</c>.</summary>
-    public string ServiceType { get; set; }
-
-    /// <summary>Gets or sets the TypeOption discriminator — always <c>"JwtAssertion"</c>.</summary>
-    public string? ServiceOptionType { get; set; }
 
     /// <summary>Gets or sets the issuer URL.</summary>
     public string? Issuer { get; set; }

@@ -13,7 +13,7 @@ namespace Fdw.Commands.Abstractions;
 /// Inherit from this class to define specific translator types that will be discovered
 /// by the TypeCollection source generator.
 /// </remarks>
-public abstract class TranslatorTypeBase : TypeOptionBase<int, TranslatorTypeBase>, ITranslatorType
+public abstract class TranslatorTypeBase : TypeOptionBase<TranslatorTypeBase>, ITranslatorType
 {
     /// <inheritdoc/>
     public IDataFormat SourceFormat { get; }
@@ -33,7 +33,6 @@ public abstract class TranslatorTypeBase : TypeOptionBase<int, TranslatorTypeBas
     /// <summary>
     /// Initializes a new instance of the <see cref="TranslatorTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this translator type.</param>
     /// <param name="name">The name of this translator type.</param>
     /// <param name="description">The description of this translator type.</param>
     /// <param name="sourceFormat">The source format this translator handles.</param>
@@ -41,14 +40,13 @@ public abstract class TranslatorTypeBase : TypeOptionBase<int, TranslatorTypeBas
     /// <param name="capabilities">The translation capabilities.</param>
     /// <param name="priority">The priority for translator selection (default 50).</param>
     protected TranslatorTypeBase(
-        int id,
         string name,
         string description,
         IDataFormat sourceFormat,
         IDataFormat targetFormat,
         TranslationCapabilities capabilities,
         int priority = 50)
-        : base(id, name, description)
+        : base(name, description)
     {
         SourceFormat = sourceFormat;
         TargetFormat = targetFormat;

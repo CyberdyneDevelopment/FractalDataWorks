@@ -5,9 +5,9 @@ using Fdw.Services.Quality.Configuration;
 namespace Fdw.Services.Quality.Validators;
 
 /// <summary>
-/// Validator for <see cref="EnvironmentConfiguration"/>.
+/// Validator for <see cref="EnvironmentImplementationConfiguration"/>.
 /// </summary>
-public sealed class EnvironmentConfigurationValidator : FdwConfigurationValidator<EnvironmentConfiguration>
+public sealed class EnvironmentConfigurationValidator : FdwConfigurationValidator<EnvironmentImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="EnvironmentConfigurationValidator"/> class.

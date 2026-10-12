@@ -14,7 +14,6 @@ namespace Fdw.Data.DataStores.Rest;
 [ExcludeFromCodeCoverage]
 public sealed class ODataDecimalConverter()
     : DataTypeConverterBase(
-        id: 7,
         name: "Decimal",
         sourceType: "Decimal",
         targetClrType: typeof(decimal),

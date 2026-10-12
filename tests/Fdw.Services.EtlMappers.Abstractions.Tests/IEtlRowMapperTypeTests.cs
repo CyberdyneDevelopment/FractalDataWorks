@@ -54,19 +54,6 @@ public class IEtlRowMapperTypeTests
         typeArgs[1].ShouldBe(typeof(IEtlRowMapperType)); // TSelf is IEtlRowMapperType
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void IEtlRowMapperTypeHasSectionNameProperty()
-    {
-        // Act
-        var property = typeof(IEtlRowMapperType).GetProperty(nameof(IEtlRowMapperType.SectionName));
-
-        // Assert
-        property.ShouldNotBeNull();
-        property.PropertyType.ShouldBe(typeof(string));
-        property.CanRead.ShouldBeTrue();
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -138,24 +125,6 @@ public class IEtlRowMapperTypeTests
         property.CanRead.ShouldBeTrue();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void IEtlRowMapperTypeHasConfigureMethod()
-    {
-        // Act
-        var method = typeof(IEtlRowMapperType).GetMethod(nameof(IEtlRowMapperType.Configure));
-
-        // Assert
-        method.ShouldNotBeNull();
-        method.ReturnType.ShouldBe(typeof(void));
-
-        var parameters = method.GetParameters();
-        parameters.Length.ShouldBe(3);
-        parameters[0].ParameterType.ShouldBe(typeof(IServiceCollection));
-        parameters[1].ParameterType.ShouldBe(typeof(IConfiguration));
-        parameters[2].ParameterType.ShouldBe(typeof(ILoggerFactory));
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

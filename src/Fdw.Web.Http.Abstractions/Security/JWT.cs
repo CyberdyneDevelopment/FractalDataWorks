@@ -13,5 +13,5 @@ public sealed class JWT : SecurityMethodBase
     /// <summary>
     /// Initializes a new instance of the <see cref="JWT"/> class.
     /// </summary>
-    public JWT() : base(2, "JWT", requiresAuthentication: true, authenticationScheme: "Bearer", supportsTokenRefresh: true) { }
+    public JWT() : base("JWT", requiresAuthentication: true, authenticationScheme: "Bearer", supportsTokenRefresh: true) { }
 }

@@ -9,5 +9,5 @@ namespace Fdw.Operations.Clients.Models;
 public sealed class NumberConfigurationPropertyType : ConfigurationPropertyTypeBasePayload
 {
     /// <summary>Initializes a new instance of <see cref="NumberConfigurationPropertyType"/>.</summary>
-    public NumberConfigurationPropertyType() : base(3, "Number") { }
+    public NumberConfigurationPropertyType() : base("Number") { }
 }

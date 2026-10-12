@@ -16,7 +16,7 @@ public sealed class ProjectHasPendingChangesCode : WorkspaceResultCodeBase
     /// </summary>
     public ProjectHasPendingChangesCode()
         : base(41002, "ProjectHasPendingChanges",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Project '{ProjectName}' has pending changes. Use force=true to unload anyway.",
             isRetryable: false)
     {

@@ -11,7 +11,6 @@ public sealed class CheckIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="CheckIcon"/>.</summary>
     public CheckIcon()
         : base(
-            3,
             "Check",
             "0 0 24 24",
             "none",

@@ -22,7 +22,6 @@ public sealed class AddDurationToFieldFieldTransformer : FieldTransformationBase
     /// </summary>
     public AddDurationToFieldFieldTransformer()
         : base(
-            id: 105,
             name: "AddDurationToField",
             displayName: "Fallback From Field",
             description: "When input is null, reads a source field from the current record and adds a duration. Passes non-null input through unchanged.",
@@ -103,7 +102,7 @@ public sealed class AddDurationToFieldFieldTransformer : FieldTransformationBase
         }
 
         var unitType = DurationUnitTypes.ByName(unit);
-        if (string.Equals(unitType.Name, "_Empty", StringComparison.Ordinal))
+        if (string.Equals(unitType.Name, "NotFound", StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Unknown duration unit '{unit}'. Use DurationUnitTypes.All() for available options.");

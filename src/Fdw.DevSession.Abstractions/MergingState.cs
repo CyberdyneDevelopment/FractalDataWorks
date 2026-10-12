@@ -12,5 +12,5 @@ namespace Fdw.DevSession.Abstractions;
 public sealed class MergingState : SessionStateBase
 {
     /// <summary>Initializes a new instance of the <see cref="MergingState"/> class.</summary>
-    public MergingState() : base(5, "Merging", isTerminal: false, isReclaimable: false) { }
+    public MergingState() : base("Merging", isTerminal: false, isReclaimable: false) { }
 }

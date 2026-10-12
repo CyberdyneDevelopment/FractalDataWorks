@@ -23,7 +23,7 @@ public sealed class ODataInsertTranslatorGapTests
     {
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns([]);
-        schema.Setup(s => s.GetProjectableFields()).Returns([]);
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns([]);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);

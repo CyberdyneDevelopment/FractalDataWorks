@@ -12,7 +12,7 @@ public sealed class ConventionsCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ConventionsCommandCategory"/> class.
     /// </summary>
-    public ConventionsCommandCategory() : base(3, "Conventions", "FDW convention validation operations")
+    public ConventionsCommandCategory() : base("Conventions", "FDW convention validation operations")
     {
     }
 }

@@ -41,7 +41,6 @@ public sealed class RemoveGlobalUsingsTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear flow: resolve, refuse duplicates, baseline, remove, diff, repair, re-probe.
     public override async Task<IGenericResult<IRoslynCommandResult>> Translate(
         RemoveGlobalUsingsCommand command,
         Solution solution,
@@ -156,7 +155,6 @@ public sealed class RemoveGlobalUsingsTranslator
                 Array.Empty<PathChange>(),
                 data));
     }
-#pragma warning restore MA0051
 
     private IGenericResult<IRoslynCommandResult> Fail(string code, ResultDetails details)
     {

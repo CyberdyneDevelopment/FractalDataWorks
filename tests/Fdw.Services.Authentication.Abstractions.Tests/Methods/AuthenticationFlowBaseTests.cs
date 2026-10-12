@@ -15,14 +15,10 @@ public class AuthenticationFlowBaseTests
     {
         // Arrange & Act
         var flow = new TestAuthenticationFlow(
-            id: 1,
             name: "AuthorizationCode",
             requiresUserInteraction: true,
             supportsRefreshTokens: true,
             isServerToServer: false);
-
-        // Assert
-        flow.Id.ShouldBe(1);
         flow.Name.ShouldBe("AuthorizationCode");
         flow.RequiresUserInteraction.ShouldBeTrue();
         flow.SupportsRefreshTokens.ShouldBeTrue();
@@ -36,7 +32,6 @@ public class AuthenticationFlowBaseTests
     {
         // Arrange & Act
         var flow = new TestAuthenticationFlow(
-            id: 2,
             name: "ClientCredentials",
             requiresUserInteraction: false,
             supportsRefreshTokens: false,
@@ -54,7 +49,7 @@ public class AuthenticationFlowBaseTests
     public void PropertiesAreReadOnly()
     {
         // Arrange
-        var flow = new TestAuthenticationFlow(1, "Test", true, true, false);
+        var flow = new TestAuthenticationFlow("Test", true, true, false);
 
         // Assert - Properties should only have getters
         var type = typeof(IAuthenticationFlow);
@@ -69,7 +64,7 @@ public class AuthenticationFlowBaseTests
     public void FlowImplementsIAuthenticationFlow()
     {
         // Arrange
-        var flow = new TestAuthenticationFlow(1, "Test", true, true, false);
+        var flow = new TestAuthenticationFlow("Test", true, true, false);
 
         // Assert
         flow.ShouldBeAssignableTo<IAuthenticationFlow>();
@@ -82,12 +77,11 @@ public class AuthenticationFlowBaseTests
     private sealed class TestAuthenticationFlow : AuthenticationFlowBase
     {
         public TestAuthenticationFlow(
-            int id,
             string name,
             bool requiresUserInteraction,
             bool supportsRefreshTokens,
             bool isServerToServer)
-            : base(id, name, requiresUserInteraction, supportsRefreshTokens, isServerToServer)
+            : base(name, requiresUserInteraction, supportsRefreshTokens, isServerToServer)
         {
         }
     }

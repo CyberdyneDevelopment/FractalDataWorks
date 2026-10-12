@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Authorization;
 
@@ -32,7 +33,7 @@ public abstract class AuthorizationTypeBase<TService, TFactory> :
         string category = "Authorization",
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category,
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "authz",
                defaultContainerName: defaultContainerName)
     {

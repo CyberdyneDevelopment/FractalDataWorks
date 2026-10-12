@@ -12,7 +12,7 @@ public sealed class DevEnvironmentType : EnvironmentTypeBase
     /// <summary>
     /// Initializes a new instance of <see cref="DevEnvironmentType"/>.
     /// </summary>
-    public DevEnvironmentType() : base(2, "Dev")
+    public DevEnvironmentType() : base("Dev")
     {
     }
 }

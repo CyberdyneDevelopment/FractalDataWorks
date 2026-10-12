@@ -14,5 +14,5 @@ public sealed class OnSuccessConditionType : WorkflowConditionTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="OnSuccessConditionType"/> class.
     /// </summary>
-    public OnSuccessConditionType() : base(1, "OnSuccess", alwaysTrue: false, requiresExpression: false) { }
+    public OnSuccessConditionType() : base("OnSuccess", alwaysTrue: false, requiresExpression: false) { }
 }

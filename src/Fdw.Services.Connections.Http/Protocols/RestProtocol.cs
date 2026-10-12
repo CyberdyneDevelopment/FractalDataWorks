@@ -32,7 +32,7 @@ public sealed class RestProtocol : RestProtocolBase
     /// Initializes a new instance of the <see cref="RestProtocol"/> class.
     /// </summary>
     public RestProtocol()
-        : base(1, "Rest", "Standard REST API protocol with offset/limit pagination")
+        : base("Rest", "Standard REST API protocol with offset/limit pagination")
     {
     }
 }

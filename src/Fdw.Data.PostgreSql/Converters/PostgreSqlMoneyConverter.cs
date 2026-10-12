@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlMoneyConverter()
     : DataTypeConverterBase(
-        id: 8,
         name: "Money",
         sourceType: "money",
         targetClrType: typeof(decimal),

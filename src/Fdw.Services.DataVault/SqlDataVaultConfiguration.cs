@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
@@ -8,8 +9,8 @@ namespace Fdw.Services.DataVault;
 
 /// <summary>
 /// Typed body configuration for the default data vault implementation.
-/// Persisted to <c>sec.DefaultDataVault</c> as a child of <c>sec.DataVault</c>
-/// via <see cref="DataVaultId"/>.
+/// Persisted to <c>sec.DefaultDataVaultConfiguration</c> as a child of <c>sec.DataVault</c>
+/// via <c>DataVaultRowId</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,6 +25,14 @@ namespace Fdw.Services.DataVault;
 [ManagedConfiguration(ServiceCategory = "DataVault", ServiceType = "Default")]
 public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
     // IGenericConfiguration — typed body identity
     // ========================================
@@ -33,6 +42,13 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// </summary>
     public Guid Id { get; set; }
 
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+
+    /// <summary>Gets or sets the name this configuration is resolved by.</summary>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether this is the current (active) version.
@@ -44,24 +60,9 @@ public partial class SqlDataVaultConfiguration : IDataVaultImplementationConfigu
     /// </summary>
     public bool IsDeleted { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by DataVaultId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "DataVaults";
-    string IGenericConfiguration.ServiceType => "DataVault";
-    string? IGenericConfiguration.ServiceOptionType => "Default";
-
     // ========================================
     // IDataVaultImplementationConfiguration
     // ========================================
-
-    /// <summary>
-    /// Gets or sets the FK to <c>sec.DataVault.Id</c> (the parent header row).
-    /// </summary>
-    public Guid DataVaultId { get; set; }
 
     // ========================================
     // Vault-specific properties (pointers only — never a secret)

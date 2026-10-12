@@ -10,11 +10,7 @@ namespace Fdw.Services.Resiliency.RetryNotify;
 /// </summary>
 public sealed class RetryNotifyResiliencyConfiguration : ResiliencyConfiguration
 {
-    /// <inheritdoc/>
-    public override string SectionName => "Resiliency:RetryNotify";
 
-    /// <inheritdoc/>
-    public override string StrategyType => "RetryNotify";
 
     /// <summary>
     /// Gets or sets the maximum number of retry attempts (not counting the initial attempt).

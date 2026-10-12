@@ -33,7 +33,6 @@ public sealed class GenerateConstructorTranslator : RoslynCommandTranslatorBase<
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear code generation: find fields, build constructor via SyntaxFactory
     public override async Task<IGenericResult<MutationResult>> Translate(
         GenerateConstructorCommand command,
         Solution solution,
@@ -190,7 +189,6 @@ public sealed class GenerateConstructorTranslator : RoslynCommandTranslatorBase<
                 newSolution,
                 fileChanges));
     }
-#pragma warning restore MA0051
 
     private static string ToCamelCase(string fieldName)
     {

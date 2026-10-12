@@ -41,7 +41,7 @@ public abstract class RazorConsoleComponent<TModel> : TUIComponent<RazorConsoleC
     /// <summary>
     /// Async version of OnInitialized.
     /// </summary>
-#pragma warning disable FDW001 // Blazor lifecycle convention requires Async suffix
+#pragma warning disable FDW001 // Razor component lifecycle convention requires Async suffix
     protected virtual Task OnInitializedAsync()
 #pragma warning restore FDW001
     {
@@ -58,7 +58,7 @@ public abstract class RazorConsoleComponent<TModel> : TUIComponent<RazorConsoleC
     /// <summary>
     /// Async version of OnParametersSet.
     /// </summary>
-#pragma warning disable FDW001 // Blazor lifecycle convention requires Async suffix
+#pragma warning disable FDW001 // Razor component lifecycle convention requires Async suffix
     protected virtual Task OnParametersSetAsync()
 #pragma warning restore FDW001
     {

@@ -13,7 +13,7 @@ public sealed class NumericType : PostgreSqlNativeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="NumericType"/> class.</summary>
     public NumericType()
-        : base(id: 11, name: "numeric")
+        : base(name: "numeric")
     {
     }
 

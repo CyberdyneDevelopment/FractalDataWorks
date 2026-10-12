@@ -11,16 +11,15 @@ namespace Fdw.Results.ExecutionStatus;
 public sealed class SucceededStatus : ExecutionStatusBase
 {
     /// <summary>
-    /// MudBlazor icon for succeeded status.
+    /// Material Symbols icon name for succeeded status.
     /// </summary>
-    public const string SucceededIcon = "check_circle"; // Icons.Material.Filled.CheckCircle
+    public const string SucceededIcon = "check_circle";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SucceededStatus"/> class.
     /// </summary>
     public SucceededStatus()
         : base(
-            id: 3,
             name: "Succeeded",
             icon: SucceededIcon,
             color: "Success",

@@ -54,4 +54,15 @@ public interface ICredentialService : IServiceOption
     /// <param name="userId">The owning user.</param>
     /// <param name="cancellationToken">Propagated cancellation token.</param>
     Task<IGenericResult> Disable(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Answers whether the user currently holds a credential in this service's store.
+    /// </summary>
+    /// <remarks>
+    /// Presence, not material. Granting a first credential and replacing an existing one are
+    /// separate acts with separate authority, and the caller cannot tell them apart without this.
+    /// </remarks>
+    /// <param name="userId">The owning user.</param>
+    /// <param name="cancellationToken">Propagated cancellation token.</param>
+    Task<IGenericResult<bool>> Exists(Guid userId, CancellationToken cancellationToken = default);
 }

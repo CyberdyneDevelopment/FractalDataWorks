@@ -11,7 +11,6 @@ public sealed class RefreshAltIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="RefreshAltIcon"/>.</summary>
     public RefreshAltIcon()
         : base(
-            14,
             "RefreshAlt",
             "0 0 24 24",
             "none",

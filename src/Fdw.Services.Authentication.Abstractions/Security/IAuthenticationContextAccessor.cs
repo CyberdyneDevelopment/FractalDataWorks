@@ -8,7 +8,7 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 /// <para>
 /// Why an accessor instead of ctor-injecting <see cref="IAuthenticationContext"/> directly: the
 /// consumer that needs per-execution tenant data — <c>MsSqlConnectionFactory</c> — is registered as a
-/// DI <c>Singleton</c> (required so the three-phase <c>ServiceTypeOption</c> registration/eager-resolve
+/// DI <c>Singleton</c> (required so the three-phase <c>Implementation</c> registration/eager-resolve
 /// pattern can cache it for the app's lifetime). A <c>Scoped</c> <see cref="IAuthenticationContext"/>
 /// ctor-injected into a <c>Singleton</c> is a captive dependency — the DI container either throws
 /// (`ValidateScopes`) or silently freezes whatever was resolved once at construction, for the life of

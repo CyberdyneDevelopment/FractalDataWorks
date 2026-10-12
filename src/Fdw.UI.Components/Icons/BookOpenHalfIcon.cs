@@ -11,7 +11,6 @@ public sealed class BookOpenHalfIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="BookOpenHalfIcon"/>.</summary>
     public BookOpenHalfIcon()
         : base(
-            51,
             "BookOpenHalf",
             "0 0 24 24",
             "none",

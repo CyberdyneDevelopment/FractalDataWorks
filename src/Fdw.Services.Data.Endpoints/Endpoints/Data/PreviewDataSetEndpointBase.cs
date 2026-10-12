@@ -1,16 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data;
-using Fdw.Data;
-using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
+using Fdw.Web.RestEndpoints.Pagination;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -18,15 +15,19 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for previewing data from a DataSet.
-/// Loads the DataSet configuration via DataSetConfigurationProvider (including Fields and Sources),
-/// then queries the first active source for sample rows.
+/// Loads the DataSet configuration via DataSetConfigurationProvider for its columns, then reads sample
+/// rows from the data set itself.
 /// </summary>
+/// <remarks>
+/// The rows are read through <see cref="DataSetQuery"/>, the one path every route that returns a data set's rows
+/// takes (FDW-1075): the data set's read gate, the strategy's renames, transformations and calculated fields, and
+/// each row cut down to the data set's declared fields. A preview shows exactly what a consumer of the data set
+/// receives, never a column of the table under it that the data set does not declare.
+/// </remarks>
 public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDataSetRequest, PreviewDataSetResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
-
-    /// <summary>Gets the data gateway for executing live data preview queries.</summary>
-    protected IDataGateway DataGateway { get; }
+    private readonly DataSetQuery _query;
 
     /// <summary>Gets the logger.</summary>
     protected new ILogger<PreviewDataSetEndpointBase> Logger { get; }
@@ -39,8 +40,8 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
         : base(logger)
     {
         _dataSetProvider = dataSetProvider;
-        DataGateway = dataGateways.ByName("Main");
         Logger = logger ?? NullLogger<PreviewDataSetEndpointBase>.Instance;
+        _query = new DataSetQuery(dataGateways, Logger);
     }
 
     /// <inheritdoc />
@@ -56,8 +57,7 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
         => PreviewDataSet(request.Name, request.MaxRows, ct);
 
     /// <summary>
-    /// Loads the DataSet configuration (including Fields and SourceIds), resolves the first active source,
-    /// then queries sample rows from that source.
+    /// Loads the DataSet configuration for its columns, then reads sample rows from the data set.
     /// Override for custom preview behavior.
     /// </summary>
     protected virtual async Task<IGenericResult<PreviewDataSetResponse?>> PreviewDataSet(
@@ -78,8 +78,8 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
 
         var config = dsResult.Value;
 
-        // Build columns from the Fields already assembled by AssembleHierarchy.
         var columns = config.Fields
+            .Where(f => f.IsCurrent && !f.IsDeleted)
             .OrderBy(f => f.Ordinal)
             .Select(f => new PreviewColumnDto
             {
@@ -90,61 +90,25 @@ public abstract class PreviewDataSetEndpointBase : CrudGetEndpointBase<PreviewDa
             .ToList();
 
         DataSetEndpointLog.LoadingSources(Logger, dataSetName);
-        var (rows, hasMore) = await FetchPreviewRows(
-            dataSetName,
-            config.Sources as IReadOnlyList<DataSetSourceConfiguration> ?? config.Sources?.ToList(),
-            maxRows,
-            ct).ConfigureAwait(false);
+        var rowCap = PaginationQuery.ResolveCalculatedRowCap(HttpContext, Logger);
+        if (rowCap.IsFailure) return rowCap.ToNewResult<PreviewDataSetResponse?>();
 
+        var page = await _query.Run(
+            config, new DataQueryRequest { DataSetName = dataSetName, Take = maxRows }, maxRows, rowCap.Value, DataSetQuery.Unscoped, ct)
+            .ConfigureAwait(false);
+        if (page.IsFailure)
+        {
+            DataSetEndpointLog.PreviewRowsFetchFailed(Logger, dataSetName);
+            return page.ToNewResult<PreviewDataSetResponse?>();
+        }
+
+        var read = page.Value!;
         return GenericResult<PreviewDataSetResponse?>.Success(new PreviewDataSetResponse
         {
             DataSetName = dataSetName,
             Columns = columns,
-            Rows = rows,
-            HasMoreRows = hasMore
+            Rows = read.Rows,
+            HasMoreRows = read.HasMoreRows
         });
-    }
-
-    private async Task<(List<IReadOnlyDictionary<string, object?>> Rows, bool HasMore)> FetchPreviewRows(
-        string dataSetName,
-        IReadOnlyList<DataSetSourceConfiguration>? sources,
-        int maxRows,
-        CancellationToken ct)
-    {
-        var source = sources?
-            .Where(s => s.IsCurrent && !s.IsDeleted)
-            .OrderBy(s => s.Priority)
-            .FirstOrDefault();
-
-        if (source is null || string.IsNullOrEmpty(source.DataStoreName) || string.IsNullOrEmpty(source.ContainerName))
-            return ([], false);
-
-        var previewCommand = new QueryCommand<IDataRow>
-        {
-            Paging = new PagingExpression { Skip = 0, Take = maxRows + 1 }
-        };
-        var previewResult = await DataGateway
-            .Execute<System.Collections.Generic.IEnumerable<IDataRow>>(
-                previewCommand,
-                new DataStoreTarget(source.DataStoreName, source.PathValue, source.ContainerName),
-                ct)
-            .ConfigureAwait(false);
-
-        if (previewResult.IsFailure || previewResult.Value is null)
-        {
-            DataSetEndpointLog.PreviewRowsFetchFailed(Logger, dataSetName);
-            return ([], false);
-        }
-
-        var allRows = previewResult.Value.ToList();
-        var hasMore = allRows.Count > maxRows;
-
-        var rows = allRows
-            .Take(maxRows)
-            .Select(r => (IReadOnlyDictionary<string, object?>)
-                new Dictionary<string, object?>(r.AsDictionary(), System.StringComparer.Ordinal))
-            .ToList();
-
-        return (rows, hasMore);
     }
 }

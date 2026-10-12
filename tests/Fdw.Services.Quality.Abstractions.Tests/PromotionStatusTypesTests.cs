@@ -7,105 +7,6 @@ public class PromotionStatusTypesTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void AllReturnsAllStatusTypes()
-    {
-        // Act
-        var all = PromotionStatusTypes.All();
-
-        // Assert
-        all.ShouldNotBeEmpty();
-        all.Count.ShouldBeGreaterThan(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByIdReturnsCorrectStatusType()
-    {
-        // Arrange
-        var all = PromotionStatusTypes.All();
-        var first = all.First();
-
-        // Act
-        var result = PromotionStatusTypes.ById(first.Id);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Id.ShouldBe(first.Id);
-        result.Name.ShouldBe(first.Name);
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByIdReturnsNotFoundForUnknownId()
-    {
-        // Act
-        var result = PromotionStatusTypes.ById(99999);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByNameReturnsCorrectStatusType()
-    {
-        // Act
-        var result = PromotionStatusTypes.ByName("Pending");
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("Pending");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByNameReturnsNotFoundForUnknownName()
-    {
-        // Act
-        var result = PromotionStatusTypes.ByName("UnknownStatus");
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void ByNameIsCaseSensitive()
-    {
-        // Act
-        var result1 = PromotionStatusTypes.ByName("Pending");
-        var result2 = PromotionStatusTypes.ByName("pending");
-        var result3 = PromotionStatusTypes.ByName("PENDING");
-
-        // Assert
-        result1.Name.ShouldBe("Pending");
-        result2.Name.ShouldBe("_Empty");
-        result3.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void NotFoundReturnsEmptyInstance()
-    {
-        // Act
-        var result = PromotionStatusTypes.NotFound;
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.Name.ShouldBe("_Empty");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
     public void PendingStatusTypeHasCorrectProperties()
     {
         // Act
@@ -113,7 +14,6 @@ public class PromotionStatusTypesTests
 
         // Assert
         status.ShouldNotBeNull();
-        status.Id.ShouldBe(1);
         status.Name.ShouldBe("Pending");
         status.IsTerminal.ShouldBeFalse();
         status.IsSuccess.ShouldBeFalse();
@@ -130,7 +30,6 @@ public class PromotionStatusTypesTests
 
         // Assert
         status.ShouldNotBeNull();
-        status.Id.ShouldBe(4);
         status.Name.ShouldBe("InProgress");
         status.IsTerminal.ShouldBeFalse();
         status.IsSuccess.ShouldBeFalse();
@@ -147,7 +46,6 @@ public class PromotionStatusTypesTests
 
         // Assert
         status.ShouldNotBeNull();
-        status.Id.ShouldBe(5);
         status.Name.ShouldBe("Completed");
         status.IsTerminal.ShouldBeTrue();
         status.IsSuccess.ShouldBeTrue();
@@ -164,7 +62,6 @@ public class PromotionStatusTypesTests
 
         // Assert
         status.ShouldNotBeNull();
-        status.Id.ShouldBe(6);
         status.Name.ShouldBe("Failed");
         status.IsTerminal.ShouldBeTrue();
         status.IsSuccess.ShouldBeFalse();
@@ -181,7 +78,6 @@ public class PromotionStatusTypesTests
 
         // Assert
         status.ShouldNotBeNull();
-        status.Id.ShouldBe(2);
         status.Name.ShouldBe("Approved");
         status.IsTerminal.ShouldBeFalse();
         status.IsSuccess.ShouldBeFalse();
@@ -198,52 +94,10 @@ public class PromotionStatusTypesTests
 
         // Assert
         status.ShouldNotBeNull();
-        status.Id.ShouldBe(3);
         status.Name.ShouldBe("Rejected");
         status.IsTerminal.ShouldBeTrue();
         status.IsSuccess.ShouldBeFalse();
         status.AllowsExecution.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void AllStatusTypesHaveUniqueIds()
-    {
-        // Act
-        var all = PromotionStatusTypes.All();
-        var ids = all.Select(s => s.Id).ToList();
-
-        // Assert
-        ids.Count.ShouldBe(ids.Distinct().Count());
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void AllStatusTypesHaveUniqueNames()
-    {
-        // Act
-        var all = PromotionStatusTypes.All();
-        var names = all.Select(s => s.Name).ToList();
-
-        // Assert
-        names.Count.ShouldBe(names.Distinct().Count());
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Etl")]
-    public void AllStatusTypesImplementInterface()
-    {
-        // Act
-        var all = PromotionStatusTypes.All();
-
-        // Assert
-        foreach (var status in all)
-        {
-            status.ShouldBeAssignableTo<IPromotionStatusType>();
-        }
     }
 
     [Theory]

@@ -15,7 +15,6 @@ public sealed class ScatterChartType : ChartTypeBase
     /// </summary>
     public ScatterChartType()
         : base(
-            id: 7,
             name: "Scatter",
             displayName: "Scatter Plot",
             category: "Correlation",

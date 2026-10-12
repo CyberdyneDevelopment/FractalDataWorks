@@ -21,7 +21,6 @@ public sealed class NullToDefaultFieldTransformer : FieldTransformationBase
     /// </summary>
     public NullToDefaultFieldTransformer()
         : base(
-            id: 600,
             name: "NullToDefault",
             displayName: "Null to Default",
             description: "When the input is null or empty string, returns a typed default value.",

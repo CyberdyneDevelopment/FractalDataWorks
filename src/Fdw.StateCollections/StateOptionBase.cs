@@ -15,16 +15,16 @@ namespace Fdw.StateCollections;
 /// property getter rather than capturing references in the constructor.
 /// </summary>
 /// <typeparam name="TSelf">The concrete state interface (CRTP).</typeparam>
-public abstract class StateOptionBase<TSelf> : TypeOptionBase<int, TSelf>, IStateOption<TSelf>
+public abstract class StateOptionBase<TSelf> : TypeOptionBase<TSelf>, IStateOption<TSelf>
     where TSelf : IStateOption<TSelf>
 {
     /// <summary>Initializes a smart-state option with id + name.</summary>
-    protected StateOptionBase(int id, string name) : base(id, name)
+    protected StateOptionBase(string name) : base(name)
     {
     }
 
     /// <summary>Initializes a smart-state option with id + name + category.</summary>
-    protected StateOptionBase(int id, string name, string? category) : base(id, name, category)
+    protected StateOptionBase(string name, string? category) : base(name, category)
     {
     }
 

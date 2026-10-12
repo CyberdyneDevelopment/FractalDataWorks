@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -38,23 +39,20 @@ public abstract class GetDataSetSourcesEndpointBase : CrudGetEndpointBase<DataSe
     }
 
     /// <summary>
-    /// Loads data set sources from the composed aggregate returned by the provider.
-    /// Override for custom behavior.
+    /// Loads the data set's sources, each with its field mappings. Override for custom behavior.
     /// </summary>
+    /// <remarks>
+    /// Reads only the sources and what hangs from them; the data set's fields, joins and filters are
+    /// not composed (FDW-951). A data set that does not exist fails as not found.
+    /// </remarks>
     protected virtual async Task<IGenericResult<List<DataSetSourcePayload>?>> LoadDataSetSources(string dataSetName, CancellationToken ct)
     {
         DataSetEndpointLog.LoadingSources(Logger, dataSetName);
 
-        var dsResult = await _dataSetProvider.Get(dataSetName, ct).ConfigureAwait(false);
-        if (dsResult.IsFailure) return dsResult.ToNewResult<List<DataSetSourcePayload>?>();
+        var read = await _dataSetProvider.Get<DataSetSourceConfiguration>(dataSetName, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
+        if (read.IsFailure) return read.ToNewResult<List<DataSetSourcePayload>?>();
 
-        if (dsResult.Value is null)
-        {
-            DataSetEndpointLog.DataSetNotFound(Logger, dataSetName);
-            return GenericResult<List<DataSetSourcePayload>?>.Success((List<DataSetSourcePayload>?)null);
-        }
-
-        var sources = dsResult.Value.Sources?.Select(DataSetQueryHelper.MapToSourceDto).ToList() ?? [];
+        var sources = read.Value!.Select(DataSetQueryHelper.MapToSourceDto).ToList();
         return GenericResult<List<DataSetSourcePayload>?>.Success((List<DataSetSourcePayload>?)sources);
     }
 }

@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
+using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -17,14 +19,14 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class DeleteSecretManagerEndpointBase : Endpoint<DeleteSecretManagerRequest>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<DeleteSecretManagerEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteSecretManagerEndpointBase"/> class.
     /// </summary>
     protected DeleteSecretManagerEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<DeleteSecretManagerEndpointBase> logger)
     {
         _configProvider = configProvider;
@@ -35,7 +37,10 @@ public abstract class DeleteSecretManagerEndpointBase : Endpoint<DeleteSecretMan
     public override void Configure()
     {
         Delete("/secret-managers/{Name}");
-        Policies("secretmanagers:delete");
+        // Secret managers are the platform's, owned by the system tenant: only a platform administrator lists, reads
+        // or changes one. A tenant never touches a secret manager or a secret; a connection's credentials are set
+        // through the connection (FDW-1086).
+        Policies(AuthConstants.PlatformAdminPolicy);
         Summary(s =>
         {
             s.Summary = "Delete secret manager";
@@ -54,7 +59,7 @@ public abstract class DeleteSecretManagerEndpointBase : Endpoint<DeleteSecretMan
         {
             SecretManagerEndpointLog.DeletingSecretManager(_logger, req.Name);
 
-            var existingResult = await _configProvider.GetHeader(req.Name, ct).ConfigureAwait(false);
+            var existingResult = await _configProvider.Get(req.Name, ct).ConfigureAwait(false);
             var existing = existingResult.IsSuccess ? existingResult.Value : null;
 
             if (existing == null)

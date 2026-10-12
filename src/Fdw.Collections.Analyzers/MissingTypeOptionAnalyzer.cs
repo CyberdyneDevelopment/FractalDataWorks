@@ -270,6 +270,21 @@ public sealed class MissingTypeOptionAnalyzer : DiagnosticAnalyzer
         if (IsGeneratedSentinel(type))
             return false;
 
+        // Skip types [TypeOption] structurally cannot apply to: the generator emits a PUBLIC static
+        // accessor on the collection type (a different type entirely, often in a different assembly)
+        // that names the option's own type as its return type. A private or nested-private type is
+        // inaccessible from there regardless of RestrictToCurrentCompilation — it is not an omission
+        // to flag, it is not a legal TypeOption. Only types reachable outside their declaring type
+        // (public, or internal within the same compilation) can ever satisfy this rule.
+        if (type.DeclaredAccessibility is Accessibility.Private or Accessibility.ProtectedAndInternal)
+            return false;
+
+        for (var container = type.ContainingType; container != null; container = container.ContainingType)
+        {
+            if (container.DeclaredAccessibility is Accessibility.Private or Accessibility.ProtectedAndInternal)
+                return false;
+        }
+
         // Check inheritance chain
         var currentType = type.BaseType;
         while (currentType != null)

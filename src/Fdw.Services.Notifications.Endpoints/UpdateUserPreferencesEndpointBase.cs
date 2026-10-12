@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -15,10 +16,16 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPreferencesRequest, IReadOnlyList<UserNotificationPreferenceDto>>
 {
+    /// <summary>Initializes a new instance of the <see cref="UpdateUserPreferencesEndpointBase"/> class.</summary>
+    protected UpdateUserPreferencesEndpointBase(ILogger<UpdateUserPreferencesEndpointBase> logger)
+    {
+        Logger = logger;
+    }
+
     /// <summary>
     /// Gets the logger instance.
     /// </summary>
-    protected new ILogger Logger { get; private set; } = null!;
+    protected new ILogger Logger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -39,8 +46,6 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
     /// <inheritdoc/>
     public override async Task HandleAsync(UpdateUserPreferencesRequest req, CancellationToken ct)
     {
-        Logger = Resolve<ILoggerFactory>().CreateLogger(GetType());
-
         try
         {
             var userId = req.UserId.ToString("D", CultureInfo.InvariantCulture);
@@ -54,7 +59,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
         catch (Exception ex)
         {
             EndpointLogger.EndpointError(Logger, ex, GetType().Name);
-            HttpContext.Response.StatusCode = 500;
+            await Send.StatusCodeAsync(StatusCodes.Status500InternalServerError, ct).ConfigureAwait(false);
         }
     }
 

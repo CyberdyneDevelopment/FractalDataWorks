@@ -19,7 +19,8 @@ namespace Fdw.Services.Connections.Endpoints;
 /// <remarks>
 /// Capabilities are populated from opt-in interfaces:
 /// <see cref="ISupportsContainerTypes"/>, <see cref="ISupportsFieldTypes"/>,
-/// <see cref="ISupportsWriteModes"/>, and <see cref="ISupportsDataPathFormats"/>.
+/// <see cref="ISupportsWriteModes"/>, <see cref="ISupportsDataPathFormats"/>,
+/// <see cref="ISupportsProtocols"/>, and <see cref="ISupportsAuthenticationMethods"/>.
 /// Connection types that do not implement an interface return an empty list for that capability.
 /// </remarks>
 public abstract class GetConnectionTypeCapabilitiesEndpointBase
@@ -53,7 +54,8 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
     /// <inheritdoc />
     protected override string EndpointDescription =>
         "Returns the capability metadata declared by the specified connection type, " +
-        "including supported container types, field types, write modes, and path formats. " +
+        "including supported container types, field types, write modes, path formats, protocols, the data store types a data store over it may have, schema discovery options, " +
+        "and the authentication methods a connection may name with the credentials each asks for. " +
         "Empty lists are returned for capabilities not declared by the type.";
 
     /// <inheritdoc />
@@ -72,11 +74,13 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
                 ConnectionEndpointLog.ConnectionTypeNotFound(_logger, request.Name);
                 return GenericResult<ConnectionTypeCapabilitiesResponse?>.Success(null);
             }
-            typeName = connResult.Value.ServiceOptionType ?? string.Empty;
+            typeName = connResult.Value.Implementation ?? string.Empty;
         }
 
         var connectionType = Fdw.Services.Connections.ConnectionTypes.ByName(typeName);
-        if (connectionType is null)
+        // Why ReferenceEquals: ByName answers an unknown name with the NotFound sentinel, never null, so
+        // a null check let every unknown type through with the sentinel's (empty) capabilities.
+        if (ReferenceEquals(connectionType, Fdw.Services.Connections.ConnectionTypes.NotFound))
         {
             ConnectionEndpointLog.ConnectionTypeNotFound(_logger, typeName);
             return GenericResult<ConnectionTypeCapabilitiesResponse?>.Success(null);
@@ -84,6 +88,10 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
 
         var containerTypes = connectionType is ISupportsContainerTypes containerCapable
             ? containerCapable.SupportedContainerTypes
+            : (IReadOnlyList<string>)[];
+
+        var executableContainerTypes = connectionType is ISupportsExecutableContainerTypes executeCapable
+            ? executeCapable.ExecutableContainerTypes
             : (IReadOnlyList<string>)[];
 
         var fieldTypes = connectionType is ISupportsFieldTypes fieldCapable
@@ -98,12 +106,25 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
             ? pathCapable.SupportedPathFormats
             : (IReadOnlyList<string>)[];
 
+        var protocols = connectionType is ISupportsProtocols protocolCapable
+            ? protocolCapable.SupportedProtocols
+            : (IReadOnlyList<string>)[];
+
+        var authenticationTypes = connectionType is ISupportsAuthenticationMethods authenticationCapable
+            ? authenticationCapable.AuthenticationMethods.Select(ConnectionAuthenticationTypeInfo.Of).ToList()
+            : (IReadOnlyList<ConnectionAuthenticationTypeInfo>)[];
+
         var response = new ConnectionTypeCapabilitiesResponse
         {
             ContainerTypes = containerTypes,
+            ExecutableContainerTypes = executableContainerTypes,
             FieldTypes = fieldTypes,
             WriteModes = writeModes,
             PathFormats = pathFormats,
+            Protocols = protocols,
+            DataStoreTypes = connectionType.SupportedDataStoreTypes,
+            DiscoveryTypes = connectionType.SupportedDiscoveryTypes.Select(option => SchemaDiscoveryTypeInfo.Of(option)).ToList(),
+            AuthenticationTypes = authenticationTypes,
         };
 
         ConnectionEndpointLog.CapabilitiesResolved(_logger, request.Name);

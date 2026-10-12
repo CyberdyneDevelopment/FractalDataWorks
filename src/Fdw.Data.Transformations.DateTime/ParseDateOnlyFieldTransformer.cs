@@ -24,7 +24,6 @@ public sealed class ParseDateOnlyFieldTransformer : FieldTransformationBase
     /// </summary>
     public ParseDateOnlyFieldTransformer()
         : base(
-            id: 102,
             name: "ParseDateOnly",
             displayName: "Parse DateOnly",
             description: "Parses a string value to DateOnly. Returns null on parse failure.",

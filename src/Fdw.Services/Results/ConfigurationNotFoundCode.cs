@@ -17,7 +17,7 @@ public sealed class ConfigurationNotFoundCode : ServicesResultCodeBase
     public ConfigurationNotFoundCode()
         : base(30000, "ConfigurationNotFound",
             ResultSeverities.ByName("Error"),
-            "Configuration not found: '{Identifier}'",
+            "Configuration not found: '{Identifier}'. It does not exist, or it is a Restricted or system-tenant row, which only the system tenant can read.",
             isRetryable: false)
     {
     }

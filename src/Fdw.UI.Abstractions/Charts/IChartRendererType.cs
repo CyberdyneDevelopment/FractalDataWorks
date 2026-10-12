@@ -67,7 +67,7 @@ public interface IChartRendererType : ITypeOption<int, ChartRendererTypeBase>
     /// that implements <see cref="IChartRenderer"/> directly).
     /// </summary>
     /// <remarks>
-    /// This is a plain <see cref="Type"/> (framework-neutral). A Blazor renderer package sets it
+    /// This is a plain <see cref="Type"/> (framework-neutral). A renderer package sets it
     /// to its component type so a host can resolve the renderer from the enumerable
     /// <see cref="ChartRendererTypes"/> registry without a separate map — no reflection, no module
     /// initialiser. The contract layer does not load or instantiate the type.

@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class DateTimeConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="DateTimeConfigurationPropertyTypeDto"/>.</summary>
-    public DateTimeConfigurationPropertyTypeDto() : base(8, "DateTime") { }
+    public DateTimeConfigurationPropertyTypeDto() : base("DateTime") { }
 }

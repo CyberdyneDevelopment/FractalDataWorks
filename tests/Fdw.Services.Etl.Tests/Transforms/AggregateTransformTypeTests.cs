@@ -22,7 +22,7 @@ public sealed class AggregateTransformTypeTests
     private readonly AggregateTransformType _sut = new();
 
     private static TransformContext CreateContext() =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>());
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>());
 
     private static PipelineTransformConfiguration CreateConfig(
         IEnumerable<string> groupByFields,
@@ -289,7 +289,6 @@ public sealed class AggregateTransformTypeTests
         target.Aggregations[0].SourceField.ShouldBe("Points");
         target.Aggregations[0].AggregateFunction.ShouldBe("Sum");
         target.Aggregations[0].OutputField.ShouldBe("TotalPoints");
-        target.Aggregations[0].PipelineTransformId.ShouldBe(target.Id);
     }
 
     [Fact]

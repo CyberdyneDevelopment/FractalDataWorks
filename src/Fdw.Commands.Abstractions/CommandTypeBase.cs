@@ -27,7 +27,7 @@ namespace Fdw.Commands.Abstractions;
 /// This pattern follows the same approach as ServiceTypeBase → ConnectionTypeBase.
 /// </para>
 /// </remarks>
-public abstract class CommandTypeBase : TypeOptionBase<int, CommandTypeBase>, IGenericCommandType
+public abstract class CommandTypeBase : TypeOptionBase<CommandTypeBase>, IGenericCommandType
 {
     /// <inheritdoc/>
     public IGenericCommandCategory CommandCategory { get; }
@@ -60,7 +60,6 @@ public abstract class CommandTypeBase : TypeOptionBase<int, CommandTypeBase>, IG
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this command type.</param>
     /// <param name="name">The name of this command type.</param>
     /// <param name="description">The description of this command type.</param>
     /// <param name="category">The command category.</param>
@@ -69,7 +68,6 @@ public abstract class CommandTypeBase : TypeOptionBase<int, CommandTypeBase>, IG
     /// <param name="supportsPipelining">Whether pipelining is supported (default false).</param>
     /// <param name="maxBatchSize">Maximum batch size (default 1).</param>
     protected CommandTypeBase(
-        int id,
         string name,
         string description,
         IGenericCommandCategory category,
@@ -77,7 +75,7 @@ public abstract class CommandTypeBase : TypeOptionBase<int, CommandTypeBase>, IG
         bool supportsBatching = false,
         bool supportsPipelining = false,
         int maxBatchSize = 1)
-        : base(id, name, description)
+        : base(name, description)
     {
         CommandCategory = category;
         SupportedTranslators = supportedTranslators;

@@ -7,6 +7,6 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// implementation's own configuration.
 /// </summary>
 public interface ISchedulerConfiguration
-    : IPlatformServiceConfiguration<ISchedulerImplementationConfiguration>
+    : IDomainConfiguration
 {
 }

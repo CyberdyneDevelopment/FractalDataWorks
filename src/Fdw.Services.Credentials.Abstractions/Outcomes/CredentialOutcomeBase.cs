@@ -10,20 +10,24 @@ namespace Fdw.Services.Credentials.Abstractions.Outcomes;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class — no logic to test.</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class CredentialOutcomeBase : TypeOptionBase<int, CredentialOutcomeBase>, ICredentialOutcome
+public abstract class CredentialOutcomeBase : TypeOptionBase<CredentialOutcomeBase>, ICredentialOutcome
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialOutcomeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this outcome.</param>
     /// <param name="name">The name of this outcome.</param>
     /// <param name="grantsAccess">Whether this outcome, on its own, grants access.</param>
-    protected CredentialOutcomeBase(int id, string name, bool grantsAccess)
-        : base(id, name)
+    /// <param name="provesSecret">Whether the presented secret was correct.</param>
+    protected CredentialOutcomeBase(string name, bool grantsAccess, bool provesSecret)
+        : base(name)
     {
         GrantsAccess = grantsAccess;
+        ProvesSecret = provesSecret;
     }
 
     /// <inheritdoc />
     public bool GrantsAccess { get; }
+
+    /// <inheritdoc />
+    public bool ProvesSecret { get; }
 }

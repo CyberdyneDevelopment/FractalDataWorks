@@ -4,6 +4,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.Logging;
+using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -36,7 +37,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Delete", RestrictToCurrentCompilation = true)]
-public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand
+public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand, ISoftDeletableCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteCommand"/> class.
@@ -52,4 +53,11 @@ public sealed class DeleteCommand : DataCommandBase<int>, IFilterableCommand
     /// Determines which records to delete.
     /// </summary>
     public IFilterExpression? Filter { get; init; }
+
+    /// <summary>
+    /// Gets or sets the soft-delete options. When set, matching rows are flagged deleted (the configured
+    /// flag column, and optionally a deleted-at column) instead of removed; the rows are those the
+    /// <see cref="Filter"/> matches and, when the options carry a source set, the keys absent from it.
+    /// </summary>
+    public SoftDeleteOptions? SoftDelete { get; init; }
 }

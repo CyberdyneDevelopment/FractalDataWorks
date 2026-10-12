@@ -56,6 +56,20 @@ public sealed class LocalKeyTakeSchemeTests
     }
 
     [Fact]
+    public void Refuses_an_entry_whose_authority_is_not_an_absolute_url()
+    {
+        // The option reads its own Authority (FDW-903): the collection no longer does it for every
+        // kind, because Session and ApiKey entries have no issuer to read.
+        var schemes = new RecordingSchemeProvider();
+
+        var result = new LocalKeyAuthenticationType().TakeScheme(
+            Entry("FdwAuthority", "auth.example"), schemes, Services(), null);
+
+        result.IsSuccess.ShouldBeFalse();
+        schemes.Added.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void The_scheme_name_carries_the_prefix_the_options_bridge_reads_back()
     {
         // The bridge recovers the entry name by trimming this prefix, so the two have to agree.
@@ -63,16 +77,16 @@ public sealed class LocalKeyTakeSchemeTests
             .ShouldBe(LocalKeyAuthenticationType.SchemePrefix + "FdwAuthority");
     }
 
-    private static IAuthenticationServiceConfiguration Entry(string? name, string? authority)
-        => new AuthenticationServiceConfiguration
+    private static LocalKeyAuthenticationConfiguration Entry(string? name, string? authority)
+        => new()
         {
             Name = name ?? string.Empty,
-            ServiceOptionType = "LocalKey",
+            Implementation = "LocalKey",
             Enabled = true,
             Authority = authority,
         };
 
-    private static IServiceProvider Services() => new ServiceCollection().BuildServiceProvider();
+    private static ServiceProvider Services() => new ServiceCollection().BuildServiceProvider();
 
     private sealed class RecordingSchemeProvider : IAuthenticationSchemeProvider
     {

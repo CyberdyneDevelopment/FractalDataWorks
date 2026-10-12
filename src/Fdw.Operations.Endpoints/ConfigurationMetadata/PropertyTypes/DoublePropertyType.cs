@@ -11,5 +11,5 @@ public sealed class DoublePropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="DoublePropertyType"/> class.
     /// </summary>
-    public DoublePropertyType() : base(7, "Double", typeof(double), ConfigurationPropertyTypeDtos.Number) { }
+    public DoublePropertyType() : base("Double", typeof(double), ConfigurationPropertyTypeDtos.Number) { }
 }

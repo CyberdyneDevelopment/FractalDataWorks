@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Configuration;
@@ -7,9 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.TokenManagers.Logging;
 
 namespace Fdw.Services.TokenManagers;
 
@@ -28,7 +32,26 @@ public static class TokenManagerTypes
     /// <summary>
     /// The connection this domain's configuration rows are read from.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
+
+    /// <summary>
+    /// The connection revoked tokens and per-user revocation marks are written to and read from: a connection the
+    /// host declares as <c>ConnectionRoles.Auth</c> in its <c>configurationSchema.json</c>, reached through its
+    /// configuration gateway.
+    /// </summary>
+    public static string RevocationConnection => AuthConnection.Name;
+
+    /// <summary>
+    /// How long the JWT signing key is reused before it is read from its secret manager again, so a
+    /// rotation takes effect without a restart.
+    /// </summary>
+    public static TimeSpan SigningCredentialCacheLifetime { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// The implementation name the Jwt token manager is registered under -- the value a token-manager
+    /// domain row carries in <c>Implementation</c>.
+    /// </summary>
+    private const string JwtImplementation = "Jwt";
 
     /// <summary>
     /// No-op — this domain has no pre-Build IOptions binding to perform; <see cref="Register"/> does the
@@ -60,26 +83,13 @@ public static class TokenManagerTypes
         if (defer)
             return GenericResult<IHostApplicationBuilder>.Success(builder);
 
-        builder.Services.TryAddSingleton<ITokenManagerConfigurationProvider>(sp =>
-            new TokenManagerConfigurationProvider(
-                sp.GetService<ILogger<TokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                ConfigurationConnection));
-        builder.Services.TryAddSingleton<TokenManagerConfigurationProvider>(
-            sp => (TokenManagerConfigurationProvider)sp.GetRequiredService<ITokenManagerConfigurationProvider>());
-        builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<TokenManagerConfiguration, Commands.TokenManagerConfigurationCommand>>(
-            sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
-        builder.Services.TryAddSingleton<IServiceConfigurationProvider<TokenManagerConfiguration>>(
-            sp => sp.GetRequiredService<TokenManagerConfigurationProvider>());
+            builder.Services.AddSingleton<ITokenManagerConfigurationProvider, TokenManagerConfigurationProvider>(sp => new TokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<TokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection, "auth", "TokenManager"));
 
-        builder.Services.TryAddSingleton<JwtTokenManagerConfigurationProvider>(sp =>
-            new JwtTokenManagerConfigurationProvider(
-                sp.GetService<ILogger<JwtTokenManagerConfigurationProvider>>()!,
-                sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                ConfigurationConnection));
+        builder.Services.AddSingleton<IJwtTokenManagerConfigurationProvider, JwtTokenManagerConfigurationProvider>(sp => new JwtTokenManagerConfigurationProvider(sp.GetRequiredService<ILogger<JwtTokenManagerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), TokenManagerTypes.ConfigurationConnection, "auth", "JwtTokenManagerConfiguration"));
 
+        builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
         builder.Services.TryAddSingleton<JwtIssuanceResolver>(sp =>
-            new JwtIssuanceResolver(sp, sp.GetService<ILogger<JwtIssuanceResolver>>()));
+            new JwtIssuanceResolver(sp, sp.GetRequiredService<IAuthenticationContextAccessor>(), sp.GetService<ILogger<JwtIssuanceResolver>>()));
 
         builder.Services.TryAddSingleton<ITokenIssuer>(sp =>
             new ConfiguredTokenIssuer(sp.GetRequiredService<JwtIssuanceResolver>()));
@@ -93,18 +103,43 @@ public static class TokenManagerTypes
         // ASP.NET's authentication-handler convention, so scoped costs nothing here.
         builder.Services.TryAddScoped<ITokenRevocationStore, TokenRevocationStore>();
 
+        TokenManagerTypesLog.Registered(loggerFactory?.CreateLogger("Fdw.Services.TokenManagers.TokenManagerTypes") ?? NullLogger.Instance);
+
         return GenericResult<IHostApplicationBuilder>.Success(builder);
     }
 
     /// <summary>
-    /// No-op — this domain has no post-Build eager-resolve step; every service is registered directly in
-    /// <see cref="Register"/>. Declared only so the <c>[PlatformServiceProvider]</c> three-phase shape
-    /// requirement is satisfied.
+    /// Hands the Jwt implementation configuration provider to the token-manager domain, so a domain row
+    /// naming <c>Implementation = "Jwt"</c> can be composed.
     /// </summary>
+    /// <remarks>
+    /// This was a no-op, and <see cref="Register"/> put both providers in the container without ever
+    /// connecting them -- so <see cref="JwtIssuanceResolver"/> read the <c>ApiTokenIssuer</c> row, found no
+    /// implementation registered under "Jwt", and every login failed at issuance with "cannot compose
+    /// 'ApiTokenIssuer'". It has to happen here rather than in <see cref="Register"/>: the registry lives
+    /// on the provider instance, and there is no instance until the container is built.
+    /// </remarks>
     /// <param name="host">The built host.</param>
     /// <param name="loggerFactory">Unused.</param>
     /// <param name="force">Run regardless of the skip flag and whether the phase has already run.</param>
     /// <param name="defer">Claim the phase without running it: the collect skips it and the next explicit call runs it.</param>
     public static IGenericResult<IHost> Initialize(IHost host, ILoggerFactory? loggerFactory = null, bool force = false, bool defer = false)
-        => GenericResult<IHost>.Success(host);
+    {
+        if (defer)
+            return GenericResult<IHost>.Success(host);
+
+        var logger = loggerFactory?.CreateLogger("Fdw.Services.TokenManagers.TokenManagerTypes") ?? NullLogger.Instance;
+
+        var registered = host.Services.GetRequiredService<ITokenManagerConfigurationProvider>()
+            .Register(JwtImplementation, host.Services.GetRequiredService<IJwtTokenManagerConfigurationProvider>());
+
+        if (registered.IsFailure)
+        {
+            TokenManagerTypesLog.ImplementationConnectFailed(logger, JwtImplementation, registered.CurrentMessage);
+            return registered.ToNewResult<IHost>();
+        }
+
+        TokenManagerTypesLog.ImplementationConnected(logger, JwtImplementation);
+        return GenericResult<IHost>.Success(host);
+    }
 }

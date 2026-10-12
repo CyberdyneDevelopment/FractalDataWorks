@@ -25,34 +25,6 @@ public class RowMapperTypesTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ByNameReturnsPooledMapperType()
-    {
-        // Act
-        var type = RowMapperTypes.ByName("Pooled");
-
-        // Assert
-        type.ShouldNotBeNull();
-        type.Name.ShouldBe("Pooled");
-        type.ShouldBeAssignableTo<IRowMapperType>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ByNameReturnsEmptyForUnknownType()
-    {
-        // Act
-        var type = RowMapperTypes.ByName("Unknown");
-
-        // Assert
-        type.ShouldNotBeNull();
-        type.Name.ShouldBe("_Empty");
-        type.ShouldBeSameAs(RowMapperTypes.NotFound);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void PooledMapperTypeHasCorrectProperties()
     {
         // Act

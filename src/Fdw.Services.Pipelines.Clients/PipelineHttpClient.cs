@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
@@ -31,7 +32,15 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     /// <inheritdoc />
     public Task<IGenericResult<PipelineDetailResponse>> Get(string name, CancellationToken cancellationToken = default)
     {
-        return Get<PipelineDetailResponse>($"pipelines/{name}", cancellationToken);
+        return Post<GetPipelineClientRequest, PipelineDetailResponse>(
+            "pipelines/get", new GetPipelineClientRequest { Name = name }, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<PipelineDetailResponse>> Get(Guid id, CancellationToken cancellationToken = default)
+    {
+        return Post<GetPipelineByIdClientRequest, PipelineDetailResponse>(
+            "pipelines/get", new GetPipelineByIdClientRequest { Id = id }, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -39,6 +48,20 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
         CreatePipelineClientRequest request, CancellationToken cancellationToken = default)
     {
         return Post<CreatePipelineClientRequest, PipelineDetailResponse>("pipelines", request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<ValidatePipelineResponse>> ValidatePipeline(
+        CreatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    {
+        return Post<CreatePipelineClientRequest, ValidatePipelineResponse>("pipelines/validate", request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult<ValidatePipelineResponse>> ValidatePipeline(
+        string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    {
+        return Post<UpdatePipelineClientRequest, ValidatePipelineResponse>($"pipelines/{name}/validate", request, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -52,5 +75,11 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     public Task<IGenericResult<IReadOnlyList<PipelineTypeSummary>>> GetPipelineTypes(CancellationToken cancellationToken = default)
     {
         return GetList<PipelineTypeSummary>("pipelines/types", cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<IGenericResult> DeletePipeline(string name, CancellationToken cancellationToken = default)
+    {
+        return Delete($"pipelines/{name}", cancellationToken);
     }
 }

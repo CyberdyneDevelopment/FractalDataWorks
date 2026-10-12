@@ -32,4 +32,14 @@ public interface IJoinExpression
     /// Example: [{ "Customers.Id", "Orders.CustomerId" }]
     /// </value>
     IReadOnlyList<(string LeftField, string RightField)> JoinConditions { get; }
+
+    /// <summary>
+    /// Gets the container the left side of each condition belongs to, or <see langword="null"/> when it
+    /// is the queried (primary) container.
+    /// </summary>
+    /// <remarks>
+    /// Names an earlier join's target when a join continues from it: a child row reaches an
+    /// implementation row, and the implementation row reaches its domain row.
+    /// </remarks>
+    string? SourceContainerName { get; }
 }

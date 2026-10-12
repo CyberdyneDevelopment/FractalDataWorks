@@ -9,6 +9,10 @@ using Fdw.Services.SecretManagers.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.Pagination;
+using Microsoft.AspNetCore.Http;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Fdw.Services.Authentication.Abstractions.Security;
 
 namespace Fdw.Services.SecretManagers.Endpoints;
 
@@ -18,14 +22,14 @@ namespace Fdw.Services.SecretManagers.Endpoints;
 /// </summary>
 public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<PaginatedResponse<SecretManagerSummaryResponse>>
 {
-    private readonly SecretManagerConfigurationProvider _configProvider;
+    private readonly ISecretManagerConfigurationProvider _configProvider;
     private readonly ILogger<ListSecretManagersEndpointBase> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ListSecretManagersEndpointBase"/> class.
     /// </summary>
     protected ListSecretManagersEndpointBase(
-        SecretManagerConfigurationProvider configProvider,
+        ISecretManagerConfigurationProvider configProvider,
         ILogger<ListSecretManagersEndpointBase> logger)
     {
         _configProvider = configProvider;
@@ -36,7 +40,10 @@ public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<Pa
     public override void Configure()
     {
         Get("/secret-managers");
-        Policies("secretmanagers:read");
+        // Secret managers are the platform's, owned by the system tenant: only a platform administrator lists, reads
+        // or changes one. A tenant never touches a secret manager or a secret; a connection's credentials are set
+        // through the connection (FDW-1086).
+        Policies(AuthConstants.PlatformAdminPolicy);
         Summary(s =>
         {
             s.Summary = "List secret managers";
@@ -61,12 +68,19 @@ public abstract class ListSecretManagersEndpointBase : EndpointWithoutRequest<Pa
             .Select(c => new SecretManagerSummaryResponse
             {
                 Name = c.Name,
-                SecretManagerType = c.SecretManagerType,
-                Description = c.Description
+                SecretManagerType = c.Implementation,
             })
             .ToList();
 
         SecretManagerEndpointLog.SecretManagersListed(_logger, configs.Count);
-        await Send.OkAsync(PaginatedResponse<SecretManagerSummaryResponse>.Create(configs, 0, configs.Count, configs.Count), ct).ConfigureAwait(false);
+        var paging = PaginationQuery.Parse(HttpContext, _logger);
+        if (paging.IsFailure)
+        {
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(paging, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(paging.Value!.Apply(configs), ct).ConfigureAwait(false);
     }
 }

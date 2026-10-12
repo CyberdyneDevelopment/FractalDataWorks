@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class WarningLineageNodeStatus : LineageNodeStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="WarningLineageNodeStatus"/>.</summary>
-    public WarningLineageNodeStatus() : base(3, "Warning") { }
+    public WarningLineageNodeStatus() : base("Warning") { }
 }

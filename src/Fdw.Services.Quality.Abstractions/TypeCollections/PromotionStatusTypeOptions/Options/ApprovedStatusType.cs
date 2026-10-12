@@ -15,7 +15,6 @@ public sealed class ApprovedStatusType : PromotionStatusTypeBase
     /// </summary>
     public ApprovedStatusType()
         : base(
-            id: 2,
             name: "Approved",
             isTerminal: false,
             isSuccess: false,

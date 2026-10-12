@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Turkish")]
 public sealed class TurkishTimeZoneType : TimeZoneTypeBase
 {
-    public TurkishTimeZoneType() : base(27, "Turkish", "Turkey Standard Time") { }
+    public TurkishTimeZoneType() : base("Turkish", "Turkey Standard Time") { }
 }

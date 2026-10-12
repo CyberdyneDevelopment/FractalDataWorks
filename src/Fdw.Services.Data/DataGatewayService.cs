@@ -5,13 +5,10 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq;
-using System.Transactions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using System.Transactions;
+using Fdw.Abstractions;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.Abstractions.Caching;
@@ -24,19 +21,24 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Data.RowSources.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Connections;
 using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Connections.Abstractions.Logging;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Caching;
+using Fdw.Services.Data.Configuration;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Limits;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
+using Fdw.Services.Data.Transformations;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
-using Fdw.Services.Data.Configuration;
-using Fdw.Abstractions;
 namespace Fdw.Services.Data;
 
 /// <summary>
@@ -47,12 +49,17 @@ namespace Fdw.Services.Data;
 /// <remarks>
 /// Limit kinds checked, in order, before a <see cref="DataStoreTarget"/> command dispatches:
 ///   1. RateLimit (token bucket, in-memory)
-///   2. ConcurrencyLimit (SemaphoreSlim per connection, non-blocking)
+///   2. ConcurrencyLimit (SemaphoreSlim per connection; a slot is taken without blocking and held
+///      until the call finishes, or the cursor is disposed, so a full connection refuses at once)
 ///   3. MaxResultSize (cap on Paging.Take if command is IQueryCommand)
 ///   4. QueryTimeout (linked CancellationTokenSource wrapping the caller's)
 ///   5. DailyBudget (in-memory counter, checked before dispatch, incremented after success)
 /// On exceeded: returns GenericResult.Failure with the matching MessageLogging result. Never
 /// throws, never blocks (non-blocking semaphore TryEnter).
+/// <see cref="OpenRecordSource(IDataCommand, DataStoreTarget, CancellationToken)"/> is held to the same
+/// limits (FDW-947): they are checked before the cursor opens, the daily counters advance when it
+/// opens, and the concurrency slot and the query timeout stay in force until the caller disposes the
+/// cursor. A limit that cannot be resolved refuses the call rather than lifting the limits (FDW-949).
 /// </remarks>
 [ExcludeFromCodeCoverage]
 public sealed class DataGatewayService : IDataGateway
@@ -60,14 +67,16 @@ public sealed class DataGatewayService : IDataGateway
     private readonly ILogger<DataGatewayService> _logger;
     private readonly IDataConnectionProvider _connectionProvider;
     private readonly IDataSetConfigurationProvider _dataSetProvider;
-    private readonly DataStoreConfigurationProvider _dataStoreConfigProvider;
+    private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _dataStoreConfigProvider;
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly PredicatePushdownAnalyzer _predicatePushdown;
     private readonly IFrameworkAuthorizationService? _authorizationService;
 
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
+    private readonly IConfigurationGatewayProvider? _configurationGateways;
 
-    private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
+    private readonly IConnectionConfigurationProvider? _connectionConfigProvider;
+    private readonly FieldMappingTransformationResolver _fieldTransformations;
     private readonly DataGatewayResultCache? _cache;
     private readonly MainDataGatewayConfiguration? _options;
 
@@ -80,8 +89,6 @@ public sealed class DataGatewayService : IDataGateway
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _concurrencyGates =
         new(StringComparer.OrdinalIgnoreCase);
 
-    private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
-
     /// <summary>
     /// Initializes a new instance of the <see cref="DataGatewayService"/> class.
     /// </summary>
@@ -90,7 +97,8 @@ public sealed class DataGatewayService : IDataGateway
     /// <param name="dataSetProvider">The dataset configuration provider for federated queries (lazy to break circular DI).</param>
     /// <param name="dataStoreConfigProvider">The DataStore configuration provider (dual-source).</param>
     /// <param name="limitResolver">Resolves the effective outbound limits for a connection.</param>
-    /// <param name="counters">Backing store for the daily query/byte counters limits are checked against.</param>
+    /// <param name="counters">Backing store for the daily query counter limits are checked against.</param>
+    /// <param name="fieldTransformations">Resolves the transformation chains attached to a data-set source's field mappings (FDW-877).</param>
     /// <param name="authorizationService">Optional authorization service for permission validation.</param>
     /// <param name="dataStoreProvider">On-demand container resolver. When non-null, container commands
     /// resolve the unified container via <c>GetContainer(...)</c>; when null, container routing fails loud.</param>
@@ -105,19 +113,26 @@ public sealed class DataGatewayService : IDataGateway
     /// Optional provider used to name the connection kind behind a target's DataStore. Required whenever
     /// caching is enabled — without it the partition cannot be resolved and the read fails loud.
     /// </param>
+    /// <param name="configurationGateways">
+    /// The configuration gateways, through which the system context reaches a store the host declared
+    /// (<see cref="IDataStore.DeclaredByHost"/>). Without it such a request fails loud; a non-system request over one
+    /// is refused either way (FDW-1068).
+    /// </param>
     public DataGatewayService(
         ILoggerFactory? loggerFactory,
         IDataConnectionProvider connectionProvider,
         IDataSetConfigurationProvider dataSetProvider,
-        DataStoreConfigurationProvider dataStoreConfigProvider,
+        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> dataStoreConfigProvider,
         IConnectionLimitResolver limitResolver,
         ConnectionLimitCounterStore counters,
+        FieldMappingTransformationResolver fieldTransformations,
         IFrameworkAuthorizationService? authorizationService = null,
         IDataStoreProvider? dataStoreProvider = null,
         DataGatewayResultCache? cache = null,
         MainDataGatewayConfiguration? options = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
-        ConnectionConfigurationProvider? connectionConfigProvider = null)
+        IConnectionConfigurationProvider? connectionConfigProvider = null,
+        IConfigurationGatewayProvider? configurationGateways = null)
     {
         var factory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = factory.CreateLogger<DataGatewayService>();
@@ -133,6 +148,8 @@ public sealed class DataGatewayService : IDataGateway
         _options = options;
         _authenticationContextAccessor = authenticationContextAccessor;
         _connectionConfigProvider = connectionConfigProvider;
+        _configurationGateways = configurationGateways;
+        _fieldTransformations = fieldTransformations ?? throw new ArgumentNullException(nameof(fieldTransformations));
 
         // Get internal implementation details - these are not injected
         _predicatePushdown = new PredicatePushdownAnalyzer(factory.CreateLogger<PredicatePushdownAnalyzer>());
@@ -182,35 +199,32 @@ public sealed class DataGatewayService : IDataGateway
         => Execute<T>(command, target, useCache: true, cancellationToken);
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// A target in a store the host declared (<see cref="IDataStore.DeclaredByHost"/>) is not run here: a non-system
+    /// caller is refused, and the system context is sent to the store's configuration gateway (FDW-1068).
+    /// </remarks>
     public async Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken = default)
+    {
+        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+            return await ExecuteOnHostStore<T>(command, target, cancellationToken).ConfigureAwait(false);
+
+        return await ExecuteAdmitted<T>(command, target, useCache, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<T>> ExecuteAdmitted<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return GenericResult<T>.Failure(ConnectionLimitLog.OperationCancelled(_logger, Guid.Empty));
 
-        var connectionName = target.DataStore;
+        var admitted = Admit(target.DataStore, command, cancellationToken);
+        if (!admitted.IsSuccess)
+            return admitted.ToNewResult<T>();
 
-        var limitsResult = _limitResolver.Resolve(connectionName, cancellationToken);
-        if (!limitsResult.IsSuccess)
-        {
-            ConnectionLimitLog.LimitResolutionFailed(_logger, Guid.Empty, limitsResult.CurrentMessage ?? "unknown");
-            return await ExecuteWithCache<T>(command, target, useCache, cancellationToken).ConfigureAwait(false);
-        }
-
-        IReadOnlyList<ConnectionLimitConfiguration> limits = limitsResult.Value
-            ?? (IReadOnlyList<ConnectionLimitConfiguration>)[];
-
+        // Held until this call returns: a concurrency slot only limits anything while work occupies it.
+        using var lease = admitted.Value!;
+        var limits = lease.Limits;
         if (limits.Count == 0)
-        {
-            ConnectionLimitLog.NoLimitsConfigured(_logger, Guid.Empty);
             return await ExecuteWithCache<T>(command, target, useCache, cancellationToken).ConfigureAwait(false);
-        }
-
-        foreach (var limit in limits)
-        {
-            var checkResult = CheckLimit<T>(limit, command, connectionName);
-            if (checkResult is not null)
-                return checkResult;
-        }
 
         var effectiveCt = ApplyQueryTimeout(limits, cancellationToken, out var timeoutCts);
 
@@ -271,6 +285,27 @@ public sealed class DataGatewayService : IDataGateway
                 return cached;
         }
 
+        // Concurrent misses for one key are one read: the call that leads reads and caches, the others wait
+        // for it. A forced refresh (useCache false) reads for itself.
+        if (cacheKey is not null && useCache)
+        {
+            return await _cache!.Coalesce(
+                cacheKey,
+                () => ReadAndCache<T>(command, target, isQuery, cacheKey, cacheCeiling, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return await ReadAndCache<T>(command, target, isQuery, cacheKey, cacheCeiling, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<T>> ReadAndCache<T>(
+        IDataCommand command,
+        DataStoreTarget target,
+        bool isQuery,
+        string? cacheKey,
+        TimeSpan cacheCeiling,
+        CancellationToken cancellationToken)
+    {
         var result = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
         ApplyCacheOutcome(command, target, result, isQuery, cacheKey, cacheCeiling);
@@ -311,7 +346,7 @@ public sealed class DataGatewayService : IDataGateway
                     cacheKey,
                     result,
                     CacheKeyBuilder.GetInvalidationTags(command, target),
-                    CachePolicy.GetDuration(command, DefaultCacheDuration, cacheCeiling));
+                    CachePolicy.GetDuration(command, cacheCeiling));
             }
 
             return;
@@ -335,7 +370,9 @@ public sealed class DataGatewayService : IDataGateway
         if (dataContainer is null)
             return GenericResult<T>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
-        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, cancellationToken).ConfigureAwait(false);
+        // The store's row alone: ConnectionId is a field of it. Reading it whole composed every path,
+        // container, field and key under it, a query per collection per row, on every command (FDW-970).
+        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
             return GenericResult<T>.Failure(
@@ -384,7 +421,9 @@ public sealed class DataGatewayService : IDataGateway
                     _logger, target.DataStore, "no connection configuration provider is registered"));
         }
 
-        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, cancellationToken).ConfigureAwait(false);
+        // Both rows alone: the partition needs the store's ConnectionId and the connection's
+        // Implementation, and this runs before every cached command's cache is even checked (FDW-970).
+        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
             return GenericResult<IConnectionType>.Failure(
@@ -393,7 +432,7 @@ public sealed class DataGatewayService : IDataGateway
         }
 
         var connectionResult = await _connectionConfigProvider
-            .Get(storeResult.Value.ConnectionId, cancellationToken).ConfigureAwait(false);
+            .Get(storeResult.Value.ConnectionId, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
         {
             return GenericResult<IConnectionType>.Failure(
@@ -401,29 +440,95 @@ public sealed class DataGatewayService : IDataGateway
                     _logger, target.DataStore, "the DataStore's connection configuration could not be resolved"));
         }
 
-        if (string.IsNullOrWhiteSpace(connectionResult.Value.ServiceOptionType))
+        if (string.IsNullOrWhiteSpace(connectionResult.Value.Implementation))
         {
             return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
-                    _logger, target.DataStore, "the connection declares no ServiceOptionType"));
+                    _logger, target.DataStore, "the connection declares no Implementation"));
         }
 
-        if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType), ConnectionTypes.NotFound))
+        if (ReferenceEquals(ConnectionTypes.ByName(connectionResult.Value.Implementation), ConnectionTypes.NotFound))
         {
             return GenericResult<IConnectionType>.Failure(
                 DataGatewayCacheLog.CachePartitionUnavailable(
                     _logger,
                     target.DataStore,
-                    $"connection type '{connectionResult.Value.ServiceOptionType}' is not registered"));
+                    $"connection type '{connectionResult.Value.Implementation}' is not registered"));
         }
 
         return GenericResult<IConnectionType>.Success(
-            ConnectionTypes.ByName(connectionResult.Value.ServiceOptionType));
+            ConnectionTypes.ByName(connectionResult.Value.Implementation));
     }
 
     /// <inheritdoc/>
     public async Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSource(
         IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return GenericResult<IRecordSource<DataRecord>>.Failure(ConnectionLimitLog.OperationCancelled(_logger, Guid.Empty));
+
+        if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
+            return await OpenOnHostStore(command, target, cancellationToken).ConfigureAwait(false);
+
+        var admitted = Admit(target.DataStore, command, cancellationToken);
+        if (!admitted.IsSuccess)
+            return admitted.ToNewResult<IRecordSource<DataRecord>>();
+
+        return await OpenWithinLimits(admitted.Value!, command, target, cancellationToken).ConfigureAwait(false);
+    }
+
+    // What the limits hold has to outlive this call: the connection returns once the cursor is open and
+    // the rows are read afterwards. So on success the lease (concurrency slots) and the timeout source are
+    // handed to the returned source, which keeps them until the caller disposes the cursor; on any other
+    // exit they are released here. A connection with nothing to keep enforcing gets its cursor back as is.
+    private async Task<IGenericResult<IRecordSource<DataRecord>>> OpenWithinLimits(
+        ConnectionLimitLease lease,
+        IDataCommand command,
+        DataStoreTarget target,
+        CancellationToken cancellationToken)
+    {
+        var limits = lease.Limits;
+        var timeoutSeconds = FindQueryTimeoutSeconds(limits);
+        var effectiveCt = ApplyQueryTimeout(limits, cancellationToken, out var timeoutCts);
+        var handedOver = false;
+
+        try
+        {
+            var opened = await OpenRecordSourceCore(command, target, effectiveCt).ConfigureAwait(false);
+            if (!opened.IsSuccess)
+                return opened;
+
+            IncrementDailyCounters(limits);
+
+            if (timeoutCts is null && !lease.HoldsSlots)
+                return opened;
+
+            handedOver = true;
+            return GenericResult<IRecordSource<DataRecord>>.Success(
+                new LimitedRecordSource(opened.Value!, lease, timeoutCts, timeoutSeconds.GetValueOrDefault(), _logger));
+        }
+        catch (OperationCanceledException ex) when (timeoutCts?.IsCancellationRequested == true && ex is not null)
+        {
+            return GenericResult<IRecordSource<DataRecord>>.Failure(
+                ConnectionLimitLog.QueryTimeoutExceeded(_logger, Guid.Empty, timeoutSeconds.GetValueOrDefault()));
+        }
+        catch (OperationCanceledException ex) when (ex is not null)
+        {
+            return GenericResult<IRecordSource<DataRecord>>.Failure(
+                ConnectionLimitLog.OperationCancelled(_logger, Guid.Empty));
+        }
+        finally
+        {
+            if (!handedOver)
+            {
+                timeoutCts?.Dispose();
+                lease.Dispose();
+            }
+        }
+    }
+
+    private async Task<IGenericResult<IRecordSource<DataRecord>>> OpenRecordSourceCore(
+        IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(target.DataStore))
             return GenericResult<IRecordSource<DataRecord>>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
@@ -438,7 +543,8 @@ public sealed class DataGatewayService : IDataGateway
         if (dataContainer is null)
             return GenericResult<IRecordSource<DataRecord>>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
-        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, cancellationToken).ConfigureAwait(false);
+        // The store's row alone, for its ConnectionId, as in ExecuteCore.
+        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
             return GenericResult<IRecordSource<DataRecord>>.Failure(DataGatewayLogger.DataStoreNotFoundForSource(_logger, target.DataStore));
 
@@ -478,22 +584,104 @@ public sealed class DataGatewayService : IDataGateway
             return GenericResult<T>.Failure(
                 DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "IDataStoreProvider is not available; cannot execute a DataSet"));
 
-        if (string.IsNullOrWhiteSpace(config.ServiceOptionType))
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "DataSet configuration has no ServiceOptionType (strategy kind)"));
+        var sourcesAdmitted = await AdmitSources(config, cancellationToken).ConfigureAwait(false);
+        if (sourcesAdmitted.IsFailure)
+            return sourcesAdmitted.ToNewResult<T>();
 
-        var strategy = DataSetTypes.ByName(config.ServiceOptionType);
+        if (string.IsNullOrWhiteSpace(config.Implementation))
+            return GenericResult<T>.Failure(
+                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, "DataSet configuration has no Implementation (strategy kind)"));
+
+        var strategy = DataSetTypes.ByName(config.Implementation);
         if (ReferenceEquals(strategy, DataSetTypes.NotFound))
             return GenericResult<T>.Failure(
-                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, $"DataSet strategy type '{config.ServiceOptionType}' is not a registered DataSetTypes member"));
+                DataGatewayLogger.DataSetNotFound(_logger, target.DataSet, $"DataSet strategy type '{config.Implementation}' is not a registered DataSetTypes member"));
 
         DataGatewayLogger.RoutingToDataSet(_logger, target.DataSet);
         var context = new DataSetExecutionContext(
-            config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _logger);
+            config, _connectionProvider, _dataStoreProvider, _predicatePushdown, _fieldTransformations, _logger);
         return await strategy.Execute<T>(context, command, cancellationToken).ConfigureAwait(false);
     }
 
 
+
+    // ============================================================
+    // Host-declared stores (FDW-1068)
+    // ============================================================
+
+    // Whether the store a target names is one the host declared in configurationSchema.json. Read off the store
+    // itself (IDataStore.DeclaredByHost), which the configuration gateway that built it set; never off its name. A
+    // name that resolves to no store is not a host store: the read goes on and fails where it always did.
+    private async Task<bool> IsHostDeclared(string? dataStoreName, CancellationToken cancellationToken)
+    {
+        if (_dataStoreProvider is null || string.IsNullOrWhiteSpace(dataStoreName))
+            return false;
+
+        var store = await _dataStoreProvider.Get(dataStoreName, cancellationToken).ConfigureAwait(false);
+        return store is { IsSuccess: true, Value.DeclaredByHost: true };
+    }
+
+    // A host store is the platform's own: a request is refused, and the system context reads it through the
+    // configuration gateway onto it, which is the one path built for those stores. The host declares each such store
+    // beside the connection of the same name that serves it, so that is the gateway asked for; a host that declares
+    // none of that name gets the provider's refusal naming the ones it does declare.
+    private IGenericResult<IConfigurationGateway> HostStoreGateway(string dataStoreName, string container)
+    {
+        if (_authenticationContextAccessor?.Current is not { IsSystemContext: true })
+        {
+            return GenericResult<IConfigurationGateway>.Failure(
+                DataServiceResultCodes.ByName("HostDeclaredStoreRefused"), _logger,
+                ResultDetails.Create("dataStore", dataStoreName, "container", container));
+        }
+
+        if (_configurationGateways is null)
+        {
+            return GenericResult<IConfigurationGateway>.Failure(
+                DataServiceResultCodes.ByName("NoConfigurationGateway"), _logger,
+                ResultDetails.Create("ConnectionName", dataStoreName, "Registered", "no configuration gateway provider was given to this data gateway"));
+        }
+
+        return _configurationGateways.Get(dataStoreName);
+    }
+
+    private async Task<IGenericResult<T>> ExecuteOnHostStore<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
+    {
+        var gateway = HostStoreGateway(target.DataStore, target.Container);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<T>();
+
+        return await gateway.Value!.Execute<T>(command, target, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<IRecordSource<DataRecord>>> OpenOnHostStore(
+        IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
+    {
+        var gateway = HostStoreGateway(target.DataStore, target.Container);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<IRecordSource<DataRecord>>();
+
+        return await gateway.Value!.OpenRecordSource(command, target, cancellationToken).ConfigureAwait(false);
+    }
+
+    // A data set over a host store would hand its rows to whoever may read the data set, so a non-system caller is
+    // refused when any source sits in one. The system context runs the data set as it always has.
+    private async Task<IGenericResult> AdmitSources(IDataSetImplementationConfiguration config, CancellationToken cancellationToken)
+    {
+        if (_authenticationContextAccessor?.Current is { IsSystemContext: true })
+            return GenericResult.Success();
+
+        foreach (var source in config.Sources)
+        {
+            if (await IsHostDeclared(source.DataStoreName, cancellationToken).ConfigureAwait(false))
+            {
+                return GenericResult.Failure(
+                    DataServiceResultCodes.ByName("HostDeclaredStoreRefused"), _logger,
+                    ResultDetails.Create("dataStore", source.DataStoreName, "container", source.ContainerName));
+            }
+        }
+
+        return GenericResult.Success();
+    }
 
     private async Task<IGenericResult<IDataContainer>> ResolveContainerResult(DataStoreTarget target, CancellationToken ct)
     {
@@ -518,10 +706,46 @@ public sealed class DataGatewayService : IDataGateway
         return GenericResult<IDataContainer>.Success(containerResult.Value);
     }
 
+    // The limit gate every DataStoreTarget read goes through -- Execute and OpenRecordSource both admit
+    // here, so a streamed read is held to exactly the limits a buffered one is (FDW-947). On success the
+    // lease carries the limits that applied and any concurrency slots taken, and the caller disposes it
+    // when the work is finished. A limit that cannot be read is a refusal, not "no limit" (FDW-949); an
+    // empty list is the normal state of a connection nobody has limited.
+    private IGenericResult<ConnectionLimitLease> Admit(string connectionName, IDataCommand command, CancellationToken cancellationToken)
+    {
+        var limitsResult = _limitResolver.Resolve(connectionName, cancellationToken);
+        if (!limitsResult.IsSuccess)
+        {
+            return GenericResult<ConnectionLimitLease>.Failure(
+                ConnectionLimitLog.LimitResolutionFailed(_logger, Guid.Empty, limitsResult.CurrentMessage ?? "unknown"));
+        }
+
+        var lease = new ConnectionLimitLease(limitsResult.Value!);
+        if (lease.Limits.Count == 0)
+        {
+            ConnectionLimitLog.NoLimitsConfigured(_logger, Guid.Empty);
+            return GenericResult<ConnectionLimitLease>.Success(lease);
+        }
+
+        foreach (var limit in lease.Limits)
+        {
+            var refusal = CheckLimit<ConnectionLimitLease>(limit, command, connectionName, lease);
+            if (refusal is not null)
+            {
+                // Slots taken by an earlier limit, or an earlier check of this one, go back.
+                lease.Dispose();
+                return refusal;
+            }
+        }
+
+        return GenericResult<ConnectionLimitLease>.Success(lease);
+    }
+
     private IGenericResult<T>? CheckLimit<T>(
         ConnectionLimitConfiguration limit,
         IDataCommand command,
-        string connectionName)
+        string connectionName,
+        ConnectionLimitLease lease)
     {
         var baseCfg = limit;
 
@@ -534,7 +758,7 @@ public sealed class DataGatewayService : IDataGateway
 
         if (baseCfg.EnforceMaxConcurrent.HasValue)
         {
-            var concurrencyResult = CheckConcurrency<T>(baseCfg, connectionName);
+            var concurrencyResult = CheckConcurrency<T>(baseCfg, connectionName, lease);
             if (concurrencyResult is not null)
                 return concurrencyResult;
         }
@@ -546,7 +770,7 @@ public sealed class DataGatewayService : IDataGateway
                 return sizeResult;
         }
 
-        if (baseCfg.EnforceMaxQueriesPerDay.HasValue || baseCfg.EnforceMaxBytesPerDay.HasValue)
+        if (baseCfg.EnforceMaxQueriesPerDay.HasValue)
         {
             var budgetResult = CheckDailyBudget<T>(baseCfg);
             if (budgetResult is not null)
@@ -571,7 +795,10 @@ public sealed class DataGatewayService : IDataGateway
             ConnectionLimitLog.RateExceeded(_logger, limit.ConnectionConfigurationId, rate, maxPerSecond));
     }
 
-    private IGenericResult<T>? CheckConcurrency<T>(ConnectionLimitConfiguration limit, string connectionName)
+    // Takes a slot and leaves it taken: the lease hands it back when the call finishes or the cursor is
+    // disposed. This used to Wait(0) and Release() straight away, which never held a slot and so could
+    // never refuse anything (FDW-949).
+    private IGenericResult<T>? CheckConcurrency<T>(ConnectionLimitConfiguration limit, string connectionName, ConnectionLimitLease lease)
     {
         int maxConcurrent = limit.EnforceMaxConcurrent!.Value;
         var semaphore = _concurrencyGates.GetOrAdd(connectionName,
@@ -587,7 +814,7 @@ public sealed class DataGatewayService : IDataGateway
                     maxConcurrent));
         }
 
-        semaphore.Release();
+        lease.Hold(semaphore);
         return null;
     }
 
@@ -611,7 +838,7 @@ public sealed class DataGatewayService : IDataGateway
 
     private IGenericResult<T>? CheckDailyBudget<T>(ConnectionLimitConfiguration limit)
     {
-        var (queries, bytes) = _counters.Read(limit.ConnectionConfigurationId);
+        var queries = _counters.ReadQueryCount(limit.ConnectionConfigurationId);
 
         if (limit.EnforceMaxQueriesPerDay.HasValue && queries >= limit.EnforceMaxQueriesPerDay.Value)
             return GenericResult<T>.Failure(
@@ -620,14 +847,6 @@ public sealed class DataGatewayService : IDataGateway
                     limit.ConnectionConfigurationId,
                     queries,
                     limit.EnforceMaxQueriesPerDay.Value));
-
-        if (limit.EnforceMaxBytesPerDay.HasValue && bytes >= limit.EnforceMaxBytesPerDay.Value)
-            return GenericResult<T>.Failure(
-                ConnectionLimitLog.DailyByteBudgetExhausted(
-                    _logger,
-                    limit.ConnectionConfigurationId,
-                    bytes,
-                    limit.EnforceMaxBytesPerDay.Value));
 
         return null;
     }
@@ -663,7 +882,7 @@ public sealed class DataGatewayService : IDataGateway
     {
         foreach (var limit in limits)
         {
-            if (limit.EnforceMaxQueriesPerDay.HasValue || limit.EnforceMaxBytesPerDay.HasValue)
+            if (limit.EnforceMaxQueriesPerDay.HasValue)
                 _counters.IncrementQueryCount(limit.ConnectionConfigurationId);
         }
     }

@@ -8,7 +8,7 @@ namespace Fdw.Services.Scheduling.Abstractions.OptionTypes;
 /// <summary>
 /// Abstract base class for trigger types that define HOW a schedule determines WHEN to execute.
 /// </summary>
-public abstract class TriggerTypeBase : TypeOptionBase<int, TriggerTypeBase>, ITypeOption<int, TriggerTypeBase>, ITriggerType
+public abstract class TriggerTypeBase : TypeOptionBase<TriggerTypeBase>, ITypeOption<int, TriggerTypeBase>, ITriggerType
 {
     /// <summary>
     /// Gets a value indicating whether this trigger type requires schedule persistence.
@@ -43,7 +43,6 @@ public abstract class TriggerTypeBase : TypeOptionBase<int, TriggerTypeBase>, IT
     /// <summary>
     /// Initializes a new instance of the <see cref="TriggerTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this trigger type.</param>
     /// <param name="name">The name of this trigger type.</param>
     /// <param name="requiresSchedule">Whether this trigger type requires schedule persistence.</param>
     /// <param name="isImmediate">Whether this trigger type executes immediately upon creation.</param>
@@ -52,8 +51,8 @@ public abstract class TriggerTypeBase : TypeOptionBase<int, TriggerTypeBase>, IT
     /// The constructor validates that the name is not null and initializes the trigger type
     /// characteristics that determine its scheduling behavior.
     /// </remarks>
-    protected TriggerTypeBase(int id, string name, bool requiresSchedule, bool isImmediate)
-        : base(id, name)
+    protected TriggerTypeBase(string name, bool requiresSchedule, bool isImmediate)
+        : base(name)
     {
         RequiresSchedule = requiresSchedule;
         IsImmediate = isImmediate;

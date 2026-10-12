@@ -1,5 +1,6 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.ServiceTypes;
 
 namespace Fdw.Services.Pipelines;

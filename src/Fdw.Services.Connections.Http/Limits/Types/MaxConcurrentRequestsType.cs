@@ -14,7 +14,6 @@ public sealed class MaxConcurrentRequestsType : ConnectionLimitTypeBase
     /// <summary>Initializes a new instance of <see cref="MaxConcurrentRequestsType"/>.</summary>
     public MaxConcurrentRequestsType()
         : base(
-            3,
             "MaxConcurrentRequests",
             "Max Concurrent Requests",
             "Limits the number of simultaneous outbound HTTP requests.",

@@ -21,7 +21,6 @@ public sealed class FixedBackoffStrategy : BackoffStrategyBase
     /// </summary>
     public FixedBackoffStrategy()
         : base(
-            id: 1,
             name: "Fixed",
             initialDelay: TimeSpan.FromSeconds(1),
             maxDelay: TimeSpan.FromSeconds(1),

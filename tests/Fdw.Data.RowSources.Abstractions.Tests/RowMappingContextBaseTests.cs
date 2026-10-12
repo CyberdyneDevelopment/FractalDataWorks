@@ -148,7 +148,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField1.Object, mockField2.Object }.AsReadOnly());
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField1.Object, mockField2.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { mockField1.Object, mockField2.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -176,7 +176,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -200,7 +200,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -228,7 +228,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -254,7 +254,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField> { mockField.Object }.AsReadOnly());
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField> { mockField.Object }.AsReadOnly());
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField> { mockField.Object }.AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -274,7 +274,7 @@ public class RowMappingContextBaseTests
 
         var mockSchema = new Mock<IContainerSchema>();
         mockSchema.Setup(s => s.Fields).Returns(new List<IField>().AsReadOnly());
-        mockSchema.Setup(s => s.GetProjectableFields()).Returns(new List<IField>().AsReadOnly());
+        mockSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField>().AsReadOnly());
 
         var mockContainer = new Mock<IStorageContainer>();
         mockContainer.Setup(c => c.Schema).Returns(mockSchema.Object);
@@ -284,7 +284,7 @@ public class RowMappingContextBaseTests
         result.FieldCount.ShouldBe(0);
     }
 
-    private static RowMappingContextBase CreateContext(int[] ordinals, string[] names, IDataTypeConverter?[] converters)
+    private static TestRowMappingContext CreateContext(int[] ordinals, string[] names, IDataTypeConverter?[] converters)
     {
         // Use the static Create method path by constructing via reflection since
         // DefaultRowMappingContext is internal. Instead, we test via the Create factory.

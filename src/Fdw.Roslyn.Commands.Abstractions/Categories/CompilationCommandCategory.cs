@@ -12,7 +12,7 @@ public sealed class CompilationCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="CompilationCommandCategory"/> class.
     /// </summary>
-    public CompilationCommandCategory() : base(2, "Compilation", "Compilation operations")
+    public CompilationCommandCategory() : base("Compilation", "Compilation operations")
     {
     }
 }

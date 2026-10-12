@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net.Http;
 using Fdw.Abstractions;
 using Fdw.Collections;
@@ -10,6 +11,7 @@ using Fdw.Services.Abstractions.Health.Monitoring;
 using Fdw.Services.Abstractions.Health.Monitoring.Logging;
 using Fdw.Services.HealthChecks.Monitoring;
 using Fdw.Services.Logging;
+using Fdw.ServiceTypes.Logging;
 using Fdw.Web.Http.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +19,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.Clients.Abstractions.Registration;
 
 namespace Fdw.Web.Analytics.Clients;
 
@@ -25,9 +28,9 @@ namespace Fdw.Web.Analytics.Clients;
 /// health source (e.g. UI hosts) and query the API's health endpoints instead.
 /// </summary>
 [ExcludeFromCodeCoverage]
-[ServiceTypeOption(typeof(HealthMonitorTypes), "HttpClient")]
+[Implementation(typeof(HealthMonitorTypes), "HttpClient")]
 public sealed class HttpHealthMonitorClientType
-    : HealthMonitorTypeBase<IHealthMonitorService, IHttpHealthMonitorFactory, HealthMonitorConfiguration>
+    : HealthMonitorTypeBase<IHealthMonitorService, IHttpHealthMonitorFactory, IHealthMonitorImplementationConfiguration>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpHealthMonitorClientType"/> class.
@@ -36,7 +39,7 @@ public sealed class HttpHealthMonitorClientType
         name: "HttpClient",
         sectionName: "HttpClient",
         displayName: "HTTP Health Monitor Client",
-        description: "Queries the API host's health endpoints over HTTP instead of checking locally")
+        description: "Queries the API host's health endpoints over HTTP instead of checking locally", defaultPathName: "hlth", defaultContainerName: "HttpClientHealthMonitorConfiguration")
     {
         Configuration(builder =>
         {
@@ -48,7 +51,6 @@ public sealed class HttpHealthMonitorClientType
 
         Registration((builder, loggerFactory) =>
         {
-            HealthMonitorProvider.Register(Name, sp => sp.GetRequiredService<HttpHealthMonitorFactory>());
 
             ServiceLogger.FactoryRegistrationDeferred(
                 loggerFactory?.CreateLogger<HttpHealthMonitorClientType>()
@@ -57,10 +59,33 @@ public sealed class HttpHealthMonitorClientType
                 Name,
                 nameof(HttpHealthMonitorFactory));
 
-            builder.Services.TryAddSingleton<HttpHealthMonitorFactory>();
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IHttpHealthMonitorFactory), typeof(HttpHealthMonitorFactory), ServiceLifetime.Singleton));
+            builder.Services.TryAdd(new ServiceDescriptor(
+                typeof(IHttpHealthMonitorProvider), typeof(HttpHealthMonitorProvider), ServiceLifetime.Singleton));
+
+            // Decorate the domain's own AddScoped<IHealthMonitorProvider> registration -- already in
+            // builder.Services by the time this runs, since HealthMonitorTypes' own Registration body
+            // sets it up before running the option collect.
+            var existing = builder.Services.Single(d => d.ServiceType == typeof(IHealthMonitorProvider));
+            builder.Services.Remove(existing);
+            builder.Services.AddScoped<IHealthMonitorProvider>(sp =>
+            {
+                var provider = (IHealthMonitorProvider)existing.ImplementationFactory!(sp);
+
+                var factoryResult = provider.Register(Name, () => sp.GetRequiredService<IHttpHealthMonitorProvider>());
+                if (!factoryResult.IsSuccess)
+                {
+                    var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<HttpHealthMonitorClientType>()
+                        ?? NullLogger<HttpHealthMonitorClientType>.Instance;
+                    ServiceTypeLog.OptionFactoryRegistrationFailed(
+                        logger, nameof(HttpHealthMonitorClientType), Name, nameof(IHttpHealthMonitorProvider), factoryResult.CurrentMessage);
+                }
+
+                return provider;
+            });
+
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
-
     }
-
 }

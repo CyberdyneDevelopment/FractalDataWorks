@@ -14,7 +14,6 @@ public sealed class NaturalKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="NaturalKeyType"/> class.</summary>
     public NaturalKeyType()
         : base(
-            id: 2,
             name: "Natural",
             isPrimaryKey: true,
             hasConstraint: true,

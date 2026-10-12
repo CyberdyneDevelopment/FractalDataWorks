@@ -324,7 +324,7 @@ public class TypePropertyMetadataTests
     [InlineData("Description", "Description")]
     [InlineData("Value", "Data")]
     [InlineData("Category", "Grouping")]
-    public void ObjectInitializer_WithCommonPropertyRoles_CreatesInstance(string propertyName, string propertyRole)
+    public void ObjectInitializer_WithCommonDatumTypes_CreatesInstance(string propertyName, string propertyRole)
     {
         // Act
         var metadata = new TypePropertyMetadata

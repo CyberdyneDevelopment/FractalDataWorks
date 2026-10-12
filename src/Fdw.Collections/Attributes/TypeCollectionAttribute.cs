@@ -59,44 +59,6 @@ public sealed class TypeCollectionAttribute(Type baseType, Type defaultReturnTyp
     public bool RestrictToCurrentCompilation { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether to generate a Blazor UI component for this TypeCollection.
-    /// When true, generates a {CollectionName}Selector.razor component with a dropdown/selector for all options.
-    /// Default is false (no UI component generated).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// When enabled, generates a reusable Blazor component that can be used in configuration UIs:
-    /// <code>
-    /// &lt;FilterOperatorsSelector @bind-Value="model.Operator" /&gt;
-    /// </code>
-    /// </para>
-    /// <para>
-    /// The generated component includes:
-    /// <list type="bullet">
-    /// <item>Dropdown with all TypeOptions from the collection</item>
-    /// <item>Two-way binding support via @bind-Value</item>
-    /// <item>Display names from TypeOption attributes</item>
-    /// <item>ID-based value tracking for serialization</item>
-    /// </list>
-    /// </para>
-    /// </remarks>
-    public bool GenerateUIComponent { get; set; }
-
-    /// <summary>
-    /// Gets or sets the custom UI component type to use instead of the auto-generated component.
-    /// When specified, the generator will not create a default component and will instead
-    /// reference this custom component type in helper methods.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Use this to provide a custom Blazor component for rendering the TypeCollection selector.
-    /// The custom component must implement the standard @bind-Value pattern with a parameter
-    /// of type matching the DefaultReturnType.
-    /// </para>
-    /// </remarks>
-    public Type? UIComponent { get; set; }
-
-    /// <summary>
     /// Gets or sets the parent collection type if this collection is a member of a parent collection.
     /// Must be used together with <see cref="TypeOptionName"/>.
     /// </summary>

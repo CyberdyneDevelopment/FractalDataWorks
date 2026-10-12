@@ -17,7 +17,6 @@ public sealed class RazorConsoleUIRendererType : UIRendererBase
     /// </summary>
     public RazorConsoleUIRendererType()
         : base(
-            id: 2,
             name: "RazorConsole",
             displayName: "RazorConsole VDOM",
             description: "Terminal UI rendering using RazorConsole virtual DOM with .razor component syntax")

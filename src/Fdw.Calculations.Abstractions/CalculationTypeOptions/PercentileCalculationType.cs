@@ -21,7 +21,6 @@ public sealed class PercentileCalculationType : CalculationTypeBase
     /// Initializes a new instance of the <see cref="PercentileCalculationType"/> class.
     /// </summary>
     public PercentileCalculationType() : base(
-        id: 6,
         name: "Percentile",
         category: "Aggregation",
         calculate: (rows, col, parameter) =>

@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Operations.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Execution API client.
+/// Implementation for the Execution API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "ExecutionClient")]
+[Implementation(typeof(ApiClientTypes), "ExecutionClient")]
 public sealed class ExecutionClientType : ApiClientTypeBase<ExecutionApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class ExecutionClientType : ApiClientTypeBase<ExecutionApiClient>
         {
             builder.Services.AddScoped<ExecutionApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<ExecutionApiClient>>() ?? NullLogger<ExecutionApiClient>.Instance;
-                return new ExecutionApiClient(factory.CreateClient(Name), logger);
+                return new ExecutionApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

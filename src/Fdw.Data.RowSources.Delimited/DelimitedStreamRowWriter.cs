@@ -145,7 +145,7 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
         {
             if (i > 0) sb.Append(_options.Separator);
             var raw = row.TryGetValue(_columns[i], out var v) ? v : null;
-            sb.Append(QuoteIfNeeded(Convert.ToString(raw, CultureInfo.InvariantCulture) ?? string.Empty));
+            sb.Append(QuoteIfNeeded(RecordValueText.IsAbsent(raw) ? string.Empty : RecordValueText.Format(raw!, _columns[i])));
         }
 
         return sb.ToString();

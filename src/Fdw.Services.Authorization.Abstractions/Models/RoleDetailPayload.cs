@@ -34,16 +34,6 @@ public sealed class RoleDetailPayload
     public bool IsTenantScoped { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the parent role, if any.
-    /// </summary>
-    public string? ParentRoleName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the sort order for displaying the role.
-    /// </summary>
-    public int SortOrder { get; set; }
-
-    /// <summary>
     /// Gets or sets the list of permissions associated with the role.
     /// </summary>
     public IReadOnlyList<PermissionPayload> Permissions { get; set; } = Array.Empty<PermissionPayload>();

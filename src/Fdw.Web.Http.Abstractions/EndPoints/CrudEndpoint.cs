@@ -14,7 +14,6 @@ public sealed class CrudEndpoint : EndpointTypeBase
     /// Initializes a new instance of the <see cref="CrudEndpoint"/> class.
     /// </summary>
     public CrudEndpoint() : base(
-        id: 1,
         name: "CrudEndpoint",
         description: "Get, Read, Update, Delete operations for data management",
         defaultHttpMethods: ["GET", "POST", "PUT", "DELETE", "PATCH"],

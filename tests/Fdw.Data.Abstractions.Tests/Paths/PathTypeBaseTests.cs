@@ -7,17 +7,6 @@ namespace Fdw.Data.Abstractions.Tests.Paths;
 
 public sealed class PathTypeBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
-
-        // Assert
-        pathType.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -25,7 +14,7 @@ public sealed class PathTypeBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Assert
         pathType.Name.ShouldBe("SqlTable");
@@ -37,7 +26,7 @@ public sealed class PathTypeBaseTests
     public void ConstructorSetsDomain()
     {
         // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Assert
         pathType.Domain.ShouldBe("Sql");
@@ -49,7 +38,7 @@ public sealed class PathTypeBaseTests
     public void ConstructorSetsConfigurationKey()
     {
         // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Assert
         pathType.ConfigurationKey.ShouldBe("Paths:SqlTable");
@@ -61,7 +50,7 @@ public sealed class PathTypeBaseTests
     public void ConstructorSetsDisplayName()
     {
         // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Assert
         pathType.DisplayName.ShouldBe("SQL Table Path");
@@ -73,7 +62,7 @@ public sealed class PathTypeBaseTests
     public void ConstructorSetsDescription()
     {
         // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Assert
         pathType.Description.ShouldBe("Path to SQL table");
@@ -85,7 +74,7 @@ public sealed class PathTypeBaseTests
     public void CategoryDefaultsToPath()
     {
         // Arrange & Act
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Assert
         pathType.Category.ShouldBe("Path");
@@ -97,7 +86,7 @@ public sealed class PathTypeBaseTests
     public void CategoryCanBeCustomized()
     {
         // Arrange & Act
-        var pathType = new TestPathType(2, "RestEndpoint", category: "API");
+        var pathType = new TestPathType("RestEndpoint", category: "API");
 
         // Assert
         pathType.Category.ShouldBe("API");
@@ -109,7 +98,7 @@ public sealed class PathTypeBaseTests
     public void ImplementsIPathType()
     {
         // Arrange
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Act & Assert
         pathType.ShouldBeAssignableTo<IPathType>();
@@ -121,37 +110,20 @@ public sealed class PathTypeBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var pathType = new TestPathType(1, "SqlTable");
+        var pathType = new TestPathType("SqlTable");
 
         // Act & Assert
         pathType.ShouldBeAssignableTo<PathTypeBase>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void MultiplePathTypesForDifferentDomains()
-    {
-        // Arrange
-        var sqlPath = new TestPathType(1, "SqlTable", domain: "Sql");
-        var restPath = new TestPathType(2, "RestEndpoint", domain: "Rest");
-
-        // Act & Assert
-        sqlPath.Domain.ShouldBe("Sql");
-        restPath.Domain.ShouldBe("Rest");
-        sqlPath.Id.ShouldNotBe(restPath.Id);
     }
 
     [ExcludeFromCodeCoverage]
     private sealed class TestPathType : PathTypeBase
     {
         public TestPathType(
-            int id,
             string name,
             string? domain = null,
             string? category = null)
             : base(
-                id,
                 name,
                 name == "SqlTable" ? "SQL Table Path" : "REST Endpoint Path",
                 name == "SqlTable" ? "Path to SQL table" : "Path to REST endpoint",

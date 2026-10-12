@@ -17,7 +17,6 @@ public sealed class PausedStateType : ExecutionStateTypeBase
     /// </summary>
     public PausedStateType()
         : base(
-            id: 11,
             name: "Paused",
             displayName: "Paused",
             isTerminal: false,

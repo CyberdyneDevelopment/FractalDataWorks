@@ -19,7 +19,6 @@ public sealed class GeoChartType : ChartTypeBase
     /// </summary>
     public GeoChartType()
         : base(
-            id: 10,
             name: "Geo",
             displayName: "Map",
             category: "Spatial",

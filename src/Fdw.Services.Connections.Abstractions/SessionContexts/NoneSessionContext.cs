@@ -15,4 +15,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(NoSessionContextTypes), "None")]
-public sealed class NoneSessionContext() : NoSessionContextBase(1, "None");
+public sealed class NoneSessionContext() : NoSessionContextBase("None");

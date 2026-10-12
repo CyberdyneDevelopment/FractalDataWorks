@@ -143,8 +143,8 @@ public sealed class FixedWidthStreamRowWriter : IRowWriter
 
         foreach (var field in _options.Fields)
         {
-            var raw = row.TryGetValue(field.Name, out var v)
-                ? Convert.ToString(v, CultureInfo.InvariantCulture) ?? string.Empty
+            var raw = row.TryGetValue(field.Name, out var v) && !RecordValueText.IsAbsent(v)
+                ? RecordValueText.Format(v!, field.Name)
                 : string.Empty;
 
             LayField(window.Slice(field.StartIndex, field.Length), raw, field);

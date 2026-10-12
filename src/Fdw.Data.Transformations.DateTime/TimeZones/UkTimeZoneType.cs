@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "UK")]
 public sealed class UkTimeZoneType : TimeZoneTypeBase
 {
-    public UkTimeZoneType() : base(25, "UK", "GMT Standard Time") { }
+    public UkTimeZoneType() : base("UK", "GMT Standard Time") { }
 }

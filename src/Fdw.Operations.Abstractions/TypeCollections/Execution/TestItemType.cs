@@ -14,7 +14,6 @@ public sealed class TestItemType : ExecutionItemTypeBase
     /// <summary>Initializes a new instance of the <see cref="TestItemType"/> class.</summary>
     public TestItemType()
         : base(
-            id: 11,
             name: "Test",
             displayName: "Test Execution",
             hierarchyLevel: 0,

@@ -158,7 +158,7 @@ public sealed class MsSqlInsertTranslator : MsSqlDataCommandTranslatorBase
         var sql = $"INSERT INTO {BuildQualifiedTableName(dbPath)} ({columnList}) VALUES ({paramList}); SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
 
         var command = CreateCommand(sql);
-        AddParametersFromObject(data, fieldNames, (n, v) => AddParameter(command, n, v));
+        AddParametersFromObject(data, fieldNames, (n, v, t) => AddParameter(command, n, v, t));
 
         return command;
     }

@@ -89,13 +89,7 @@ Welcome to the FractalDataWorks documentation. This wiki guides you through buil
 
 ## Management UI
 
-36. [Management UI Overview](11-01-Management-UI-Overview.md) - Reference UI implementations
-37. [Blazor Hosting Models](11-02-Blazor-Hosting-Models.md) - InteractiveServer vs InteractiveAuto
-
-The reference Management UI implementations live in separate repositories:
-
-- `reference-ui` — Tailwind + InteractiveServer skin
-- `reference-aui` — MudBlazor + InteractiveAuto skin
+36. [Management UI Overview](11-01-Management-UI-Overview.md) - The web console (`reference-react-ui`, a separate repository) and the terminal UI (`Fdw.TUI.Management`)
 
 ## Hosting & Deployment
 
@@ -115,6 +109,7 @@ The reference Management UI implementations live in separate repositories:
 51. [Real-Time Hub Path](12-16-Realtime-Hub-Path.md) - RealTimeHubBase + RealTimeHubs collection; add a SignalR hub as one [TypeOption]
 52. [Managed Identity](12-17-Managed-Identity.md) - IIdentityService: proving this process's own identity for outbound calls, instead of a static shared secret
 53. [Granting Managed Identity Access](12-18-Granting-Managed-Identity-Access.md) - Which role to assign for identities:read / identities:write, and how to confirm it took effect
+54. [Choosing Who May Sign In](12-19-Choosing-Who-May-Sign-In.md) - per-method sign-in gating, switching a flow off, API key kinds, invitations
 
 ## API Endpoints
 
@@ -123,11 +118,9 @@ The reference Management UI implementations live in separate repositories:
 
 ## Web UI Architecture
 
-46. [Headless UI Pattern](13-01-Headless-UI-Pattern.md) - Protocol components, API clients, and the headless rendering architecture
 47. [Creating Consumer Packages](13-02-Creating-Consumer-Packages.md) - Building consumer endpoints from per-domain endpoint packages
-48. [UI Layer Anatomy](13-05-UI-Layer-Anatomy.md) - Object types at each layer (*.Clients.Abstractions → *.Clients → *.Components → *.UI.Components → *.UI.Pages)
+48. [UI Layer Anatomy](13-05-UI-Layer-Anatomy.md) - Object types at each layer (*.Clients.Abstractions → *.Clients → Fdw.UI.Components models, and the web console over HTTP)
 49. [CancellationToken Propagation](13-04-CancellationToken-Propagation.md) - Rules for forwarding cancellation through async chains
-50. [UI Skin Assembly Discovery](13-06-UI-Skin-Assembly-Discovery.md) - How skin assemblies are discovered
 
 ## Code Conventions
 
@@ -140,15 +133,9 @@ The reference Management UI implementations live in separate repositories:
 50. [Building an ETL Server](14-02-Building-An-ETL-Server.md) - Pipeline execution server tutorial
 51. [Building a Scheduler Server](14-03-Building-A-Scheduler-Server.md) - Job scheduling server tutorial
 
-## Building UI Projects (Tutorials)
-
-52. [Building a Blazor Server UI](15-01-Building-A-Blazor-Server-UI.md) - InteractiveServer with Tailwind CSS
-53. [Building a Blazor Auto UI](15-02-Building-A-Blazor-Auto-UI.md) - InteractiveAuto with MudBlazor
-
 ## API Clients & Protocols (Reference)
 
 55. [API Clients Reference](16-01-API-Clients-Reference.md) - Complete reference for 16 per-domain .Clients packages
-57. [UI Domain Map](16-03-UI-Domain-Map.md) - Per-domain package stacks and page inventory (all 15 domains)
 
 ## Testing
 

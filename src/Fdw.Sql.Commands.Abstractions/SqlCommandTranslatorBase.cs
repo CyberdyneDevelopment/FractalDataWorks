@@ -9,7 +9,7 @@ using Fdw.Sql.Workspace;
 namespace Fdw.Sql.Commands.Abstractions;
 
 /// <summary>Non-generic translator base. Each translator is itself a TypeOption (discoverable by name).</summary>
-public abstract class SqlCommandTranslatorBase : TypeOptionBase<int, SqlCommandTranslatorBase>, ISqlCommandTranslator
+public abstract class SqlCommandTranslatorBase : TypeOptionBase<SqlCommandTranslatorBase>, ISqlCommandTranslator
 {
     /// <summary>Sentinel ctor.</summary>
     protected SqlCommandTranslatorBase()
@@ -18,21 +18,8 @@ public abstract class SqlCommandTranslatorBase : TypeOptionBase<int, SqlCommandT
 
     /// <summary>Initializes a new translator.</summary>
     protected SqlCommandTranslatorBase(string name, string description)
-        : base(GenerateIdFromName(name), name, name, name, description, "SqlCommandTranslator")
+        : base(name, name, name, description, "SqlCommandTranslator")
     { }
-
-    private static int GenerateIdFromName(string name)
-    {
-        if (string.IsNullOrEmpty(name)) return 0;
-        unchecked
-        {
-            const int FnvPrime = 0x01000193;
-            const int FnvOffsetBasis = (int)0x811C9DC5;
-            int hash = FnvOffsetBasis;
-            foreach (char c in name) { hash ^= c; hash *= FnvPrime; }
-            return hash & 0x7FFFFFFF;
-        }
-    }
 
     /// <inheritdoc/>
     public abstract Type CommandType { get; }

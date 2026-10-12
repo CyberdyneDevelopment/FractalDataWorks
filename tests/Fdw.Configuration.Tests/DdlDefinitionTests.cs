@@ -257,10 +257,6 @@ public class DdlDefinitionTests
     {
         // Assert
         ForeignKeyActions.All().Count.ShouldBe(4);
-        ForeignKeyActions.NoAction.Id.ShouldBe(1);
-        ForeignKeyActions.Cascade.Id.ShouldBe(2);
-        ForeignKeyActions.SetNull.Id.ShouldBe(3);
-        ForeignKeyActions.SetDefault.Id.ShouldBe(4);
     }
 
     #endregion

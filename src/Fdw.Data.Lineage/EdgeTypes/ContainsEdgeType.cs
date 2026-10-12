@@ -12,5 +12,5 @@ namespace Fdw.Data.Lineage.EdgeTypes;
 public sealed class ContainsEdgeType : LineageEdgeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="ContainsEdgeType"/> class.</summary>
-    public ContainsEdgeType() : base(7, "Contains") { }
+    public ContainsEdgeType() : base("Contains") { }
 }

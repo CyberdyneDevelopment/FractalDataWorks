@@ -231,7 +231,6 @@ public class CollectionTypeInfoModel<TId> : IInputInfoModel, IEquatable<Collecti
     /// </summary>
     /// <param name="writer">The TextWriter to write to.</param>
     /// <exception cref="ArgumentNullException">Thrown when the writer is null.</exception>
-#pragma warning disable MA0051 // Sequential property serialization for incremental generator cache hash
     public void WriteToHash(TextWriter writer)
     {
         if (writer == null)
@@ -296,7 +295,6 @@ public class CollectionTypeInfoModel<TId> : IInputInfoModel, IEquatable<Collecti
             writer.Write(concreteType.InputHash);
         }
     }
-#pragma warning restore MA0051
 
     /// <summary>
     /// Determines whether the specified <see cref="CollectionTypeInfoModel{TId}"/> is equal to the current instance.

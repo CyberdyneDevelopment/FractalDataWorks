@@ -50,7 +50,7 @@ public abstract class CreatePromotionEndpointBase : Endpoint<CreatePromotionRequ
 
         try
         {
-            var requestConfig = new PromotionRequestConfiguration
+            var requestConfig = new PromotionRequestImplementationConfiguration
             {
                 Name = req.Name,
                 SourceEnvironment = req.SourceEnvironment,
@@ -100,7 +100,7 @@ public abstract class CreatePromotionEndpointBase : Endpoint<CreatePromotionRequ
     }
 
     /// <summary>Sends the created-at response. Override to customize the response location.</summary>
-    protected virtual Task SendCreatedAtResponse(PromotionRequestConfiguration p, CancellationToken ct)
+    protected virtual Task SendCreatedAtResponse(PromotionRequestImplementationConfiguration p, CancellationToken ct)
     {
         return Send.CreatedAtAsync<GetPromotionEndpointBase>(
             new { p.Id },

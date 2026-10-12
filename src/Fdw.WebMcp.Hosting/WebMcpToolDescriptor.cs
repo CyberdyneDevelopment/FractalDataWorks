@@ -18,4 +18,6 @@ public sealed record WebMcpToolDescriptor(
     Type? RequestType,
     Type? ResponseType,
     string? ParentListRoute = null,
-    string? ParentListToolName = null);
+    string? ParentListToolName = null,
+    string? PresetFieldName = null,
+    string? PresetValue = null);

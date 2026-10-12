@@ -13,5 +13,5 @@ public sealed class TextAreaComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="TextAreaComponentType"/> class.
     /// </summary>
-    public TextAreaComponentType() : base(3, "TextArea", "Text Area", "Input", "Multi-line text input") { }
+    public TextAreaComponentType() : base("TextArea", "Text Area", "Input", "Multi-line text input") { }
 }

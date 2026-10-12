@@ -36,7 +36,7 @@ namespace Fdw.Services.ExternalIdentityProviders;
     typeof(ExternalIdentityProvisionerTypes),
     ServiceInterface = typeof(IExternalIdentityProvisioner),
     ProviderType = typeof(ExternalIdentityProvisionerServiceProvider),
-    ProviderInterface = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>),
+    ProviderInterface = typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>),
     ServiceCategory = "ExternalIdentityProvisioner")]
 public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBase<
     ExternalIdentityProvisionerTypeBase<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration, IExternalIdentityProvisionerFactory<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>,
@@ -45,7 +45,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     // Configure(), Register(), Initialize() are source-generated.
 
@@ -60,61 +60,41 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
     /// </remarks>
     static ExternalIdentityProvisionerTypes()
     {
-        var collectOptions = RegisterFunc;
-
-        var providerService = typeof(IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
+        var providerService = typeof(IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>).ToString();
 
         Registration((builder, loggerFactory) =>
         {
             var log = loggerFactory?.CreateLogger<ExternalIdentityProvisionerTypes>() ?? NullLogger<ExternalIdentityProvisionerTypes>.Instance;
 
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
-
+            builder.Services.AddSingleton<IExternalIdentityProvisionerBindingImplementationConfigurationProvider, ExternalIdentityProvisionerBindingImplementationConfigurationProvider>(sp => new ExternalIdentityProvisionerBindingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityProvisionerBindingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection, "sec", "ExternalIdentityProvisionerBindingConfiguration"));
             builder.Services.TryAddSingleton<ExternalIdentityProvisionerBindingConfigurationProvider>(sp =>
-                new ExternalIdentityProvisionerBindingConfigurationProvider(
-                    sp.GetService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                        ExternalIdentityProvisionerTypes.ConfigurationConnection));
+            {
+                var domain = new ExternalIdentityProvisionerBindingConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ExternalIdentityProvisionerBindingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection, "sec", "ExternalIdentityProvisionerBinding");
+                domain.Register("ExternalIdentityProvisionerBinding", sp.GetRequiredService<IExternalIdentityProvisionerBindingImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IExternalIdentityProvisionerBindingConfigurationProvider>(sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerBindingConfiguration, ExternalIdentityProvisionerBindingConfigurationCommand>>(
-                sp => sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerBindingConfiguration>>(sp =>
-                sp.GetRequiredService<ExternalIdentityProvisionerBindingConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<IExternalIdentityProvisionerConfigurationProvider>(sp =>
-                new ExternalIdentityProvisionerConfigurationProvider(
-                    sp.GetService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
-            builder.Services.TryAddSingleton<ExternalIdentityProvisionerConfigurationProvider>(
-                sp => (ExternalIdentityProvisionerConfigurationProvider)sp.GetRequiredService<IExternalIdentityProvisionerConfigurationProvider>());
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<ExternalIdentityProvisionerConfiguration, ExternalIdentityProvisionerConfigurationCommand>>(
-                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<ExternalIdentityProvisionerConfiguration>>(
-                sp => sp.GetRequiredService<ExternalIdentityProvisionerConfigurationProvider>());
 
-            builder.Services.AddScoped<IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
+            builder.Services.AddSingleton<IExternalIdentityProvisionerConfigurationProvider, ExternalIdentityProvisionerConfigurationProvider>(sp => new ExternalIdentityProvisionerConfigurationProvider(sp.GetRequiredService<ILogger<ExternalIdentityProvisionerConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), ExternalIdentityProvisionerTypes.ConfigurationConnection, "sec", "ExternalIdentityProvisioner"));
+
+            builder.Services.AddScoped<IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>(sp =>
             {
                 var provider = new ExternalIdentityProvisionerServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProvisionerServiceProvider>()
                     ?? NullLogger<ExternalIdentityProvisionerServiceProvider>.Instance);
 
                 var stLogger = sp.GetService<ILoggerFactory>()?.CreateLogger<ExternalIdentityProvisionerTypes>()
                     ?? NullLogger<ExternalIdentityProvisionerTypes>.Instance;
                 ServiceTypeLog.DomainProviderConstructing(stLogger, nameof(ExternalIdentityProvisionerTypes), provider.GetType().Name);
+                var cfgProvider = sp.GetService<IExternalIdentityProvisionerConfigurationProvider>();
                 try
                 {
-                    if (sp.GetService<IExternalIdentityProvisionerConfigurationProvider>() is { } cfgProvider)
+                    if (cfgProvider is not null)
                     {
                         var domainResult = provider.Register(cfgProvider);
                         if (domainResult.IsSuccess)
@@ -128,7 +108,7 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                             stLogger,
                             nameof(ExternalIdentityProvisionerTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<IExternalIdentityProvisionerImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -136,18 +116,32 @@ public partial class ExternalIdentityProvisionerTypes : ServiceTypeCollectionBas
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(ExternalIdentityProvisionerTypes));
                     throw;
                 }
+
                 return provider;
             });
 
             // Published under the domain-named interface as well as the closed generic: a caller
             // asking for IExternalIdentityProvisionerServiceProvider states which domain it needs,
-            // rather than a shape another IPlatformServiceProvider<TService, TConfig> could also
+            // rather than a shape another IDomainServiceProvider<TService, TConfig> could also
             // satisfy — and it has to be the SAME instance the closed generic resolves, or a caller
             // reached through this name would register against a provider whose factories the one
             // reached through the closed generic never sees.
             builder.Services.TryAddScoped<IExternalIdentityProvisionerServiceProvider>(sp =>
                 (IExternalIdentityProvisionerServiceProvider)sp.GetRequiredService<
-                    IPlatformServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>());
+                    IDomainServiceProvider<IExternalIdentityProvisioner, IExternalIdentityProvisionerImplementationConfiguration>>());
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(ExternalIdentityProvisionerTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(ExternalIdentityProvisionerTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(ExternalIdentityProvisionerTypes), providerService);

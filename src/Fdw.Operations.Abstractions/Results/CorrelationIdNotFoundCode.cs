@@ -18,7 +18,7 @@ public sealed class CorrelationIdNotFoundCode : OperationsResultCodeBase
         : base(
             30000,
             "CorrelationIdNotFound",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "No executions found for correlation ID '{CorrelationId}'",
             isRetryable: false)
     {

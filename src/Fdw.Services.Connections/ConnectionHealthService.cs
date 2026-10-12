@@ -27,25 +27,28 @@ namespace Fdw.Services.Connections;
 /// </remarks>
 public sealed class ConnectionHealthService : IConnectionHealthService
 {
-    private const string DataStoreName = "PlatformConfiguration";
+    private static string DataStoreName => PlatformConnection.Name;
     private const string PathName = "conn";
     private const string Container = "ConnectionHealthCheck";
 
     private readonly ILogger<ConnectionHealthService> _logger;
-    private readonly IDataGatewayProvider _dataGateways;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    // Why resolved here rather than injected: the gateway is scoped and this is not, so holding one
-    // would be a captive dependency. The provider is asked when a call is actually being made.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    // The platform's own rows are read through the configuration gateway onto that store, never the request-facing
+    // Main gateway (FDW-1068): Main runs whatever data store a request names, and these rows are not a request's to name.
+    private IDataGateway Gateway => _configurationGateways.Get(DataStoreName) is { IsSuccess: true, Value: { } gateway }
+        ? gateway
+        : throw new InvalidOperationException(
+            $"No configuration gateway is available for connection '{DataStoreName}'. It must be declared in the host's configurationSchema.json.");
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionHealthService"/> class.
     /// </summary>
-    /// <param name="dataGateways">The data gateway for health check history persistence.</param>
+    /// <param name="configurationGateways">The data gateway for health check history persistence.</param>
     /// <param name="logger">Optional logger; falls back to <see cref="NullLogger{T}"/>.</param>
-    public ConnectionHealthService(IDataGatewayProvider dataGateways, ILogger<ConnectionHealthService>? logger = null)
+    public ConnectionHealthService(IConfigurationGatewayProvider configurationGateways, ILogger<ConnectionHealthService>? logger = null)
     {
-        _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _configurationGateways = configurationGateways ?? throw new ArgumentNullException(nameof(configurationGateways));
         _logger = logger ?? NullLogger<ConnectionHealthService>.Instance;
     }
 
@@ -133,6 +136,36 @@ public sealed class ConnectionHealthService : IConnectionHealthService
         {
             return GenericResult<IReadOnlyList<ConnectionHealthCheckRecord>>.Failure(
                 ConnectionHealthServiceLog.QueryHistoryFailed(_logger, connectionId, ex.Message));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>> GetAllCurrent(
+        CancellationToken cancellationToken = default)
+    {
+        ConnectionHealthServiceLog.QueryingAllCurrent(_logger);
+
+        try
+        {
+            var command = Query.From<ConnectionHealthCurrentRecord>(DataStoreName, PathName, "ConnectionHealthCurrent").Build();
+
+            var result = await Gateway.Execute<IEnumerable<ConnectionHealthCurrentRecord>>(command, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!result.IsSuccess)
+            {
+                ConnectionHealthServiceLog.QueryAllCurrentCommandFailed(_logger);
+                return result.ToNewResult<IReadOnlyList<ConnectionHealthCurrentRecord>>();
+            }
+
+            var current = (result.Value ?? []).ToList();
+            ConnectionHealthServiceLog.AllCurrentRetrieved(_logger, current.Count);
+            return GenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>.Success(current);
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<IReadOnlyList<ConnectionHealthCurrentRecord>>.Failure(
+                ConnectionHealthServiceLog.QueryAllCurrentFailed(_logger, ex.Message));
         }
     }
 

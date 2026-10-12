@@ -21,7 +21,7 @@ namespace Fdw.Data.DataStores.SqlServer;
 
 /// <summary>
 /// Imports schema from SQL Server databases by querying INFORMATION_SCHEMA views.
-/// Returns a discovered <see cref="DataStoreConfiguration"/> with DatabasePath rows containing
+/// Returns a discovered <see cref="DataStoreImplementationConfiguration"/> with DatabasePath rows containing
 /// Table/View/StoredProcedure container configs and their field configs.
 /// </summary>
 [TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "SqlServer", RestrictToCurrentCompilation = true)]
@@ -36,7 +36,6 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
     /// <param name="logger">Logger instance for diagnostic output.</param>
     public SqlServerSchemaImporter(ILogger<SqlServerSchemaImporter> logger)
         : base(
-            id: 1,
             name: "SqlServer",
             description: "Imports schema from SQL Server databases via INFORMATION_SCHEMA",
             dataStoreType: "SqlServer")
@@ -48,7 +47,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
     /// <inheritdoc/>
     [ConventionOverride(MaxMethodLines = 70)]
-    public override async Task<IGenericResult<DataStoreConfiguration>> Import(
+    public override async Task<IGenericResult<DataStoreImplementationConfiguration>> Import(
         string source,
         SchemaImporterOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -56,7 +55,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
         try
         {
             if (string.IsNullOrWhiteSpace(source))
-                return GenericResult<DataStoreConfiguration>.Failure(
+                return GenericResult<DataStoreImplementationConfiguration>.Failure(
                     SqlServerDataStoreResultCodes.ByName("ConnectionStringEmpty"));
 
             var connectionBuilder = new SqlConnectionStringBuilder(source);
@@ -73,7 +72,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                 // 2. Discover tables, views, and stored procedures
                 var tablesResult = await DiscoverTables(connection, options, cancellationToken).ConfigureAwait(false);
                 if (!tablesResult.IsSuccess)
-                    return GenericResult<DataStoreConfiguration>.Failure(
+                    return GenericResult<DataStoreImplementationConfiguration>.Failure(
                         SqlServerDataStoreResultCodes.ByName("DiscoverTablesFailed"),
                         ResultDetails.Create("error", tablesResult.CurrentMessage ?? "Unknown error"));
 
@@ -86,12 +85,10 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
                     SqlServerSchemaImporterLogger.Warning(_logger, "Failed to discover stored procedures", sprocsResult.CurrentMessage);
 
                 // 3. Build the discovered DataStore configuration directly (no legacy IDataStore tree)
-                var dataStore = new DataStoreConfiguration
+                var dataStore = new DataStoreImplementationConfiguration
                 {
                     Name = databaseName,
-                    ServiceType = "DataStore",
-                    ServiceOptionType = "MsSql",
-                    SectionName = "DataStores"
+                    Implementation = "MsSql",
                 };
 
                 var totalObjects = 0;
@@ -110,12 +107,12 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
                 SqlServerSchemaImporterLogger.ImportCompleted(_logger, databaseName, totalObjects);
 
-                return GenericResult<DataStoreConfiguration>.Success(dataStore);
+                return GenericResult<DataStoreImplementationConfiguration>.Success(dataStore);
             }
         }
         catch (Exception ex)
         {
-            return GenericResult<DataStoreConfiguration>.Failure(
+            return GenericResult<DataStoreImplementationConfiguration>.Failure(
                 SqlServerSchemaImporterLogger.ImportFailed(_logger, ex));
         }
     }
@@ -317,13 +314,11 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
 
     #region Column Discovery
 
-#pragma warning disable MA0051 // Method is too long - SQL query string literal, not complex
     private static async Task<IGenericResult<List<ColumnInfo>>> GetColumns(
         SqlConnection connection,
         string schemaName,
         string tableName,
         CancellationToken cancellationToken)
-#pragma warning restore MA0051
     {
         const string query = @"
             SELECT
@@ -516,7 +511,7 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
     /// <returns>The count of successfully added containers.</returns>
     private static async Task<int> AddDiscoveredPaths(
         SqlConnection connection,
-        DataStoreConfiguration dataStore,
+        DataStoreImplementationConfiguration dataStore,
         IGenericResult<List<DatabaseObjectInfo>> discoveryResult,
         string containerTypeId,
         Func<SqlConnection, DatabaseObjectInfo, SchemaImporterOptions?, CancellationToken, Task<IGenericResult<DataContainerConfiguration>>> containerCreator,
@@ -629,13 +624,11 @@ public sealed partial class SqlServerSchemaImporter : SchemaImporterBase<SqlServ
     /// <param name="logger">Logger for diagnostics.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Dictionary keyed by schema.object.column (column is empty for table/view level).</returns>
-#pragma warning disable MA0051 // Method is too long - SQL query string literal, not complex
     private static async Task<IGenericResult<Dictionary<string, List<ExtendedPropertyInfo>>>> DiscoverExtendedProperties(
         SqlConnection connection,
         SchemaImporterOptions? options,
         ILogger logger,
         CancellationToken cancellationToken)
-#pragma warning restore MA0051
     {
         if (options?.IncludeExtendedProperties == false)
         {

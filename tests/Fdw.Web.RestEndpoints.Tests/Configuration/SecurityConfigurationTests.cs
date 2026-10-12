@@ -117,7 +117,7 @@ public class SecurityConfigurationTests
 
         // Assert
         securityMethod.ShouldNotBeNull();
-        securityMethod.Name.ShouldBe("_Empty");
+        securityMethod.Name.ShouldBe("NotFound");
     }
 
     [Fact]

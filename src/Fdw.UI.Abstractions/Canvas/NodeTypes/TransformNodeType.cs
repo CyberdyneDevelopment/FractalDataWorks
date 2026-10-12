@@ -14,7 +14,7 @@ public sealed class TransformNodeType : CanvasNodeTypeBase
     /// Initializes a new instance of the <see cref="TransformNodeType"/> class.
     /// </summary>
     public TransformNodeType()
-        : base(5, "Transform", "Transform", "Processing", "shuffle")
+        : base("Transform", "Transform", "Processing", "shuffle")
     {
     }
 }

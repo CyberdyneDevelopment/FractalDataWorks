@@ -34,7 +34,7 @@ public sealed class RowMappingContextTests
         }
 
         schema.Setup(s => s.Fields).Returns(fieldList);
-        schema.Setup(s => s.GetProjectableFields()).Returns(fieldList);
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fieldList);
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         return (source, container);
@@ -155,7 +155,7 @@ public sealed class RowMappingContextTests
         var container = new Mock<IStorageContainer>();
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(new List<IField>());
-        schema.Setup(s => s.GetProjectableFields()).Returns(new List<IField>());
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(new List<IField>());
         container.Setup(c => c.Schema).Returns(schema.Object);
 
         var ctx = RowMappingContext.Create(source.Object, container.Object);

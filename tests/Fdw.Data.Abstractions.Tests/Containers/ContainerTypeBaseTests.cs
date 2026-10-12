@@ -7,17 +7,6 @@ namespace Fdw.Data.Abstractions.Tests.Containers;
 
 public sealed class ContainerTypeBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        // Arrange & Act
-        var containerType = new TestContainerType(1, "Table");
-
-        // Assert
-        containerType.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -25,7 +14,7 @@ public sealed class ContainerTypeBaseTests
     public void ConstructorSetsName()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Assert
         containerType.Name.ShouldBe("Table");
@@ -37,7 +26,7 @@ public sealed class ContainerTypeBaseTests
     public void ConstructorSetsDisplayName()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Assert
         containerType.DisplayName.ShouldBe("Database Table");
@@ -49,7 +38,7 @@ public sealed class ContainerTypeBaseTests
     public void ConstructorSetsDescription()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Assert
         containerType.Description.ShouldBe("SQL database table");
@@ -61,7 +50,7 @@ public sealed class ContainerTypeBaseTests
     public void ConstructorSetsSupportsSchemaDiscovery()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(1, "Table", supportsSchemaDiscovery: true);
+        var containerType = new TestContainerType("Table", supportsSchemaDiscovery: true);
 
         // Assert
         containerType.SupportsSchemaDiscovery.ShouldBeTrue();
@@ -73,7 +62,7 @@ public sealed class ContainerTypeBaseTests
     public void ConstructorSetsConfigurationKey()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Assert
         containerType.ConfigurationKey.ShouldBe("Containers:Table");
@@ -85,7 +74,7 @@ public sealed class ContainerTypeBaseTests
     public void CategoryDefaultsToContainer()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Assert
         containerType.Category.ShouldBe("Container");
@@ -97,7 +86,7 @@ public sealed class ContainerTypeBaseTests
     public void CategoryCanBeCustomized()
     {
         // Arrange & Act
-        var containerType = new TestContainerType(2, "Custom", category: "CustomCategory");
+        var containerType = new TestContainerType("Custom", category: "CustomCategory");
 
         // Assert
         containerType.Category.ShouldBe("CustomCategory");
@@ -109,7 +98,7 @@ public sealed class ContainerTypeBaseTests
     public void ImplementsIContainerType()
     {
         // Arrange
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Act & Assert
         containerType.ShouldBeAssignableTo<IContainerType>();
@@ -121,7 +110,7 @@ public sealed class ContainerTypeBaseTests
     public void InheritsFromTypeOptionBase()
     {
         // Arrange
-        var containerType = new TestContainerType(1, "Table");
+        var containerType = new TestContainerType("Table");
 
         // Act & Assert
         containerType.ShouldBeAssignableTo<ContainerTypeBase>();
@@ -133,8 +122,8 @@ public sealed class ContainerTypeBaseTests
     public void DifferentContainerTypesHaveDifferentSettings()
     {
         // Arrange
-        var table = new TestContainerType(1, "Table", supportsSchemaDiscovery: true);
-        var file = new TestContainerType(2, "File", supportsSchemaDiscovery: false);
+        var table = new TestContainerType("Table", supportsSchemaDiscovery: true);
+        var file = new TestContainerType("File", supportsSchemaDiscovery: false);
 
         // Act & Assert
         table.SupportsSchemaDiscovery.ShouldBeTrue();
@@ -145,12 +134,10 @@ public sealed class ContainerTypeBaseTests
     private sealed class TestContainerType : ContainerTypeBase
     {
         public TestContainerType(
-            int id,
             string name,
             bool supportsSchemaDiscovery = true,
             string? category = null)
             : base(
-                id,
                 name,
                 name == "Table" ? "Database Table" : "File System",
                 name == "Table" ? "SQL database table" : "File-based storage",

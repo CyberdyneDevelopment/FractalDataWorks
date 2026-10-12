@@ -13,7 +13,7 @@
 /// the same reason: services take providers, only providers take gateways.
 ///
 /// Named by lookup rather than a bare property so the shape matches every other provider's --
-/// domain.Register(Name, implementation) elsewhere routes by the same ServiceOptionType a caller
+/// domain.Register(Name, implementation) elsewhere routes by the same Implementation a caller
 /// asks for here. This framework ships one implementation, named "Main"; a caller names it rather
 /// than the provider assuming it, so a second implementation is a routing change here, not a
 /// reshaped interface.
@@ -21,7 +21,7 @@
 public interface IDataGatewayProvider
 {
     /// <summary>Gets the data gateway registered under the given name.</summary>
-    /// <param name="name">The implementation's <c>ServiceOptionType</c> -- "Main" for the one this
+    /// <param name="name">The implementation's <c>Implementation</c> -- "Main" for the one this
     /// framework ships.</param>
     /// <returns>The gateway, or throws when none is registered under that name.</returns>
     IDataGateway ByName(string name);

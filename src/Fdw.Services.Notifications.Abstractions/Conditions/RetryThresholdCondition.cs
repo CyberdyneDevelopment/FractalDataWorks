@@ -15,7 +15,7 @@ public sealed class RetryThresholdCondition : NotificationConditionTypeBase
     /// Initializes a new instance of the <see cref="RetryThresholdCondition"/> class.
     /// </summary>
     public RetryThresholdCondition()
-        : base(1, "RetryThreshold", "replay", "Warning")
+        : base("RetryThreshold", "replay", "Warning")
     {
     }
 

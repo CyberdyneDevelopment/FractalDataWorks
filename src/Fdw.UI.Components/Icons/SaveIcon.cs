@@ -11,7 +11,6 @@ public sealed class SaveIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="SaveIcon"/>.</summary>
     public SaveIcon()
         : base(
-            18,
             "Save",
             "0 0 24 24",
             "none",

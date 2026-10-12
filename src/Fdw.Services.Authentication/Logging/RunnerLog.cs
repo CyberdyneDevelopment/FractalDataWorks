@@ -190,4 +190,25 @@ internal static partial class RunnerLog
         Message = "Flow '{flowName}' reached assurance '{achieved}' but requires '{required}'")]
     internal static partial IGenericMessage InsufficientAssurance(
         ILogger<AuthenticationRunner> logger, string flowName, string achieved, string required);
+
+    /// <summary>A later step decided after an earlier one refused; the refusal was kept.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="stepName">The step whose decision was discarded.</param>
+    /// <param name="reason">The refusal that stands.</param>
+    // Warning, not Error: the runner handled it as designed. A flow with two deciding steps is
+    // ordinary; the second one simply may not overrule the first one's no.
+    [MessageLogging(EventId = 91120, Level = LogLevel.Warning,
+        Message = "Step '{stepName}' decided after an earlier refusal; the refusal stands: {reason}")]
+    internal static partial IGenericMessage RefusalStands(
+        ILogger<AuthenticationRunner> logger, string stepName, string reason);
+
+    /// <summary>The flow passed its terminal check, and the token or session it earned could not be issued.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">The flow.</param>
+    /// <param name="product">What the flow issues: <c>session</c> or <c>token</c>.</param>
+    // Error, not Warning: the caller was accepted, so this is the host failing, not a refusal (FDW-918).
+    [MessageLogging(EventId = 91124, Level = LogLevel.Error,
+        Message = "Flow '{flowName}' accepted the sign-in but its {product} could not be issued")]
+    internal static partial IGenericMessage IssuanceFailed(
+        ILogger<AuthenticationRunner> logger, string flowName, string product);
 }

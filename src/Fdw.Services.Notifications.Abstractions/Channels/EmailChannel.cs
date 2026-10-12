@@ -15,7 +15,6 @@ public sealed class EmailChannel : NotificationChannelBase
     /// </summary>
     public EmailChannel()
         : base(
-            id: 1,
             name: "Email",
             description: "SMTP email notifications",
             supportsBatchSend: true,

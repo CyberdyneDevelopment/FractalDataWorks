@@ -14,7 +14,6 @@ public sealed class HealthEndpoint : EndpointTypeBase
     /// Initializes a new instance of the <see cref="HealthEndpoint"/> class.
     /// </summary>
     public HealthEndpoint() : base(
-        id: 6,
         name: "HealthEndpoint",
         description: "System health and monitoring endpoints",
         defaultHttpMethods: ["GET"],

@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class SecretConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="SecretConfigurationPropertyTypeDto"/>.</summary>
-    public SecretConfigurationPropertyTypeDto() : base(5, "Secret") { }
+    public SecretConfigurationPropertyTypeDto() : base("Secret") { }
 }

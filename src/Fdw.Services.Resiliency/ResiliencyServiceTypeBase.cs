@@ -1,6 +1,7 @@
 using Fdw.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Resiliency;
 
@@ -28,7 +29,7 @@ public abstract class ResiliencyServiceTypeBase :
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Resiliency",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "conn",
                defaultContainerName: defaultContainerName)
     {

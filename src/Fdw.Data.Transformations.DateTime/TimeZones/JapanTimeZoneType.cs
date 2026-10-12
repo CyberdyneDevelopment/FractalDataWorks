@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Japan")]
 public sealed class JapanTimeZoneType : TimeZoneTypeBase
 {
-    public JapanTimeZoneType() : base(13, "Japan", "Tokyo Standard Time") { }
+    public JapanTimeZoneType() : base("Japan", "Tokyo Standard Time") { }
 }

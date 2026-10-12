@@ -1,7 +1,12 @@
-﻿using System.Threading;
+﻿using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Data;
+using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.DataSets.Results;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -15,11 +20,16 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSetNameRequest>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetVariationConfigurationProvider _variations;
 
     /// <inheritdoc />
-    protected DeleteDataSetEndpointBase(ILogger<DeleteDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+    protected DeleteDataSetEndpointBase(
+        ILogger<DeleteDataSetEndpointBase> logger,
+        DataSetConfigurationProvider dataSetProvider,
+        IDataSetVariationConfigurationProvider variations) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
+        _variations = variations;
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -69,6 +79,9 @@ public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSet
             return GenericResult.Success();
         }
 
+        var unvaried = await RefuseWhileVaried(loadResult.Value, ct).ConfigureAwait(false);
+        if (unvaried.IsFailure) return unvaried;
+
         var deleteResult = await _dataSetProvider.Delete(loadResult.Value.Id, ct).ConfigureAwait(false);
         if (deleteResult.IsFailure)
         {
@@ -78,5 +91,36 @@ public abstract class DeleteDataSetEndpointBase : CrudDeleteEndpointBase<DataSet
 
         DataSetEndpointLog.DataSetDeleted(Logger, name);
         return GenericResult.Success();
+    }
+
+    /// <summary>Refuses the delete while a workspace owns a variation of the data set: each one reads through to it.</summary>
+    /// <remarks>
+    /// One query on the variations' domain table, asking for a page of one with the count: the answer needed is
+    /// whether any exist and how many to name. A delete retires the data set's rows and removes none, so no foreign
+    /// key refuses it, and this is the only guard. The count is read as the caller; a variation row-level security
+    /// hides from them does not block the delete.
+    /// </remarks>
+    private async Task<IGenericResult> RefuseWhileVaried(IDataSetImplementationConfiguration dataSet, CancellationToken ct)
+    {
+        var variations = await _variations.Get(
+            new DomainQuery(
+                new FilterExpression
+                {
+                    Root = new FilterCondition
+                    {
+                        PropertyName = nameof(DataSetVariationDomainConfiguration.BaseDataSetId),
+                        Operator = FilterOperators.ByName("Equal"),
+                        Value = dataSet.Id,
+                    },
+                },
+                null, 0, 1, true),
+            ct).ConfigureAwait(false);
+        if (variations.IsFailure) return variations;
+
+        return variations.Value!.Total is > 0 and var count
+            ? GenericResult.Failure(
+                DataSetsResultCodes.ByName("DataSetHasVariations"), Logger,
+                ResultDetails.Create("dataSet", dataSet.Name, "count", count.ToString(CultureInfo.InvariantCulture)))
+            : GenericResult.Success();
     }
 }

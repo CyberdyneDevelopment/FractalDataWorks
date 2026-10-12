@@ -5,9 +5,9 @@ using Fdw.Services.Quality.Configuration;
 namespace Fdw.Services.Quality.Validators;
 
 /// <summary>
-/// Validator for <see cref="PromotionRequestConfiguration"/>.
+/// Validator for <see cref="PromotionRequestImplementationConfiguration"/>.
 /// </summary>
-public sealed class PromotionRequestConfigurationValidator : FdwConfigurationValidator<PromotionRequestConfiguration>
+public sealed class PromotionRequestConfigurationValidator : FdwConfigurationValidator<PromotionRequestImplementationConfiguration>
 {
     private static readonly string[] ValidStatuses = ["Pending", "Approved", "Rejected", "Completed", "Cancelled"];
 

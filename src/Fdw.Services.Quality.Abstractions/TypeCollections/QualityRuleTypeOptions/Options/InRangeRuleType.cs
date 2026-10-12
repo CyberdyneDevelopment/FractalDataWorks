@@ -15,7 +15,6 @@ public sealed class InRangeRuleType : QualityRuleTypeBase
     /// </summary>
     public InRangeRuleType()
         : base(
-            id: 3,
             name: "InRange",
             requiresField: true,
             supportsMultipleFields: false,

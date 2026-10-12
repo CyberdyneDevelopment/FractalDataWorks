@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -9,40 +10,35 @@ namespace Fdw.Services.ExternalIdentityProviders.ClaimMapped;
 
 /// <summary>
 /// Typed-body configuration for the ClaimMapped external-identity-provisioner TypeOption.
-/// Standalone POCO — does NOT inherit from <see cref="ExternalIdentityProvisionerConfiguration"/>.
-/// Persisted to <c>sec.ClaimMappedExternalIdentityProvisioner</c> as a child of
-/// <c>sec.ExternalIdentityProvisioner</c> via <see cref="ExternalIdentityProvisionerId"/>. Carries no
+/// Standalone POCO — does NOT inherit from <c>IExternalIdentityProvisionerImplementationConfiguration</c>.
+/// Persisted to <c>sec.ClaimMappedExternalIdentityProvisionerConfiguration</c> as a child of
+/// <c>sec.ExternalIdentityProvisioner</c> via <c>ExternalIdentityProvisionerRowId</c>. Carries no
 /// scalar columns of its own — its policy lives entirely in the ordered <see cref="Rules"/> child
-/// collection (<c>sec.ClaimMappedProvisioningRule</c>), mirroring
-/// <see cref="Chained.ChainedExternalIdentityProvisionerConfiguration"/>'s ordered-children shape.
+/// collection (<c>sec.ClaimMappedProvisioningRule</c>).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "ExternalIdentityProvisioner", ServiceType = "ClaimMapped")]
 public sealed partial class ClaimMappedExternalIdentityProvisionerConfiguration : IExternalIdentityProvisionerImplementationConfiguration
 {
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     /// <summary>
     /// Gets or sets the unique identifier for this typed-body row
     /// (<c>sec.ClaimMappedExternalIdentityProvisioner.Id</c>).
     /// </summary>
     public Guid Id { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — identified by ExternalIdentityProvisionerId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "ExternalIdentityProvisioners";
-    string IGenericConfiguration.ServiceType => "ExternalIdentityProvisioner";
-    string? IGenericConfiguration.ServiceOptionType => "ClaimMapped";
-
-    /// <summary>
-    /// Gets or sets the durable logical FK to <c>sec.ExternalIdentityProvisioner.Id</c> (the parent header).
-    /// </summary>
-    public Guid ExternalIdentityProvisionerId { get; set; }
-
     /// <inheritdoc/>
+    // Why it maps with no column of its own: the name is the domain's, and there is one
+    // name for a configured member. The domain provider joins the domain row to this one,
+    // and the join's result set is what carries it in.
     public string Name { get; set; } = string.Empty;
 
     /// <summary>

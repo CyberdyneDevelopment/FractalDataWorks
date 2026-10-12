@@ -26,7 +26,7 @@ public sealed class FilePath : PathBase, IDataPath<IStorageContainer>
     public FilePath(
         string path,
         IEnumerable<IStorageContainer>? containers = null)
-        : base(3, "FilePath")
+        : base("FilePath")
     {
         PathValue = path ?? throw new ArgumentNullException(nameof(path));
         _containers = containers?.ToList() ?? new List<IStorageContainer>();

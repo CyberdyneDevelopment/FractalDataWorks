@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Fdw.Configuration;
 using Fdw.ServiceTypes;
 using Fdw.Services.SecretManagers.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.SecretManagers;
 
@@ -196,7 +197,7 @@ public abstract class SecretManagerTypeBase<TService, TFactory, TConfiguration> 
         string? category = null,
         string defaultContainerName = "")
         : base(name, sectionName, displayName, description, category ?? "Secret Management",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sec",
                defaultContainerName: defaultContainerName)
     {

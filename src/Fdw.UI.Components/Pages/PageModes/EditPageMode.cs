@@ -13,7 +13,6 @@ public sealed class EditPageMode : PageModeBase
     /// Creates the edit page mode.
     /// </summary>
     public EditPageMode() : base(
-        id: 3,
         name: "Edit",
         label: "Edit",
         icon: "✏",

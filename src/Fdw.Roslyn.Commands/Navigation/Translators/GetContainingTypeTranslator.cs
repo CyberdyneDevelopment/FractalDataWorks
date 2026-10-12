@@ -30,7 +30,6 @@ public sealed class GetContainingTypeTranslator : RoslynCommandTranslatorBase<Ge
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: walk syntax tree upward, collect containing types
     public override async Task<IGenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>> Translate(
         GetContainingTypeCommand command,
         Solution solution,
@@ -121,5 +120,4 @@ public sealed class GetContainingTypeTranslator : RoslynCommandTranslatorBase<Ge
 
         return GenericResult<QueryResult<IReadOnlyList<TypeInfoResult>>>.Success(result);
     }
-#pragma warning restore MA0051
 }

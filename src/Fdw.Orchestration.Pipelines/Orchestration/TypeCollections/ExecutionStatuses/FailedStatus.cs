@@ -15,7 +15,6 @@ public sealed class FailedStatus : ExecutionStatusBase
     /// </summary>
     public FailedStatus()
         : base(
-            id: 6,
             name: "Failed",
             isTerminal: true,
             isSuccess: false,

@@ -9,5 +9,5 @@ namespace Fdw.Data.RowSources.Http.Abstractions;
 public sealed class LinkHeaderRestPaginationStyle : RestPaginationStyleBase
 {
     /// <summary>Initializes a new instance of <see cref="LinkHeaderRestPaginationStyle"/>.</summary>
-    public LinkHeaderRestPaginationStyle() : base(4, "LinkHeader") { }
+    public LinkHeaderRestPaginationStyle() : base("LinkHeader") { }
 }

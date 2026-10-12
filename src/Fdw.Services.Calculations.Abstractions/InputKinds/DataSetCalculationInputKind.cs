@@ -14,7 +14,7 @@ public sealed class DataSetCalculationInputKind : CalculationInputKindBase
     /// Initializes a new instance of the <see cref="DataSetCalculationInputKind"/> class.
     /// </summary>
     public DataSetCalculationInputKind()
-        : base(id: 1, name: "DataSet")
+        : base(name: "DataSet")
     {
     }
 }

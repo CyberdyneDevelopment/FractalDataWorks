@@ -21,26 +21,51 @@ public sealed class ConnectionHealthServiceTests
 {
     // A stub rather than the real provider: this fixture is about what the service does with a
     // gateway, not about how one is supplied.
-    private sealed class StubGatewayProvider(IDataGateway gateway) : IDataGatewayProvider
+    private sealed class StubGatewayProvider(IConfigurationGateway gateway) : IConfigurationGatewayProvider
     {
-        public IDataGateway ByName(string name) => gateway;
+        public List<string> Asked { get; } = [];
+
+        public IGenericResult<IConfigurationGateway> Get(string connectionName)
+        {
+            Asked.Add(connectionName);
+            return GenericResult<IConfigurationGateway>.Success(gateway);
+        }
+
+        public IGenericResult Register(IConfigurationGateway other) => throw new NotSupportedException();
     }
 
-    private sealed record Fixture(ConnectionHealthService Service, Mock<IDataGateway> Gateway);
+    private sealed record Fixture(ConnectionHealthService Service, Mock<IConfigurationGateway> Gateway, StubGatewayProvider Provider);
 
     private static Fixture CreateService()
     {
-        var gateway = new Mock<IDataGateway>(MockBehavior.Loose);
-        var service = new ConnectionHealthService(new StubGatewayProvider(gateway.Object), NullLogger<ConnectionHealthService>.Instance);
-        return new Fixture(service, gateway);
+        var gateway = new Mock<IConfigurationGateway>(MockBehavior.Loose);
+        var provider = new StubGatewayProvider(gateway.Object);
+        var service = new ConnectionHealthService(provider, NullLogger<ConnectionHealthService>.Instance);
+        return new Fixture(service, gateway, provider);
     }
 
-    private static void SetupExecuteInt(Mock<IDataGateway> gateway, IGenericResult<int> result)
+    // FDW-1068: the health history lives in the platform's own store, so it is written through the configuration
+    // gateway onto that store and never through the request-facing Main gateway, which runs whatever store a request names.
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task RecordHealthCheckWritesThroughThePlatformConfigurationGateway()
+    {
+        var fixture = CreateService();
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Success(1));
+
+        await fixture.Service.RecordHealthCheck(
+            Guid.NewGuid(), "TestConnection", true, 42, null, TestContext.Current.CancellationToken);
+
+        fixture.Provider.Asked.ShouldBe(new[] { "PlatformConfiguration" });
+    }
+
+    private static void SetupExecuteInt(Mock<IConfigurationGateway> gateway, IGenericResult<int> result)
         => gateway
             .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
 
-    private static void SetupExecuteHistory(Mock<IDataGateway> gateway, IGenericResult<IEnumerable<ConnectionHealthCheckRecord>> result)
+    private static void SetupExecuteHistory(Mock<IConfigurationGateway> gateway, IGenericResult<IEnumerable<ConnectionHealthCheckRecord>> result)
         => gateway
             .Setup(g => g.Execute<IEnumerable<ConnectionHealthCheckRecord>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);

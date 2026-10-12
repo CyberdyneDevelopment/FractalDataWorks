@@ -10,9 +10,16 @@ namespace Fdw.Services.Connections.Sql.Tests.Fakes;
 /// </summary>
 internal sealed class FakeDialect : ISqlDialect
 {
-    public FakeDialect(bool supportsSchemaNamespace = true)
+    public FakeDialect(
+        bool supportsSchemaNamespace = true,
+        string likeMetaCharacters = "%_[",
+        char likeEscapeCharacter = '!',
+        string patternMatchOperator = "LIKE")
     {
         SupportsSchemaNamespace = supportsSchemaNamespace;
+        LikeMetaCharacters = likeMetaCharacters;
+        LikeEscapeCharacter = likeEscapeCharacter;
+        PatternMatchOperator = patternMatchOperator;
     }
 
     public string Name => "Fake";
@@ -22,6 +29,12 @@ internal sealed class FakeDialect : ISqlDialect
     public string QuoteIdentifier(string identifier) => $"\"{identifier}\"";
 
     public string ParameterPrefix => "@";
+
+    public char LikeEscapeCharacter { get; }
+
+    public string LikeMetaCharacters { get; }
+
+    public string PatternMatchOperator { get; }
 
     public string AlwaysFalsePredicate => "FALSE";
 

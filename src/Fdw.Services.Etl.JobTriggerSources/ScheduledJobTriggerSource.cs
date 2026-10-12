@@ -9,5 +9,5 @@ namespace Fdw.Services.Etl.JobTriggerSources;
 public sealed class ScheduledJobTriggerSource : JobTriggerSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="ScheduledJobTriggerSource"/> class.</summary>
-    public ScheduledJobTriggerSource() : base(2, "Scheduled") { }
+    public ScheduledJobTriggerSource() : base("Scheduled") { }
 }

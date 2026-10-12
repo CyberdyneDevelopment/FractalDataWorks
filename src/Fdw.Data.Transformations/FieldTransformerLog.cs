@@ -34,6 +34,20 @@ public static partial class FieldTransformerLog
     public static partial IGenericMessage InputNotConvertibleToLong(ILogger logger, string inputTypeName);
 
     // ========================================================================
+    // Division (91007)
+    // ========================================================================
+
+    /// <summary>A transform was asked to divide by a zero divisor. This is a failure, never a null or zero result.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="transformName">The transform that was asked to divide.</param>
+    /// <returns>The message.</returns>
+    [MessageLogging(
+        EventId = 91007,
+        Level = LogLevel.Error,
+        Message = "Division by zero in the '{transformName}' transform: its divisor is zero")]
+    public static partial IGenericMessage DivisionByZero(ILogger logger, string transformName);
+
+    // ========================================================================
     // Parameter injection (91010-91011)
     // ========================================================================
 

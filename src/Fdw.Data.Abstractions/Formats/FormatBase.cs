@@ -8,15 +8,14 @@ namespace Fdw.Data.Abstractions;
 /// <summary>
 /// Base class for format implementations.
 /// </summary>
-public abstract class FormatBase : TypeOptionBase<int, FormatBase>, IFormat
+public abstract class FormatBase : TypeOptionBase<FormatBase>, IFormat
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FormatBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this format type.</param>
     /// <param name="name">The name of this format.</param>
     /// <param name="category">The category for this format type.</param>
-    protected FormatBase(int id, string name, string? category = "Format") : base(id, name, category)
+    protected FormatBase(string name, string? category = "Format") : base(name, category)
     {
 
     }

@@ -10,5 +10,5 @@ namespace Fdw.UI.Components.Services;
 public sealed class SlateStatusColor : StatusColorBase
 {
     /// <summary>Initializes a new instance of <see cref="SlateStatusColor"/>.</summary>
-    public SlateStatusColor() : base(7, "Slate", "dot-glacier", "var(--n-400)", "var(--n-500)") { }
+    public SlateStatusColor() : base("Slate", "dot-glacier", "var(--n-400)", "var(--n-500)") { }
 }

@@ -26,30 +26,33 @@ namespace Fdw.Services.Notifications.Services;
 /// </remarks>
 public sealed class SqlUserNotificationPreferenceService : IUserNotificationPreferenceService
 {
-    private const string DataStoreName = "PlatformConfiguration";
+    private static string DataStoreName => PlatformConnection.Name;
     private const string PathName = "notify";
     private const string ContainerName = "UserNotificationPreference";
     private const string SystemActor = "system";
 
-    private readonly IDataGatewayProvider _dataGateways;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
     private readonly ILogger<SqlUserNotificationPreferenceService> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlUserNotificationPreferenceService"/> class.
     /// </summary>
     public SqlUserNotificationPreferenceService(
-        IDataGatewayProvider dataGateways,
+        IConfigurationGatewayProvider configurationGateways,
         ILogger<SqlUserNotificationPreferenceService>? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(dataGateways);
+        ArgumentNullException.ThrowIfNull(configurationGateways);
 
-        _dataGateways = dataGateways;
+        _configurationGateways = configurationGateways;
         _logger = logger ?? NullLogger<SqlUserNotificationPreferenceService>.Instance;
     }
 
-    // Why this throws rather than returning a result: every caller below is mid-query and has no
-    // branch for "there is no gateway". The provider names the reason, which a Lazy could not.
-    private IDataGateway Gateway => _dataGateways.ByName("Main");
+    // The platform's own rows are read through the configuration gateway onto that store, never the request-facing
+    // Main gateway (FDW-1068): Main runs whatever data store a request names, and these rows are not a request's to name.
+    private IDataGateway Gateway => _configurationGateways.Get(DataStoreName) is { IsSuccess: true, Value: { } gateway }
+        ? gateway
+        : throw new InvalidOperationException(
+            $"No configuration gateway is available for connection '{DataStoreName}'. It must be declared in the host's configurationSchema.json.");
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<NotificationPreference>>> GetPreferences(

@@ -17,7 +17,6 @@ public sealed class OAuth2AuthenticationMethod : AuthenticationMethodBase
     /// Initializes a new instance of the <see cref="OAuth2AuthenticationMethod"/> class.
     /// </summary>
     public OAuth2AuthenticationMethod() : base(
-        id: 1,
         name: "OAuth2",
         requiresUserInteraction: true,
         supportsTokenRefresh: true,

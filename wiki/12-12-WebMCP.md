@@ -11,21 +11,45 @@ to install and no per-client configuration — that is the whole point of the st
 
 ---
 
-## Status: declared, not served
+## Registration: two three-phase registrants
 
-**No application currently maps WebMCP.** Nothing calls `MapWebMcp` or `UseWebMcpApiKeyAuth`, and
-`reference-api` has no reference to the WebMcp packages at all.
+WebMCP is its own domain. A host references the packages, and each registers itself through
+PlatformServices like any other domain; there is no `Add…`/`Map…` call to make.
 
-291 endpoint options carry `[WebMcpTool]`, so `DeclaredWebMcpTools` fills during startup — and
-nothing reads it. `/.well-known/webmcp.js` is not served by any host, and no agent can discover
-anything.
+| Registrant | Category | Package | Initialize maps |
+|---|---|---|---|
+| `WebMcpHosting` | `WebMcp` | `Fdw.WebMcp.Hosting` | `GET /.well-known/webmcp.js` |
+| `WebMcpMcpHosting` | `WebMcpMcp` | `Fdw.WebMcp.Mcp` | the same catalogue over MCP at `/mcp`, for headless agents |
 
-What remains is a ServiceType plus a `.Registration` package: `AddWebMcp` in the Registration phase,
-`MapWebMcp` in Initialization (which receives the built `IHost`), and the middleware placed ahead of
-`UseAuthentication`. Read the rest of this page as the shape of the mechanism, not as a description
-of a running system.
+Both Initialize phases read the route table, so they run **after the endpoints are mapped**. A host
+defers them out of the PlatformServices collect and runs them last:
 
-**Package:** `Fdw.WebMcp.Hosting` · **Attribute:** `Fdw.WebMcp.Abstractions`
+```csharp
+PlatformServices.WebMcp.Initialize(app, loggerFactory, defer: true);
+PlatformServices.WebMcpMcp.Initialize(app, loggerFactory, defer: true);
+PlatformServices.Endpoints.Initialize(app, loggerFactory, defer: true);
+PlatformServices.Initialize(app, loggerFactory);
+PlatformServices.Endpoints.Initialize(app, loggerFactory);
+PlatformServices.WebMcp.Initialize(app, loggerFactory);
+PlatformServices.WebMcpMcp.Initialize(app, loggerFactory);
+```
+
+What they serve comes from the host's **WebMcp configuration row** (the `WebMcp` domain row and its
+`Host` implementation, `hst.HostWebMcpConfiguration`), read once at Initialize:
+
+| Column | Required | Meaning |
+|---|---|---|
+| `ApiKeyHeader` | yes | The header the client key travels in on every tool call. |
+| `SecretManagerName` + `SecretKeyName` | together, or neither | The client key, resolved through the secret manager. Neither: the host serves no client key. One without the other is refused. |
+| `SelfBaseAddress` | to serve MCP | The absolute address the host reaches its own routes on; an MCP tool call is sent there. Never taken from the request's Host header. `WebMcpMcpHosting` refuses to start without it. |
+
+Nothing is filled in: a host missing the row, the header, or (for MCP) the address stops at
+Initialize with a message naming what is missing.
+
+reference-api does not reference the WebMcp packages; TechCom (FDW-871) is the first host wired to
+them.
+
+**Packages:** `Fdw.WebMcp.Hosting`, `Fdw.WebMcp.Mcp` · **Attribute:** `Fdw.WebMcp.Abstractions`
 
 ---
 
@@ -44,7 +68,7 @@ one place that knows an endpoint is switched on. An endpoint that is never decla
 so marking the class instead would offer agents tools for routes that return 404.
 
 Tools are **gathered from options that attached themselves**. They are not swept out of an assembly
-list — `AddWebMcp` takes no assemblies, and there is no discovery scan. An earlier design did scan,
+list — the registrant takes no assemblies, and there is no discovery scan. An earlier design did scan,
 and it found nothing: the routes it needed live inside FastEndpoints `Configure()` bodies, which no
 assembly scan can read.
 
@@ -59,13 +83,13 @@ assembly scan can read.
 
 The attribute carries **no route**. The route lives in the endpoint's `Configure()` body, and a copy
 here would be a second source of truth free to drift from the one the router actually matches. It is
-read from the live route table at `MapWebMcp`.
+read from the live route table at `WebMcpHosting`'s Initialize.
 
 ---
 
 ## Route and method resolution
 
-Both come from the application's own `EndpointDataSource` at `MapWebMcp`, joined to the declarations
+Both come from the application's own `EndpointDataSource` at `WebMcpHosting`'s Initialize, joined to the declarations
 by endpoint type. The endpoint class is read off FastEndpoints' `EndpointDefinition` metadata by
 NAME rather than by type, so the package keeps no hard dependency on a FastEndpoints version.
 
@@ -212,8 +236,8 @@ Chrome 149–156 trial window.
 })();
 ```
 
-The registry is a singleton resolved once at `MapWebMcp`; the script itself is rebuilt per request,
-so a change in what is exposed takes effect without a restart.
+The registry is a singleton resolved once at `WebMcpHosting`'s Initialize; the script itself is
+rebuilt per request from it and from the settings read at Initialize.
 
 ---
 
@@ -244,10 +268,11 @@ policy gating what an agent may do unattended.
 
 ### Client key
 
-`WebMcpOptions.ClientApiKey` is injected into every `fetch()` in the generated script, under
-`ApiKeyHeader` (default `X-Webmcp-Key`). **That value is embedded in a publicly cached JavaScript
-file** — use a low-privilege, read-only key, store it in secrets rather than `appsettings.json`, and
-never reuse an admin key.
+The client key the WebMcp row names (`SecretManagerName` + `SecretKeyName`, resolved through the
+secret manager) is injected into every `fetch()` in the generated script, and sent on every MCP tool
+call, under the row's `ApiKeyHeader`. **That value is embedded in a publicly cached JavaScript file**
+— use a low-privilege, read-only key and never reuse an admin key. An agent's own identity travels
+separately, in its `Authorization` header, which the MCP bridge forwards to each tool's route.
 
 ---
 
@@ -271,8 +296,8 @@ cannot work, so it should never be offered one.
 - Complex request properties (arrays, nested objects) are omitted from the schema.
 - Multi-parameter routes get no valid-values recovery.
 - The tool list is not filtered by the caller's permissions — every caller is offered every declared
-  tool and discovers its own 403s. The OpenAPI document already filters per caller
-  (`PermissionFilterDocumentProcessor`); this does not yet.
+  tool and discovers its own 403s. The API reference documents already cut per caller
+  (`ApiReferenceDocument.KeepAdmitted`, FDW-919); this does not yet.
 - `Cache-Control: public` is correct only while the script is identical for every caller. Filtering
   it per principal requires `private`/`no-store` first, or a shared cache will serve one caller's
   tool list to another.

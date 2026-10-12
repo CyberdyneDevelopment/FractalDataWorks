@@ -13,38 +13,44 @@ namespace Fdw.Aegis.Configuration;
 /// must satisfy. Standalone typed-body POCO — mirrors <c>MsSqlConnectionConfiguration</c>.
 /// </summary>
 /// <remarks>
-/// Persisted (Phase 2) to its own table as a child of the <c>AegisCommand</c> header via
-/// <see cref="AegisCommandId"/>. For Phase 0/1 this is bound directly from <c>aegisSchema.json</c>
-/// via <c>IOptions</c> — no ConfigurationDb round trip.
+/// The PreApproved implementation of the AegisCommand domain: its row hangs from the domain row by
+/// <see cref="AegisCommandId"/>, and its <see cref="ParameterAllowList"/> rows hang from it and load
+/// and save with it.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "AegisCommand", ServiceType = "PreApproved")]
 public partial class PreApprovedCommandConfiguration : IApprovalPolicyConfiguration
 {
+    /// <summary>Gets or sets the name, set by the domain provider from the domain row.</summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the domain this implementation belongs to.</summary>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Domain { get; set; } = string.Empty;
+
+    /// <inheritdoc/>
+    /// <remarks>Set by the provider from the domain row; never persisted.</remarks>
+    public string Implementation { get; set; } = string.Empty;
+
     // ========================================
-    // IGenericConfiguration — typed body identity
+    // IGenericConfiguration — implementation identity
     // ========================================
 
     /// <summary>
-    /// Gets or sets the unique identifier for this typed body row.
+    /// Gets or sets the unique identifier for this implementation row.
     /// </summary>
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Gets or sets the logical FK to the parent <c>AegisCommandConfiguration.Id</c>.
+    /// Gets or sets the domain record's durable id.
     /// </summary>
     public Guid AegisCommandId { get; set; }
 
-    string IGenericConfiguration.Name
-    {
-        get => string.Empty;
-        set { /* typed body has no independent name — it is identified by AegisCommandId */ }
-    }
-
-    string IGenericConfiguration.SectionName => "Commands";
-    string IGenericConfiguration.ServiceType => "AegisCommand";
-    string? IGenericConfiguration.ServiceOptionType => "PreApproved";
+    /// <summary>
+    /// Gets or sets the declared connection this command runs against.
+    /// </summary>
+    public string ConnectionName { get; set; } = string.Empty;
 
     // ========================================
     // Approval-policy properties
@@ -64,7 +70,7 @@ public partial class PreApprovedCommandConfiguration : IApprovalPolicyConfigurat
     /// <summary>
     /// Gets or sets the deterministic parameter allow-list: every parameter this command accepts,
     /// the values it permits, and whether it is required. A submitted parameter absent from this
-    /// list, or with a value not in <see cref="ParameterAllowEntry.PermittedValues"/>, is rejected.
+    /// list, or with a value not in <see cref="ParameterAllowEntryConfiguration.PermittedValues"/>, is rejected.
     /// </summary>
-    public IList<ParameterAllowEntry> ParameterAllowList { get; set; } = new List<ParameterAllowEntry>();
+    public IList<ParameterAllowEntryConfiguration> ParameterAllowList { get; set; } = new List<ParameterAllowEntryConfiguration>();
 }

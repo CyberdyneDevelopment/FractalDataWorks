@@ -53,7 +53,7 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         var dbPath = new DatabasePath("", "dbo", name);
         var containerSchema = new Mock<IContainerSchema>();
         containerSchema.Setup(s => s.Fields).Returns(fields ?? []);
-        containerSchema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
+        containerSchema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
         var container = new Mock<IStorageContainer>();
         container.Setup(c => c.Name).Returns(name);
@@ -66,7 +66,7 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateWithEmptyCollectionCreatesEmptyDataTable()
+    public void TranslateWithEmptyCollectionCreatesEmptyDataTable()
     {
         // Arrange - BulkInsert allows empty collection (creates empty DataTable)
         var fields = new[] { CreateField("Name").Object };
@@ -78,11 +78,11 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert - succeeds with empty DataTable
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Rows.Count.ShouldBe(0);
     }
 
@@ -120,7 +120,7 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithInt32TypeFromObjectClrType()
+    public void TranslateBulkInsertCreatesDataTableWithInt32TypeFromObjectClrType()
     {
         // Arrange - ClrType is object, TypeName is "Int32" -> should infer int
         var fields = new[]
@@ -135,19 +135,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTableParam = result.Value!.Parameters["@__BulkCopy_DataTable"];
-        var dataTable = (DataTable)dataTableParam.Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Age"]!.DataType.ShouldBe(typeof(int));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithInt64Type()
+    public void TranslateBulkInsertCreatesDataTableWithInt64Type()
     {
         // Arrange
         var fields = new[]
@@ -162,18 +161,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["BigVal"]!.DataType.ShouldBe(typeof(long));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithStringType()
+    public void TranslateBulkInsertCreatesDataTableWithStringType()
     {
         // Arrange
         var fields = new[]
@@ -188,18 +187,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Name"]!.DataType.ShouldBe(typeof(string));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithDateTimeType()
+    public void TranslateBulkInsertCreatesDataTableWithDateTimeType()
     {
         // Arrange
         var fields = new[]
@@ -214,18 +213,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Created"]!.DataType.ShouldBe(typeof(DateTime));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithBooleanType()
+    public void TranslateBulkInsertCreatesDataTableWithBooleanType()
     {
         // Arrange
         var fields = new[]
@@ -240,18 +239,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["IsActive"]!.DataType.ShouldBe(typeof(bool));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithDecimalType()
+    public void TranslateBulkInsertCreatesDataTableWithDecimalType()
     {
         // Arrange
         var fields = new[]
@@ -266,18 +265,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Price"]!.DataType.ShouldBe(typeof(decimal));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithDoubleType()
+    public void TranslateBulkInsertCreatesDataTableWithDoubleType()
     {
         // Arrange
         var fields = new[]
@@ -292,18 +291,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Weight"]!.DataType.ShouldBe(typeof(double));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithGuidType()
+    public void TranslateBulkInsertCreatesDataTableWithGuidType()
     {
         // Arrange
         var fields = new[]
@@ -318,18 +317,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["ExternalId"]!.DataType.ShouldBe(typeof(Guid));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertCreatesDataTableWithUnknownTypeNameFallsToObject()
+    public void TranslateBulkInsertCreatesDataTableWithUnknownTypeNameFallsToObject()
     {
         // Arrange - unknown TypeName defaults to object
         var fields = new[]
@@ -344,18 +343,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Data"]!.DataType.ShouldBe(typeof(object));
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertHandlesNullableValueTypeField()
+    public void TranslateBulkInsertHandlesNullableValueTypeField()
     {
         // Arrange - nullable int field
         var fields = new[]
@@ -370,18 +369,18 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Rows[0]["Score"].ShouldBe(DBNull.Value);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertHandlesNonNullableReferenceTypeField()
+    public void TranslateBulkInsertHandlesNonNullableReferenceTypeField()
     {
         // Arrange - non-nullable string (reference type, IsNullable=true still works)
         var fields = new[]
@@ -396,11 +395,11 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         // String is already a reference type, so IsNullable doesn't change column type
         dataTable.Columns["Name"]!.DataType.ShouldBe(typeof(string));
     }
@@ -408,7 +407,7 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertHandlesMultipleRows()
+    public void TranslateBulkInsertHandlesMultipleRows()
     {
         // Arrange
         var fields = new[]
@@ -429,11 +428,11 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Rows.Count.ShouldBe(3);
         dataTable.Rows[0]["Name"].ShouldBe("Alice");
         dataTable.Rows[1]["Name"].ShouldBe("Bob");
@@ -443,7 +442,7 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertSetsDestinationParameter()
+    public void TranslateBulkInsertSetsDestinationParameter()
     {
         // Arrange
         var fields = new[] { CreateField("Name").Object };
@@ -455,17 +454,17 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Parameters["@__BulkCopy_Destination"].Value!.ToString().ShouldBe("[dbo].[Customers]");
+        result.Value!.Destination.ShouldBe("[dbo].[Customers]");
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public async Task TranslateBulkInsertWithDirectClrTypeSkipsTypeNameLookup()
+    public void TranslateBulkInsertWithDirectClrTypeSkipsTypeNameLookup()
     {
         // Arrange - ClrType is NOT object, so TypeName inference is skipped
         var fields = new[]
@@ -480,11 +479,11 @@ public sealed class MsSqlBulkInsertTranslatorGapTests
         command.Setup(c => c.InputData).Returns(entities);
 
         // Act
-        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+        var result = MsSqlBulkInsertTranslator.Plan(command.Object, container.Object);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        var dataTable = (DataTable)result.Value!.Parameters["@__BulkCopy_DataTable"].Value!;
+        var dataTable = result.Value!.Rows;
         dataTable.Columns["Price"]!.DataType.ShouldBe(typeof(decimal));
     }
 }

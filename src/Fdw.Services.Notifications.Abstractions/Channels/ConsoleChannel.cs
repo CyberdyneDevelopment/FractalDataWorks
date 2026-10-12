@@ -15,7 +15,6 @@ public sealed class ConsoleChannel : NotificationChannelBase
     /// </summary>
     public ConsoleChannel()
         : base(
-            id: 4,
             name: "Console",
             description: "Development/test channel that logs notification content via structured logging",
             supportsBatchSend: true,

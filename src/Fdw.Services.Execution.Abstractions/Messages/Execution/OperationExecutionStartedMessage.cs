@@ -17,8 +17,7 @@ public sealed class OperationExecutionStartedMessage : ExecutionMessage, IServic
         : base(3002, "OperationExecutionStarted", MessageSeverity.Information,
                "Operation execution started",
                "EXEC_OPERATION_STARTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class OperationExecutionStartedMessage : ExecutionMessage, IServic
         : base(3002, "OperationExecutionStarted", MessageSeverity.Information,
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' execution started", operationName),
                "EXEC_OPERATION_STARTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -43,8 +41,7 @@ public sealed class OperationExecutionStartedMessage : ExecutionMessage, IServic
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' execution started for process: {1}",
                            operationName, processId),
                "EXEC_OPERATION_STARTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 
     /// <summary>
@@ -58,7 +55,6 @@ public sealed class OperationExecutionStartedMessage : ExecutionMessage, IServic
                string.Format(CultureInfo.InvariantCulture, "Operation '{0}' execution started for process: {1} (type: {2})",
                            operationName, processId, processType),
                "EXEC_OPERATION_STARTED",
-               "Execution",
-               "https://docs.Fdw.io/execution/operations")
+               "Execution")
     { }
 }

@@ -12,5 +12,5 @@ namespace Fdw.Data.Lineage.NodeTypes;
 public sealed class StageNodeType : LineageNodeTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="StageNodeType"/> class.</summary>
-    public StageNodeType() : base(7, "Stage") { }
+    public StageNodeType() : base("Stage") { }
 }

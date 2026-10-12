@@ -1,3 +1,4 @@
+using Fdw.Configuration;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Services;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Linq;
 using Fdw.Results;
-using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -49,7 +49,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
     /// <summary>
     /// The connection this domain's configuration rows are read from and written to.
     /// </summary>
-    public static string ConfigurationConnection { get; set; } = "PlatformConfiguration";
+    public static string ConfigurationConnection => PlatformConnection.Name;
 
     // Configure(), Register() and Initialize() are source-generated
 
@@ -64,8 +64,6 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
     /// </remarks>
     static CredentialServiceTypes()
     {
-        var collectOptions = RegisterFunc;
-
         var providerService = typeof(ICredentialServiceProvider).ToString();
 
         Registration((builder, loggerFactory) =>
@@ -75,30 +73,16 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<ICredentialServiceConfigurationProvider>(sp =>
                 new CredentialServiceConfigurationProvider(
                     sp.GetService<ILogger<CredentialServiceConfigurationProvider>>()!,
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    ConfigurationConnection));
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), CredentialServiceTypes.ConfigurationConnection, "sec", "CredentialService"));
             builder.Services.TryAddSingleton<CredentialServiceConfigurationProvider>(
                 sp => (CredentialServiceConfigurationProvider)sp.GetRequiredService<ICredentialServiceConfigurationProvider>());
 
-            builder.Services.TryAddSingleton<ImplementationConfigurationProviderBase<CredentialServiceConfiguration, CredentialServiceConfigurationCommand>>(
-                sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
-            builder.Services.TryAddSingleton<IServiceConfigurationProvider<CredentialServiceConfiguration>>(
-                sp => sp.GetRequiredService<CredentialServiceConfigurationProvider>());
-
-            var registered = collectOptions(builder, loggerFactory);
-            if (registered.IsFailure)
-                return registered;
-
-            var declaredOptions = Options;
-            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
-
-            ServiceTypeLog.DomainOptionsCollected(log, nameof(CredentialServiceTypes), declaredOptions.Length, optionNames);
-            ServiceTypeLog.DomainProviderDeclared(log, nameof(CredentialServiceTypes), providerService);
-
+            // The domain's own base registration goes FIRST -- each option decorates this
+            // registration (wraps its factory) from its own Register() call below, so it has to
+            // already exist in builder.Services by the time that runs.
             builder.Services.AddScoped<ICredentialServiceProvider>(sp =>
             {
                 var provider = new CredentialServiceProvider(
-                    sp,
                     sp.GetService<ILoggerFactory>()?.CreateLogger<CredentialServiceProvider>()
                     ?? NullLogger<CredentialServiceProvider>.Instance);
 
@@ -121,7 +105,7 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                             stLogger,
                             nameof(CredentialServiceTypes),
                             provider.GetType().Name,
-                            typeof(IServiceConfigurationProvider<CredentialServiceConfiguration>).ToString());
+                            typeof(IImplementationConfigurationProvider<ICredentialServiceImplementationConfiguration>).ToString());
                     }
                 }
                 catch (Exception ex)
@@ -129,8 +113,22 @@ public partial class CredentialServiceTypes : ServiceTypeCollectionBase<
                     ServiceTypeLog.FactoryRegistrationException(stLogger, ex, nameof(CredentialServiceTypes));
                     throw;
                 }
+
                 return provider;
             });
+
+            foreach (var option in Options)
+            {
+                var optionRegistered = option.Register(builder, loggerFactory);
+                if (optionRegistered.IsFailure)
+                    return optionRegistered;
+            }
+
+            var declaredOptions = Options;
+            var optionNames = string.Join(", ", declaredOptions.Select(option => option.Name));
+
+            ServiceTypeLog.DomainOptionsCollected(log, nameof(CredentialServiceTypes), declaredOptions.Length, optionNames);
+            ServiceTypeLog.DomainProviderDeclared(log, nameof(CredentialServiceTypes), providerService);
 
             if (declaredOptions.Length == 0)
                 ServiceTypeLog.DomainRegisteredWithNoOptions(log, nameof(CredentialServiceTypes), providerService);

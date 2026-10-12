@@ -31,7 +31,6 @@ public sealed class OrganizeUsingsTranslator : RoslynCommandTranslatorBase<Organ
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: collect usings, sort, rebuild compilation unit
     public override async Task<IGenericResult<MutationResult<OrganizedUsingsData>>> Translate(
         OrganizeUsingsCommand command,
         Solution solution,
@@ -143,5 +142,4 @@ public sealed class OrganizeUsingsTranslator : RoslynCommandTranslatorBase<Organ
                 fileChanges,
                 data));
     }
-#pragma warning restore MA0051
 }

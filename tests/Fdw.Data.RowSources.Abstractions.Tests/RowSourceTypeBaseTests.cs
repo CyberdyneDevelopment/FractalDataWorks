@@ -4,15 +4,6 @@ namespace Fdw.Data.RowSources.Abstractions.Tests;
 
 public class RowSourceTypeBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void ConstructorSetsId()
-    {
-        var sut = new TestRowSourceType();
-
-        sut.Id.ShouldBe(1);
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -76,7 +67,7 @@ public class RowSourceTypeBaseTests
 
     private sealed class TestRowSourceType : RecordSourceTypeBase
     {
-        public TestRowSourceType() : base(1, "TestSource") { }
+        public TestRowSourceType() : base("TestSource") { }
 
         public override bool SupportsSync => true;
         public override bool SupportsAsync => true;

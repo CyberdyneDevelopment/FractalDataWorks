@@ -12,7 +12,7 @@ public sealed class SearchCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SearchCommandCategory"/> class.
     /// </summary>
-    public SearchCommandCategory() : base(9, "Search", "Code search operations")
+    public SearchCommandCategory() : base("Search", "Code search operations")
     {
     }
 }

@@ -1,7 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization.Logging;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Fdw.Services.Authorization.Authorization;
@@ -34,10 +37,11 @@ namespace Fdw.Services.Authorization.Authorization;
 /// </remarks>
 public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvider
 {
-    internal const string SystemAdminPolicy = "system:admin";
+    internal const string SystemAdminPolicy = AuthConstants.PlatformAdminPolicy;
 
     private readonly DefaultAuthorizationPolicyProvider _fallbackProvider;
     private readonly ISystemRoleConfiguration _systemRoleConfiguration;
+    private readonly ILogger<FdwAuthorizationPolicyProvider> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FdwAuthorizationPolicyProvider"/> class.
@@ -47,12 +51,15 @@ public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvide
     /// Provides the deployment-configured admin role name so the "system:admin" policy
     /// does not embed a hardcoded role string.
     /// </param>
+    /// <param name="logger">The logger.</param>
     public FdwAuthorizationPolicyProvider(
         IOptions<Microsoft.AspNetCore.Authorization.AuthorizationOptions> options,
-        ISystemRoleConfiguration systemRoleConfiguration)
+        ISystemRoleConfiguration systemRoleConfiguration,
+        ILogger<FdwAuthorizationPolicyProvider>? logger = null)
     {
         _fallbackProvider = new DefaultAuthorizationPolicyProvider(options);
         _systemRoleConfiguration = systemRoleConfiguration;
+        _logger = logger ?? NullLogger<FdwAuthorizationPolicyProvider>.Instance;
     }
 
     /// <inheritdoc />
@@ -65,11 +72,15 @@ public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvide
 
         if (string.Equals(policyName, SystemAdminPolicy, StringComparison.Ordinal))
         {
+            // The platform's administrator, not any tenant's: the admin role held while acting in the
+            // global tenant (FDW-825). A tenant Admin carries the same role name in a token for their
+            // own tenant, which is why the role alone cannot answer this.
             var adminRoleName = _systemRoleConfiguration.AdminRoleName;
             var policy = new AuthorizationPolicyBuilder()
-                .RequireRole(adminRoleName)
+                .RequireAssertion(context => _systemRoleConfiguration.IsPlatformAdmin(context.User))
                 .Build();
 
+            FrameworkAuthorizationLog.PolicyResolvedToAdminRole(_logger, policyName, adminRoleName);
             return Task.FromResult<AuthorizationPolicy?>(policy);
         }
 
@@ -93,9 +104,11 @@ public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvide
                 .AddRequirements(new FdwPermissionRequirement(parts[0], parts[1]))
                 .Build();
 
+            FrameworkAuthorizationLog.PolicyResolvedToPermission(_logger, policyName, parts[0], parts[1]);
             return Task.FromResult<AuthorizationPolicy?>(policy);
         }
 
+        FrameworkAuthorizationLog.PolicyFellThroughToDefault(_logger, policyName);
         return _fallbackProvider.GetPolicyAsync(policyName);
     }
 

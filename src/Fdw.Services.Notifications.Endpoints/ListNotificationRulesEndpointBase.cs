@@ -4,24 +4,32 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Notifications.Configuration;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
+using System;
+using Fdw.Web.RestEndpoints.Models;
 
 namespace Fdw.Services.Notifications.Endpoints;
 
 /// <summary>
-/// Base endpoint for listing all notification rules.
+/// Base endpoint for listing notification rules, one page at a time (FDW-951).
 /// </summary>
-public abstract class ListNotificationRulesEndpointBase : CrudListEndpointBase<NotificationRuleSummaryDto>
+/// <remarks>
+/// A page is one read of the notification rules domain table: the fields a rule's summary shows live on the
+/// domain row, so no rule's implementation is read to list it (FDW-1005).
+/// </remarks>
+public abstract class ListNotificationRulesEndpointBase
+    : CrudPageEndpointBase<NotificationRuleDomainConfiguration, NotificationRuleSummaryDto>
 {
-    private readonly IServiceConfigurationProvider<NotificationRuleConfiguration> _provider;
+    private readonly INotificationRuleConfigurationProvider _provider;
 
     /// <inheritdoc />
-    protected ListNotificationRulesEndpointBase(ILogger<ListNotificationRulesEndpointBase> logger, IServiceConfigurationProvider<NotificationRuleConfiguration> provider) : base(logger)
+    protected ListNotificationRulesEndpointBase(ILogger<ListNotificationRulesEndpointBase> logger, INotificationRuleConfigurationProvider provider) : base(logger)
     {
-        _provider = provider;
+        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
     }
 
     /// <inheritdoc />
@@ -31,32 +39,26 @@ public abstract class ListNotificationRulesEndpointBase : CrudListEndpointBase<N
     protected override string EndpointSummary => "List notification rules";
 
     /// <inheritdoc />
-    protected override string EndpointDescription => "Returns all notification rules.";
+    protected override string EndpointDescription => "Streams one page of notification rules in name order.";
 
     /// <inheritdoc />
-    protected override async Task<IGenericResult<List<NotificationRuleSummaryDto>>> LoadItems(CancellationToken ct)
+    protected override Task<IGenericResult<ConfigurationPage<NotificationRuleDomainConfiguration>>> LoadPage(
+        PaginatedListRequest paging, CancellationToken ct)
     {
         NotificationEndpointLog.ListingNotificationRules(Logger);
-
-        var allResult = await _provider.Get(ct).ConfigureAwait(false);
-        if (!allResult.IsSuccess)
-        {
-            return allResult.ToNewResult<List<NotificationRuleSummaryDto>>();
-        }
-
-        var items = (allResult.Value ?? (IReadOnlyList<NotificationRuleConfiguration>)[])
-            .Select(r => new NotificationRuleSummaryDto
-            {
-                Id = r.Id,
-                Name = r.Name,
-                Description = r.Description,
-                IsEnabled = r.IsEnabled,
-                NotificationServiceType = r.NotificationServiceType,
-                NotificationServiceName = r.NotificationServiceName,
-                Severity = r.Severity
-            })
-            .ToList();
-
-        return GenericResult<List<NotificationRuleSummaryDto>>.Success(items);
+        return _provider.Get(new DomainQuery(null, null, paging.Skip, paging.Take, false), ct);
     }
+
+    /// <inheritdoc />
+    protected override Task<IGenericResult<NotificationRuleSummaryDto>> ToSummary(NotificationRuleDomainConfiguration item, CancellationToken ct)
+        => Task.FromResult(GenericResult<NotificationRuleSummaryDto>.Success(new NotificationRuleSummaryDto
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Description = item.Description,
+            IsEnabled = item.IsEnabled,
+            NotificationServiceType = item.NotificationServiceType,
+            NotificationServiceName = item.NotificationServiceName,
+            Severity = item.Severity
+        }));
 }

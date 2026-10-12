@@ -11,7 +11,6 @@ public sealed class FullscreenIcon : IconGlyphBase
     /// <summary>Initializes a new instance of <see cref="FullscreenIcon"/>.</summary>
     public FullscreenIcon()
         : base(
-            42,
             "Fullscreen",
             "0 0 24 24",
             "none",

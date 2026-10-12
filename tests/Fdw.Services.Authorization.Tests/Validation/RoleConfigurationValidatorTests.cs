@@ -18,7 +18,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWithValidConfiguration()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin"
         };
@@ -36,7 +36,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWithEmptyName()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = string.Empty
         };
@@ -54,7 +54,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWithInvalidNamePattern()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "1Role"
         };
@@ -72,7 +72,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWithNameExceedingMaxLength()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = new string('A', 101)
         };
@@ -90,7 +90,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWithNullDisplayName()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             DisplayName = null
@@ -109,7 +109,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWithValidDisplayName()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             DisplayName = "System Administrator"
@@ -128,7 +128,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWithLongDisplayName()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             DisplayName = new string('A', 201)
@@ -147,7 +147,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWithNullDescription()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             Description = null
@@ -166,7 +166,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWithValidDescription()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             Description = "Full system access"
@@ -185,7 +185,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWithControlCharactersInDescription()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             Description = "Invalid\0Description"
@@ -204,7 +204,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWithDescriptionExceedingMaxLength()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin",
             Description = new string('A', 1001)
@@ -220,48 +220,10 @@ public sealed class RoleConfigurationValidatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ValidateFailsWithNegativeSortOrder()
-    {
-        // Arrange
-        var config = new RoleConfiguration
-        {
-            Name = "Admin",
-            SortOrder = -1
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.SortOrder);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void ValidatePassesWithZeroSortOrder()
-    {
-        // Arrange
-        var config = new RoleConfiguration
-        {
-            Name = "Admin",
-            SortOrder = 0
-        };
-
-        // Act
-        var result = _validator.TestValidate(config);
-
-        // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.SortOrder);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
     public void ValidatePassesWhenTenantScopedWithValidTenantId()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "TenantAdmin",
             IsTenantScoped = true,
@@ -281,7 +243,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateFailsWhenTenantScopedWithEmptyTenantId()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "TenantAdmin",
             IsTenantScoped = true,
@@ -301,7 +263,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWhenNotTenantScopedWithNullTenantId()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "GlobalAdmin",
             IsTenantScoped = false,
@@ -321,7 +283,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidatePassesWhenNotTenantScopedWithEmptyTenantId()
     {
         // Arrange - validator only checks when IsTenantScoped AND TenantId.HasValue
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "GlobalAdmin",
             IsTenantScoped = false,
@@ -341,7 +303,7 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateOptionsReturnsSuccessForValidConfig()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
             Name = "Admin"
         };
@@ -359,10 +321,9 @@ public sealed class RoleConfigurationValidatorTests
     public void ValidateOptionsReturnsFailureForInvalidConfig()
     {
         // Arrange
-        var config = new RoleConfiguration
+        var config = new RoleImplementationConfiguration
         {
-            Name = string.Empty,
-            SortOrder = -1
+            Name = string.Empty
         };
 
         // Act

@@ -7,22 +7,25 @@ using Fdw.Collections.Attributes;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Calculations.Abstractions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Data.Transformations;
 
 /// <summary>
 /// Divides the input value by a fixed divisor parameter.
-/// Input must be numeric (converted to decimal). Returns null on divide by zero.
+/// Input must be numeric (converted to decimal). A zero divisor fails the transform with a coded message; it never returns null or zero.
 /// </summary>
 [TypeOption(typeof(TransformationTypes), "Divide")]
 public sealed class DivideFieldTransformer : FieldTransformationBase
 {
+    private static readonly ILogger Logger = NullLogger.Instance;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="DivideFieldTransformer"/> class.
     /// </summary>
     public DivideFieldTransformer()
         : base(
-            id: 203,
             name: "Divide",
             displayName: "Divide",
             description: "Divides the input value by a fixed divisor. Input must be numeric.",
@@ -59,7 +62,7 @@ public sealed class DivideFieldTransformer : FieldTransformationBase
 
         if (divisor == 0m)
         {
-            return Task.FromResult(GenericResult<object?>.Success(null));
+            return Task.FromResult(GenericResult<object?>.Failure(FieldTransformerLog.DivisionByZero(Logger, "Divide")));
         }
 
         var value = ConvertToDecimal(input);

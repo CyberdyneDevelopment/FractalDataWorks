@@ -25,7 +25,6 @@ public sealed class UniqueValidationRuleType : ValidationRuleTypeBase
     /// </summary>
     public UniqueValidationRuleType()
         : base(
-            id: 7,
             name: "Unique",
             requiresFields: true,
             supportsMultipleFields: true,

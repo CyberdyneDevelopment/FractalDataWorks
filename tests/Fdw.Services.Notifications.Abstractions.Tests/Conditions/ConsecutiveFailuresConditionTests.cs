@@ -120,9 +120,6 @@ public class ConsecutiveFailuresConditionTests
     {
         // Arrange & Act
         var condition = new ConsecutiveFailuresCondition();
-
-        // Assert
-        condition.Id.ShouldBe(2);
         condition.Name.ShouldBe("ConsecutiveFailures");
         condition.Icon.ShouldBe("error_outline");
         condition.Color.ShouldBe("Error");

@@ -1,53 +1,31 @@
-using System;
+using Fdw.Configuration;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
-using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Commands;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Fdw.Services.Pipelines;
 
-/// <summary>
-/// The general pipeline header provider over <c>pipe.Pipeline</c>. The full aggregate — the
-/// ETL-kind typed body (pipe.EtlPipeline), its engine typed body (pipe.BatchCopyPipeline /
-/// pipe.StreamingPipeline), and the kind body's Transforms — is composed on read and cascade-saved on
-/// write entirely by the keystone <see cref="ImplementationConfigurationProviderBase{TConfig,TCommand}"/>. The "Etl"
-/// kind typed provider is attached to this header from the Services.Etl side (the ETL domain the general header
-/// consumes), mirroring the connections→secret-managers consumer-injects-provider pattern.
-/// </summary>
-public class PipelineServiceConfigurationProvider
-    : ServiceConfigurationProviderBase<
-          PipelineConfiguration,
-          IPipelineImplementationConfiguration,
-          PipelineConfigurationCommand>,
+/// <summary>Supplies the Pipeline configuration.</summary>
+public sealed class PipelineServiceConfigurationProvider
+    : DomainConfigurationProviderBase<IPipelineImplementationConfiguration>,
       IPipelineConfigurationProvider
 {
-
     /// <summary>Initializes a new instance of the <see cref="PipelineServiceConfigurationProvider"/> class.</summary>
+    /// <param name="logger">Logger for this provider instance.</param>
+    /// <param name="gatewayProvider">Supplies the gateway onto the configuration store.</param>
+    /// <param name="dataStoreName">The connection this domain's configuration rows are read from and written to.</param>
+    /// <param name="pathName">The schema its rows live in -- passed by its registration.</param>
+    /// <param name="containerName">The container its rows live in -- passed by its registration.</param>
     public PipelineServiceConfigurationProvider(
-        ILogger<PipelineServiceConfigurationProvider>? logger,
+        ILogger<PipelineServiceConfigurationProvider> logger,
         IConfigurationGatewayProvider gatewayProvider,
         string dataStoreName,
-        string pathName = "pipe")
-        : base(logger ?? NullLogger<PipelineServiceConfigurationProvider>.Instance,
-               gatewayProvider,
-               dataStoreName, pathName)
+        string pathName,
+        string containerName)
+        : base(logger, gatewayProvider, dataStoreName, pathName, containerName)
     {
     }
-
-    /// <inheritdoc />
-    protected override PipelineConfiguration Compose<T>(
-        string serviceOptionType,
-        string name,
-        T implementationConfiguration)
-        => new()
-        {
-            Name = name,
-            ServiceOptionType = serviceOptionType,
-            Configuration = implementationConfiguration,
-        };
 }

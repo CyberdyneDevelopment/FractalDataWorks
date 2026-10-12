@@ -16,7 +16,7 @@
     <IncludeBuildOutput>true</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <IncludeSymbols>false</IncludeSymbols>
-    <PackageDescription>Lightweight source generator for cross-assembly TypeOption and ServiceTypeOption registration. Generates module initializers that register options with their collections when assemblies are loaded. Designed to be embedded transitively in consuming NuGet packages.</PackageDescription>
+    <PackageDescription>Lightweight source generator for cross-assembly TypeOption and Implementation registration. Generates module initializers that register options with their collections when assemblies are loaded. Designed to be embedded transitively in consuming NuGet packages.</PackageDescription>
     <PackageTags>type-collections;registration;module-initializer;source-generator;roslyn;cross-assembly</PackageTags>
 
     <!-- Suppress warnings for analyzer-only packages -->

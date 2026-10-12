@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
@@ -75,6 +76,28 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
             var property = type.GetProperty(fieldName);
             if (property != null)
                 addParam(fieldName, property.GetValue(data));
+        }
+    }
+
+    /// <summary>
+    /// Adds one parameter per field name from the matching property on <paramref name="data"/>,
+    /// passing each property's declared type alongside its value.
+    /// </summary>
+    /// <param name="data">The object whose properties supply the parameter values.</param>
+    /// <param name="fieldNames">The field names to bind; a name with no matching property is skipped.</param>
+    /// <param name="addParam">
+    /// Delegate that adds a named parameter to the underlying command. Receives the parameter name
+    /// WITHOUT the SQL prefix, the property's value, and the property's declared type, so a driver can
+    /// type a null value by what the property holds rather than leaving it untyped.
+    /// </param>
+    protected static void AddParametersFromObject(object data, IEnumerable<string> fieldNames, Action<string, object?, Type> addParam)
+    {
+        var type = data.GetType();
+        foreach (var fieldName in fieldNames)
+        {
+            var property = type.GetProperty(fieldName);
+            if (property != null)
+                addParam(fieldName, property.GetValue(data), property.PropertyType);
         }
     }
 
@@ -276,10 +299,15 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
     {
         var columnName = QualifyColumn(condition.PropertyName, context.Dialect, context.PrimaryQualifier);
 
+        if (condition.Operator.IsPatternMatch)
+            return BuildPatternCondition(columnName, condition, context);
+
         if (condition.Operator.RequiresValue)
         {
             // Special handling for IN operator: expand IEnumerable into individual parameters
-            if (condition.Value is IEnumerable enumerable and not string)
+            // Why byte[] is excluded: it is one binary value compared whole, not a list to expand into
+            // one parameter per byte, which produced "= (@p0_0, @p0_1, ...)" and SQL 102 (FDW-889).
+            if (condition.Value is IEnumerable enumerable and not string and not byte[])
             {
                 var conditionIndex = context.ParameterCounter++;
                 var paramNames = new List<string>();
@@ -309,16 +337,41 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
             context.ParameterCounter++;
 
             // ZERO SQL INJECTION: Value goes into parameter, NOT concatenated into SQL.
-            // Preprocess string values to escape operator-specific metacharacters (e.g., LIKE wildcards).
-            object? paramValue = condition.Value is string strValue
-                ? condition.Operator.PreprocessSqlValue(strValue)
-                : condition.Value;
-
-            context.AddParam(singleParamKey, paramValue);
+            context.AddParam(singleParamKey, condition.Value);
             return $"{columnName} {condition.Operator.SqlOperator} {singleSqlParamName}";
         }
 
         return $"{columnName} {condition.Operator.SqlOperator}";
+    }
+
+    // A pattern operator (Contains, StartsWith, EndsWith): the operator says where anything may sit around
+    // the value, the dialect says which of its operators matches ignoring case and how that reads the text,
+    // and the pattern -- the escaped text with the wildcards -- is the parameter's value. The statement
+    // carries an ESCAPE clause every time, so the text is read the same way on every engine.
+    private static string BuildPatternCondition(string columnName, FilterCondition condition, SqlBuildContext context)
+    {
+        var op = condition.Operator;
+        var parameterName = $"{context.ParameterPrefix}p{context.ParameterCounter}";
+        context.ParameterCounter++;
+
+        // A caller's number or boolean is matched as its text; a list is not a pattern and is refused
+        // rather than joined into one.
+        object? pattern = condition.Value switch
+        {
+            null => null,
+            string text => LikePattern.Build(text, context.Dialect, op.MatchesAnythingBefore, op.MatchesAnythingAfter),
+            IEnumerable => throw new ArgumentException(
+                $"Operator '{op.Name}' on '{condition.PropertyName}' takes one value, not a list.",
+                nameof(condition)),
+            var other => LikePattern.Build(
+                Convert.ToString(other, CultureInfo.InvariantCulture)!, // never null: `other` is not
+                context.Dialect,
+                op.MatchesAnythingBefore,
+                op.MatchesAnythingAfter),
+        };
+
+        context.AddParam(parameterName.Substring(1), pattern);
+        return $"{columnName} {context.Dialect.PatternMatchOperator} {parameterName} {LikePattern.EscapeClause(context.Dialect)}";
     }
 
     private static string BuildWhereGroup(FilterGroup group, SqlBuildContext context)

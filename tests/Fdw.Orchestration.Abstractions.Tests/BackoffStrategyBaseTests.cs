@@ -9,13 +9,12 @@ public class BackoffStrategyBaseTests
     private sealed class ConstantBackoffStrategy : BackoffStrategyBase
     {
         public ConstantBackoffStrategy(
-            int id,
             string name,
             TimeSpan initialDelay,
             TimeSpan maxDelay,
             double multiplier = 2.0,
             double jitterFactor = 0.0)
-            : base(id, name, initialDelay, maxDelay, multiplier, jitterFactor)
+            : base(name, initialDelay, maxDelay, multiplier, jitterFactor)
         {
         }
 
@@ -31,13 +30,12 @@ public class BackoffStrategyBaseTests
     private sealed class ExponentialBackoffStrategy : BackoffStrategyBase
     {
         public ExponentialBackoffStrategy(
-            int id,
             string name,
             TimeSpan initialDelay,
             TimeSpan maxDelay,
             double multiplier = 2.0,
             double jitterFactor = 0.0)
-            : base(id, name, initialDelay, maxDelay, multiplier, jitterFactor)
+            : base(name, initialDelay, maxDelay, multiplier, jitterFactor)
         {
         }
 
@@ -57,13 +55,11 @@ public class BackoffStrategyBaseTests
     public void ConstructorSetsAllProperties()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Constant",
+"Constant",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             multiplier: 1.5,
             jitterFactor: 0.25);
-
-        strategy.Id.ShouldBe(1);
         strategy.Name.ShouldBe("Constant");
         strategy.InitialDelay.ShouldBe(TimeSpan.FromSeconds(1));
         strategy.MaxDelay.ShouldBe(TimeSpan.FromSeconds(30));
@@ -77,7 +73,7 @@ public class BackoffStrategyBaseTests
     public void UsesJitterReturnsTrueWhenJitterFactorPositive()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: 0.1);
@@ -91,7 +87,7 @@ public class BackoffStrategyBaseTests
     public void UsesJitterReturnsFalseWhenJitterFactorZero()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: 0.0);
@@ -105,7 +101,7 @@ public class BackoffStrategyBaseTests
     public void JitterFactorClampedToZeroWhenNegative()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: -0.5);
@@ -120,7 +116,7 @@ public class BackoffStrategyBaseTests
     public void JitterFactorClampedToOneWhenAboveOne()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: 2.5);
@@ -134,7 +130,7 @@ public class BackoffStrategyBaseTests
     public void DefaultMultiplierIsTwo()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
@@ -147,7 +143,7 @@ public class BackoffStrategyBaseTests
     public void DefaultJitterFactorIsZero()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
@@ -160,7 +156,7 @@ public class BackoffStrategyBaseTests
     public void ClampToMaxReturnsMaxWhenDelayExceedsMax()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
@@ -175,7 +171,7 @@ public class BackoffStrategyBaseTests
     public void ClampToMaxReturnsDelayWhenWithinMax()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
@@ -190,7 +186,7 @@ public class BackoffStrategyBaseTests
     public void ClampToMaxReturnsMaxWhenEqual()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
@@ -205,7 +201,7 @@ public class BackoffStrategyBaseTests
     public void ApplyJitterReturnsOriginalDelayWhenJitterIsZero()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: 0.0);
@@ -221,7 +217,7 @@ public class BackoffStrategyBaseTests
     public void ApplyJitterReturnsNonNegativeDelay()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: 1.0);
@@ -240,7 +236,7 @@ public class BackoffStrategyBaseTests
     public void ApplyJitterProducesVariation()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Test",
+"Test",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30),
             jitterFactor: 0.5);
@@ -262,7 +258,7 @@ public class BackoffStrategyBaseTests
     public void GetDelayReturnsConstantForConstantStrategy()
     {
         var strategy = new ConstantBackoffStrategy(
-            1, "Constant",
+"Constant",
             TimeSpan.FromSeconds(2),
             TimeSpan.FromSeconds(30));
 
@@ -277,12 +273,12 @@ public class BackoffStrategyBaseTests
     public void GetPollyBackoffTypeNameReturnsCorrectValue()
     {
         var constant = new ConstantBackoffStrategy(
-            1, "Constant",
+"Constant",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
         var exponential = new ExponentialBackoffStrategy(
-            2, "Exponential",
+"Exponential",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(30));
 
@@ -296,7 +292,7 @@ public class BackoffStrategyBaseTests
     public void ExponentialBackoffGrowsExponentially()
     {
         var strategy = new ExponentialBackoffStrategy(
-            2, "Exponential",
+"Exponential",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromMinutes(5),
             multiplier: 2.0);
@@ -313,7 +309,7 @@ public class BackoffStrategyBaseTests
     public void ExponentialBackoffClampsToMax()
     {
         var strategy = new ExponentialBackoffStrategy(
-            2, "Exponential",
+"Exponential",
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(10),
             multiplier: 2.0);

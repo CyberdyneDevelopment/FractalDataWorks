@@ -1,127 +1,122 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Commands.Data;
 using Fdw.Data.DataSets;
+using Fdw.Data.Transformations.Configuration;
 using Fdw.Results;
-using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
+using Fdw.Services.Data.Transformations;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for soft-deleting a field mapping transform.
-/// Provides virtual default implementations using IDataGateway for reads and writes.
+/// Detaches a transformation from a field mapping (FDW-846):
+/// <c>DELETE /field-mappings/{FieldMappingId}/transforms/{TransformationName}</c>. The transformation
+/// itself, and every other field mapping it is attached to, is untouched.
 /// </summary>
-/// <remarks>
-/// Why: FieldMappingTransform is a child record that does not implement IGenericConfiguration,
-/// so it cannot be routed through IConfigurationWriter. ConfigurationDeleteCommand via IDataGateway
-/// is the documented exception for child records. The configuration connection name and path are
-/// sourced from DataSetConfigurationProvider rather than IConfigurationConnectionNameProvider.
-/// </remarks>
 public abstract class DeleteFieldMappingTransformEndpointBase : CrudDeleteEndpointBase<DeleteFieldMappingTransformRequest>
 {
-    /// <summary>Gets the data gateway for executing queries and commands.</summary>
-    protected IDataGateway DataGateway { get; }
+    private readonly TransformationConfigurationProvider _transformations;
+    private readonly IConfigurationGatewayProvider _configurationGateways;
 
-    private readonly DataSetConfigurationProvider _dataSetProvider;
-
-    /// <inheritdoc />
-    protected DeleteFieldMappingTransformEndpointBase(ILogger<DeleteFieldMappingTransformEndpointBase> logger, IDataGatewayProvider dataGateways,
-        DataSetConfigurationProvider dataSetProvider) : base(logger)
+    /// <summary>Initializes a new instance of the <see cref="DeleteFieldMappingTransformEndpointBase"/> class.</summary>
+    /// <remarks>
+    /// The attachments are configuration rows in the transformation store the host declared, so they are read and
+    /// retired through that store's configuration gateway: the main gateway refuses a request over a host-declared store.
+    /// </remarks>
+    protected DeleteFieldMappingTransformEndpointBase(ILogger<DeleteFieldMappingTransformEndpointBase> logger,
+        IConfigurationGatewayProvider configurationGateways, TransformationConfigurationProvider transformations) : base(logger)
     {
-        DataGateway = dataGateways.ByName("Main");
-        _dataSetProvider = dataSetProvider;
+        _configurationGateways = configurationGateways;
+        _transformations = transformations;
     }
 
-    /// <summary>Gets the resource name used for route and policy generation.</summary>
+    /// <inheritdoc/>
     protected override string ResourceName => "field-mapping-transforms";
 
-    /// <summary>Gets the delete policy for this endpoint.</summary>
+    /// <inheritdoc/>
     protected override string DeletePolicy => "datasets:delete";
 
-    /// <summary>Gets the route for this endpoint.</summary>
-    protected override string Route => "/field-mappings/{FieldMappingId}/transforms/{TransformId}";
+    /// <inheritdoc/>
+    protected override string Route => "/field-mappings/{FieldMappingId}/transforms/{TransformationName}";
 
-    /// <summary>Gets the OpenAPI summary for this endpoint.</summary>
-    protected override string EndpointSummary => "Delete a field mapping transform";
+    /// <inheritdoc/>
+    protected override string EndpointSummary => "Detach a transformation from a field mapping";
 
-    /// <summary>Gets the OpenAPI description for this endpoint.</summary>
+    /// <inheritdoc/>
     protected override string EndpointDescription =>
-        "Soft-deletes a transform step from a field mapping's transform chain.";
+        "Stops applying a transformation to a field mapping. The transformation itself is not deleted.";
 
-    /// <summary>Gets the connection name for configuration database queries.</summary>
-    protected virtual string ConfigurationConnectionName => _dataSetProvider.DataStoreName;
+    /// <inheritdoc/>
+    protected override string GetResourceIdentifier(DeleteFieldMappingTransformRequest request) => request.TransformationName;
 
-    /// <summary>
-    /// Gets the configuration path that holds the transform containers.
-    /// </summary>
-    protected virtual string TransformPathName => "transform";
-
-    /// <summary>Gets the container name for FieldMappingTransform queries.</summary>
-    protected virtual string TransformContainerName => "FieldMappingTransform";
-
-    /// <summary>Returns the transform identifier from the delete request.</summary>
-    protected override string GetResourceIdentifier(DeleteFieldMappingTransformRequest request)
-        => request.TransformId.ToString();
-
-    /// <summary>Checks if the transform exists.</summary>
-    protected override Task<IGenericResult<bool>> CheckExistsForDelete(DeleteFieldMappingTransformRequest request, CancellationToken ct)
+    /// <inheritdoc/>
+    protected override async Task<IGenericResult<bool>> CheckExistsForDelete(DeleteFieldMappingTransformRequest request, CancellationToken ct)
     {
-        return CheckTransformExists(request.TransformId, ct);
+        var attachment = await FindAttachment(request, ct).ConfigureAwait(false);
+        if (attachment.IsFailure)
+            return attachment.ToNewResult<bool>();
+
+        return GenericResult<bool>.Success(attachment.Value is not null);
     }
 
-    /// <summary>Soft-deletes the transform.</summary>
-    protected override Task<IGenericResult> Delete(DeleteFieldMappingTransformRequest request, CancellationToken ct)
+    /// <inheritdoc/>
+    protected override async Task<IGenericResult> Delete(DeleteFieldMappingTransformRequest request, CancellationToken ct)
     {
-        return DeleteTransform(request.TransformId, ct);
-    }
+        FieldMappingTransformEndpointLog.DeletingTransform(Logger, request.TransformationName);
 
-    /// <summary>
-    /// Checks if a transform exists.
-    /// Default implementation queries via IDataGateway. Override for custom behavior.
-    /// </summary>
-    protected virtual async Task<IGenericResult<bool>> CheckTransformExists(Guid transformId, CancellationToken ct)
-    {
-        var command = new QueryCommand<FieldMappingTransformConfiguration>
-        {
-            Filter = DataSetQueryHelper.ByParentIdFilter(nameof(FieldMappingTransformConfiguration.Id), transformId)
-        };
-        var result = await DataGateway
-            .Execute<IEnumerable<FieldMappingTransformConfiguration>>(
-                command, new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName), ct)
+        var attachment = await FindAttachment(request, ct).ConfigureAwait(false);
+        if (attachment.IsFailure)
+            return attachment;
+        if (attachment.Value is null)
+            return GenericResult.Failure(FieldMappingTransformEndpointLog.TransformationNotAttached(
+                Logger, request.FieldMappingId, request.TransformationName));
+
+        var gateway = _configurationGateways.Get(_transformations.DataStoreName);
+        if (gateway.IsFailure)
+            return gateway;
+
+        var retired = await FieldMappingTransformations
+            .Retire(gateway.Value!, _transformations.DataStoreName, attachment.Value.Id, ct)
             .ConfigureAwait(false);
-        if (result.IsFailure) return result.ToNewResult<bool>();
-
-        return GenericResult<bool>.Success(result.Value?.Any() == true);
-    }
-
-    /// <summary>
-    /// Soft-deletes the transform via a ConfigurationDeleteCommand through the DataGateway.
-    /// Default implementation uses IDataGateway. Override for custom behavior.
-    /// </summary>
-    protected virtual async Task<IGenericResult> DeleteTransform(Guid transformId, CancellationToken ct)
-    {
-        FieldMappingTransformEndpointLog.DeletingTransform(Logger, transformId);
-
-        var deleteResult = await DataGateway
-            .Execute<int>(
-                new ConfigurationDeleteCommand(transformId),
-                new DataStoreTarget(ConfigurationConnectionName, TransformPathName, TransformContainerName),
-                ct)
-            .ConfigureAwait(false);
-        if (deleteResult.IsFailure)
+        if (retired.IsFailure)
         {
-            FieldMappingTransformEndpointLog.DeleteTransformFailed(Logger, transformId);
-            return deleteResult;
+            FieldMappingTransformEndpointLog.DeleteTransformFailed(Logger, request.TransformationName);
+            return retired;
         }
 
-        FieldMappingTransformEndpointLog.DeletedTransform(Logger, transformId);
+        FieldMappingTransformEndpointLog.DeletedTransform(Logger, request.TransformationName);
         return GenericResult.Success();
+    }
+
+    // The attachment is addressed by the pair (field mapping, transformation name); its own Id is
+    // only what the retire command needs.
+    private async Task<IGenericResult<FieldMappingTransformationConfiguration?>> FindAttachment(
+        DeleteFieldMappingTransformRequest request, CancellationToken ct)
+    {
+        var transformation = await _transformations.Get(request.TransformationName, ct).ConfigureAwait(false);
+        if (transformation.IsFailure)
+            return transformation.ToNewResult<FieldMappingTransformationConfiguration?>();
+        if (transformation.Value is null)
+            return GenericResult<FieldMappingTransformationConfiguration?>.Success(null);
+
+        var gateway = _configurationGateways.Get(_transformations.DataStoreName);
+        if (gateway.IsFailure)
+            return gateway.ToNewResult<FieldMappingTransformationConfiguration?>();
+
+        var attached = await FieldMappingTransformations
+            .ForFieldMapping(gateway.Value!, _transformations.DataStoreName, request.FieldMappingId, ct)
+            .ConfigureAwait(false);
+        if (attached.IsFailure)
+            return attached.ToNewResult<FieldMappingTransformationConfiguration?>();
+
+        return GenericResult<FieldMappingTransformationConfiguration?>.Success(
+            attached.Value!.FirstOrDefault(a => a.TransformationId == transformation.Value.Id));
     }
 }

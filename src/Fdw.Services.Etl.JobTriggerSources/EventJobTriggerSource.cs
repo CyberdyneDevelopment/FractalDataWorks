@@ -9,5 +9,5 @@ namespace Fdw.Services.Etl.JobTriggerSources;
 public sealed class EventJobTriggerSource : JobTriggerSourceBase
 {
     /// <summary>Initializes a new instance of the <see cref="EventJobTriggerSource"/> class.</summary>
-    public EventJobTriggerSource() : base(3, "Event") { }
+    public EventJobTriggerSource() : base("Event") { }
 }

@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Argentina")]
 public sealed class ArgentinaTimeZoneType : TimeZoneTypeBase
 {
-    public ArgentinaTimeZoneType() : base(18, "Argentina", "Argentina Standard Time") { }
+    public ArgentinaTimeZoneType() : base("Argentina", "Argentina Standard Time") { }
 }

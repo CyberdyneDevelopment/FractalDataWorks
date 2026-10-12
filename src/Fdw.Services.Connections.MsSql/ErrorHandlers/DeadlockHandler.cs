@@ -19,7 +19,7 @@ public sealed class DeadlockHandler : SqlErrorHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DeadlockHandler"/> class.
     /// </summary>
-    public DeadlockHandler() : base(5, "Deadlock") { }
+    public DeadlockHandler() : base("Deadlock") { }
 
     /// <inheritdoc />
     public override IReadOnlyList<int> SqlErrorNumbers => [1205];

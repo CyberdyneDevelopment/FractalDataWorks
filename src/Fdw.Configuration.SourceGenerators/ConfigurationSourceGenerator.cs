@@ -24,10 +24,7 @@ public sealed class ConfigurationSourceGenerator : IIncrementalGenerator
     /// <summary>
     /// Initializes the incremental generator.
     /// </summary>
-    // MA0051: Method length acceptable - generator initialization registers multiple outputs (DDL/ConfigurationTypes/TypeCollection DDL)
-#pragma warning disable MA0051 // Method is too long
     public void Initialize(IncrementalGeneratorInitializationContext context)
-#pragma warning restore MA0051
     {
         // Register embedded sources (attributes and interfaces)
         // Note: ConfigurationTypeOptionAttribute is NOT embedded - it lives in Fdw.Configuration

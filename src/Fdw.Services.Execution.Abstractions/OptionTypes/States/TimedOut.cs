@@ -16,7 +16,6 @@ public sealed class TimedOut : ProcessStateBase
     /// </summary>
     public TimedOut()
         : base(
-            id: 7,
             name: "TimedOut",
             isTerminal: true,
             isError: true,

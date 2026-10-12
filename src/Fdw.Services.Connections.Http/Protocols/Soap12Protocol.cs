@@ -32,18 +32,17 @@ public class Soap12Protocol : SoapProtocolBase
     /// Initializes a new instance of the <see cref="Soap12Protocol"/> class.
     /// </summary>
     public Soap12Protocol()
-        : base(3, "Soap12", "SOAP 1.2 protocol", SoapVersion.Soap12.ContentType)
+        : base("Soap12", "SOAP 1.2 protocol", SoapVersion.Soap12.ContentType)
     {
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Soap12Protocol"/> class for derived classes.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The protocol name.</param>
     /// <param name="description">The protocol description.</param>
-    protected Soap12Protocol(int id, string name, string description)
-        : base(id, name, description, SoapVersion.Soap12.ContentType)
+    protected Soap12Protocol(string name, string description)
+        : base(name, description, SoapVersion.Soap12.ContentType)
     {
     }
 

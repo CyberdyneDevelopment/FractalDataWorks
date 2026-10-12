@@ -12,7 +12,7 @@ public sealed class QaEnvironmentType : EnvironmentTypeBase
     /// <summary>
     /// Initializes a new instance of <see cref="QaEnvironmentType"/>.
     /// </summary>
-    public QaEnvironmentType() : base(3, "QA")
+    public QaEnvironmentType() : base("QA")
     {
     }
 }

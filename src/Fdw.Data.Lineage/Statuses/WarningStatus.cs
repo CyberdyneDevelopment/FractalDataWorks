@@ -14,5 +14,5 @@ public sealed class WarningStatus : LineageNodeStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="WarningStatus"/> class.
     /// </summary>
-    public WarningStatus() : base(2, "Warning") { }
+    public WarningStatus() : base("Warning") { }
 }

@@ -14,14 +14,14 @@ using Fdw.Results;
 namespace Fdw.Services.Pipelines.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Pipeline API client.
+/// Implementation for the Pipeline API client.
 /// </summary>
 /// <remarks>
 /// Registered with <see cref="ApiClientTypes"/> via a <c>[ModuleInitializer]</c> generated in
 /// the entry point project by <c>Fdw.Registration.SourceGenerators</c>.
 /// </remarks>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "PipelineClient")]
+[Implementation(typeof(ApiClientTypes), "PipelineClient")]
 public sealed class PipelineClientType : ApiClientTypeBase<IPipelineClient>
 {
     /// <summary>
@@ -38,9 +38,8 @@ public sealed class PipelineClientType : ApiClientTypeBase<IPipelineClient>
         {
             builder.Services.AddScoped<IPipelineClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<PipelineHttpClient>>() ?? NullLogger<PipelineHttpClient>.Instance;
-                return new PipelineHttpClient(factory.CreateClient(Name), logger);
+                return new PipelineHttpClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

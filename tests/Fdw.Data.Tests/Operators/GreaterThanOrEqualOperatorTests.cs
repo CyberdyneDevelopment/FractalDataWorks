@@ -89,12 +89,4 @@ public sealed class GreaterThanOrEqualOperatorTests
     {
         _sut.FormatODataValue("text").ShouldBe("'text'");
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void FormatSqlParameterUsesDefaultFormat()
-    {
-        _sut.FormatSqlParameter("Score").ShouldBe("@Score");
-    }
 }

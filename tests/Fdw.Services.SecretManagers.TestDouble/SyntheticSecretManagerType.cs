@@ -9,7 +9,7 @@ using Microsoft.Extensions.Hosting;
 namespace Fdw.Services.SecretManagers.TestDouble;
 
 /// <summary>
-/// The <c>Synthetic</c> secret-manager <c>[ServiceTypeOption]</c> this suite supplies to
+/// The <c>Synthetic</c> secret-manager <c>[Implementation]</c> this suite supplies to
 /// <see cref="SecretManagerTypes"/>.
 /// </summary>
 /// <remarks>
@@ -26,7 +26,7 @@ namespace Fdw.Services.SecretManagers.TestDouble;
 /// assembly being loaded, which is the whole point of the mechanism.
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(SecretManagerTypes), OptionName)]
+[Implementation(typeof(SecretManagerTypes), OptionName)]
 public sealed class SyntheticSecretManagerType
     : SecretManagerTypeBase<ISecretManager, ISyntheticSecretManagerFactory, SyntheticSecretManagerConfiguration>
 {
@@ -63,7 +63,7 @@ public sealed class SyntheticSecretManagerType
             var services = host.Services;
             services
                 .GetRequiredService<ISecretManagerProvider>()
-                .Register(Name, services.GetRequiredService<ISyntheticSecretManagerFactory>());
+                .Register(Name, () => new SyntheticSecretManagerProvider(services.GetRequiredService<ISyntheticSecretManagerFactory>()));
 
             return GenericResult<IHost>.Success(host);
         });

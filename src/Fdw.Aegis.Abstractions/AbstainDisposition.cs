@@ -15,7 +15,7 @@ public sealed class AbstainDisposition : VerdictDispositionBase
     /// Initializes a new instance of the <see cref="AbstainDisposition"/> class.
     /// </summary>
     public AbstainDisposition()
-        : base(id: 3, name: "Abstain", isTerminal: false, allowsInjection: false)
+        : base(name: "Abstain", isTerminal: false, allowsInjection: false)
     {
     }
 }

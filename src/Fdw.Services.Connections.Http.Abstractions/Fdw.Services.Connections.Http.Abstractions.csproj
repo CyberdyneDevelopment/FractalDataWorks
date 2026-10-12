@@ -27,7 +27,6 @@
 <ItemGroup>
     <InternalsVisibleTo Include="Fdw.Services.Connections.Http.Abstractions.Tests" />
     <InternalsVisibleTo Include="Fdw.Services.Connections.Http.Tests" />
-    <InternalsVisibleTo Include="ReferenceConnections.Http.Tests" />
   </ItemGroup>
 
   <ItemGroup>

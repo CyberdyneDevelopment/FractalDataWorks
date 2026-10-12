@@ -67,18 +67,18 @@ services.AddConfigurationGateway<FileSystemConnectionFactory>("configurationSche
 ## The schema that makes it work
 
 The FileSystem run's `configurationSchema.json` declares one connection whose
-`ServiceOptionType` is `FileSystem` and whose `Configuration.Root` is a folder — then declares the
+`Implementation` is `FileSystem` and whose `Configuration.Root` is a folder — then declares the
 DataStore shape exactly as a SQL host would, with `Format: "Json"` on each container:
 
 ```jsonc
 {
   "ConfigurationSchema": {
     "Connections": [
-      { "Name": "ConfigurationDb", "ServiceOptionType": "FileSystem",
+      { "Name": "ConfigurationDb", "Implementation": "FileSystem",
         "Configuration": { "Root": "config-data" } }
     ],
     "SecretManagers": [
-      { "Name": "EnvSecrets", "ServiceOptionType": "EnvironmentVariable",
+      { "Name": "EnvSecrets", "Implementation": "EnvironmentVariable",
         "Configuration": { "Prefix": "FDW_SECRET_" } }
     ],
     "DataStores": [
@@ -91,7 +91,7 @@ DataStore shape exactly as a SQL host would, with `Format: "Json"` on each conta
             "Containers": [
               {
                 "Name": "SecretManager", "TypeId": "Table", "Format": "Json",
-                "Fields": [ /* RowId, Id, Name, ServiceOptionType, IsCurrent, IsDeleted */ ],
+                "Fields": [ /* RowId, Id, Name, Implementation, IsCurrent, IsDeleted */ ],
                 "Keys": [
                   { "Name": "PK_SecretManager",         "TypeId": "Physical", "KeyFields": [ { "Name": "RowId" } ] },
                   { "Name": "PK_SecretManager_Logical", "TypeId": "Logical",  "KeyFields": [ { "Name": "Id" } ] }
@@ -126,7 +126,7 @@ what the typed-body JOIN rides. The data files are plain JSON arrays of row obje
 ```jsonc
 // config-data/sec/SecretManager.json
 [ { "RowId": 1, "Id": "1111…", "Name": "EnvSecrets",
-    "ServiceOptionType": "EnvironmentVariable", "IsCurrent": true, "IsDeleted": false } ]
+    "Implementation": "EnvironmentVariable", "IsCurrent": true, "IsDeleted": false } ]
 
 // config-data/sec/EnvironmentVariableSecretManager.json
 [ { "RowId": 1, "Id": "2222…", "SecretManagerId": "1111…", "SecretManagerRowId": 1,

@@ -1,11 +1,10 @@
 using Fdw.Configuration;
 using System;
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Fdw.Services.Abstractions;
 using Fdw.ServiceTypes;
 using Fdw.Services.Scheduling.Abstractions;
+using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Scheduling;
 
@@ -155,7 +154,7 @@ public abstract class SchedulerTypeBase<TService, TConfiguration, TFactory> :
         string? category = null,
         string defaultContainerName = "")
         : base(name, $"Schedulings:{name}", $"{name} Scheduling Service", $"Scheduling service using {schedulingEngine} engine", category ?? "Scheduling",
-               defaultDataStoreName: "PlatformConfiguration",
+               defaultDataStoreName: () => PlatformConnection.Name,
                defaultPathName: "sched",
                defaultContainerName: defaultContainerName)
     {
@@ -165,5 +164,4 @@ public abstract class SchedulerTypeBase<TService, TConfiguration, TFactory> :
         SupportsRecurring = supportsRecurring;
         SupportsDelayed = supportsDelayed;
     }
-
 }

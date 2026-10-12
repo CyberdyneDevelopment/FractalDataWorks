@@ -8,7 +8,7 @@ namespace Fdw.UI.Web.Abstractions;
 
 /// <summary>
 /// CRTP-based web component that can render to ANY JavaScript framework.
-/// Exports metadata that can be consumed by Blazor, React, Vue, Angular, etc.
+/// Exports metadata that can be consumed by React, Vue, Angular, etc.
 /// </summary>
 public abstract class WebComponentBase<TSelf, TModel> : ComponentBase<TSelf, TModel>, IWebComponent
     where TSelf : WebComponentBase<TSelf, TModel>

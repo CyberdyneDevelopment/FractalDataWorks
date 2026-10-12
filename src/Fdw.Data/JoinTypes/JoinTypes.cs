@@ -19,9 +19,9 @@ namespace Fdw.Data.Abstractions;
 /// var inner = JoinTypes.Inner;
 /// var left = JoinTypes.Left;
 ///
-/// // Or lookup by name/id
+/// // Or look up by name, or by an id read from an option
 /// var joinType = JoinTypes.ByName("Inner");
-/// var joinType = JoinTypes.ById(1);
+/// var same = JoinTypes.ById(joinType.Id);
 ///
 /// // Get all join types
 /// var all = JoinTypes.All();

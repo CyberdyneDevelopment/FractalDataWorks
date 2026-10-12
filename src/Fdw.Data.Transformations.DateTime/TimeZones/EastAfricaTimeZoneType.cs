@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "EastAfrica")]
 public sealed class EastAfricaTimeZoneType : TimeZoneTypeBase
 {
-    public EastAfricaTimeZoneType() : base(31, "EastAfrica", "E. Africa Standard Time") { }
+    public EastAfricaTimeZoneType() : base("EastAfrica", "E. Africa Standard Time") { }
 }

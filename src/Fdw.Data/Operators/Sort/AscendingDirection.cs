@@ -15,7 +15,6 @@ public sealed class AscendingDirection : SortDirectionBase
     /// Initializes a new instance of the <see cref="AscendingDirection"/> class.
     /// </summary>
     public AscendingDirection() : base(
-        id: 1,
         name: "Ascending",
         description: "Sort from smallest to largest, A to Z",
         isAscending: true,

@@ -14,7 +14,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaNumberDecimalConverter()
     : DataTypeConverterBase(
-        id: 5,
         name: "NumberDecimal",
         sourceType: "number",
         targetClrType: typeof(decimal),

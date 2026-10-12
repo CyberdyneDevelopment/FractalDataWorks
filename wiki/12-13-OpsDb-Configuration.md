@@ -65,11 +65,11 @@ OpsDb must be registered as a named connection in ConfigurationDb (`conn` schema
 Example seed pattern (idempotent — see `databases/ConfigurationDb/seed/02-seed-cfg-runtime-config.sql` for the authoritative seed):
 
 ```sql
-INSERT INTO conn.[Connection] (Id, Name, ServiceOptionType, Description)
-SELECT NEWID(), v.Name, v.ServiceOptionType, v.Description
+INSERT INTO conn.[Connection] (Id, Name, Implementation, Description)
+SELECT NEWID(), v.Name, v.Implementation, v.Description
 FROM (VALUES
     ('OpsDb', 'MsSql', 'OpsDb — operational runtime data')
-) v(Name, ServiceOptionType, Description)
+) v(Name, Implementation, Description)
 WHERE NOT EXISTS (
     SELECT 1 FROM conn.[Connection] x
     WHERE x.Name = v.Name AND x.IsCurrent = 1 AND x.IsDeleted = 0

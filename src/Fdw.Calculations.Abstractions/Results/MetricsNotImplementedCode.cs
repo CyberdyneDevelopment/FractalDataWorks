@@ -16,7 +16,7 @@ public sealed class MetricsNotImplementedCode : CalculationResultCodeBase
     /// </summary>
     public MetricsNotImplementedCode()
         : base(90005, "MetricsNotImplemented",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Metrics not implemented",
             isRetryable: false)
     {

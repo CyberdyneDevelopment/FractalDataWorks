@@ -17,7 +17,6 @@ public sealed class RunningStateType : ExecutionStateTypeBase
     /// </summary>
     public RunningStateType()
         : base(
-            id: 10,
             name: "Running",
             displayName: "Running",
             isTerminal: false,

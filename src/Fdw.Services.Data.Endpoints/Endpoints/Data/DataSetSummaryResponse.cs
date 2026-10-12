@@ -20,17 +20,16 @@ public class DataSetSummaryResponse : ResourceSummary
     /// <summary>Gets or sets the data set description.</summary>
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>ClassificationId</c> of the data set's data classification level; <c>NotYetClassified</c> until someone picks a level.
+    /// </summary>
+    public int ClassificationId { get; set; }
+
     /// <summary>Gets or sets the data set category.</summary>
     public string? Category { get; set; }
 
     /// <summary>Gets or sets the data set version.</summary>
     public string? Version { get; set; }
-
-    /// <summary>Gets or sets the number of fields in the data set.</summary>
-    public int FieldCount { get; set; }
-
-    /// <summary>Gets or sets the number of sources in the data set.</summary>
-    public int SourceCount { get; set; }
 
     /// <summary>Gets or sets the creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; }

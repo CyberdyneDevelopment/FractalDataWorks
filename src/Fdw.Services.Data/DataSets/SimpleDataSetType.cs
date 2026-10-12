@@ -25,7 +25,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Why: registered as the <c>"Simple"</c> member of <see cref="DataSetTypes"/>; selected when a
-/// dataset's authored <c>ServiceOptionType</c> is <c>"Simple"</c>. The type option is a module-init
+/// dataset's authored <c>Implementation</c> is <c>"Simple"</c>. The type option is a module-init
 /// singleton with a parameterless constructor and no DI — it is stateless and reads everything it needs
 /// for one execution from the <see cref="DataSetExecutionContext"/>.
 /// </remarks>
@@ -34,13 +34,25 @@ public sealed class SimpleDataSetType : DataSetTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="SimpleDataSetType"/> class.</summary>
     public SimpleDataSetType()
-        : base(1, "Simple", "Single-source dataset (direct pull; also the writable sink)",
+        : base("Simple", "Single-source dataset (direct pull; also the writable sink)",
             typeof(object), Array.Empty<IDataField>(), category: "DataSetStrategy")
     {
     }
 
     /// <inheritdoc />
     public override IDataQuery CreateQuery() => new DataQueryBuilder<object>(Name);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// A single source pushes ordering and paging into the store's own query. An aggregated Simple
+    /// set does not: the aggregate translator takes no paging, so callers must still check for
+    /// aggregates (FDW-876).
+    /// </remarks>
+    public override bool PagesInStore => true;
+
+    /// <inheritdoc />
+    /// <remarks>One source, one query: a grouping is that query's GROUP BY, when the source's connection runs one.</remarks>
+    public override bool AggregatesInStore => true;
 
     /// <inheritdoc />
     public override async Task<IGenericResult<T>> Execute<T>(
@@ -84,39 +96,159 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (containerName == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceNoContainer(ctx.Logger, sourceConfig.SourceName, ctx.Config.Name));
 
-        IAggregationExpression? aggregation = null;
-        if (ctx.Config.Aggregates is { Count: > 0 } aggregates)
-        {
-            var aggBuild = BuildAggregation<T>(ctx, aggregates);
-            if (aggBuild.HasError)
-                return aggBuild.ErrorResult!;
-            aggregation = aggBuild.Aggregation;
-        }
+        var plan = ResolveAggregation<T>(ctx, command, fieldMappings);
+        if (plan.HasError)
+            return plan.ErrorResult!;
 
-        var sourceQuery = new QueryCommand<T>
-        {
-            Filter = filterResult.TranslatedFilter,
-            Ordering = command is QueryCommand<T> qc ? qc.Ordering : null,
-            Paging = command is QueryCommand<T> qc2 ? qc2.Paging : null,
-            Aggregation = aggregation
-        };
-
+        var sourceQuery = SourceQuery<T>(command, filterResult.TranslatedFilter, fieldMappings, plan.Aggregation, plan.GroupMappings);
         var result = await ExecuteSourceQuery<T>(ctx, sourceQuery, sourceConfig, ct).ConfigureAwait(false);
 
+        return result.IsFailure
+            ? result
+            : await ShapeRead(ctx, result, fieldMappings, sourceConfig, plan.Aggregation, plan.GroupMappings, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>The query the source is asked: the caller's filter, order and page in the store's names, plus the aggregation.</summary>
+    /// <remarks>
+    /// Read through IQueryCommand, not QueryCommand&lt;T&gt;: T is the RESULT type (IEnumerable&lt;IDataRow&gt;), not the
+    /// command's row type, so a QueryCommand&lt;T&gt; test never matched and the caller's filter, ordering and paging
+    /// were silently dropped (FDW-877). Ordering is translated to physical names exactly as the filter is, so a
+    /// sort on a mapped field reaches the store under the column it actually has (FDW-876).
+    /// A caller's grouping orders by a group column or an aggregate's output column: only the group columns have a
+    /// physical name, and an output column is already the name the caller gave it. A data set's own aggregates are
+    /// never paged, as before: the translator used to ignore a page on them, and a reader that pages through one
+    /// must keep reading all of it.
+    /// </remarks>
+    private static QueryCommand<T> SourceQuery<T>(
+        IDataCommand command,
+        IFilterExpression? translatedFilter,
+        IReadOnlyDictionary<string, string>? fieldMappings,
+        IAggregationExpression? aggregation,
+        IReadOnlyDictionary<string, string>? groupMappings)
+    {
+        var requested = command as IQueryCommand;
+        return new QueryCommand<T>
+        {
+            Filter = translatedFilter,
+            Ordering = PredicatePushdownAnalyzer.TranslateOrderingToPhysical(requested?.Ordering, groupMappings is null ? fieldMappings : groupMappings),
+            Paging = aggregation is not null && groupMappings is null ? null : requested?.Paging,
+            Aggregation = aggregation
+        };
+    }
+
+    /// <summary>The rows a read answers with: shaped into the data set's rows, or, for a grouped read, with its group columns named as the data set names them.</summary>
+    /// <remarks>
+    /// An aggregated read returns measures rather than rows, so it is not shaped. A caller's grouping returns its
+    /// group columns under the store's names: they are given back as the data set's own, and only those columns are
+    /// renamed, so an aggregate's output name is never taken for one.
+    /// </remarks>
+    private static async Task<IGenericResult<T>> ShapeRead<T>(
+        DataSetExecutionContext ctx,
+        IGenericResult<T> result,
+        IReadOnlyDictionary<string, string>? fieldMappings,
+        DataSetSourceConfiguration sourceConfig,
+        IAggregationExpression? aggregation,
+        IReadOnlyDictionary<string, string>? groupMappings,
+        CancellationToken ct)
+    {
+        if (aggregation is null)
+            return await ShapeRows(ctx, result, fieldMappings, sourceConfig, ct).ConfigureAwait(false);
+
+        return groupMappings is { Count: > 0 }
+            ? DataSetExecutionHelpers.ApplyFieldRename(ctx, result, groupMappings, sourceConfig.SourceName)
+            : result;
+    }
+
+    /// <summary>
+    /// The aggregation a read runs: the data set's own (built from its definitions), or the one the caller's
+    /// query carries, with its field names turned into the store's.
+    /// </summary>
+    /// <remarks>
+    /// Both at once is refused: the data set's result is already grouped, and a second grouping over it
+    /// would be a different query from either. <c>GroupMappings</c> is set only for the caller's, and holds
+    /// the logical-to-physical names of its group columns.
+    /// </remarks>
+    private static (bool HasError, IAggregationExpression? Aggregation, IReadOnlyDictionary<string, string>? GroupMappings, IGenericResult<T>? ErrorResult) ResolveAggregation<T>(
+        DataSetExecutionContext ctx, IDataCommand command, IReadOnlyDictionary<string, string>? fieldMappings)
+    {
+        if (ctx.Config is not ISimpleDataSetConfiguration simple)
+            return (true, null, null, DataSetExecutionHelpers.KindMismatch<T>(ctx, "Simple"));
+
+        var requested = (command as IQueryCommand)?.Aggregation;
+        var defined = simple.Aggregates is { Count: > 0 };
+
+        if (requested is null)
+        {
+            if (!defined)
+                return (false, null, null, null);
+
+            var built = BuildAggregation<T>(ctx, simple.Aggregates);
+            return (built.HasError, built.Aggregation, null, built.ErrorResult);
+        }
+
+        if (defined)
+        {
+            return (true, null, null, GenericResult<T>.Failure(
+                DataServiceResultCodes.ByName("DataSetNotGroupable"), ctx.Logger,
+                ResultDetails.Create("dataSet", ctx.Config.Name, "reason", "it already defines aggregates of its own")));
+        }
+
+        var groupMappings = fieldMappings is null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : requested.GroupByFields.Where(fieldMappings.ContainsKey)
+                .ToDictionary(g => g, g => fieldMappings[g], StringComparer.OrdinalIgnoreCase);
+        return (false, ToPhysical(requested, fieldMappings), groupMappings, null);
+    }
+
+    private static AggregationExpression ToPhysical(IAggregationExpression requested, IReadOnlyDictionary<string, string>? fieldMappings) => new()
+    {
+        GroupByFields = [.. requested.GroupByFields.Select(g => fieldMappings is not null && fieldMappings.TryGetValue(g, out var physical) ? physical : g)],
+        Aggregations = requested.Aggregations.ToDictionary(a => a.Key, a => PhysicalMeasure(a.Value, fieldMappings), StringComparer.Ordinal),
+        IncludeGroupCount = requested.IncludeGroupCount,
+    };
+
+    // A measure is "FUNC(field)" or "FUNC(*)": the field inside is the data set's name for it, and the store
+    // is asked for its own column.
+    private static string PhysicalMeasure(string measure, IReadOnlyDictionary<string, string>? fieldMappings)
+    {
+        var open = measure.IndexOf('(', StringComparison.Ordinal);
+        var close = measure.LastIndexOf(')');
+        if (fieldMappings is null || open <= 0 || close <= open)
+            return measure;
+
+        var inner = measure.Substring(open + 1, close - open - 1).Trim();
+        return fieldMappings.TryGetValue(inner, out var physical) ? $"{measure.Substring(0, open)}({physical})" : measure;
+    }
+
+    /// <summary>
+    /// Turns physical source rows into the data set's logical rows, in order: rename to logical
+    /// fields, run each field's attached transformation chain (FDW-877), then add calculated fields.
+    /// An aggregated read returns measures rather than rows, so it is not shaped.
+    /// </summary>
+    private static async Task<IGenericResult<T>> ShapeRows<T>(
+        DataSetExecutionContext ctx,
+        IGenericResult<T> result,
+        IReadOnlyDictionary<string, string>? fieldMappings,
+        DataSetSourceConfiguration sourceConfig,
+        CancellationToken ct)
+    {
         if (result.IsFailure)
             return result;
 
-        if (aggregation is null)
-        {
-            if (fieldMappings != null && fieldMappings.Count > 0 && result.Value != null)
-                result = DataSetExecutionHelpers.ApplyFieldRename(ctx, result, fieldMappings, sourceConfig.SourceName);
+        if (fieldMappings != null && fieldMappings.Count > 0 && result.Value != null)
+            result = DataSetExecutionHelpers.ApplyFieldRename(ctx, result, fieldMappings, sourceConfig.SourceName);
 
-            var calculatedFields = ctx.Config.Fields.Where(f => f.IsCalculated).ToList();
-            if (calculatedFields.Count > 0 && result.Value != null)
-            {
-                DataGatewayLogger.ApplyingCalculatedFields(ctx.Logger, calculatedFields.Count, ctx.Config.Name);
-                result = DataSetExecutionHelpers.ApplyCalculatedFields(ctx, result, calculatedFields, ctx.Config.Name);
-            }
+        var chains = await DataSetExecutionHelpers.ResolveChains(ctx, [sourceConfig], ct).ConfigureAwait(false);
+        if (chains.IsFailure)
+            return chains.ToNewResult<T>();
+        if (chains.Value!.Count > 0 && result.Value != null)
+            result = await DataSetExecutionHelpers.ApplyFieldTransformations(ctx, result, chains.Value, sourceConfig.SourceName, ct).ConfigureAwait(false);
+
+        var calculatedFields = ctx.Config.Fields.Where(f => f.IsCalculated).ToList();
+        if (calculatedFields.Count > 0 && result.Value != null)
+        {
+            DataGatewayLogger.ApplyingCalculatedFields(ctx.Logger, calculatedFields.Count, ctx.Config.Name);
+            result = DataSetExecutionHelpers.ApplyCalculatedFields(ctx, result, calculatedFields, ctx.Config.Name);
         }
 
         return result;
@@ -129,7 +261,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
     /// pushed down to SQL.
     /// </summary>
     private static (bool HasError, IAggregationExpression? Aggregation, IGenericResult<T>? ErrorResult) BuildAggregation<T>(
-        DataSetExecutionContext ctx, IEnumerable<DataSetAggregateDefinition> defs)
+        DataSetExecutionContext ctx, IEnumerable<DataSetAggregateConfiguration> defs)
     {
         var groupBy = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -189,7 +321,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         IReadOnlyDictionary<string, string>? fieldMappings,
         string sourceName)
     {
-        if (command is not QueryCommand<T> queryCommand || queryCommand.Filter == null)
+        if (command is not IQueryCommand { Filter: not null } queryCommand)
             return (false, null, null);
 
         var translationResult = ctx.Pushdown.TranslateToPhysical(queryCommand.Filter, fieldMappings);
@@ -234,7 +366,30 @@ public sealed class SimpleDataSetType : DataSetTypeBase
             return GenericResult<T>.Failure(
                 DataGatewayLogger.ConnectionRetrievalFailed(ctx.Logger, sourceConfig.DataStoreName, connectionResult.CurrentMessage ?? "Unknown error"));
 
-        var result = await connectionResult.Value.Execute<T>(command, containerResult.Value, ct).ConfigureAwait(false);
+        return await RunOnConnection<T>(ctx, connectionResult.Value, containerResult.Value, command, sourceConfig, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Sends the command to the source's connection and logs how it went.</summary>
+    /// <remarks>
+    /// Only a connection that runs a GROUP BY is sent an aggregation: any other would answer with the rows
+    /// ungrouped and nothing to say it had not grouped them.
+    /// </remarks>
+    private static async Task<IGenericResult<T>> RunOnConnection<T>(
+        DataSetExecutionContext ctx,
+        IDataConnection connection,
+        IDataContainer container,
+        IDataCommand command,
+        DataSetSourceConfiguration sourceConfig,
+        CancellationToken ct)
+    {
+        if (command is IQueryCommand { Aggregation: not null } && !connection.AggregatesInStore)
+        {
+            return GenericResult<T>.Failure(
+                DataServiceResultCodes.ByName("AggregationNotSupportedBySource"), ctx.Logger,
+                ResultDetails.Create("dataSet", ctx.Config.Name, "source", sourceConfig.SourceName));
+        }
+
+        var result = await connection.Execute<T>(command, container, ct).ConfigureAwait(false);
 
         if (result.IsSuccess)
             DataGatewayLogger.SourceQueryCompleted(ctx.Logger, sourceConfig.SourceName, 0);

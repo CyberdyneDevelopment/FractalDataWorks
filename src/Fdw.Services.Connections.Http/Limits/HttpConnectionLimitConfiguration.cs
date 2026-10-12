@@ -25,7 +25,6 @@ public sealed partial class HttpConnectionLimitConfiguration : ConnectionLimitCo
     /// Initializes a new instance of <see cref="HttpConnectionLimitConfiguration"/>.
     /// </summary>
     public HttpConnectionLimitConfiguration()
-        : base("Connection", "Http", "Connections")
     {
     }
 

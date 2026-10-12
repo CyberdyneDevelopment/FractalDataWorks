@@ -1,8 +1,6 @@
 using Fdw.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Calculations;
@@ -15,10 +13,10 @@ namespace Fdw.Services.Calculations.Abstractions;
 
 /// <summary>
 /// Abstract base class for all calculation entity types.
-/// Uses MD5-based deterministic Guid for stable cross-assembly identity.
+/// Its Guid id is derived from the option's fully qualified type name (<c>GuidTypeOptionBase</c>).
 /// </summary>
 public abstract class CalculationEntityTypeBase :
-    TypeOptionBase<Guid, CalculationEntityTypeBase>,
+    GuidTypeOptionBase<CalculationEntityTypeBase>,
     ICalculationEntityType
 {
     /// <summary>
@@ -28,7 +26,7 @@ public abstract class CalculationEntityTypeBase :
     /// <param name="displayName">Human-readable display name.</param>
     /// <param name="description">Description of what this calculation type does.</param>
     protected CalculationEntityTypeBase(string name, string displayName, string description)
-        : base(GenerateId(name), name)
+        : base(name)
     {
         DisplayName = displayName;
         Description = description;
@@ -73,19 +71,4 @@ public abstract class CalculationEntityTypeBase :
         IReadOnlyList<ResolvedCalculationInput> inputs,
         ICalculationContext context,
         CancellationToken cancellationToken);
-
-    private static Guid GenerateId(string name)
-    {
-        var nameBytes = Encoding.UTF8.GetBytes(name);
-#if NETSTANDARD2_0
-        using var sha = SHA256.Create();
-        var hash = sha.ComputeHash(nameBytes);
-#else
-        var hash = SHA256.HashData(nameBytes);
-#endif
-        // Take first 16 bytes of SHA256 for a deterministic stable Guid
-        var guidBytes = new byte[16];
-        Buffer.BlockCopy(hash, 0, guidBytes, 0, 16);
-        return new Guid(guidBytes);
-    }
 }

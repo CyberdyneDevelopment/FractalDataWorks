@@ -14,12 +14,12 @@ namespace Fdw.Services.Credentials;
 
 /// <summary>
 /// Default implementation of <see cref="ICredentialServiceProvider"/>.
-/// Wraps <see cref="PlatformServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
+/// Wraps <see cref="DomainServiceProviderBase{TService,TConfiguration,TFactory,TConfigurationProvider}"/>
 /// and adds credential-service-specific cache-by-name lookup and the typed
 /// <see cref="Get(CredentialServiceRequest, CancellationToken)"/> entry point.
 /// </summary>
 public sealed class CredentialServiceProvider
-    : PlatformServiceProviderBase<
+    : DomainServiceProviderBase<
           ICredentialService,
           ICredentialServiceImplementationConfiguration,
           ICredentialServiceFactory<ICredentialService, ICredentialServiceImplementationConfiguration>,
@@ -35,9 +35,8 @@ public sealed class CredentialServiceProvider
     /// Initializes a new instance of the <see cref="CredentialServiceProvider"/> class.
     /// </summary>
     /// <param name="logger">Logger instance.</param>
-    /// <param name="services">The container this provider resolves factories from.</param>
-    public CredentialServiceProvider(IServiceProvider services, ILogger<CredentialServiceProvider> logger)
-        : base(services, logger ?? NullLogger<CredentialServiceProvider>.Instance)
+    public CredentialServiceProvider(ILogger<CredentialServiceProvider> logger)
+        : base(logger ?? NullLogger<CredentialServiceProvider>.Instance)
     {
         _logger = logger ?? NullLogger<CredentialServiceProvider>.Instance;
     }

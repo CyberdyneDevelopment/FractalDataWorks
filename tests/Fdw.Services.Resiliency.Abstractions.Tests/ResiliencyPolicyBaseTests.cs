@@ -23,7 +23,6 @@ public class ResiliencyPolicyBaseTests
         private readonly IResiliencyCategory _category;
 
         public TestResiliencyPolicy(
-            int id,
             string name,
             int maxRetries = 3,
             TimeSpan? initialDelay = null,
@@ -32,7 +31,7 @@ public class ResiliencyPolicyBaseTests
             TimeSpan? circuitBreakerDuration = null,
             int circuitBreakerThreshold = 5,
             IResiliencyCategory? category = null)
-            : base(id, name)
+            : base(name)
         {
             _maxRetries = maxRetries;
             _initialDelay = initialDelay ?? TimeSpan.FromMilliseconds(100);
@@ -55,22 +54,10 @@ public class ResiliencyPolicyBaseTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void ConstructorSetsId()
-    {
-        // Act
-        var policy = new TestResiliencyPolicy(42, "Test");
-
-        // Assert
-        policy.Id.ShouldBe(42);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void ConstructorSetsName()
     {
         // Act
-        var policy = new TestResiliencyPolicy(1, "TestPolicy");
+        var policy = new TestResiliencyPolicy("TestPolicy");
 
         // Assert
         policy.Name.ShouldBe("TestPolicy");
@@ -82,7 +69,7 @@ public class ResiliencyPolicyBaseTests
     public void MaxRetriesReturnsConfiguredValue()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", maxRetries: 7);
+        var policy = new TestResiliencyPolicy("Test", maxRetries: 7);
 
         // Act
         var maxRetries = policy.MaxRetries;
@@ -98,7 +85,7 @@ public class ResiliencyPolicyBaseTests
     {
         // Arrange
         var expectedDelay = TimeSpan.FromMilliseconds(250);
-        var policy = new TestResiliencyPolicy(1, "Test", initialDelay: expectedDelay);
+        var policy = new TestResiliencyPolicy("Test", initialDelay: expectedDelay);
 
         // Act
         var delay = policy.InitialDelay;
@@ -114,7 +101,7 @@ public class ResiliencyPolicyBaseTests
     {
         // Arrange
         var expectedDelay = TimeSpan.FromSeconds(10);
-        var policy = new TestResiliencyPolicy(1, "Test", maxDelay: expectedDelay);
+        var policy = new TestResiliencyPolicy("Test", maxDelay: expectedDelay);
 
         // Act
         var delay = policy.MaxDelay;
@@ -129,7 +116,7 @@ public class ResiliencyPolicyBaseTests
     public void BackoffMultiplierReturnsConfiguredValue()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", backoffMultiplier: 1.5);
+        var policy = new TestResiliencyPolicy("Test", backoffMultiplier: 1.5);
 
         // Act
         var multiplier = policy.BackoffMultiplier;
@@ -145,7 +132,7 @@ public class ResiliencyPolicyBaseTests
     {
         // Arrange
         var expectedDuration = TimeSpan.FromMinutes(2);
-        var policy = new TestResiliencyPolicy(1, "Test", circuitBreakerDuration: expectedDuration);
+        var policy = new TestResiliencyPolicy("Test", circuitBreakerDuration: expectedDuration);
 
         // Act
         var duration = policy.CircuitBreakerDuration;
@@ -160,7 +147,7 @@ public class ResiliencyPolicyBaseTests
     public void CircuitBreakerThresholdReturnsConfiguredValue()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", circuitBreakerThreshold: 15);
+        var policy = new TestResiliencyPolicy("Test", circuitBreakerThreshold: 15);
 
         // Act
         var threshold = policy.CircuitBreakerThreshold;
@@ -175,7 +162,7 @@ public class ResiliencyPolicyBaseTests
     public void ResiliencyCategoryReturnsConfiguredValue()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", category: ResiliencyCategories.Critical);
+        var policy = new TestResiliencyPolicy("Test", category: ResiliencyCategories.Critical);
 
         // Act
         var category = policy.ResiliencyCategory;
@@ -190,7 +177,7 @@ public class ResiliencyPolicyBaseTests
     public void ImplementsIResiliencyPolicy()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test");
+        var policy = new TestResiliencyPolicy("Test");
 
         // Assert
         policy.ShouldBeAssignableTo<IResiliencyPolicy>();
@@ -214,7 +201,7 @@ public class ResiliencyPolicyBaseTests
     public void CanBeInheritedByConcreteClass()
     {
         // Act
-        var policy = new TestResiliencyPolicy(1, "Test");
+        var policy = new TestResiliencyPolicy("Test");
 
         // Assert
         policy.ShouldBeAssignableTo<ResiliencyPolicyBase>();
@@ -266,7 +253,7 @@ public class ResiliencyPolicyBaseTests
     public void SupportsZeroMaxRetries()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", maxRetries: 0);
+        var policy = new TestResiliencyPolicy("Test", maxRetries: 0);
 
         // Assert
         policy.MaxRetries.ShouldBe(0);
@@ -278,7 +265,7 @@ public class ResiliencyPolicyBaseTests
     public void SupportsZeroInitialDelay()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", initialDelay: TimeSpan.Zero);
+        var policy = new TestResiliencyPolicy("Test", initialDelay: TimeSpan.Zero);
 
         // Assert
         policy.InitialDelay.ShouldBe(TimeSpan.Zero);
@@ -290,7 +277,7 @@ public class ResiliencyPolicyBaseTests
     public void SupportsZeroCircuitBreakerThreshold()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", circuitBreakerThreshold: 0);
+        var policy = new TestResiliencyPolicy("Test", circuitBreakerThreshold: 0);
 
         // Assert
         policy.CircuitBreakerThreshold.ShouldBe(0);
@@ -302,7 +289,7 @@ public class ResiliencyPolicyBaseTests
     public void SupportsLargeMaxRetries()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", maxRetries: 100);
+        var policy = new TestResiliencyPolicy("Test", maxRetries: 100);
 
         // Assert
         policy.MaxRetries.ShouldBe(100);
@@ -314,7 +301,7 @@ public class ResiliencyPolicyBaseTests
     public void SupportsLargeBackoffMultiplier()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", backoffMultiplier: 10.0);
+        var policy = new TestResiliencyPolicy("Test", backoffMultiplier: 10.0);
 
         // Assert
         policy.BackoffMultiplier.ShouldBe(10.0);
@@ -326,7 +313,7 @@ public class ResiliencyPolicyBaseTests
     public void SupportsSmallBackoffMultiplier()
     {
         // Arrange
-        var policy = new TestResiliencyPolicy(1, "Test", backoffMultiplier: 1.1);
+        var policy = new TestResiliencyPolicy("Test", backoffMultiplier: 1.1);
 
         // Assert
         policy.BackoffMultiplier.ShouldBe(1.1);

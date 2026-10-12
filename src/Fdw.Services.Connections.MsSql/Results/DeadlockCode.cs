@@ -18,7 +18,7 @@ public sealed class DeadlockCode : MsSqlResultCodeBase
         : base(
             81000,
             "Deadlock",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "Transaction was chosen as a deadlock victim on '{CommandText}'. The operation can be retried.",
             isRetryable: true)
     {

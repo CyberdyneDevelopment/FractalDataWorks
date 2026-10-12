@@ -13,9 +13,9 @@ namespace Fdw.Services.Etl.Commands;
 /// <see cref="PipelineTransformAggregationConfiguration"/> item via <c>ConfigurationCommands.All()</c>;
 /// without this TypeOption the cascade would fail loud (NoChildCommandForType) when persisting an aggregation.
 /// </remarks>
-[TypeOption(typeof(ConfigurationCommands), "AggregationOperationConfiguration")]
+[TypeOption(typeof(ConfigurationCommands), "PipelineTransformAggregation")]
 public sealed class PipelineTransformAggregationConfigurationCommand : ConfigurationCommandBase<PipelineTransformAggregationConfiguration>
 {
     /// <summary>Initializes the command targeting the AggregationOperationConfiguration table.</summary>
-    public PipelineTransformAggregationConfigurationCommand() : base("AggregationOperationConfiguration") { }
+    public PipelineTransformAggregationConfigurationCommand() : base("PipelineTransformAggregation") { }
 }

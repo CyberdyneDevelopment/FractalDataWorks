@@ -13,16 +13,15 @@ namespace Fdw.Services.Connections.Http.Security;
 /// Base class for SOAP security processor implementations.
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
-public abstract class SoapSecurityProcessorBase : TypeOptionBase<int, SoapSecurityProcessorBase>, ISoapSecurityProcessor
+public abstract class SoapSecurityProcessorBase : TypeOptionBase<SoapSecurityProcessorBase>, ISoapSecurityProcessor
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SoapSecurityProcessorBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier.</param>
     /// <param name="name">The processor name.</param>
     /// <param name="description">The processor description.</param>
-    protected SoapSecurityProcessorBase(int id, string name, string description)
-        : base(id, name)
+    protected SoapSecurityProcessorBase(string name, string description)
+        : base(name)
     {
         Description = description;
     }

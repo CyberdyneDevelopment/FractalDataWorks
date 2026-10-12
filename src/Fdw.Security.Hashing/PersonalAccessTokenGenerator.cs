@@ -11,13 +11,13 @@ public sealed class PersonalAccessTokenGenerator : IPersonalAccessTokenGenerator
     private const int DisplayPrefixLength = 20;
 
     /// <inheritdoc/>
-    public string Generate(string environment)
+    public string Generate(string prefix, string environment)
     {
         var randomBytes = new byte[32];
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomBytes);
         var suffix = ToBase62(randomBytes);
-        return $"fdx_{environment}_{suffix}";
+        return $"{prefix}{environment}_{suffix}";
     }
 
     /// <inheritdoc/>

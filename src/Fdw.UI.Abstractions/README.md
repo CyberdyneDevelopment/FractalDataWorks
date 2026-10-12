@@ -47,7 +47,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `AccordionDisplayMode` | class | Accordion/collapsible panels. |
 | `AreaChartType` | class | Filled area chart — like a line chart but with the region below the line filled. |
 | `BarChartType` | class | Vertical or horizontal bar chart for comparing values across categories. |
-| `BlazorUIRendererType` | class | UI renderer type for Blazor rendering. |
 | `BothRenderMode` | class | Both view and edit side-by-side. |
 | `CalcInputNodeType` | class | A calculation graph input parameter node that receives a value fed into the calculation. |
 | `CalcOperationNodeType` | class | A calculation graph operation step node that performs a computation on its inputs. |

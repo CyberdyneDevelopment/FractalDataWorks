@@ -1,6 +1,6 @@
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
-using Fdw.Services.Authentication.Abstractions;
+using Fdw.Claims.Abstractions;
 
 namespace Fdw.Services.Multitenancy.Abstractions.Scoping;
 
@@ -13,7 +13,6 @@ public sealed class TenantScopeLayer : ScopeLayerBase
     /// <summary>Initializes a new instance of the <see cref="TenantScopeLayer"/> class.</summary>
     public TenantScopeLayer()
         : base(
-            id: 1,
             name: "Tenant",
             claim: ClaimDefinitions.tenantId,
             columnName: "TenantId",

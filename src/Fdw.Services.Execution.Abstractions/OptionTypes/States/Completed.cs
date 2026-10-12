@@ -13,7 +13,7 @@ public sealed class Completed : ProcessStateBase
     /// <summary>
     /// Initializes a new instance of the Completed state.
     /// </summary>
-    public Completed() : base(3, "Completed", isTerminal: true, isError: false, isActive: false, isInitial: false)
+    public Completed() : base("Completed", isTerminal: true, isError: false, isActive: false, isInitial: false)
     {
     }
 }

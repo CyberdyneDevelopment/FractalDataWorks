@@ -22,7 +22,6 @@ public sealed class AverageFieldTransformer : FieldTransformationBase
     /// </summary>
     public AverageFieldTransformer()
         : base(
-            id: 206,
             name: "Average",
             displayName: "Average",
             description: "Computes the average of the input value and a second field value from the current record.",

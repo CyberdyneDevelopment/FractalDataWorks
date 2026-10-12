@@ -17,7 +17,6 @@ public sealed class ProjectNodeType : OrchestrationNodeTypeBase
     /// <summary>Initializes a new instance of <see cref="ProjectNodeType"/>.</summary>
     public ProjectNodeType()
         : base(
-            id: 1,
             name: "Project",
             displayName: "Project",
             typicalDepth: 0,

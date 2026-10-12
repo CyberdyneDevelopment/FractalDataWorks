@@ -1,4 +1,4 @@
-﻿using Fdw.Abstractions;
+using Fdw.Abstractions;
 using Fdw.Collections;
 using Fdw.Configuration;
 using Fdw.Services;
@@ -13,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 namespace Fdw.Services.Hosts;
 
 /// <summary>
@@ -29,13 +30,24 @@ namespace Fdw.Services.Hosts;
     typeof(IHostType),
     typeof(HostTypes),
     ServiceInterface = typeof(IHostService),
-    ProviderType = typeof(HostServiceProvider),
-    ProviderInterface = typeof(IHostServiceProvider),
     ServiceCategory = "Host")]
 public partial class HostTypes : ServiceTypeCollectionBase<
     HostTypeBase<IHostService, IHostImplementationConfiguration, IHostFactory<IHostService, IHostImplementationConfiguration>>,
     IHostType>
 {
+    /// <summary>
+    /// The connection this domain's configuration rows are read from and written to.
+    /// </summary>
+    /// <remarks>
+    /// The server tier (<c>ConnectionRoles.Server</c>), not the platform tier: how a host is put together
+    /// (its CORS, forwarded headers, response buffering) is that host's own configuration, and two hosts on
+    /// one platform are set up differently (FDW-956).
+    /// </remarks>
+    public static string ConfigurationConnection => ServerConnection.Name;
+
+    /// <summary>The Implementation a Host domain row names: Host has exactly one.</summary>
+    private const string HostImplementationName = "Host";
+
     /// <summary>Orders this collection's options by where their middleware belongs.</summary>
     /// <remarks>
     /// The default body cycles options in registration order, which for a request pipeline is
@@ -62,12 +74,23 @@ public partial class HostTypes : ServiceTypeCollectionBase<
                 }
             }
 
+            builder.Services.AddSingleton<IHostImplementationConfigurationProvider, HostImplementationConfigurationProvider>(sp =>
+                new HostImplementationConfigurationProvider(
+                    sp.GetService<ILogger<HostImplementationConfigurationProvider>>() ?? NullLogger<HostImplementationConfigurationProvider>.Instance,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), HostTypes.ConfigurationConnection, "hst", "HostConfiguration"));
+
             builder.Services.TryAddSingleton<HostConfigurationProvider>(sp =>
-                new HostConfigurationProvider(
-                    sp.GetService<ILogger<HostConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>()));
-            builder.Services.TryAddSingleton<IHostConfigurationProvider>(
-                sp => sp.GetRequiredService<HostConfigurationProvider>());
+            {
+                var domain = new HostConfigurationProvider(
+                    sp.GetService<ILogger<HostConfigurationProvider>>() ?? NullLogger<HostConfigurationProvider>.Instance,
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), HostTypes.ConfigurationConnection, "hst", "Host");
+
+                // Host is a single-implementation domain, so one registration under its own name.
+                // Without it the domain read finds its row and then has nothing to hand it to.
+                domain.Register(HostImplementationName, sp.GetRequiredService<IHostImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IHostConfigurationProvider>(sp => sp.GetRequiredService<HostConfigurationProvider>());
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

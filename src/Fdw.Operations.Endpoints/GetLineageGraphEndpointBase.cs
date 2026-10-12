@@ -93,9 +93,9 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         var chainsTask = QueryAll<ChainDefinitionLineageRecord>("ChainDefinition", "transform", ChainDefinitionTags, ct);
         var stepsTask = QueryAll<ChainStepLineageRecord>("ChainStep", "transform", ChainStepTags, ct);
         var stepFieldsTask = QueryAll<ChainStepSourceFieldRecord>("ChainStepSourceField", "transform", ChainStepSourceFieldTags, ct);
-        var fieldMappingsTask = QueryAll<DataSetFieldMappingRecord>("DataSetFieldMapping", "data", DataSetFieldMappingTags, ct);
+        var fieldDataSetsTask = Lineage.FieldDataSets(ct);
 
-        await Task.WhenAll(dataSetsTask, pipelinesTask, sourcesTask, chainsTask, stepsTask, stepFieldsTask, fieldMappingsTask).ConfigureAwait(false);
+        await Task.WhenAll(dataSetsTask, pipelinesTask, sourcesTask, chainsTask, stepsTask, stepFieldsTask, fieldDataSetsTask).ConfigureAwait(false);
 
         var dataSets = await dataSetsTask.ConfigureAwait(false);
         var pipelines = await pipelinesTask.ConfigureAwait(false);
@@ -103,9 +103,9 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         var chains = await chainsTask.ConfigureAwait(false);
         var steps = await stepsTask.ConfigureAwait(false);
         var stepFields = await stepFieldsTask.ConfigureAwait(false);
-        var fieldMappings = await fieldMappingsTask.ConfigureAwait(false);
+        var fieldDataSets = await fieldDataSetsTask.ConfigureAwait(false);
 
-        return BuildGraphFromRecords(dataSets, pipelines, sources, chains, steps, stepFields, fieldMappings, _logger);
+        return BuildGraphFromRecords(dataSets, pipelines, sources, chains, steps, stepFields, fieldDataSets, _logger);
     }
 
     /// <summary>
@@ -120,14 +120,14 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         IReadOnlyList<ChainDefinitionLineageRecord> chains,
         IReadOnlyList<ChainStepLineageRecord> steps,
         IReadOnlyList<ChainStepSourceFieldRecord> stepFields,
-        IReadOnlyList<DataSetFieldMappingRecord> fieldMappings,
+        IReadOnlyDictionary<string, IReadOnlySet<string>> fieldDataSets,
         ILogger logger)
     {
         dataSets = dataSets.GroupBy(ds => ds.Id).Select(g => g.First()).ToList();
 
         var graph = new LineageGraph();
         AddNodes(graph, dataSets, pipelines, sources, chains);
-        AddEdges(graph, dataSets, pipelines, sources, chains, steps, stepFields, fieldMappings, logger);
+        AddEdges(graph, dataSets, pipelines, sources, chains, steps, stepFields, fieldDataSets, logger);
         return graph;
     }
 
@@ -157,7 +157,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
                 Id = $"Pipeline_{p.Name}",
                 Type = LineageNodeTypes.ByName("Pipeline"),
                 Name = p.Name,
-                Description = p.ServiceOptionType
+                Description = p.Implementation
             });
         }
 
@@ -205,14 +205,14 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         IReadOnlyList<ChainDefinitionLineageRecord> chains,
         IReadOnlyList<ChainStepLineageRecord> steps,
         IReadOnlyList<ChainStepSourceFieldRecord> stepFields,
-        IReadOnlyList<DataSetFieldMappingRecord> fieldMappings,
+        IReadOnlyDictionary<string, IReadOnlySet<string>> fieldDataSets,
         ILogger logger)
     {
         var dataSetNameById = dataSets.ToDictionary(ds => ds.Id, ds => ds.Name);
         var edgeId = 0;
 
         AddSourceAndPipelineEdges(graph, pipelines, sources, dataSetNameById, logger, ref edgeId);
-        AddCalculationEdges(graph, sources, chains, steps, stepFields, fieldMappings, dataSetNameById, ref edgeId);
+        AddCalculationEdges(graph, chains, steps, stepFields, fieldDataSets, ref edgeId);
     }
 
     /// <summary>
@@ -321,19 +321,14 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
     /// <summary>Creates edges linking Calculations to DataSets via ChainStep field cross-references.</summary>
     private static void AddCalculationEdges(
         LineageGraph graph,
-        IReadOnlyList<DataSetSourcePayload> sources,
         IReadOnlyList<ChainDefinitionLineageRecord> chains,
         IReadOnlyList<ChainStepLineageRecord> steps,
         IReadOnlyList<ChainStepSourceFieldRecord> stepFields,
-        IReadOnlyList<DataSetFieldMappingRecord> fieldMappings,
-        Dictionary<Guid, string> dataSetNameById,
+        IReadOnlyDictionary<string, IReadOnlySet<string>> fieldToDataSets,
         ref int edgeId)
     {
         var stepsByChainId = steps.GroupBy(s => s.ChainDefinitionId).ToDictionary(g => g.Key, g => g.ToList());
         var stepFieldsByStepId = stepFields.GroupBy(sf => sf.ChainStepId).ToDictionary(g => g.Key, g => g.ToList());
-        var fieldMappingsBySourceId = fieldMappings.GroupBy(fm => fm.DataSetSourceId).ToDictionary(g => g.Key, g => g.ToList());
-
-        var fieldToDataSets = BuildFieldToDataSetLookup(sources, fieldMappingsBySourceId, dataSetNameById);
         var calcEdges = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var chain in chains)
@@ -385,30 +380,6 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         }
     }
 
-    /// <summary>Builds a reverse lookup from logical field names to the DataSet names that contain them.</summary>
-    private static Dictionary<string, HashSet<string>> BuildFieldToDataSetLookup(
-        IReadOnlyList<DataSetSourcePayload> sources,
-        Dictionary<Guid, List<DataSetFieldMappingRecord>> fieldMappingsBySourceId,
-        Dictionary<Guid, string> dataSetNameById)
-    {
-        var fieldToDataSets = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var src in sources)
-        {
-            if (!dataSetNameById.TryGetValue(src.DataSetId, out var dsName)) continue;
-            if (!fieldMappingsBySourceId.TryGetValue(src.Id, out var mappings)) continue;
-            foreach (var m in mappings)
-            {
-                if (!fieldToDataSets.TryGetValue(m.LogicalFieldName, out var dsSet))
-                {
-                    dsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    fieldToDataSets[m.LogicalFieldName] = dsSet;
-                }
-                dsSet.Add(dsName);
-            }
-        }
-        return fieldToDataSets;
-    }
-
     /// <summary>Builds a response DTO from the subgraph reachable from the entry node.</summary>
     private static LineageGraphResponse BuildSubgraphResponse(LineageGraph graph, string entryNodeId)
     {
@@ -453,14 +424,11 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
         };
     }
 
-    private static readonly TimeSpan LineageCacheDuration = TimeSpan.FromMinutes(5);
-
     private static readonly string[] DataSetTags = ["data.DataSet"];
     private static readonly string[] DataSetSourceTags = ["data.DataSetSource"];
     private static readonly string[] ChainDefinitionTags = ["transform.ChainDefinition"];
     private static readonly string[] ChainStepTags = ["transform.ChainStep"];
     private static readonly string[] ChainStepSourceFieldTags = ["transform.ChainStepSourceField"];
-    private static readonly string[] DataSetFieldMappingTags = ["data.DataSetFieldMapping"];
 
     /// <summary>Queries all records from a configuration table, with CachePolicy metadata applied.</summary>
     /// <param name="containerName">The container (table) name.</param>
@@ -478,7 +446,7 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
             Metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
                 [CachePolicy.CacheEnabledKey] = true,
-                [CachePolicy.CacheDurationKey] = LineageCacheDuration,
+                [CachePolicy.CacheDurationKey] = CachePolicy.DefaultDuration,
                 [CachePolicy.CacheInvalidationTagsKey] = invalidationTags
             }
         };

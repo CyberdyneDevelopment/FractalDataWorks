@@ -30,16 +30,6 @@ public sealed class CrossJoinExecutorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ExecuteResolvesFromTypeCollectionByName()
-    {
-        // Assert
-        _sut.ShouldNotBe(JoinExecutors.NotFound);
-        _sut.Name.ShouldBe("Cross");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
     public void ExecuteReturnsCartesianProductOfAllRowsInLeftThenRightOrder()
     {
         // Arrange

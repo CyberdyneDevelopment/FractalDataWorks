@@ -16,7 +16,6 @@ public sealed class BearerTokenType : TokenTypeBase
     /// Initializes a new instance of the <see cref="BearerTokenType"/> class.
     /// </summary>
     public BearerTokenType() : base(
-        id: 4,
         name: "BearerToken",
         format: "JWT",
         canBeRefreshed: false,

@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlTimestampTzConverter()
     : DataTypeConverterBase(
-        id: 16,
         name: "TimestampTz",
         sourceType: "timestamptz",
         targetClrType: typeof(DateTimeOffset),

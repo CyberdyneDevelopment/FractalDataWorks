@@ -13,7 +13,7 @@ public sealed class GenerationCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="GenerationCommandCategory"/> class.
     /// </summary>
     public GenerationCommandCategory()
-        : base(4, "Generation", "Code generation commands for creating classes, methods, tests, and documentation")
+        : base("Generation", "Code generation commands for creating classes, methods, tests, and documentation")
     {
     }
 }

@@ -17,7 +17,6 @@ public sealed class SequentialStrategy : FederationStrategyBase
     /// </summary>
     public SequentialStrategy()
         : base(
-            id: 2,
             name: "Sequential",
             description: "Executes source queries one at a time in order",
             isParallel: false,

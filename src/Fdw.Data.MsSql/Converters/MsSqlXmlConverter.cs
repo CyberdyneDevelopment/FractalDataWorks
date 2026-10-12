@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlXmlConverter()
     : DataTypeConverterBase(
-        id: 23,
         name: "Xml",
         sourceType: "xml",
         targetClrType: typeof(string),

@@ -22,7 +22,7 @@ public sealed class SparklineVisualizationType : VisualizationTypeBase
     /// Initializes a new instance of the <see cref="SparklineVisualizationType"/> class.
     /// </summary>
     public SparklineVisualizationType()
-        : base(8, "Sparkline", "Sparkline", "mdi-chart-timeline-variant", SupportedTypes)
+        : base("Sparkline", "Sparkline", "mdi-chart-timeline-variant", SupportedTypes)
     {
     }
 

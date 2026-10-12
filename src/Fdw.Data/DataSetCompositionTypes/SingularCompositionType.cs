@@ -20,7 +20,6 @@ public sealed class SingularCompositionType : DataSetCompositionTypeBase
     /// </summary>
     public SingularCompositionType()
         : base(
-            id: 1,
             name: "Singular",
             description: "Wraps a single source without structural transformation",
             allowsMultipleSources: false,

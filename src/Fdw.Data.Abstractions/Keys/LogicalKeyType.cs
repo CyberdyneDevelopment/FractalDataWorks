@@ -23,7 +23,6 @@ public sealed class LogicalKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="LogicalKeyType"/> class.</summary>
     public LogicalKeyType()
         : base(
-            id: 7,
             name: "Logical",
             isPrimaryKey: true,
             hasConstraint: true,

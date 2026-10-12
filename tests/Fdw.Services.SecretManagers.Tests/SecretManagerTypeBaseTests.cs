@@ -19,7 +19,7 @@ public sealed class SecretManagerTypeBaseTests
     /// Concrete test subclass for exercising the SecretManagerTypeBase constructor.
     /// </summary>
     private sealed class TestSecretManagerType
-        : SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, SecretManagerConfiguration>, SecretManagerConfiguration>
+        : SecretManagerTypeBase<ISecretManager, ISecretManagerServiceFactory<ISecretManager, ISecretManagerImplementationConfiguration>, ISecretManagerImplementationConfiguration>
     {
 
         public TestSecretManagerType(

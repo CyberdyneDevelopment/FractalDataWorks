@@ -14,7 +14,6 @@ namespace Fdw.Data.JsonSchema;
 [ExcludeFromCodeCoverage]
 public sealed class JsonSchemaNumberFloatConverter()
     : DataTypeConverterBase(
-        id: 3,
         name: "NumberFloat",
         sourceType: "number+float",
         targetClrType: typeof(float),

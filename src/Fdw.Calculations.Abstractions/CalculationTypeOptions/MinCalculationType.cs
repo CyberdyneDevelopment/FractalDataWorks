@@ -15,7 +15,6 @@ public sealed class MinCalculationType : CalculationTypeBase
     /// Initializes a new instance of the <see cref="MinCalculationType"/> class.
     /// </summary>
     public MinCalculationType() : base(
-        id: 3,
         name: "Min",
         category: "Aggregation",
         calculate: (rows, col, _) =>

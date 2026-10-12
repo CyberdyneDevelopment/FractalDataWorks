@@ -9,5 +9,5 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata;
 public sealed class BoolConfigurationPropertyTypeDto : ConfigurationPropertyTypeDtoBase
 {
     /// <summary>Initializes a new instance of <see cref="BoolConfigurationPropertyTypeDto"/>.</summary>
-    public BoolConfigurationPropertyTypeDto() : base(4, "Bool") { }
+    public BoolConfigurationPropertyTypeDto() : base("Bool") { }
 }

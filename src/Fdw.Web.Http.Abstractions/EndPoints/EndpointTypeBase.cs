@@ -8,7 +8,7 @@ namespace Fdw.Web.Http.Abstractions.EndPoints;
 /// Each type provides semantic meaning and enables framework-specific behavior customization.
 /// </summary>
 [ExcludeFromCodeCoverage] // Abstract base class - concrete types (CRUD, Query, etc.) are also excluded
-public abstract class EndpointTypeBase : TypeOptionBase<int, EndpointTypeBase>, IEndpointType
+public abstract class EndpointTypeBase : TypeOptionBase<EndpointTypeBase>, IEndpointType
 {
     /// <summary>
     /// Gets the default HTTP methods typically used by this endpoint type.
@@ -76,7 +76,6 @@ public abstract class EndpointTypeBase : TypeOptionBase<int, EndpointTypeBase>, 
     /// Initializes a new instance of the <see cref="EndpointTypeBase"/> class.
     /// </summary>
     protected EndpointTypeBase(
-        int id,
         string name,
         string description,
         string[] defaultHttpMethods,
@@ -91,7 +90,7 @@ public abstract class EndpointTypeBase : TypeOptionBase<int, EndpointTypeBase>, 
         int timeoutMs,
         long maxBodySize,
         string[] allowedRoles)
-        : base(id, name, $"Endpoints:{name}", name, description, "Endpoint")
+        : base(name, $"Endpoints:{name}", name, description, "Endpoint")
     {
         DefaultHttpMethods = defaultHttpMethods;
         RequiresAuthentication = requiresAuthentication;

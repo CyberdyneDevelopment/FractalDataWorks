@@ -5,6 +5,9 @@ using System.Threading.Tasks;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Flow;
+using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Authentication.Abstractions.Sessions;
+using Moq;
 using Shouldly;
 using Xunit;
 
@@ -39,16 +42,20 @@ public sealed class AuthenticationRunnerInvariantTests
         var issuer = new RecordingIssuer();
         var store = new InMemoryExecutions();
         var flows = new StaticFlowProvider(flowForResume ?? Flow());
-        return (new AuthenticationRunner(new CountingAcrPolicy(), issuer, store, flows, steps.Lookup),
+        return (new AuthenticationRunner(
+                    new CountingAcrPolicy(), issuer, new Mock<ISessionStore>(MockBehavior.Strict).Object, store, flows, steps.Lookup, new Mock<ITenantProvider>().Object),
                 issuer, store);
     }
 
     private static AuthenticationFlow Flow(params string[] steps) => new()
     {
         Name = "test-flow",
-        Steps = steps,
+        Steps = FlowSteps.Named(steps),
+        RequiredPermissions = [],
         Audience = "test-audience",
         ExecutionLifetime = TimeSpan.FromMinutes(5),
+        SecretManagerName = "TestSecrets",
+        SecretKeyName = "TEST_EXECUTION_KEY",
     };
 
     /// <summary>I1 — a step cannot affect what it did not declare.</summary>

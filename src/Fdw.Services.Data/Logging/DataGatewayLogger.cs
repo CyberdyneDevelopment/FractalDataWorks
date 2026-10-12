@@ -380,13 +380,13 @@ public static partial class DataGatewayLogger
         string storeTypeName);
 
     /// <summary>
-    /// Logs when a DataStore configuration is missing ServiceOptionType.
+    /// Logs when a DataStore configuration is missing Implementation.
     /// </summary>
     [MessageLogging(
         EventId = 61008,
         Level = LogLevel.Error,
-        Message = "DataStore '{dataStoreName}' has no ServiceOptionType configured. Cannot determine store type for container building.")]
-    public static partial IGenericMessage DataStoreMissingServiceOptionType(
+        Message = "DataStore '{dataStoreName}' has no Implementation configured. Cannot determine store type for container building.")]
+    public static partial IGenericMessage DataStoreMissingImplementation(
         ILogger logger,
         string dataStoreName);
 

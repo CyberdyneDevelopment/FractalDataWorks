@@ -11,5 +11,5 @@ public sealed class DecimalPropertyType : ConfigurationPropertyTypeBaseResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="DecimalPropertyType"/> class.
     /// </summary>
-    public DecimalPropertyType() : base(6, "Decimal", typeof(decimal), ConfigurationPropertyTypeDtos.Number) { }
+    public DecimalPropertyType() : base("Decimal", typeof(decimal), ConfigurationPropertyTypeDtos.Number) { }
 }

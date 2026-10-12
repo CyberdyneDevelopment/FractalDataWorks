@@ -9,5 +9,5 @@ namespace Fdw.Orchestration.Abstractions.Caching;
 public sealed class LowCachePriority : CachePriorityBase
 {
     /// <summary>Initializes a new instance of <see cref="LowCachePriority"/>.</summary>
-    public LowCachePriority() : base(0, "Low") { }
+    public LowCachePriority() : base("Low") { }
 }

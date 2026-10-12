@@ -14,7 +14,7 @@ public sealed class SeriesEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="SeriesEncodingRole"/> class.
     /// </summary>
     public SeriesEncodingRole()
-        : base(3, "Series", "Series", isSpatial: false)
+        : base("Series", "Series", isSpatial: false)
     {
     }
 }

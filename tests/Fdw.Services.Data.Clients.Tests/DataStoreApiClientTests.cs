@@ -79,19 +79,25 @@ public sealed class DataStoreApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task GetDataStoreSendsCorrectRequest()
+    public async Task GetDataStoreSendsPostRequestWithNameInBody()
     {
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
+        string? body = null;
+        var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
-            Content = JsonContent.Create(new DataStoreDetailPayload { Name = "store1" })
+            body = await request.Content!.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new DataStoreDetailPayload { Name = "store1" })
+            };
         });
         var sut = CreateClient(handler);
 
         await sut.GetDataStore("store1", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/datastores/store1");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/datastores/get");
+        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
+        body.ShouldBe("{\"name\":\"store1\"}");
     }
 
     [Fact]

@@ -37,7 +37,7 @@ public sealed class ODataUpdateTranslatorTests
     {
         var schema = new Mock<IContainerSchema>();
         schema.Setup(s => s.Fields).Returns(fields ?? []);
-        schema.Setup(s => s.GetProjectableFields()).Returns(fields ?? []);
+        schema.Setup(s => s.GetReturnedFields(It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>())).Returns(fields ?? []);
 
         var metadata = new Dictionary<string, object>();
         if (primaryKeyFieldName != null)

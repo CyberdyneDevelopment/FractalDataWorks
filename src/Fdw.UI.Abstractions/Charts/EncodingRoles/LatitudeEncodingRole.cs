@@ -14,7 +14,7 @@ public sealed class LatitudeEncodingRole : ChartEncodingRoleBase
     /// Initializes a new instance of the <see cref="LatitudeEncodingRole"/> class.
     /// </summary>
     public LatitudeEncodingRole()
-        : base(7, "Latitude", "Latitude", isSpatial: true)
+        : base("Latitude", "Latitude", isSpatial: true)
     {
     }
 }

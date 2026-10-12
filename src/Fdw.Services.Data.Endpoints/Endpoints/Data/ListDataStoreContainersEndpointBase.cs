@@ -13,8 +13,16 @@ namespace Fdw.Services.Data.Endpoints;
 /// <summary>
 /// Base endpoint for listing all containers across all data stores.
 /// </summary>
+/// <remarks>
+/// Reads every store down to its containers and no further (FDW-951): their fields, keys and path
+/// policies are not composed to name them, so the item carries no field count. A container's fields
+/// are read on their own route, when it is opened.
+/// </remarks>
 public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase<DataStoreContainerWithPathDto>
 {
+    // A store's paths are one level under it and their containers two.
+    private const int ThroughContainers = 2;
+
     private readonly DataStoreConfigurationProvider _dataStoreProvider;
 
     /// <inheritdoc />
@@ -26,21 +34,19 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
     /// <summary>Gets the resource name used for route and policy generation.</summary>
     protected override string ResourceName => "datastore-containers";
 
-    /// <summary>Loads all containers from all data stores and maps them to DTOs.</summary>
+    /// <summary>Loads every store's containers and maps them to DTOs.</summary>
     protected override async Task<IGenericResult<List<DataStoreContainerWithPathDto>>> LoadItems(CancellationToken ct)
     {
-        var configsResult = await _dataStoreProvider.Get(ct).ConfigureAwait(false);
-        if (!configsResult.IsSuccess)
+        var stores = await _dataStoreProvider.Get(ThroughContainers, ct).ConfigureAwait(false);
+        if (stores.IsFailure)
         {
-            return configsResult.ToNewResult<List<DataStoreContainerWithPathDto>>();
+            return stores.ToNewResult<List<DataStoreContainerWithPathDto>>();
         }
 
-        var configs = configsResult.Value ?? (IReadOnlyList<DataStoreConfiguration>)[];
-
-        var containers = configs
+        var containers = stores.Value!
             .Where(config => !string.IsNullOrWhiteSpace(config.Name))
-            .SelectMany(config => (config.Paths ?? [])
-                .SelectMany(path => (path.Containers ?? [])
+            .SelectMany(config => config.Paths
+                .SelectMany(path => path.Containers
                     .Select(container => MapContainerWithPath(config, path, container))))
             .ToList();
 
@@ -49,7 +55,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
 
     /// <summary>Maps a container with its parent path and data store information.</summary>
     protected virtual DataStoreContainerWithPathDto MapContainerWithPath(
-        DataStoreConfiguration dataStore,
+        IDataStoreImplementationConfiguration dataStore,
         DataPathConfiguration path,
         DataContainerConfiguration container)
     {
@@ -60,7 +66,7 @@ public abstract class ListDataStoreContainersEndpointBase : CrudListEndpointBase
             PathName = path.Name,
             ContainerName = container.Name,
             ContainerType = container.TypeId ?? string.Empty,
-            FieldCount = (container.Fields ?? []).Count
+            ClassificationId = container.ClassificationId
         };
     }
 }

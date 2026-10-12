@@ -190,10 +190,10 @@ internal static class ReplacesDiscovery
     }
 
     /// <summary>
-    /// Filters a list of ServiceTypeOptionModels by removing replaced types.
+    /// Filters a list of ImplementationModels by removing replaced types.
     /// </summary>
-    public static ImmutableArray<ServiceTypeOptionModel> FilterReplacedServiceTypeOptions(
-        ImmutableArray<ServiceTypeOptionModel> options,
+    public static ImmutableArray<ImplementationModel> FilterReplacedImplementations(
+        ImmutableArray<ImplementationModel> options,
         Dictionary<string, string> replacementMap,
         SourceProductionContext context)
     {

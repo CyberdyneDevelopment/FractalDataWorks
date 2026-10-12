@@ -20,7 +20,7 @@ public interface IPropertyDefinition
     /// <summary>
     /// Gets the property role (e.g., SurrogateKey, NaturalKey, Attribute, Measure, Lookup).
     /// </summary>
-    IPropertyRole Role { get; }
+    IDatumType Role { get; }
 
     /// <summary>
     /// Gets a value indicating whether this property is required (NOT NULL).

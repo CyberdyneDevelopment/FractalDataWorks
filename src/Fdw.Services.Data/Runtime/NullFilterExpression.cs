@@ -7,7 +7,7 @@ namespace Fdw.Services.Data.Runtime;
 /// when a join condition cannot be built without a resolved field reference.
 /// </summary>
 /// <remarks>
-/// The DataGatewayService reads join field names directly from <c>JoinConfiguration</c>
+/// The DataGatewayService reads join field names directly from <c>DataSetJoinConfiguration</c>
 /// at query execution time rather than from the <see cref="IDataSetJoin.Condition"/> expression,
 /// so this sentinel value is never translated to SQL. It satisfies the non-null contract
 /// on <see cref="IDataSetJoin.Condition"/> without hiding the missing configuration.

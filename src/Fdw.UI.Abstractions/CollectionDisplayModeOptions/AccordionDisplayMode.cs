@@ -14,5 +14,5 @@ public sealed class AccordionDisplayMode : CollectionDisplayModeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="AccordionDisplayMode"/> class.
     /// </summary>
-    public AccordionDisplayMode() : base(0, "Accordion", supportsExpandCollapse: true, supportsGrouping: true) { }
+    public AccordionDisplayMode() : base("Accordion", supportsExpandCollapse: true, supportsGrouping: true) { }
 }

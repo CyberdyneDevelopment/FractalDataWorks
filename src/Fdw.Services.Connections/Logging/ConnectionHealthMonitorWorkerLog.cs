@@ -7,7 +7,6 @@ namespace Fdw.Services.Connections.Logging;
 
 /// <summary>
 /// MessageLogging for <see cref="ConnectionHealthMonitorWorker"/> operations.
-/// EventId range: 12200-12215.
 /// </summary>
 [MessageLoggingTypeCode("CONNECTIONS")]
 public static partial class ConnectionHealthMonitorWorkerLog
@@ -67,4 +66,18 @@ public static partial class ConnectionHealthMonitorWorkerLog
     /// <summary>Logs that this host's configuration store registers no connection container, so the monitor is idle.</summary>
     [MessageLogging(EventId = 12214, Level = LogLevel.Information, Message = "No connection container in this host's configuration store — connection health monitoring idle")]
     public static partial IGenericMessage MonitoringIdleNoConnectionContainer(ILogger logger);
+
+    /// <summary>Logs that probing a connection threw instead of answering; the connection is recorded unhealthy and the pass goes on.</summary>
+    [MessageLogging(EventId = 12215, Level = LogLevel.Error, Message = "Health probe for connection '{connectionName}' threw instead of answering; recorded unhealthy, the pass continues: {reason}")]
+    public static partial IGenericMessage ProbeThrew(ILogger logger, Exception ex, string connectionName, string reason);
+
+    /// <summary>Logs that persisting a connection's health check threw; the pass goes on to the next connection.</summary>
+    [MessageLogging(EventId = 12216, Level = LogLevel.Error, Message = "Persisting the health check for connection '{connectionName}' threw; the pass continues: {reason}")]
+    public static partial IGenericMessage PersistHistoryThrew(ILogger logger, Exception ex, string connectionName, string reason);
+
+    /// <summary>Logs how long the monitor waits before its next check: until the soonest enabled connection falls due, within its scan bounds.</summary>
+    // Why 10001: the catalog's Informational, a non-error outcome, which is what this is.
+    // Why Debug: a per-scan outcome, like the count of due connections it follows; nothing an operator acts on.
+    [MessageLogging(EventId = 10001, Level = LogLevel.Debug, Message = "Next connection health scan in {seconds} second(s)")]
+    public static partial IGenericMessage NextScanScheduled(ILogger logger, double seconds);
 }

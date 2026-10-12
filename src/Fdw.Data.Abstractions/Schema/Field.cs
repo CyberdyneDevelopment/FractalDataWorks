@@ -19,9 +19,9 @@ public sealed class Field : IField
     public required IFieldType FieldType { get; init; }
 
     /// <summary>
-    /// Gets or initializes the field role (from PropertyRoles TypeCollection).
+    /// Gets or initializes the field role (from DatumTypes TypeCollection).
     /// </summary>
-    public required IPropertyRole Role { get; init; }
+    public required IDatumType Role { get; init; }
 
     /// <summary>
     /// Gets or initializes whether the field is nullable.
@@ -74,11 +74,8 @@ public sealed class Field : IField
     /// </summary>
     public bool IsSystemProvided { get; init; }
 
-    /// <inheritdoc />
-    /// <remarks>
-    /// Why the default is Visible: a field the builder produced without consulting a VisibilityId is
-    /// an ordinary field. Defaulting the other way would silently drop columns from every projection
-    /// the moment a transport built a field list without setting this.
-    /// </remarks>
-    public IFieldVisibility Visibility { get; init; } = FieldVisibilities.ByName("Visible");
+    /// <summary>
+    /// Gets or initializes whether the store declares a DEFAULT constraint on this column.
+    /// </summary>
+    public bool HasDefault { get; init; }
 }

@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "AustraliaCentral")]
 public sealed class AustraliaCentralTimeZoneType : TimeZoneTypeBase
 {
-    public AustraliaCentralTimeZoneType() : base(40, "AustraliaCentral", "Cen. Australia Standard Time") { }
+    public AustraliaCentralTimeZoneType() : base("AustraliaCentral", "Cen. Australia Standard Time") { }
 }

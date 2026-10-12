@@ -1,4 +1,5 @@
 ﻿using System;
+using Fdw.Services.Abstractions;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,7 +42,7 @@ namespace Fdw.Services.Data;
 /// via the IDataNode tree, fires follow-up queries for each child container whose FK key points to
 /// the parent, and populates the matching collection property on each parent POCO via reflection.
 /// </remarks>
-public sealed class ConfigurationGateway : IConfigurationGateway
+public sealed class ConfigurationGateway : IConfigurationGateway, IDerivedConfigurationCache
 {
     /// <inheritdoc />
     public string ConnectionName { get; }
@@ -49,11 +50,13 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     private const string ConnectionTypePostgreSql = "PostgreSql";
 
     private readonly ILogger<ConfigurationGateway> _logger;
-    private readonly IConnectionFactory _connectionFactory;
-    private readonly ISecretManager? _secretManager;
+    // The same implementation provider every other caller reaches this connection type through.
+    // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
+    // The same implementation provider every other caller reaches this connection type through.
+    // The gateway does not resolve secrets itself: that is the provider's job, here as everywhere.
+    private readonly IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> _connectionProvider;
     private readonly ConfigurationSchema _schema;
 
-    private readonly Lazy<Task<IGenericResult<IDataConnection>>> _connectionLazy;
 
     private readonly Lazy<IReadOnlyList<IDataStore>> _dataStores;
 
@@ -64,50 +67,20 @@ public sealed class ConfigurationGateway : IConfigurationGateway
 
     private readonly Lazy<IGenericResult<IConnectionType>> _connectionTypeLazy;
 
-    private static readonly TimeSpan DefaultCacheDuration = TimeSpan.FromMinutes(5);
+    // The reads of the derived-value build running on this async flow, or null when none is. Per flow and not
+    // a field of the gateway, which every request shares: a read by another request while a build runs must
+    // not be mixed into that build's tags, and a read by the build must not be lost from them.
+    private readonly AsyncLocal<DerivedScope?> _derivedScope = new();
 
     /// <summary>
-    /// Initializes a new instance of <see cref="ConfigurationGateway"/> without a secret manager.
-    /// Use when the ConfigurationDb connection uses integrated auth or does not need secret resolution.
+    /// Initializes a new instance of <see cref="ConfigurationGateway"/>.
     /// </summary>
     /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
-    /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
+    /// <param name="connectionProvider">The Connection implementation provider that opens ConfigurationDb.</param>
     /// <param name="schema">
     /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
-    /// Registered as a singleton via
-    /// <see cref="ConfigurationGatewayTypes"/>, one per connection declared in the schema.
-    /// </param>
-    /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
-    /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>
-    /// <param name="options">Optional gateway options (EnableCache knob). When null caching is disabled.</param>
-    /// <param name="authenticationContextAccessor">
-    /// Optional accessor for the calling principal, used to partition cached results by the
-    /// visibility scope their session reads under.
-    /// </param>
-    public ConfigurationGateway(
-        string connectionName,
-        IConnectionFactory connectionFactory,
-        ConfigurationSchema schema,
-        ILogger<ConfigurationGateway>? logger = null,
-        DataGatewayResultCache? cache = null,
-        MainDataGatewayConfiguration? options = null,
-        IAuthenticationContextAccessor? authenticationContextAccessor = null)
-        : this(connectionName, connectionFactory, secretManager: null, schema, logger, cache, options, authenticationContextAccessor)
-    {
-    }
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="ConfigurationGateway"/> with an optional secret manager.
-    /// </summary>
-    /// <param name="connectionName">The configuration connection this gateway reads and writes.</param>
-    /// <param name="connectionFactory">Factory used to open a connection to ConfigurationDb.</param>
-    /// <param name="secretManager">
-    /// Optional secret manager. When non-null and the ConfigurationDb connection references a secret,
-    /// the secret is resolved at construction time and attached to the connection configuration
-    /// before the factory creates the connection.
-    /// </param>
-    /// <param name="schema">
-    /// Deserialized <see cref="ConfigurationSchema"/> from <c>configurationSchema.json</c>.
+    /// Registered as a singleton via <see cref="ConfigurationGatewayTypes"/>, one per connection
+    /// declared in the schema.
     /// </param>
     /// <param name="logger">Logger (optional — falls back to NullLogger).</param>
     /// <param name="cache">Optional process-wide result cache. When null caching is disabled.</param>
@@ -120,8 +93,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     /// </param>
     public ConfigurationGateway(
         string connectionName,
-        IConnectionFactory connectionFactory,
-        ISecretManager? secretManager,
+        IImplementationServiceProvider<IGenericConnection, IConnectionImplementationConfiguration> connectionProvider,
         ConfigurationSchema schema,
         ILogger<ConfigurationGateway>? logger = null,
         DataGatewayResultCache? cache = null,
@@ -131,8 +103,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         ConnectionName = string.IsNullOrWhiteSpace(connectionName)
             ? throw new ArgumentNullException(nameof(connectionName))
             : connectionName;
-        _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
-        _secretManager = secretManager;
+        _connectionProvider = connectionProvider ?? throw new ArgumentNullException(nameof(connectionProvider));
         _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         _logger = logger ?? NullLogger<ConfigurationGateway>.Instance;
         _cache = cache;
@@ -142,12 +113,6 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         _connectionTypeLazy = new Lazy<IGenericResult<IConnectionType>>(
             ResolveConnectionType,
             LazyThreadSafetyMode.ExecutionAndPublication);
-
-#pragma warning disable VSTHRD011
-        _connectionLazy = new Lazy<Task<IGenericResult<IDataConnection>>>(
-            () => BuildConnection(default),
-            LazyThreadSafetyMode.ExecutionAndPublication);
-#pragma warning restore VSTHRD011
 
         _dataStores = new Lazy<IReadOnlyList<IDataStore>>(
             () => BuildFromSchema(_schema, _logger),
@@ -171,35 +136,216 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     {
         bool isQuery = command is IQueryCommand;
 
+        // Recorded on entry, from the command, whoever ends up running the read: a call answered from the cache,
+        // or one that joins a read already in flight, still made this read, and a derived value being built
+        // depends on it.
+        RecordForDerivedBuild(command, target);
+
         string? cacheKey = null;
         var cacheCeiling = TimeSpan.MaxValue;
         if (CacheEnabled && isQuery)
         {
-            var connectionTypeResult = _connectionTypeLazy.Value;
-            if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
-                return connectionTypeResult.ToNewResult<T>();
+            var key = CacheKeyFor(command, target, typeof(T).FullName);
+            if (!key.IsSuccess)
+                return key.ToNewResult<T>();
 
-            cacheCeiling = connectionTypeResult.Value.MaxCacheDuration(_authenticationContextAccessor?.Current);
-
-            try
-            {
-                cacheKey = string.Concat(
-                    connectionTypeResult.Value.CachePartition(_authenticationContextAccessor?.Current),
-                    "|_cfg|", CacheKeyBuilder.ComputeCacheKey(command, target), ":", typeof(T).FullName);
-            }
-            catch (Exception ex)
-            {
-                return GenericResult<T>.Failure(
-                    DataGatewayCacheLog.KeyComputationFailed(_logger, command.CommandType, target.Container, ex.Message));
-            }
+            cacheKey = key.Value.Key;
+            cacheCeiling = key.Value.Ceiling;
 
             if (useCache && _cache!.TryGet<T>(cacheKey, out var cached) && cached is not null)
+            {
+                ConfigurationGatewayLog.CachedRead(_logger, target.DataStore, target.Path, target.Container);
                 return cached;
+            }
         }
 
+        // Concurrent misses for one key are one read: the call that leads reads and caches, the others wait
+        // for it. A forced refresh (useCache false) reads for itself.
+        if (cacheKey is not null && useCache)
+        {
+            return await _cache!.Coalesce(
+                cacheKey,
+                () => ReadAndCache<T>(command, target, isQuery, cacheKey, cacheCeiling, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return await ReadAndCache<T>(command, target, isQuery, cacheKey, cacheCeiling, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<T>> ReadAndCache<T>(
+        IDataCommand command,
+        DataStoreTarget target,
+        bool isQuery,
+        string? cacheKey,
+        TimeSpan cacheCeiling,
+        CancellationToken cancellationToken)
+    {
         var result = await ExecuteCore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
         ApplyCacheOutcome(command, target, result, isQuery, cacheKey, cacheCeiling);
+        return result;
+    }
+
+    // The caller's partition of this configuration connection, and the longest the caller may be shown a cached
+    // answer. The one place either is worked out, so that no entry this gateway keeps, a read or a derived value,
+    // is keyed by anything else.
+    private IGenericResult<(string Partition, TimeSpan Ceiling)> CallerCacheScope(string commandType, string container)
+    {
+        var connectionTypeResult = _connectionTypeLazy.Value;
+        if (!connectionTypeResult.IsSuccess || connectionTypeResult.Value is null)
+            return connectionTypeResult.ToNewResult<(string Partition, TimeSpan Ceiling)>();
+
+        var authenticationContext = _authenticationContextAccessor?.Current;
+
+        try
+        {
+            return GenericResult<(string Partition, TimeSpan Ceiling)>.Success((
+                connectionTypeResult.Value.CachePartition(authenticationContext),
+                connectionTypeResult.Value.MaxCacheDuration(authenticationContext)));
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<(string Partition, TimeSpan Ceiling)>.Failure(
+                DataGatewayCacheLog.KeyComputationFailed(_logger, commandType, container, ex.Message));
+        }
+    }
+
+    // The key a read is cached under, and the longest its caller may be shown a cached answer. The key starts
+    // with the caller's partition, so what one caller may see is never served to another: every entry this
+    // gateway keeps is keyed from CallerCacheScope, and none without the partition.
+    private IGenericResult<(string Key, TimeSpan Ceiling)> CacheKeyFor(IDataCommand command, DataStoreTarget target, string? resultType)
+    {
+        var scope = CallerCacheScope(command.CommandType, target.Container);
+        if (!scope.IsSuccess)
+            return scope.ToNewResult<(string Key, TimeSpan Ceiling)>();
+
+        try
+        {
+            return GenericResult<(string Key, TimeSpan Ceiling)>.Success((
+                string.Concat(
+                    scope.Value.Partition,
+                    "|_cfg|", CacheKeyBuilder.ComputeCacheKey(command, target), ":", resultType),
+                scope.Value.Ceiling));
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<(string Key, TimeSpan Ceiling)>.Failure(
+                DataGatewayCacheLog.KeyComputationFailed(_logger, command.CommandType, target.Container, ex.Message));
+        }
+    }
+
+    // The key a derived value is kept under: the caller's partition, then what the value is and what kind.
+    private IGenericResult<(string Key, TimeSpan Ceiling)> DerivedKeyFor(string name, string? resultType)
+    {
+        var scope = CallerCacheScope("Derive", name);
+        if (!scope.IsSuccess)
+            return scope.ToNewResult<(string Key, TimeSpan Ceiling)>();
+
+        return GenericResult<(string Key, TimeSpan Ceiling)>.Success((
+            string.Concat(scope.Value.Partition, "|_derived|", name, ":", resultType),
+            scope.Value.Ceiling));
+    }
+
+    /// <inheritdoc/>
+    public async Task<IGenericResult<T>> Derive<T>(
+        string name,
+        Func<Task<IGenericResult<T>>> build,
+        Func<T, bool> isWorthKeeping,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(build);
+        ArgumentNullException.ThrowIfNull(isWorthKeeping);
+
+        // With the cache off nothing is kept, as for every read this gateway makes.
+        if (!CacheEnabled)
+            return await build().ConfigureAwait(false);
+
+        var key = DerivedKeyFor(name, typeof(T).FullName);
+        if (!key.IsSuccess)
+            return key.ToNewResult<T>();
+
+        var cacheKey = key.Value.Key;
+        var ceiling = key.Value.Ceiling;
+
+        var derived = _cache!.TryGet<DerivedEntry<T>>(cacheKey, out var cached) && cached is not null
+            ? cached
+            : await _cache.Coalesce(
+                cacheKey,
+                () => BuildAndKeep(name, cacheKey, ceiling, build, isWorthKeeping),
+                cancellationToken).ConfigureAwait(false);
+
+        if (!derived.IsSuccess || derived.Value is not { } entry)
+            return derived.ToNewResult<T>();
+
+        // Whoever asked, whether it was handed a kept value, joined a build in flight or ran the build, is
+        // depending on the reads that built it, and a build it is part of has to be dropped by them too.
+        RecordForDerivedBuild(entry.Tags);
+
+        return GenericResult<T>.Success(entry.Value);
+    }
+
+    // Records, in the derived-value build running on this async flow if there is one, the tags a query would be
+    // cached under. Nothing is worked out when no build is running.
+    private void RecordForDerivedBuild(IDataCommand command, DataStoreTarget target)
+    {
+        if (command is IQueryCommand && _derivedScope.Value is { } building)
+            building.Note(CacheKeyBuilder.GetInvalidationTags(command, target));
+    }
+
+    private void RecordForDerivedBuild(IReadOnlyList<string> tags)
+    {
+        if (_derivedScope.Value is { } building)
+            building.Note(tags);
+    }
+
+    private async Task<IGenericResult<DerivedEntry<T>>> BuildAndKeep<T>(
+        string name,
+        string cacheKey,
+        TimeSpan ceiling,
+        Func<Task<IGenericResult<T>>> build,
+        Func<T, bool> isWorthKeeping)
+    {
+        // A scope of this build's own on this async flow, and the flow's previous one put back afterwards. The
+        // reads the build makes are recorded in it, including those of tasks it starts; reads by other requests
+        // are on other flows, and a build this one is inside keeps its own scope.
+        var outer = _derivedScope.Value;
+        var scope = new DerivedScope();
+        _derivedScope.Value = scope;
+
+        IGenericResult<T> built;
+        try
+        {
+            built = await build().ConfigureAwait(false);
+        }
+        finally
+        {
+            _derivedScope.Value = outer;
+        }
+
+        if (!built.IsSuccess || built.Value is not { } value)
+            return built.ToNewResult<DerivedEntry<T>>();
+
+        var entry = new DerivedEntry<T>(value, scope.Tags());
+        var result = GenericResult<DerivedEntry<T>>.Success(entry);
+
+        // Kept only when something could drop it: a build that read nothing through this gateway has no
+        // write that would ever invalidate what it produced.
+        if (entry.Tags.Count == 0)
+        {
+            ConfigurationGatewayLog.DerivedNotKept(
+                _logger, name, "the build read nothing through this gateway, so no write could drop it");
+            return result;
+        }
+
+        if (!isWorthKeeping(value))
+        {
+            ConfigurationGatewayLog.DerivedNotKept(_logger, name, "the value describes nothing worth remembering");
+            return result;
+        }
+
+        // The same duration a read is kept for: the default, capped by what the connection type permits.
+        _cache!.Set(cacheKey, result, entry.Tags, ceiling < CachePolicy.DefaultDuration ? ceiling : CachePolicy.DefaultDuration);
         return result;
     }
 
@@ -231,13 +377,20 @@ public sealed class ConfigurationGateway : IConfigurationGateway
 
         if (isQuery)
         {
-            if (cacheKey is not null)
+            // A successful-but-empty read is not a fact worth remembering. Whatever produced it --
+            // the deny principal seeing nothing before RequestContextMiddleware establishes a real
+            // context, a row genuinely not existing yet, a container that hasn't propagated -- caching
+            // it makes that transient emptiness durable for up to CachePolicy.DefaultDuration, so every read
+            // in that window repeats the same wrong answer instead of getting a chance to see the
+            // real one. IsSuccess only proves the query ran; it says nothing about whether the answer
+            // is one worth keeping.
+            if (cacheKey is not null && !IsEmptyResult(result.Value))
             {
                 _cache!.Set(
                     cacheKey,
                     result,
                     CacheKeyBuilder.GetInvalidationTags(command, target),
-                    CachePolicy.GetDuration(command, DefaultCacheDuration, cacheCeiling));
+                    CachePolicy.GetDuration(command, cacheCeiling));
             }
 
             return;
@@ -245,6 +398,12 @@ public sealed class ConfigurationGateway : IConfigurationGateway
 
         _cache!.InvalidateByTags(CacheKeyBuilder.GetInvalidationTags(command, target));
     }
+
+    // Only collection-shaped results (IEnumerable<T> query results, not a single row or a scalar)
+    // can be "empty" in the sense this guards against -- a null Value already skips caching via
+    // result.IsSuccess's own contract elsewhere, and a scalar or single-object Value is never empty.
+    private static bool IsEmptyResult(object? value)
+        => value is IEnumerable enumerable and not string && !enumerable.Cast<object?>().Any();
 
     private async Task<IGenericResult<T>> ExecuteCore<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
@@ -257,9 +416,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                     "DataStoreTarget.DataStore is required"));
         }
 
-#pragma warning disable VSTHRD011, VSTHRD003
-        var connectionResult = await _connectionLazy.Value.ConfigureAwait(false);
-#pragma warning restore VSTHRD011, VSTHRD003
+        var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return connectionResult.ToNewResult<T>();
 
@@ -307,9 +464,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container, "DataStoreTarget.DataStore is required"));
         }
 
-#pragma warning disable VSTHRD011, VSTHRD003
-        var connectionResult = await _connectionLazy.Value.ConfigureAwait(false);
-#pragma warning restore VSTHRD011, VSTHRD003
+        var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return connectionResult.ToNewResult<IRecordSource<DataRecord>>();
 
@@ -351,9 +506,52 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container, "DataStoreTarget.DataStore is required"));
         }
 
-#pragma warning disable VSTHRD011, VSTHRD003
-        var connectionResult = await _connectionLazy.Value.ConfigureAwait(false);
-#pragma warning restore VSTHRD011, VSTHRD003
+        if (!CacheEnabled || _cache is not { } cache || command is not IQueryCommand query)
+            return await ReadRows(command, target, rowType, cancellationToken).ConfigureAwait(false);
+
+        // The typed-list child read a configuration aggregate makes once per owner row: cached like every other
+        // read here, under the caller's partition, and dropped by a write to ANY container the read touches.
+        var tags = RowTags(query, target);
+        if (!tags.IsSuccess || tags.Value is not { } rowTags)
+            return tags.ToNewResult<IEnumerable<object>>();
+
+        // Recorded before the cache is asked, for the reason given on the typed read: a cached answer is a read too.
+        RecordForDerivedBuild(rowTags);
+
+        var key = CacheKeyFor(command, target, string.Concat(rowType.FullName, ":rows"));
+        if (!key.IsSuccess)
+            return key.ToNewResult<IEnumerable<object>>();
+
+        var cacheKey = key.Value.Key;
+        if (cache.TryGet<IEnumerable<object>>(cacheKey, out var cached) && cached is not null)
+        {
+            ConfigurationGatewayLog.CachedRead(_logger, target.DataStore, target.Path, target.Container);
+            return cached;
+        }
+
+        return await cache.Coalesce(
+            cacheKey,
+            async () =>
+            {
+                var read = await ReadRows(command, target, rowType, cancellationToken).ConfigureAwait(false);
+
+                // Kept even when it is empty: an owner with no children of a kind is a fact about an owner that
+                // was just read, and a write to the child table drops it. A root read that finds nothing is not
+                // kept (see ApplyCacheOutcome), because that one may just be a row that does not exist yet.
+                if (read.IsSuccess)
+                {
+                    cache.Set(cacheKey, read, rowTags, CachePolicy.GetDuration(command, key.Value.Ceiling));
+                }
+
+                return read;
+            },
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<IEnumerable<object>>> ReadRows(
+        IDataCommand command, DataStoreTarget target, Type rowType, CancellationToken cancellationToken)
+    {
+        var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return connectionResult.ToNewResult<IEnumerable<object>>();
 
@@ -378,6 +576,56 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         }
     }
 
+    // Everything a child read reads is something whose write must drop its entry: the child's own container,
+    // and each container it joins to (the owner row, and above it the domain row, decide which children are
+    // current). A container the schema does not declare cannot be tagged, so the read fails rather than being
+    // kept under a tag nothing will ever drop.
+    private IGenericResult<IReadOnlyList<string>> RowTags(IQueryCommand command, DataStoreTarget target)
+    {
+        var tags = new List<string>(CacheKeyBuilder.GetInvalidationTags(command, target));
+
+        foreach (var join in command.Joins)
+        {
+            var joined = TagOf(target.DataStore, join.TargetContainerName);
+            if (joined is null)
+                return GenericResult<IReadOnlyList<string>>.Failure(ConfigurationGatewayLog.ExecuteFailed(
+                    _logger, target.Container, $"Joined container '{join.TargetContainerName}' is not declared in data store '{target.DataStore}'"));
+
+            tags.Add(joined);
+
+            if (join.SourceContainerName is not { } source)
+                continue;
+
+            var from = TagOf(target.DataStore, source);
+            if (from is null)
+                return GenericResult<IReadOnlyList<string>>.Failure(ConfigurationGatewayLog.ExecuteFailed(
+                    _logger, target.Container, $"Joined container '{source}' is not declared in data store '{target.DataStore}'"));
+
+            tags.Add(from);
+        }
+
+        return GenericResult<IReadOnlyList<string>>.Success(tags);
+    }
+
+    // The invalidation tag a write to a container drops: its path and its name. Container names are unique
+    // within a data store, so the name alone finds it.
+    private string? TagOf(string dataStoreName, string containerName)
+    {
+        foreach (var store in _dataStores.Value)
+        {
+            if (!string.Equals(store.Name, dataStoreName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            foreach (var container in store.Paths.SelectMany(path => path.Containers))
+            {
+                if (string.Equals(container.Name, containerName, StringComparison.Ordinal))
+                    return string.Concat(container.Parent.Name, ".", container.Name);
+            }
+        }
+
+        return null;
+    }
+
     /// <inheritdoc/>
     public async Task<IGenericResult> Execute(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
     {
@@ -387,9 +635,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container, "DataStoreTarget.DataStore is required"));
         }
 
-#pragma warning disable VSTHRD011, VSTHRD003
-        var connectionResult = await _connectionLazy.Value.ConfigureAwait(false);
-#pragma warning restore VSTHRD011, VSTHRD003
+        var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return connectionResult;
 
@@ -428,9 +674,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         string connectionName,
         CancellationToken cancellationToken = default)
     {
-#pragma warning disable VSTHRD011, VSTHRD003
-        var connectionResult = await _connectionLazy.Value.ConfigureAwait(false);
-#pragma warning restore VSTHRD011, VSTHRD003
+        var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
             return connectionResult.ToNewResult<IDataGatewayTransaction>();
 
@@ -469,24 +713,24 @@ public sealed class ConfigurationGateway : IConfigurationGateway
             if (!string.Equals(_schema.Connections[i].Name, ConnectionName, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            if (string.IsNullOrWhiteSpace(_schema.Connections[i].ServiceOptionType))
+            if (string.IsNullOrWhiteSpace(_schema.Connections[i].Implementation))
             {
                 return GenericResult<IConnectionType>.Failure(
                     DataGatewayCacheLog.CachePartitionUnavailable(
-                        _logger, ConnectionName, "the connection declares no ServiceOptionType"));
+                        _logger, ConnectionName, "the connection names no implementation"));
             }
 
-            if (ReferenceEquals(ConnectionTypes.ByName(_schema.Connections[i].ServiceOptionType), ConnectionTypes.NotFound))
+            if (ReferenceEquals(ConnectionTypes.ByName(_schema.Connections[i].Implementation), ConnectionTypes.NotFound))
             {
                 return GenericResult<IConnectionType>.Failure(
                     DataGatewayCacheLog.CachePartitionUnavailable(
                         _logger,
                         ConnectionName,
-                        $"connection type '{_schema.Connections[i].ServiceOptionType}' is not registered"));
+                        $"connection type '{_schema.Connections[i].Implementation}' is not registered"));
             }
 
             return GenericResult<IConnectionType>.Success(
-                ConnectionTypes.ByName(_schema.Connections[i].ServiceOptionType));
+                ConnectionTypes.ByName(_schema.Connections[i].Implementation));
         }
 
         return GenericResult<IConnectionType>.Failure(
@@ -498,7 +742,7 @@ public sealed class ConfigurationGateway : IConfigurationGateway
     {
         ConfigurationGatewayLog.BuildConnectionEntry(_logger, ConnectionName);
 
-        ConnectionConfiguration? configDbEntry = null;
+        IConnectionImplementationConfiguration? configDbEntry = null;
 
         for (var i = 0; i < _schema.Connections.Count; i++)
         {
@@ -515,16 +759,8 @@ public sealed class ConfigurationGateway : IConfigurationGateway
                 ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
         }
 
-        // A connection factory builds from the implementation configuration — the declared record
-        // names the connection and says which kind it is, the body carries what the kind needs.
-        if (configDbEntry.Configuration is null)
-        {
-            return GenericResult<IDataConnection>.Failure(
-                ConfigurationGatewayLog.ConnectionNotFound(_logger, ConnectionName));
-        }
-
-        var factoryResult = await _connectionFactory
-            .Create(configDbEntry.Configuration, _secretManager, cancellationToken)
+        var factoryResult = await _connectionProvider
+            .Create(configDbEntry, cancellationToken)
             .ConfigureAwait(false);
         if (!factoryResult.IsSuccess || factoryResult.Value is null)
         {
@@ -579,17 +815,17 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         return builtStores;
     }
 
-    private static IDataStore? BuildStore(DataStoreConfiguration storeCfg, ILogger logger)
+    private static IDataStore? BuildStore(DataStoreImplementationConfiguration storeCfg, ILogger logger)
     {
-        var storeType = string.IsNullOrEmpty(storeCfg.TypeId)
+        var storeType = string.IsNullOrEmpty(storeCfg.Implementation)
             ? null
             : DataStoreTypes.All().FirstOrDefault(t =>
-                string.Equals(t.Name, storeCfg.TypeId, StringComparison.OrdinalIgnoreCase));
+                string.Equals(t.Name, storeCfg.Implementation, StringComparison.OrdinalIgnoreCase));
 
         if (storeType is null)
         {
             ConfigurationGatewayLog.ExecuteFailed(logger, storeCfg.Name,
-                $"DataStore transport '{storeCfg.TypeId}' is not a registered DataStoreType");
+                $"DataStore transport '{storeCfg.Implementation}' is not a registered DataStoreType");
             return null;
         }
 
@@ -598,6 +834,10 @@ public sealed class ConfigurationGateway : IConfigurationGateway
         var configureResult = builder.Configure(storeCfg);
         if (!configureResult.IsSuccess)
             return null;
+
+        // Every store this gateway builds is one the host declared in configurationSchema.json; it carries that fact
+        // so the main data gateway can refuse requests over it (FDW-1068).
+        builder.DeclareByHost();
 
 #pragma warning disable VSTHRD002
         var buildResult = builder.Build().GetAwaiter().GetResult();

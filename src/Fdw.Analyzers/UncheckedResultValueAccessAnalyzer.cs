@@ -409,26 +409,26 @@ public sealed class UncheckedResultValueAccessAnalyzer : DiagnosticAnalyzer
     }
 
     /// <summary>
-    /// Checks whether a statement unconditionally exits the current scope (return, throw).
-    /// For blocks, checks that the last statement is an early exit.
+    /// Checks whether a statement unconditionally exits the current scope (return, throw, continue, break,
+    /// yield break). For blocks, checks that the last statement is an early exit.
     /// </summary>
     private static bool ContainsUnconditionalEarlyExit(StatementSyntax statement)
     {
-        if (statement is ReturnStatementSyntax or ThrowStatementSyntax
-            or ContinueStatementSyntax or BreakStatementSyntax)
-        {
+        if (IsEarlyExit(statement))
             return true;
-        }
 
         if (statement is BlockSyntax block && block.Statements.Count > 0)
-        {
-            var lastStatement = block.Statements[block.Statements.Count - 1];
-            return lastStatement is ReturnStatementSyntax or ThrowStatementSyntax
-                or ContinueStatementSyntax or BreakStatementSyntax;
-        }
+            return IsEarlyExit(block.Statements[block.Statements.Count - 1]);
 
         return false;
     }
+
+    // Why yield break is here: in an iterator it ends the sequence exactly as return ends a method, so a
+    // failure check that leaves with it guards the .Value that follows. yield return does not exit.
+    private static bool IsEarlyExit(StatementSyntax statement) =>
+        statement is ReturnStatementSyntax or ThrowStatementSyntax
+            or ContinueStatementSyntax or BreakStatementSyntax
+        || statement.IsKind(SyntaxKind.YieldBreakStatement);
 
     /// <summary>
     /// Checks whether a node is the same as or a descendant of the specified potential ancestor.

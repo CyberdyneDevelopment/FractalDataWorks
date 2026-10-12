@@ -14,7 +14,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlSingleConverter()
     : DataTypeConverterBase(
-        id: 17,
         name: "Single",
         sourceType: "real",
         targetClrType: typeof(float),

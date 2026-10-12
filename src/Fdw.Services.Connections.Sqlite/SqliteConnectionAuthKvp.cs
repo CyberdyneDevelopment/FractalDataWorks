@@ -10,7 +10,7 @@ public sealed class SqliteConnectionAuthKvp
 {
 
     /// <summary>Gets or sets the parent FK.</summary>
-    public Guid SqliteConnectionId { get; set; }
+    public Guid SqliteConnectionConfigurationId { get; set; }
 
     /// <summary>Gets or sets the key name.</summary>
     public string Name { get; set; } = string.Empty;

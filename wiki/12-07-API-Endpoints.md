@@ -457,7 +457,7 @@ public sealed class GetConnectionEndpoint : GetConnectionEndpointBase<MsSqlConne
         {
             Id = config.Id,
             Name = config.Name,
-            ServiceType = config.ServiceOptionType ?? "MsSql",
+            ServiceType = config.Implementation ?? "MsSql",
             Server = config.Server,
             Port = config.Port,
             Database = config.Database,
@@ -479,7 +479,7 @@ Beyond the consumer-facing endpoint architecture above, the reference-etl and re
 
 | Endpoint Class | Method | Route | Description |
 |---------------|--------|-------|-------------|
-| `TriggerJobEndpoint` | POST | `/api/v1/etl/trigger` | Triggers a pipeline execution, returns 202 Accepted with execution ID |
+| `UnifiedTriggerEndpoint` | POST | `/api/v1/etl/trigger/pipeline` | Triggers a pipeline execution, returns 202 Accepted with execution ID. The body names the roles the run acts with (`runRoles`, required, only roles the caller holds); a pipeline carries no roles of its own, and a schedule records the roles its creator named |
 | `GetJobStatusEndpoint` | GET | `/api/v1/etl/jobs/{executionId}/status` | Returns execution status and metrics |
 
 ### reference-scheduler Endpoints

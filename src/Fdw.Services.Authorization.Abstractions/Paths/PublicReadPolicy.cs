@@ -14,7 +14,7 @@ namespace Fdw.Services.Authorization.Abstractions.Paths;
 public sealed class PublicReadPolicy : PathAuthorizationPolicyBase
 {
     /// <summary>Initializes the PublicRead policy.</summary>
-    public PublicReadPolicy() : base(3, "PublicRead") { }
+    public PublicReadPolicy() : base("PublicRead") { }
 
     /// <inheritdoc />
     public override IGenericResult<IPathAuthorizationDecision> Evaluate(string canonicalAddress, IRequestContext context)

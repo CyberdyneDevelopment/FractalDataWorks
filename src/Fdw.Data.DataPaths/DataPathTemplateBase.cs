@@ -4,17 +4,16 @@ using Fdw.Collections;
 namespace Fdw.Data.DataPaths;
 
 /// <summary>Base class for <see cref="IDataPathTemplate"/> TypeOptions.</summary>
-public abstract class DataPathTemplateBase : TypeOptionBase<int, DataPathTemplateBase>, IDataPathTemplate
+public abstract class DataPathTemplateBase : TypeOptionBase<DataPathTemplateBase>, IDataPathTemplate
 {
     /// <summary>Initializes a new template.</summary>
     protected DataPathTemplateBase(
-        int id,
         string name,
         string template,
         string dataStoreServiceType,
         string defaultPolicyName,
         IReadOnlyList<string> requiredVariables)
-        : base(id, name)
+        : base(name)
     {
         Template = template;
         DataStoreServiceType = dataStoreServiceType;

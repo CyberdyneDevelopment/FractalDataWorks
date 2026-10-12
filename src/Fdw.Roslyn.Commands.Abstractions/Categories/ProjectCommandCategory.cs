@@ -12,7 +12,7 @@ public sealed class ProjectCommandCategory : RoslynCommandCategoryBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ProjectCommandCategory"/> class.
     /// </summary>
-    public ProjectCommandCategory() : base(7, "Project", "Project management operations")
+    public ProjectCommandCategory() : base("Project", "Project management operations")
     {
     }
 }

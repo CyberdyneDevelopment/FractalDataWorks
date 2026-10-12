@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -16,7 +17,16 @@ public sealed class BinaryDataType : DataTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="BinaryDataType"/> class.</summary>
     public BinaryDataType()
-        : base(id: 14, name: "Binary")
+        : base(name: "Binary")
     {
     }
+
+    /// <inheritdoc />
+    public override Type ClrType => typeof(byte[]);
+
+    /// <inheritdoc />
+    public override object? Parse(string text) => null;
+
+    /// <inheritdoc />
+    public override bool RendersInExpressions => false;
 }

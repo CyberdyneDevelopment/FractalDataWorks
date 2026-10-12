@@ -14,7 +14,7 @@ public sealed class SquareBorderStyle : BorderStyleBase
     /// <summary>
     /// Creates the square border style.
     /// </summary>
-    public SquareBorderStyle() : base(2, "Square") { }
+    public SquareBorderStyle() : base("Square") { }
 
     /// <inheritdoc />
     public override BoxBorder Panel => BoxBorder.Square;

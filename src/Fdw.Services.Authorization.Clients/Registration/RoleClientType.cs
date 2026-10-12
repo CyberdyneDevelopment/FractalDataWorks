@@ -13,10 +13,10 @@ using Fdw.Results;
 namespace Fdw.Services.Authorization.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Role API client.
+/// Implementation for the Role API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "RoleClient")]
+[Implementation(typeof(ApiClientTypes), "RoleClient")]
 public sealed class RoleClientType : ApiClientTypeBase<RoleApiClient>
 {
     /// <summary>
@@ -33,9 +33,8 @@ public sealed class RoleClientType : ApiClientTypeBase<RoleApiClient>
         {
             builder.Services.AddScoped<RoleApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<RoleApiClient>>() ?? NullLogger<RoleApiClient>.Instance;
-                return new RoleApiClient(factory.CreateClient(Name), logger);
+                return new RoleApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Fdw.Collections.Attributes;
 using Microsoft.Extensions.Configuration;
+using Fdw.Services.Connections.Abstractions.Authentication;
 
 namespace Fdw.Services.Connections.Http.Security.Types;
 
@@ -12,7 +13,7 @@ public sealed class NoneSecurityConfiguration : HttpAuthenticationConfiguration
 {
     /// <summary>Initializes a new instance of the <see cref="NoneSecurityConfiguration"/> class.</summary>
     public NoneSecurityConfiguration()
-        : base(1, "None", "No Security", "No authentication or message security applied")
+        : base("None", "No Security", "No authentication or message security applied", requiresSecret: false)
     {
     }
 
@@ -29,4 +30,12 @@ public sealed class NoneSecurityConfiguration : HttpAuthenticationConfiguration
     {
         return [new("Type", Name)];
     }
+
+    /// <inheritdoc />
+    /// <remarks>Carries no stored credential.</remarks>
+    public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [];
+
+    /// <inheritdoc/>
+    /// <remarks>No security presents no identity at all; the request is anonymous.</remarks>
+    public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;
 }

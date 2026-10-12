@@ -4,6 +4,7 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Abstractions;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.Logging;
+using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -37,7 +38,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Update", RestrictToCurrentCompilation = true)]
-public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableCommand
+public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableCommand, ISoftDeletableCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateCommand{T}"/> class.
@@ -54,4 +55,10 @@ public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableComma
     /// Determines which records to update.
     /// </summary>
     public IFilterExpression? Filter { get; init; }
+
+    /// <summary>
+    /// Gets or sets the soft-delete options. When set, the update also flags the matching rows deleted (the
+    /// configured flag column, and optionally a deleted-at column) in the same statement.
+    /// </summary>
+    public SoftDeleteOptions? SoftDelete { get; init; }
 }

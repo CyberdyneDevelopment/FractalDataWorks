@@ -32,7 +32,6 @@ public sealed class AnalyzeCouplingTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear Roslyn flow: calculate efferent/afferent coupling, compute instability
     public override async Task<IGenericResult<QueryResult<CouplingAnalysisData>>> Translate(
         AnalyzeCouplingCommand command,
         Solution solution,
@@ -190,5 +189,4 @@ public sealed class AnalyzeCouplingTranslator
 
         return GenericResult<QueryResult<CouplingAnalysisData>>.Success(result);
     }
-#pragma warning restore MA0051
 }

@@ -717,7 +717,7 @@ public static partial class ServiceTypeLog
     [MessageLogging(
         EventId = 31001,
         Level = LogLevel.Error,
-        Message = "[{domainName}] Configuration not found: '{configurationName}'")]
+        Message = "[{domainName}] Configuration not found: '{configurationName}'. It does not exist, or it is a Restricted or system-tenant row, which only the system tenant can read.")]
     public static partial IGenericMessage ConfigurationNotFound(
         ILogger logger,
         string domainName,
@@ -844,11 +844,35 @@ public static partial class ServiceTypeLog
         Message = "[{collectionName}] {phase} (collection #{sequence}) ran with NO options registered. "
             + "Nothing joined this collection, so every lookup against it will miss. If that is not "
             + "intended, the entry point is missing a reference to the package holding the "
-            + "[ServiceTypeOption] or [TypeOption] classes — a library never self-registers a plain "
+            + "[Implementation] or [TypeOption] classes — a library never self-registers a plain "
             + "[TypeOption]; the entry point's module initializer scans its referenced assemblies. "
             + "Reference the implementation (or its .Registration package) from the entry point and "
             + "the count here will be non-zero.")]
     public static partial IGenericMessage CollectionPhaseNoOptions(
+        ILogger logger,
+        string collectionName,
+        string phase,
+        int sequence);
+
+    /// <summary>
+    /// Logs that a collection phase ran with nothing in its own native membership, for a collection
+    /// that declared it never uses that surface in the first place.
+    /// </summary>
+    /// <remarks>
+    /// A collection whose members join a sibling TypeCollection instead (see
+    /// <c>ServiceTypeCollectionBase{TBase, TInterface}.NativeMembersUnused</c>) has an empty
+    /// native membership by design, forever -- not because a package reference is missing. Logging
+    /// <see cref="CollectionPhaseNoOptions"/> for it would be a false alarm on every single run, so
+    /// this Information-level line takes its place: still visible, but not shaped like the failure
+    /// this exists to distinguish from.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 62011,
+        Level = LogLevel.Information,
+        Message = "[{collectionName}] {phase} (collection #{sequence}) has no native members by design -- "
+            + "this collection's real membership is tracked by a sibling collection its phases read "
+            + "from instead.")]
+    public static partial IGenericMessage CollectionPhaseMembersElsewhere(
         ILogger logger,
         string collectionName,
         string phase,
@@ -965,6 +989,45 @@ public static partial class ServiceTypeLog
         int position,
         int total,
         string reason);
+
+    /// <summary>
+    /// Logs that one domain's phase failed, while the run continues to the next.
+    /// </summary>
+    /// <remarks>
+    /// Fail loud is about being heard, not about stopping. A run that returned at the first failure
+    /// reported one broken domain per boot and hid the rest, so a host with four independent faults
+    /// took four deploys to reveal them -- each one knowable at the first boot and withheld. Every
+    /// domain now runs and every failure is named here; the phase still returns a failure overall, so
+    /// nothing is being tolerated, only reported completely.
+    /// </remarks>
+    [MessageLogging(
+        EventId = 61020,
+        Level = LogLevel.Critical,
+        Message = "Platform {phase} FAILED at domain '{categoryName}' (entry {position} of {total}): {reason}. "
+            + "The run continues so every failing domain is reported, and {phase} will "
+            + "return a failure once it completes.")]
+    public static partial IGenericMessage PlatformPhaseDomainFailed(
+        ILogger logger,
+        string phase,
+        string categoryName,
+        int position,
+        int total,
+        string reason);
+
+    /// <summary>
+    /// Logs the tally at the end of a phase in which at least one domain failed.
+    /// </summary>
+    [MessageLogging(
+        EventId = 61021,
+        Level = LogLevel.Critical,
+        Message = "Platform {phase} completed with {failed} of {total} domain(s) failing: {categoryNames}. "
+            + "Each failure is logged above with its own reason.")]
+    public static partial IGenericMessage PlatformPhaseCompletedWithFailures(
+        ILogger logger,
+        string phase,
+        int failed,
+        int total,
+        string categoryNames);
 
     /// <summary>
     /// Logs that an option phase threw. The exception is converted to a failure result after this is
@@ -1192,7 +1255,7 @@ public static partial class ServiceTypeLog
     [MessageLogging(
         EventId = 61016,
         Level = LogLevel.Warning,
-        Message = "[{collectionName}] registered '{providerServiceType}' but collected ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [ServiceTypeOption] types.")]
+        Message = "[{collectionName}] registered '{providerServiceType}' but collected ZERO options — the provider is resolvable and can create nothing. Reference the package(s) declaring this domain's [Implementation] types.")]
     public static partial IGenericMessage DomainRegisteredWithNoOptions(
         ILogger logger,
         string collectionName,

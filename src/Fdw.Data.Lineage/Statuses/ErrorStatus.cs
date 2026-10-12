@@ -14,5 +14,5 @@ public sealed class ErrorStatus : LineageNodeStatusBase
     /// <summary>
     /// Initializes a new instance of the <see cref="ErrorStatus"/> class.
     /// </summary>
-    public ErrorStatus() : base(3, "Error") { }
+    public ErrorStatus() : base("Error") { }
 }

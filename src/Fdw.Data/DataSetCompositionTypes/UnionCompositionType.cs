@@ -18,7 +18,6 @@ public sealed class UnionCompositionType : DataSetCompositionTypeBase
     /// </summary>
     public UnionCompositionType()
         : base(
-            id: 3,
             name: "Union",
             description: "Stacks rows from multiple sources using UNION semantics; sources must have compatible field shapes",
             allowsMultipleSources: true,

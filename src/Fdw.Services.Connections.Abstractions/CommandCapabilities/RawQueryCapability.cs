@@ -23,7 +23,6 @@ public sealed class RawQueryCapability : CommandCapabilityTypeBase
     /// </summary>
     public RawQueryCapability()
         : base(
-            id: 2,
             name: "RawQuery",
             displayName: "Raw Query",
             configurationFields:

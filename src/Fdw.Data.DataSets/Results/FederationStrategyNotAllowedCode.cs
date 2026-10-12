@@ -18,7 +18,7 @@ public sealed class FederationStrategyNotAllowedCode : DataSetsResultCodeBase
     public FederationStrategyNotAllowedCode()
         : base(20004, "FederationStrategyNotAllowed",
             ResultSeverities.ByName("Error"),
-            "DataSet '{name}' create/update rejected: federationStrategy is not allowed when serviceOptionType is '{serviceOptionType}'",
+            "DataSet '{name}' create/update rejected: federationStrategy is not allowed when implementation is '{implementation}'",
             isRetryable: false)
     {
     }

@@ -29,7 +29,7 @@ public static class TypeCollectionPromptHelper
         string promptText,
         IEnumerable<TOption> options,
         TUIThemeConfiguration? theme = null)
-        where TOption : class, ITypeOption
+        where TOption : class, ITypeOption<int>
     {
         var list = options.ToList();
 
@@ -46,6 +46,6 @@ public static class TypeCollectionPromptHelper
                 .UseConverter(opt => $"{opt.Name} [dim]({opt.Id})[/]")
                 .HighlightStyle(new Style(theme?.Colors.Selected ?? Color.Blue)));
 
-        return (int)selection.Id;
+        return selection.Id;
     }
 }

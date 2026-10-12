@@ -130,6 +130,44 @@ public class SetSecretManagerCommandTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
+    public void TheValueAndTheTypeAHandlerReadsAreTheOnesTheCommandCarries()
+    {
+        var cmd = SetSecretManagerCommand.WithSecretType("vault", "key", "val", "Password");
+
+        cmd.SecretValue.ShouldBe("val");
+        cmd.SecretType.ShouldBe("Password");
+        cmd.Parameters["SecretValue"].ShouldBe("val");
+        cmd.Parameters["SecretType"].ShouldBe("Password");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ACommandThatStatesNoTypeCarriesNoneForTheStoreToRefuse()
+    {
+        var cmd = SetSecretManagerCommand.Create("vault", "key", "val");
+
+        cmd.SecretType.ShouldBeNull();
+        cmd.Parameters.ShouldNotContainKey("SecretType");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void CopiesOfACommandKeepTheTypeAndTheValue()
+    {
+        ISecretManagerCommand<SecretValue> cmd = SetSecretManagerCommand.WithSecretType("vault", "key", "val", "Password");
+
+        var copy = cmd.WithMetadata(new Dictionary<string, object> { ["source"] = "test" });
+
+        var typed = copy.ShouldBeOfType<SetSecretManagerCommand>();
+        typed.SecretValue.ShouldBe("val");
+        typed.SecretType.ShouldBe("Password");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
     public void AdditionalParametersAreMergedWithSecretValue()
     {
         var additional = new Dictionary<string, object?> { ["Description"] = "desc" };

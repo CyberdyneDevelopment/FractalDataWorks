@@ -16,7 +16,7 @@ public sealed class NoActiveSessionCode : WorkspaceResultCodeBase
     /// </summary>
     public NoActiveSessionCode()
         : base(40000, "NoActiveSession",
-            ResultSeverities.ByName("Warning"),
+            ResultSeverities.ByName("Error"),
             "No active session. Use CreateSession or ResumeSession first.",
             isRetryable: false)
     {

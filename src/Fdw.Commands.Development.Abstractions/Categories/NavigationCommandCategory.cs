@@ -13,7 +13,7 @@ public sealed class NavigationCommandCategory : DevelopmentCommandCategoryBase
     /// Initializes a new instance of the <see cref="NavigationCommandCategory"/> class.
     /// </summary>
     public NavigationCommandCategory()
-        : base(5, "Navigation", "Code navigation commands for finding definitions, base types, and members")
+        : base("Navigation", "Code navigation commands for finding definitions, base types, and members")
     {
     }
 }

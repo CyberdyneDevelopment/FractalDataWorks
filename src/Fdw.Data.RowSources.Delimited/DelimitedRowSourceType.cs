@@ -19,7 +19,7 @@ public sealed class DelimitedRowSourceType : RecordSourceTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DelimitedRowSourceType"/> class.
     /// </summary>
-    public DelimitedRowSourceType() : base(6, "Delimited")
+    public DelimitedRowSourceType() : base("Delimited")
     {
     }
 

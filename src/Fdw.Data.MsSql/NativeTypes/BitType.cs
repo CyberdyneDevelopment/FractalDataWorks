@@ -14,7 +14,6 @@ public sealed class BitType : DataTypeOptionBase
     /// <summary>Initializes a new instance of the <see cref="BitType"/> class.</summary>
     public BitType()
         : base(
-            id: 19,
             name: "bit",
             description: "Single bit — 0, 1 or null.",
             abstractType: DataTypes.Bool)

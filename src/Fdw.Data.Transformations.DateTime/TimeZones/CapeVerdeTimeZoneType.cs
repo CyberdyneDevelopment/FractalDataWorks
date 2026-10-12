@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "CapeVerde")]
 public sealed class CapeVerdeTimeZoneType : TimeZoneTypeBase
 {
-    public CapeVerdeTimeZoneType() : base(45, "CapeVerde", "Cape Verde Standard Time") { }
+    public CapeVerdeTimeZoneType() : base("CapeVerde", "Cape Verde Standard Time") { }
 }

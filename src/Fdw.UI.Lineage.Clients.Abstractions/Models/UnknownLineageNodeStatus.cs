@@ -9,5 +9,5 @@ namespace Fdw.UI.Lineage.Clients.Models;
 public sealed class UnknownLineageNodeStatus : LineageNodeStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="UnknownLineageNodeStatus"/>.</summary>
-    public UnknownLineageNodeStatus() : base(1, "Unknown") { }
+    public UnknownLineageNodeStatus() : base("Unknown") { }
 }

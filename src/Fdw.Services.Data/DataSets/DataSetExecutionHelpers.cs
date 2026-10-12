@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Data;
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Data.DataContainers.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Data.RowSources.Abstractions;
+using Fdw.Data.Transformations;
 using Fdw.Results;
 using Fdw.Services.Data.Execution;
 using Fdw.Services.Data.Logging;
 using Fdw.Services.Data.Results;
+using Fdw.Services.Data.Transformations;
 
 namespace Fdw.Services.Data;
 
@@ -19,6 +24,16 @@ namespace Fdw.Services.Data;
 /// </summary>
 internal static class DataSetExecutionHelpers
 {
+    /// <summary>Refuses a run whose configuration is not of the kind that runs it.</summary>
+    /// <param name="ctx">The execution context.</param>
+    /// <param name="kind">The kind that was asked to run the data set.</param>
+    /// <typeparam name="T">The result type the failure is returned as.</typeparam>
+    /// <returns>The failure.</returns>
+    internal static IGenericResult<T> KindMismatch<T>(DataSetExecutionContext ctx, string kind)
+        => GenericResult<T>.Failure(
+            DataServiceResultCodes.ByName("DataSetKindMismatch"), ctx.Logger,
+            ResultDetails.Create("dataSet", ctx.Config.Name, "kind", kind));
+
     /// <summary>
     /// Returns the container name for a source: ContainerName → HttpEndpoint → FilePath → null.
     /// Null means no container is configured; the caller must fail loud.
@@ -80,14 +95,153 @@ internal static class DataSetExecutionHelpers
     }
 
     /// <summary>
-    /// Applies calculated fields (expressions/calculators defined on DataFieldConfiguration) to each
+    /// The attached transformation chains of every field across <paramref name="sources"/>, keyed by
+    /// logical field name (FDW-877). A data set's logical field names are unique across its sources.
+    /// </summary>
+    internal static async Task<IGenericResult<IReadOnlyDictionary<string, IReadOnlyList<ResolvedFieldTransformation>>>> ResolveChains(
+        DataSetExecutionContext ctx, IEnumerable<DataSetSourceConfiguration> sources, CancellationToken cancellationToken)
+    {
+        var merged = new Dictionary<string, IReadOnlyList<ResolvedFieldTransformation>>(StringComparer.Ordinal);
+        foreach (var source in sources)
+        {
+            var chains = await ctx.FieldTransformations.ForSource(source, cancellationToken).ConfigureAwait(false);
+            if (chains.IsFailure)
+                return chains;
+
+            foreach (var (field, chain) in chains.Value!)
+                merged[field] = chain;
+        }
+
+        return GenericResult<IReadOnlyDictionary<string, IReadOnlyList<ResolvedFieldTransformation>>>.Success(merged);
+    }
+
+    /// <summary>
+    /// Runs each field's attached transformation chain (FDW-877) over every row, in chain order, after
+    /// the physical-to-logical rename. A field the read did not select is left alone. Any link that
+    /// fails fails the read: returning the untransformed value would present raw data as transformed.
+    /// </summary>
+    internal static async Task<IGenericResult<T>> ApplyFieldTransformations<T>(
+        DataSetExecutionContext ctx,
+        IGenericResult<T> sourceResult,
+        IReadOnlyDictionary<string, IReadOnlyList<ResolvedFieldTransformation>> chains,
+        string sourceName,
+        CancellationToken cancellationToken)
+    {
+        if (!sourceResult.IsSuccess || sourceResult.Value == null || chains.Count == 0)
+            return sourceResult;
+        if (sourceResult.Value is string || sourceResult.Value is not System.Collections.IEnumerable enumerable)
+            return sourceResult;
+
+        var now = DateTimeOffset.UtcNow;
+        var rows = new List<Dictionary<string, object?>>();
+        foreach (var item in enumerable)
+        {
+            if (item == null) continue;
+            var dictResult = ObjectToDictionary(item);
+            if (!dictResult.IsSuccess)
+                return dictResult.ToNewResult<T>();
+
+            var row = dictResult.Value!;
+            foreach (var (field, chain) in chains)
+            {
+                if (!row.TryGetValue(field, out var value))
+                    continue;
+
+                var transformed = await RunChain(ctx, field, chain, value, row, now, cancellationToken).ConfigureAwait(false);
+                if (transformed.IsFailure)
+                    return transformed.ToNewResult<T>();
+
+                row[field] = transformed.Value;
+            }
+
+            rows.Add(row);
+        }
+
+        FieldMappingTransformationResolverLog.Applied(ctx.Logger, chains.Count, rows.Count, sourceName);
+        return ConvertDictionariesToType<T>(ctx, rows);
+    }
+
+    /// <summary>
+    /// The <see cref="DataRecord"/> form of <see cref="ApplyFieldTransformations{T}"/>, for the federated
+    /// strategy, which joins sources in memory as records. A record is immutable, so each one with a
+    /// transformed field is rebuilt over the same schema.
+    /// </summary>
+    internal static async Task<IGenericResult<List<DataRecord>>> ApplyFieldTransformations(
+        DataSetExecutionContext ctx,
+        List<DataRecord> records,
+        IReadOnlyDictionary<string, IReadOnlyList<ResolvedFieldTransformation>> chains,
+        string dataSetName,
+        CancellationToken cancellationToken)
+    {
+        if (chains.Count == 0)
+            return GenericResult<List<DataRecord>>.Success(records);
+
+        var now = DateTimeOffset.UtcNow;
+        var output = new List<DataRecord>(records.Count);
+        foreach (var record in records)
+        {
+            var values = record.Values.ToArray();
+            var current = record.ToDictionary();
+            foreach (var (field, chain) in chains)
+            {
+                var ordinal = record.Schema.GetFieldOrdinal(field);
+                if (ordinal < 0)
+                    continue;
+
+                var transformed = await RunChain(ctx, field, chain, values[ordinal], current, now, cancellationToken).ConfigureAwait(false);
+                if (transformed.IsFailure)
+                    return transformed.ToNewResult<List<DataRecord>>();
+
+                values[ordinal] = transformed.Value;
+            }
+
+            output.Add(new DataRecord(record.Schema, values));
+        }
+
+        FieldMappingTransformationResolverLog.Applied(ctx.Logger, chains.Count, output.Count, dataSetName);
+        return GenericResult<List<DataRecord>>.Success(output);
+    }
+
+    private static async Task<IGenericResult<object?>> RunChain(
+        DataSetExecutionContext ctx,
+        string field,
+        IReadOnlyList<ResolvedFieldTransformation> chain,
+        object? value,
+        IReadOnlyDictionary<string, object?> currentRecord,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        foreach (var link in chain)
+        {
+            var transformed = await link.Operation.Transform(
+                value,
+                new TransformationContext
+                {
+                    Parameters = link.Parameters,
+                    CurrentRecord = currentRecord,
+                    ExecutionTimestamp = now,
+                    OperatingDate = DateOnly.FromDateTime(now.UtcDateTime),
+                    CancellationToken = cancellationToken,
+                },
+                cancellationToken).ConfigureAwait(false);
+            if (transformed.IsFailure)
+                return GenericResult<object?>.Failure(FieldMappingTransformationResolverLog.TransformFailed(ctx.Logger, link.Name, field));
+
+            value = transformed.Value;
+        }
+
+        return GenericResult<object?>.Success(value);
+    }
+
+    /// <summary>
+    /// Applies calculated fields (expressions/calculators defined on DataSetFieldConfiguration) to each
     /// row in the result. Only operates on row-enumerable T values; non-collection types return a
     /// failure result.
     /// </summary>
     internal static IGenericResult<T> ApplyCalculatedFields<T>(
         DataSetExecutionContext ctx,
         IGenericResult<T> sourceResult,
-        List<DataFieldConfiguration> calculatedFields,
+        List<DataSetFieldConfiguration> calculatedFields,
         string dataSetName)
     {
         if (!sourceResult.IsSuccess || sourceResult.Value == null)
@@ -107,7 +261,7 @@ internal static class DataSetExecutionHelpers
     internal static List<Dictionary<string, object?>>? ProcessRowsWithCalculatedFields(
         DataSetExecutionContext ctx,
         System.Collections.IEnumerable enumerable,
-        List<DataFieldConfiguration> calculatedFields,
+        List<DataSetFieldConfiguration> calculatedFields,
         string dataSetName,
         out int rowCount)
     {

@@ -9,5 +9,5 @@ namespace Fdw.UI.Abstractions.Pages;
 public sealed class ErrorWizardStepStatus : WizardStepStatusBase
 {
     /// <summary>Initializes a new instance of <see cref="ErrorWizardStepStatus"/>.</summary>
-    public ErrorWizardStepStatus() : base(5, "Error") { }
+    public ErrorWizardStepStatus() : base("Error") { }
 }

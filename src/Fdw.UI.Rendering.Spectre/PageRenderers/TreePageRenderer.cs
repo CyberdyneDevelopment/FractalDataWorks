@@ -207,10 +207,7 @@ public sealed class TreePageRenderer
         console.WriteLine();
     }
 
-    // MA0051: Method length acceptable - procedural tree navigation with node flattening, expand/collapse, and action dispatch
-#pragma warning disable MA0051 // Method is too long
     private static TreePageResult PromptAction(ITreePageModel page, IAnsiConsole console, IMenuTheme theme)
-#pragma warning restore MA0051
     {
         var choices = new List<(string Id, string Label, object? Data)>();
 

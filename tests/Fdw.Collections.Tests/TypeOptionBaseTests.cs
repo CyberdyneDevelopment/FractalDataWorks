@@ -226,19 +226,4 @@ public class TypeOptionBaseTests
     }
 
     #endregion
-
-    #region ITypeOption Explicit Interface Tests
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "CoreFramework")]
-    public void ITypeOption_Id_ReturnsBoxedValue()
-    {
-        ITypeOption option = new TestOption(42, "Test");
-
-        option.Id.ShouldBeOfType<int>();
-        ((int)option.Id).ShouldBe(42);
-    }
-
-    #endregion
 }

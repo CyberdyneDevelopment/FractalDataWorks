@@ -15,7 +15,7 @@ public sealed class MinAggregationFunction : AggregationFunctionBase
     /// <summary>
     /// Initializes a new instance of the <see cref="MinAggregationFunction"/> class.
     /// </summary>
-    public MinAggregationFunction() : base(id: 3, name: "Min")
+    public MinAggregationFunction() : base(name: "Min")
     {
     }
 

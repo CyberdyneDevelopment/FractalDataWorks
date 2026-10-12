@@ -25,7 +25,6 @@ public sealed class HttpRequestCapability : CommandCapabilityTypeBase
     /// </summary>
     public HttpRequestCapability()
         : base(
-            id: 7,
             name: "HttpRequest",
             displayName: "HTTP Request",
             configurationFields:

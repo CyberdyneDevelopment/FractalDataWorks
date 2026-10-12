@@ -9,18 +9,6 @@ namespace Fdw.Services.Execution.Abstractions.Tests.OptionTypes;
 
 public class ProcessTypeBaseTests
 {
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void ConstructorSetsIdAndName()
-    {
-        // Arrange & Act
-        var processType = new TestableProcessType(1, "TestType");
-
-        // Assert
-        processType.Id.ShouldBe(1);
-        processType.Name.ShouldBe("TestType");
-    }
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -28,7 +16,7 @@ public class ProcessTypeBaseTests
     public void ProcessTypeInheritsFromTypeOptionBase()
     {
         // Arrange & Act
-        var processType = new TestableProcessType(1, "Test");
+        var processType = new TestableProcessType("Test");
 
         // Assert
         processType.ShouldBeAssignableTo<IProcessType>();
@@ -36,7 +24,7 @@ public class ProcessTypeBaseTests
 
     private sealed class TestableProcessType : ProcessTypeBase
     {
-        public TestableProcessType(int id, string name) : base(id, name)
+        public TestableProcessType(string name) : base(name)
         {
         }
 

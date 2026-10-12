@@ -9,7 +9,7 @@ namespace Fdw.Services.Connections.Http;
 /// <summary>
 /// Generic HTTP connection configuration that works with any protocol.
 /// Protocol-specific behavior is determined by the translator and protocol type.
-/// Persisted to <c>conn.HttpConnection</c> as a child of <c>conn.Connection</c> via <see cref="HttpConnectionConfigurationBase.ConnectionId"/>.
+/// Persisted to <c>conn.HttpConnection</c> as a child of <c>conn.Connection</c> via <c>ConnectionRowId</c>.
 /// </summary>
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Connection", ServiceType = "Http")]

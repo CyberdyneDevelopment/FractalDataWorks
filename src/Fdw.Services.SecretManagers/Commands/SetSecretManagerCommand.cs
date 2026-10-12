@@ -55,6 +55,15 @@ public sealed class SetSecretManagerCommand : SecretManagerCommandBase, ISecretM
     public string SecretValue => Parameters[nameof(SecretValue)]?.ToString() ?? string.Empty;
 
     /// <summary>
+    /// Gets the kind of secret being stored (for example <c>Password</c>), or <see langword="null"/> when the command states none.
+    /// </summary>
+    /// <value>The secret type the caller stated.</value>
+    /// <remarks>
+    /// A secret manager that records a type refuses a command that states none: nothing assumes one on the caller's behalf.
+    /// </remarks>
+    public string? SecretType => Parameters.TryGetValue(nameof(SecretType), out var type) ? type?.ToString() : null;
+
+    /// <summary>
     /// Gets the expiration date for the secret.
     /// </summary>
     /// <value>The expiration date, or null if no expiration is set.</value>
@@ -94,6 +103,25 @@ public sealed class SetSecretManagerCommand : SecretManagerCommandBase, ISecretM
     public static SetSecretManagerCommand Create(string? container, string secretKey, string secretValue, TimeSpan? timeout = null)
     {
         return new SetSecretManagerCommand(container, secretKey, secretValue, null, null, timeout);
+    }
+
+    /// <summary>
+    /// Creates a SetSecretManagerCommand that states the kind of secret it stores.
+    /// </summary>
+    /// <param name="container">The secret container or vault name.</param>
+    /// <param name="secretKey">The secret key or identifier.</param>
+    /// <param name="secretValue">The secret value to store.</param>
+    /// <param name="secretType">The kind of secret (for example <c>Password</c>).</param>
+    /// <param name="timeout">ManagementCommand timeout.</param>
+    /// <returns>A new SetSecretManagerCommand instance.</returns>
+    public static SetSecretManagerCommand WithSecretType(string? container, string secretKey, string secretValue, string secretType, TimeSpan? timeout = null)
+    {
+        var parameters = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            [nameof(SecretType)] = secretType
+        };
+
+        return new SetSecretManagerCommand(container, secretKey, secretValue, parameters, null, timeout);
     }
 
     /// <summary>

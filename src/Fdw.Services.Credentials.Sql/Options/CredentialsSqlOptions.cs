@@ -16,8 +16,6 @@ namespace Fdw.Services.Credentials.Sql.Options;
 /// </remarks>
 public sealed class CredentialsSqlOptions
 {
-    /// <summary>The configuration section name.</summary>
-    public const string SectionName = "CredentialsSql";
 
     /// <summary>
     /// Gets or sets the name of the credential service whose vault and PAT policy back the SQL

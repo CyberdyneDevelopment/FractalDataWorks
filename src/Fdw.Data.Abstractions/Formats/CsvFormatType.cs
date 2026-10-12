@@ -16,7 +16,6 @@ public sealed class CsvFormatType : FormatTypeBase
     /// </summary>
     public CsvFormatType()
         : base(
-            id: 4,
             name: "Csv",
             displayName: "CSV",
             description: "Comma-Separated Values data format",

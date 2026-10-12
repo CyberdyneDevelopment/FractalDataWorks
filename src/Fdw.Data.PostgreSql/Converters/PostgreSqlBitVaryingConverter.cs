@@ -14,7 +14,6 @@ namespace Fdw.Data.PostgreSql;
 [ExcludeFromCodeCoverage]
 public sealed class PostgreSqlBitVaryingConverter()
     : DataTypeConverterBase(
-        id: 24,
         name: "BitVarying",
         sourceType: "bit varying",
         targetClrType: typeof(BitArray),

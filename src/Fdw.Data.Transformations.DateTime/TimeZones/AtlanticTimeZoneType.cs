@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Atlantic")]
 public sealed class AtlanticTimeZoneType : TimeZoneTypeBase
 {
-    public AtlanticTimeZoneType() : base(16, "Atlantic", "Atlantic Standard Time") { }
+    public AtlanticTimeZoneType() : base("Atlantic", "Atlantic Standard Time") { }
 }

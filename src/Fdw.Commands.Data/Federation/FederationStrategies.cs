@@ -19,9 +19,9 @@ namespace Fdw.Commands.Data.Abstractions;
 /// var parallel = FederationStrategies.Parallel;
 /// var sequential = FederationStrategies.Sequential;
 ///
-/// // Or lookup by name/id
+/// // Or look up by name, or by an id read from an option
 /// var strategy = FederationStrategies.ByName("Parallel");
-/// var strategy = FederationStrategies.ById(2);
+/// var same = FederationStrategies.ById(strategy.Id);
 ///
 /// // Get all strategies
 /// var all = FederationStrategies.All();

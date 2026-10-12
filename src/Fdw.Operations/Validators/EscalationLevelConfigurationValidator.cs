@@ -20,10 +20,6 @@ public sealed class EscalationLevelConfigurationValidator : FdwConfigurationVali
             .NotEmpty()
             .WithMessage("Name is required");
 
-        RuleFor(x => x.EscalationPolicyId)
-            .NotEqual(System.Guid.Empty)
-            .WithMessage("EscalationPolicyId is required");
-
         RuleFor(x => x.Level)
             .GreaterThanOrEqualTo(1)
             .WithMessage("Level must be at least 1");

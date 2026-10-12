@@ -7,9 +7,9 @@ using Fdw.Validation;
 namespace Fdw.Services.Authorization.Validation;
 
 /// <summary>
-/// Validator for <see cref="PermissionConfiguration"/>.
+/// Validator for <see cref="PermissionImplementationConfiguration"/>.
 /// </summary>
-public sealed class PermissionConfigurationValidator : FdwConfigurationValidator<PermissionConfiguration>
+public sealed class PermissionConfigurationValidator : FdwConfigurationValidator<PermissionImplementationConfiguration>
 {
     private static readonly string[] ValidActions = ["read", "write", "execute", "delete", "admin"];
 
@@ -65,9 +65,5 @@ public sealed class PermissionConfigurationValidator : FdwConfigurationValidator
             RuleFor(x => x.Description!)
                 .IsSafeString(1000);
         });
-
-        RuleFor(x => x.SortOrder)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("SortOrder must be greater than or equal to 0");
     }
 }

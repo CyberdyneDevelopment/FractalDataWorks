@@ -10,5 +10,5 @@ namespace Fdw.UI.Pipelines.Clients.Models;
 public sealed class ReplaceWriteMode : WriteModeBase
 {
     /// <summary>Initializes a new instance of <see cref="ReplaceWriteMode"/>.</summary>
-    public ReplaceWriteMode() : base(3, "Replace") { }
+    public ReplaceWriteMode() : base("Replace") { }
 }

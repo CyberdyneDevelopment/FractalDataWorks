@@ -13,7 +13,6 @@ namespace Fdw.Data.MsSql;
 [ExcludeFromCodeCoverage]
 public sealed class MsSqlTextConverter()
     : DataTypeConverterBase(
-        id: 25,
         name: "Text",
         sourceType: "text",
         targetClrType: typeof(string),

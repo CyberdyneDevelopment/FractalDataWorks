@@ -7,7 +7,7 @@ namespace Fdw.Data.Abstractions;
 /// <summary>
 /// Primary key — the logical durable identity column (Id).
 /// Not DB-generated; set by the application. Child tables reference this column
-/// via a Foreign key field whose ReferencedFieldRowId points here.
+/// via a Foreign key field whose ReferencedFieldId points here.
 /// </summary>
 /// <remarks>
 /// Retained for backward compatibility with existing seed data. The key picker treats
@@ -21,7 +21,6 @@ public sealed class PrimaryKeyType : KeyTypeBase
     /// <summary>Initializes a new instance of the <see cref="PrimaryKeyType"/> class.</summary>
     public PrimaryKeyType()
         : base(
-            id: 5,
             name: "PrimaryKey",
             isPrimaryKey: true,
             hasConstraint: true,

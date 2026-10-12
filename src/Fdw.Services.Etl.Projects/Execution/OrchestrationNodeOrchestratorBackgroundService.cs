@@ -55,13 +55,12 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
         var scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            EstablishWorkAuthenticationContext(scope.ServiceProvider, request);
+            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
 
-            var orchestrator = scope.ServiceProvider.GetRequiredService<IOrchestrationNodeOrchestrator>();
 
             try
             {
-                await orchestrator.Execute(request, stoppingToken).ConfigureAwait(false);
+                await scope.ServiceProvider.GetRequiredService<IOrchestrationNodeOrchestrator>().Execute(request, stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
             {
@@ -76,20 +75,26 @@ public sealed class OrchestrationNodeOrchestratorBackgroundService : BackgroundS
         }
     }
 
-    internal void EstablishWorkAuthenticationContext(IServiceProvider services, OrchestrationNodeExecutionRequest request)
+    // Why SYSTEM: a background run executes as system by design (FDW-767, confirmed as the
+    // permanent model in FDW-825) -- it has no ClaimsPrincipal, and the work it does on a tenant's
+    // behalf may read and write whatever that pipeline is configured to touch.
+    //
+    // Why the run's tenant rides on the system context: it never narrows what the run sees; it
+    // decides the tenant the rows the run writes default to, through every tenant column's
+    // DEFAULT. Without it a tenant's execution records and outputs would land in the default
+    // tenant, readable by every tenant. A request with no tenant is work that belongs to none, and
+    // its rows land in the default tenant -- the column default, not a choice made here.
+    internal void EstablishSystemAuthenticationContext(IServiceProvider services, OrchestrationNodeExecutionRequest request)
     {
-        if (!request.TenantId.HasValue)
-        {
-            return;
-        }
-
         var accessor = services.GetService<IAuthenticationContextAccessor>();
         if (accessor is null || accessor.Current is not null)
         {
             return;
         }
 
-        accessor.Current = new WorkAuthenticationContext(request.TenantId.Value);
-        OrchestrationNodeOrchestratorLog.WorkAuthenticationContextEstablished(_logger, request.ExecutionId, request.TenantId.Value);
+        accessor.Current = request.TenantId is { } tenantId
+            ? new SystemAuthenticationContext(tenantId)
+            : new SystemAuthenticationContext();
+        OrchestrationNodeOrchestratorLog.ExecutionElevatedToSystemContext(_logger, request.ExecutionId, request.TenantId);
     }
 }

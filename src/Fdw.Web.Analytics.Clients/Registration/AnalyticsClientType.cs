@@ -16,10 +16,10 @@ using Fdw.Results;
 namespace Fdw.Web.Analytics.Clients;
 
 /// <summary>
-/// ServiceTypeOption for the Analytics API client.
+/// Implementation for the Analytics API client.
 /// </summary>
 // TClient uniquely identifies this option — ServiceTypeBase.Id is computed from typeof(TService).FullName + typeof(TFactory).FullName
-[ServiceTypeOption(typeof(ApiClientTypes), "AnalyticsClient")]
+[Implementation(typeof(ApiClientTypes), "AnalyticsClient")]
 public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
 {
     /// <summary>
@@ -36,9 +36,8 @@ public sealed class AnalyticsClientType : ApiClientTypeBase<AnalyticsApiClient>
         {
             builder.Services.AddScoped<AnalyticsApiClient>(sp =>
             {
-                var factory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetService<ILogger<AnalyticsApiClient>>() ?? NullLogger<AnalyticsApiClient>.Instance;
-                return new AnalyticsApiClient(factory.CreateClient(Name), logger);
+                return new AnalyticsApiClient(sp.GetRequiredService<IHttpClientFactory>().CreateClient(Name), logger);
             });
 
             builder.Services.TryAddSingleton<IAnalyticsService, AnalyticsService>();

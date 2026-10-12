@@ -8,4 +8,4 @@ namespace Fdw.Services.Connections.Abstractions;
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(ConnectionStates), "Broken", RestrictToCurrentCompilation = true)]
-public sealed class BrokenConnectionState() : ConnectionStateBase(7, "Broken");
+public sealed class BrokenConnectionState() : ConnectionStateBase("Broken");

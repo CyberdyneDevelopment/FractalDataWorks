@@ -8,17 +8,16 @@ namespace Fdw.Services.Connections.Abstractions.Commands.ConnectionManagementOpe
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption base class - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-public abstract class ConnectionManagementOperationBase : TypeOptionBase<int, ConnectionManagementOperationBase>, IConnectionManagementOperation
+public abstract class ConnectionManagementOperationBase : TypeOptionBase<ConnectionManagementOperationBase>, IConnectionManagementOperation
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ConnectionManagementOperationBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this connection management operation.</param>
     /// <param name="name">The name of this connection management operation.</param>
     /// <param name="modifiesState">Whether this operation modifies connection state.</param>
     /// <param name="requiresExistingConnection">Whether this operation requires an existing connection.</param>
-    protected ConnectionManagementOperationBase(int id, string name, bool modifiesState, bool requiresExistingConnection)
-        : base(id, name)
+    protected ConnectionManagementOperationBase(string name, bool modifiesState, bool requiresExistingConnection)
+        : base(name)
     {
         ModifiesState = modifiesState;
         RequiresExistingConnection = requiresExistingConnection;

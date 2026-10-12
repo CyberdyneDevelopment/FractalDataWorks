@@ -18,6 +18,9 @@ public interface ITransformOperationSpec
     /// <summary>Gets the execution order of this transform within the pipeline.</summary>
     int ExecutionOrder { get; }
 
+    /// <summary>Gets whether the step runs. A step that does not say is enabled.</summary>
+    bool IsEnabled { get; }
+
     /// <summary>Gets the field mappings (for Map transforms).</summary>
     IReadOnlyList<IFieldMapping> FieldMappings { get; }
 

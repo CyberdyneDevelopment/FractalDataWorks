@@ -29,7 +29,7 @@ public class ResultHttpStatusMapperTests
     private const int InternalCode = 90001;     // category 9 -> 500
     private const int LegacyCode = 3012;        // < 10000, uncategorized -> default 500
 
-    private static HttpContext CreateHttpContext(string traceId = "test-trace-123")
+    private static DefaultHttpContext CreateHttpContext(string traceId = "test-trace-123")
     {
         var context = new DefaultHttpContext();
         context.TraceIdentifier = traceId;
@@ -256,9 +256,9 @@ public class ResultHttpStatusMapperTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void MapMessageOnlyCodeReturns500()
+    public void MapMessageOnlyInternalCodeReturns500()
     {
-        // Arrange -- no primary Code, no CodeChain; only a message string code (no Id, so no category)
+        // Arrange -- no primary Code, no CodeChain; only a message code in the Internal category
         var mockMessage = new Mock<IGenericMessage>();
         mockMessage.Setup(m => m.Code).Returns("TEST-90001");
 
@@ -273,8 +273,186 @@ public class ResultHttpStatusMapperTests
         // Act
         var (statusCode, _) = ResultHttpStatusMapper.Map(mockResult.Object, context);
 
-        // Assert -- a bare message code carries no Id, so it cannot resolve a category -> default 500
+        // Assert -- the message code's number is category 9 (Internal) -> 500
         statusCode.ShouldBe(500);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void MapMessageOnlyNotFoundCodeReturns404()
+    {
+        // Arrange -- GenericResult.Failure(message) leaves Code null; the [MessageLogging] message
+        // carries "PREFIX-NNNNN", whose number encodes the category (FDW-888)
+        var mockMessage = new Mock<IGenericMessage>();
+        mockMessage.Setup(m => m.Code).Returns("DATAENDPOINTS-31550");
+
+        var mockResult = new Mock<IGenericResult>();
+        mockResult.Setup(r => r.IsFailure).Returns(true);
+        mockResult.Setup(r => r.Code).Returns((IResultCode?)null);
+        mockResult.Setup(r => r.CodeChain).Returns(new List<IResultCode>());
+        mockResult.Setup(r => r.Messages).Returns(new List<IGenericMessage> { mockMessage.Object });
+
+        // Act
+        var (statusCode, response) = ResultHttpStatusMapper.Map(mockResult.Object, CreateHttpContext());
+
+        // Assert
+        statusCode.ShouldBe(404);
+        response.Extensions["code"].ShouldBe("DATAENDPOINTS-31550");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void MapMessageOnlyProgressCodeNeverAnswersSuccess()
+    {
+        // Arrange -- a failure whose only message is a progress code (category 1)
+        var mockMessage = new Mock<IGenericMessage>();
+        mockMessage.Setup(m => m.Code).Returns("DATAENDPOINTS-11550");
+
+        var mockResult = new Mock<IGenericResult>();
+        mockResult.Setup(r => r.IsFailure).Returns(true);
+        mockResult.Setup(r => r.Code).Returns((IResultCode?)null);
+        mockResult.Setup(r => r.CodeChain).Returns(new List<IResultCode>());
+        mockResult.Setup(r => r.Messages).Returns(new List<IGenericMessage> { mockMessage.Object });
+
+        // Act
+        var (statusCode, _) = ResultHttpStatusMapper.Map(mockResult.Object, CreateHttpContext());
+
+        // Assert -- progress codes are never read as a status; the failure stays a 500
+        statusCode.ShouldBe(500);
+    }
+
+    #endregion
+    #region Validation reasons (FDW-1046)
+
+    private static IGenericResult CreateFailureWithClientMessage(int id, string? clientMessage)
+    {
+        var mockCode = new Mock<IResultCode>();
+        mockCode.Setup(c => c.Id).Returns(id);
+        mockCode.Setup(c => c.Code).Returns($"TEST-{id}");
+        mockCode.Setup(c => c.FormatClientMessage(It.IsAny<IResultDetails?>())).Returns(clientMessage);
+
+        var mockResult = new Mock<IGenericResult>();
+        mockResult.Setup(r => r.IsSuccess).Returns(false);
+        mockResult.Setup(r => r.IsFailure).Returns(true);
+        mockResult.Setup(r => r.Code).Returns(mockCode.Object);
+        mockResult.Setup(r => r.CodeChain).Returns(new List<IResultCode>());
+        mockResult.Setup(r => r.Messages).Returns(new List<IGenericMessage>());
+        return mockResult.Object;
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void AValidationCodeThatOptedInShowsItsReasonAsTheDetailAndKeepsTheGenericTitle()
+    {
+        var (statusCode, response) = ResultHttpStatusMapper.Map(
+            CreateFailureWithClientMessage(ValidationCode, "filter field 'x' is not a field of this data set"), CreateHttpContext());
+
+        statusCode.ShouldBe(400);
+        response.Detail.ShouldBe("filter field 'x' is not a field of this data set");
+        response.Title.ShouldBe("The request was invalid");
+        response.Extensions["code"].ShouldBe($"TEST-{ValidationCode}");
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AValidationCodeThatShowsNothingKeepsTheGenericDetail(string? clientMessage)
+    {
+        var (_, response) = ResultHttpStatusMapper.Map(CreateFailureWithClientMessage(ValidationCode, clientMessage), CreateHttpContext());
+
+        response.Detail.ShouldBe("The request was invalid");
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    [InlineData(ConflictCode)]
+    [InlineData(ConfigurationCode)]
+    [InlineData(DependencyCode)]
+    [InlineData(TransientCode)]
+    [InlineData(InternalCode)]
+    public void OnlyTheValidationCategoryEverShowsAReason(int codeNumber)
+    {
+        var (_, response) = ResultHttpStatusMapper.Map(
+            CreateFailureWithClientMessage(codeNumber, "server SRV01 refused the login"), CreateHttpContext());
+
+        response.Detail.ShouldNotBeNull().ShouldNotContain("SRV01");
+    }
+
+    #endregion
+
+    #region Relayed downstream ids (FDW-1132)
+
+    private static IGenericResult CreateFailureRelayingADownstream(IResultCode code, bool ownCode, IResultDetails details)
+    {
+        var mockResult = new Mock<IGenericResult>();
+        mockResult.Setup(r => r.IsSuccess).Returns(false);
+        mockResult.Setup(r => r.IsFailure).Returns(true);
+        mockResult.Setup(r => r.Code).Returns(ownCode ? code : null);
+        mockResult.Setup(r => r.CodeChain).Returns(ownCode ? new List<IResultCode>() : new List<IResultCode> { code });
+        mockResult.Setup(r => r.Messages).Returns(new List<IGenericMessage>());
+        mockResult.Setup(r => r.Details).Returns(details);
+        return mockResult.Object;
+    }
+
+    private static IResultCode CreateInternalCode()
+    {
+        var mockCode = new Mock<IResultCode>();
+        mockCode.Setup(c => c.Id).Returns(InternalCode);
+        mockCode.Setup(c => c.Code).Returns("CLIENT-90000");
+        return mockCode.Object;
+    }
+
+    private static ResultDetails DownstreamDetails()
+        => ResultDetails.Create(ResultDetailKeys.UpstreamReferenceId, "0HNP3VG25HU9A", ResultDetailKeys.UpstreamCode, "SERVICES-61001");
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void MapReportsTheDownstreamReferenceIdAndKeepsItsOwnBesideIt()
+    {
+        var result = CreateFailureRelayingADownstream(CreateInternalCode(), ownCode: true, DownstreamDetails());
+
+        var (statusCode, response) = ResultHttpStatusMapper.Map(result, CreateHttpContext("proxy-trace-1"));
+
+        statusCode.ShouldBe(500);
+        response.Extensions["referenceId"].ShouldBe("0HNP3VG25HU9A");
+        response.Extensions["proxyReferenceId"].ShouldBe("proxy-trace-1");
+        response.Extensions["upstreamCode"].ShouldBe("SERVICES-61001");
+        response.Extensions["code"].ShouldBe("CLIENT-90000");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void MapWithNothingRelayedReportsItsOwnTraceId()
+    {
+        var result = CreateFailureWithCode(InternalCode, "CLIENT-90000");
+
+        var (_, response) = ResultHttpStatusMapper.Map(result, CreateHttpContext("proxy-trace-2"));
+
+        response.Extensions["referenceId"].ShouldBe("proxy-trace-2");
+        response.Extensions.ContainsKey("proxyReferenceId").ShouldBeFalse();
+        response.Extensions.ContainsKey("upstreamCode").ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void MapIgnoresDownstreamIdsHeldByAResultThatOnlyChainsTheCode()
+    {
+        var result = CreateFailureRelayingADownstream(CreateInternalCode(), ownCode: false, DownstreamDetails());
+
+        var (_, response) = ResultHttpStatusMapper.Map(result, CreateHttpContext("proxy-trace-3"));
+
+        response.Extensions["referenceId"].ShouldBe("proxy-trace-3");
+        response.Extensions.ContainsKey("proxyReferenceId").ShouldBeFalse();
     }
 
     #endregion

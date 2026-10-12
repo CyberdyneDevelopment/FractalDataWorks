@@ -15,7 +15,6 @@ public sealed class SucceededStatus : ExecutionStatusBase
     /// </summary>
     public SucceededStatus()
         : base(
-            id: 4,
             name: "Succeeded",
             isTerminal: true,
             isSuccess: true,

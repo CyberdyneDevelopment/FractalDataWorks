@@ -44,8 +44,8 @@ This document maps every project in `src/` to a logical domain and describes the
 | 27 | **Hosting** | 4 | Server bootstrap, DI registration |
 | 28 | **Web** | 14 | API base, endpoints, HTTP clients, search, analytics |
 | 29 | **Validation** | 3 | Validation framework, FastEndpoints integration |
-| 30 | **UI.Components** | 6 | Headless Blazor components, TUI, RazorConsole |
-| 31 | **UI.Skins** | 3 | MudBlazor, Tailwind, Authentication skins |
+| 30 | **UI.Components** | 6 | UI models, TUI, RazorConsole |
+| 31 | **UI.Skins** | 0 | Removed in FDW-872 (Blazor skins) |
 | 32 | **UI.Services** | 9 | UI-specific clients, themes, pipelines, lineage |
 | 33 | **Calculations** | 6 | Calculation engine, aggregations, endpoints |
 | 34 | **CodeBuilder** | 4 | Code generation utilities |
@@ -59,7 +59,7 @@ This document maps every project in `src/` to a logical domain and describes the
 | 42 | **Security** | 1 | Hashing utilities |
 | 43 | **Types** | 2 | Database type mappings |
 
-**Total: 197 projects across 43 domains**
+**Total: 197 projects across 43 domains** (counted before FDW-872 removed the Blazor, WASM and OpenIdConnect client projects; the per-domain tables below are current)
 
 ---
 
@@ -180,8 +180,6 @@ This document maps every project in `src/` to a logical domain and describes the
 |---------|---------|
 | `Fdw.Services.Authentication` | AuthenticationServiceTypes collection |
 | `Fdw.Services.Authentication.Abstractions` | IAuthentication interfaces |
-| `Fdw.Services.Authentication.Clients` | Auth HTTP client |
-| `Fdw.Services.Authentication.Clients.Abstractions` | Auth client interfaces |
 | `Fdw.Services.Authentication.Endpoints` | Auth API endpoints |
 | `Fdw.Services.Authentication.Jwt` | JWT authentication implementation |
 | `Fdw.Services.Authentication.Jwt.MsSql` | JWT with SQL Server storage |
@@ -386,12 +384,8 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Web.Endpoints` | FastEndpoints base |
 | `Fdw.Web.RestEndpoints` | REST endpoint conventions |
 | `Fdw.Web.Clients.Abstractions` | Cross-domain DTO contracts |
-| `Fdw.Web.Clients.Wasm` | WASM HTTP client |
 | `Fdw.Web.Http.Abstractions` | HTTP abstractions |
 | `Fdw.Web.Http.Authentication` | HTTP auth middleware |
-| `Fdw.Web.Http.Authentication.Blazor` | Blazor auth handler |
-| `Fdw.Web.Http.Authentication.OpenIdConnect` | OIDC integration |
-| `Fdw.Web.Http.Authentication.Wasm` | WASM auth handler |
 | `Fdw.Web.Analytics.Clients` | Analytics HTTP client |
 | `Fdw.Web.Analytics.Clients.Abstractions` | Analytics interfaces |
 | `Fdw.Web.Search.Clients` | Search HTTP client |
@@ -413,20 +407,14 @@ This document maps every project in `src/` to a logical domain and describes the
 | Project | Purpose |
 |---------|---------|
 | `Fdw.UI.Abstractions` | UI interfaces |
-| `Fdw.UI.Components` | Headless Blazor components |
-| `Fdw.UI.Components.Blazor` | Blazor-specific component implementations |
-| `Fdw.UI.Components.Blazor.MsSql` | MsSql-specific UI components |
+| `Fdw.UI.Components` | Framework-neutral page and form models |
 | `Fdw.UI.Components.RazorConsole` | Razor console components |
 | `Fdw.UI.Components.RazorConsole.SourceGenerators` | Console generators |
 | `Fdw.UI.Components.TUI` | Terminal UI components |
 
 ### 31. UI.Skins
 
-| Project | Purpose |
-|---------|---------|
-| `Fdw.UI.Blazor.MudBlazor` | MudBlazor skin |
-| `Fdw.UI.Blazor.Tailwind` | Tailwind CSS skin |
-| `Fdw.UI.Blazor.Authentication` | Auth UI skin |
+No projects. The MudBlazor and Tailwind Blazor skins were removed in FDW-872; the web console is the separate `reference-react-ui` repository.
 
 ### 32. UI.Services
 

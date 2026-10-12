@@ -5,7 +5,7 @@ namespace Fdw.UI.Web.Abstractions;
 
 /// <summary>
 /// Framework-agnostic component metadata that can be serialized to JSON.
-/// Consumed by ANY JavaScript framework (Blazor, React, Vue, Angular, etc.).
+/// Consumed by ANY JavaScript framework (React, Vue, Angular, etc.).
 /// </summary>
 public class ComponentMetadata
 {

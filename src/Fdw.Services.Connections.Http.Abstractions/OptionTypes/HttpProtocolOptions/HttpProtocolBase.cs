@@ -13,6 +13,7 @@ using Fdw.Data.RowSources.Abstractions;
 using Fdw.Data.RowSources.Json.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Http.Abstractions.Results;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 
@@ -36,7 +37,7 @@ namespace Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOpt
 /// </list>
 /// </para>
 /// </remarks>
-public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, IHttpProtocol
+public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttpProtocol
 {
     /// <summary>Whether this protocol can express a filter in the request it builds.</summary>
     /// <param name="filter">The filter the command carries.</param>
@@ -79,12 +80,11 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
     /// <summary>
     /// Initializes a new instance of the <see cref="HttpProtocolBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for the HTTP protocol.</param>
     /// <param name="name">The name of the HTTP protocol.</param>
     /// <param name="description">The description of the HTTP protocol.</param>
     /// <param name="defaultContentType">The default content type for this protocol.</param>
-    protected HttpProtocolBase(int id, string name, string description, string defaultContentType)
-        : base(id, name)
+    protected HttpProtocolBase(string name, string description, string defaultContentType)
+        : base(name)
     {
         Description = description;
         DefaultContentType = defaultContentType;
@@ -348,6 +348,32 @@ public abstract class HttpProtocolBase : TypeOptionBase<int, HttpProtocolBase>, 
             FlattenNestedObjects = flattenNestedObjects,
             FlattenSeparator = string.IsNullOrEmpty(flattenSeparator) ? "." : flattenSeparator
         });
+    }
+
+    /// <summary>
+    /// Opens a streaming record source over response content, using the same format resolution and
+    /// row-extraction metadata as <see cref="TryCreateRowReader"/>.
+    /// </summary>
+    /// <param name="container">The container carrying the format + row-extraction metadata.</param>
+    /// <param name="content">The response content stream. The returned source reads from it lazily.</param>
+    /// <param name="fields">The container's fields, used to build the record schema once.</param>
+    /// <param name="logger">Optional logger threaded to the created source.</param>
+    /// <returns>A record source over the content, or null when no reader exists for the format.</returns>
+    /// <remarks>
+    /// The caller owns the returned source AND the stream it reads from: the read is lazy, so neither
+    /// can be disposed when this method returns. Format dispatch is deliberately shared with the
+    /// materializing path rather than duplicated -- a streaming read and a buffered read of the same
+    /// container must not be able to disagree about what the rows are.
+    /// </remarks>
+    /// <inheritdoc />
+    public IRecordSource<DataRecord>? TryOpenRecordSource(
+        IStorageContainer container,
+        Stream content,
+        IReadOnlyList<IDataField> fields,
+        ILogger? logger = null)
+    {
+        var reader = TryCreateRowReader(container, content);
+        return reader is null ? null : new CursorRecordSource(reader, fields, logger);
     }
 
     /// <summary>

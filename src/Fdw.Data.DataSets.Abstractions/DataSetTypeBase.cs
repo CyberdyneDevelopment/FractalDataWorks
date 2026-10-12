@@ -14,7 +14,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// Abstract base class for dataset type definitions following the Fdw.Collections pattern.
 /// Provides common functionality and enforces the structure required for source generation.
 /// </summary>
-public abstract class DataSetTypeBase : TypeOptionBase<int, DataSetTypeBase>, IDataSetType
+public abstract class DataSetTypeBase : TypeOptionBase<DataSetTypeBase>, IDataSetType
 {
     private readonly IReadOnlyCollection<IDataField> _fields;
     private readonly System.Collections.ObjectModel.ReadOnlyCollection<string> _keyFields;
@@ -22,7 +22,6 @@ public abstract class DataSetTypeBase : TypeOptionBase<int, DataSetTypeBase>, ID
     /// <summary>
     /// Initializes a new instance of the <see cref="DataSetTypeBase"/> class.
     /// </summary>
-    /// <param name="id">The unique identifier for this dataset.</param>
     /// <param name="name">The name of this dataset.</param>
     /// <param name="description">The description of this dataset.</param>
     /// <param name="recordType">The .NET type of records in this dataset.</param>
@@ -31,13 +30,12 @@ public abstract class DataSetTypeBase : TypeOptionBase<int, DataSetTypeBase>, ID
     /// <exception cref="ArgumentNullException">Thrown when name, description, recordType, or fields are null.</exception>
     /// <exception cref="ArgumentException">Thrown when fields collection is empty or contains duplicate names.</exception>
     protected DataSetTypeBase(
-        int id,
         string name,
         string description,
         Type recordType,
         IReadOnlyCollection<IDataField> fields,
         string? category = null)
-        : base(id, name, $"DataSets:{name}", $"{name} Data Set", description, category ?? "Dataset")
+        : base(name, $"DataSets:{name}", $"{name} Data Set", description, category ?? "Dataset")
     {
         RecordType = recordType;
         _fields = fields ?? Array.Empty<IDataField>();
@@ -58,6 +56,24 @@ public abstract class DataSetTypeBase : TypeOptionBase<int, DataSetTypeBase>, ID
 
     /// <inheritdoc/>
     public virtual string Version => "1.0";
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// False unless a kind says otherwise: a caller that pages through a kind which ignores paging
+    /// gets the same rows on every page and never reaches the end, so the safe answer is "no" until
+    /// the kind proves it (FDW-876).
+    /// </remarks>
+    public virtual bool PagesInStore => false;
+
+    /// <summary>
+    /// Gets a value indicating whether a query's grouping and aggregates are run by the store this kind reads.
+    /// </summary>
+    /// <value>
+    /// False unless a kind says otherwise: a kind that builds its own result from several reads has no one
+    /// query to put a GROUP BY in, and would return ungrouped rows, so the safe answer is "no" until the kind
+    /// proves it (FDW-1023).
+    /// </value>
+    public virtual bool AggregatesInStore => false;
 
     /// <summary>
     /// Gets a field by name.

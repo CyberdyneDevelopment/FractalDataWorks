@@ -232,7 +232,8 @@ public static partial class PostgreSqlConnectionLog
     /// <summary>
     /// Logs successful execution of a SQL command with row count.
     /// </summary>
-    [MessageLogging(EventId = 11017, Level = LogLevel.Information, Message = "PostgreSQL command executed: {commandText} ({rowsAffected} rows)")]
+    // Why Debug, not Information: a per-statement outcome, matching MsSqlConnectionLogger.SqlCommandExecuted.
+    [MessageLogging(EventId = 11017, Level = LogLevel.Debug, Message = "PostgreSQL command executed: {commandText} ({rowsAffected} rows)")]
     public static partial IGenericMessage SqlCommandExecuted(ILogger logger, string commandText, int rowsAffected);
 
     /// <summary>
@@ -271,7 +272,7 @@ public static partial class PostgreSqlConnectionLog
     public static partial IGenericMessage ProbeSucceeded(ILogger logger, string connectionName);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Bulk COPY Events (BulkInsert marker path)
+    // Bulk COPY Events (the BulkInsert bulk route, FDW-1152)
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
@@ -279,12 +280,6 @@ public static partial class PostgreSqlConnectionLog
     /// </summary>
     [MessageLogging(EventId = 11020, Level = LogLevel.Debug, Message = "Starting PostgreSQL binary COPY for '{connectionName}' ({columnCount} columns)")]
     public static partial IGenericMessage BulkCopyStarting(ILogger logger, string connectionName, int columnCount);
-
-    /// <summary>
-    /// Logs a missing or invalid bulk-copy metadata parameter on the marker command.
-    /// </summary>
-    [MessageLogging(EventId = 71007, Level = LogLevel.Error, Message = "PostgreSQL bulk COPY metadata parameter '{parameterName}' missing or invalid for '{connectionName}'")]
-    public static partial IGenericMessage BulkCopyMetadataMissing(ILogger logger, string connectionName, string parameterName);
 
     /// <summary>
     /// Logs an exception that occurred during a PostgreSQL binary COPY bulk-insert operation.

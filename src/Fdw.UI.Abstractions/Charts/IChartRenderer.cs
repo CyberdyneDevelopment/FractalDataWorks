@@ -10,7 +10,7 @@ namespace Fdw.UI.Abstractions.Charts;
 /// <remarks>
 /// <para>
 /// Implementations translate an <see cref="IChartModel"/> into a framework-specific chart
-/// (e.g. a Blazor ApexCharts component, an ECharts widget via JS interop, an SVG export,
+/// (e.g. an ECharts widget via JS interop, an SVG export,
 /// a Spectre.Console sparkline). The same <see cref="IChartModel"/> can be rendered by any
 /// registered implementation — the model has no knowledge of the renderer.
 /// </para>
@@ -21,7 +21,7 @@ namespace Fdw.UI.Abstractions.Charts;
 /// without holding a separate type reference.
 /// </para>
 /// <para>
-/// No Blazor or ASP.NET types appear in this interface — the chart contract layer is
+/// No UI-framework or ASP.NET types appear in this interface — the chart contract layer is
 /// render-agnostic. This mirrors <c>ICanvasRenderer</c> exactly.
 /// </para>
 /// </remarks>

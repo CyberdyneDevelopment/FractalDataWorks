@@ -15,7 +15,6 @@ public sealed class TaskItemType : ExecutionItemTypeBase
     /// </summary>
     public TaskItemType()
         : base(
-            id: 5,
             name: "Task",
             displayName: "Task",
             hierarchyLevel: 4,

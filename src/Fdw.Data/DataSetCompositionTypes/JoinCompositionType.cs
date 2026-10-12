@@ -17,7 +17,6 @@ public sealed class JoinCompositionType : DataSetCompositionTypeBase
     /// </summary>
     public JoinCompositionType()
         : base(
-            id: 2,
             name: "Join",
             description: "Combines multiple sources using JOIN semantics with explicit join definitions",
             allowsMultipleSources: true,

@@ -13,7 +13,7 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 public sealed class SlidingWindowRateLimitAlgorithm : RateLimitAlgorithmBase
 {
     /// <summary>Initializes a new instance of <see cref="SlidingWindowRateLimitAlgorithm"/>.</summary>
-    public SlidingWindowRateLimitAlgorithm() : base(2, "SlidingWindow") { }
+    public SlidingWindowRateLimitAlgorithm() : base("SlidingWindow") { }
 
     /// <inheritdoc />
     public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>

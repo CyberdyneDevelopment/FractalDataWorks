@@ -33,25 +33,18 @@ namespace Fdw.Services.Authentication.Validation;
 /// it is a secret-manager operation rather than a deployment.
 /// </para>
 /// </remarks>
-[ServiceTypeOption(typeof(AuthenticationServiceTypes), "LocalKey")]
+[Implementation(typeof(AuthenticationServiceTypes), "LocalKey")]
 public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="LocalKeyAuthenticationType"/> class.</summary>
     public LocalKeyAuthenticationType()
         : base("LocalKey",
                "Local Signing Key",
-               "Validates bearer tokens this host issued, against the key it signed them with")
+               "Validates bearer tokens this host issued, against the key it signed them with", defaultContainerName: "LocalKeyAuthenticationServiceConfiguration")
     {
         Registration((builder, loggerFactory) =>
         {
-            builder.Services.TryAddSingleton<LocalKeyAuthenticationConfigurationProvider>(sp =>
-                new LocalKeyAuthenticationConfigurationProvider(
-                    sp.GetRequiredService<ILogger<LocalKeyAuthenticationConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    AuthenticationServiceTypes.ConfigurationConnection,
-                    AuthenticationServiceTypes.ServerConfigurationPath));
-            builder.Services.TryAddSingleton<ILocalKeyAuthenticationConfigurationProvider>(sp =>
-                sp.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+            builder.Services.AddSingleton<ILocalKeyAuthenticationConfigurationProvider, LocalKeyAuthenticationConfigurationProvider>(sp => new LocalKeyAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<LocalKeyAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection, PathName, Container));
 
             // Transient, because the handler holds the scheme and the request it was initialised
             // for in fields. One instance per resolution is what AuthenticationBuilder.AddScheme
@@ -70,7 +63,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
         Initialization((host, loggerFactory) =>
         {
             host.Services.GetRequiredService<IAuthenticationServiceConfigurationProvider>()
-                .Register(Name, host.Services.GetRequiredService<LocalKeyAuthenticationConfigurationProvider>());
+                .Register(Name, host.Services.GetRequiredService<ILocalKeyAuthenticationConfigurationProvider>());
             return GenericResult<IHost>.Success(host);
         });
     }
@@ -114,7 +107,7 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
 
     /// <inheritdoc />
     public override IGenericResult<AuthenticationSchemeBinding> TakeScheme(
-        IAuthenticationServiceConfiguration configuration,
+        IAuthenticationServiceImplementationConfiguration configuration,
         IAuthenticationSchemeProvider schemes,
         IServiceProvider services,
         ILoggerFactory? loggerFactory)
@@ -129,9 +122,19 @@ public sealed class LocalKeyAuthenticationType : AuthenticationServiceTypeBase
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingName(log, "(unnamed)"));
 
-        if (configuration.Authority is not { Length: > 0 } issuer)
+        if (configuration.Authority is not { Length: > 0 })
             return GenericResult<AuthenticationSchemeBinding>.Failure(
                 AuthenticationValidationLog.EntryMissingAuthority(log, serviceName));
+
+        // Through IssuerName, which the options bridge also reads its ValidIssuer through: the
+        // selector matches the binding ordinally and the scheme checks ValidIssuer ordinally, so both
+        // have to derive from the same rule or a declared "https://host" routes a token minted against
+        // "https://host/" and is then refused by the scheme it was correctly routed to. Read here, by
+        // the kinds that validate an issuer, and not by the collection for every entry: a kind whose
+        // credential names no issuer (ApiKey, Session) has no Authority to read (FDW-903).
+        var read = IssuerName.Read(configuration.Authority, serviceName, log);
+        if (!read.IsSuccess || read.Value is not { } issuer)
+            return read.ToNewResult<AuthenticationSchemeBinding>();
 
         // The scheme is added here and names the handler that validates for it. The handler reads
         // this entry's rows through the configuration provider on every request - nothing is cached

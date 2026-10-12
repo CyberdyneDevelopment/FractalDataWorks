@@ -6,7 +6,7 @@ using Fdw.Results;
 namespace Fdw.Services.Multitenancy.Abstractions;
 
 /// <summary>
-/// Provides access to organization records backed by <c>tenant.Organizations</c>.
+/// Provides access to organization records backed by <c>tenant.Organization</c>.
 /// </summary>
 public interface IOrganizationProvider
 {

@@ -13,7 +13,7 @@ public sealed class AsciiIconSet : IconSetBase
     /// <summary>
     /// Creates the ASCII icon set.
     /// </summary>
-    public AsciiIconSet() : base(2, "Ascii") { }
+    public AsciiIconSet() : base("Ascii") { }
 
     /// <inheritdoc />
     public override string SelectedIndicator => ">";

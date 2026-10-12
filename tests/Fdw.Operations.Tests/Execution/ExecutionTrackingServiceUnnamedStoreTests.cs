@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Operations.Execution;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -17,7 +18,7 @@ namespace Fdw.Operations.Tests.Execution;
 /// <remarks>
 /// This is the regression guard for a live outage. The store name was once proven in the Operations
 /// Registration phase, which took every reference host down at boot: every host registers the
-/// Operations domain as part of the platform sweep, including hosts that never track an execution and
+/// Operations domain as part of the platform bootstrap, including hosts that never track an execution and
 /// therefore have no operational store to name. Construction is not use, so the check belongs at the
 /// reads. That is only workable because every public method here returns a result and can say no.
 /// </remarks>
@@ -30,8 +31,14 @@ public sealed class ExecutionTrackingServiceUnnamedStoreTests
         public IDataGateway ByName(string name) => gateway;
     }
 
+    // Strict, like the gateway: with no store named, every read refuses before it asks who the caller is, so
+    // reaching the accessor would be a defect and must throw rather than quietly return no caller.
     private static ExecutionTrackingService WithNoStore() =>
-        new(new StubGatewayProvider(new Mock<IDataGateway>(MockBehavior.Strict).Object), NullLoggerFactory.Instance, dataStoreName: null);
+        new(
+            new StubGatewayProvider(new Mock<IDataGateway>(MockBehavior.Strict).Object),
+            NullLoggerFactory.Instance,
+            new Mock<IAuthenticationContextAccessor>(MockBehavior.Strict).Object,
+            dataStoreName: null);
 
     [Fact]
     [Trait("Priority", "P1")]

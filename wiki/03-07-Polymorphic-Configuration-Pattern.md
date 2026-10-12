@@ -1,13 +1,13 @@
 # Polymorphic Configuration Pattern
 
-When a service domain has **multiple type variants** with **different runtime field shapes**, FDW models the configuration as a **parent header table** plus one **typed-body table per variant**. The parent holds identity; each typed body holds the runtime configuration for that variant. The dispatch picks a variant by `ServiceOptionType` discriminator and the variant's factory consumes only the typed-body fields.
+When a service domain has **multiple type variants** with **different runtime field shapes**, FDW models the configuration as a **parent header table** plus one **typed-body table per variant**. The parent holds identity; each typed body holds the runtime configuration for that variant. The dispatch picks a variant by `Implementation` discriminator and the variant's factory consumes only the typed-body fields.
 
 This is the **polymorphic configuration pattern**. It is the official FDW pattern for any service domain that has — or could grow to have — more than one specialization.
 
 ## When the pattern applies
 
 A domain needs polymorphic configuration if and only if **both** are true:
-1. It has 2+ `[ServiceTypeOption]` impls under one `[ServiceTypeCollection]`.
+1. It has 2+ `[Implementation]` impls under one `[ServiceTypeCollection]`.
 2. The variants have **different runtime field shapes** (not just different values for the same fields).
 
 | Situation | Pattern |
@@ -24,7 +24,7 @@ The placement rule below applies to every domain that follows this pattern.
 The runtime call path is:
 
 1. **Domain provider** (`ConnectionConfigurationProvider`) loads the parent header by name or id → a `ConnectionConfiguration` populated from parent columns only.
-2. **The same domain provider** then runs `PopulateTypedBody`: it reads `header.ServiceOptionType`, looks up the registered typed provider for that discriminator, calls that provider's `Get(header.Id)`, and assigns the result to `header.Configuration`. Dispatch is internal to the domain provider — it is **not** done by a `DefaultServiceProvider`.
+2. **The same domain provider** then runs `PopulateTypedBody`: it reads `header.Implementation`, looks up the registered typed provider for that discriminator, calls that provider's `Get(header.Id)`, and assigns the result to `header.Configuration`. Dispatch is internal to the domain provider — it is **not** done by a `DefaultServiceProvider`.
 3. **Typed provider** queries the typed-body table by `[Id] = @parentId` → returns the variant configuration (`MsSqlConnectionConfiguration`, etc.) populated from typed-body columns only.
 4. **Factory** builds the runtime service from the typed config (`header.Configuration`).
 
@@ -45,7 +45,7 @@ The parent POCO declares only identity and dispatch properties. Version-on-write
 | `RowId` | yes | version-specific PK (`NEWSEQUENTIALID()`) |
 | `Id` | yes | durable logical identity |
 | `Name` | yes | human/UI lookup key |
-| `ServiceOptionType` | yes | discriminator — drives dispatch |
+| `Implementation` | yes | discriminator — drives dispatch |
 | `Description` | optional | UI-only |
 
 Generator-added columns (not on the POCO): `IsCurrent` / `IsDeleted` (version-on-write), `TenantId` / `VisibilityGroupId` (tenant scope), and the audit set (`SrcCreateDate`, `CreateDate`, `CreateBy`, `CreateOnBehalfOf`, `ModifyDate`, `ModifyBy`, `ModifyOnBehalfOf`).
@@ -75,11 +75,11 @@ Duplicating the same column across N typed-body tables is the correct trade-off 
 
 ## Reference: Connection family (gold standard)
 
-The `ConnectionConfiguration` parent POCO declares only: `RowId, Id, Name, SectionName, ServiceType, ServiceOptionType, Description, Environment, LastTestedAt, LastTestSuccess, LastTestMessage, DiscoveryEnabled`, plus the `[NotMapped]` `Configuration` slot that holds the loaded typed body. Version/tenant/audit columns are added by the DDL generator.
+The `ConnectionConfiguration` parent POCO declares only: `RowId, Id, Name, SectionName, ServiceType, Implementation, Description, Environment, LastTestedAt, LastTestSuccess, LastTestMessage`, plus the `[NotMapped]` `Configuration` slot that holds the loaded typed body. Version/tenant/audit columns are added by the DDL generator.
 
 | Table | Role | Columns |
 |---|---|---|
-| `conn.Connection` | Parent (identity) | `RowId, Id, Name, SectionName, ServiceType, ServiceOptionType, Description, Environment, LastTestedAt, LastTestSuccess, LastTestMessage, DiscoveryEnabled` + generator-added version/tenant/audit |
+| `conn.Connection` | Parent (identity) | `RowId, Id, Name, SectionName, ServiceType, Implementation, Description, Environment, LastTestedAt, LastTestSuccess, LastTestMessage` + generator-added version/tenant/audit |
 | `conn.MsSqlConnection` | Typed body | `RowId, Id, ConnectionId, Server, Database, Port, InstanceName, …Authentication…, …Pool…` + generator-added |
 | `conn.PostgreSqlConnection` | Typed body | `RowId, Id, ConnectionId, Host, Database, Port, …` + generator-added |
 
@@ -89,7 +89,7 @@ Each concrete connection type gets its own typed-body table with an identity-onl
 
 `MsSqlConnectionConfiguration.Server` and an HTTP connection's `BaseUrl` play similar conceptual roles ("where to connect") but have different shapes — that's why they're typed-body specializations rather than typed-column variants.
 
-**JSON dispatch:** when a `ConnectionConfiguration` round-trips through System.Text.Json, the variant is resolved by a custom `ConnectionConfigurationJsonConverter` keyed on the `ServiceOptionType` discriminator — **not** by `[JsonPolymorphic]`/`[JsonDerivedType]` attributes. The converter reads `ServiceOptionType`, resolves the concrete type from `ConnectionTypes` (populated by module initializers at assembly load), and deserializes the nested `Configuration` body into it. Attributes are deliberately avoided because the typed-body types live in packages that `Services.Connections` cannot reference.
+**JSON dispatch:** when a `ConnectionConfiguration` round-trips through System.Text.Json, the variant is resolved by a custom `ConnectionConfigurationJsonConverter` keyed on the `Implementation` discriminator — **not** by `[JsonPolymorphic]`/`[JsonDerivedType]` attributes. The converter reads `Implementation`, resolves the concrete type from `ConnectionTypes` (populated by module initializers at assembly load), and deserializes the nested `Configuration` body into it. Attributes are deliberately avoided because the typed-body types live in packages that `Services.Connections` cannot reference.
 
 ## Reference: Pipeline family (base-class inheritance variant)
 
@@ -101,7 +101,7 @@ The Pipeline family demonstrates the **inheritance** form of this pattern. `EtlP
 
 (All three live in `Fdw.Services.Etl`.) Unlike the Connection family — where the typed body is a standalone POCO referenced via `Configuration` — here each variant is a subclass and the DDL generator emits a separate child table per subclass.
 
-The anchor `EtlPipelineConfiguration` declares only identity/dispatch properties: `Id, Name, ServiceType, ServiceOptionType, SectionName`, plus the `Transforms` child collection (populated after hydration, never a column).
+The anchor `EtlPipelineConfiguration` declares only identity/dispatch properties: `Id, Name, ServiceType, Implementation, SectionName`, plus the `Transforms` child collection (populated after hydration, never a column).
 
 The variant subclasses carry the runtime fields the factory reads. Shared columns are repeated on each subclass; variant-specific columns appear only where relevant:
 
@@ -116,7 +116,7 @@ The variant-specific columns (`MaxParallelism`/`LoadMode`/`TruncateBeforeLoad` f
 ## Auditing an existing domain
 
 A domain is **broken** in this respect if both:
-- Multiple `[ServiceTypeOption]` impls exist, AND
+- Multiple `[Implementation]` impls exist, AND
 - The parent table contains columns that any factory reads at runtime.
 
 Symptom at runtime: the factory log shows `Configuration loaded: ''` (empty Name / source / destination), and the runtime fails with `Container '' not found in configuration` or similar empty-config errors.
@@ -140,7 +140,7 @@ Pick (2) when an audit confirms the runtime never reaches the typed-body tables.
 
 ## Single-type domains
 
-A `[ServiceTypeCollection]` with a single `[ServiceTypeOption]` impl does not need a typed body. Use one flat table; runtime fields live on the parent. This is acceptable until a second variant is added; at that point migrate to polymorphic configuration.
+A `[ServiceTypeCollection]` with a single `[Implementation]` impl does not need a typed body. Use one flat table; runtime fields live on the parent. This is acceptable until a second variant is added; at that point migrate to polymorphic configuration.
 
 ## Related skills and patterns
 
@@ -155,6 +155,6 @@ The following internal Claude skills (in `claude-tools/`, not shipped publicly) 
 
 - [ManagedConfiguration](03-01-ManagedConfiguration.md) — attribute and DDL conventions
 - [Configuration Provider Registration Pattern](03-05-Configuration-Provider-Registration-Pattern.md) — DI registration for parent + typed providers
-- [TypeCollections Overview](04-01-Overview.md) — `[ServiceTypeCollection]` and `[ServiceTypeOption]`
+- [TypeCollections Overview](04-01-Overview.md) — `[ServiceTypeCollection]` and `[Implementation]`
 - [Service Domains Overview](06-01-Service-Domains-Overview.md) — how factories consume configuration
 - [Connections Service Domain](06-03-Connections-Service-Domain.md) — gold-standard implementation

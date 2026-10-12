@@ -15,11 +15,11 @@ public static partial class SecretManagerConfigurationProviderLog
     /// Logs that a typed cache was registered for a secret manager service option type.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="serviceOptionType">The service option type the typed cache was registered for.</param>
+    /// <param name="implementation">The service option type the typed cache was registered for.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11000, Level = LogLevel.Debug,
-        Message = "Registered typed cache for secret manager ServiceOptionType '{serviceOptionType}'")]
-    public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string serviceOptionType);
+        Message = "Registered typed cache for secret manager Implementation '{implementation}'")]
+    public static partial IGenericMessage TypedCacheRegistered(ILogger logger, string implementation);
 
     /// <summary>
     /// Logs that a typed configuration lookup has started for a secret manager.
@@ -36,22 +36,22 @@ public static partial class SecretManagerConfigurationProviderLog
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="name">The name of the secret manager whose typed configuration was resolved.</param>
-    /// <param name="serviceOptionType">The service option type the typed configuration was resolved through.</param>
+    /// <param name="implementation">The service option type the typed configuration was resolved through.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11002, Level = LogLevel.Trace,
-        Message = "Typed configuration resolved for secret manager '{name}' via ServiceOptionType '{serviceOptionType}'")]
-    public static partial IGenericMessage TypedLookupResolved(ILogger logger, string name, string serviceOptionType);
+        Message = "Typed configuration resolved for secret manager '{name}' via Implementation '{implementation}'")]
+    public static partial IGenericMessage TypedLookupResolved(ILogger logger, string name, string implementation);
 
     /// <summary>
     /// Logs that no typed cache was registered for a secret manager service option type.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="serviceOptionType">The service option type that has no registered typed cache.</param>
+    /// <param name="implementation">The service option type that has no registered typed cache.</param>
     /// <param name="name">The name of the secret manager whose typed cache was not found.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61000, Level = LogLevel.Warning,
-        Message = "No typed cache registered for secret manager ServiceOptionType '{serviceOptionType}' (secret manager '{name}')")]
-    public static partial IGenericMessage TypedCacheNotFound(ILogger logger, string serviceOptionType, string name);
+        Message = "No typed cache registered for secret manager Implementation '{implementation}' (secret manager '{name}')")]
+    public static partial IGenericMessage TypedCacheNotFound(ILogger logger, string implementation, string name);
 
     /// <summary>
     /// Logs that a parent secret manager has no service option type, so its typed configuration cannot be resolved.
@@ -60,19 +60,19 @@ public static partial class SecretManagerConfigurationProviderLog
     /// <param name="name">The name of the parent secret manager that has no service option type.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61001, Level = LogLevel.Warning,
-        Message = "Parent secret manager '{name}' has no ServiceOptionType -- cannot resolve typed configuration")]
-    public static partial IGenericMessage NoServiceOptionType(ILogger logger, string name);
+        Message = "Parent secret manager '{name}' has no Implementation -- cannot resolve typed configuration")]
+    public static partial IGenericMessage NoImplementation(ILogger logger, string name);
 
     /// <summary>
     /// Logs that no typed secret manager provider is registered for a service option type.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
-    /// <param name="serviceOptionType">The service option type that has no registered typed provider.</param>
+    /// <param name="implementation">The service option type that has no registered typed provider.</param>
     /// <param name="name">The name of the secret manager whose typed provider was not found.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61002, Level = LogLevel.Error,
-        Message = "No typed secret manager provider registered for service option type '{serviceOptionType}' (secret manager '{name}')")]
-    public static partial IGenericMessage NoTypedProviderForServiceOptionType(ILogger logger, string serviceOptionType, string name);
+        Message = "No typed secret manager provider registered for service option type '{implementation}' (secret manager '{name}')")]
+    public static partial IGenericMessage NoTypedProviderForImplementation(ILogger logger, string implementation, string name);
 
     /// <summary>
     /// Logs that loading the typed secret manager body failed for a secret manager.
@@ -80,20 +80,20 @@ public static partial class SecretManagerConfigurationProviderLog
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="exception">The exception that caused the typed body load to fail.</param>
     /// <param name="name">The name of the secret manager whose typed body failed to load.</param>
-    /// <param name="serviceOptionType">The service option type of the typed body that failed to load.</param>
+    /// <param name="implementation">The service option type of the typed body that failed to load.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 61003, Level = LogLevel.Error,
-        Message = "Failed to load typed secret manager body for '{name}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string name, string serviceOptionType);
+        Message = "Failed to load typed secret manager body for '{name}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoadFailed(ILogger logger, Exception exception, string name, string implementation);
 
     /// <summary>
     /// Logs that the typed secret manager body was loaded for a secret manager.
     /// </summary>
     /// <param name="logger">The logger to write the event to.</param>
     /// <param name="name">The name of the secret manager whose typed body was loaded.</param>
-    /// <param name="serviceOptionType">The service option type of the typed body that was loaded.</param>
+    /// <param name="implementation">The service option type of the typed body that was loaded.</param>
     /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
     [MessageLogging(EventId = 11003, Level = LogLevel.Trace,
-        Message = "Typed secret manager body loaded for '{name}' (service option type '{serviceOptionType}')")]
-    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string name, string serviceOptionType);
+        Message = "Typed secret manager body loaded for '{name}' (service option type '{implementation}')")]
+    public static partial IGenericMessage TypedBodyLoaded(ILogger logger, string name, string implementation);
 }

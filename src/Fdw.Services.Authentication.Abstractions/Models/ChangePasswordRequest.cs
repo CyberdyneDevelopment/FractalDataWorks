@@ -1,4 +1,4 @@
-namespace Fdw.Services.Authentication.Clients.Models;
+namespace Fdw.Services.Authentication.Abstractions.Models;
 
 /// <summary>
 /// Client-side request model for changing the current user's password.

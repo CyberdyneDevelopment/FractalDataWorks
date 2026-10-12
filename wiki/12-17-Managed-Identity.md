@@ -7,7 +7,7 @@ secret that was copied into both ends.
 `Fdw.Services.Identity` is the domain that obtains those tokens. Its options are named for the
 **mechanism** by which a service proves itself, not for the authorization server that happens to be
 answering: both shipped mechanisms are standard OAuth2 grants and work against any server that
-implements them. A third mechanism is a new package with a new `[ServiceTypeOption]`, nothing more.
+implements them. A third mechanism is a new package with a new `[Implementation]`, nothing more.
 
 ---
 
@@ -99,13 +99,13 @@ Fdw.Services.Identity                (net10.0)
 
 Fdw.Services.Identity.ClientCredentials  (net10.0)
 ├── ClientCredentialsConfiguration        typed body (sec.ClientCredentialsIdentity)
-├── ClientCredentialsIdentityType         [ServiceTypeOption(…, "ClientCredentials")]
+├── ClientCredentialsIdentityType         [Implementation(…, "ClientCredentials")]
 ├── ClientCredentialsIdentityFactory
 └── ClientCredentialsIdentityService      RFC 6749 §4.4 token-endpoint client
 
 Fdw.Services.Identity.JwtAssertion       (net10.0)
 ├── JwtAssertionConfiguration             typed body (sec.JwtAssertionIdentity)
-├── JwtAssertionIdentityType              [ServiceTypeOption(…, "JwtAssertion")]
+├── JwtAssertionIdentityType              [Implementation(…, "JwtAssertion")]
 ├── JwtAssertionIdentityFactory
 ├── JwtAssertionIdentityService           RFC 7523 token-endpoint client
 └── Assertions/                           IFederatedAssertionSource + env/file sources
@@ -171,9 +171,8 @@ FDW typed HTTP client already goes through via `BearerTokenHandler`. Registering
 `ManagedIdentityAccessTokenProvider` means outgoing calls acquire and attach a managed-identity
 token with no change at any call site.
 
-The existing implementations of that seam — `BlazorServerAccessTokenProvider` and
-`InstanceAccessTokenProvider` — forward the *signed-in user's* token, on purpose, so that downstream
-authorization runs as the real user (least privilege). **Managed identity does not replace those and
+The existing implementation of that seam, `InstanceAccessTokenProvider` (the terminal UI), forwards the *signed-in user's* token, on purpose, so that downstream
+authorization runs as the real user (least privilege). **Managed identity does not replace it and
 must not.** It applies where there is no user in the loop: scheduled dispatches, background jobs,
 CI-initiated calls, service-initiated reconciliation. Replacing a user-token forward with a service
 identity would widen authority, not narrow it.

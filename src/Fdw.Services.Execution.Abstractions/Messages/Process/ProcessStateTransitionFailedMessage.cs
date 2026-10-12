@@ -17,8 +17,7 @@ public sealed class ProcessStateTransitionFailedMessage : ExecutionMessage, ISer
         : base(1004, "ProcessStateTransitionFailed", MessageSeverity.Error,
                "Process state transition failed",
                "EXEC_STATE_TRANSITION_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/state-management")
+               "Process")
     { }
 
     /// <summary>
@@ -29,8 +28,7 @@ public sealed class ProcessStateTransitionFailedMessage : ExecutionMessage, ISer
         : base(1004, "ProcessStateTransitionFailed", MessageSeverity.Error,
                string.Format(CultureInfo.InvariantCulture, "Process state transition failed for process: {0}", processId),
                "EXEC_STATE_TRANSITION_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/state-management")
+               "Process")
     { }
 
     /// <summary>
@@ -44,8 +42,7 @@ public sealed class ProcessStateTransitionFailedMessage : ExecutionMessage, ISer
                string.Format(CultureInfo.InvariantCulture, "Process state transition failed for process: {0} from '{1}' to '{2}'",
                            processId, fromState, toState),
                "EXEC_STATE_TRANSITION_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/state-management")
+               "Process")
     { }
 
     /// <summary>
@@ -60,7 +57,6 @@ public sealed class ProcessStateTransitionFailedMessage : ExecutionMessage, ISer
                string.Format(CultureInfo.InvariantCulture, "Process state transition failed for process: {0} from '{1}' to '{2}': {3}",
                            processId, fromState, toState, reason),
                "EXEC_STATE_TRANSITION_FAILED",
-               "Process",
-               "https://docs.Fdw.io/execution/state-management")
+               "Process")
     { }
 }

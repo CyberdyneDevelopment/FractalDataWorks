@@ -11,7 +11,7 @@ namespace Fdw.Services.Authentication.Abstractions;
 /// interchangeable at the call site.
 /// </remarks>
 public interface IAuthenticationServiceConfiguration
-    : IPlatformServiceConfiguration<IAuthenticationServiceImplementationConfiguration>
+    : IDomainConfiguration
 {
     /// <summary>Gets or sets whether this service is trusted.</summary>
     /// <remarks>

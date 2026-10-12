@@ -13,5 +13,5 @@ public sealed class DatePickerComponentType : ComponentTypeBase
     /// <summary>
     /// Initializes a new instance of the <see cref="DatePickerComponentType"/> class.
     /// </summary>
-    public DatePickerComponentType() : base(5, "DatePicker", "Date Picker", "Input", "Date selection picker") { }
+    public DatePickerComponentType() : base("DatePicker", "Date Picker", "Input", "Date selection picker") { }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Data;
 using System.Text.Json;
@@ -64,7 +65,9 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
     protected static void AddParameter(SqlCommand command, string name, object? value)
     {
         object? materialized = value;
-        if (value is IEnumerable enumerable && value is not string)
+        // Why byte[] is excluded: it is IEnumerable, but it is one binary value (varbinary), not a
+        // collection. Serialized to JSON it reached a binary column as nvarchar, SQL 257 (FDW-889).
+        if (value is IEnumerable enumerable && value is not string && value is not byte[])
         {
             MsSqlDataCommandTranslatorBaseLog.SerializingEnumerableParameter(
                 NullLogger<MsSqlDataCommandTranslatorBase>.Instance, name);
@@ -73,6 +76,34 @@ public abstract class MsSqlDataCommandTranslatorBase : SqlDataCommandTranslatorB
 
         var param = new SqlParameter($"@{name}", materialized ?? (object)System.DBNull.Value);
         command.Parameters.Add(param);
+    }
+
+    /// <summary>
+    /// Adds a named parameter whose value was read from a property, typing a null by the property's
+    /// declared type.
+    /// </summary>
+    /// <param name="command">The SQL command.</param>
+    /// <param name="name">Parameter name without the <c>@</c> prefix.</param>
+    /// <param name="value">The property's value; <c>null</c> maps to <see cref="System.DBNull.Value"/>.</param>
+    /// <param name="declaredType">The property's declared type.</param>
+    /// <remarks>
+    /// A null reaches ADO.NET as an untyped <see cref="System.DBNull"/>, which SqlClient sends as
+    /// NVARCHAR. SQL Server converts an NVARCHAR NULL implicitly to every column type except BINARY and
+    /// VARBINARY, so a null <c>byte[]</c> has to say it is binary or the statement fails with SQL 257
+    /// (FDW-918: a new session's null <c>CsrfTokenHash</c>). Every other value binds exactly as
+    /// <see cref="AddParameter(SqlCommand, string, object?)"/> binds it.
+    /// </remarks>
+    protected static void AddParameter(SqlCommand command, string name, object? value, Type declaredType)
+    {
+        if (value is null && declaredType == typeof(byte[]))
+        {
+            MsSqlDataCommandTranslatorBaseLog.BindingNullBinaryParameter(
+                NullLogger<MsSqlDataCommandTranslatorBase>.Instance, name);
+            AddParameter(command, name, null, SqlDbType.VarBinary);
+            return;
+        }
+
+        AddParameter(command, name, value);
     }
 
     /// <summary>

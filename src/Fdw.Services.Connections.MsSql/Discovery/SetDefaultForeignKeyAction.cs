@@ -9,5 +9,5 @@ namespace Fdw.Services.Connections.MsSql.Discovery;
 public sealed class SetDefaultForeignKeyAction : ForeignKeyActionBase
 {
     /// <summary>Initializes a new instance of <see cref="SetDefaultForeignKeyAction"/>.</summary>
-    public SetDefaultForeignKeyAction() : base(3, "SetDefault") { }
+    public SetDefaultForeignKeyAction() : base("SetDefault") { }
 }

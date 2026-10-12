@@ -24,7 +24,7 @@ namespace Fdw.Services.Data;
 /// </summary>
 /// <remarks>
 /// Why: registered as the <c>"Compound"</c> member of <see cref="DataSetTypes"/>; selected when a
-/// dataset's authored <c>ServiceOptionType</c> is <c>"Compound"</c>. The defining property is that the
+/// dataset's authored <c>Implementation</c> is <c>"Compound"</c>. The defining property is that the
 /// join is performed by the backend (not in memory), so all sources must live in one store.
 /// <para>
 /// Builds a single <see cref="QueryCommand{T}"/> carrying JOIN expressions and a multi-source
@@ -37,7 +37,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
 {
     /// <summary>Initializes a new instance of the <see cref="CompoundDataSetType"/> class.</summary>
     public CompoundDataSetType()
-        : base(2, "Compound", "Single-store dataset whose join is pushed down to the store",
+        : base("Compound", "Single-store dataset whose join is pushed down to the store",
             typeof(object), Array.Empty<IDataField>(), category: "DataSetStrategy")
     {
     }
@@ -51,6 +51,14 @@ public sealed class CompoundDataSetType : DataSetTypeBase
     {
         if (context is not DataSetExecutionContext ctx)
             return GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataSetConfigurationRequired"));
+
+        if (command is IQueryCommand { Aggregation: not null })
+            return GenericResult<T>.Failure(
+                DataServiceResultCodes.ByName("DataSetNotGroupable"), ctx.Logger,
+                ResultDetails.Create("dataSet", ctx.Config.Name, "reason", "a Compound data set builds its rows from more than one read, so it has no one query to group"));
+
+        if (ctx.Config is not ICompoundDataSetConfiguration compound)
+            return DataSetExecutionHelpers.KindMismatch<T>(ctx, "Compound");
 
         var sources = ctx.Config.Sources;
         if (sources is null || sources.Count == 0)
@@ -69,7 +77,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         if (primaryContainerName == null)
             return GenericResult<T>.Failure(DataGatewayLogger.SourceNoContainer(ctx.Logger, primarySource.SourceName, ctx.Config.Name));
 
-        var joinResult = BuildJoinExpressions<T>(ctx, sources);
+        var joinResult = BuildJoinExpressions<T>(ctx, compound.Joins, sources);
         if (joinResult.HasError) return joinResult.ErrorResult!;
 
         var projResult = BuildProjection<T>(ctx, sources, primarySource);
@@ -86,20 +94,21 @@ public sealed class CompoundDataSetType : DataSetTypeBase
 
     private static (bool HasError, List<IJoinExpression>? Joins, IGenericResult<T>? ErrorResult) BuildJoinExpressions<T>(
         DataSetExecutionContext ctx,
+        IList<DataSetJoinConfiguration> joins,
         IList<DataSetSourceConfiguration> sources)
     {
         var sourceLookup = sources.ToDictionary(s => s.SourceName, StringComparer.OrdinalIgnoreCase);
-        var joinExpressions = new List<IJoinExpression>(ctx.Config.Joins.Count);
+        var joinExpressions = new List<IJoinExpression>(joins.Count);
 
-        foreach (var join in ctx.Config.Joins)
+        foreach (var join in joins.OrderBy(j => j.Ordinal))
         {
-            if (!sourceLookup.TryGetValue(join.LeftSource, out var leftSource))
+            if (!sourceLookup.TryGetValue(join.LeftSourceName, out var leftSource))
                 return (true, null, GenericResult<T>.Failure(
-                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.LeftSource)));
+                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.LeftSourceName)));
 
-            if (!sourceLookup.TryGetValue(join.RightSource, out var rightSource))
+            if (!sourceLookup.TryGetValue(join.RightSourceName, out var rightSource))
                 return (true, null, GenericResult<T>.Failure(
-                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSource)));
+                    DataGatewayLogger.JoinSourceNotFound(ctx.Logger, ctx.Config.Name, join.RightSourceName)));
 
             var rightContainerName = DataSetExecutionHelpers.GetContainerName(rightSource);
             if (rightContainerName == null)
@@ -112,8 +121,8 @@ public sealed class CompoundDataSetType : DataSetTypeBase
                 JoinType = join.JoinType,
                 JoinConditions =
                 [
-                    (leftSource.FieldMappings.TryGetValue(join.LeftField, out var lp) ? lp : join.LeftField,
-                     rightSource.FieldMappings.TryGetValue(join.RightField, out var rp) ? rp : join.RightField),
+                    (leftSource.FieldMappings.TryGetValue(join.LeftFieldName, out var lp) ? lp : join.LeftFieldName,
+                     rightSource.FieldMappings.TryGetValue(join.RightFieldName, out var rp) ? rp : join.RightFieldName),
                 ],
             });
         }
@@ -177,7 +186,7 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         IDataCommand command,
         DataSetSourceConfiguration primarySource)
     {
-        if (command is not QueryCommand<T> { Filter: not null } queryCommand)
+        if (command is not IQueryCommand { Filter: not null } queryCommand)
             return (false, null, null);
 
         var fieldMappings = primarySource.FieldMappings.Count > 0 ? primarySource.FieldMappings : null;
@@ -204,8 +213,8 @@ public sealed class CompoundDataSetType : DataSetTypeBase
             Joins = joinExpressions,
             Projection = projection,
             Filter = translatedFilter,
-            Ordering = (command as QueryCommand<T>)?.Ordering,
-            Paging = (command as QueryCommand<T>)?.Paging,
+            Ordering = (command as IQueryCommand)?.Ordering,
+            Paging = (command as IQueryCommand)?.Paging,
         };
 
         // Resolve primary container from the DataStore provider.
@@ -229,7 +238,26 @@ public sealed class CompoundDataSetType : DataSetTypeBase
         // Execute the pushed-down compound query through the single connection.
         var result = await connectionResult.Value.Execute<T>(sourceQuery, containerResult.Value, ct).ConfigureAwait(false);
 
-        // Apply calculated fields post-execution (they operate on logical field names from SQL aliases).
+        return await ShapeRows(ctx, result, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Shapes the joined rows. The projection aliases every column to its logical name, so each
+    /// source's attached transformation chains apply to the rows directly (FDW-877), then calculated
+    /// fields read the transformed values.
+    /// </summary>
+    private static async Task<IGenericResult<T>> ShapeRows<T>(
+        DataSetExecutionContext ctx, IGenericResult<T> result, CancellationToken ct)
+    {
+        if (result.IsFailure || result.Value == null)
+            return result;
+
+        var chains = await DataSetExecutionHelpers.ResolveChains(ctx, ctx.Config.Sources, ct).ConfigureAwait(false);
+        if (chains.IsFailure)
+            return chains.ToNewResult<T>();
+        if (chains.Value!.Count > 0)
+            result = await DataSetExecutionHelpers.ApplyFieldTransformations(ctx, result, chains.Value, ctx.Config.Name, ct).ConfigureAwait(false);
+
         var calculatedFields = ctx.Config.Fields.Where(f => f.IsCalculated).ToList();
         if (calculatedFields.Count > 0 && result.IsSuccess && result.Value != null)
         {

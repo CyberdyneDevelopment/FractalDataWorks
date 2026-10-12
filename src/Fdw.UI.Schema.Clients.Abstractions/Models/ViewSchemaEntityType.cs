@@ -9,5 +9,5 @@ namespace Fdw.UI.Schema.Clients.Models;
 public sealed class ViewSchemaEntityType : SchemaEntityTypeBase
 {
     /// <summary>Initializes a new instance of <see cref="ViewSchemaEntityType"/>.</summary>
-    public ViewSchemaEntityType() : base(2, "View") { }
+    public ViewSchemaEntityType() : base("View") { }
 }

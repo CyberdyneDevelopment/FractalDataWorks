@@ -8,5 +8,5 @@ namespace Fdw.Data.Transformations;
 [TypeOption(typeof(TimeZoneTypes), "Azores")]
 public sealed class AzoresTimeZoneType : TimeZoneTypeBase
 {
-    public AzoresTimeZoneType() : base(46, "Azores", "Azores Standard Time") { }
+    public AzoresTimeZoneType() : base("Azores", "Azores Standard Time") { }
 }

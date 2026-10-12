@@ -13,7 +13,6 @@ public sealed class None : RateLimitPolicyBase
     /// Initializes a new instance of the <see cref="None"/> class.
     /// </summary>
     public None() : base(
-        id: 1,
         name: "None",
         maxRequests: int.MaxValue,
         windowSizeInSeconds: 0,

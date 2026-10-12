@@ -136,9 +136,9 @@ public static partial class DataStoreProviderLog
     [MessageLogging(EventId = 61017, Level = LogLevel.Critical, Message = "No DataStoreType '{storeType}' found for DataStore '{dataStoreName}' during startup tree build — store dropped from the tree; every container targeting it will fail")]
     public static partial IGenericMessage NoDataStoreTypeFoundAtStartup(ILogger logger, string storeType, string dataStoreName);
 
-    /// <summary>Logs when a DataStore configuration is missing ServiceOptionType.</summary>
-    [MessageLogging(EventId = 61018, Level = LogLevel.Error, Message = "DataStore '{dataStoreName}' has no ServiceOptionType configured. Cannot determine store type.")]
-    public static partial IGenericMessage DataStoreMissingServiceOptionType(ILogger logger, string dataStoreName);
+    /// <summary>Logs when a DataStore configuration is missing Implementation.</summary>
+    [MessageLogging(EventId = 61018, Level = LogLevel.Error, Message = "DataStore '{dataStoreName}' has no Implementation configured. Cannot determine store type.")]
+    public static partial IGenericMessage DataStoreMissingImplementation(ILogger logger, string dataStoreName);
 
     /// <summary>Logs when a container is built from configuration.</summary>
     [MessageLogging(EventId = 11149, Level = LogLevel.Information, Message = "Container '{containerName}' built from configuration for DataStore '{dataStoreName}'")]

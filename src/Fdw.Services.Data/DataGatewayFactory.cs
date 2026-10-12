@@ -9,6 +9,7 @@ using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Limits;
 using Fdw.Services.Data.Logging;
+using Fdw.Services.Data.Transformations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -28,14 +29,16 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
 {
     private readonly IDataConnectionProvider _connectionProvider;
     private readonly IDataSetConfigurationProvider _dataSetProvider;
-    private readonly DataStoreConfigurationProvider _dataStoreConfigProvider;
+    private readonly IDomainConfigurationProvider<IDataStoreImplementationConfiguration> _dataStoreConfigProvider;
     private readonly IFrameworkAuthorizationService? _authorizationService;
     private readonly IDataStoreProvider? _dataStoreProvider;
     private readonly DataGatewayResultCache? _cache;
     private readonly IAuthenticationContextAccessor? _authenticationContextAccessor;
-    private readonly ConnectionConfigurationProvider? _connectionConfigProvider;
+    private readonly IConnectionConfigurationProvider? _connectionConfigProvider;
+    private readonly IConfigurationGatewayProvider? _configurationGateways;
     private readonly IConnectionLimitResolver _limitResolver;
     private readonly ConnectionLimitCounterStore _counters;
+    private readonly FieldMappingTransformationResolver _fieldTransformations;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<DataGatewayFactory> _logger;
 
@@ -43,27 +46,31 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
     public DataGatewayFactory(
         IDataConnectionProvider connectionProvider,
         IDataSetConfigurationProvider dataSetProvider,
-        DataStoreConfigurationProvider dataStoreConfigProvider,
+        IDomainConfigurationProvider<IDataStoreImplementationConfiguration> dataStoreConfigProvider,
         IConnectionLimitResolver limitResolver,
         ConnectionLimitCounterStore counters,
+        FieldMappingTransformationResolver fieldTransformations,
         IFrameworkAuthorizationService? authorizationService = null,
         IDataStoreProvider? dataStoreProvider = null,
         DataGatewayResultCache? cache = null,
         IAuthenticationContextAccessor? authenticationContextAccessor = null,
-        ConnectionConfigurationProvider? connectionConfigProvider = null,
+        IConnectionConfigurationProvider? connectionConfigProvider = null,
         ILoggerFactory? loggerFactory = null,
-        ILogger<DataGatewayFactory>? logger = null)
+        ILogger<DataGatewayFactory>? logger = null,
+        IConfigurationGatewayProvider? configurationGateways = null)
     {
         _connectionProvider = connectionProvider;
         _dataSetProvider = dataSetProvider;
         _dataStoreConfigProvider = dataStoreConfigProvider;
         _limitResolver = limitResolver;
         _counters = counters;
+        _fieldTransformations = fieldTransformations;
         _authorizationService = authorizationService;
         _dataStoreProvider = dataStoreProvider;
         _cache = cache;
         _authenticationContextAccessor = authenticationContextAccessor;
         _connectionConfigProvider = connectionConfigProvider;
+        _configurationGateways = configurationGateways;
         _loggerFactory = loggerFactory ?? NullLoggerFactory.Instance;
         _logger = logger ?? NullLogger<DataGatewayFactory>.Instance;
     }
@@ -76,12 +83,14 @@ internal sealed class DataGatewayFactory : IDataGatewayFactory
             _dataStoreConfigProvider,
             _limitResolver,
             _counters,
+            _fieldTransformations,
             _authorizationService,
             _dataStoreProvider,
             _cache,
             configuration,
             _authenticationContextAccessor,
-            _connectionConfigProvider);
+            _connectionConfigProvider,
+            _configurationGateways);
 
     /// <inheritdoc />
     public IGenericResult<IGenericService> Create(IServiceConfiguration configuration)

@@ -8,7 +8,7 @@ namespace Fdw.UI.Themes;
 /// </summary>
 /// <remarks>
 /// Access palettes by name: <c>ColorPalettes.ByName("Dark")</c>
-/// Access palettes by id: <c>ColorPalettes.ById(1)</c>
+/// Access a palette by its own id: <c>ColorPalettes.ById(palette.Id)</c>
 /// Get all palettes: <c>ColorPalettes.All()</c>
 /// </remarks>
 [TypeCollection(typeof(ColorPaletteBase), typeof(IColorPalette), typeof(ColorPalettes))]

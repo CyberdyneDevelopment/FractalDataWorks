@@ -26,7 +26,7 @@ public sealed class SimpleRetryResiliencyPolicy : ResiliencyPolicyBase
     /// <summary>
     /// Initializes a new instance of the <see cref="SimpleRetryResiliencyPolicy"/> class.
     /// </summary>
-    public SimpleRetryResiliencyPolicy() : base(4, "Simple")
+    public SimpleRetryResiliencyPolicy() : base("Simple")
     {
     }
 

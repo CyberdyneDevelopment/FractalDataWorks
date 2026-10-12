@@ -14,5 +14,5 @@ namespace Fdw.Services.Credentials.Sql.Outcomes;
 public sealed class MatchOutcome : CredentialOutcomeBase
 {
     /// <summary>Initializes a new instance of the <see cref="MatchOutcome"/> class.</summary>
-    public MatchOutcome() : base(1, "Match", grantsAccess: true) { }
+    public MatchOutcome() : base("Match", grantsAccess: true, provesSecret: true) { }
 }

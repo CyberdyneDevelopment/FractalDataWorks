@@ -18,8 +18,8 @@ public sealed class DataSetConfigurationBuilderTests
         return new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "System.Int32", isKey: true)
-            .AddField("Name", "System.String");
+            .AddField("Id", "Int32", isKey: true)
+            .AddField("Name", "String");
     }
 
     private sealed class TestRecord
@@ -48,7 +48,7 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var result = new DataSetConfigurationBuilder()
             .WithRecordType<TestRecord>()
-            .AddField("Id", "System.Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -62,7 +62,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("  ")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "System.Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -75,7 +75,7 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
-            .AddField("Id", "System.Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true)
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -103,7 +103,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Name", "System.String")
+            .AddField("Name", "String")
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -117,8 +117,8 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "System.Int32", isKey: true)
-            .AddField("Id", "System.String")
+            .AddField("Id", "Int32", isKey: true)
+            .AddField("Id", "String")
             .Build();
 
         result.IsSuccess.ShouldBeFalse();
@@ -132,7 +132,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "System.Int32")
+            .AddField("Id", "Int32")
             .AddKeyField("NonExistent")
             .Build();
 
@@ -237,7 +237,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordType(typeof(TestRecord))
-            .AddField("Id", "System.Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -261,7 +261,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Customers")
             .WithRecordTypeName("MyApp.Customer")
-            .AddField("Id", "System.Int32", isKey: true)
+            .AddField("Id", "Int32", isKey: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -273,10 +273,10 @@ public sealed class DataSetConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void AddFieldWithConfigurationAddsField()
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = "Email",
-            TypeName = "System.String",
+            TypeName = "String",
             IsRequired = true
         };
 
@@ -294,7 +294,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddFieldNullIsIgnored()
     {
         var result = CreateValidBuilder()
-            .AddField((DataFieldConfiguration)null!)
+            .AddField((DataSetFieldConfiguration)null!)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -306,10 +306,10 @@ public sealed class DataSetConfigurationBuilderTests
     [Trait("Category", "DataIntegrity")]
     public void AddFieldWithKeyAutoAddsToKeyFields()
     {
-        var field = new DataFieldConfiguration
+        var field = new DataSetFieldConfiguration
         {
             Name = "CompanyId",
-            TypeName = "System.Int32",
+            TypeName = "Int32",
             IsKey = true
         };
 
@@ -340,7 +340,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddFieldWithBuilderFuncNullIsIgnored()
     {
         var result = CreateValidBuilder()
-            .AddField((Func<DataFieldConfigurationBuilder, IGenericResult<DataFieldConfiguration>>)null!)
+            .AddField((Func<DataSetFieldConfigurationBuilder, IGenericResult<DataSetFieldConfiguration>>)null!)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
@@ -354,8 +354,8 @@ public sealed class DataSetConfigurationBuilderTests
     {
         var fields = new[]
         {
-            new DataFieldConfiguration { Name = "Email", TypeName = "System.String" },
-            new DataFieldConfiguration { Name = "Phone", TypeName = "System.String" }
+            new DataSetFieldConfiguration { Name = "Email", TypeName = "String" },
+            new DataSetFieldConfiguration { Name = "Phone", TypeName = "String" }
         };
 
         var result = CreateValidBuilder()
@@ -410,7 +410,7 @@ public sealed class DataSetConfigurationBuilderTests
     public void AddKeyFieldAddsToKeyFields()
     {
         var result = CreateValidBuilder()
-            .AddField("CompanyId", "System.Int32")
+            .AddField("CompanyId", "Int32")
             .AddKeyField("CompanyId")
             .Build();
 
@@ -452,8 +452,8 @@ public sealed class DataSetConfigurationBuilderTests
         var result = new DataSetConfigurationBuilder()
             .WithName("Composite")
             .WithRecordType<TestRecord>()
-            .AddField("Id", "System.Int32")
-            .AddField("CompanyId", "System.Int32")
+            .AddField("Id", "Int32")
+            .AddField("CompanyId", "Int32")
             .AddKeyFields(new[] { "Id", "CompanyId" })
             .Build();
 
@@ -511,22 +511,6 @@ public sealed class DataSetConfigurationBuilderTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.SourceIds.Count.ShouldBe(0);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void AddSourceConfigurationSetsDataSetId()
-    {
-        var id = Guid.NewGuid();
-        var builder = CreateValidBuilder()
-            .WithId(id)
-            .AddSource("Primary", "MsSql");
-
-        var result = builder.Build();
-        result.IsSuccess.ShouldBeTrue();
-
-        builder.SourceConfigurations.ShouldAllBe(s => s.DataSetId == id);
     }
 
     [Fact]
@@ -600,7 +584,7 @@ public sealed class DataSetConfigurationBuilderTests
         var result = builder
             .WithName("Orders")
             .WithRecordType<TestRecord>()
-            .AddField("OrderId", "System.Guid", isKey: true)
+            .AddField("OrderId", "Guid", isKey: true)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();

@@ -15,18 +15,6 @@ public class MsSqlConverterIntegrationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public void MsSqlConvertersShouldBeAccessible()
-    {
-        // Verify the collection was generated correctly
-        // 10 original + 19 new converters (DateTime2, Date, Time, SmallDateTime, Int16, Byte,
-        // Single, Money, SmallMoney, Char, NChar, Varchar, Xml, Binary, Text, NText, Image, Numeric, Timestamp)
-        var all = MsSqlConverters.All();
-        all.Count().ShouldBe(29);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
     public void BySourceTypeShouldFindAllStandardSqlTypes()
     {
         // Test lookup for common SQL types
@@ -55,26 +43,21 @@ public class MsSqlConverterIntegrationTests
     public void FieldShouldStoreTypeSystemMetadata()
     {
         // Get field with new type system properties
+        var intConverter = MsSqlConverters.BySourceType("int");
         var field = new Field
         {
             Name = "CustomerId",
             FieldType = new SimpleFieldType { TypeName = "Int32", ClrType = typeof(int) },
-            Role = PropertyRoles.ByName("Surrogate"),
+            Role = DatumTypes.ByName("DbKey"),
             IsNullable = false,
             IsIdentity = true,
             IsComputed = false,
             TypeSystemId = "MsSql",
-            ConverterTypeId = 1  // MsSqlInt32Converter
+            ConverterTypeId = intConverter.Id
         };
 
         field.TypeSystemId.ShouldBe("MsSql");
-        field.ConverterTypeId.ShouldBe(1);
-
-        // Verify we can look up the converter
-        var converter = MsSqlConverters.ById(field.ConverterTypeId!.Value);
-        converter.ShouldNotBe(MsSqlConverters.NotFound);
-        converter.Name.ShouldBe("Int32");
-        converter.SourceType.ShouldBe("int");
+        field.ConverterTypeId.ShouldBe(intConverter.Id);
     }
 
     [Fact]
@@ -115,7 +98,7 @@ public class MsSqlConverterIntegrationTests
             {
                 Name = "Id",
                 FieldType = new SimpleFieldType { TypeName = "Int32", ClrType = typeof(int) },
-                Role = PropertyRoles.ByName("Surrogate"),
+                Role = DatumTypes.ByName("DbKey"),
                 TypeSystemId = "MsSql",
                 ConverterTypeId = MsSqlConverters.BySourceType("int").Id
             },
@@ -123,7 +106,7 @@ public class MsSqlConverterIntegrationTests
             {
                 Name = "Name",
                 FieldType = new SimpleFieldType { TypeName = "String", ClrType = typeof(string) },
-                Role = PropertyRoles.ByName("Attribute"),
+                Role = DatumTypes.ByName("Attribute"),
                 TypeSystemId = "MsSql",
                 ConverterTypeId = MsSqlConverters.BySourceType("nvarchar").Id
             },
@@ -131,7 +114,7 @@ public class MsSqlConverterIntegrationTests
             {
                 Name = "IsActive",
                 FieldType = new SimpleFieldType { TypeName = "Boolean", ClrType = typeof(bool) },
-                Role = PropertyRoles.ByName("Attribute"),
+                Role = DatumTypes.ByName("Attribute"),
                 TypeSystemId = "MsSql",
                 ConverterTypeId = MsSqlConverters.BySourceType("bit").Id
             }
@@ -146,23 +129,5 @@ public class MsSqlConverterIntegrationTests
             // Verify converter produces correct CLR type
             converter.TargetClrType.ShouldBe(field.FieldType.ClrType);
         }
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void EmptyConverterShouldBeReusable()
-    {
-        var empty1 = MsSqlConverters.NotFound;
-        var empty2 = MsSqlConverters.BySourceType("unknown_type");
-        var empty3 = MsSqlConverters.ById(99999);
-
-        // All should return same Empty instance
-        empty1.ShouldBe(empty2);
-        empty2.ShouldBe(empty3);
-
-        // Empty instance should exist
-        empty1.ShouldNotBeNull();
-        empty1.Id.ShouldBe(0);
     }
 }

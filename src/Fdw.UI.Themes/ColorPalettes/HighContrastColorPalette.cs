@@ -18,7 +18,7 @@ public sealed class HighContrastColorPalette : ColorPaletteBase
     /// <summary>
     /// Creates the high contrast color palette.
     /// </summary>
-    public HighContrastColorPalette() : base(3, "HighContrast") { }
+    public HighContrastColorPalette() : base("HighContrast") { }
 
     /// <inheritdoc />
     public override Color Primary => Color.Yellow;

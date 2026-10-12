@@ -17,7 +17,6 @@ public sealed class RetryingStateType : ExecutionStateTypeBase
     /// </summary>
     public RetryingStateType()
         : base(
-            id: 13,
             name: "Retrying",
             displayName: "Retrying",
             isTerminal: false,

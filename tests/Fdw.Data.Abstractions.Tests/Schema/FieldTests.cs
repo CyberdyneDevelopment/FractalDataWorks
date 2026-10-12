@@ -18,7 +18,7 @@ public sealed class FieldTests
         {
             Name = "TestField",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -38,7 +38,7 @@ public sealed class FieldTests
         {
             Name = "Id",
             FieldType = fieldType,
-            Role = PropertyRoles.Surrogate
+            Role = DatumTypes.DbKey
         };
 
         // Assert
@@ -51,7 +51,7 @@ public sealed class FieldTests
     public void RoleCanBeSet()
     {
         // Arrange
-        var role = PropertyRoles.Surrogate;
+        var role = DatumTypes.DbKey;
 
         // Act
         var field = new Field
@@ -75,7 +75,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -92,7 +92,7 @@ public sealed class FieldTests
         {
             Name = "Description",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             IsNullable = true
         };
 
@@ -110,7 +110,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             IsNullable = false
         };
 
@@ -131,7 +131,7 @@ public sealed class FieldTests
         {
             Name = "Description",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             IsNullable = true
         };
 
@@ -152,7 +152,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             Description = "The name of the entity"
         };
 
@@ -170,7 +170,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -194,7 +194,7 @@ public sealed class FieldTests
         {
             Name = "Email",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             Metadata = metadata
         };
 
@@ -214,7 +214,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -231,7 +231,7 @@ public sealed class FieldTests
         {
             Name = "Id",
             FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-            Role = PropertyRoles.Surrogate,
+            Role = DatumTypes.DbKey,
             TypeSystemId = "MsSql"
         };
 
@@ -249,7 +249,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -266,7 +266,7 @@ public sealed class FieldTests
         {
             Name = "Id",
             FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-            Role = PropertyRoles.Surrogate,
+            Role = DatumTypes.DbKey,
             ConverterTypeId = 8
         };
 
@@ -284,7 +284,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -301,7 +301,7 @@ public sealed class FieldTests
         {
             Name = "Name",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute
+            Role = DatumTypes.Attribute
         };
 
         // Assert
@@ -311,18 +311,18 @@ public sealed class FieldTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void SurrogateRoleIsPreservedOnField()
+    public void DbKeyDatumTypeIsPreservedOnField()
     {
         // Arrange & Act
         var field = new Field
         {
             Name = "Id",
             FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-            Role = PropertyRoles.Surrogate
+            Role = DatumTypes.DbKey
         };
 
         // Assert
-        field.Role.Name.ShouldBe("Surrogate");
+        field.Role.Name.ShouldBe("DbKey");
     }
 
     [Fact]
@@ -335,7 +335,7 @@ public sealed class FieldTests
         {
             Name = "Id",
             FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-            Role = PropertyRoles.Surrogate
+            Role = DatumTypes.DbKey
         };
 
         // Assert
@@ -352,7 +352,7 @@ public sealed class FieldTests
         {
             Name = "Id",
             FieldType = new SimpleFieldType { TypeName = "int", ClrType = typeof(int) },
-            Role = PropertyRoles.Surrogate,
+            Role = DatumTypes.DbKey,
             IsIdentity = true
         };
 
@@ -370,7 +370,7 @@ public sealed class FieldTests
         {
             Name = "Total",
             FieldType = new SimpleFieldType { TypeName = "decimal", ClrType = typeof(decimal) },
-            Role = PropertyRoles.Measure
+            Role = DatumTypes.Measure
         };
 
         // Assert
@@ -387,7 +387,7 @@ public sealed class FieldTests
         {
             Name = "Total",
             FieldType = new SimpleFieldType { TypeName = "decimal", ClrType = typeof(decimal) },
-            Role = PropertyRoles.Measure,
+            Role = DatumTypes.Measure,
             IsComputed = true
         };
 
@@ -412,7 +412,7 @@ public sealed class FieldTests
         {
             Name = "FullName",
             FieldType = new SimpleFieldType { TypeName = "string", ClrType = typeof(string) },
-            Role = PropertyRoles.Attribute,
+            Role = DatumTypes.Attribute,
             IsNullable = true,
             Description = "Computed full name",
             Metadata = metadata,
@@ -425,7 +425,7 @@ public sealed class FieldTests
         // Assert
         field.Name.ShouldBe("FullName");
         field.FieldType.TypeName.ShouldBe("string");
-        field.Role.ShouldBe(PropertyRoles.Attribute);
+        field.Role.ShouldBe(DatumTypes.Attribute);
         field.IsNullable.ShouldBeTrue();
         field.IsRequired.ShouldBeFalse();
         field.Description.ShouldBe("Computed full name");

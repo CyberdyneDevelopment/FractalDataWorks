@@ -56,4 +56,39 @@ internal static partial class BindingLog
     [MessageLogging(EventId = 91193, Level = LogLevel.Error,
         Message = "Both an issuer and a subject are required to resolve a binding")]
     internal static partial IGenericMessage LookupIncomplete(ILogger<ExternalIdentityBinding> logger);
+
+    /// <summary>A binding resolved a sign-in, and the first-use stamp could not be written.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The authority that asserted the subject.</param>
+    [MessageLogging(EventId = 91194, Level = LogLevel.Warning,
+        Message = "A subject from '{issuer}' signed in, but the binding's first-use stamp was not recorded: the binding still reads as pending")]
+    internal static partial IGenericMessage FirstUseNotRecorded(
+        ILogger<ExternalIdentityBinding> logger, string issuer);
+
+    /// <summary>No open invitation matched the verified address at this issuer.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The issuer.</param>
+    // The address is not logged, for the same reason the subject is not: it identifies a person.
+    [MessageLogging(EventId = 91290, Level = LogLevel.Debug,
+        Message = "No open invitation at issuer '{issuer}' matches the verified address")]
+    internal static partial IGenericMessage NoInvitation(ILogger<ExternalIdentityBinding> logger, string issuer);
+
+    /// <summary>An invitation was redeemed and is now a binding.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The issuer.</param>
+    /// <param name="userId">The invited account.</param>
+    // Information: a pre-created account went live, which an operator onboarding someone wants to see.
+    [MessageLogging(EventId = 91291, Level = LogLevel.Information,
+        Message = "An invitation at issuer '{issuer}' was redeemed; user {userId} is now bound to the subject that issuer proved")]
+    internal static partial IGenericMessage InvitationRedeemed(
+        ILogger<ExternalIdentityBinding> logger, string issuer, Guid userId);
+
+    /// <summary>An invitation matched but could not be written as a binding.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="issuer">The issuer.</param>
+    /// <param name="userId">The invited account.</param>
+    [MessageLogging(EventId = 91292, Level = LogLevel.Error,
+        Message = "An invitation at issuer '{issuer}' for user {userId} matched but could not be redeemed; the sign-in is refused")]
+    internal static partial IGenericMessage InvitationNotRedeemed(
+        ILogger<ExternalIdentityBinding> logger, string issuer, Guid userId);
 }

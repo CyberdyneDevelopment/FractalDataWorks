@@ -34,7 +34,6 @@ public sealed class MoveTypesToNamespaceTranslator
     }
 
     /// <inheritdoc/>
-#pragma warning disable MA0051 // Linear flow: select, rewrite declarations, follow references, probe.
     public override async Task<IGenericResult<IRoslynCommandResult>> Translate(
         MoveTypesToNamespaceCommand command,
         Solution solution,
@@ -143,7 +142,6 @@ public sealed class MoveTypesToNamespaceTranslator
                 Array.Empty<PathChange>(),
                 data));
     }
-#pragma warning restore MA0051
 
     private static async Task<List<SelectedType>> SelectDocuments(
         Solution solution,
