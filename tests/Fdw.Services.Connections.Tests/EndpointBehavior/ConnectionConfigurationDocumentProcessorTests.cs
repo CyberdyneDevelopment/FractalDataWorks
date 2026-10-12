@@ -48,7 +48,11 @@ public sealed class ConnectionConfigurationDocumentProcessorTests
         var document = Process();
 
         var request = RequestSchema(document, MemberPath, OpenApiOperationMethod.Patch).ActualSchema;
-        PropertyOf(request, "configuration").ShouldNotBeNull().OneOf.Count.ShouldBe(3);
+        // The property's own nullable/any alternatives stay in the oneOf; what the processor adds is one reference per type schema.
+        var alternatives = PropertyOf(request, "configuration").ShouldNotBeNull().OneOf;
+        new[] { "AzureBlobTestConfiguration", "MsSqlConnectionConfiguration", "SftpTestConfiguration" }
+            .Count(name => alternatives.Any(alternative => ReferenceEquals(alternative.Reference, document.Definitions[name])))
+            .ShouldBe(3);
     }
 
     [Fact]
