@@ -39,13 +39,11 @@ public abstract class MsSqlAuthenticationConfiguration
         string description,
         IReadOnlyList<string> expectedProperties,
         IReadOnlyList<string> requiredProperties,
-        IReadOnlyList<string> secretPropertyNames,
         bool requiresSecret)
         : base(name, $"Authentication:{name}", displayName, description, "Authentication", requiresSecret)
     {
         ExpectedProperties = expectedProperties;
         RequiredProperties = requiredProperties;
-        SecretPropertyNames = secretPropertyNames;
     }
 
     /// <inheritdoc />
@@ -54,38 +52,8 @@ public abstract class MsSqlAuthenticationConfiguration
     /// <inheritdoc />
     public IReadOnlyList<string> RequiredProperties { get; } = [];
 
-    /// <summary>
-    /// The subset of <see cref="ExpectedProperties"/> whose values are secret references
-    /// (e.g. <c>SecretKeyName</c>) and must be masked before this type's KVP values are
-    /// surfaced in an API response. Empty for methods with no secret-bearing property
-    /// (Windows, EntraId, ManagedIdentity, AzureCli).
-    /// </summary>
-    public IReadOnlyList<string> SecretPropertyNames { get; } = [];
-
     /// <inheritdoc />
     public bool IsEmpty => string.IsNullOrEmpty(Name);
-
-    /// <summary>
-    /// Masks this type's secret-bearing properties (<see cref="SecretPropertyNames"/>) in
-    /// <paramref name="values"/>, replacing each non-empty value with <paramref name="maskValue"/>.
-    /// </summary>
-    /// <remarks>
-    /// Why: the NotFound/Empty sentinel (unrecognized or unset AuthenticationType) masks every
-    /// non-empty value rather than none — an unrecognized type is treated as unsafe to display,
-    /// not as "nothing declared, nothing to hide".
-    /// </remarks>
-    public IDictionary<string, string?> MaskSecrets(IReadOnlyDictionary<string, string?> values, string maskValue)
-    {
-        var masked = new Dictionary<string, string?>(values, StringComparer.OrdinalIgnoreCase);
-        IReadOnlyList<string> keysToMask = IsEmpty ? new List<string>(masked.Keys) : SecretPropertyNames;
-        foreach (var key in keysToMask)
-        {
-            if (masked.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
-                masked[key] = maskValue;
-        }
-
-        return masked;
-    }
 
     /// <summary>
     /// Reads one authentication property, failing loud when it is absent or empty.

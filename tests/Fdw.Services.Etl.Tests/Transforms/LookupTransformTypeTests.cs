@@ -410,7 +410,7 @@ public sealed class LookupTransformTypeTests
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("ETL-11059");
         result.Messages[^1].Message.ShouldContain("query rejected");
-        result.Messages[^1].Message.ShouldContain("Conn1:Devices");
+        result.Messages[^1].Message.ShouldContain("preload from Devices");
         context.Errors.ShouldBeEmpty();
     }
 

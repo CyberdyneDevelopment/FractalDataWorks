@@ -57,7 +57,8 @@ public sealed class CalculationNodeCatalogTests
         {
             type.Summary.ShouldNotBeNullOrWhiteSpace(type.Name);
             type.MinOperands.ShouldBeGreaterThanOrEqualTo(0, type.Name);
-            type.MaxOperands.ShouldBeGreaterThanOrEqualTo(type.MinOperands, type.Name);
+            // A negative maximum is "no upper bound" (CalculationArrayValidator reads it so), as Add and Concat have.
+            (type.MaxOperands < 0 || type.MaxOperands >= type.MinOperands).ShouldBeTrue(type.Name);
         }
     }
 }

@@ -22,14 +22,13 @@ public sealed class SqlAuthConfiguration : MsSqlAuthenticationConfiguration
 {
     private static readonly string[] Expected = ["Username", "SecretKeyName", "SecretManagerName"];
     private static readonly string[] Required = ["Username", "SecretKeyName"];
-    private static readonly string[] Secret = ["SecretKeyName"];
 
     /// <summary>Initializes a new instance of the <see cref="SqlAuthConfiguration"/> class.</summary>
     public SqlAuthConfiguration()
         : base("SqlAuth",
                "SQL Server Authentication",
                "Username and password authentication",
-               Expected, Required, Secret, requiresSecret: true)
+               Expected, Required, requiresSecret: true)
     {
     }
 
@@ -92,6 +91,9 @@ public sealed class SqlAuthConfiguration : MsSqlAuthenticationConfiguration
 
     /// <inheritdoc />
     public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("SecretKeyName", "Password", secret: true)];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<ConnectionSettingField> Settings { get; } = [new("Username", "User name")];
 
     /// <inheritdoc/>
     /// <remarks>The connection carries its own login and the password it names.</remarks>

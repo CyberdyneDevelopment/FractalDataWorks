@@ -455,10 +455,11 @@ public static class ConnectionCredentialStore
         var opened = await provider.Get(managerName, cancellationToken).ConfigureAwait(false);
         if (opened.IsFailure || opened.Value is null)
         {
-            ConnectionEndpointLog.ExternalCredentialUnavailable(logger, connection.Name, string.Empty, managerName, "secret manager not registered");
+            var fields = string.Join(", ", slots.Value.Fields);
+            ConnectionEndpointLog.ExternalCredentialUnavailable(logger, connection.Name, fields, managerName, "secret manager not registered");
             return GenericResult.Failure(
                 ConnectionsResultCodes.ByName("ExternalCredentialUnavailable"),
-                ResultDetails.Create("name", connection.Name, "secretManager", managerName, "field", string.Empty)
+                ResultDetails.Create("name", connection.Name, "secretManager", managerName, "field", fields)
                     .With("reason", "the secret manager is not registered"));
         }
 

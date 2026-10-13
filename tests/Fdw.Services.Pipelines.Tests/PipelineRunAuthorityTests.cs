@@ -477,6 +477,8 @@ public sealed class PipelineRunAuthorityTests
     {
         RolesCarryAll();
         Visible("Orders");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
         StoreVisible("Warehouse");
         ContainerVisible("Warehouse", "orders/v1", "orders", visible: true);
 
@@ -493,6 +495,8 @@ public sealed class PipelineRunAuthorityTests
     {
         RolesCarry("datasets:read", "datasets:write", "connections:read", "connections:write", "datastores:read");
         Visible("Orders");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
         StoreVisible("Warehouse");
         ContainerVisible("Warehouse", "orders/v1", "orders", visible: true);
 
@@ -510,6 +514,8 @@ public sealed class PipelineRunAuthorityTests
     {
         RolesCarryAll();
         Visible("Orders");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
         StoreVisible("Warehouse", declaredByHost: true);
         ContainerVisible("Warehouse", "orders/v1", "orders", visible: true);
 
@@ -526,6 +532,8 @@ public sealed class PipelineRunAuthorityTests
     {
         RolesCarryAll();
         Visible("Orders");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
         var partial = DestinationStoreReach with { DestinationContainerName = null };
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), partial, ["DataEngineer"],
@@ -541,6 +549,8 @@ public sealed class PipelineRunAuthorityTests
     {
         RolesCarryAll();
         Visible("Orders", "OrdersCopy");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
         StoreVisible("Warehouse");
         ContainerVisible("Warehouse", "orders/v1", "orders", visible: true);
         var doubled = DestinationStoreReach with { DestinationDataSet = "OrdersCopy" };

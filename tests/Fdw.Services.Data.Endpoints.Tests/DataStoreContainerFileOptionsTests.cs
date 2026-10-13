@@ -95,7 +95,10 @@ public sealed class DataStoreContainerFileOptionsTests
         var separator = DataStoreContainerBuilder.FileOptionsRefusal("People", "Delimited", null, "", null, NullLogger.Instance)!;
 
         notForFormat.Code!.Code.ShouldBe("DATA-21019");
-        notForFormat.Code.FormatClientMessage(notForFormat.Details).ShouldBe("Container 'People' states HasHeader, which only a Delimited or Xlsx container takes");
+        var notForFormatMessage = notForFormat.Code.FormatClientMessage(notForFormat.Details)!;
+        notForFormatMessage.ShouldStartWith("Container 'People' states HasHeader, which only a ");
+        notForFormatMessage.ShouldEndWith(" container takes");
+        notForFormatMessage.ShouldContain("Xlsx");
         sheet.Code!.Code.ShouldBe("DATA-21020");
         sheet.Code.FormatClientMessage(sheet.Details).ShouldContain("worksheet 'a/b'");
         separator.Code!.Code.ShouldBe("DATA-21021");

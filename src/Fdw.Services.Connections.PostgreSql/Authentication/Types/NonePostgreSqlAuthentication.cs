@@ -18,7 +18,6 @@ public sealed class NonePostgreSqlAuthentication : PostgreSqlAuthenticationConfi
                "No username/password fragment — relies on the server's trust/peer configuration",
                expectedProperties: [],
                requiredProperties: [],
-               secretPropertyNames: [],
                requiresSecret: false)
     {
     }
