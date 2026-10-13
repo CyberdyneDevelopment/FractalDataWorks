@@ -18,10 +18,10 @@ public sealed class PlatformRowEndpointsGatewayTests
 {
     public static TheoryData<Type> PlatformRowEndpoints => new()
     {
-        typeof(SaveFieldMappingTransformEndpointBase),
-        typeof(DeleteFieldMappingTransformEndpointBase),
-        typeof(ListFieldMappingTransformsEndpointBase),
-        typeof(ReorderFieldMappingTransformsEndpointBase),
+        typeof(SaveFieldMappingTransformationEndpointBase),
+        typeof(DeleteFieldMappingTransformationEndpointBase),
+        typeof(ListFieldMappingTransformationsEndpointBase),
+        typeof(ReorderFieldMappingTransformationsEndpointBase),
         typeof(DeleteTransformationEndpointBase),
         typeof(ListDataSetSamplesEndpointBase),
         typeof(UpsertDataSetSampleEndpointBase),

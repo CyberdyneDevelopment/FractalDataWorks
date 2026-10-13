@@ -43,8 +43,10 @@ namespace Fdw.Services.Etl.Pipelines;
 ///   "Pipelines": {
 ///     "OrdersSync": {
 ///       "PipelineType": "BatchCopy",
-///       "SourceConnectionName": "SourceDb",
-///       "DestinationConnectionName": "TargetDb",
+///       "SourceDataSet": "Orders",
+///       "DestinationDataStoreName": "Warehouse",
+///       "DestinationDataStorePath": "orders/v1",
+///       "DestinationContainerName": "orders",
 ///       "MaxParallelism": 4,
 ///       "LoadMode": "Append"
 ///     }

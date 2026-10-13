@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using Fdw.Collections.Attributes;
@@ -22,6 +23,9 @@ public sealed class RefNode : CalculationNodeBase
         : base("Ref", "The value of a result defined earlier in the same array.", 0, 0)
     {
     }
+
+    /// <inheritdoc />
+    public override IReadOnlyList<string> Members { get; } = new[] { "name" };
 
     /// <inheritdoc />
     public override IGenericResult Check(CalculationNode node, ICalculationScope scope)

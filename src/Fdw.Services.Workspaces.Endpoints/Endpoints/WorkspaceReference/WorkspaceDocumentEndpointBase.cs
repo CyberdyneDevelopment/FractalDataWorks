@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
-using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Web.RestEndpoints.ApiReference;
@@ -15,8 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Workspaces.Endpoints;
 
 /// <summary>
-/// Base for the API references of workspace data: one operation per data set attached to each
-/// workspace the reference covers, grouped by workspace.
+/// Base for the API references of workspace data: one operation per data set the caller may query in each
+/// workspace the reference covers, grouped by workspace. A variation the workspace owns is one of them.
 /// </summary>
 /// <typeparam name="TRequest">What the route carries.</typeparam>
 /// <remarks>
@@ -28,9 +27,10 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// template every copy starts from, so the reference cannot drift from what the route accepts.
 /// </para>
 /// <para>
-/// An attached data set that fails to load is left out and logged, and the others are still
-/// described: the data route serves the rest of a workspace when one data set is broken, and so does
-/// its reference.
+/// The names come from <see cref="IWorkspaceReadService.DataSets"/>, the same answer the data route resolves a name
+/// from, so the reference cannot list a name the route would refuse nor omit one it would serve (FDW-1318). A data
+/// set that fails to load is left out and logged there, and the others are still described: the data route serves
+/// the rest of a workspace when one data set is broken, and so does its reference.
 /// </para>
 /// </remarks>
 public abstract class WorkspaceDocumentEndpointBase<TRequest> : ApiReferenceDocumentEndpointBase<TRequest>
@@ -38,25 +38,25 @@ public abstract class WorkspaceDocumentEndpointBase<TRequest> : ApiReferenceDocu
 {
     private const string DataRouteSuffix = "/{WorkspaceName}/{DataSetName}";
 
-    private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly IWorkspaceReadService _readService;
 
     /// <summary>Initializes a new instance of the <see cref="WorkspaceDocumentEndpointBase{TRequest}"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="systemRoles">Decides whether the caller is a platform admin.</param>
     /// <param name="workspaces">Resolves the workspaces with their members and resources.</param>
     /// <param name="access">Decides whether the caller may read a workspace.</param>
-    /// <param name="dataSets">Resolves the attached data sets and their fields.</param>
+    /// <param name="readService">Resolves the data sets and variations a workspace exposes, with their fields.</param>
     protected WorkspaceDocumentEndpointBase(
         ILogger<ApiReferenceDocumentEndpointBase<TRequest>> logger,
         ISystemRoleConfiguration systemRoles,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
-        IDataSetConfigurationProvider dataSets)
+        IWorkspaceReadService readService)
         : base(logger, systemRoles)
     {
         Workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
         Access = access ?? throw new ArgumentNullException(nameof(access));
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
+        _readService = readService ?? throw new ArgumentNullException(nameof(readService));
     }
 
     /// <summary>Gets the provider that resolves workspaces.</summary>
@@ -109,23 +109,21 @@ public abstract class WorkspaceDocumentEndpointBase<TRequest> : ApiReferenceDocu
         foreach (var workspace in workspaces)
         {
             tags.Add(new KeyValuePair<string, string?>(workspace.Name, workspace.Description));
-            await AddDataSets(document, routePath, template, workspace, cancellationToken).ConfigureAwait(false);
+            var described = await AddDataSets(document, routePath, template, workspace, cancellationToken).ConfigureAwait(false);
+            if (described.IsFailure)
+                return described;
         }
 
         document.ReplaceTags(tags);
         return GenericResult.Success();
     }
 
-    private static bool IsCurrentDataSet(WorkspaceResourceConfiguration resource) =>
-        resource.IsCurrent && !resource.IsDeleted
-        && string.Equals(resource.ResourceType, "DataSet", StringComparison.Ordinal);
-
     private static string PathFor(string routePath, string workspaceName, string dataSetName)
         => routePath
             .Replace("{WorkspaceName}", Uri.EscapeDataString(workspaceName), StringComparison.OrdinalIgnoreCase)
             .Replace("{DataSetName}", Uri.EscapeDataString(dataSetName), StringComparison.OrdinalIgnoreCase);
 
-    private static JsonObject OperationFor(JsonObject template, string workspaceName, IDataSetImplementationConfiguration dataSet)
+    private static JsonObject OperationFor(JsonObject template, string workspaceName, ReadableDataSet dataSet)
     {
         var operation = template.DeepClone().AsObject();
         operation["operationId"] = "Query_" + workspaceName + "_" + dataSet.Name;
@@ -166,29 +164,21 @@ public abstract class WorkspaceDocumentEndpointBase<TRequest> : ApiReferenceDocu
             && location.TryGetValue(out string? kind)
             && string.Equals(kind, "path", StringComparison.Ordinal);
 
-    private async Task AddDataSets(
+    private async Task<IGenericResult> AddDataSets(
         ApiReferenceDocument document,
         string routePath,
         JsonObject template,
         IWorkspaceImplementationConfiguration workspace,
         CancellationToken cancellationToken)
     {
-        var added = 0;
-        foreach (var attachment in workspace.Resources.Where(IsCurrentDataSet))
-        {
-            var dataSet = await _dataSets.Get(attachment.ResourceId, cancellationToken).ConfigureAwait(false);
-            if (dataSet.IsFailure || dataSet.Value is not { } found)
-            {
-                ApiReferenceLog.DataSetLeftOut(
-                    Logger, workspace.Name, attachment.ResourceId,
-                    dataSet.IsFailure ? "it could not be loaded" : "no data set has that id");
-                continue;
-            }
+        var readable = await _readService.DataSets(workspace, cancellationToken).ConfigureAwait(false);
+        if (readable.IsFailure || readable.Value is not { } dataSets)
+            return readable;
 
-            document.AddOperation(PathFor(routePath, workspace.Name, found.Name), "post", OperationFor(template, workspace.Name, found));
-            added++;
-        }
+        foreach (var dataSet in dataSets)
+            document.AddOperation(PathFor(routePath, workspace.Name, dataSet.Name), "post", OperationFor(template, workspace.Name, dataSet));
 
-        ApiReferenceLog.WorkspaceDescribed(Logger, workspace.Name, added);
+        ApiReferenceLog.WorkspaceDescribed(Logger, workspace.Name, dataSets.Count);
+        return GenericResult.Success();
     }
 }

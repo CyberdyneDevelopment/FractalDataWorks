@@ -36,7 +36,7 @@ public abstract class UpdateTransformationEndpointBase : CrudUpdateEndpointBase<
     }
 
     /// <inheritdoc />
-    protected override string ResourceName => "transforms";
+    protected override string ResourceName => "transformations";
 
     /// <inheritdoc />
     protected override string WritePolicy => "datasets:write";
@@ -62,11 +62,11 @@ public abstract class UpdateTransformationEndpointBase : CrudUpdateEndpointBase<
     {
         if (existing.IsSystemProvided)
             return GenericResult.Failure(
-                FieldMappingTransformEndpointLog.SystemProvidedTransformationImmutable(Logger, existing.Name));
+                FieldMappingTransformationEndpointLog.SystemProvidedTransformationImmutable(Logger, existing.Name));
 
         var current = await _transformations.Get(request.Name, ct).ConfigureAwait(false);
         if (current.IsFailure || current.Value is null)
-            return GenericResult.Failure(FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.Name));
+            return GenericResult.Failure(FieldMappingTransformationEndpointLog.TransformationNotFound(Logger, request.Name));
 
         return Prepare(request, current.Value);
     }
@@ -78,7 +78,7 @@ public abstract class UpdateTransformationEndpointBase : CrudUpdateEndpointBase<
         var current = await _transformations.Get(request.Name, ct).ConfigureAwait(false);
         if (current.IsFailure || current.Value is null)
             return GenericResult<TransformationPayload>.Failure(
-                FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.Name));
+                FieldMappingTransformationEndpointLog.TransformationNotFound(Logger, request.Name));
 
         var prepared = Prepare(request, current.Value);
         if (prepared.IsFailure)
@@ -95,9 +95,9 @@ public abstract class UpdateTransformationEndpointBase : CrudUpdateEndpointBase<
             return reread.ToNewResult<TransformationPayload>();
         if (reread.Value is null)
             return GenericResult<TransformationPayload>.Failure(
-                FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.Name));
+                FieldMappingTransformationEndpointLog.TransformationNotFound(Logger, request.Name));
 
-        FieldMappingTransformEndpointLog.TransformationSaved(Logger, request.Name, current.Value.Implementation);
+        FieldMappingTransformationEndpointLog.TransformationSaved(Logger, request.Name, current.Value.Implementation);
         return TransformationEndpointSupport.ToDetail(reread.Value, _context);
     }
 

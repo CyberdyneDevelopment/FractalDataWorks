@@ -266,23 +266,6 @@ public sealed class PipelineStageRulesTests
         result.Details!.GetValue<string>("StepName").ShouldBe("Shape");
     }
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void AFieldMappingThatStatesBothAnExpressionAndAChainIsRefused()
-    {
-        // Arrange
-        var stage = MapStage([new PipelineFieldTransformationReference { Transformation = "Trim", Ordinal = 1 }]);
-        stage.FieldMappings[0].TransformExpression = "Upper";
-
-        // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [stage], NullLogger.Instance, Known());
-
-        // Assert
-        result.IsSuccess.ShouldBeFalse();
-        result.Details!.GetValue<string>("Reason").ShouldNotBeNull().ShouldContain("transformExpression");
-    }
-
     [Theory]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]

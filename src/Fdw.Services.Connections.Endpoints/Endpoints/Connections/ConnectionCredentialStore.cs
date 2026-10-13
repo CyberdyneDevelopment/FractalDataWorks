@@ -28,6 +28,13 @@ namespace Fdw.Services.Connections.Endpoints;
 /// <see cref="SettingDefinitions.ConnectionCredentialSecretManager"/>, and each secret's name is minted here.
 /// </para>
 /// <para>
+/// One exception, a platform administrator's (FDW-1327): to keep credentials in a secret manager that something else
+/// manages, an administrator names the secret manager and each secret on the connection instead of sending values. The
+/// platform checks that they can be read, never writes or deletes them (a name it did not mint is left alone), and from
+/// then on only a platform administrator may change them: nobody else sends values for the connection or changes what it
+/// names. A name in the form the platform mints is never an administrator's to choose.
+/// </para>
+/// <para>
 /// No value is logged or returned. Values are resolved server-side only when the connection is used.
 /// </para>
 /// </remarks>
@@ -49,6 +56,7 @@ public static class ConnectionCredentialStore
     /// <param name="before">The connection's credential slots before the request, or <see langword="null"/> for a new connection.</param>
     /// <param name="connection">The connection's configuration as the request leaves it; its credential references are changed in place.</param>
     /// <param name="credentials">The values the request sent, or <see langword="null"/> when it sent none.</param>
+    /// <param name="callerIsPlatformAdmin">Whether the caller is a platform administrator, who alone may name where credentials are kept (FDW-1327).</param>
     /// <param name="services">The request's services.</param>
     /// <param name="logger">The calling endpoint's logger.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -58,13 +66,19 @@ public static class ConnectionCredentialStore
         ConnectionCredentialSlots? before,
         IConnectionImplementationConfiguration connection,
         IDictionary<string, string>? credentials,
+        bool callerIsPlatformAdmin,
         IServiceProvider services,
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        var references = RefuseCallerReferences(connectionType, before, connection, logger);
+        var references = RefuseCallerReferences(connectionType, before, connection, callerIsPlatformAdmin, logger);
         if (references.IsFailure)
             return references.ToNewResult<ConnectionCredentialWrite>();
+
+        var external = await CheckExternal(
+            connectionType, before, connection, credentials, callerIsPlatformAdmin, services, logger, cancellationToken).ConfigureAwait(false);
+        if (external.IsFailure)
+            return external.ToNewResult<ConnectionCredentialWrite>();
 
         var stored = await Store(connectionType, connection, credentials, services, logger, cancellationToken).ConfigureAwait(false);
         if (stored.IsFailure)
@@ -75,23 +89,90 @@ public static class ConnectionCredentialStore
         return GenericResult<ConnectionCredentialWrite>.Success(stored.Value!.AlsoRetiring(Dropped(connectionType, before, connection)));
     }
 
+    // An administrator may name where credentials are kept, but never in the platform's own minted form: the store deletes
+    // minted secrets when a connection stops naming them, and a name in that form could be another connection's. A minted
+    // name the connection already had is its own and stays.
+    private static IGenericResult RefuseMintedName(
+        ConnectionCredentialSlots? before, ConnectionCredentialSlots after, string connectionName, ILogger logger)
+    {
+        var reserved = after.References.Values.FirstOrDefault(
+            reference => !string.IsNullOrEmpty(reference) && ConnectionCredentialSecretName.IsMinted(reference!)
+                         && before?.References.Values.Contains(reference, StringComparer.Ordinal) != true);
+        if (reserved is null)
+            return GenericResult.Success();
+
+        ConnectionEndpointLog.ExternalSecretNameReserved(logger, connectionName);
+        return GenericResult.Failure(
+            ConnectionsResultCodes.ByName("ExternalSecretNameReserved"),
+            ResultDetails.Create("name", connectionName, "secret", reserved));
+    }
+
+    // True when the connection kept its credentials outside the platform and the request changes where, including clearing.
+    private static bool ChangesExternal(ConnectionCredentialSlots? before, ConnectionCredentialSlots after) =>
+        before is not null && IsExternal(before) && ReferencesChanged(before, after);
+
+    // What the request does about credentials kept outside the platform (FDW-1327): a caller who is not an administrator may
+    // not send values for them; an administrator who names where they are kept sends no values with it, and what is named
+    // is checked to be readable before anything is saved.
+    private static async Task<IGenericResult> CheckExternal(
+        IConnectionType connectionType,
+        ConnectionCredentialSlots? before,
+        IConnectionImplementationConfiguration connection,
+        IDictionary<string, string>? credentials,
+        bool callerIsPlatformAdmin,
+        IServiceProvider services,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var sentValues = credentials is { Count: > 0 };
+        if (sentValues && !callerIsPlatformAdmin && before is not null && IsExternal(before))
+        {
+            ConnectionEndpointLog.CredentialsManagedExternally(logger, connection.Name);
+            return GenericResult.Failure(
+                ConnectionsResultCodes.ByName("CredentialsManagedExternally"), ResultDetails.Create("name", connection.Name));
+        }
+
+        var named = NamesWhereKept(connectionType, before, connection);
+        if (named.IsFailure || !named.Value)
+            return named;
+
+        // An administrator named where the credentials are kept: that is the whole request about them. Values with it would
+        // be written to the platform's store under names it mints and the connection pointed away again.
+        if (sentValues)
+        {
+            ConnectionEndpointLog.CredentialReferenceAndValue(logger, connection.Name);
+            return GenericResult.Failure(
+                ConnectionsResultCodes.ByName("CredentialReferenceAndValue"), ResultDetails.Create("name", connection.Name));
+        }
+
+        return await VerifyExternal(connectionType, connection, services, logger, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>
-    /// Refuses a change to where a connection's credentials are stored that came from the caller rather than the
-    /// server: a credential field or the secret manager set to a value other than the one the connection already had.
+    /// Refuses a change to where a connection's credentials are stored that came from a caller who may not make it: a
+    /// credential field or the secret manager set to a value other than the one the connection already had, or, for a
+    /// connection whose credentials are kept externally, any change to them.
     /// </summary>
     /// <param name="connectionType">The connection's type.</param>
     /// <param name="before">The connection's credential slots before the request, or <see langword="null"/> for a new connection.</param>
     /// <param name="after">The connection's configuration as the request would leave it.</param>
+    /// <param name="callerIsPlatformAdmin">Whether the caller is a platform administrator (FDW-1327).</param>
     /// <param name="logger">The calling endpoint's logger.</param>
-    /// <returns>Success, or a <c>CredentialReferenceReserved</c> refusal naming the value the caller tried to set.</returns>
+    /// <returns>
+    /// Success; <c>CredentialReferenceReserved</c> naming the value a caller who is not a platform administrator tried to
+    /// set; <c>CredentialsManagedExternally</c> when such a caller changes credentials kept externally; or
+    /// <c>ExternalSecretNameReserved</c> when an administrator names a secret in the form the platform mints.
+    /// </returns>
     /// <remarks>
-    /// Clearing a reference is allowed (switching to a method that carries no credential); naming one is not, because a
-    /// caller who could name the secret could make the connection read any secret the platform holds.
+    /// Clearing a reference is allowed (switching to a method that carries no credential) unless the credentials are
+    /// kept externally. Naming one is a platform administrator's alone, because whoever can name the secret can make
+    /// the connection read any secret the platform holds.
     /// </remarks>
     public static IGenericResult RefuseCallerReferences(
         IConnectionType connectionType,
         ConnectionCredentialSlots? before,
         IConnectionImplementationConfiguration after,
+        bool callerIsPlatformAdmin,
         ILogger logger)
     {
         if (connectionType is null) throw new ArgumentNullException(nameof(connectionType));
@@ -101,9 +182,19 @@ public static class ConnectionCredentialStore
         if (slots.IsFailure)
             return slots;
 
+        if (!callerIsPlatformAdmin && ChangesExternal(before, slots.Value!))
+        {
+            ConnectionEndpointLog.CredentialsManagedExternally(logger, after.Name);
+            return GenericResult.Failure(
+                ConnectionsResultCodes.ByName("CredentialsManagedExternally"), ResultDetails.Create("name", after.Name));
+        }
+
         var chosen = ChosenByCaller(before, slots.Value!);
         if (chosen is null)
             return GenericResult.Success();
+
+        if (callerIsPlatformAdmin)
+            return RefuseMintedName(before, slots.Value!, after.Name, logger);
 
         ConnectionEndpointLog.CredentialReferenceRefused(logger, after.Name, chosen);
         return GenericResult.Failure(
@@ -283,6 +374,112 @@ public static class ConnectionCredentialStore
             await Retire(owned.Value!, connection.Name, services, logger, cancellationToken).ConfigureAwait(false);
 
         return deleted;
+    }
+
+    /// <summary>
+    /// Tells whether a connection's credentials are kept outside the platform's credential store: it names a secret
+    /// manager and at least one set secret whose name the store did not mint (FDW-1327).
+    /// </summary>
+    /// <param name="slots">The connection's credential slots.</param>
+    /// <returns><see langword="true"/> when an administrator named where a credential is kept.</returns>
+    /// <remarks>Derived from the names and nothing else: the store mints every name it writes, so a name in another form was named by a person.</remarks>
+    public static bool IsExternal(ConnectionCredentialSlots slots)
+    {
+        if (slots is null) throw new ArgumentNullException(nameof(slots));
+
+        return slots.SecretManagerName is not null
+               && slots.Fields.Any(field => IsExternal(slots, field));
+    }
+
+    /// <summary>Tells whether one credential field of a connection is kept outside the platform's credential store.</summary>
+    /// <param name="slots">The connection's credential slots.</param>
+    /// <param name="field">The credential field.</param>
+    /// <returns><see langword="true"/> when the field names a secret the store did not mint.</returns>
+    public static bool IsExternal(ConnectionCredentialSlots slots, string field)
+    {
+        if (slots is null) throw new ArgumentNullException(nameof(slots));
+
+        return slots.IsSet(field)
+               && slots.References.TryGetValue(field, out var reference)
+               && !string.IsNullOrEmpty(reference)
+               && !ConnectionCredentialSecretName.IsMinted(reference!);
+    }
+
+    // True when the request names a secret manager or a secret the connection did not name before: the connection is to
+    // keep its credentials where someone else keeps them. Only an administrator gets this far (RefuseCallerReferences).
+    private static IGenericResult<bool> NamesWhereKept(
+        IConnectionType connectionType, ConnectionCredentialSlots? before, IConnectionImplementationConfiguration connection)
+    {
+        var slots = connectionType.CredentialSlots(connection);
+        if (slots.IsFailure)
+            return slots.ToNewResult<bool>();
+
+        return GenericResult<bool>.Success(ChosenByCaller(before, slots.Value!) is not null);
+    }
+
+    // Any difference in where a connection's credentials are kept, including a cleared reference.
+    private static bool ReferencesChanged(ConnectionCredentialSlots before, ConnectionCredentialSlots after)
+    {
+        if (!string.Equals(before.SecretManagerName, after.SecretManagerName, StringComparison.Ordinal))
+            return true;
+
+        foreach (var field in after.Fields.Union(before.Fields, StringComparer.OrdinalIgnoreCase))
+        {
+            before.References.TryGetValue(field, out var was);
+            after.References.TryGetValue(field, out var now);
+            if (!string.Equals(was ?? string.Empty, now ?? string.Empty, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
+    }
+
+    // Checks what an administrator named: the secret manager is registered and each named secret can be read. The value is
+    // read to prove the secret is there and is dropped at once; nothing logs, keeps or returns it.
+    private static async Task<IGenericResult> VerifyExternal(
+        IConnectionType connectionType,
+        IConnectionImplementationConfiguration connection,
+        IServiceProvider services,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var slots = connectionType.CredentialSlots(connection);
+        if (slots.IsFailure)
+            return slots;
+
+        var managerName = slots.Value!.SecretManagerName;
+        if (managerName is null)
+            return GenericResult.Success();   // names a secret but no secret manager: CredentialRequired follows from Store
+
+        var provider = services.GetRequiredService<ISecretManagerProvider>();
+        var opened = await provider.Get(managerName, cancellationToken).ConfigureAwait(false);
+        if (opened.IsFailure || opened.Value is null)
+        {
+            var fields = string.Join(", ", slots.Value.Fields);
+            ConnectionEndpointLog.ExternalCredentialUnavailable(logger, connection.Name, fields, managerName, "secret manager not registered");
+            return GenericResult.Failure(
+                ConnectionsResultCodes.ByName("ExternalCredentialUnavailable"),
+                ResultDetails.Create("name", connection.Name, "secretManager", managerName, "field", fields)
+                    .With("reason", "the secret manager is not registered"));
+        }
+
+        foreach (var field in slots.Value.SetFields)
+        {
+            var key = slots.Value.References[field]!;
+            var read = await opened.Value
+                .Execute(GetSecretManagerCommand.Latest(container: null, secretKey: key), cancellationToken)
+                .ConfigureAwait(false);
+            if (read.IsSuccess)
+                continue;
+
+            var reason = StoreResultCode(read);
+            ConnectionEndpointLog.ExternalCredentialUnavailable(logger, connection.Name, field, managerName, reason);
+            return GenericResult.Failure(
+                ConnectionsResultCodes.ByName("ExternalCredentialUnavailable"),
+                ResultDetails.Create("name", connection.Name, "secretManager", managerName, "field", field).With("reason", reason));
+        }
+
+        return GenericResult.Success();
     }
 
     // The first credential reference the caller set to a value of its own: a field or the secret manager that now names

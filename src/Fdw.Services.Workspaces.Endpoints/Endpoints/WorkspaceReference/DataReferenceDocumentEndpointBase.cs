@@ -27,14 +27,14 @@ public abstract class DataReferenceDocumentEndpointBase : WorkspaceDocumentEndpo
     /// <param name="systemRoles">Decides whether the caller is a platform admin.</param>
     /// <param name="workspaces">Resolves the workspaces with their members and resources.</param>
     /// <param name="access">Decides whether the caller may read a workspace.</param>
-    /// <param name="dataSets">Resolves the attached data sets and their fields.</param>
+    /// <param name="readService">Resolves the data sets and variations a workspace exposes, with their fields.</param>
     protected DataReferenceDocumentEndpointBase(
         ILogger<ApiReferenceDocumentEndpointBase<EmptyRequest>> logger,
         ISystemRoleConfiguration systemRoles,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
-        IDataSetConfigurationProvider dataSets)
-        : base(logger, systemRoles, workspaces, access, dataSets)
+        IWorkspaceReadService readService)
+        : base(logger, systemRoles, workspaces, access, readService)
     {
     }
 

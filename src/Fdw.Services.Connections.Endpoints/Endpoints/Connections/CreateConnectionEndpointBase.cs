@@ -111,10 +111,12 @@ public abstract class CreateConnectionEndpointBase : CrudCreateEndpointBase<Crea
         }
 
         // Where a connection's credentials are stored is the server's choice, and their values arrive write-only: refuse
-        // a request that names a secret, then store the values it sent and point the connection at them (FDW-1086).
+        // a request that names a secret, then store the values it sent and point the connection at them (FDW-1086). A
+        // platform administrator alone may instead name a secret manager and secrets that something else keeps (FDW-1327).
         // Last before the save, so no refusal after it can leave stored secrets behind.
         var credentials = await ConnectionCredentialStore.Prepare(
-            connectionType, before: null, connection, request.Credentials, HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);
+            connectionType, before: null, connection, request.Credentials, Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User),
+            HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);
         if (credentials.IsFailure)
         {
             return credentials.ToNewResult<ConnectionDetailDto>();

@@ -17,7 +17,7 @@ public sealed class SortTransformTypeTests
     private readonly SortTransformType _sut = new();
 
     private static TransformContext CreateContext() =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>());
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>());
 
     private static PipelineTransformConfiguration CreateConfig(params (string Field, string Direction)[] fields)
     {

@@ -14,13 +14,13 @@ design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 | `AddDataStoreContainerRequest` | Services.Data.Clients.Abstractions | `Fields`, `Format`, `Name` | — | **REVIEW** | — |
 | `AssignRoleRequest` | Services.Authorization.Abstractions | `UserId` | — | **JUSTIFIED** | server-only fields are route-bound identifiers |
 | `CatalogSearchRequest` | Services.Catalog.Clients.Abstractions | `EntityTypes`, `Tags` | `EntityType` | **REVIEW** | — |
-| `CreateDataSetRequest` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `KeyFields`, `SourceDataSetName`, `TransformExpression` | — | **REVIEW** | — |
+| `CreateDataSetRequest` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `KeyFields`, `SourceDataSetName` | — | **REVIEW** | — |
 | `CreateDataSetSourceRequest` | Services.Data.Clients.Abstractions | `SourceDataSetId`, `SourceKind` | `FieldMappings` | **REVIEW** | — |
 | `CreatePromotionRequest` | Web.Analytics.Clients.Abstractions | `Items`, `Notes`, `RequestedBy` | — | **REVIEW** | — |
 | `CreateQualityRuleRequest` | Services.Quality.Abstractions | `FieldName`, `IsEnabled`, `MaxValue`, `MinValue`, `Pattern`, `Severity` | — | **REVIEW** | — |
 | `DataPreviewRequest` | Services.Data.Clients.Abstractions | `Columns` | `Filters`, `Page`, `PageSize` | **REVIEW** | — |
 | `DataPreviewResponse` | Services.Data.Clients.Abstractions | `Messages`, `RowCount`, `Source` | `TotalRowCount` | **REVIEW** | — |
-| `DataSetDetailDto` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `SourceDataSetName`, `TransformExpression` | `Id`, `KeyFields`, `Name` | **REVIEW** | — |
+| `DataSetDetailDto` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `SourceDataSetName` | `Id`, `KeyFields`, `Name` | **REVIEW** | — |
 | `DataSetFieldDto` | Services.Data.Clients.Abstractions | `IsNullable`, `TypeName` | `DefaultValue`, `IsIndexed` | **REVIEW** | — |
 | `DataSetSourceDto` | Services.Data.Clients.Abstractions | `ContainerId`, `IsActive`, `PathName`, `SourceDataSetId`, `SourceDataSetName`, `SourceKind` | `FieldMappings`, `FileFormat`, `HttpMethod`, `MapperTypeName`, `Path`, `SupportsPredicatePushdown` | **REVIEW** | — |
 | `DataSetSourceRecord` | Operations.Endpoints | — | `SourceDataSetId`, `SourceDataSetName` | **REVIEW** | — |
@@ -44,7 +44,7 @@ design is deliberate and `Fdw.ContractParity.Tests` documents the reasons.
 | `SaveSourceMappingsRequest` | Schema.Clients.Abstractions | `Name` | `DataSetName` | **JUSTIFIED** | server-only fields are route-bound identifiers |
 | `SchemaFieldDto` | Data.Components | `Ordinal` | `MaxLength`, `Precision`, `Scale` | **REVIEW** | — |
 | `SetRolePermissionsRequest` | Services.Authorization.Abstractions | `Name` | — | **JUSTIFIED** | server-only fields are route-bound identifiers |
-| `UpdateDataSetRequest` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `KeyFields`, `Name`, `SourceDataSetName`, `TransformExpression` | — | **REVIEW** | — |
+| `UpdateDataSetRequest` | Services.Data.Clients.Abstractions | `Aggregates`, `FederationStrategy`, `KeyFields`, `Name`, `SourceDataSetName` | — | **REVIEW** | — |
 | `UpdateQualityRuleRequest` | Services.Quality.Abstractions | `Id` | — | **JUSTIFIED** | server-only fields are route-bound identifiers |
 | `UpdateRoleRequest` | Services.Authorization.Abstractions | `Name`, `SortOrder` | — | **REVIEW** | — |
 | `UpdateUserPreferencesRequest` | Services.Notifications.Abstractions | `DarkMode`, `Language`, `ThemeName`, `Timezone` | `Preferences`, `UserId` | **REVIEW** | — |

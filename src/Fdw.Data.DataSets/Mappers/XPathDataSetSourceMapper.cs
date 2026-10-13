@@ -103,7 +103,7 @@ public sealed class XPathDataSetSourceMapper : DataSetSourceMapperTypeBase
                 }
 
                 // Apply transform chain (ascending ordinal order)
-                foreach (var step in mapping.Transforms.OrderBy(s => s.Ordinal))
+                foreach (var step in mapping.Transformations.OrderBy(s => s.Ordinal))
                 {
                     var typeOption = TransformationTypes.ByName(step.TransformType);
                     if (typeOption == TransformationTypes.NotFound)

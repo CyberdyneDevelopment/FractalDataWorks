@@ -25,6 +25,18 @@ public class DataStoreContainerResponse
     /// </summary>
     public int ClassificationId { get; set; }
 
+    /// <summary>Gets or sets the container's serialization format, or null when it states none.</summary>
+    public string? Format { get; set; }
+
+    /// <summary>Gets or sets whether the file's first row is a header row, or null when not stated.</summary>
+    public bool? HasHeader { get; set; }
+
+    /// <summary>Gets or sets the separator of the file's fields, or null when not stated.</summary>
+    public string? Separator { get; set; }
+
+    /// <summary>Gets or sets the worksheet to read, or null when not stated.</summary>
+    public string? SheetName { get; set; }
+
     /// <summary>Gets or sets the auto-generated key field names.</summary>
     public IList<string> SurrogateKeyFields { get; set; } = [];
 

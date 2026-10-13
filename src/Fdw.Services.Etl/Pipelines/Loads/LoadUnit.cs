@@ -64,9 +64,9 @@ public sealed class LoadUnit
         return string.IsNullOrWhiteSpace(configuration.DestinationDataSet)
             ? new LoadUnit(owner, kind, row)
             {
-                DataStore = configuration.DestinationConnectionName,
-                Path = string.Empty,
-                Container = configuration.DestinationContainerPath,
+                DataStore = configuration.DestinationDataStoreName,
+                Path = configuration.DestinationDataStorePath,
+                Container = configuration.DestinationContainerName,
             }
             : new LoadUnit(owner, kind, row) { DataSet = configuration.DestinationDataSet };
     }

@@ -20,7 +20,7 @@ public sealed class EntraIdConfiguration : MsSqlAuthenticationConfiguration
         : base("EntraId",
                "Microsoft Entra ID",
                "Authenticate using Microsoft Entra ID (Azure Active Directory)",
-               Expected, [], [], requiresSecret: false)
+               Expected, [], requiresSecret: false)
     {
     }
 

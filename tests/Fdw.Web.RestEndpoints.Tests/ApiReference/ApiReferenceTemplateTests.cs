@@ -23,16 +23,16 @@ public sealed class ApiReferenceTemplateTests
     {
         var document = Parse("""
             {"openapi":"3.0.0","paths":{
-              "/api/v1/field-mappings/{FieldMappingId}/transforms":{"get":{"parameters":[{"name":"FieldMappingId","in":"path","required":true}]}},
-              "/api/v1/field-mappings/{fieldMappingId}/transforms":{"post":{"parameters":[{"name":"fieldMappingId","in":"path","required":true},{"name":"Q","in":"query"}]}}}}
+              "/api/v1/field-mappings/{FieldMappingId}/transformations":{"get":{"parameters":[{"name":"FieldMappingId","in":"path","required":true}]}},
+              "/api/v1/field-mappings/{fieldMappingId}/transformations":{"post":{"parameters":[{"name":"fieldMappingId","in":"path","required":true},{"name":"Q","in":"query"}]}}}}
             """);
 
         var result = document.UnifyPathTemplates(NullLogger.Instance);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(1);
-        document.Paths.ShouldBe(new[] { "/api/v1/field-mappings/{fieldMappingId}/transforms" });
-        var item = Paths(document)["/api/v1/field-mappings/{fieldMappingId}/transforms"]!;
+        document.Paths.ShouldBe(new[] { "/api/v1/field-mappings/{fieldMappingId}/transformations" });
+        var item = Paths(document)["/api/v1/field-mappings/{fieldMappingId}/transformations"]!;
         item["get"]!["parameters"]![0]!["name"]!.GetValue<string>().ShouldBe("fieldMappingId");
         item["post"]!["parameters"]![0]!["name"]!.GetValue<string>().ShouldBe("fieldMappingId");
         item["post"]!["parameters"]![1]!["name"]!.GetValue<string>().ShouldBe("Q");

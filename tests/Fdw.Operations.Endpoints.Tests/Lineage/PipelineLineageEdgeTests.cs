@@ -60,11 +60,11 @@ public class PipelineLineageEdgeTests
     }
 
     [Fact]
-    public void WritesToEdgeCreatedFromDestinationConnection()
+    public void WritesToEdgeCreatedFromDestinationDataStore()
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", DestinationConnectionName = "Conn1" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", DestinationDataStoreName = "Store1" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
@@ -73,15 +73,15 @@ public class PipelineLineageEdgeTests
             new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
-            e.SourceId == "Pipeline_P1" && e.TargetId == "Connection_Conn1" && e.Type.Name == "WritesTo");
+            e.SourceId == "Pipeline_P1" && e.TargetId == "DataStore_Store1" && e.Type.Name == "WritesTo");
     }
 
     [Fact]
-    public void ReadsFromEdgeCreatedFromSourceConnection()
+    public void ReadsFromEdgeCreatedFromSourceDataStore()
     {
         var pipelines = new List<PipelineLineageRecord>
         {
-            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", SourceConnectionName = "ConnA" }
+            new() { Id = Guid.NewGuid(), Name = "P1", Implementation = "Etl", SourceDataStoreName = "StoreA" }
         };
 
         var graph = GetLineageGraphEndpointBase.BuildGraphFromRecords(
@@ -90,7 +90,7 @@ public class PipelineLineageEdgeTests
             new Dictionary<string, IReadOnlySet<string>>(), _logger.Object);
 
         graph.Edges.ShouldContain(e =>
-            e.SourceId == "Connection_ConnA" && e.TargetId == "Pipeline_P1" && e.Type.Name == "ReadsFrom");
+            e.SourceId == "DataStore_StoreA" && e.TargetId == "Pipeline_P1" && e.Type.Name == "ReadsFrom");
     }
 
     [Fact]

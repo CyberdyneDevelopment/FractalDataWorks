@@ -35,6 +35,10 @@ public abstract class RecordSourceTypeBase : TypeOptionBase<RecordSourceTypeBase
     public abstract string Format { get; }
 
     /// <inheritdoc />
+    /// <remarks>False unless the format overrides it: the text formats (Json, Xml, Delimited, FixedWidth) are read as text.</remarks>
+    public virtual bool ReadsBinary => false;
+
+    /// <inheritdoc />
     public abstract IRowSourceReader CreateReader(Stream content, RowSourceOptions? options);
 
     /// <inheritdoc />

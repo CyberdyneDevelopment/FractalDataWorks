@@ -5,7 +5,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// The kinds of transformation the <c>/transforms</c> resource authors, chosen by a request's <c>implementation</c>.
+/// The kinds of transformation the <c>/transformations</c> resource authors, chosen by a request's <c>implementation</c>.
 /// </summary>
 /// <remarks>
 /// Why a collection and not a switch in the endpoints: each kind owns what only it knows (which members a request may state,

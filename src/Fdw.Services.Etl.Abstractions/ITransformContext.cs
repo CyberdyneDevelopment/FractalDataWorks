@@ -51,7 +51,7 @@ public interface ITransformContext : IExecutionContext
     /// cannot reach. The run resolves every chain once when it starts, so a Transformation that no longer resolves fails the
     /// run before any record moves, naming it.
     /// </remarks>
-    IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>> FieldTransformChains { get; }
+    IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> FieldTransformChains { get; }
 
     /// <summary>
     /// Gets the calculations the run compiled for its Compute stages, by the id of the stage. A Compute stage has an entry; a

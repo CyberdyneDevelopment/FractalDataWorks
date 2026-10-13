@@ -17,7 +17,7 @@ public sealed class ManagedIdentityConfiguration : MsSqlAuthenticationConfigurat
         : base("ManagedIdentity",
                "Managed Identity",
                "Authenticate using Azure Managed Identity",
-               [], [], [], requiresSecret: false)
+               [], [], requiresSecret: false)
     {
     }
 

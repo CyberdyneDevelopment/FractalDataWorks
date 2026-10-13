@@ -86,8 +86,8 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="fieldMappingId">The field mapping identifier.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the list of transforms.</returns>
-    public virtual Task<IGenericResult<IReadOnlyList<FieldMappingTransformPayload>>> GetTransforms(Guid fieldMappingId, CancellationToken ct = default)
-        => GetList<FieldMappingTransformPayload>($"field-mappings/{fieldMappingId}/transforms", ct);
+    public virtual Task<IGenericResult<IReadOnlyList<FieldMappingTransformationPayload>>> GetTransforms(Guid fieldMappingId, CancellationToken ct = default)
+        => GetList<FieldMappingTransformationPayload>($"field-mappings/{fieldMappingId}/transformations", ct);
 
     /// <summary>
     /// Attaches an existing transformation to a field mapping.
@@ -95,8 +95,8 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="request">The field mapping, transformation name and chain position.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the attachment.</returns>
-    public virtual Task<IGenericResult<FieldMappingTransformPayload>> SaveTransform(SaveFieldMappingTransformRequest request, CancellationToken ct = default)
-        => Post<SaveFieldMappingTransformRequest, FieldMappingTransformPayload>($"field-mappings/{request.FieldMappingId}/transforms", request, ct);
+    public virtual Task<IGenericResult<FieldMappingTransformationPayload>> SaveTransform(SaveFieldMappingTransformationRequest request, CancellationToken ct = default)
+        => Post<SaveFieldMappingTransformationRequest, FieldMappingTransformationPayload>($"field-mappings/{request.FieldMappingId}/transformations", request, ct);
 
     /// <summary>
     /// Detaches a transformation from a field mapping. The transformation itself is not deleted.
@@ -106,7 +106,7 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether it was detached.</returns>
     public virtual Task<IGenericResult> DeleteTransform(Guid fieldMappingId, string transformationName, CancellationToken ct = default)
-        => Delete($"field-mappings/{fieldMappingId}/transforms/{Uri.EscapeDataString(transformationName)}", ct);
+        => Delete($"field-mappings/{fieldMappingId}/transformations/{Uri.EscapeDataString(transformationName)}", ct);
 
     /// <summary>
     /// Reorders transforms for a field mapping.
@@ -115,42 +115,42 @@ public class DataSetApiClient : ApiClientBase
     /// <param name="request">Every attached transformation's name, in the new order.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether the reorder succeeded.</returns>
-    public virtual Task<IGenericResult> ReorderTransforms(Guid fieldMappingId, ReorderTransformsRequest request, CancellationToken ct = default)
-        => Post<ReorderTransformsRequest>($"field-mappings/{fieldMappingId}/transforms/reorder", request, ct);
+    public virtual Task<IGenericResult> ReorderTransformations(Guid fieldMappingId, ReorderTransformationsRequest request, CancellationToken ct = default)
+        => Post<ReorderTransformationsRequest>($"field-mappings/{fieldMappingId}/transformations/reorder", request, ct);
 
     /// <summary>Lists the transformations (defined once, attachable to field mappings).</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing every transformation.</returns>
     public virtual Task<IGenericResult<IReadOnlyList<TransformationPayload>>> ListTransformations(CancellationToken ct = default)
-        => GetList<TransformationPayload>("transforms", ct);
+        => GetList<TransformationPayload>("transformations", ct);
 
     /// <summary>Gets one transformation by name.</summary>
     /// <param name="name">The transformation's name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the transformation.</returns>
     public virtual Task<IGenericResult<TransformationPayload>> GetTransformation(string name, CancellationToken ct = default)
-        => Get<TransformationPayload>($"transforms/{Uri.EscapeDataString(name)}", ct);
+        => Get<TransformationPayload>($"transformations/{Uri.EscapeDataString(name)}", ct);
 
     /// <summary>Defines a transformation.</summary>
     /// <param name="request">Its name, operation and parameter values.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the transformation as saved.</returns>
     public virtual Task<IGenericResult<TransformationPayload>> CreateTransformation(CreateTransformationRequest request, CancellationToken ct = default)
-        => Post<CreateTransformationRequest, TransformationPayload>("transforms", request, ct);
+        => Post<CreateTransformationRequest, TransformationPayload>("transformations", request, ct);
 
     /// <summary>Changes a transformation; omitted members keep their value.</summary>
     /// <param name="request">The change, addressed by <see cref="UpdateTransformationRequest.Name"/>.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the transformation as saved.</returns>
     public virtual Task<IGenericResult<TransformationPayload>> UpdateTransformation(UpdateTransformationRequest request, CancellationToken ct = default)
-        => Patch<UpdateTransformationRequest, TransformationPayload>($"transforms/{Uri.EscapeDataString(request.Name)}", request, ct);
+        => Patch<UpdateTransformationRequest, TransformationPayload>($"transformations/{Uri.EscapeDataString(request.Name)}", request, ct);
 
     /// <summary>Deletes a transformation. Refused while it is attached to a field mapping.</summary>
     /// <param name="name">The transformation's name.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result indicating whether it was deleted.</returns>
     public virtual Task<IGenericResult> DeleteTransformation(string name, CancellationToken ct = default)
-        => Delete($"transforms/{Uri.EscapeDataString(name)}", ct);
+        => Delete($"transformations/{Uri.EscapeDataString(name)}", ct);
 
     /// <summary>
     /// Gets all available transform types.
@@ -159,6 +159,14 @@ public class DataSetApiClient : ApiClientBase
     /// <returns>A result containing the list of available transform types.</returns>
     public virtual Task<IGenericResult<IReadOnlyList<TransformTypePayload>>> GetAvailableTransformTypes(CancellationToken ct = default)
         => GetList<TransformTypePayload>("transform-types", ct);
+
+    /// <summary>
+    /// Gets the formats a container can state, each with its family, file extension and the separator it defines.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A result containing the formats.</returns>
+    public virtual Task<IGenericResult<IReadOnlyList<FormatTypePayload>>> GetAvailableFormatTypes(CancellationToken ct = default)
+        => GetList<FormatTypePayload>("format-types", ct);
 
     /// <summary>
     /// Gets all available DataSet types from the server's DataSetTypes TypeCollection.

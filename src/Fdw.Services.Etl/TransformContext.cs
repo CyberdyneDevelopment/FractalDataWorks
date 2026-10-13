@@ -42,7 +42,7 @@ public sealed class TransformContext : ITransformContext
         Guid executionId,
         ILogger logger,
         IReadOnlyDictionary<string, object?> variables,
-        IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>> fieldTransformChains,
+        IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> fieldTransformChains,
         object? calculationEngine = null,
         object? connectionProvider = null,
         object? dataGateway = null,
@@ -85,7 +85,7 @@ public sealed class TransformContext : ITransformContext
     public IReadOnlyDictionary<string, object?> Parameters { get; }
 
     /// <inheritdoc />
-    public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>> FieldTransformChains { get; }
+    public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> FieldTransformChains { get; }
 
     /// <inheritdoc />
     public IReadOnlyDictionary<Guid, ICompiledCalculation> BuiltCalculations { get; }

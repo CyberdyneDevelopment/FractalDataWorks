@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Data.Endpoints.Logging;
 
 /// <summary>
-/// MessageLogging for the transformation endpoints: the standalone <c>/transforms</c> resource and
+/// MessageLogging for the transformation endpoints: the standalone <c>/transformations</c> resource and
 /// the transformations attached to a field mapping (FDW-846).
 /// </summary>
 /// <remarks>
@@ -14,18 +14,18 @@ namespace Fdw.Services.Data.Endpoints.Logging;
 /// (400), 3 missing (404), 4 conflict (409), 7 dependency.
 /// </remarks>
 [MessageLoggingTypeCode("DATAENDPOINTS")]
-public static partial class FieldMappingTransformEndpointLog
+public static partial class FieldMappingTransformationEndpointLog
 {
     /// <summary>Logs that a field mapping's transformations are being listed.</summary>
-    [MessageLogging(EventId = 11015, Level = LogLevel.Trace, Message = "Listing transforms")]
+    [MessageLogging(EventId = 11015, Level = LogLevel.Trace, Message = "Listing transformations")]
     public static partial IGenericMessage ListingTransforms(ILogger logger);
 
     /// <summary>Logs how many transformations a field mapping has.</summary>
-    [MessageLogging(EventId = 11016, Level = LogLevel.Debug, Message = "Listed {count} transforms")]
+    [MessageLogging(EventId = 11016, Level = LogLevel.Debug, Message = "Listed {count} transformations")]
     public static partial IGenericMessage ListedTransforms(ILogger logger, int count);
 
     /// <summary>Logs that listing a field mapping's transformations failed.</summary>
-    [MessageLogging(EventId = 71004, Level = LogLevel.Warning, Message = "Failed to list transforms for field mapping '{fieldMappingId}'")]
+    [MessageLogging(EventId = 71004, Level = LogLevel.Warning, Message = "Failed to list transformations for field mapping '{fieldMappingId}'")]
     public static partial IGenericMessage ListTransformsFailed(ILogger logger, Guid fieldMappingId);
 
     /// <summary>Logs that a transformation is being attached to a field mapping.</summary>
@@ -53,16 +53,16 @@ public static partial class FieldMappingTransformEndpointLog
     public static partial IGenericMessage DeleteTransformFailed(ILogger logger, string transformationName);
 
     /// <summary>Logs that a field mapping's chain is being reordered.</summary>
-    [MessageLogging(EventId = 11021, Level = LogLevel.Trace, Message = "Reordering transforms for field mapping '{fieldMappingId}'")]
+    [MessageLogging(EventId = 11021, Level = LogLevel.Trace, Message = "Reordering transformations for field mapping '{fieldMappingId}'")]
     public static partial IGenericMessage ReorderingTransforms(ILogger logger, Guid fieldMappingId);
 
     /// <summary>Logs that a field mapping's chain was reordered.</summary>
-    [MessageLogging(EventId = 11022, Level = LogLevel.Information, Message = "Reordered transforms for field mapping '{fieldMappingId}'")]
+    [MessageLogging(EventId = 11022, Level = LogLevel.Information, Message = "Reordered transformations for field mapping '{fieldMappingId}'")]
     public static partial IGenericMessage ReorderedTransforms(ILogger logger, Guid fieldMappingId);
 
     /// <summary>Logs that reordering a field mapping's chain failed.</summary>
-    [MessageLogging(EventId = 71007, Level = LogLevel.Warning, Message = "Failed to reorder transforms for field mapping '{fieldMappingId}'")]
-    public static partial IGenericMessage ReorderTransformsFailed(ILogger logger, Guid fieldMappingId);
+    [MessageLogging(EventId = 71007, Level = LogLevel.Warning, Message = "Failed to reorder transformations for field mapping '{fieldMappingId}'")]
+    public static partial IGenericMessage ReorderTransformationsFailed(ILogger logger, Guid fieldMappingId);
 
     /// <summary>Logs that the transform types are being listed.</summary>
     [MessageLogging(EventId = 11023, Level = LogLevel.Trace, Message = "Listing transform types")]

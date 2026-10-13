@@ -22,7 +22,7 @@ namespace Fdw.Services.Etl.Pipelines;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "BatchCopy")]
-public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImplementationConfiguration, IDataStoreSourcedPipelineConfiguration
+public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImplementationConfiguration, IDataStoreSourcedPipelineConfiguration, IDataStoreDestinedPipelineConfiguration
 {
 
     /// <inheritdoc/>
@@ -54,11 +54,6 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImpleme
     public bool IsEnabled { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the source connection name.
-    /// </summary>
-    public string SourceConnectionName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the source data set identifier.
     /// </summary>
     public string SourceDataSet { get; set; } = string.Empty;
@@ -76,14 +71,21 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImpleme
     public string? SourceContainerName { get; set; }
 
     /// <summary>
-    /// Gets or sets the destination connection name.
-    /// </summary>
-    public string DestinationConnectionName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the destination data set identifier.
     /// </summary>
     public string DestinationDataSet { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>pipe.BatchCopyPipelineConfiguration.DestinationDataStoreName</c> (FDW-1269).</remarks>
+    public string? DestinationDataStoreName { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>pipe.BatchCopyPipelineConfiguration.DestinationDataStorePath</c> (FDW-1269).</remarks>
+    public string? DestinationDataStorePath { get; set; }
+
+    /// <inheritdoc />
+    /// <remarks>Maps to <c>pipe.BatchCopyPipelineConfiguration.DestinationContainerName</c> (FDW-1269).</remarks>
+    public string? DestinationContainerName { get; set; }
 
     /// <summary>
     /// Gets or sets the batch size for processing.
@@ -139,21 +141,8 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImpleme
     public Guid? SinkDataSetId { get; set; }
 
     /// <summary>
-    /// Gets or sets the container path for a connection-based source (ETL pattern).
-    /// Required when SourceKind is Connection; ignored when SourceKind is DataSet.
-    /// Format: schema.table (SQL), /api/path (HTTP), or file path.
-    /// </summary>
-    public string? SourceContainerPath { get; set; }
-
-    /// <summary>
-    /// Gets or sets the container path for a connection-based destination (ETL pattern).
-    /// Required when DestinationKind is Connection; ignored when DestinationKind is DataSet.
-    /// </summary>
-    public string? DestinationContainerPath { get; set; }
-
-    /// <summary>
     /// Gets or sets the resolved source kind discriminator (ETL vs ELT).
-    /// Not a DB column — populated by the factory from SourceDataSet / SourceConnectionName
+    /// Not a DB column — populated by the factory from SourceDataSet / SourceDataStoreName
     /// at construction time. Null means the factory has not yet resolved the kind.
     /// </summary>
     [NotMapped]
@@ -161,7 +150,7 @@ public sealed partial class BatchCopyPipelineConfiguration : IEtlPipelineImpleme
 
     /// <summary>
     /// Gets or sets the resolved destination kind discriminator (ETL vs ELT).
-    /// Not a DB column — populated by the factory from DestinationDataSet / DestinationConnectionName
+    /// Not a DB column — populated by the factory from DestinationDataSet / DestinationDataStoreName
     /// at construction time. Null means the factory has not yet resolved the kind.
     /// </summary>
     [NotMapped]

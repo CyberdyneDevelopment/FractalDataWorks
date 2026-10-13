@@ -159,7 +159,7 @@ public sealed class PipelineHttpClientTests
         var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
             body = await request.Content!.ReadAsStringAsync(ct);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "BatchCopy", SourceConnectionName = "source-db", DestinationConnectionName = "target-db" }) };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "BatchCopy" }) };
         });
         var sut = CreateClient(handler);
 
@@ -181,7 +181,7 @@ public sealed class PipelineHttpClientTests
         var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
             body = await request.Content!.ReadAsStringAsync(ct);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "BatchCopy", SourceConnectionName = "source-db", DestinationConnectionName = "target-db" }) };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "BatchCopy" }) };
         });
         var sut = CreateClient(handler);
 
@@ -201,8 +201,9 @@ public sealed class PipelineHttpClientTests
             Id = Guid.NewGuid(),
             Name = "demo-pipeline",
             PipelineType = "BatchCopy",
-            SourceConnectionName = "source-db",
-            DestinationConnectionName = "target-db",
+            DestinationDataStoreName = "target-db",
+            DestinationDataStorePath = "etl",
+            DestinationContainerName = "orders",
             IsEnabled = true
         };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
@@ -217,8 +218,8 @@ public sealed class PipelineHttpClientTests
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("demo-pipeline");
         result.Value.PipelineType.ShouldBe("BatchCopy");
-        result.Value.SourceConnectionName.ShouldBe("source-db");
-        result.Value.DestinationConnectionName.ShouldBe("target-db");
+        result.Value.DestinationDataStoreName.ShouldBe("target-db");
+        result.Value.DestinationContainerName.ShouldBe("orders");
         result.Value.IsEnabled.ShouldBeTrue();
     }
 

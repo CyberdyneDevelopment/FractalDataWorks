@@ -119,7 +119,7 @@ public abstract class ValidatePipelineEndpointBase : Endpoint<CreatePipelineRequ
             }
         }
 
-        problems.AddRange(await _loadDraft.Problems(req, req.DestinationDataSet, PipelineDraft.TransformExpressions(req.Transforms), ct).ConfigureAwait(false));
+        problems.AddRange(await _loadDraft.Problems(req, req.DestinationDataSet, PipelineDraft.StageFilterExpressions(req.Transforms), ct).ConfigureAwait(false));
 
         if (PipelineTruncateConsistency.Check(req.TruncateBeforeLoad, req.LoadMode, _logger) is { } disagreement)
         {

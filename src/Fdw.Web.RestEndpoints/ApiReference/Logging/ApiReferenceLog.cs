@@ -115,18 +115,6 @@ public static partial class ApiReferenceLog
         Message = "Workspace '{workspace}' contributed {dataSets} data set operations to the API reference")]
     public static partial IGenericMessage WorkspaceDescribed(ILogger logger, string workspace, int dataSets);
 
-    /// <summary>Logs an attached data set left out of a reference because it could not be loaded.</summary>
-    /// <param name="logger">The logger.</param>
-    /// <param name="workspace">The workspace the data set is attached to.</param>
-    /// <param name="dataSetId">The attached data set's id.</param>
-    /// <param name="reason">Why it was left out.</param>
-    // Warning: the reference is still served, one data set short, as the data route still serves the others.
-    [MessageLogging(
-        EventId = 41001,
-        Level = LogLevel.Warning,
-        Message = "Data set {dataSetId} attached to workspace '{workspace}' was left out of the API reference: {reason}")]
-    public static partial IGenericMessage DataSetLeftOut(ILogger logger, string workspace, Guid dataSetId, string reason);
-
     /// <summary>Logs that the OpenAPI document could not be generated.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="exception">What the generator threw.</param>

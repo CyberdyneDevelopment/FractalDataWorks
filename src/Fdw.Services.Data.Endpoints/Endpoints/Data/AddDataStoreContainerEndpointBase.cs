@@ -7,6 +7,7 @@ using Fdw.Data.Abstractions.Results;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -47,14 +48,8 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
     /// store-exists, path-exists, and no-duplicate-name invariants before writing.</summary>
     protected override async Task<IGenericResult<DataStoreContainerResponse>> Create(AddDataStoreContainerRequest request, CancellationToken ct)
     {
-        var classified = DataClassificationValidator.Validate(request.Fields.Select(f => f.ClassificationId).Prepend(request.ClassificationId), Logger);
-        if (classified.IsFailure) return classified.ToNewResult<DataStoreContainerResponse>();
-
-        var typed = DatumTypeValidator.Validate(request.Fields.Select(f => f.DatumTypeId), Logger);
-        if (typed.IsFailure) return typed.ToNewResult<DataStoreContainerResponse>();
-
-        var dataTyped = DataTypeValidator.Validate(request.Fields.Select(f => f.FrameworkDataType), Logger);
-        if (dataTyped.IsFailure) return dataTyped.ToNewResult<DataStoreContainerResponse>();
+        var invalid = RefuseInvalid(request);
+        if (invalid.IsFailure) return invalid.ToNewResult<DataStoreContainerResponse>();
 
         var container = new DataContainerConfiguration
         {
@@ -65,6 +60,9 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             RecordSelector = request.RecordSelector,
             FlattenNestedObjects = request.FlattenNestedObjects,
             FlattenSeparator = request.FlattenSeparator,
+            HasHeader = request.HasHeader,
+            Separator = request.Separator,
+            SheetName = request.SheetName,
             ClassificationId = request.ClassificationId,
             Fields = BuildFields(request.Fields),
         };
@@ -88,6 +86,11 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             return GenericResult<DataStoreContainerResponse>.Failure(
                 DataStoreEndpointLog.ContainerAlreadyExists(Logger, container.Name, request.PathName, request.Name));
 
+        var named = DataStoreContainerBuilder.NameRefusal(
+            container.Name, container.Format, DataStoreTypes.ByName(store.Implementation).AddressesContainersAsFiles, Logger);
+        if (named is not null)
+            return named.ToNewResult<DataStoreContainerResponse>();
+
         var keysResult = BuildKeys(request, container, store);
         if (keysResult.IsFailure)
             return keysResult.ToNewResult<DataStoreContainerResponse>();
@@ -104,6 +107,25 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
         DataStoreEndpointLog.ContainerAdded(Logger, request.ContainerName, request.PathName, request.Name);
 
         return GenericResult<DataStoreContainerResponse>.Success(BuildResponse(container));
+    }
+
+    /// <summary>Refuses a request whose classifications, datum types, data types or file options are not ones the system holds.</summary>
+    private IGenericResult RefuseInvalid(AddDataStoreContainerRequest request)
+    {
+        var classified = DataClassificationValidator.Validate(request.Fields.Select(f => f.ClassificationId).Prepend(request.ClassificationId), Logger);
+        if (classified.IsFailure) return classified;
+
+        var typed = DatumTypeValidator.Validate(request.Fields.Select(f => f.DatumTypeId), Logger);
+        if (typed.IsFailure) return typed;
+
+        var dataTyped = DataTypeValidator.Validate(request.Fields.Select(f => f.FrameworkDataType), Logger);
+        if (dataTyped.IsFailure) return dataTyped;
+
+        var refusal = DataStoreContainerBuilder.FileOptionsRefusal(
+            request.ContainerName, request.Format, request.HasHeader, request.Separator, request.SheetName, Logger);
+        if (refusal is not null) return refusal;
+
+        return GenericResult.Success();
     }
 
     /// <summary>Builds the container's field rows from the request, pre-assigning each an Id.</summary>
@@ -125,6 +147,10 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             Id = container.Id,
             Name = container.Name,
             ClassificationId = container.ClassificationId,
+            Format = container.Format,
+            HasHeader = container.HasHeader,
+            Separator = container.Separator,
+            SheetName = container.SheetName,
             Fields = container.Fields.Select(f => new DataStoreFieldResponse
             {
                 Id = f.Id,

@@ -119,7 +119,8 @@ public abstract class UpdateConnectionEndpointBase : CrudUpdateEndpointBase<Upda
         // Credentials last before the save: refuse a request that names where they are stored, store the values it sent,
         // and after the save delete the secrets the connection no longer names (FDW-1086).
         var credentials = await ConnectionCredentialStore.Prepare(
-            connectionType, before.Value, updatedConnection, request.Credentials, HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);
+            connectionType, before.Value, updatedConnection, request.Credentials, Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User),
+            HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);
         if (credentials.IsFailure) return credentials.ToNewResult<ConnectionDetailDto>();
 
         // One save, one record: the provider versions the implementation row and writes everything under

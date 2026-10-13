@@ -98,6 +98,7 @@ public static class PipelineDetailMapper
         // the implementation. The schedule flag is still the app's to fill.
         var etl = pipeline as IEtlPipelineImplementationConfiguration;
         var dataStoreSource = pipeline as IDataStoreSourcedPipelineConfiguration;
+        var dataStoreDestination = pipeline as IDataStoreDestinedPipelineConfiguration;
 
         var response = new PipelineDetailResponse
         {
@@ -105,13 +106,14 @@ public static class PipelineDetailMapper
             Name = pipeline.Name,
             PipelineType = pipeline.Implementation,
             Description = pipeline.Description,
-            SourceConnectionName = etl?.SourceConnectionName ?? string.Empty,
-            DestinationConnectionName = etl?.DestinationConnectionName ?? string.Empty,
             SourceDataSet = etl?.SourceDataSet,
             SourceDataStoreName = dataStoreSource?.SourceDataStoreName,
             SourceDataStorePath = dataStoreSource?.SourceDataStorePath,
             SourceContainerName = dataStoreSource?.SourceContainerName,
             DestinationDataSet = etl?.DestinationDataSet,
+            DestinationDataStoreName = dataStoreDestination?.DestinationDataStoreName,
+            DestinationDataStorePath = dataStoreDestination?.DestinationDataStorePath,
+            DestinationContainerName = dataStoreDestination?.DestinationContainerName,
             IsEnabled = etl?.IsEnabled ?? false,
             CreatedAt = pipeline.CreateDate,
             UpdatedAt = pipeline.ModifyDate,
@@ -206,12 +208,11 @@ public static class PipelineDetailMapper
                 Name = m.Name,
                 SourceField = m.SourceField,
                 DestinationField = m.DestinationField,
-                TransformExpression = m.TransformExpression,
                 TargetType = m.TargetType,
                 IsEnabled = m.IsEnabled,
                 IsRequired = m.IsRequired,
                 DefaultValue = m.DefaultValue,
-                Transforms = ChainOf(m, transformationNames),
+                Transformations = ChainOf(m, transformationNames),
             })
             .ToList();
     }
@@ -306,8 +307,10 @@ public static class PipelineDetailMapper
         var first = transform.Lookups[0];
         return new LookupDto
         {
-            LookupConnectionName = first.LookupConnectionName,
             LookupDataSet = first.LookupDataSet,
+            LookupDataStoreName = first.LookupDataStoreName,
+            LookupDataStorePath = first.LookupDataStorePath,
+            LookupContainerName = first.LookupContainerName,
             LookupKeyField = first.LookupKeyField,
             SourceKeyField = first.SourceKeyField,
             OutputFieldPrefix = first.OutputFieldPrefix,

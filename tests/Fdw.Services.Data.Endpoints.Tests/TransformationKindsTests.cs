@@ -12,7 +12,7 @@ using Xunit;
 namespace Fdw.Services.Data.Endpoints.Tests;
 
 /// <summary>
-/// FDW-1221: one <c>/transforms</c> resource serves every kind of transformation. The request's implementation picks the kind,
+/// FDW-1221: one <c>/transformations</c> resource serves every kind of transformation. The request's implementation picks the kind,
 /// and a kind refuses the members that belong to another.
 /// </summary>
 public sealed class TransformationKindsTests

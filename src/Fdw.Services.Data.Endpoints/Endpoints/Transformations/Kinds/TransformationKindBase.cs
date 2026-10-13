@@ -6,7 +6,7 @@ using Fdw.Services.Data.Clients.Models;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// What one kind of transformation does for the <c>/transforms</c> endpoints: build the configuration a create or a change
+/// What one kind of transformation does for the <c>/transformations</c> endpoints: build the configuration a create or a change
 /// states, and describe a stored one as the payload a read returns.
 /// </summary>
 public abstract class TransformationKindBase : TypeOptionBase<TransformationKindBase>, ITransformationKind

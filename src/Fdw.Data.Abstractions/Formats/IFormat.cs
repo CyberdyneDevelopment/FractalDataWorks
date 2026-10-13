@@ -12,7 +12,7 @@ namespace Fdw.Data.Abstractions;
 public interface IFormat
 {
     /// <summary>
-    /// Format name (e.g., "Tabular", "Json", "Csv", "Xml", "Parquet").
+    /// Format name (e.g., "Tabular", "Json", "Delimited", "FixedWidth", "Xml", "Xlsx").
     /// </summary>
     string FormatName { get; }
 

@@ -25,6 +25,16 @@ public interface ICalculationNodeType : ITypeOption<int, CalculationNodeBase>
     /// <summary>Gets the names the operands have in JSON, or an empty list when they are an unnamed "args" array.</summary>
     IReadOnlyList<string> OperandNames { get; }
 
+    /// <summary>
+    /// Gets the optional members of a node that this operation reads, by their JSON names: <c>name</c>, <c>value</c>, <c>flag</c>,
+    /// <c>places</c> and <c>mode</c>. Empty when the operation takes only operands. A client builds its forms from this list and
+    /// never from the operation's name (FDW-1280).
+    /// </summary>
+    IReadOnlyList<string> Members { get; }
+
+    /// <summary>Gets the values the <c>mode</c> member may take, or an empty list when the operation reads no <c>mode</c>.</summary>
+    IReadOnlyList<string> Modes { get; }
+
     /// <summary>Gets the type operand <paramref name="index"/> must have, or null when any numeric operand is accepted as it is.</summary>
     /// <param name="index">The operand's position.</param>
     /// <returns>decimal, decimal? or bool; or null.</returns>

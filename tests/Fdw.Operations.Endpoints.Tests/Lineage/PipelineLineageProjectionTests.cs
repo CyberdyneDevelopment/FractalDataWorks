@@ -42,10 +42,14 @@ public class PipelineLineageProjectionTests
             Domain = "Pipeline",
             Implementation = "BatchCopy",
             IsEnabled = true,
-            SourceDataSet = "UsgsDailyRaw",
-            DestinationDataSet = "UsgsDailySink",
-            SourceConnectionName = "UsgsHttp",
-            DestinationConnectionName = "NflDb"
+            SourceDataSet = string.Empty,
+            DestinationDataSet = string.Empty,
+            SourceDataStoreName = "UsgsHttp",
+            SourceDataStorePath = "feeds/v1",
+            SourceContainerName = "quakes",
+            DestinationDataStoreName = "NflDb",
+            DestinationDataStorePath = "etl",
+            DestinationContainerName = "quakeSink"
         };
 
         var record = PipelineLineageProjection.From(configuration, _logger.Object);
@@ -53,10 +57,10 @@ public class PipelineLineageProjectionTests
         record.Id.ShouldBe(configuration.Id);
         record.Name.ShouldBe("UsgsDailyLoad");
         record.Implementation.ShouldBe("BatchCopy");
-        record.SourceDataSet.ShouldBe("UsgsDailyRaw");
-        record.DestinationDataSet.ShouldBe("UsgsDailySink");
-        record.SourceConnectionName.ShouldBe("UsgsHttp");
-        record.DestinationConnectionName.ShouldBe("NflDb");
+        record.SourceDataStoreName.ShouldBe("UsgsHttp");
+        record.SourceContainerName.ShouldBe("quakes");
+        record.DestinationDataStoreName.ShouldBe("NflDb");
+        record.DestinationContainerName.ShouldBe("quakeSink");
         record.IsEnabled.ShouldBeTrue();
         VerifyLogged(LogLevel.Debug, 11016, Times.Once());
         VerifyLogged(LogLevel.Debug, 11017, Times.Once());
@@ -77,13 +81,15 @@ public class PipelineLineageProjectionTests
             SourceConnectionName = "StreamSourceConn",
             DestinationConnectionName = "StreamSinkConn"
         };
+        // A streaming pipeline's source and destination are connections to a stream, not data store containers; its lineage
+        // shows the data sets only until streaming gets the same treatment (FDW-1269).
 
         var record = PipelineLineageProjection.From(configuration, _logger.Object);
 
         record.SourceDataSet.ShouldBe("StreamSourceDs");
         record.DestinationDataSet.ShouldBe("StreamSinkDs");
-        record.SourceConnectionName.ShouldBe("StreamSourceConn");
-        record.DestinationConnectionName.ShouldBe("StreamSinkConn");
+        record.SourceDataStoreName.ShouldBeNull();
+        record.DestinationDataStoreName.ShouldBeNull();
         record.IsEnabled.ShouldBeTrue();
     }
 
@@ -105,8 +111,8 @@ public class PipelineLineageProjectionTests
         record.Implementation.ShouldBe("SomeOtherKind");
         record.SourceDataSet.ShouldBeNull();
         record.DestinationDataSet.ShouldBeNull();
-        record.SourceConnectionName.ShouldBeNull();
-        record.DestinationConnectionName.ShouldBeNull();
+        record.SourceDataStoreName.ShouldBeNull();
+        record.DestinationDataStoreName.ShouldBeNull();
         record.IsEnabled.ShouldBeFalse();
         VerifyLogged(LogLevel.Debug, 31002, Times.Once());
     }

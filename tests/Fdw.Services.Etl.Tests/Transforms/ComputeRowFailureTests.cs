@@ -84,7 +84,7 @@ public sealed class ComputeRowFailureTests
             Guid.NewGuid(),
             NullLogger.Instance,
             new Dictionary<string, object?>(),
-            new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>(),
+            new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(),
             builtCalculations: resolved.Value!.Calculations,
             builtSets: resolved.Value.Sets);
         var result = await new ComputeTransformType().TransformBatch(Trades(), stage, context, TestContext.Current.CancellationToken);

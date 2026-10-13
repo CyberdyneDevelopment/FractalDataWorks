@@ -108,7 +108,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
                 LogicalFieldName = m.LogicalFieldName,
                 SourceKind = source.SourceKind,
                 PhysicalFieldName = m.PhysicalFieldName,
-                TransformExpression = m.TransformExpression,
                 Ordinal = i,
             })
             .ToList();
@@ -127,7 +126,6 @@ public abstract class SaveSourceMappingsEndpointBase : Endpoint<SaveSourceMappin
             SourceName = source.SourceName,
             LogicalFieldName = m.LogicalFieldName,
             PhysicalFieldName = m.PhysicalFieldName,
-            TransformExpression = m.TransformExpression,
         }).ToList(), ct).ConfigureAwait(false);
     }
 

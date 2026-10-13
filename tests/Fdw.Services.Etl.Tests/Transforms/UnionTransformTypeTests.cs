@@ -19,7 +19,7 @@ public sealed class UnionTransformTypeTests
     private readonly UnionTransformType _sut = new();
 
     private static TransformContext Context(object? gateway) =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>(), dataGateway: gateway);
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), dataGateway: gateway);
 
     private static object Gateway(IReadOnlyList<Dictionary<string, object?>> source, List<string> events, bool failReads = false) =>
         new PagedSourceGateway(source, events, failReads).Provider.ByName("Main");
@@ -302,7 +302,6 @@ public sealed class UnionTransformTypeTests
     [Trait("Category", "Etl")]
     [InlineData("blankSource")]
     [InlineData("blankDestination")]
-    [InlineData("transformExpression")]
     [InlineData("defaultValue")]
     [InlineData("targetType")]
     [InlineData("isRequired")]
@@ -315,7 +314,6 @@ public sealed class UnionTransformTypeTests
         {
             case "blankSource": mapping.SourceField = " "; break;
             case "blankDestination": mapping.DestinationField = string.Empty; break;
-            case "transformExpression": mapping.TransformExpression = "upper(Name)"; break;
             case "defaultValue": mapping.DefaultValue = "none"; break;
             case "targetType": mapping.TargetType = "string"; break;
             case "isRequired": mapping.IsRequired = true; break;

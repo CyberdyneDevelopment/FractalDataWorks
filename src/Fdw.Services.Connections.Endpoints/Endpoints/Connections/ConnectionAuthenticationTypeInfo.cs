@@ -24,6 +24,12 @@ public sealed class ConnectionAuthenticationTypeInfo
     /// <summary>Gets or sets the credentials the method asks for; empty for a method that carries none.</summary>
     public IReadOnlyList<ConnectionCredentialFieldInfo> CredentialFields { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the non-secret values the method requires besides its credentials (a SQL login's user name); empty
+    /// for a method that needs none (FDW-1336). Each is sent in <c>authentication</c> under its field name.
+    /// </summary>
+    public IReadOnlyList<ConnectionSettingFieldInfo> Settings { get; set; } = [];
+
     /// <summary>Describes an authentication method for a form.</summary>
     /// <param name="method">The method, as its connection type describes it.</param>
     /// <returns>The description.</returns>
@@ -45,6 +51,9 @@ public sealed class ConnectionAuthenticationTypeInfo
                     Required = true,
                     Secret = credential.Secret,
                 })
+                .ToList(),
+            Settings = method.Settings
+                .Select(setting => new ConnectionSettingFieldInfo { Field = setting.Field, Label = setting.Label, Required = true })
                 .ToList(),
         };
     }

@@ -76,7 +76,11 @@ public abstract class GetDataStorePathsEndpointBase : CrudGetEndpointBase<DataSt
             Id = container.Id,
             Name = container.Name,
             ContainerType = container.TypeId ?? string.Empty,
-            ClassificationId = container.ClassificationId
+            ClassificationId = container.ClassificationId,
+            Format = container.Format,
+            HasHeader = container.HasHeader,
+            Separator = container.Separator,
+            SheetName = container.SheetName
         };
     }
 

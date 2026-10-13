@@ -83,7 +83,7 @@ public sealed class PipelineChainReadBackTests
         var names = new Dictionary<Guid, string> { [TrimId] = "Trim", [UpperId] = "ToUpper" };
 
         // Act
-        var chain = PipelineDetailMapper.Map(pipeline, names).Transforms![0].FieldMappings![0].Transforms!;
+        var chain = PipelineDetailMapper.Map(pipeline, names).Transforms![0].FieldMappings![0].Transformations!;
 
         // Assert
         chain.Select(step => (step.TransformationId, step.Transformation, step.Ordinal))
@@ -100,7 +100,7 @@ public sealed class PipelineChainReadBackTests
         var names = new Dictionary<Guid, string> { [TrimId] = "Trim" };
 
         // Act
-        var chain = PipelineDetailMapper.Map(pipeline, names).Transforms![0].FieldMappings![0].Transforms!;
+        var chain = PipelineDetailMapper.Map(pipeline, names).Transforms![0].FieldMappings![0].Transformations!;
 
         // Assert
         chain[1].TransformationId.ShouldBe(HiddenId);
@@ -116,7 +116,7 @@ public sealed class PipelineChainReadBackTests
         var mapping = PipelineDetailMapper.Map(Saved(MapStage("Shape")), new Dictionary<Guid, string>()).Transforms![0].FieldMappings![0];
 
         // Assert
-        mapping.Transforms.ShouldBeNull();
+        mapping.Transformations.ShouldBeNull();
     }
 
     [Fact]
@@ -134,8 +134,8 @@ public sealed class PipelineChainReadBackTests
         // Assert
         detail.IsSuccess.ShouldBeTrue(detail.CurrentMessage);
         provider.Verify(p => p.Get(It.IsAny<CancellationToken>()), Times.Once);
-        detail.Value!.Transforms![0].FieldMappings![0].Transforms!.Select(step => step.Transformation).ShouldBe(new string?[] { "Trim", "ToUpper" });
-        detail.Value.Transforms![1].FieldMappings![0].Transforms![0].Transformation.ShouldBeNull();
+        detail.Value!.Transforms![0].FieldMappings![0].Transformations!.Select(step => step.Transformation).ShouldBe(new string?[] { "Trim", "ToUpper" });
+        detail.Value.Transforms![1].FieldMappings![0].Transformations![0].Transformation.ShouldBeNull();
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public sealed class PipelineChainReadBackTests
 
         // Assert
         var nested = detail.Value!.Transforms![0].Paths![0].Stages[0];
-        nested.FieldMappings![0].Transforms!.Single().Transformation.ShouldBe("Trim");
+        nested.FieldMappings![0].Transformations!.Single().Transformation.ShouldBe("Trim");
     }
 
     [Fact]

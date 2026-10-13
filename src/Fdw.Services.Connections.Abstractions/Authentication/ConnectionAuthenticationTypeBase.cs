@@ -89,4 +89,46 @@ public abstract class ConnectionAuthenticationTypeBase<TSelf> : TypeOptionBase<T
     public bool IsServerSet(string property)
         => string.Equals(property, ConnectionCredentialProperties.SecretManager, StringComparison.OrdinalIgnoreCase)
            || CredentialFields.Contains(property, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets the non-secret values this method requires besides its credentials (the SQL login name of a password
+    /// method), each with the label a person is asked for. Empty for a method that requires none (FDW-1336).
+    /// </summary>
+    /// <remarks>
+    /// Stated per method, like <see cref="Credentials"/>, so a form can ask for every required value before the
+    /// connection exists. Each is an authentication value: a caller sends it in <c>authentication</c> under its field name.
+    /// </remarks>
+    public virtual IReadOnlyList<ConnectionSettingField> Settings => [];
+
+    /// <summary>
+    /// Masks the stored-credential references in <paramref name="values"/>, replacing each non-empty one with
+    /// <paramref name="maskValue"/> (FDW-1086). The one definition for every connection kind.
+    /// </summary>
+    /// <param name="values">The connection's authentication values.</param>
+    /// <param name="maskValue">What a masked value is shown as.</param>
+    /// <returns>The values with the credential references masked; the secret manager and the settings are shown as they are.</returns>
+    /// <remarks>
+    /// Why: a credential's value is the name of a secret, and a caller never learns where a credential is kept. The secret
+    /// manager's name and the method's settings are not secret. An unrecognised method (the NotFound sentinel has no
+    /// name) masks every non-empty value: it is treated as unsafe to show, not as "nothing declared, nothing to hide".
+    /// </remarks>
+    public IDictionary<string, string?> MaskSecrets(IReadOnlyDictionary<string, string?> values, string maskValue)
+    {
+        if (values is null) throw new ArgumentNullException(nameof(values));
+
+        // Copied entry by entry: this project targets netstandard2.0, where Dictionary has no constructor over an
+        // IReadOnlyDictionary.
+        var masked = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in values)
+            masked[entry.Key] = entry.Value;
+
+        var keysToMask = string.IsNullOrEmpty(Name) ? masked.Keys.ToList() : CredentialFields.ToList();
+        foreach (var key in keysToMask)
+        {
+            if (masked.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
+                masked[key] = maskValue;
+        }
+
+        return masked;
+    }
 }

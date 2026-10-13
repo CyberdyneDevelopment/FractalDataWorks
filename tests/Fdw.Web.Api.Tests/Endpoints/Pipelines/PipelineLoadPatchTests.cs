@@ -98,11 +98,13 @@ public sealed class PipelineLoadPatchTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public void NamingADestinationConnectionReplacesTheWholeBindingSoNoDestinationDataSetRemains()
+    public void NamingADestinationStoreContainerReplacesTheWholeBindingSoNoDestinationDataSetRemains()
     {
         var existing = PipelineDetailMapper.Map(Saved("Append"));
 
-        PipelineLoadPatch.EffectiveDestinationDataSet(Body("""{ "destinationConnectionName": "Warehouse" }"""), existing).ShouldBeNull();
+        PipelineLoadPatch.EffectiveDestinationDataSet(
+            Body("""{ "destinationDataStoreName": "Warehouse", "destinationDataStorePath": "dbo", "destinationContainerName": "Orders" }"""),
+            existing).ShouldBeNull();
     }
 
     [Fact]

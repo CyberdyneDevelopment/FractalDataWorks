@@ -7,11 +7,17 @@ namespace Fdw.Services.Etl.Abstractions;
 /// </summary>
 public interface ILookupSpec
 {
-    /// <summary>Gets the lookup connection name.</summary>
-    string LookupConnectionName { get; }
-
-    /// <summary>Gets the lookup data set name.</summary>
+    /// <summary>Gets the lookup data set name, or empty when the lookup reads a data store container.</summary>
     string LookupDataSet { get; }
+
+    /// <summary>Gets the data store the lookup reads, when it reads a container rather than a data set (FDW-1269); all three parts or none.</summary>
+    string? LookupDataStoreName { get; }
+
+    /// <summary>Gets the path within the lookup data store.</summary>
+    string? LookupDataStorePath { get; }
+
+    /// <summary>Gets the container within that path whose rows the lookup reads.</summary>
+    string? LookupContainerName { get; }
 
     /// <summary>Gets the lookup key field (in the lookup source).</summary>
     string LookupKeyField { get; }

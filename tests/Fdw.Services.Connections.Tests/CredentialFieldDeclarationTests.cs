@@ -60,7 +60,8 @@ public sealed class CredentialFieldDeclarationTests
         var info = ConnectionAuthenticationTypeInfo.Of(new ConnectionAuthenticationMethod(
             "Basic", "HTTP Basic", usesHostIdentity: false,
             [new ConnectionCredentialField("UsernameSecretName", "User name", secret: false),
-             new ConnectionCredentialField("PasswordSecretName", "Password", secret: true)]));
+             new ConnectionCredentialField("PasswordSecretName", "Password", secret: true)],
+            [new ConnectionSettingField("Realm", "Realm")]));
 
         info.Name.ShouldBe("Basic");
         info.DisplayName.ShouldBe("HTTP Basic");
@@ -70,6 +71,63 @@ public sealed class CredentialFieldDeclarationTests
             ("UsernameSecretName", "User name", true, false),
             ("PasswordSecretName", "Password", true, true),
         ]);
+        info.Settings.Select(setting => (setting.Field, setting.Label, setting.Required)).ShouldBe([("Realm", "Realm", true)]);
+    }
+
+    [Fact]
+    public void SqlAuthAsksForTheLoginNameAsASettingNotACredential()
+    {
+        var sqlAuth = ConnectionAuthenticationMethod.Of(MsSqlAuthenticationTypes.ByName("SqlAuth"));
+
+        var setting = sqlAuth.Settings.ShouldHaveSingleItem();
+        setting.Field.ShouldBe("Username");
+        setting.Label.ShouldBe("User name");
+        sqlAuth.Credentials.Select(credential => credential.Field).ShouldNotContain("Username");
+        ConnectionAuthenticationMethod.Of(MsSqlAuthenticationTypes.ByName("WindowsAuth")).Settings.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void EveryMethodStatesAsSettingsExactlyItsRequiredValuesThatAreNotCredentialsOrTheSecretManager()
+    {
+        foreach (var method in MsSqlAuthenticationTypes.All())
+        {
+            var required = method.RequiredProperties
+                .Except(method.CredentialFields, System.StringComparer.OrdinalIgnoreCase)
+                .Except([ConnectionCredentialProperties.SecretManager], System.StringComparer.OrdinalIgnoreCase)
+                .OrderBy(field => field, System.StringComparer.Ordinal);
+
+            (method.Name, string.Join(",", method.Settings.Select(setting => setting.Field).OrderBy(field => field, System.StringComparer.Ordinal)))
+                .ShouldBe((method.Name, string.Join(",", required)));
+        }
+    }
+
+    [Fact]
+    public void AMethodMasksItsCredentialReferencesAndShowsTheSecretManagerAndItsSettings()
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["Username"] = "app",
+            ["SecretManagerName"] = "CompanyVault",
+            ["SecretKeyName"] = "prod-sql-password",
+        };
+
+        var masked = MsSqlAuthenticationTypes.ByName("SqlAuth").MaskSecrets(values, "********");
+
+        masked["Username"].ShouldBe("app");
+        masked["SecretManagerName"].ShouldBe("CompanyVault");
+        masked["SecretKeyName"].ShouldBe("********");
+    }
+
+    [Fact]
+    public void AnUnrecognisedMethodMasksEveryValue()
+    {
+        var values = new Dictionary<string, string?> { ["Username"] = "app", ["SecretManagerName"] = "CompanyVault", ["Empty"] = string.Empty };
+
+        var masked = MsSqlAuthenticationTypes.ByName("NoSuchMethod").MaskSecrets(values, "********");
+
+        masked["Username"].ShouldBe("********");
+        masked["SecretManagerName"].ShouldBe("********");
+        masked["Empty"].ShouldBe(string.Empty);
     }
 
     [Fact]

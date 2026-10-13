@@ -50,9 +50,6 @@ public interface IDataSetImplementationConfiguration : IImplementationConfigurat
     /// <summary>Gets or sets the is filterable.</summary>
     bool IsFilterable { get; set; }
 
-    /// <summary>Gets or sets the transform expression.</summary>
-    string? TransformExpression { get; set; }
-
     /// <summary>Gets or sets the source data set name.</summary>
     string? SourceDataSetName { get; set; }
 

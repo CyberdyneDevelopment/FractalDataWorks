@@ -98,15 +98,17 @@ public abstract class TestConnectionConfigEndpointBase : Endpoint<CreateConnecti
         if (admitted.IsFailure)
             return admitted;
 
-        // An unsaved connection has no stored credentials, and its body may not name one: a caller who could name a
-        // secret could test-open a connection with any secret the platform holds (FDW-1086).
+        // An unsaved connection has no stored credentials, and its body may not name one unless the caller is a platform
+        // administrator: a caller who could name a secret could test-open a connection with any secret the platform holds
+        // (FDW-1086, FDW-1327).
         if (request.Credentials is { Count: > 0 })
         {
             return GenericResult.Failure(
                 ConnectionsResultCodes.ByName("CredentialTestNotSupported"), ResultDetails.Create("name", request.Name));
         }
 
-        var references = ConnectionCredentialStore.RefuseCallerReferences(connectionType, before: null, configuration, EndpointLogger);
+        var references = ConnectionCredentialStore.RefuseCallerReferences(
+            connectionType, before: null, configuration, Resolve<ISystemRoleConfiguration>().IsPlatformAdmin(User), EndpointLogger);
         if (references.IsFailure)
             return references;
 

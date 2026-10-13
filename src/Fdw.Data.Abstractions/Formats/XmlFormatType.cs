@@ -22,7 +22,8 @@ public sealed class XmlFormatType : FormatTypeBase
             mimeType: "application/xml",
             isBinary: false,
             supportsStreaming: true,
-            canonicalFileExtension: ".xml")
+            canonicalFileExtension: ".xml",
+            family: "Xml")
     {
     }
 }

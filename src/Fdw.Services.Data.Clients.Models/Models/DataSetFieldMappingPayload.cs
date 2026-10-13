@@ -16,10 +16,6 @@ public sealed class DataSetFieldMappingPayload
     /// <summary>Gets or sets the source field name.</summary>
     /// <remarks>Null when the source has no physical field to name (a DataSet or Calculation source).</remarks>
     public string? SourceFieldName { get; set; }
-    /// <summary>Gets or sets the transform expression.</summary>
-    public string? TransformExpression { get; set; }
-    /// <summary>Gets or sets the mapping expression.</summary>
-    public string? Expression { get => TransformExpression; set => TransformExpression = value; }
     /// <summary>Gets or sets the ordinal position.</summary>
     public int Ordinal { get; set; }
 }

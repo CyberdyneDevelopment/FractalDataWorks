@@ -6,8 +6,8 @@ namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
 /// What a pipeline's stages and load steps touch beyond its own source and destination (FDW-1161): the data sets its Union
-/// stages append, its Lookup stages read and the tables of its Compute stages are bound to, the connections its Lookup stages name, the data sets its load and reject steps
-/// write or read, and the containers its Execute steps write.
+/// stages append, its Lookup stages read and the tables of its Compute stages are bound to, the data store containers its Lookup stages read, the data sets
+/// its load and reject steps write or read, and the containers its Execute steps write.
 /// </summary>
 /// <remarks>
 /// Why this is read from the saved pipeline and nowhere else: a run is judged for reach when it is triggered or scheduled,
@@ -15,11 +15,9 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// Every name appears once, however many stages and steps name it.
 /// </remarks>
 /// <param name="DataSets">The data sets the stages and steps read or write.</param>
-/// <param name="Connections">The connections the stages name.</param>
-/// <param name="Containers">The data store containers the steps write.</param>
+/// <param name="Containers">The data store containers the stages read and the steps write.</param>
 public sealed record StepReach(
     IReadOnlyList<ReachedDataSet> DataSets,
-    IReadOnlyList<ReachedConnection> Connections,
     IReadOnlyList<ReachedContainer> Containers)
 {
     /// <summary>Reads what the stages and load steps of a saved pipeline touch.</summary>
@@ -28,18 +26,16 @@ public sealed record StepReach(
     public static StepReach Of(PipelineDetailResponse pipeline)
     {
         var dataSets = new List<ReachedDataSet>();
-        var connections = new List<ReachedConnection>();
         var containers = new List<ReachedContainer>();
-        Stages(pipeline.Transforms, dataSets, connections);
+        Stages(pipeline.Transforms, dataSets, containers);
         Steps(pipeline.LoadSteps, dataSets, containers);
         Steps(pipeline.RejectSteps, dataSets, containers);
         return new StepReach(
             [.. dataSets.Distinct()],
-            [.. connections.Distinct()],
             [.. containers.Distinct()]);
     }
 
-    private static void Stages(IEnumerable<PipelineTransformDto>? stages, List<ReachedDataSet> dataSets, List<ReachedConnection> connections)
+    private static void Stages(IEnumerable<PipelineTransformDto>? stages, List<ReachedDataSet> dataSets, List<ReachedContainer> containers)
     {
         if (stages is null)
         {
@@ -56,7 +52,10 @@ public sealed record StepReach(
             if (stage.Lookup is { } lookup)
             {
                 Add(dataSets, lookup.LookupDataSet, false);
-                Add(connections, lookup.LookupConnectionName, false);
+                if (lookup.LookupDataStoreName is { Length: > 0 } store && lookup.LookupDataStorePath is { } storePath && lookup.LookupContainerName is { } container)
+                {
+                    containers.Add(new ReachedContainer(store, storePath, container, false));
+                }
             }
 
             foreach (var table in stage.Compute?.Tables.Where(table => string.Equals(table.From, "DataSet", System.StringComparison.Ordinal)) ?? [])
@@ -71,7 +70,7 @@ public sealed record StepReach(
 
             foreach (var path in stage.Paths)
             {
-                Stages(path.Stages, dataSets, connections);
+                Stages(path.Stages, dataSets, containers);
             }
         }
     }
@@ -99,14 +98,6 @@ public sealed record StepReach(
         if (!string.IsNullOrWhiteSpace(name))
         {
             dataSets.Add(new ReachedDataSet(name, writes));
-        }
-    }
-
-    private static void Add(List<ReachedConnection> connections, string? name, bool writes)
-    {
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            connections.Add(new ReachedConnection(name, writes));
         }
     }
 }

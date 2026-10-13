@@ -96,6 +96,24 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     /// </remarks>
     protected virtual int DrainThresholdChars => 8 * 1024;
 
+    /// <summary>Gets the pending byte count at which a binary response's buffer is drained.</summary>
+    /// <remarks>A buffer size, like <see cref="DrainThresholdChars"/>: it trades syscalls against memory and changes no behaviour.</remarks>
+    protected virtual int DrainThresholdBytes => 32 * 1024;
+
+    /// <summary>
+    /// Builds the writer options for the negotiated format over the record source's columns. Override to set options the
+    /// format's own defaults leave off.
+    /// </summary>
+    /// <param name="format">The negotiated format.</param>
+    /// <param name="columns">The ordered column names the writer emits.</param>
+    /// <returns>Options of the concrete type the format's writer expects.</returns>
+    /// <remarks>
+    /// An export a person opens in a spreadsheet turns on the delimited writer's byte order mark and formula guard here. They
+    /// are off in the format's own defaults because a machine reader must see the value unchanged.
+    /// </remarks>
+    protected virtual RowWriterOptions WriterOptions(IRecordWriterType format, IReadOnlyList<string> columns)
+        => format.CreateOptions(columns);
+
     /// <summary>Gets the documentation tag this endpoint appears under.</summary>
     protected virtual string EndpointTag => ResourceName;
 
@@ -152,11 +170,16 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
     {
         var resource = ResourceIdentifier(req);
 
-        var format = NegotiateFormat(HttpContext.Request.Headers.Accept.ToString());
+        var named = HttpContext.Request.Query["format"].ToString();
+        var format = string.IsNullOrWhiteSpace(named)
+            ? NegotiateFormat(HttpContext.Request.Headers.Accept.ToString())
+            : FormatNamed(named);
         if (format is null)
         {
-            StreamRecordsEndpointLog.FormatNotAcceptable(Logger, resource, HttpContext.Request.Headers.Accept.ToString());
-            AddError($"No available record format satisfies the Accept header. Available: {AvailableMediaTypes()}.");
+            StreamRecordsEndpointLog.FormatNotAcceptable(Logger, resource, string.IsNullOrWhiteSpace(named) ? HttpContext.Request.Headers.Accept.ToString() : named);
+            AddError(string.IsNullOrWhiteSpace(named)
+                ? $"No available record format satisfies the Accept header. Available: {AvailableMediaTypes()}."
+                : $"No record format is named '{named}'. Available: {AvailableFormatNames()}.");
             await Send.ErrorsAsync(406, ct).ConfigureAwait(false);
             return;
         }
@@ -219,8 +242,8 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
             HttpContext.Response.DeclareTrailer(StatusTrailerName);
         }
 
-        var draining = new DrainingTextWriter(HttpContext.Response.Body, new UTF8Encoding(false), DrainThresholdChars);
-        var writer = format.CreateWriter(draining, format.CreateOptions(columns));
+        using var sink = new ResponseSink(HttpContext.Response.Body, format.WritesBinary, DrainThresholdChars, DrainThresholdBytes);
+        var writer = sink.CreateWriter(format, WriterOptions(format, columns));
         var rowCount = 0L;
         string? failure = null;
         var ceilingHit = false;
@@ -243,11 +266,10 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
 
                 writer.Write(record.Value);
                 rowCount++;
-                await draining.DrainIfFull(ct).ConfigureAwait(false);
+                await sink.DrainIfFull(ct).ConfigureAwait(false);
             }
 
-            writer.Flush();
-            await draining.Complete(ct).ConfigureAwait(false);
+            await sink.Finish(writer, ct).ConfigureAwait(false);
         }
         catch (NotSupportedException unserializable)
         {
@@ -266,8 +288,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         }
         finally
         {
-            await writer.DisposeAsync().ConfigureAwait(false);
-            await draining.DisposeAsync().ConfigureAwait(false);
+            await sink.Release(writer).ConfigureAwait(false);
         }
 
         if (failure is not null)
@@ -299,7 +320,7 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         }
 
         AppendStatusTrailer($"complete; rows={rowCount}");
-        StreamRecordsEndpointLog.StreamCompleted(Logger, resource, rowCount, draining.DrainedByteCount);
+        StreamRecordsEndpointLog.StreamCompleted(Logger, resource, rowCount, sink.DrainedByteCount);
     }
 
     private void AppendStatusTrailer(string value)
@@ -308,6 +329,27 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         {
             HttpContext.Response.AppendTrailer(StatusTrailerName, value);
         }
+    }
+
+    // Why a query value as well as the Accept header: a browser link or a form post cannot set Accept, and a download is
+    // exactly a link. It wins over Accept because it is the more specific statement, made by whoever built the link.
+    // Why the file extension as well as the format's name: the extension is what a person writes (csv, xlsx) and the name is the
+    // format's own (Delimited). The extension is the format's own statement about itself, so no table is kept beside this.
+    private static IRecordWriterType? FormatNamed(string name)
+    {
+        var wanted = name.Trim();
+        foreach (var candidate in RecordWriterTypes.All())
+        {
+            if (!ReferenceEquals(candidate, RecordWriterTypes.NotFound)
+                && !string.IsNullOrEmpty(candidate.MediaType)
+                && (string.Equals(candidate.Format, wanted, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(candidate.FileExtension, wanted, StringComparison.OrdinalIgnoreCase)))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private IRecordWriterType? NegotiateFormat(string acceptHeader)
@@ -352,6 +394,78 @@ public abstract class StreamRecordsEndpointBase<TRequest> : Endpoint<TRequest>
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Where a response's bytes go: a text format through a <see cref="DrainingTextWriter"/>, a binary one through a
+    /// <see cref="DrainingStream"/>, each drained between records so no synchronous write reaches the response body.
+    /// </summary>
+    private sealed class ResponseSink : IDisposable
+    {
+        private readonly DrainingTextWriter? _text;
+        private readonly DrainingStream? _bytes;
+
+        internal ResponseSink(System.IO.Stream body, bool binary, int drainThresholdChars, int drainThresholdBytes)
+        {
+            if (binary)
+            {
+                _bytes = new DrainingStream(body, drainThresholdBytes);
+            }
+            else
+            {
+                _text = new DrainingTextWriter(body, new UTF8Encoding(false), drainThresholdChars);
+            }
+        }
+
+        internal IRecordWriter<DataRecord> CreateWriter(IRecordWriterType format, RowWriterOptions options)
+            => _bytes is not null ? format.CreateBinaryWriter(_bytes, options) : format.CreateWriter(_text!, options);
+
+        internal long DrainedByteCount => _bytes is not null ? _bytes.DrainedByteCount : _text!.DrainedByteCount;
+
+        internal ValueTask DrainIfFull(CancellationToken ct)
+            => _bytes is not null ? _bytes.DrainIfFull(ct) : _text!.DrainIfFull(ct);
+
+        // Why a binary writer is disposed before the last drain: a binary file is not a file until its writer finishes it (a
+        // workbook's central directory is written on dispose), and that is only after the last row. A failed response never
+        // gets here, so no half file ends with the parts that would let it pass for a whole one.
+        internal async Task Finish(IRecordWriter<DataRecord> writer, CancellationToken ct)
+        {
+            if (_bytes is not null)
+            {
+                await writer.DisposeAsync().ConfigureAwait(false);
+                await _bytes.Complete(ct).ConfigureAwait(false);
+                return;
+            }
+
+            writer.Flush();
+            await _text!.Complete(ct).ConfigureAwait(false);
+        }
+
+        // A text writer is always disposed here. A binary writer was disposed by Finish when the file was complete, and is left
+        // undisposed after a failure: disposing it would finish the workbook, and nothing after a failure should.
+        internal ValueTask Release(IRecordWriter<DataRecord> writer)
+            => _text is not null ? writer.DisposeAsync() : default;
+
+        // Both are buffers over the response body: disposing them releases the buffers and writes nothing.
+        public void Dispose()
+        {
+            _text?.Dispose();
+            _bytes?.Dispose();
+        }
+    }
+
+    private static string AvailableFormatNames()
+    {
+        var available = new List<string>();
+        foreach (var candidate in RecordWriterTypes.All())
+        {
+            if (!ReferenceEquals(candidate, RecordWriterTypes.NotFound) && !string.IsNullOrEmpty(candidate.MediaType))
+            {
+                available.Add($"{candidate.Format} ({candidate.FileExtension})");
+            }
+        }
+
+        return string.Join(", ", available);
     }
 
     private static string AvailableMediaTypes()

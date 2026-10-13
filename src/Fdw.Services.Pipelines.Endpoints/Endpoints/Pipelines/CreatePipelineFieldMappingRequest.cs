@@ -45,21 +45,14 @@ public class CreatePipelineFieldMappingRequest : IFieldMapping, IFieldMappingCha
     public string? TargetType { get; set; }
 
     /// <summary>
-    /// Gets or sets the chain of named Transformations the mapping applies to its value (the request's <c>transforms</c>).
+    /// Gets or sets the chain of named Transformations the mapping applies to its value (the request's <c>transformations</c>).
     /// </summary>
     /// <remarks>
     /// Why each step names its Transformation by name OR by id (exactly one): the name is what a person writes and the id is
-    /// what a read-back returns. The pipeline stores the id. A stage that states a chain together with a
-    /// <see cref="TransformExpression"/> on the same mapping is refused: a mapping has one or the other.
+    /// what a read-back returns. The pipeline stores the id.
     /// </remarks>
-    [JsonPropertyName("transforms")]
+    [JsonPropertyName("transformations")]
     public IList<PipelineFieldTransformationReference>? TransformationChain { get; set; }
-
-    /// <summary>
-    /// Gets or sets the optional named transform expression applied before TargetType coercion
-    /// (e.g. "FromUnixMilliseconds"). Resolved against the TransformationTypes collection at runtime.
-    /// </summary>
-    public string? TransformExpression { get; set; }
 
     // Why the chain is exposed to the stage mapper through its own interface: a stage kind that reads a mapping should not
     // have to know about chains, and the mapper (which resolves names to ids) reads them here. An absent chain and an empty
@@ -72,18 +65,6 @@ public class CreatePipelineFieldMappingRequest : IFieldMapping, IFieldMappingCha
                 string.IsNullOrWhiteSpace(reference.Transformation) ? null : reference.Transformation,
                 reference.TransformationId,
                 reference.Ordinal))];
-
-    /// <inheritdoc/>
-    /// <remarks>
-    /// Why this projects <see cref="TransformExpression"/>: the create request carries one transform
-    /// name and no parameter values, so a one-step chain is what it actually describes. It reports no
-    /// chain when no name was supplied rather than inventing one.
-    /// </remarks>
-    [JsonIgnore]
-    public IReadOnlyList<IFieldMappingTransform> Transforms =>
-        string.IsNullOrEmpty(TransformExpression)
-            ? []
-            : [new PipelineFieldMappingTransform(TransformExpression)];
 
     /// <summary>
     /// Gets or sets whether the source field is required (a missing required field reports an error).

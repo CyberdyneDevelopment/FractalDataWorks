@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>Reorders the transformations attached to a field mapping.</summary>
-public class ReorderFieldMappingTransformsRequest
+public class ReorderFieldMappingTransformationsRequest
 {
     /// <summary>Gets or sets the field mapping.</summary>
     public Guid FieldMappingId { get; set; }

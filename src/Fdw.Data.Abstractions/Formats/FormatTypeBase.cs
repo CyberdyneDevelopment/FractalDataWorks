@@ -23,6 +23,11 @@ public abstract class FormatTypeBase : TypeOptionBase<FormatTypeBase>, IFormatTy
     /// Required — every format option MUST declare it (no silent default), mirroring how the other
     /// metadata (name/mimeType/…) is supplied by ctor arg per the FDW TypeOption convention.
     /// </param>
+    /// <param name="family">
+    /// The family of this format: the name of the record source and writer that read and write it. A format that is
+    /// read by a reader of its own name states that name; there is no default, so no format is read by accident.
+    /// </param>
+    /// <param name="separator">The field separator this format defines, or null when it defines none.</param>
     /// <param name="category">The category for this format type (defaults to "Format").</param>
     protected FormatTypeBase(
         string name,
@@ -32,6 +37,8 @@ public abstract class FormatTypeBase : TypeOptionBase<FormatTypeBase>, IFormatTy
         bool isBinary,
         bool supportsStreaming,
         string canonicalFileExtension,
+        string family,
+        string? separator = null,
         string? category = null)
         : base(name, $"Formats:{name}", displayName, description, category ?? "Format")
     {
@@ -39,6 +46,8 @@ public abstract class FormatTypeBase : TypeOptionBase<FormatTypeBase>, IFormatTy
         IsBinary = isBinary;
         SupportsStreaming = supportsStreaming;
         CanonicalFileExtension = canonicalFileExtension;
+        Family = family;
+        Separator = separator;
     }
 
     /// <inheritdoc/>
@@ -52,4 +61,10 @@ public abstract class FormatTypeBase : TypeOptionBase<FormatTypeBase>, IFormatTy
 
     /// <inheritdoc/>
     public string CanonicalFileExtension { get; }
+
+    /// <inheritdoc/>
+    public string Family { get; }
+
+    /// <inheritdoc/>
+    public string? Separator { get; }
 }

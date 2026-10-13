@@ -159,7 +159,7 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
     IReadOnlyList<string> IStatedMembersSpec.StatedMembers => StatedMembers();
 
     IReadOnlyList<string> IStatedMembersSpec.StatedMappingMembers =>
-        FieldMappings.Any(mapping => mapping.TransformationChain is { Count: > 0 }) ? ["transforms"] : [];
+        FieldMappings.Any(mapping => mapping.TransformationChain is { Count: > 0 }) ? ["transformations"] : [];
 
     private List<string> StatedMembers()
     {

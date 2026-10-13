@@ -55,12 +55,6 @@ public sealed partial class DataSetFieldMappingConfiguration : IGenericConfigura
     /// </summary>
     public string? TransformationTypeName { get; set; }
 
-    /// <summary>
-    /// Gets or sets an optional free-form transformation expression.
-    /// Prefer <see cref="TransformationTypeName"/> when the operation maps to a known TypeCollection entry.
-    /// </summary>
-    public string? TransformExpression { get; set; }
-
     /// <summary>Gets or sets the ordinal position for ordering mappings within a source.</summary>
     public int Ordinal { get; set; }
 

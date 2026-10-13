@@ -18,9 +18,6 @@ public class PipelineFieldMappingDto
     /// <summary>Gets or sets the destination field name.</summary>
     public string DestinationField { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the optional transform expression.</summary>
-    public string? TransformExpression { get; set; }
-
     /// <summary>Gets or sets the target data type.</summary>
     public string? TargetType { get; set; }
 
@@ -39,7 +36,7 @@ public class PipelineFieldMappingDto
 
     /// <summary>
     /// Gets or sets the chain of named Transformations the mapping's value goes through, in order (the wire member
-    /// <c>transforms</c>). Each step states its <c>transformationId</c>, the <c>transformation</c> name (null when the caller cannot read that Transformation) and its <c>ordinal</c>; null when the mapping states none.
+    /// <c>transformations</c>). Each step states its <c>transformationId</c>, the <c>transformation</c> name (null when the caller cannot read that Transformation) and its <c>ordinal</c>; null when the mapping states none.
     /// </summary>
-    public IList<PipelineFieldTransformationReference>? Transforms { get; set; }
+    public IList<PipelineFieldTransformationReference>? Transformations { get; set; }
 }

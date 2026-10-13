@@ -175,7 +175,6 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         }
 
         existing.Category = request.Category ?? existing.Category;
-        existing.TransformExpression = request.TransformExpression ?? existing.TransformExpression;
         existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
     }
 
