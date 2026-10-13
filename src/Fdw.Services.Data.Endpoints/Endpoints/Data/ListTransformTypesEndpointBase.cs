@@ -41,11 +41,11 @@ public abstract class ListTransformTypesEndpointBase : CrudListEndpointBase<Tran
     /// <summary>Loads all registered field transform types as DTOs.</summary>
     protected override Task<IGenericResult<List<TransformTypePayload>>> LoadItems(CancellationToken ct)
     {
-        FieldMappingTransformEndpointLog.ListingTransformTypes(Logger);
+        FieldMappingTransformationEndpointLog.ListingTransformTypes(Logger);
 
         var items = MapTransformTypes();
 
-        FieldMappingTransformEndpointLog.ListedTransformTypes(Logger, items.Count);
+        FieldMappingTransformationEndpointLog.ListedTransformTypes(Logger, items.Count);
         return Task.FromResult(GenericResult<List<TransformTypePayload>>.Success(items.ToList()));
     }
 

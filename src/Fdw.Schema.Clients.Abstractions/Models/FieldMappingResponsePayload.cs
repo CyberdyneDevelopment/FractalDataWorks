@@ -22,6 +22,4 @@ public sealed class FieldMappingResponsePayload
     /// with no name, which is a different thing from pointing at nothing.
     /// </remarks>
     public string? PhysicalFieldName { get; set; }
-    /// <summary>Gets or sets the optional transform expression.</summary>
-    public string? TransformExpression { get; set; }
 }

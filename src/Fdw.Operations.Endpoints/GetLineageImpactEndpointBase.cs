@@ -75,7 +75,7 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
     /// <summary>Finds the entry node by trying common entity type prefixes.</summary>
     private static (LineageNode? Node, string? NodeId) FindEntryNode(LineageGraph graph, string entityName)
     {
-        var entityTypes = new[] { "DataSet", "Pipeline", "Connection", "Calculation" };
+        var entityTypes = new[] { "DataSet", "Pipeline", "DataStore", "Connection", "Calculation" };
         foreach (var entityType in entityTypes)
         {
             var nodeId = $"{entityType}_{entityName}";
@@ -167,7 +167,17 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
             });
         }
 
-        var connectionNames = CollectConnectionNames(pipelines, sources);
+        foreach (var storeName in PipelineLineageStores.Names(pipelines))
+        {
+            graph.Nodes.Add(new LineageNode
+            {
+                Id = PipelineLineageStores.NodeId(storeName),
+                Type = LineageNodeTypes.ByName("DataStore"),
+                Name = storeName
+            });
+        }
+
+        var connectionNames = CollectConnectionNames(sources);
         foreach (var connName in connectionNames)
         {
             graph.Nodes.Add(new LineageNode
@@ -179,23 +189,14 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
         }
     }
 
-    /// <summary>Collects unique connection names from pipelines and sources.</summary>
-    private static HashSet<string> CollectConnectionNames(
-        IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetSourcePayload> sources)
+    /// <summary>Collects unique connection names from the data set sources.</summary>
+    private static HashSet<string> CollectConnectionNames(IReadOnlyList<DataSetSourcePayload> sources)
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var src in sources)
         {
             if (!string.IsNullOrEmpty(src.ConnectionName))
                 names.Add(src.ConnectionName);
-        }
-        foreach (var p in pipelines)
-        {
-            if (!string.IsNullOrEmpty(p.SourceConnectionName))
-                names.Add(p.SourceConnectionName);
-            if (!string.IsNullOrEmpty(p.DestinationConnectionName))
-                names.Add(p.DestinationConnectionName);
         }
         return names;
     }
@@ -257,23 +258,23 @@ public abstract class GetLineageImpactEndpointBase : Endpoint<LineageImpactReque
                 });
             }
 
-            if (!string.IsNullOrEmpty(p.DestinationConnectionName))
+            if (!string.IsNullOrEmpty(p.DestinationDataStoreName))
             {
                 graph.Edges.Add(new LineageEdge
                 {
                     Id = $"e{edgeId++}",
                     SourceId = $"Pipeline_{p.Name}",
-                    TargetId = $"Connection_{p.DestinationConnectionName}",
+                    TargetId = PipelineLineageStores.NodeId(p.DestinationDataStoreName),
                     Type = LineageEdgeTypes.ByName("WritesTo")
                 });
             }
 
-            if (!string.IsNullOrEmpty(p.SourceConnectionName))
+            if (!string.IsNullOrEmpty(p.SourceDataStoreName))
             {
                 graph.Edges.Add(new LineageEdge
                 {
                     Id = $"e{edgeId++}",
-                    SourceId = $"Connection_{p.SourceConnectionName}",
+                    SourceId = PipelineLineageStores.NodeId(p.SourceDataStoreName),
                     TargetId = $"Pipeline_{p.Name}",
                     Type = LineageEdgeTypes.ByName("ReadsFrom")
                 });

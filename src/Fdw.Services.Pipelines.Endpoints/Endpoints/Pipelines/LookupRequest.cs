@@ -11,13 +11,17 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public class LookupRequest : ILookupSpec
 {
-    /// <summary>Gets or sets the lookup connection name.</summary>
-    [Required]
-    public string LookupConnectionName { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the lookup data set name.</summary>
-    [Required]
+    /// <summary>Gets or sets the lookup data set name, or leave it empty and name a data store container.</summary>
     public string LookupDataSet { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the data store to read when the lookup reads a container (FDW-1269). Send all three of LookupDataStoreName, LookupDataStorePath and LookupContainerName, and no LookupDataSet.</summary>
+    public string? LookupDataStoreName { get; set; }
+
+    /// <summary>Gets or sets the path within that data store.</summary>
+    public string? LookupDataStorePath { get; set; }
+
+    /// <summary>Gets or sets the container within that path whose rows the lookup reads.</summary>
+    public string? LookupContainerName { get; set; }
 
     /// <summary>Gets or sets the lookup key field (in the lookup source).</summary>
     [Required]

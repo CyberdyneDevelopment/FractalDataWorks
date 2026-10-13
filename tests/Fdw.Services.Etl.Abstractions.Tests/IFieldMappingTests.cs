@@ -43,37 +43,6 @@ public class IFieldMappingTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void TransformExpressionPropertyCanBeRead()
-    {
-        // Arrange
-        const string expected = "x * 2";
-        var mapping = new TestFieldMapping { TransformExpression = expected };
-
-        // Act
-        var result = mapping.TransformExpression;
-
-        // Assert
-        result.ShouldBe(expected);
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
-    public void TransformExpressionPropertyCanBeNull()
-    {
-        // Arrange
-        var mapping = new TestFieldMapping { TransformExpression = null };
-
-        // Act
-        var result = mapping.TransformExpression;
-
-        // Assert
-        result.ShouldBeNull();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Etl")]
     public void DefaultValuePropertyCanBeRead()
     {
         // Arrange
@@ -196,7 +165,6 @@ public class IFieldMappingTests
         {
             SourceField = "Source",
             DestinationField = "Destination",
-            TransformExpression = "x + 1",
             DefaultValue = "0",
             TargetType = "int",
             IsRequired = true,
@@ -206,7 +174,6 @@ public class IFieldMappingTests
         // Act & Assert
         mapping.SourceField.ShouldBe("Source");
         mapping.DestinationField.ShouldBe("Destination");
-        mapping.TransformExpression.ShouldBe("x + 1");
         mapping.DefaultValue.ShouldBe("0");
         mapping.TargetType.ShouldBe("int");
         mapping.IsRequired.ShouldBeTrue();
@@ -221,12 +188,9 @@ public class IFieldMappingTests
     {
         public string SourceField { get; set; } = string.Empty;
         public string DestinationField { get; set; } = string.Empty;
-        public string? TransformExpression { get; set; }
         public string? DefaultValue { get; set; }
         public string? TargetType { get; set; }
         public bool IsRequired { get; set; }
         public bool IsEnabled { get; set; }
-
-        public IReadOnlyList<IFieldMappingTransform> Transforms { get; set; } = [];
     }
 }

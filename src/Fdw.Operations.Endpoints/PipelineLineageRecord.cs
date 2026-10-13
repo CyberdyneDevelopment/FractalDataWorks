@@ -20,8 +20,12 @@ public partial class PipelineLineageRecord
     public string? DestinationDataSet { get; set; }
     /// <summary>Gets or sets whether the pipeline is enabled.</summary>
     public bool IsEnabled { get; set; }
-    /// <summary>Gets or sets the source connection name.</summary>
-    public string? SourceConnectionName { get; set; }
-    /// <summary>Gets or sets the destination connection name (maps to DestinationConnectionName column).</summary>
-    public string? DestinationConnectionName { get; set; }
+    /// <summary>Gets or sets the data store the pipeline reads, when its source is a data store container (maps to SourceDataStoreName).</summary>
+    public string? SourceDataStoreName { get; set; }
+    /// <summary>Gets or sets the data store the pipeline writes, when its destination is a data store container (maps to DestinationDataStoreName).</summary>
+    public string? DestinationDataStoreName { get; set; }
+    /// <summary>Gets or sets the source container within the data store (maps to SourceContainerName).</summary>
+    public string? SourceContainerName { get; set; }
+    /// <summary>Gets or sets the destination container within the data store (maps to DestinationContainerName).</summary>
+    public string? DestinationContainerName { get; set; }
 }

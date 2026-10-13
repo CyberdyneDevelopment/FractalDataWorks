@@ -129,12 +129,12 @@ public sealed class PipelineRunAuthority
         if (dataSets.IsFailure)
             return dataSets;
 
-        var connections = await ReachConnections(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
-        if (connections.IsFailure)
-            return connections;
-
         var source = await ReachSourceContainer(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
-        return source.IsFailure ? source : await ReachContainers(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
+        if (source.IsFailure)
+            return source;
+
+        var destination = await ReachDestinationContainer(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
+        return destination.IsFailure ? destination : await ReachContainers(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
     }
 
     // Every data set the pipeline reads or writes -- its own source and destination, and what its stages and steps name.
@@ -176,20 +176,6 @@ public sealed class PipelineRunAuthority
             var store = await ReachDataStore(reach, roles, permissions, source.DataStoreName, reached.Writes, logger, ct).ConfigureAwait(false);
             if (store.IsFailure)
                 return store;
-        }
-
-        return GenericResult.Success();
-    }
-
-    // The connections the pipeline names itself: its own source and destination, and the ones its Lookup stages read through.
-    private async Task<IGenericResult> ReachConnections(
-        PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
-    {
-        foreach (var reached in ConnectionsTouched(reach))
-        {
-            var refused = await ReachConnection(reach, roles, permissions, reached, logger, ct).ConfigureAwait(false);
-            if (refused.IsFailure)
-                return refused;
         }
 
         return GenericResult.Success();
@@ -246,6 +232,30 @@ public sealed class PipelineRunAuthority
             .ConfigureAwait(false);
     }
 
+    // A data store container destination (FDW-1269), judged as the source is, but for writing: all three parts are named together, never
+    // beside a destination data set or a destination connection, and the roles must carry datastores:write.
+    private async Task<IGenericResult> ReachDestinationContainer(
+        PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(reach.DestinationDataStoreName)
+            && string.IsNullOrWhiteSpace(reach.DestinationDataStorePath)
+            && string.IsNullOrWhiteSpace(reach.DestinationContainerName))
+            return GenericResult.Success();
+
+        if (string.IsNullOrWhiteSpace(reach.DestinationDataStoreName)
+            || string.IsNullOrWhiteSpace(reach.DestinationDataStorePath)
+            || string.IsNullOrWhiteSpace(reach.DestinationContainerName))
+            return Refuse(logger, reach, roles,
+                "a data store destination names its store, path and container together (DestinationDataStoreName, DestinationDataStorePath, DestinationContainerName)");
+
+        if (!string.IsNullOrWhiteSpace(reach.DestinationDataSet))
+            return Refuse(logger, reach, roles, "a pipeline writes to one place: name a destination data set or a data store container, not both");
+
+        return await ReachContainer(
+            reach, roles, permissions, new ReachedContainer(reach.DestinationDataStoreName, reach.DestinationDataStorePath, reach.DestinationContainerName, true), logger, ct)
+            .ConfigureAwait(false);
+    }
+
     // The containers the pipeline's Execute steps write.
     private async Task<IGenericResult> ReachContainers(
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
@@ -284,12 +294,6 @@ public sealed class PipelineRunAuthority
         Named(reach.SourceDataSet).Select(name => new ReachedDataSet(name, false))
             .Concat(reach.Steps.DataSets)
             .Concat(Named(reach.DestinationDataSet).Select(name => new ReachedDataSet(name, true)))
-            .Distinct();
-
-    private static IEnumerable<ReachedConnection> ConnectionsTouched(PipelineReach reach) =>
-        Named(reach.SourceConnectionName).Select(name => new ReachedConnection(name, false))
-            .Concat(reach.Steps.Connections)
-            .Concat(Named(reach.DestinationConnectionName).Select(name => new ReachedConnection(name, true)))
             .Distinct();
 
     private static IEnumerable<string> Named(string? name)

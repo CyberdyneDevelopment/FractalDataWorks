@@ -43,7 +43,7 @@ public sealed class MapTransformType : TransformTypeBase
     private static readonly StageMember[] OwnedMembers =
     [
         new("fieldMappings", "FieldMappings", true, "Source to destination field mappings"),
-        new("transforms", "TransformationChain", false, "On a field mapping: the named Transformations its value goes through, in order")
+        new("transformations", "TransformationChain", false, "On a field mapping: the named Transformations its value goes through, in order")
     ];
 
     /// <inheritdoc />
@@ -97,7 +97,6 @@ public sealed class MapTransformType : TransformTypeBase
                 Name = fm.DestinationField,
                 SourceField = fm.SourceField,
                 DestinationField = fm.DestinationField,
-                TransformExpression = fm.TransformExpression,
                 DefaultValue = fm.DefaultValue,
                 TargetType = fm.TargetType,
                 IsRequired = fm.IsRequired,
@@ -174,11 +173,10 @@ public sealed class MapTransformType : TransformTypeBase
         // If source field missing, not required, and no default, skip the field
     }
 
-    // Why the run's resolved chain wins: a mapping that states a chain of named Transformations is run from what the run
-    // resolved for it (ITransformContext.FieldTransformChains); a mapping that states none keeps the legacy projection of
-    // its single TransformExpression name, which stays until it is retired.
-    private static IReadOnlyList<IFieldMappingTransform> ChainOf(PipelineTransformFieldMappingConfiguration mapping, ITransformContext context) =>
-        context.FieldTransformChains.TryGetValue(mapping.Id, out var chain) ? chain : mapping.Transforms;
+    // Why the run's resolved chain is the only chain: a mapping that states a chain of named Transformations is run from what
+    // the run resolved for it (ITransformContext.FieldTransformChains); a mapping that states none has no steps.
+    private static IReadOnlyList<IFieldMappingTransformation> ChainOf(PipelineTransformFieldMappingConfiguration mapping, ITransformContext context) =>
+        context.FieldTransformChains.TryGetValue(mapping.Id, out var chain) ? chain : [];
 
     /// <summary>
     /// Applies a field mapping's ordered transform chain (each step a <see cref="TransformationTypes"/> option such as
@@ -188,12 +186,11 @@ public sealed class MapTransformType : TransformTypeBase
     /// <remarks>
     /// Why: TargetType's <c>ConvertValue</c> is a primitive cast switch (a long becomes .NET ticks, not
     /// epoch-ms) and cannot express semantic conversions; the TransformationTypes collection
-    /// (FromUnixMilliseconds, ParseDateTimeOffset, Timezone, ...) is the system mechanism for them. This
-    /// honours the otherwise-unread <c>TransformExpression</c> column so a Map field-mapping can name a
-    /// transformer instead of producing garbage.
+    /// (FromUnixMilliseconds, ParseDateTimeOffset, Timezone, ...) is the system mechanism for them. A Map
+    /// field-mapping names its transformers through its Transformation chain.
     /// </remarks>
     private static async ValueTask<object?> ApplyTransformChain(
-        IReadOnlyList<IFieldMappingTransform> transforms,
+        IReadOnlyList<IFieldMappingTransformation> transforms,
         object? value,
         string sourceField,
         IDictionary<string, object?> input,

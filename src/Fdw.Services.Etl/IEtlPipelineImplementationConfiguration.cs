@@ -29,14 +29,8 @@ public interface IEtlPipelineImplementationConfiguration : IPipelineImplementati
     /// <summary>Gets a value indicating whether the pipeline is enabled.</summary>
     bool IsEnabled { get; }
 
-    /// <summary>Gets the source connection name (populated when the source is a Connection).</summary>
-    string SourceConnectionName { get; }
-
     /// <summary>Gets the source data set name (populated when the source is a DataSet).</summary>
     string SourceDataSet { get; }
-
-    /// <summary>Gets the destination connection name (populated when the destination is a Connection).</summary>
-    string DestinationConnectionName { get; }
 
     /// <summary>Gets the destination data set name (populated when the destination is a DataSet).</summary>
     string DestinationDataSet { get; }

@@ -26,9 +26,6 @@ public sealed partial class MapTransformationFieldMappingConfiguration : IGeneri
     /// <summary>Gets or sets the output field written.</summary>
     public string DestinationField { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets an optional expression applied to the value on the way across.</summary>
-    public string? TransformExpression { get; set; }
-
     /// <summary>Gets or sets the value written when the source is empty.</summary>
     public string? DefaultValue { get; set; }
 

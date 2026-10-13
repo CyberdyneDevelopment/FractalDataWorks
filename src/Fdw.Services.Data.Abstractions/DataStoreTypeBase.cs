@@ -51,4 +51,8 @@ public abstract class DataStoreTypeBase<TConfiguration> :
     /// </remarks>
     public abstract IDataStoreBuilder SupplyBuilder(ILogger? logger = null);
 
+    /// <inheritdoc />
+    /// <remarks>False unless the transport overrides it: a SQL or HTTP store finds a container by its own name.</remarks>
+    public virtual bool AddressesContainersAsFiles => false;
+
 }

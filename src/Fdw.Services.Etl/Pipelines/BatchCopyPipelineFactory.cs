@@ -130,24 +130,18 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
     private void ResolveKinds(BatchCopyPipelineConfiguration batch)
     {
         var hasSourceDataSet = !string.IsNullOrWhiteSpace(batch.SourceDataSet);
-        var hasSourceConnection = !string.IsNullOrWhiteSpace(batch.SourceConnectionName);
         // A data store source is the store; its path and container are checked by ValidateSourceKind, so a
         // half-addressed one is refused there with the missing part named (FDW-1103).
         var hasSourceDataStore = !string.IsNullOrWhiteSpace(batch.SourceDataStoreName);
-        var sourceForms = (hasSourceDataSet ? 1 : 0) + (hasSourceConnection ? 1 : 0) + (hasSourceDataStore ? 1 : 0);
 
-        if (sourceForms > 1)
+        if (hasSourceDataSet && hasSourceDataStore)
         {
             EtlLog.PipelineCreationFailed(_logger, batch.Name,
-                "More than one of SourceDataSet, SourceConnectionName and SourceDataStoreName is set; exactly one is required");
+                "Both SourceDataSet and SourceDataStoreName are set; exactly one is required");
         }
         else if (hasSourceDataSet)
         {
             batch.SourceKind = DataSourceKinds.ByName("DataSet");
-        }
-        else if (hasSourceConnection)
-        {
-            batch.SourceKind = DataSourceKinds.ByName("Connection");
         }
         else if (hasSourceDataStore)
         {
@@ -155,20 +149,22 @@ public sealed class BatchCopyPipelineFactory : IBatchCopyPipelineFactory
         }
 
         var hasDestDataSet = !string.IsNullOrWhiteSpace(batch.DestinationDataSet);
-        var hasDestConnection = !string.IsNullOrWhiteSpace(batch.DestinationConnectionName);
+        // A data store destination is the store; its path and container are checked by ValidateDestinationKind, so a
+        // half-addressed one is refused there with the missing part named (FDW-1269).
+        var hasDestDataStore = !string.IsNullOrWhiteSpace(batch.DestinationDataStoreName);
 
-        if (hasDestDataSet && hasDestConnection)
+        if (hasDestDataSet && hasDestDataStore)
         {
             EtlLog.PipelineCreationFailed(_logger, batch.Name,
-                "Both DestinationDataSet and DestinationConnectionName are set; exactly one is required");
+                "Both DestinationDataSet and DestinationDataStoreName are set; exactly one is required");
         }
         else if (hasDestDataSet)
         {
             batch.DestinationKind = DataDestinationKinds.ByName("DataSet");
         }
-        else if (hasDestConnection)
+        else if (hasDestDataStore)
         {
-            batch.DestinationKind = DataDestinationKinds.ByName("Connection");
+            batch.DestinationKind = DataDestinationKinds.ByName("DataStore");
         }
     }
 

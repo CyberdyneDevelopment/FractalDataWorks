@@ -39,9 +39,7 @@ public class IEtlPipelineImplementationConfigurationLinkageTests
         var concrete = new BatchCopyPipelineConfiguration
         {
             IsEnabled = true,
-            SourceConnectionName = "SourceConn",
             SourceDataSet = "SourceDs",
-            DestinationConnectionName = "DestConn",
             DestinationDataSet = "DestDs",
             SourceDataSetId = Guid.NewGuid(),
             SinkDataSetId = Guid.NewGuid()
@@ -52,9 +50,7 @@ public class IEtlPipelineImplementationConfigurationLinkageTests
 #pragma warning restore CA1859
 
         engine.IsEnabled.ShouldBeTrue();
-        engine.SourceConnectionName.ShouldBe(concrete.SourceConnectionName);
         engine.SourceDataSet.ShouldBe(concrete.SourceDataSet);
-        engine.DestinationConnectionName.ShouldBe(concrete.DestinationConnectionName);
         engine.DestinationDataSet.ShouldBe(concrete.DestinationDataSet);
         engine.SourceDataSetId.ShouldBe(concrete.SourceDataSetId);
         engine.SinkDataSetId.ShouldBe(concrete.SinkDataSetId);
@@ -68,9 +64,7 @@ public class IEtlPipelineImplementationConfigurationLinkageTests
         var concrete = new StreamingPipelineConfiguration
         {
             IsEnabled = false,
-            SourceConnectionName = "StreamSourceConn",
             SourceDataSet = "StreamSourceDs",
-            DestinationConnectionName = "StreamDestConn",
             DestinationDataSet = "StreamDestDs",
             SourceDataSetId = Guid.NewGuid(),
             SinkDataSetId = Guid.NewGuid()
@@ -81,9 +75,7 @@ public class IEtlPipelineImplementationConfigurationLinkageTests
 #pragma warning restore CA1859
 
         engine.IsEnabled.ShouldBeFalse();
-        engine.SourceConnectionName.ShouldBe(concrete.SourceConnectionName);
         engine.SourceDataSet.ShouldBe(concrete.SourceDataSet);
-        engine.DestinationConnectionName.ShouldBe(concrete.DestinationConnectionName);
         engine.DestinationDataSet.ShouldBe(concrete.DestinationDataSet);
         engine.SourceDataSetId.ShouldBe(concrete.SourceDataSetId);
         engine.SinkDataSetId.ShouldBe(concrete.SinkDataSetId);

@@ -12,8 +12,8 @@ namespace Fdw.Operations.Endpoints;
 /// </summary>
 /// <remarks>
 /// Why: the previous mechanism read <c>pipe.Pipeline</c> as a flat single-table row, which structurally
-/// cannot see the linkage columns (SourceDataSet/DestinationDataSet/SourceConnectionName/
-/// DestinationConnectionName/IsEnabled) that live on the engine's own row. A read through the Pipeline
+/// cannot see the linkage columns (SourceDataSet/DestinationDataSet/SourceDataStoreName/
+/// DestinationDataStoreName/IsEnabled) that live on the engine's own row. A read through the Pipeline
 /// domain already dispatches to whichever implementation the row names, so this projection reads the
 /// linkage off that implementation — polymorphically through
 /// <see cref="IEtlPipelineImplementationConfiguration"/>, with no <c>is BatchCopy...</c> branch and no
@@ -50,12 +50,21 @@ internal static class PipelineLineageProjection
         record.SourceDataSet = engine.SourceDataSet;
         record.DestinationDataSet = engine.DestinationDataSet;
         record.IsEnabled = engine.IsEnabled;
-        record.SourceConnectionName = engine.SourceConnectionName;
-        record.DestinationConnectionName = engine.DestinationConnectionName;
+        if (engine is IDataStoreSourcedPipelineConfiguration source)
+        {
+            record.SourceDataStoreName = source.SourceDataStoreName;
+            record.SourceContainerName = source.SourceContainerName;
+        }
+
+        if (engine is IDataStoreDestinedPipelineConfiguration destination)
+        {
+            record.DestinationDataStoreName = destination.DestinationDataStoreName;
+            record.DestinationContainerName = destination.DestinationContainerName;
+        }
 
         ApiEndpointLog.PipelineLinkageExtracted(
             logger, configuration.Name, engine.SourceDataSet, engine.DestinationDataSet,
-            engine.SourceConnectionName, engine.DestinationConnectionName);
+            record.SourceDataStoreName, record.DestinationDataStoreName);
 
         return record;
     }

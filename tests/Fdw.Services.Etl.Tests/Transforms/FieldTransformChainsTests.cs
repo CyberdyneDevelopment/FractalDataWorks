@@ -169,7 +169,7 @@ public sealed class FieldTransformChainsTests
     public void ARunContextCarriesExactlyTheChainsItIsGiven()
     {
         // Arrange
-        var stated = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>();
+        var stated = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>();
 
         // Act
         var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: stated);

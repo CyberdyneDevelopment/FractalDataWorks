@@ -9,10 +9,16 @@ namespace Fdw.Services.Etl.Tests.Transforms;
 internal sealed class FakeLookupSpec : ILookupSpec
 {
     /// <inheritdoc />
-    public string LookupConnectionName { get; set; } = string.Empty;
+    public string LookupDataSet { get; set; } = string.Empty;
 
     /// <inheritdoc />
-    public string LookupDataSet { get; set; } = string.Empty;
+    public string? LookupDataStoreName { get; set; }
+
+    /// <inheritdoc />
+    public string? LookupDataStorePath { get; set; }
+
+    /// <inheritdoc />
+    public string? LookupContainerName { get; set; }
 
     /// <inheritdoc />
     public string LookupKeyField { get; set; } = string.Empty;

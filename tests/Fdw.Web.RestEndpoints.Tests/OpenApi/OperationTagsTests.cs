@@ -15,7 +15,7 @@ public sealed class OperationTagsTests
         { "/api/v1/calculation-entities", ["calculation-entities", "Calculation-Entities"], "Calculation Entities" },
         { "/api/v1/settings/server", ["settings/server", "Settings"], "Settings" },
         { "/api/v1/configuration/types/children", ["configuration-types", "Configuration"], "Configuration" },
-        { "/api/v1/field-mappings/{fieldMappingId}/transforms/{transformationName}", ["field-mapping-transforms"], "Field Mappings" },
+        { "/api/v1/field-mappings/{fieldMappingId}/transformations/{transformationName}", ["field-mapping-transformations"], "Field Mappings" },
         { "/api/v1/connection-types/{name}/capabilities", ["Connection-Types"], "Connection Types" },
         { "/api/v1/auth/logout", ["Authentication", "Auth"], OperationTags.Authentication },
         { "/connect/token", [], OperationTags.Authentication },

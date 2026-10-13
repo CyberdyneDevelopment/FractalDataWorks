@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using Fdw.Data.DataSets.Abstractions;
 
 namespace Fdw.Services.Workspaces.Endpoints;
 
@@ -11,15 +10,23 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// </summary>
 public static class DataSetReferenceDescription
 {
-    /// <summary>Describes a data set's query operation.</summary>
-    /// <param name="dataSet">The data set.</param>
+    /// <summary>Describes the query operation of a data set a workspace exposes.</summary>
+    /// <param name="readable">The data set under the name the workspace knows it by, and the data set its query runs.</param>
     /// <returns>The description, as Markdown.</returns>
-    public static string For(IDataSetImplementationConfiguration dataSet)
+    /// <remarks>
+    /// A variation is described under its own name, with the fields of the main data set it varies, which are the fields
+    /// the data route translates a filter against.
+    /// </remarks>
+    public static string For(ReadableDataSet readable)
     {
-        ArgumentNullException.ThrowIfNull(dataSet);
+        ArgumentNullException.ThrowIfNull(readable);
 
+        var dataSet = readable.ExecutionTarget;
         var text = new StringBuilder();
-        text.Append("Query the **").Append(dataSet.Name).Append("** data set.");
+        text.Append("Query the **").Append(readable.Name).Append("** data set.");
+        if (!string.Equals(readable.Name, dataSet.Name, StringComparison.OrdinalIgnoreCase))
+            text.Append(" It is a variation of the **").Append(dataSet.Name).Append("** data set; its stored filter narrows the rows.");
+
         if (!string.IsNullOrWhiteSpace(dataSet.Description))
             text.Append(' ').Append(dataSet.Description);
 

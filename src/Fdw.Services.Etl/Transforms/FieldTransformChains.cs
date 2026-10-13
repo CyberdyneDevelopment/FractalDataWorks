@@ -41,13 +41,13 @@ public static class FieldTransformChains
     /// The resolved chains by mapping id (empty when no mapping states a chain), or the failure naming the stage, the mapping
     /// and the step that could not be resolved.
     /// </returns>
-    public static async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>>>> Resolve(
+    public static async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>>> Resolve(
         IEnumerable<PipelineTransformConfiguration>? stages,
         ITransformationConfigurationProvider? transformations,
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        var chains = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>();
+        var chains = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>();
         var failure = await ResolveStages(stages, null, chains, transformations, logger, cancellationToken).ConfigureAwait(false);
         if (failure is not null)
         {
@@ -55,16 +55,16 @@ public static class FieldTransformChains
         }
 
         FieldChainLog.ChainsResolved(logger, chains.Count, chains.Values.Sum(chain => chain.Count));
-        return GenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>>>.Success(chains);
+        return GenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>>.Success(chains);
     }
 
     // Resolves the chains of one list of stages and, below them, of the stages in the paths of each stage. The name given to a
     // refusal is the stage's place the way a person reads it: stage names and path names joined by '.'. Returns the failure of
     // the first chain that cannot be resolved, or null when every chain was.
-    private static async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>>>?> ResolveStages(
+    private static async Task<IGenericResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>>?> ResolveStages(
         IEnumerable<PipelineTransformConfiguration>? stages,
         string? parentName,
-        Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>> chains,
+        Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> chains,
         ITransformationConfigurationProvider? transformations,
         ILogger logger,
         CancellationToken cancellationToken)
@@ -82,7 +82,7 @@ public static class FieldTransformChains
                 var chain = await ResolveMapping(stageName, mapping, transformations, logger, cancellationToken).ConfigureAwait(false);
                 if (chain.IsFailure)
                 {
-                    return chain.ToNewResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransform>>>();
+                    return chain.ToNewResult<IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>>();
                 }
 
                 chains[mapping.Id] = chain.Value!;
@@ -101,7 +101,7 @@ public static class FieldTransformChains
         return null;
     }
 
-    private static async Task<IGenericResult<IReadOnlyList<IFieldMappingTransform>>> ResolveMapping(
+    private static async Task<IGenericResult<IReadOnlyList<IFieldMappingTransformation>>> ResolveMapping(
         string stage,
         PipelineTransformFieldMappingConfiguration mapping,
         ITransformationConfigurationProvider? transformations,
@@ -110,26 +110,26 @@ public static class FieldTransformChains
     {
         if (transformations is null)
         {
-            return GenericResult<IReadOnlyList<IFieldMappingTransform>>.Failure(
+            return GenericResult<IReadOnlyList<IFieldMappingTransformation>>.Failure(
                 FieldChainLog.TransformationProviderMissing(logger, stage, mapping.Name));
         }
 
-        var chain = new List<IFieldMappingTransform>();
+        var chain = new List<IFieldMappingTransformation>();
         foreach (var step in mapping.TransformationChain.OrderBy(step => step.Ordinal))
         {
             var resolved = await ResolveStep(stage, mapping, step, transformations, logger, cancellationToken).ConfigureAwait(false);
             if (resolved.IsFailure)
             {
-                return resolved.ToNewResult<IReadOnlyList<IFieldMappingTransform>>();
+                return resolved.ToNewResult<IReadOnlyList<IFieldMappingTransformation>>();
             }
 
             chain.Add(resolved.Value!);
         }
 
-        return GenericResult<IReadOnlyList<IFieldMappingTransform>>.Success(chain);
+        return GenericResult<IReadOnlyList<IFieldMappingTransformation>>.Success(chain);
     }
 
-    private static async Task<IGenericResult<IFieldMappingTransform>> ResolveStep(
+    private static async Task<IGenericResult<IFieldMappingTransformation>> ResolveStep(
         string stage,
         PipelineTransformFieldMappingConfiguration mapping,
         PipelineTransformFieldMappingTransformationConfiguration step,
@@ -140,23 +140,23 @@ public static class FieldTransformChains
         var found = await transformations.Get(step.TransformationId, cancellationToken).ConfigureAwait(false);
         if (found.IsFailure || found.Value is null)
         {
-            return GenericResult<IFieldMappingTransform>.Failure(
+            return GenericResult<IFieldMappingTransformation>.Failure(
                 FieldChainLog.TransformationMissing(logger, stage, mapping.Name, step.TransformationId));
         }
 
         if (found.Value is not IFieldTransformationConfiguration field)
         {
-            return GenericResult<IFieldMappingTransform>.Failure(
+            return GenericResult<IFieldMappingTransformation>.Failure(
                 FieldChainLog.TransformationNotFieldLevel(logger, stage, mapping.Name, found.Value.Name, found.Value.Implementation));
         }
 
         if (TransformationTypes.ByName(field.TransformationType) is not FieldTransformationBase)
         {
-            return GenericResult<IFieldMappingTransform>.Failure(
+            return GenericResult<IFieldMappingTransformation>.Failure(
                 FieldChainLog.TransformationOperationUnknown(logger, stage, mapping.Name, field.Name, field.TransformationType));
         }
 
         var parameters = field.Parameters.ToDictionary(parameter => parameter.Name, parameter => parameter.Value, StringComparer.Ordinal);
-        return GenericResult<IFieldMappingTransform>.Success(new FieldMappingTransform(field.TransformationType, step.Ordinal, parameters));
+        return GenericResult<IFieldMappingTransformation>.Success(new FieldMappingTransformation(field.TransformationType, step.Ordinal, parameters));
     }
 }

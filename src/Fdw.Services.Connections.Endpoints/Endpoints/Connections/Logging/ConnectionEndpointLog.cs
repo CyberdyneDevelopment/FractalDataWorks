@@ -110,4 +110,24 @@ public static partial class ConnectionEndpointLog
     // Why Error: no connection's credentials can be stored until an operator sets it.
     [MessageLogging(EventId = 61000, Level = LogLevel.Error, Message = "Connection credentials cannot be stored: the server setting '{setting}' names no secret manager")]
     public static partial IGenericMessage CredentialStoreNotConfigured(ILogger logger, string setting);
+
+    /// <summary>A caller who is not a platform administrator tried to change credentials a connection keeps in an external secret manager (FDW-1327).</summary>
+    // Why Warning: the request is refused; someone is trying to change what an administrator pinned.
+    [MessageLogging(EventId = 21002, Level = LogLevel.Warning, Message = "Connection '{connectionName}' refused: its credentials are kept in a secret manager a platform administrator named, and only a platform administrator may change them")]
+    public static partial IGenericMessage CredentialsManagedExternally(ILogger logger, string connectionName);
+
+    /// <summary>A request named where a connection's credentials are kept and also sent their values (FDW-1327).</summary>
+    // Why Warning: the request is refused; the caller must choose one of the two.
+    [MessageLogging(EventId = 21003, Level = LogLevel.Warning, Message = "Connection '{connectionName}' refused: the request names where its credentials are kept and also sends their values")]
+    public static partial IGenericMessage CredentialReferenceAndValue(ILogger logger, string connectionName);
+
+    /// <summary>An administrator named a secret in the form the credential store mints for its own credentials (FDW-1327).</summary>
+    // Why Warning: the request is refused; such a name could be another connection's secret, which the store would delete.
+    [MessageLogging(EventId = 21004, Level = LogLevel.Warning, Message = "Connection '{connectionName}' refused: it names a secret in the form the credential store mints")]
+    public static partial IGenericMessage ExternalSecretNameReserved(ILogger logger, string connectionName);
+
+    /// <summary>The secret manager or a secret an administrator named for a connection cannot be used (FDW-1327); the field and the reason, never a value.</summary>
+    // Why Warning: the request is refused; the administrator must fix the name or the secret manager, nothing is stored.
+    [MessageLogging(EventId = 21005, Level = LogLevel.Warning, Message = "Connection '{connectionName}' refused: the '{field}' credential in secret manager '{secretManagerName}' cannot be used ({reason})")]
+    public static partial IGenericMessage ExternalCredentialUnavailable(ILogger logger, string connectionName, string field, string secretManagerName, string reason);
 }

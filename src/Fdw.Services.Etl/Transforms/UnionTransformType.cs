@@ -268,11 +268,6 @@ public sealed class UnionTransformType : TransformTypeBase
 
     private static string? ForeignMember(IFieldMapping mapping)
     {
-        if (!string.IsNullOrEmpty(mapping.TransformExpression))
-        {
-            return "transformExpression";
-        }
-
         if (mapping.DefaultValue is not null)
         {
             return "defaultValue";

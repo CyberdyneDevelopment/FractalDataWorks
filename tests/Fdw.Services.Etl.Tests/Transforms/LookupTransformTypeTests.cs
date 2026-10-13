@@ -25,14 +25,13 @@ public sealed class LookupTransformTypeTests
     private readonly LookupTransformType _sut = new();
 
     private static TransformContext CreateContext(IDataGateway? dataGateway = null) =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>(), dataGateway: dataGateway);
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), dataGateway: dataGateway);
 
     private static PipelineTransformConfiguration CreateConfig(params PipelineTransformLookupConfiguration[] lookups) =>
         new() { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup", Lookups = [.. lookups] };
 
     private static PipelineTransformLookupConfiguration LookupColumn(
         string lookupValueField,
-        string connectionName = "Conn1",
         string dataSet = "Devices",
         string lookupKeyField = "Id",
         string sourceKeyField = "DeviceId",
@@ -41,7 +40,6 @@ public sealed class LookupTransformTypeTests
         new()
         {
             Id = Guid.NewGuid(),
-            LookupConnectionName = connectionName,
             LookupDataSet = dataSet,
             LookupKeyField = lookupKeyField,
             SourceKeyField = sourceKeyField,
@@ -496,7 +494,6 @@ public sealed class LookupTransformTypeTests
             OperationType = "Lookup",
             Lookup = new FakeLookupSpec
             {
-                LookupConnectionName = "Conn1",
                 LookupDataSet = "Devices",
                 LookupKeyField = "Id",
                 SourceKeyField = "DeviceId",
@@ -515,7 +512,85 @@ public sealed class LookupTransformTypeTests
         target.Lookups.Count.ShouldBe(2);
         target.Lookups[0].LookupValueField.ShouldBe("Name");
         target.Lookups[1].LookupValueField.ShouldBe("Region");
-        target.Lookups[0].LookupConnectionName.ShouldBe("Conn1");
+        target.Lookups[0].LookupDataSet.ShouldBe("Devices");
+    }
+
+    private static FakeTransformOperationSpec LookupSpec(Action<FakeLookupSpec> shape)
+    {
+        var lookup = new FakeLookupSpec
+        {
+            LookupKeyField = "Id",
+            SourceKeyField = "DeviceId",
+            LookupColumns = ["Name"],
+            JoinType = "Left",
+        };
+        shape(lookup);
+        return new FakeTransformOperationSpec { Name = "Lookup1", OperationType = "Lookup", Lookup = lookup };
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void ALookupOverADataStoreContainerCarriesItsThreePartsAndNeedsNoConnectionName()
+    {
+        var spec = LookupSpec(l =>
+        {
+            l.LookupDataStoreName = "Warehouse";
+            l.LookupDataStorePath = "ref/v1";
+            l.LookupContainerName = "devices";
+        });
+        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+
+        var result = _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance);
+
+        result.IsSuccess.ShouldBeTrue();
+        target.Lookups[0].LookupDataStoreName.ShouldBe("Warehouse");
+        target.Lookups[0].LookupDataStorePath.ShouldBe("ref/v1");
+        target.Lookups[0].LookupContainerName.ShouldBe("devices");
+        target.Lookups[0].LookupDataSet.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void ALookupNamingNeitherADataSetNorAContainerIsRefused()
+    {
+        var spec = LookupSpec(_ => { });
+        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+
+        _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void ALookupNamingBothADataSetAndAContainerIsRefused()
+    {
+        var spec = LookupSpec(l =>
+        {
+            l.LookupDataSet = "Devices";
+            l.LookupDataStoreName = "Warehouse";
+            l.LookupDataStorePath = "ref/v1";
+            l.LookupContainerName = "devices";
+        });
+        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+
+        _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AHalfNamedDataStoreLookupIsRefused()
+    {
+        var spec = LookupSpec(l =>
+        {
+            l.LookupDataStoreName = "Warehouse";
+            l.LookupContainerName = "devices";
+        });
+        var target = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup" };
+
+        _sut.MapSpecToConfiguration(spec, target, NullLogger.Instance).IsSuccess.ShouldBeFalse();
     }
 
     [Fact]
@@ -547,7 +622,6 @@ public sealed class LookupTransformTypeTests
             OperationType = "Lookup",
             Lookup = new FakeLookupSpec
             {
-                LookupConnectionName = "Conn1",
                 LookupDataSet = "Devices",
                 LookupKeyField = "Id",
                 SourceKeyField = "DeviceId",
@@ -576,7 +650,6 @@ public sealed class LookupTransformTypeTests
             OperationType = "Lookup",
             Lookup = new FakeLookupSpec
             {
-                LookupConnectionName = "Conn1",
                 LookupDataSet = "Devices",
                 LookupKeyField = "Id",
                 SourceKeyField = "DeviceId",

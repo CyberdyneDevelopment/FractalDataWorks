@@ -38,6 +38,17 @@ public interface IDataStoreType : ITypeOption<Guid, IDataStoreType>
     /// </remarks>
     IDataStoreBuilder SupplyBuilder(ILogger? logger = null);
 
+    /// <summary>
+    /// Gets a value indicating whether this store type finds a container as a file, by the container's name plus its
+    /// format's own extension (a FileSystem store).
+    /// </summary>
+    /// <remarks>
+    /// A container of such a store must not be named with the extension: the store adds it, so a container named
+    /// <c>people.xlsx</c> is looked up as <c>people.xlsx.xlsx</c> and never found. Declared on the option, like
+    /// <c>WritesBinary</c> on a record writer type, so no caller matches on a store type's name.
+    /// </remarks>
+    bool AddressesContainersAsFiles { get; }
+
 }
 
 /// <summary>

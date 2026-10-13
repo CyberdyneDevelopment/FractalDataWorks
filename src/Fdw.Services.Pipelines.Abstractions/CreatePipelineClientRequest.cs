@@ -25,16 +25,6 @@ public class CreatePipelineClientRequest : IPipelineLoadFields
     public string PipelineType { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the source connection name.
-    /// </summary>
-    public string SourceConnectionName { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the destination connection name.
-    /// </summary>
-    public string DestinationConnectionName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the source DataSet name.
     /// </summary>
     public string? SourceDataSet { get; set; }
@@ -52,6 +42,15 @@ public class CreatePipelineClientRequest : IPipelineLoadFields
     /// Gets or sets the destination DataSet name.
     /// </summary>
     public string? DestinationDataSet { get; set; }
+
+    /// <summary>Gets or sets the data store to write to when the destination is a data store container rather than a data set (FDW-1269). Send all three of DestinationDataStoreName, DestinationDataStorePath and DestinationContainerName, and no DestinationDataSet.</summary>
+    public string? DestinationDataStoreName { get; set; }
+
+    /// <summary>Gets or sets the path within that data store, as the store names it.</summary>
+    public string? DestinationDataStorePath { get; set; }
+
+    /// <summary>Gets or sets the container within that path that the pipeline writes its rows into.</summary>
+    public string? DestinationContainerName { get; set; }
 
     /// <summary>
     /// Gets or sets optional description.

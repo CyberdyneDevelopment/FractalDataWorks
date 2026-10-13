@@ -46,7 +46,7 @@ public sealed class StageChainLookupTests
         TransformationType = "Trim",
     };
 
-    private static List<CreatePipelineTransformRequest> Stages(string? expression, params PipelineFieldTransformationReference[] chain) =>
+    private static List<CreatePipelineTransformRequest> Stages(params PipelineFieldTransformationReference[] chain) =>
     [
         new()
         {
@@ -59,7 +59,6 @@ public sealed class StageChainLookupTests
                     Name = "Label",
                     SourceField = "a",
                     DestinationField = "A",
-                    TransformExpression = expression,
                     TransformationChain = [.. chain],
                 },
             ],
@@ -72,7 +71,7 @@ public sealed class StageChainLookupTests
     public async Task ANamedStepIsResolvedToTheIdOfItsTransformation()
     {
         // Act
-        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(null, new PipelineFieldTransformationReference { Transformation = "trim", Ordinal = 1 }), TestContext.Current.CancellationToken);
+        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(new PipelineFieldTransformationReference { Transformation = "trim", Ordinal = 1 }), TestContext.Current.CancellationToken);
 
         // Assert
         chains.Problems.ShouldBeEmpty();
@@ -85,7 +84,7 @@ public sealed class StageChainLookupTests
     public async Task AStepThatGivesTheIdOfAnExistingTransformationHasNoProblem()
     {
         // Act
-        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(null, new PipelineFieldTransformationReference { TransformationId = TrimId, Ordinal = 1 }), TestContext.Current.CancellationToken);
+        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(new PipelineFieldTransformationReference { TransformationId = TrimId, Ordinal = 1 }), TestContext.Current.CancellationToken);
 
         // Assert
         chains.Problems.ShouldBeEmpty();
@@ -98,7 +97,7 @@ public sealed class StageChainLookupTests
     public async Task ARequestThatStatesNoChainHasNothingToLookUp()
     {
         // Act
-        var chains = await Lookup().Resolve("Nightly", Stages(null), TestContext.Current.CancellationToken);
+        var chains = await Lookup().Resolve("Nightly", Stages(), TestContext.Current.CancellationToken);
 
         // Assert
         chains.Problems.ShouldBeEmpty();
@@ -111,12 +110,12 @@ public sealed class StageChainLookupTests
     public async Task AStepNamingATransformationThatDoesNotExistIsAProblemOnItsStage()
     {
         // Act
-        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(null, new PipelineFieldTransformationReference { Transformation = "Missing", Ordinal = 1 }), TestContext.Current.CancellationToken);
+        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(new PipelineFieldTransformationReference { Transformation = "Missing", Ordinal = 1 }), TestContext.Current.CancellationToken);
 
         // Assert
         var problem = chains.Problems.ShouldHaveSingleItem();
         problem.Stage.ShouldBe("Shape");
-        problem.Field.ShouldBe("FieldMappings[0].Transforms[0].Transformation");
+        problem.Field.ShouldBe("FieldMappings[0].Transformations[0].Transformation");
         problem.Reason.ShouldContain("Missing");
         chains.Refusal<int>(NullLogger.Instance)!.Code!.Id.ShouldBe(20001);
     }
@@ -127,7 +126,7 @@ public sealed class StageChainLookupTests
     public async Task AStepGivingAnIdThatDoesNotExistIsAProblem()
     {
         // Act
-        var chains = await Lookup().Resolve("Nightly", Stages(null, new PipelineFieldTransformationReference { TransformationId = TrimId, Ordinal = 1 }), TestContext.Current.CancellationToken);
+        var chains = await Lookup().Resolve("Nightly", Stages(new PipelineFieldTransformationReference { TransformationId = TrimId, Ordinal = 1 }), TestContext.Current.CancellationToken);
 
         // Assert
         chains.Problems.ShouldHaveSingleItem().Reason.ShouldContain(TrimId.ToString());
@@ -145,7 +144,7 @@ public sealed class StageChainLookupTests
         wholeInput.SetupGet(item => item.Implementation).Returns("Aggregate");
 
         // Act
-        var chains = await Lookup(wholeInput.Object).Resolve("Nightly", Stages(null, new PipelineFieldTransformationReference { Transformation = "Totals", Ordinal = 1 }), TestContext.Current.CancellationToken);
+        var chains = await Lookup(wholeInput.Object).Resolve("Nightly", Stages(new PipelineFieldTransformationReference { Transformation = "Totals", Ordinal = 1 }), TestContext.Current.CancellationToken);
 
         // Assert
         chains.Problems.ShouldHaveSingleItem().Reason.ShouldContain("Aggregate");
@@ -168,25 +167,11 @@ public sealed class StageChainLookupTests
         };
 
         // Act
-        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(null, step), TestContext.Current.CancellationToken);
+        var chains = await Lookup(Trim()).Resolve("Nightly", Stages(step), TestContext.Current.CancellationToken);
 
         // Assert
         chains.Problems.ShouldNotBeEmpty();
         chains.Problems.ShouldAllBe(problem => problem.Stage == "Shape");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task AMappingThatStatesBothAnExpressionAndAChainIsAProblemOnItsStage()
-    {
-        // Act
-        var chains = await Lookup(Trim()).Resolve("Nightly", Stages("Trim", new PipelineFieldTransformationReference { Transformation = "Trim", Ordinal = 1 }), TestContext.Current.CancellationToken);
-
-        // Assert
-        var problem = chains.Problems.ShouldHaveSingleItem();
-        problem.Stage.ShouldBe("Shape");
-        problem.Field.ShouldBe("FieldMappings[0].TransformExpression");
     }
 
     private static List<CreatePipelineTransformRequest> InsideBranch(params PipelineFieldTransformationReference[] chain) =>
@@ -198,7 +183,7 @@ public sealed class StageChainLookupTests
             Unmatched = "Pass",
             Paths =
             [
-                new CreatePipelinePathRequest { Name = "Adults", Condition = "Age >= 18", Stages = Stages(null, chain) },
+                new CreatePipelinePathRequest { Name = "Adults", Condition = "Age >= 18", Stages = Stages(chain) },
             ],
         },
     ];
@@ -228,7 +213,7 @@ public sealed class StageChainLookupTests
         var problem = chains.Problems.ShouldHaveSingleItem();
         problem.StagePath.ShouldBe(new[] { "Route", "Adults", "Shape" });
         problem.Stage.ShouldBe("Route.Adults.Shape");
-        problem.Field.ShouldBe("FieldMappings[0].Transforms[0].Transformation");
+        problem.Field.ShouldBe("FieldMappings[0].Transformations[0].Transformation");
         var refusal = chains.Refusal<int>(NullLogger.Instance)!;
         refusal.Code!.Id.ShouldBe(20001);
         refusal.Details!.GetValue<string>("StepName").ShouldBe("Route.Adults.Shape");
@@ -249,6 +234,6 @@ public sealed class StageChainLookupTests
         // Assert
         var problem = chains.Problems.ShouldHaveSingleItem();
         problem.Stage.ShouldBeNull();
-        problem.Field.ShouldBe("Transforms[0].Paths[0].Stages[0].FieldMappings[0].Transforms[0].Transformation");
+        problem.Field.ShouldBe("Transforms[0].Paths[0].Stages[0].FieldMappings[0].Transformations[0].Transformation");
     }
 }

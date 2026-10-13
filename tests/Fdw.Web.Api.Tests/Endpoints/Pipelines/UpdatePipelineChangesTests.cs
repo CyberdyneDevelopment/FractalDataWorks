@@ -16,13 +16,14 @@ public sealed class UpdatePipelineChangesTests
     private static UpdatePipelineRequest Body(string json) => JsonSerializer.Deserialize<UpdatePipelineRequest>(json, Web)!;
 
     [Theory]
-    [InlineData("SourceConnectionName", """{ "sourceConnectionName": "Feed" }""")]
-    [InlineData("DestinationConnectionName", """{ "destinationConnectionName": "Warehouse" }""")]
     [InlineData("SourceDataSet", """{ "sourceDataSet": "Orders" }""")]
     [InlineData("SourceDataStoreName", """{ "sourceDataStoreName": "Feeds" }""")]
     [InlineData("SourceDataStorePath", """{ "sourceDataStorePath": "orders/v1" }""")]
     [InlineData("SourceContainerName", """{ "sourceContainerName": "orders" }""")]
     [InlineData("DestinationDataSet", """{ "destinationDataSet": "OrdersCopy" }""")]
+    [InlineData("DestinationDataStoreName", """{ "destinationDataStoreName": "Warehouse" }""")]
+    [InlineData("DestinationDataStorePath", """{ "destinationDataStorePath": "orders/v1" }""")]
+    [InlineData("DestinationContainerName", """{ "destinationContainerName": "orders" }""")]
     [InlineData("Description", """{ "description": "nightly copy" }""")]
     [InlineData("IsEnabled", """{ "isEnabled": false }""")]
     [InlineData("TruncateBeforeLoad", """{ "truncateBeforeLoad": true }""")]

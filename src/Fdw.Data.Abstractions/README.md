@@ -55,7 +55,10 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `ContainerNotFoundInPathCode` | class | Container was not found in the specified path within a DataStore — the path exists in this host's store… |
 | `ContainerSchema` | class | Implementation of container schema with field role filtering. |
 | `ContainerTypeMetadata` | class | Metadata about a data container type's capabilities and characteristics. |
-| `CsvFormatType` | class | Represents CSV (Comma-Separated Values) data format. |
+| `CsvFormatType` | class | Represents the comma-separated values text format (family Delimited). |
+| `TsvFormatType` | class | Represents the tab-separated values text format (family Delimited). |
+| `DelimitedFormatType` | class | Represents delimited text with a separator the container states (family Delimited). |
+| `FixedWidthFormatType` | class | Represents the fixed-width text data format. |
 
 ## Installation
 

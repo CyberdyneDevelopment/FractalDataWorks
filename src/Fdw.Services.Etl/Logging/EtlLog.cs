@@ -954,13 +954,12 @@ public static partial class EtlLog
     [MessageLogging(
         EventId = 11044,
         Level = LogLevel.Debug,
-        Message = "Lookup '{name}' preloaded {keyCount} keys from {connection}:{dataSet}")]
+        Message = "Lookup '{name}' preloaded {keyCount} keys from {source}")]
     public static partial IGenericMessage LookupBatchPreloaded(
         ILogger logger,
         string name,
         int keyCount,
-        string connection,
-        string dataSet);
+        string source);
 
     /// <summary>
     /// Logs when an Aggregate transform has no group-by fields and/or aggregations — fail loud
@@ -1076,12 +1075,11 @@ public static partial class EtlLog
     [MessageLogging(
         EventId = 11059,
         Level = LogLevel.Error,
-        Message = "Lookup '{name}' could not preload from {connection}:{dataSet}: {error}")]
+        Message = "Lookup '{name}' could not preload from {source}: {error}")]
     public static partial IGenericMessage LookupPreloadFailed(
         ILogger logger,
         string name,
-        string connection,
-        string dataSet,
+        string source,
         string error);
 
     /// <summary>

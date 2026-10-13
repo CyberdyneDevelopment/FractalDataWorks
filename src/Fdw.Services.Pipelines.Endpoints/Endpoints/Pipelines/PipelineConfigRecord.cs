@@ -16,12 +16,6 @@ public class PipelineConfigRecord
     /// <summary>Gets or sets the pipeline type.</summary>
     public string PipelineType { get; set; } = string.Empty;
 
-    /// <summary>Gets or sets the source connection name.</summary>
-    public string SourceConnectionName { get; set; } = string.Empty;
-
-    /// <summary>Gets or sets the destination connection name.</summary>
-    public string DestinationConnectionName { get; set; } = string.Empty;
-
     /// <summary>Gets or sets the source DataSet name.</summary>
     public string? SourceDataSet { get; set; }
 

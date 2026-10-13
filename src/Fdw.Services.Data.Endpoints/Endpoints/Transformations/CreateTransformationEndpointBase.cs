@@ -36,7 +36,7 @@ public abstract class CreateTransformationEndpointBase : CrudCreateEndpointBase<
     }
 
     /// <inheritdoc />
-    protected override string ResourceName => "transforms";
+    protected override string ResourceName => "transformations";
 
     /// <inheritdoc />
     protected override string WritePolicy => "datasets:write";
@@ -76,9 +76,9 @@ public abstract class CreateTransformationEndpointBase : CrudCreateEndpointBase<
             return reread.ToNewResult<TransformationPayload>();
         if (reread.Value is null)
             return GenericResult<TransformationPayload>.Failure(
-                FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.Name));
+                FieldMappingTransformationEndpointLog.TransformationNotFound(Logger, request.Name));
 
-        FieldMappingTransformEndpointLog.TransformationSaved(Logger, request.Name, request.Implementation);
+        FieldMappingTransformationEndpointLog.TransformationSaved(Logger, request.Name, request.Implementation);
         return TransformationEndpointSupport.ToDetail(reread.Value, _context);
     }
 

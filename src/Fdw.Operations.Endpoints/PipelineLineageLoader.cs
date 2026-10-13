@@ -71,7 +71,7 @@ internal static class PipelineLineageLoader
         {
             var record = PipelineLineageProjection.From(pipeline, logger);
             if (string.IsNullOrEmpty(record.SourceDataSet) && string.IsNullOrEmpty(record.DestinationDataSet) &&
-                string.IsNullOrEmpty(record.SourceConnectionName) && string.IsNullOrEmpty(record.DestinationConnectionName))
+                string.IsNullOrEmpty(record.SourceDataStoreName) && string.IsNullOrEmpty(record.DestinationDataStoreName))
                 nodeOnlyCount++;
 
             records.Add(record);

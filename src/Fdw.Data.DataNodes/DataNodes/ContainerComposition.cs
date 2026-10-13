@@ -47,11 +47,21 @@ public static class ContainerComposition
 
     /// <summary>
     /// Builds the <c>IStorageContainer.Metadata</c> bag that the record-source readers consume
-    /// (<c>RecordSelector</c>, <c>FlattenNestedObjects</c>, <c>FlattenSeparator</c>), sourced directly
-    /// from the inline row-shaping options on the container config — no typed-body resolution.
+    /// (<c>RecordSelector</c>, <c>FlattenNestedObjects</c>, <c>FlattenSeparator</c>, and for a file
+    /// <c>HasHeader</c>, <c>Separator</c>, <c>SheetName</c>), sourced directly from the inline
+    /// row-shaping options on the container config — no typed-body resolution.
     /// </summary>
-    public static IReadOnlyDictionary<string, object> BuildMetadata(DataContainerConfiguration cfg)
+    /// <param name="cfg">The container configuration.</param>
+    /// <param name="format">The container's resolved format (<see cref="ResolveFormat"/>).</param>
+    /// <remarks>
+    /// A key is present only when it is stated; the readers treat an absent key as not stated. <c>Separator</c> is stated in
+    /// one place: by the format when the format defines one (<c>Csv</c>, <c>Tsv</c>), otherwise by the container. The API
+    /// refuses a container separator on a format that defines its own, so the two never both exist.
+    /// </remarks>
+    public static IReadOnlyDictionary<string, object> BuildMetadata(DataContainerConfiguration cfg, IFormatType format)
     {
+        ArgumentNullException.ThrowIfNull(format);
+
         var meta = new Dictionary<string, object>(StringComparer.Ordinal);
 
         if (!string.IsNullOrWhiteSpace(cfg.RecordSelector))
@@ -60,6 +70,14 @@ public static class ContainerComposition
             meta["FlattenNestedObjects"] = cfg.FlattenNestedObjects.Value;
         if (!string.IsNullOrWhiteSpace(cfg.FlattenSeparator))
             meta["FlattenSeparator"] = cfg.FlattenSeparator!;
+        if (cfg.HasHeader.HasValue)
+            meta["HasHeader"] = cfg.HasHeader.Value;
+        if (!string.IsNullOrEmpty(format.Separator))
+            meta["Separator"] = format.Separator!;
+        else if (!string.IsNullOrEmpty(cfg.Separator))
+            meta["Separator"] = cfg.Separator!;
+        if (!string.IsNullOrWhiteSpace(cfg.SheetName))
+            meta["SheetName"] = cfg.SheetName!;
 
         return meta;
     }

@@ -32,6 +32,6 @@ public static class PipelineDraft
     /// <summary>The filter expression of each transform a body states, with the stage it sits on, for the run-parameter reference check.</summary>
     /// <param name="transforms">The transforms of the body.</param>
     /// <returns>Each transform's name and filter expression.</returns>
-    public static IReadOnlyList<(string? Stage, string? Expression)> TransformExpressions(IEnumerable<CreatePipelineTransformRequest> transforms) =>
+    public static IReadOnlyList<(string? Stage, string? Expression)> StageFilterExpressions(IEnumerable<CreatePipelineTransformRequest> transforms) =>
         [.. transforms.Select(t => ((string?)t.Name, t.FilterExpression))];
 }

@@ -86,7 +86,7 @@ public sealed class ContainerCompositionTests
     {
         var cfg = WithJsonFormat("Quakes", recordSelector: "features", flatten: true, flattenSeparator: "_");
 
-        var meta = ContainerComposition.BuildMetadata(cfg);
+        var meta = ContainerComposition.BuildMetadata(cfg, FormatTypes.Json);
 
         meta["RecordSelector"].ShouldBe("features");
         meta["FlattenNestedObjects"].ShouldBe(true);
@@ -98,10 +98,46 @@ public sealed class ContainerCompositionTests
     [Trait("Category", "CoreFramework")]
     public void BuildMetadataOmitsUnsetKeys()
     {
-        var meta = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "Empty" });
+        var meta = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "Empty" }, FormatTypes.Json);
 
         meta.ContainsKey("RecordSelector").ShouldBeFalse();
         meta.ContainsKey("FlattenNestedObjects").ShouldBeFalse();
         meta.ContainsKey("FlattenSeparator").ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "CoreFramework")]
+    public void BuildMetadataCarriesTheFileOptionsOnlyWhenTheyAreStated()
+    {
+        var stated = ContainerComposition.BuildMetadata(
+            new DataContainerConfiguration { Name = "People", HasHeader = true, Separator = ";", SheetName = "Staff" }, FormatTypes.Delimited);
+        var notHeader = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "Rows", HasHeader = false }, FormatTypes.Delimited);
+        var none = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "Empty" }, FormatTypes.Delimited);
+
+        stated["HasHeader"].ShouldBe(true);
+        stated["Separator"].ShouldBe(";");
+        stated["SheetName"].ShouldBe("Staff");
+        notHeader["HasHeader"].ShouldBe(false);
+        none.ContainsKey("HasHeader").ShouldBeFalse();
+        none.ContainsKey("Separator").ShouldBeFalse();
+        none.ContainsKey("SheetName").ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
+    public void BuildMetadataStatesTheSeparatorOnceFromTheFormatThatDefinesOne()
+    {
+        var csv = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "People" }, FormatTypes.Csv);
+        var tsv = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "People" }, FormatTypes.Tsv);
+        var delimited = ContainerComposition.BuildMetadata(
+            new DataContainerConfiguration { Name = "People", Separator = "|" }, FormatTypes.Delimited);
+        var noSeparator = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "People" }, FormatTypes.Delimited);
+
+        csv["Separator"].ShouldBe(",");
+        tsv["Separator"].ShouldBe("\t");
+        delimited["Separator"].ShouldBe("|");
+        noSeparator.ContainsKey("Separator").ShouldBeFalse();
     }
 }

@@ -32,14 +32,21 @@ public sealed partial class PipelineTransformLookupConfiguration : IGenericConfi
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the lookup connection name.
-    /// </summary>
-    public string LookupConnectionName { get; set; } = string.Empty;
-
-    /// <summary>
     /// Gets or sets the lookup data set name.
     /// </summary>
     public string LookupDataSet { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the data store the lookup reads, when it reads a container rather than a data set (FDW-1269). All three parts or none.</summary>
+    /// <remarks>Maps to <c>pipe.PipelineTransformLookup.LookupDataStoreName</c>.</remarks>
+    public string? LookupDataStoreName { get; set; }
+
+    /// <summary>Gets or sets the path within the lookup data store.</summary>
+    /// <remarks>Maps to <c>pipe.PipelineTransformLookup.LookupDataStorePath</c>.</remarks>
+    public string? LookupDataStorePath { get; set; }
+
+    /// <summary>Gets or sets the container within that path whose rows the lookup reads.</summary>
+    /// <remarks>Maps to <c>pipe.PipelineTransformLookup.LookupContainerName</c>.</remarks>
+    public string? LookupContainerName { get; set; }
 
     /// <summary>
     /// Gets or sets the lookup key field.

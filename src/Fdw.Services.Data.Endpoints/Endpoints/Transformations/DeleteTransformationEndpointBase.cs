@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
-/// Deletes a transformation (FDW-846): <c>DELETE /transforms/{Name}</c>. Refused while it is attached
+/// Deletes a transformation (FDW-846): <c>DELETE /transformations/{Name}</c>. Refused while it is attached
 /// to a field mapping, and for system-provided ones.
 /// </summary>
 public abstract class DeleteTransformationEndpointBase : CrudDeleteEndpointBase<TransformationNameRequest>
@@ -36,7 +36,7 @@ public abstract class DeleteTransformationEndpointBase : CrudDeleteEndpointBase<
     }
 
     /// <inheritdoc/>
-    protected override string ResourceName => "transforms";
+    protected override string ResourceName => "transformations";
 
     /// <inheritdoc/>
     protected override string DeletePolicy => "datasets:delete";
@@ -61,11 +61,11 @@ public abstract class DeleteTransformationEndpointBase : CrudDeleteEndpointBase<
         if (found.IsFailure)
             return found;
         if (found.Value is null)
-            return GenericResult.Failure(FieldMappingTransformEndpointLog.TransformationNotFound(Logger, request.Name));
+            return GenericResult.Failure(FieldMappingTransformationEndpointLog.TransformationNotFound(Logger, request.Name));
 
         if (found.Value.IsSystemProvided)
             return GenericResult.Failure(
-                FieldMappingTransformEndpointLog.SystemProvidedTransformationImmutable(Logger, request.Name));
+                FieldMappingTransformationEndpointLog.SystemProvidedTransformationImmutable(Logger, request.Name));
 
         // Why refuse rather than cascade: detaching it silently would change what every one of those
         // field mappings produces. The caller detaches deliberately first.
@@ -80,7 +80,7 @@ public abstract class DeleteTransformationEndpointBase : CrudDeleteEndpointBase<
             return attached;
         if (attached.Value!.Count > 0)
             return GenericResult.Failure(
-                FieldMappingTransformEndpointLog.TransformationStillAttached(Logger, request.Name, attached.Value.Count));
+                FieldMappingTransformationEndpointLog.TransformationStillAttached(Logger, request.Name, attached.Value.Count));
 
         return GenericResult.Success();
     }
@@ -92,7 +92,7 @@ public abstract class DeleteTransformationEndpointBase : CrudDeleteEndpointBase<
         if (deleted.IsFailure)
             return deleted;
 
-        FieldMappingTransformEndpointLog.TransformationDeleted(Logger, request.Name);
+        FieldMappingTransformationEndpointLog.TransformationDeleted(Logger, request.Name);
         return GenericResult.Success();
     }
 }

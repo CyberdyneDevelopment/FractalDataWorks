@@ -105,6 +105,24 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     public string? FlattenSeparator { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the first row of the file is a header row, for a Delimited or Xlsx container. Maps to
+    /// <c>data.DataContainer.HasHeader</c>. Null means not stated: the reader then reads the first row as data.
+    /// </summary>
+    public bool? HasHeader { get; set; }
+
+    /// <summary>
+    /// Gets or sets the character or string that separates the fields of a row, for a Delimited container. Maps to
+    /// <c>data.DataContainer.Separator</c>. This is the file's field separator, not <see cref="FlattenSeparator"/>.
+    /// </summary>
+    public string? Separator { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the worksheet to read, for an Xlsx container. Maps to <c>data.DataContainer.SheetName</c>.
+    /// Null means not stated: a workbook with a single worksheet is read, one with several is refused.
+    /// </summary>
+    public string? SheetName { get; set; }
+
+    /// <summary>
     /// Gets or sets the fields (columns) within this container.
     /// </summary>
     /// <remarks>

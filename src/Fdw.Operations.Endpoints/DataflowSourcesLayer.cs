@@ -56,27 +56,29 @@ internal static class DataflowSourcesLayer
 
     private static void AddPipelineConnections(DataflowGraphDraft draft, PipelineLineageRecord pipeline)
     {
-        AddPipelineConnection(draft, pipeline, pipeline.SourceConnectionName, reads: true);
-        AddPipelineConnection(draft, pipeline, pipeline.DestinationConnectionName, reads: false);
+        AddPipelineContainer(draft, pipeline, pipeline.SourceDataStoreName, pipeline.SourceContainerName, reads: true);
+        AddPipelineContainer(draft, pipeline, pipeline.DestinationDataStoreName, pipeline.DestinationContainerName, reads: false);
     }
 
-    private static void AddPipelineConnection(
+    // A pipeline's data store source or destination is drawn as the container it names (FDW-1269).
+    private static void AddPipelineContainer(
         DataflowGraphDraft draft,
         PipelineLineageRecord pipeline,
-        string? connectionName,
+        string? dataStoreName,
+        string? containerName,
         bool reads)
     {
-        if (string.IsNullOrEmpty(connectionName))
+        if (string.IsNullOrEmpty(dataStoreName) || string.IsNullOrEmpty(containerName))
             return;
 
-        var connectionId = DataflowNodeIds.Connection(connectionName);
+        var containerId = DataflowNodeIds.Container(dataStoreName, containerName);
         var pipelineId = DataflowNodeIds.Pipeline(pipeline.Name);
-        draft.AddNode(DataflowNodes.Connection(connectionName));
+        draft.AddNode(DataflowNodes.Container(dataStoreName, containerName));
         draft.AddEdge(new DataflowEdgeDto
         {
-            Id = reads ? $"edge_conn_{connectionName}_pipe_{pipeline.Name}" : $"edge_pipe_{pipeline.Name}_conn_{connectionName}",
-            Source = reads ? connectionId : pipelineId,
-            Target = reads ? pipelineId : connectionId,
+            Id = reads ? $"edge_container_{dataStoreName}_{containerName}_pipe_{pipeline.Name}" : $"edge_pipe_{pipeline.Name}_container_{dataStoreName}_{containerName}",
+            Source = reads ? containerId : pipelineId,
+            Target = reads ? pipelineId : containerId,
             RelationType = reads ? "reads_from" : "writes_to"
         });
     }

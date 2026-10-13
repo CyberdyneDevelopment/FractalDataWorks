@@ -127,7 +127,6 @@ public sealed class PipelineTransformConfigurationMapperTests
             OperationType = "Lookup",
             Lookup = new LookupRequest
             {
-                LookupConnectionName = "Conn1",
                 LookupDataSet = "Devices",
                 LookupKeyField = "Id",
                 SourceKeyField = "DeviceId",
@@ -145,7 +144,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         config.Lookups.Count.ShouldBe(2);
         config.Lookups[0].LookupValueField.ShouldBe("Name");
         config.Lookups[1].LookupValueField.ShouldBe("Region");
-        config.Lookups[0].LookupConnectionName.ShouldBe("Conn1");
+        config.Lookups[0].LookupDataSet.ShouldBe("Devices");
         config.Lookups[0].JoinType.ShouldBe("Left");
     }
 
@@ -179,7 +178,6 @@ public sealed class PipelineTransformConfigurationMapperTests
             OperationType = "Lookup",
             Lookup = new LookupRequest
             {
-                LookupConnectionName = "Conn1",
                 LookupDataSet = "Devices",
                 LookupKeyField = "Id",
                 SourceKeyField = "DeviceId",

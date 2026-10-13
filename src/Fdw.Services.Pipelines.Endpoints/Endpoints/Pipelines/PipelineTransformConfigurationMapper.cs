@@ -180,11 +180,6 @@ public static class PipelineTransformConfigurationMapper
         ILogger logger)
     {
         var mappingName = target.Name;
-        if (!string.IsNullOrEmpty(mapping.TransformExpression))
-        {
-            return StageChainLog.ExpressionAndChain(logger, mappingName).Message;
-        }
-
         var ordered = steps.OrderBy(step => step.Ordinal).ToList();
         if (!ordered.Select(step => step.Ordinal).SequenceEqual(Enumerable.Range(1, ordered.Count)))
         {

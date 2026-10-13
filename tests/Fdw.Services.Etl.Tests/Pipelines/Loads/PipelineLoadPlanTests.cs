@@ -121,8 +121,9 @@ public sealed class PipelineLoadPlanTests
         var toDataSet = Plan(Pipeline("Append"));
         var toContainer = Pipeline("Append");
         toContainer.DestinationDataSet = string.Empty;
-        toContainer.DestinationConnectionName = "Warehouse";
-        toContainer.DestinationContainerPath = "dbo.Orders";
+        toContainer.DestinationDataStoreName = "Warehouse";
+        toContainer.DestinationDataStorePath = "dbo";
+        toContainer.DestinationContainerName = "Orders";
 
         // Act
         var container = Plan(toContainer);
@@ -131,7 +132,8 @@ public sealed class PipelineLoadPlanTests
         toDataSet.OwnLoad!.DataSet.ShouldBe("Orders");
         container.OwnLoad!.DataSet.ShouldBeNull();
         container.OwnLoad.DataStore.ShouldBe("Warehouse");
-        container.OwnLoad.Container.ShouldBe("dbo.Orders");
+        container.OwnLoad.Path.ShouldBe("dbo");
+        container.OwnLoad.Container.ShouldBe("Orders");
     }
 
     [Fact]

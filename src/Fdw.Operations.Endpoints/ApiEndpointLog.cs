@@ -88,14 +88,14 @@ public static partial class ApiEndpointLog
     [MessageLogging(
         EventId = 11017,
         Level = LogLevel.Debug,
-        Message = "Pipeline {name} linkage src={sourceDataSet} dst={destinationDataSet} srcConn={sourceConnection} dstConn={destinationConnection}")]
+        Message = "Pipeline {name} linkage src={sourceDataSet} dst={destinationDataSet} srcStore={sourceDataStore} dstStore={destinationDataStore}")]
     public static partial IGenericMessage PipelineLinkageExtracted(
         ILogger logger,
         string name,
         string sourceDataSet,
         string destinationDataSet,
-        string sourceConnection,
-        string destinationConnection);
+        string? sourceDataStore,
+        string? destinationDataStore);
 
     /// <summary>Logs the per-kind edge counts produced while building a lineage graph.</summary>
     [MessageLogging(

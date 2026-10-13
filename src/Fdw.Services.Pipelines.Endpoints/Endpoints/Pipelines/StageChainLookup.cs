@@ -114,14 +114,9 @@ public sealed class StageChainLookup
         CancellationToken cancellationToken)
     {
         var mapping = at.Mapping;
-        if (!string.IsNullOrEmpty(mapping.TransformExpression))
-        {
-            found.Problems.Add(at.Problem("TransformExpression", StageChainLog.ExpressionAndChain(_logger, mapping.Name).Message));
-        }
-
         if (!chain.Select(step => step.Ordinal).OrderBy(ordinal => ordinal).SequenceEqual(Enumerable.Range(1, chain.Count)))
         {
-            found.Problems.Add(at.Problem("Transforms", StageChainLog.OrdinalsNotConsecutive(_logger, mapping.Name, chain.Count).Message));
+            found.Problems.Add(at.Problem("Transformations", StageChainLog.OrdinalsNotConsecutive(_logger, mapping.Name, chain.Count).Message));
         }
 
         for (var stepIndex = 0; stepIndex < chain.Count; stepIndex++)
@@ -202,7 +197,7 @@ public sealed class StageChainLookup
             : StageChainLog.TransformationNotFieldLevel(_logger, mappingName, step.Ordinal, found.Value.Name, found.Value.Implementation).Message;
     }
 
-    private static string StepField(int stepIndex, string member) => $"Transforms[{stepIndex}].{member}";
+    private static string StepField(int stepIndex, string member) => $"Transformations[{stepIndex}].{member}";
 
     // What a lookup finds as it goes: the ids of the Transformations the request names, the problems, and the steps it looked at.
     private sealed class Found

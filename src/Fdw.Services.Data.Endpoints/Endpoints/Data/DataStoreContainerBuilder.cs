@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.Abstractions;
+using Fdw.Data.RowSources.Delimited.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Fdw.Services.Data.Endpoints.Logging;
+using Fdw.Services.Data.Results;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Data.Endpoints;
@@ -16,6 +18,133 @@ namespace Fdw.Services.Data.Endpoints;
 public static class DataStoreContainerBuilder
 {
     private const string ForeignKeyType = "Foreign";
+    private const int MaxSeparatorLength = 10;
+
+    /// <summary>
+    /// Refuses a file option the container's format does not take: HasHeader for a container of the Delimited family
+    /// (Delimited, Csv, Tsv) or Xlsx, Separator for the plain Delimited format only (Csv and Tsv define theirs),
+    /// SheetName for an Xlsx one.
+    /// </summary>
+    /// <param name="containerName">The container, for the refusal.</param>
+    /// <param name="format">The container's serialization format; null when it states none.</param>
+    /// <param name="hasHeader">Whether the first row is a header, or null when not stated.</param>
+    /// <param name="separator">The field separator, or null when not stated.</param>
+    /// <param name="sheetName">The worksheet name, or null when not stated.</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <returns>The refusal, a validation result whose code carries the reason for the caller; null when every option stated is one the format takes.</returns>
+    /// <remarks>
+    /// An option that is not stated is never refused and never defaulted: the reader treats an absent
+    /// key as not stated. A container with no format states none, so it takes none of them.
+    /// </remarks>
+    public static IGenericResult? FileOptionsRefusal(
+        string containerName, string? format, bool? hasHeader, string? separator, string? sheetName, ILogger logger)
+    {
+        if (hasHeader.HasValue && !IsOfDelimitedFamily(format) && !IsXlsx(format))
+        {
+            return NotForFormat(containerName, "HasHeader", "Delimited, Csv, Tsv or Xlsx", logger);
+        }
+
+        if (SeparatorRefusal(containerName, format, separator, logger) is { } separatorRefusal)
+        {
+            return separatorRefusal;
+        }
+
+        return SheetNameRefusal(containerName, format, sheetName, logger);
+    }
+
+    /// <summary>
+    /// Refuses a container of a store that finds its containers as files when the container's name already ends with
+    /// its format's own extension.
+    /// </summary>
+    /// <param name="containerName">The container's name.</param>
+    /// <param name="format">The container's serialization format; null when it states none.</param>
+    /// <param name="storeAddressesContainersAsFiles">Whether the store type addresses a container as a file (<c>IDataStoreType.AddressesContainersAsFiles</c>).</param>
+    /// <param name="logger">The logger a refusal is written to.</param>
+    /// <returns>The refusal, or null when the name is one the store can find.</returns>
+    /// <remarks>
+    /// The store adds the extension itself, so <c>people.xlsx</c> of format Xlsx is looked up as
+    /// <c>people.xlsx.xlsx</c> and is never found. A format with no file extension, a format that does not
+    /// resolve, and a store that does not address files, are not refused.
+    /// </remarks>
+    public static IGenericResult? NameRefusal(
+        string containerName, string? format, bool storeAddressesContainersAsFiles, ILogger logger)
+    {
+        if (!storeAddressesContainersAsFiles || string.IsNullOrEmpty(format))
+        {
+            return null;
+        }
+
+        // Why the sentinel is excluded: a format that does not resolve is FormatTypes.NotFound, whose canonical extension
+        // is the sentinel's own text ("NotFound"), not an empty string. It has no extension to refuse by.
+        var formatType = FormatTypes.ByName(format);
+        var extension = formatType.CanonicalFileExtension;
+        if (ReferenceEquals(formatType, FormatTypes.NotFound)
+            || extension.Length == 0
+            || !containerName.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return GenericResult.Failure(
+            DataServiceResultCodes.ByName("ContainerNameCarriesFormatExtension"), logger,
+            ResultDetails.Create(
+                "container", containerName, "extension", extension, "expected", containerName[..^extension.Length]));
+    }
+
+    private static IGenericResult NotForFormat(string containerName, string option, string formats, ILogger logger)
+        => GenericResult.Failure(
+            DataServiceResultCodes.ByName("ContainerFileOptionNotForFormat"), logger,
+            ResultDetails.Create("container", containerName, "option", option, "formats", formats));
+
+    private static IGenericResult? SeparatorRefusal(string containerName, string? format, string? separator, ILogger logger)
+    {
+        if (separator is null)
+        {
+            return null;
+        }
+
+        if (!IsPlainDelimited(format))
+        {
+            return NotForFormat(containerName, "Separator", "Delimited", logger);
+        }
+
+        return separator.Length is 0 or > MaxSeparatorLength
+            ? GenericResult.Failure(
+                DataServiceResultCodes.ByName("ContainerSeparatorInvalid"), logger,
+                ResultDetails.Create("container", containerName, "length", separator.Length))
+            : null;
+    }
+
+    private static IGenericResult? SheetNameRefusal(string containerName, string? format, string? sheetName, ILogger logger)
+    {
+        if (sheetName is null)
+        {
+            return null;
+        }
+
+        if (!IsXlsx(format))
+        {
+            return NotForFormat(containerName, "SheetName", "Xlsx", logger);
+        }
+
+        return XlsxRowWriterOptions.IsValidSheetName(sheetName)
+            ? null
+            : GenericResult.Failure(
+                DataServiceResultCodes.ByName("ContainerSheetNameInvalid"), logger,
+                ResultDetails.Create("container", containerName, "sheetName", sheetName));
+    }
+
+    // The plain Delimited format is the one that takes a separator of the container's own; Csv and Tsv define theirs.
+    private static bool IsPlainDelimited(string? format) => string.Equals(format, "Delimited", StringComparison.OrdinalIgnoreCase);
+
+    // The family is the name of the record source that reads the format (FDW-1315): Delimited, Csv and Tsv are one family.
+    private static bool IsOfDelimitedFamily(string? format)
+        => !string.IsNullOrEmpty(format)
+            && FormatTypes.All().Any(f => !ReferenceEquals(f, FormatTypes.NotFound)
+                && string.Equals(f.Name, format, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(f.Family, "Delimited", StringComparison.Ordinal));
+
+    private static bool IsXlsx(string? format) => string.Equals(format, "Xlsx", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Builds the container's field rows, pre-assigning each an Id.</summary>
     /// <param name="fields">The fields the caller supplied.</param>

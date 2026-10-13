@@ -37,6 +37,28 @@ public sealed class RecordWriterContext
     }
 
     /// <summary>
+    /// Builds a context whose destination is a byte stream, for a binary format (an Excel workbook is a zip).
+    /// </summary>
+    /// <param name="target">The destination stream; the writer finishes the file when it is disposed, and the stream is left open.</param>
+    /// <param name="fields">The container's field children — the flyweight schema / column order.</param>
+    /// <param name="options">Format-specific options; null requests the format's defaults.</param>
+    /// <returns>A context for <see cref="IRecordWriterType.Create"/>, which a text format refuses.</returns>
+    /// <remarks>
+    /// <see cref="Target"/> is a text writer that discards, so a caller that ignores <see cref="ByteTarget"/> writes nothing
+    /// rather than text into a file: a text format asked to build from this context refuses it, naming the format, instead of
+    /// silently writing to nowhere.
+    /// </remarks>
+    public static RecordWriterContext ForBytes(Stream target, IReadOnlyList<IDataField> fields, RowWriterOptions? options = null)
+    {
+        return new RecordWriterContext(TextWriter.Null, fields, options) { ByteTarget = target ?? throw new ArgumentNullException(nameof(target)) };
+    }
+
+    /// <summary>
+    /// Gets the destination byte stream when the context was built with <see cref="ForBytes"/>; null for a text context.
+    /// </summary>
+    public Stream? ByteTarget { get; private set; }
+
+    /// <summary>
     /// Gets the destination text writer.
     /// </summary>
     public TextWriter Target { get; }

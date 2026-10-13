@@ -75,6 +75,10 @@ public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContaine
             ContainerType = container.TypeId ?? string.Empty,
             Description = container.Description,
             ClassificationId = container.ClassificationId,
+            Format = container.Format,
+            HasHeader = container.HasHeader,
+            Separator = container.Separator,
+            SheetName = container.SheetName,
             Fields = fields
         };
     }

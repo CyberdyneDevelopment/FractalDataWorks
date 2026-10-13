@@ -24,6 +24,9 @@ public sealed class FieldNode : CalculationNodeBase
     }
 
     /// <inheritdoc />
+    public override IReadOnlyList<string> Members { get; } = new[] { "name" };
+
+    /// <inheritdoc />
     public override Type ResultType(CalculationNode node, Type expected, IReadOnlyList<Type> operandTypes) =>
         expected == typeof(bool) ? typeof(bool) : typeof(decimal?);
 

@@ -49,4 +49,18 @@ public interface IFormatType : ITypeOption<int>
     /// FileSystem-store builder MUST fail loud rather than compose a bare, extension-less file path.
     /// </summary>
     string CanonicalFileExtension { get; }
+
+    /// <summary>
+    /// Gets the family of this format: the NAME of the record source and record writer that read and write it
+    /// (<c>RecordSourceTypes</c>, <c>RecordWriterTypes</c>). Several formats can share one family: <c>Csv</c> and <c>Tsv</c> are
+    /// formats of the <c>Delimited</c> family, which is also a format of its own for any other separator. Every other format
+    /// is its own family.
+    /// </summary>
+    string Family { get; }
+
+    /// <summary>
+    /// Gets the field separator this format defines, or <see langword="null"/> when the format does not define one
+    /// (the container then states it, as for the plain <c>Delimited</c> format). <c>Csv</c> is <c>","</c>, <c>Tsv</c> is a tab.
+    /// </summary>
+    string? Separator { get; }
 }
