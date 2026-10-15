@@ -30,8 +30,8 @@ public sealed class SourceFieldMapping
     public int Ordinal { get; set; }
 
     /// <summary>
-    /// Gets or sets the ordered transform chain to apply after the raw value is extracted.
+    /// Gets or sets the ordered Transformation chain to apply after the raw value is extracted.
     /// Applied in ascending Ordinal order. Empty list means pass-through.
     /// </summary>
-    public IReadOnlyList<SourceFieldTransform> Transforms { get; set; } = [];
+    public IReadOnlyList<SourceFieldTransformation> Transformations { get; set; } = [];
 }

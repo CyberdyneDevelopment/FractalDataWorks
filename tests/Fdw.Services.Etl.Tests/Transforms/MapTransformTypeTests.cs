@@ -20,7 +20,12 @@ public sealed class MapTransformTypeTests
     private readonly MapTransformType _sut = new();
 
     private static TransformContext CreateContext() =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>());
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>());
+
+    // The run resolves a mapping's chain of named Transformations and hands it to the Map stage through its context.
+    private static TransformContext CreateContextWithChain(PipelineTransformFieldMappingConfiguration mapping, string transformer) =>
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains:
+            new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> { [mapping.Id] = [new ChainStep(transformer, 1)] });
 
     private static PipelineTransformConfiguration CreateConfig(params PipelineTransformFieldMappingConfiguration[] mappings) =>
         new() { Id = Guid.NewGuid(), Name = "Map1", OperationType = "Map", FieldMappings = [.. mappings] };
@@ -31,8 +36,7 @@ public sealed class MapTransformTypeTests
         string? targetType = null,
         string? defaultValue = null,
         bool isRequired = false,
-        bool isEnabled = true,
-        string? transformExpression = null) =>
+        bool isEnabled = true) =>
         new()
         {
             Id = Guid.NewGuid(),
@@ -42,7 +46,6 @@ public sealed class MapTransformTypeTests
             DefaultValue = defaultValue,
             IsRequired = isRequired,
             IsEnabled = isEnabled,
-            TransformExpression = transformExpression,
         };
 
     // ── Pass-through / structural branches ──────────────────────────────────────────────
@@ -504,7 +507,7 @@ public sealed class MapTransformTypeTests
         context.Errors[0].Message.ShouldContain("Type conversion failed for field 'A' to type 'not-a-real-type'");
     }
 
-    // ── Named transformer seam (TransformExpression) ────────────────────────────────────
+    // ── Named transformer seam (the resolved Transformation chain) ──────────────────────
 
     [Fact]
     [Trait("Priority", "P1")]
@@ -513,8 +516,9 @@ public sealed class MapTransformTypeTests
     {
         // Arrange
         var input = new Dictionary<string, object?> { ["A"] = null };
-        var config = CreateConfig(CreateMapping("A", "B", transformExpression: "AnyTransformer"));
-        var context = CreateContext();
+        var mapping = CreateMapping("A", "B");
+        var config = CreateConfig(mapping);
+        var context = CreateContextWithChain(mapping, "AnyTransformer");
 
         // Act
         var result = await _sut.Transform(input, config, context, TestContext.Current.CancellationToken);
@@ -533,8 +537,9 @@ public sealed class MapTransformTypeTests
         // Arrange — Fdw.Data.DataSets (which holds the concrete TransformationTypes options)
         // is not referenced by this test assembly, so any name is unregistered by construction.
         var input = new Dictionary<string, object?> { ["A"] = "raw" };
-        var config = CreateConfig(CreateMapping("A", "B", transformExpression: "NotRegisteredTransformerXyz"));
-        var context = CreateContext();
+        var mapping = CreateMapping("A", "B");
+        var config = CreateConfig(mapping);
+        var context = CreateContextWithChain(mapping, "NotRegisteredTransformerXyz");
 
         // Act
         var result = await _sut.Transform(input, config, context, TestContext.Current.CancellationToken);
@@ -552,8 +557,9 @@ public sealed class MapTransformTypeTests
     {
         // Arrange
         var input = new Dictionary<string, object?> { ["A"] = "42" };
-        var config = CreateConfig(CreateMapping("A", "B", targetType: "int", transformExpression: "NotRegistered"));
-        var context = CreateContext();
+        var mapping = CreateMapping("A", "B", targetType: "int");
+        var config = CreateConfig(mapping);
+        var context = CreateContextWithChain(mapping, "NotRegistered");
 
         // Act
         var result = await _sut.Transform(input, config, context, TestContext.Current.CancellationToken);
@@ -637,7 +643,7 @@ public sealed class MapTransformTypeTests
         // Arrange: the mapping states no expression; the run resolved a one-step chain for its id
         _ = new ToUpperFieldTransformer();
         var mapping = CreateMapping("A", "B");
-        var chains = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>
+        var chains = new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>
         {
             [mapping.Id] = [new ChainStep("ToUpper", 1)],
         };
@@ -651,7 +657,7 @@ public sealed class MapTransformTypeTests
         result.Value!["B"].ShouldBe("ABC");
     }
 
-    private sealed record ChainStep(string TransformType, int Ordinal) : IFieldMappingTransform
+    private sealed record ChainStep(string TransformType, int Ordinal) : IFieldMappingTransformation
     {
         public IReadOnlyDictionary<string, string> Parameters { get; } = new Dictionary<string, string>();
     }

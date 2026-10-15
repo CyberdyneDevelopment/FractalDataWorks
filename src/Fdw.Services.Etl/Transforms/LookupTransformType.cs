@@ -157,8 +157,7 @@ public sealed class LookupTransformType : TransformTypeBase
 
         var lookup = spec.Lookup;
         if (lookup == null ||
-            string.IsNullOrWhiteSpace(lookup.LookupConnectionName) ||
-            string.IsNullOrWhiteSpace(lookup.LookupDataSet) ||
+            !NamesExactlyOneSource(lookup) ||
             string.IsNullOrWhiteSpace(lookup.LookupKeyField) ||
             string.IsNullOrWhiteSpace(lookup.SourceKeyField) ||
             lookup.LookupColumns.Count == 0)
@@ -175,8 +174,10 @@ public sealed class LookupTransformType : TransformTypeBase
             .Select(column => new PipelineTransformLookupConfiguration
             {
                 Name = column,
-                LookupConnectionName = lookup.LookupConnectionName,
                 LookupDataSet = lookup.LookupDataSet,
+                LookupDataStoreName = lookup.LookupDataStoreName,
+                LookupDataStorePath = lookup.LookupDataStorePath,
+                LookupContainerName = lookup.LookupContainerName,
                 LookupKeyField = lookup.LookupKeyField,
                 SourceKeyField = lookup.SourceKeyField,
                 OutputFieldPrefix = lookup.OutputFieldPrefix,
@@ -189,8 +190,27 @@ public sealed class LookupTransformType : TransformTypeBase
         return GenericResult.Success();
     }
 
+    // A lookup reads exactly one place (FDW-1269): a data set, or a data store container named by its store, path and container together.
+    private static bool NamesExactlyOneSource(ILookupSpec lookup)
+    {
+        var hasDataSet = !string.IsNullOrWhiteSpace(lookup.LookupDataSet);
+        var parts = (string.IsNullOrWhiteSpace(lookup.LookupDataStoreName) ? 0 : 1)
+            + (string.IsNullOrWhiteSpace(lookup.LookupDataStorePath) ? 0 : 1)
+            + (string.IsNullOrWhiteSpace(lookup.LookupContainerName) ? 0 : 1);
+        return hasDataSet ? parts == 0 : parts == 3;
+    }
+
+    private static bool ReadsDataStore(PipelineTransformLookupConfiguration lookup) =>
+        !string.IsNullOrWhiteSpace(lookup.LookupDataStoreName);
+
+    // What the lookup reads, for its cache key and its log lines: the data set, or store/path/container.
+    private static string SourceName(PipelineTransformLookupConfiguration lookup) =>
+        ReadsDataStore(lookup)
+            ? $"{lookup.LookupDataStoreName}/{lookup.LookupDataStorePath}/{lookup.LookupContainerName}"
+            : lookup.LookupDataSet;
+
     private static string CacheKey(PipelineTransformLookupConfiguration lookup) =>
-        $"{lookup.LookupConnectionName}:{lookup.LookupDataSet}:{lookup.LookupKeyField}:{lookup.SourceKeyField}";
+        $"{SourceName(lookup)}:{lookup.LookupKeyField}:{lookup.SourceKeyField}";
 
     private static ConcurrentDictionary<string, ConcurrentDictionary<string, IReadOnlyDictionary<string, object?>>> RecordCacheOf(ITransformContext context)
     {
@@ -261,7 +281,7 @@ public sealed class LookupTransformType : TransformTypeBase
         if (!batchResult.IsSuccess)
         {
             return GenericResult.Failure(EtlLog.LookupPreloadFailed(
-                context.Logger, transformName, sample.LookupConnectionName, sample.LookupDataSet,
+                context.Logger, transformName, SourceName(sample),
                 string.Join("; ", batchResult.Messages.Select(message => message.Message))));
         }
 
@@ -270,7 +290,7 @@ public sealed class LookupTransformType : TransformTypeBase
             recordCache.TryAdd(kvp.Key, kvp.Value);
         }
 
-        EtlLog.LookupBatchPreloaded(context.Logger, transformName, batchResult.Value!.Count, sample.LookupConnectionName, sample.LookupDataSet);
+        EtlLog.LookupBatchPreloaded(context.Logger, transformName, batchResult.Value!.Count, SourceName(sample));
         return GenericResult.Success();
     }
 
@@ -295,8 +315,13 @@ public sealed class LookupTransformType : TransformTypeBase
                 }
             };
 
-            var result = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
-                queryCommand, new DataSetTarget(lookup.LookupDataSet), cancellationToken).ConfigureAwait(false);
+            var result = ReadsDataStore(lookup)
+                ? await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+                    queryCommand,
+                    new DataStoreTarget(lookup.LookupDataStoreName!, lookup.LookupDataStorePath, lookup.LookupContainerName!),
+                    cancellationToken).ConfigureAwait(false)
+                : await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
+                    queryCommand, new DataSetTarget(lookup.LookupDataSet), cancellationToken).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {

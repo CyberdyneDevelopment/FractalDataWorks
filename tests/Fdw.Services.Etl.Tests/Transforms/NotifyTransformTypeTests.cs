@@ -51,7 +51,7 @@ public sealed class NotifyTransformTypeTests
     {
         // Arrange
         var inputs = new List<IDictionary<string, object?>> { new Dictionary<string, object?> { ["A"] = 1 }, new Dictionary<string, object?> { ["A"] = 2 } };
-        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>());
+        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>());
 
         // Act
         var batch = await _sut.TransformBatch(inputs, Target(), context, TestContext.Current.CancellationToken);

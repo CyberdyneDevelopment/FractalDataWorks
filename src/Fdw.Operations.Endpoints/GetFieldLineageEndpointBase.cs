@@ -263,12 +263,14 @@ public abstract class GetFieldLineageEndpointBase : Endpoint<LineageFieldRequest
             if (!string.IsNullOrEmpty(src.ConnectionName))
                 connectionNames.Add(src.ConnectionName);
         }
-        foreach (var p in pipelines)
+        foreach (var storeName in PipelineLineageStores.Names(pipelines))
         {
-            if (!string.IsNullOrEmpty(p.SourceConnectionName))
-                connectionNames.Add(p.SourceConnectionName);
-            if (!string.IsNullOrEmpty(p.DestinationConnectionName))
-                connectionNames.Add(p.DestinationConnectionName);
+            graph.Nodes.Add(new LineageNode
+            {
+                Id = PipelineLineageStores.NodeId(storeName),
+                Type = LineageNodeTypes.ByName("DataStore"),
+                Name = storeName
+            });
         }
         foreach (var connName in connectionNames)
         {

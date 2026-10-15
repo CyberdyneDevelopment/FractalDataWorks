@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Data.Endpoints.Logging;
 
 /// <summary>
-/// MessageLogging for choosing the kind of a transformation on the one <c>/transforms</c> resource (FDW-1221): a request that
+/// MessageLogging for choosing the kind of a transformation on the one <c>/transformations</c> resource (FDW-1221): a request that
 /// names no kind, a kind nothing authors here, or a member that belongs to another kind.
 /// </summary>
 /// <remarks>EventIds follow the result categories (first digit of a five-digit id): 2 validation (400). This class uses 21560-21569.</remarks>

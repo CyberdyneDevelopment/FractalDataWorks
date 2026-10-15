@@ -6,21 +6,23 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// <param name="PipelineName">The pipeline's name.</param>
 /// <param name="SourceDataSet">The data set it reads, if any.</param>
 /// <param name="DestinationDataSet">The data set it writes, if any.</param>
-/// <param name="SourceConnectionName">The connection it reads from, if any.</param>
-/// <param name="DestinationConnectionName">The connection it writes to, if any.</param>
 /// <param name="SourceDataStoreName">The data store whose container it reads, if any (FDW-1103).</param>
 /// <param name="SourceDataStorePath">The path within that data store.</param>
 /// <param name="SourceContainerName">The container within that path.</param>
+/// <param name="DestinationDataStoreName">The data store whose container it writes, if any (FDW-1269).</param>
+/// <param name="DestinationDataStorePath">The path within that data store.</param>
+/// <param name="DestinationContainerName">The container within that path.</param>
 /// <param name="Steps">What its stages and load steps touch beyond that: Union and Lookup sources, load and reject destinations, Execute containers.</param>
 public sealed record PipelineReach(
     string PipelineName,
     string? SourceDataSet,
     string? DestinationDataSet,
-    string? SourceConnectionName,
-    string? DestinationConnectionName,
     string? SourceDataStoreName,
     string? SourceDataStorePath,
     string? SourceContainerName,
+    string? DestinationDataStoreName,
+    string? DestinationDataStorePath,
+    string? DestinationContainerName,
     StepReach Steps)
 {
     /// <summary>Reads what a saved pipeline reads and writes from its stored detail.</summary>
@@ -34,10 +36,11 @@ public sealed record PipelineReach(
         pipeline.Name,
         pipeline.SourceDataSet,
         pipeline.DestinationDataSet,
-        pipeline.SourceConnectionName,
-        pipeline.DestinationConnectionName,
         pipeline.SourceDataStoreName,
         pipeline.SourceDataStorePath,
         pipeline.SourceContainerName,
+        pipeline.DestinationDataStoreName,
+        pipeline.DestinationDataStorePath,
+        pipeline.DestinationContainerName,
         StepReach.Of(pipeline));
 }

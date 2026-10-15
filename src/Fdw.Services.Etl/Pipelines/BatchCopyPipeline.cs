@@ -418,15 +418,13 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     {
         if (SkipsDestinationWrites(options)
             || _connectionProvider == null
-            || _configuration.DestinationKind == null
-            || !string.Equals(_configuration.DestinationKind.Name, "Connection", StringComparison.Ordinal)
-            || string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
+            || !DestinationIsDataStore
+            || DestinationProblem() is not null)
         {
             return GenericResult<bool>.Success(false);
         }
 
-        var connectionResult = await _connectionProvider.Get(
-            _configuration.DestinationConnectionName, cancellationToken).ConfigureAwait(false);
+        var connectionResult = await DestinationConnection(cancellationToken).ConfigureAwait(false);
         return connectionResult.IsSuccess
             ? GenericResult<bool>.Success(connectionResult.Value is IHttpRecordWriterConnection)
             : connectionResult.ToNewResult<bool>();
@@ -577,14 +575,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             return await ExtractBatchFromDataSet(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
         }
 
-        if (string.Equals(sourceKind.Name, "Connection", StringComparison.Ordinal))
-        {
-            // ETL path: read directly from the physical connection + container. B3 HTTP branch
-            // will add its own logic inside ExtractBatchFromConnection when the HTTP connection
-            // type is detected. This method is the single extension point for connection-based reads.
-            return await ExtractBatchFromConnection(gateway, skip, effectiveBatchSize, cancellationToken).ConfigureAwait(false);
-        }
-
         if (string.Equals(sourceKind.Name, "DataStore", StringComparison.Ordinal))
         {
             // ETL path: read one container of a configured data store, addressed by store, path and container.
@@ -679,54 +669,6 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             batch.Cast<IDictionary<string, object?>>().ToList());
     }
 
-    // ETL path: source is a physical connection + explicit container path.
-    // Extension point for B3: HTTP-specific branch logic belongs inside this method
-    // once the HTTP connection type is available (connection-type detection stays below the
-    // connection layer — no switch on connection type here; the gateway routes accordingly).
-    private async Task<IGenericResult<List<IDictionary<string, object?>>>> ExtractBatchFromConnection(
-        IDataGateway gateway,
-        int skip,
-        int effectiveBatchSize,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(_configuration.SourceConnectionName))
-        {
-            return GenericResult<List<IDictionary<string, object?>>>.Failure(
-                EtlLog.ExtractFailed(_logger, Name, "SourceConnectionName is required when SourceKind is Connection"));
-        }
-
-        if (string.IsNullOrWhiteSpace(_configuration.SourceContainerPath))
-        {
-            return GenericResult<List<IDictionary<string, object?>>>.Failure(
-                EtlLog.ExtractFailed(_logger, Name, "SourceContainerPath is required when SourceKind is Connection"));
-        }
-
-        EtlLog.ExtractingFromConnection(_logger, Name, _configuration.SourceConnectionName, _configuration.SourceContainerPath!);
-
-        var queryCommand = new QueryCommand<Dictionary<string, object?>>
-        {
-            Paging = new PagingExpression
-            {
-                Skip = skip,
-                Take = effectiveBatchSize
-            }
-        };
-
-        var queryResult = await gateway.Execute<IEnumerable<Dictionary<string, object?>>>(
-            queryCommand,
-            new DataStoreTarget(_configuration.SourceConnectionName, null, _configuration.SourceContainerPath!),
-            cancellationToken).ConfigureAwait(false);
-
-        if (!queryResult.IsSuccess)
-        {
-            return GenericResult<List<IDictionary<string, object?>>>.Failure(
-                EtlLog.ExtractFailed(_logger, Name, GetFirstMessageText(queryResult.Messages) ?? "Unknown error"));
-        }
-
-        var batch = queryResult.Value?.ToList() ?? [];
-        return GenericResult<List<IDictionary<string, object?>>>.Success(
-            batch.Cast<IDictionary<string, object?>>().ToList());
-    }
 
     private async Task<IGenericResult<List<IDictionary<string, object?>>>> TransformRecords(
         List<IDictionary<string, object?>> records,
@@ -841,7 +783,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             }
 
             var toDataSet = string.Equals(_configuration.DestinationKind.Name, "DataSet", StringComparison.Ordinal);
-            if (!toDataSet && !string.Equals(_configuration.DestinationKind.Name, "Connection", StringComparison.Ordinal))
+            if (!toDataSet && !DestinationIsDataStore)
             {
                 return GenericResult.Failure(EtlLog.UnknownDestinationKind(_logger, Name, _configuration.DestinationKind.Name));
             }
@@ -853,11 +795,11 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
             }
 
             // DataSet is the ELT path (written through DataSet dispatch, which carries the store→path→
-            // container address); Connection is the ETL path (written straight to the physical
-            // connection + container).
+            // container address); DataStore is the ETL path (written straight to the named container of
+            // a configured data store).
             var loaded = toDataSet
                 ? await LoadToDataSet(gateway, records, run, result, cancellationToken).ConfigureAwait(false)
-                : await LoadToConnection(gateway, records, run, result, cancellationToken).ConfigureAwait(false);
+                : await LoadToContainer(gateway, records, run, result, cancellationToken).ConfigureAwait(false);
             if (!loaded.IsSuccess)
             {
                 return loaded;
@@ -891,7 +833,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
 
         var truncateResult = toDataSet
             ? await TruncateDataSet(gateway, cancellationToken).ConfigureAwait(false)
-            : await TruncateConnection(gateway, cancellationToken).ConfigureAwait(false);
+            : await TruncateContainer(gateway, cancellationToken).ConfigureAwait(false);
         if (truncateResult.IsSuccess)
         {
             run.Truncated = true;
@@ -987,29 +929,20 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         return GenericResult<int>.Success(totalLoaded);
     }
 
-    // ETL path: truncate directly on the physical connection + container.
-    private async Task<IGenericResult> TruncateConnection(
+    // ETL path: truncate the named container of a data store.
+    private async Task<IGenericResult> TruncateContainer(
         IDataGateway gateway,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
+        if (DestinationProblem() is { } problem)
         {
-            return GenericResult.Failure(
-                EtlLog.LoadFailed(_logger, Name, "DestinationConnectionName is required when DestinationKind is Connection"));
+            return GenericResult.Failure(EtlLog.LoadFailed(_logger, Name, problem));
         }
 
-        if (string.IsNullOrWhiteSpace(_configuration.DestinationContainerPath))
-        {
-            return GenericResult.Failure(
-                EtlLog.LoadFailed(_logger, Name, "DestinationContainerPath is required when DestinationKind is Connection"));
-        }
+        var target = DestinationTarget();
+        EtlLog.LoadingToConnection(_logger, Name, target.DataStore, target.Container);
 
-        EtlLog.LoadingToConnection(_logger, Name, _configuration.DestinationConnectionName, _configuration.DestinationContainerPath!);
-
-        var truncateResult = await gateway.Execute<int>(
-            new TruncateCommand(),
-            new DataStoreTarget(_configuration.DestinationConnectionName, null, _configuration.DestinationContainerPath!),
-            cancellationToken).ConfigureAwait(false);
+        var truncateResult = await gateway.Execute<int>(new TruncateCommand(), target, cancellationToken).ConfigureAwait(false);
 
         if (!truncateResult.IsSuccess)
         {
@@ -1025,31 +958,24 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     //   IHttpRecordWriterConnection → serialize via RecordWriterTypes and POST/PUT to configured endpoint
     //   fallthrough                  → BulkInsertCommand (SQL/tabular connections)
     // Fail loud if neither capability is present (NO FALLBACKS).
-    private async Task<IGenericResult<int>> LoadToConnection(
+    private async Task<IGenericResult<int>> LoadToContainer(
         IDataGateway gateway,
         List<IDictionary<string, object?>> records,
         RunState run,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
+        if (DestinationProblem() is { } problem)
         {
-            return GenericResult<int>.Failure(
-                EtlLog.LoadFailed(_logger, Name, "DestinationConnectionName is required when DestinationKind is Connection"));
+            return GenericResult<int>.Failure(EtlLog.LoadFailed(_logger, Name, problem));
         }
 
-        if (string.IsNullOrWhiteSpace(_configuration.DestinationContainerPath))
-        {
-            return GenericResult<int>.Failure(
-                EtlLog.LoadFailed(_logger, Name, "DestinationContainerPath is required when DestinationKind is Connection"));
-        }
-
-        EtlLog.LoadingToConnection(_logger, Name, _configuration.DestinationConnectionName, _configuration.DestinationContainerPath!);
+        var destination = DestinationTarget();
+        EtlLog.LoadingToConnection(_logger, Name, destination.DataStore, destination.Container);
 
         if (_connectionProvider != null)
         {
-            var connectionResult = await _connectionProvider.Get(
-                _configuration.DestinationConnectionName, cancellationToken).ConfigureAwait(false);
+            var connectionResult = await DestinationConnection(cancellationToken).ConfigureAwait(false);
             if (!connectionResult.IsSuccess)
             {
                 return connectionResult.ToNewResult<int>();
@@ -1063,13 +989,12 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                         _logger, Name, _configuration.LoadMode!, "an HTTP record writer sends rows and cannot match them on keys"));
                 }
 
-                return await LoadToHttpRecordWriter(httpWriter, records, result, cancellationToken)
+                return await LoadToHttpRecordWriter(httpWriter, destination, records, result, cancellationToken)
                     .ConfigureAwait(false);
             }
         }
 
         // Insert or upsert path: SQL/tabular connections, or when connection provider is not wired.
-        var destination = new DataStoreTarget(_configuration.DestinationConnectionName, null, _configuration.DestinationContainerPath!);
         return await LoadBatches(
             records, run, result, (command, token) => gateway.Execute<int>(command, destination, token), cancellationToken).ConfigureAwait(false);
     }
@@ -1078,6 +1003,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
     // them to the endpoint declared in the HttpRecordWriterCapability fields.
     private async Task<IGenericResult<int>> LoadToHttpRecordWriter(
         IHttpRecordWriterConnection httpWriter,
+        DataStoreTarget destination,
         List<IDictionary<string, object?>> records,
         EtlPipelineExecutionResult result,
         CancellationToken cancellationToken)
@@ -1089,8 +1015,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                     "IDataStoreProvider is required for HTTP record writer load path"));
         }
 
-        var storeResult = await _dataStoreProvider.Get(
-            _configuration.DestinationConnectionName!, cancellationToken).ConfigureAwait(false);
+        var storeResult = await _dataStoreProvider.Get(destination.DataStore, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess)
         {
             return storeResult.ToNewResult<int>();
@@ -1099,7 +1024,7 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         IDataContainer? container = null;
         foreach (var path in storeResult.Value!.Paths)
         {
-            var containerResult = path.Container(_configuration.DestinationContainerPath!);
+            var containerResult = path.Container(destination.Container);
             if (containerResult.IsSuccess)
             {
                 container = containerResult.Value;
@@ -1111,10 +1036,10 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         {
             return GenericResult<int>.Failure(
                 EtlLog.LoadFailed(_logger, Name,
-                    $"Container '{_configuration.DestinationContainerPath}' not found in data store '{_configuration.DestinationConnectionName}'"));
+                    $"Container '{destination.Container}' not found in data store '{destination.DataStore}'"));
         }
 
-        EtlLog.LoadingViaHttpRecordWriter(_logger, Name, records.Count, _configuration.DestinationConnectionName!);
+        EtlLog.LoadingViaHttpRecordWriter(_logger, Name, records.Count, destination.DataStore);
 
         IReadOnlyList<IReadOnlyDictionary<string, object?>> rows =
             records.Select(r => (IReadOnlyDictionary<string, object?>)
@@ -1126,11 +1051,11 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
         {
             return GenericResult<int>.Failure(
                 EtlLog.LoadViaHttpRecordWriterFailed(
-                    _logger, Name, _configuration.DestinationConnectionName!,
+                    _logger, Name, destination.DataStore,
                     GetFirstMessageText(writeResult.Messages) ?? "HTTP write failed"));
         }
 
-        EtlLog.LoadViaHttpRecordWriterCompleted(_logger, Name, writeResult.Value, _configuration.DestinationConnectionName!);
+        EtlLog.LoadViaHttpRecordWriterCompleted(_logger, Name, writeResult.Value, destination.DataStore);
         return GenericResult<int>.Success(writeResult.Value);
     }
 
@@ -1309,18 +1234,42 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "SourceContainerName is required when SourceKind is DataStore"));
             }
         }
-        else if (string.Equals(_configuration.SourceKind.Name, "Connection", StringComparison.Ordinal))
-        {
-            if (string.IsNullOrWhiteSpace(_configuration.SourceConnectionName))
-            {
-                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "SourceConnectionName is required when SourceKind is Connection"));
-            }
+    }
 
-            if (string.IsNullOrWhiteSpace(_configuration.SourceContainerPath))
-            {
-                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "SourceContainerPath is required when SourceKind is Connection"));
-            }
+    // A DataStore destination writes into one container of a configured data store through the data gateway.
+    private bool DestinationIsDataStore =>
+        string.Equals(_configuration.DestinationKind?.Name, "DataStore", StringComparison.Ordinal);
+
+    // What a data store destination still lacks, or null when its container is fully named: the store, the path and the container
+    // (FDW-1269). Call only for a DataStore destination.
+    private string? DestinationProblem() =>
+        string.IsNullOrWhiteSpace(_configuration.DestinationDataStoreName)
+            ? "DestinationDataStoreName is required when DestinationKind is DataStore"
+            : string.IsNullOrWhiteSpace(_configuration.DestinationDataStorePath)
+                ? "DestinationDataStorePath is required when DestinationKind is DataStore"
+                : string.IsNullOrWhiteSpace(_configuration.DestinationContainerName)
+                    ? "DestinationContainerName is required when DestinationKind is DataStore"
+                    : null;
+
+    // The container the destination writes to. Call only after DestinationProblem() returned null.
+    private DataStoreTarget DestinationTarget() =>
+        new(_configuration.DestinationDataStoreName!, _configuration.DestinationDataStorePath, _configuration.DestinationContainerName!);
+
+    // The connection behind the destination data store, which decides how rows are written (an HTTP record writer sends them,
+    // anything else takes a bulk insert). It is found through the store's ConnectionId, so no caller names a connection above the
+    // connection layer.
+    private async Task<IGenericResult<IGenericConnection>> DestinationConnection(CancellationToken cancellationToken)
+    {
+        if (_dataStoreProvider == null)
+        {
+            return GenericResult<IGenericConnection>.Failure(
+                EtlLog.LoadFailed(_logger, Name, "IDataStoreProvider is required to resolve a data store destination's connection"));
         }
+
+        var store = await _dataStoreProvider.Get(_configuration.DestinationDataStoreName!, cancellationToken).ConfigureAwait(false);
+        return store.IsSuccess
+            ? await _connectionProvider!.Get(store.Value!.ConnectionId, cancellationToken).ConfigureAwait(false)
+            : store.ToNewResult<IGenericConnection>();
     }
 
     private void ValidateDestinationKind(List<IGenericMessage> messages)
@@ -1338,16 +1287,11 @@ public sealed class BatchCopyPipeline : EtlPipelineBase
                 messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "DestinationDataSet is required when DestinationKind is DataSet"));
             }
         }
-        else if (string.Equals(_configuration.DestinationKind.Name, "Connection", StringComparison.Ordinal))
+        else if (DestinationIsDataStore)
         {
-            if (string.IsNullOrWhiteSpace(_configuration.DestinationConnectionName))
+            if (DestinationProblem() is { } problem)
             {
-                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "DestinationConnectionName is required when DestinationKind is Connection"));
-            }
-
-            if (string.IsNullOrWhiteSpace(_configuration.DestinationContainerPath))
-            {
-                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, "DestinationContainerPath is required when DestinationKind is Connection"));
+                messages.Add(EtlLog.PipelineCreationFailed(_logger, Name, problem));
             }
         }
     }

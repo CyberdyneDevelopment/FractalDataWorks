@@ -106,7 +106,6 @@ public abstract class GetSourceMappingsEndpointBase : Endpoint<GetSourceMappings
             SourceName = source.SourceName,
             LogicalFieldName = mapping.LogicalFieldName,
             PhysicalFieldName = mapping.PhysicalFieldName,
-            TransformExpression = mapping.TransformExpression
         };
     }
 

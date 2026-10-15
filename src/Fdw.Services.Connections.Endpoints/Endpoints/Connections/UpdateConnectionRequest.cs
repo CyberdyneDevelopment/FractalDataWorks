@@ -97,9 +97,16 @@ public class UpdateConnectionRequest : ResourceUpdateRequest
     /// method uses (for example <c>SecretKeyName</c> for a password, <c>ApiKeySecretName</c> for an API key).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Write-only. The server stores each value in the platform's credential secret manager under a secret it chooses
     /// and points the connection at it; no response, log line or endpoint ever returns a value, and a caller never
     /// names the secret manager or the secret (FDW-1086). Null keeps the stored credentials; a supplied set replaces them, and must name every credential the method uses.
+    /// </para>
+    /// <para>
+    /// A platform administrator alone may instead name the secret manager and secrets that keep the credentials outside
+    /// the platform, and sends no values with them (FDW-1327). Credentials kept that way are changed only by a platform
+    /// administrator.
+    /// </para>
     /// </remarks>
     public IDictionary<string, string>? Credentials { get; set; }
 }

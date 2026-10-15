@@ -89,7 +89,7 @@ internal static class TransformationEndpointSupport
     {
         if (TransformationTypes.ByName(transformationType) is not FieldTransformationBase operation)
             return GenericResult.Failure(
-                FieldMappingTransformEndpointLog.TransformationTypeUnknown(logger, transformationType));
+                FieldMappingTransformationEndpointLog.TransformationTypeUnknown(logger, transformationType));
 
         var given = parameters.Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
         var declared = operation.ExpectedParameters.Select(d => d.Name).ToHashSet(StringComparer.Ordinal);
@@ -97,12 +97,12 @@ internal static class TransformationEndpointSupport
         var missing = operation.ExpectedParameters.FirstOrDefault(d => d.IsRequired && !given.Contains(d.Name));
         if (missing is not null)
             return GenericResult.Failure(
-                FieldMappingTransformEndpointLog.TransformationParameterMissing(logger, transformationType, missing.Name));
+                FieldMappingTransformationEndpointLog.TransformationParameterMissing(logger, transformationType, missing.Name));
 
         var unknown = given.FirstOrDefault(name => !declared.Contains(name));
         if (unknown is not null)
             return GenericResult.Failure(
-                FieldMappingTransformEndpointLog.TransformationParameterUnknown(logger, transformationType, unknown));
+                FieldMappingTransformationEndpointLog.TransformationParameterUnknown(logger, transformationType, unknown));
 
         return GenericResult.Success();
     }

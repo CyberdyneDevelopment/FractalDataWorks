@@ -15,8 +15,6 @@ public sealed class PipelineReachTests
     {
         Name = "Nightly",
         PipelineType = "BatchCopy",
-        SourceConnectionName = "Feed",
-        DestinationConnectionName = "Warehouse",
         SourceDataSet = "Orders",
         DestinationDataSet = "OrdersCopy"
     };
@@ -25,14 +23,23 @@ public sealed class PipelineReachTests
     {
         Name = "Nightly",
         PipelineType = "BatchCopy",
-        SourceConnectionName = string.Empty,
-        DestinationConnectionName = string.Empty,
         // The engine record writes an unused data set side as an empty string, and the detail carries it as read.
         SourceDataSet = string.Empty,
         SourceDataStoreName = "Feeds",
         SourceDataStorePath = "orders/v1",
         SourceContainerName = "orders",
         DestinationDataSet = "OrdersCopy"
+    };
+
+    private static PipelineDetailResponse SavedIntoAContainer() => new()
+    {
+        Name = "Nightly",
+        PipelineType = "BatchCopy",
+        SourceDataSet = "Orders",
+        DestinationDataSet = string.Empty,
+        DestinationDataStoreName = "Warehouse",
+        DestinationDataStorePath = "orders/v1",
+        DestinationContainerName = "orders"
     };
 
     private static PipelineLoadStep Step(string destination, string? source = null, PipelineLoadDestinationContainer? container = null) => new()
@@ -53,11 +60,21 @@ public sealed class PipelineReachTests
         reach.PipelineName.ShouldBe("Nightly");
         reach.SourceDataSet.ShouldBe("Orders");
         reach.DestinationDataSet.ShouldBe("OrdersCopy");
-        reach.SourceConnectionName.ShouldBe("Feed");
-        reach.DestinationConnectionName.ShouldBe("Warehouse");
         reach.Steps.DataSets.ShouldBeEmpty();
-        reach.Steps.Connections.ShouldBeEmpty();
         reach.Steps.Containers.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ASavedPipelineIntoADataStoreContainerReachesItsThreeDestinationParts()
+    {
+        var reach = PipelineReach.Of(SavedIntoAContainer());
+
+        reach.DestinationDataStoreName.ShouldBe("Warehouse");
+        reach.DestinationDataStorePath.ShouldBe("orders/v1");
+        reach.DestinationContainerName.ShouldBe("orders");
+        reach.SourceDataSet.ShouldBe("Orders");
     }
 
     [Fact]
@@ -96,7 +113,7 @@ public sealed class PipelineReachTests
                             {
                                 Name = "Enrich",
                                 OperationType = "Lookup",
-                                Lookup = new LookupDto { LookupConnectionName = "Reference", LookupDataSet = "Customers" }
+                                Lookup = new LookupDto { LookupDataSet = "Customers" }
                             }
                         ]
                     }
@@ -107,7 +124,33 @@ public sealed class PipelineReachTests
         var steps = PipelineReach.Of(saved).Steps;
 
         steps.DataSets.ShouldBe([new ReachedDataSet("OrdersArchive", false), new ReachedDataSet("Customers", false)]);
-        steps.Connections.ShouldBe([new ReachedConnection("Reference", false)]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ALookupOverADataStoreContainerReadsThatContainerAndReachesNoDataSet()
+    {
+        var saved = SavedOverADataSet();
+        saved.Transforms =
+        [
+            new PipelineTransformDto
+            {
+                Name = "Enrich",
+                OperationType = "Lookup",
+                Lookup = new LookupDto
+                {
+                    LookupDataStoreName = "Warehouse",
+                    LookupDataStorePath = "ref/v1",
+                    LookupContainerName = "customers"
+                }
+            }
+        ];
+
+        var steps = PipelineReach.Of(saved).Steps;
+
+        steps.Containers.ShouldBe([new ReachedContainer("Warehouse", "ref/v1", "customers", false)]);
+        steps.DataSets.ShouldBeEmpty();
     }
 
     [Fact]

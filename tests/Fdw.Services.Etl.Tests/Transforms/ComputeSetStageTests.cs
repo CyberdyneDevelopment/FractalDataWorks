@@ -101,7 +101,7 @@ public sealed class ComputeSetStageTests
         Guid.NewGuid(),
         NullLogger.Instance,
         new Dictionary<string, object?>(),
-        new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>(),
+        new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(),
         builtCalculations: compiled.Calculations,
         builtSets: compiled.Sets);
 

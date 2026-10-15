@@ -44,6 +44,12 @@ public abstract class CalculationNodeBase : TypeOptionBase<CalculationNodeBase>,
     public virtual IReadOnlyList<string> OperandNames => NoNames;
 
     /// <inheritdoc />
+    public virtual IReadOnlyList<string> Members => NoNames;
+
+    /// <inheritdoc />
+    public virtual IReadOnlyList<string> Modes => NoNames;
+
+    /// <inheritdoc />
     public virtual Type? OperandType(int index) => typeof(decimal);
 
     /// <inheritdoc />

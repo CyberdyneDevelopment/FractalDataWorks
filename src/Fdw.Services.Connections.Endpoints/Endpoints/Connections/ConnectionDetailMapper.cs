@@ -87,6 +87,7 @@ public static class ConnectionDetailMapper
                 Label = credential.Label,
                 Secret = credential.Secret,
                 IsSet = slots.Value.IsSet(credential.Field),
+                IsExternal = ConnectionCredentialStore.IsExternal(slots.Value, credential.Field),
             })
             .ToList();
     }

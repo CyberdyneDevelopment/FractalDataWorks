@@ -84,4 +84,23 @@ public interface IRecordWriterType : ITypeOption<int, RecordWriterTypeBase>
     /// from a target + options. The new overload is the config-driven surface layered over the same writers.
     /// </remarks>
     IRecordWriter<DataRecord> CreateWriter(TextWriter target, RowWriterOptions? options);
+
+    /// <summary>
+    /// Gets a value indicating whether this format is written as bytes, not text (an Excel workbook is a zip).
+    /// </summary>
+    /// <remarks>
+    /// A binary format has no <see cref="TextWriter"/> form: <see cref="CreateWriter"/> refuses it, and
+    /// <see cref="CreateBinaryWriter"/> is its writer. A host streaming to a response asks this before choosing which to call.
+    /// </remarks>
+    bool WritesBinary { get; }
+
+    /// <summary>
+    /// Creates a format-specific row writer over a byte stream, for a format whose output is not text.
+    /// </summary>
+    /// <param name="target">The destination stream. It is written synchronously, so a response body is wrapped in a
+    /// <see cref="DrainingStream"/> and drained between records. The writer finishes the file when it is disposed.</param>
+    /// <param name="options">Format-specific options; null requests the format's defaults.</param>
+    /// <returns>A record writer ready to accept records.</returns>
+    /// <exception cref="System.NotSupportedException">The format is a text format: <see cref="WritesBinary"/> is false.</exception>
+    IRecordWriter<DataRecord> CreateBinaryWriter(Stream target, RowWriterOptions? options);
 }

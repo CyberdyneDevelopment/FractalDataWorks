@@ -28,6 +28,10 @@ public class ConnectionCredentialStoreTests
     private const string Store = "MsSqlSecrets";
     private const string Field = "SecretKeyName";
 
+    private const string MintedName = "Connection-0123456789abcdef0123456789abcdef-SecretKeyName";
+    private const string ExternalManager = "CompanyVault";
+    private const string ExternalName = "prod-warehouse-sql-password";
+
     private static readonly ConnectionCredentialField Password = new(Field, "Password", secret: true);
 
     private static (Mock<IConnectionType> Type, IConnectionImplementationConfiguration Connection) SqlAuthConnection(
@@ -100,6 +104,47 @@ public class ConnectionCredentialStoreTests
         return (services.Object, manager);
     }
 
+    // The platform's credential store (Store) and a second secret manager an administrator names. The external one is
+    // registered only when asked, and reads succeed or fail as asked.
+    private static (IServiceProvider Services, Mock<ISecretManager> Store, Mock<ISecretManager> External) ExternalServices(
+        bool registered = true, bool readable = true)
+    {
+        var settings = new Mock<IEffectiveSettingsProvider>();
+        settings.Setup(s => s.GetEffectiveValue<string>(SettingDefinitions.ConnectionCredentialSecretManager, null, null)).Returns(Store);
+
+        var store = new Mock<ISecretManager>();
+        store.Setup(m => m.Execute(It.IsAny<ISecretManagerCommand<SecretValue>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ISecretManagerCommand<SecretValue> command, CancellationToken _) =>
+                GenericResult<SecretValue>.Success(new SecretValue(command.SecretKey!, "stored")));
+        store.Setup(m => m.Execute(It.IsAny<ISecretManagerCommand<IGenericResult>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IGenericResult>.Success(GenericResult.Success()));
+
+        var external = new Mock<ISecretManager>();
+        external.Setup(m => m.Execute(It.IsAny<ISecretManagerCommand<SecretValue>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ISecretManagerCommand<SecretValue> command, CancellationToken _) => readable
+                ? GenericResult<SecretValue>.Success(new SecretValue(command.SecretKey!, "kept elsewhere"))
+                : GenericResult<SecretValue>.Failure(
+                    ConnectionsResultCodes.ByName("CredentialsUndetermined"), ResultDetails.Create("name", "Warehouse")));
+
+        var secrets = new Mock<ISecretManagerProvider>();
+        secrets.Setup(p => p.Get(Store, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<ISecretManager>.Success(store.Object));
+        secrets.Setup(p => p.Get(ExternalManager, It.IsAny<CancellationToken>())).ReturnsAsync(
+            registered
+                ? GenericResult<ISecretManager>.Success(external.Object)
+                : GenericResult<ISecretManager>.Failure(ConnectionsResultCodes.ByName("CredentialsUndetermined"), ResultDetails.Create("name", ExternalManager)));
+
+        var services = new Mock<IServiceProvider>();
+        services.Setup(s => s.GetService(typeof(IEffectiveSettingsProvider))).Returns(settings.Object);
+        services.Setup(s => s.GetService(typeof(ISecretManagerProvider))).Returns(secrets.Object);
+        return (services.Object, store, external);
+    }
+
+    private static Dictionary<string, string?> Kept() =>
+        new() { [ConnectionCredentialProperties.SecretManager] = ExternalManager, [Field] = ExternalName };
+
+    private static Dictionary<string, string?> Stored() =>
+        new() { [ConnectionCredentialProperties.SecretManager] = Store, [Field] = MintedName };
+
     private static string? Code(IGenericResult result) => result.Code?.Name;
 
     [Fact]
@@ -125,7 +170,7 @@ public class ConnectionCredentialStoreTests
     {
         var (type, connection) = SqlAuthConnection(new Dictionary<string, string?> { ["Username"] = "app", [Field] = "TokenSigningKey" });
 
-        var result = ConnectionCredentialStore.RefuseCallerReferences(type.Object, before: null, connection, NullLogger.Instance);
+        var result = ConnectionCredentialStore.RefuseCallerReferences(type.Object, before: null, connection, callerIsPlatformAdmin: false, NullLogger.Instance);
 
         result.IsFailure.ShouldBeTrue();
         Code(result).ShouldBe("CredentialReferenceReserved");
@@ -136,18 +181,18 @@ public class ConnectionCredentialStoreTests
     {
         var (type, connection) = SqlAuthConnection(new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store });
 
-        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before: null, connection, NullLogger.Instance)
+        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before: null, connection, callerIsPlatformAdmin: false, NullLogger.Instance)
             .IsFailure.ShouldBeTrue();
     }
 
     [Fact]
     public void AnUpdateThatKeepsTheStoredReferencesIsAllowed()
     {
-        var values = new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, [Field] = "Connection.a.SecretKeyName" };
+        var values = new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, [Field] = MintedName };
         var (type, connection) = SqlAuthConnection(values);
         var before = ConnectionCredentialSlots.From("SqlAuth", [Password], values);
 
-        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, NullLogger.Instance)
+        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, callerIsPlatformAdmin: false, NullLogger.Instance)
             .IsSuccess.ShouldBeTrue();
     }
 
@@ -155,11 +200,11 @@ public class ConnectionCredentialStoreTests
     public void AnUpdateThatPointsAStoredCredentialAtAnotherSecretIsRefused()
     {
         var before = ConnectionCredentialSlots.From("SqlAuth", [Password],
-            new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, [Field] = "Connection.a.SecretKeyName" });
+            new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, [Field] = MintedName });
         var (type, connection) = SqlAuthConnection(
             new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, [Field] = "TokenSigningKey" });
 
-        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, NullLogger.Instance)
+        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, callerIsPlatformAdmin: false, NullLogger.Instance)
             .IsFailure.ShouldBeTrue();
     }
 
@@ -322,7 +367,7 @@ public class ConnectionCredentialStoreTests
     public void SlotsReportWhichFieldsAreSetAndNeverAValue()
     {
         var slots = ConnectionCredentialSlots.From("Basic", [new("UsernameSecretName", "User name", secret: false), new("PasswordSecretName", "Password", secret: true)],
-            new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, ["UsernameSecretName"] = "Connection.a.UsernameSecretName" });
+            new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = Store, ["UsernameSecretName"] = "Connection-0123456789abcdef0123456789abcdef-UsernameSecretName" });
 
         slots.SetFields.ShouldBe(["UsernameSecretName"]);
         slots.MissingFields.ShouldBe(["PasswordSecretName"]);
@@ -331,10 +376,166 @@ public class ConnectionCredentialStoreTests
     [Fact]
     public void TheNewCredentialCodesShowTheCallerWhy()
     {
-        foreach (var name in new[] { "CredentialsUndetermined", "CredentialReferenceReserved", "CredentialFieldsInvalid", "CredentialRequired", "CredentialTestNotSupported", "CredentialPersistFailed", "CredentialFieldNameRefused" })
+        foreach (var name in new[] { "CredentialsUndetermined", "CredentialReferenceReserved", "CredentialFieldsInvalid", "CredentialRequired", "CredentialTestNotSupported", "CredentialPersistFailed", "CredentialFieldNameRefused",
+            "CredentialsManagedExternally", "ExternalCredentialUnavailable", "CredentialReferenceAndValue", "ExternalSecretNameReserved" })
         {
             ConnectionsResultCodes.ByName(name).FormatClientMessage(ResultDetails.Create("name", "Warehouse"))
                 .ShouldNotBeNullOrWhiteSpace(name);
         }
+    }
+
+    // ---- FDW-1327: an administrator names where credentials are kept ----
+
+    [Fact]
+    public void ASecretNotMintedByTheStoreIsKeptExternally()
+    {
+        ConnectionCredentialStore.IsExternal(ConnectionCredentialSlots.From("SqlAuth", [Password], Kept())).ShouldBeTrue();
+        ConnectionCredentialStore.IsExternal(ConnectionCredentialSlots.From("SqlAuth", [Password], Kept()), Field).ShouldBeTrue();
+        ConnectionCredentialStore.IsExternal(ConnectionCredentialSlots.From("SqlAuth", [Password], Stored())).ShouldBeFalse();
+        ConnectionCredentialStore.IsExternal(ConnectionCredentialSlots.From("SqlAuth", [Password], new Dictionary<string, string?>())).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AnAdministratorMayNameWhereCredentialsAreKept()
+    {
+        var (type, connection) = SqlAuthConnection(Kept());
+
+        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before: null, connection, callerIsPlatformAdmin: true, NullLogger.Instance)
+            .IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AnAdministratorMayNotNameASecretInTheFormTheStoreMints()
+    {
+        var (type, connection) = SqlAuthConnection(
+            new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = ExternalManager, [Field] = MintedName });
+
+        var result = ConnectionCredentialStore.RefuseCallerReferences(
+            type.Object, before: null, connection, callerIsPlatformAdmin: true, NullLogger.Instance);
+
+        result.IsFailure.ShouldBeTrue();
+        Code(result).ShouldBe("ExternalSecretNameReserved");
+    }
+
+    [Fact]
+    public void AnAdministratorMayKeepAMintedNameTheConnectionAlreadyHad()
+    {
+        var (type, connection) = SqlAuthConnection(Stored());
+        var before = ConnectionCredentialSlots.From("SqlAuth", [Password], Stored());
+
+        ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, callerIsPlatformAdmin: true, NullLogger.Instance)
+            .IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ACallerWhoIsNotAnAdministratorMayNotChangeCredentialsKeptExternally()
+    {
+        var before = ConnectionCredentialSlots.From("SqlAuth", [Password], Kept());
+        var (type, connection) = SqlAuthConnection(
+            new Dictionary<string, string?> { [ConnectionCredentialProperties.SecretManager] = ExternalManager, [Field] = "another-secret" });
+
+        var result = ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, callerIsPlatformAdmin: false, NullLogger.Instance);
+
+        result.IsFailure.ShouldBeTrue();
+        Code(result).ShouldBe("CredentialsManagedExternally");
+    }
+
+    [Fact]
+    public void ACallerWhoIsNotAnAdministratorMayNotClearCredentialsKeptExternally()
+    {
+        var before = ConnectionCredentialSlots.From("SqlAuth", [Password], Kept());
+        var (type, connection) = SqlAuthConnection(new Dictionary<string, string?>());
+
+        var result = ConnectionCredentialStore.RefuseCallerReferences(type.Object, before, connection, callerIsPlatformAdmin: false, NullLogger.Instance);
+
+        Code(result).ShouldBe("CredentialsManagedExternally");
+    }
+
+    [Fact]
+    public async Task ACallerWhoIsNotAnAdministratorMayNotSendValuesForCredentialsKeptExternally()
+    {
+        var before = ConnectionCredentialSlots.From("SqlAuth", [Password], Kept());
+        var (type, connection) = SqlAuthConnection(Kept());
+        var (services, store, external) = ExternalServices();
+
+        var result = await ConnectionCredentialStore.Prepare(
+            type.Object, before, connection, new Dictionary<string, string> { [Field] = "s3cret" }, callerIsPlatformAdmin: false,
+            services, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        Code(result).ShouldBe("CredentialsManagedExternally");
+        store.Verify(m => m.Execute(It.IsAny<ISecretManagerCommand<SecretValue>>(), It.IsAny<CancellationToken>()), Times.Never);
+        external.Verify(m => m.Execute(It.IsAny<ISecretManagerCommand<SecretValue>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AnAdministratorMayNotNameWhereCredentialsAreKeptAndSendTheirValues()
+    {
+        var (type, connection) = SqlAuthConnection(Kept());
+        var (services, store, _) = ExternalServices();
+
+        var result = await ConnectionCredentialStore.Prepare(
+            type.Object, before: null, connection, new Dictionary<string, string> { [Field] = "s3cret" }, callerIsPlatformAdmin: true,
+            services, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        Code(result).ShouldBe("CredentialReferenceAndValue");
+        store.Verify(m => m.Execute(It.IsAny<ISecretManagerCommand<SecretValue>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ACredentialAnAdministratorNamesIsCheckedAndNothingIsWrittenToThePlatformsStore()
+    {
+        var (type, connection) = SqlAuthConnection(Kept());
+        var (services, store, external) = ExternalServices();
+
+        var result = await ConnectionCredentialStore.Prepare(
+            type.Object, before: null, connection, credentials: null, callerIsPlatformAdmin: true,
+            services, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Written.ShouldBeEmpty();
+        external.Verify(
+            m => m.Execute(It.Is<ISecretManagerCommand<SecretValue>>(c => c.SecretKey == ExternalName), It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(m => m.Execute(It.IsAny<ISecretManagerCommand<SecretValue>>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ASecretManagerThatIsNotRegisteredIsRefusedBeforeAnythingIsSaved()
+    {
+        var (type, connection) = SqlAuthConnection(Kept());
+        var (services, _, _) = ExternalServices(registered: false);
+
+        var result = await ConnectionCredentialStore.Prepare(
+            type.Object, before: null, connection, credentials: null, callerIsPlatformAdmin: true,
+            services, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        Code(result).ShouldBe("ExternalCredentialUnavailable");
+    }
+
+    [Fact]
+    public async Task ASecretThatCannotBeReadIsRefusedBeforeAnythingIsSaved()
+    {
+        var (type, connection) = SqlAuthConnection(Kept());
+        var (services, _, _) = ExternalServices(readable: false);
+
+        var result = await ConnectionCredentialStore.Prepare(
+            type.Object, before: null, connection, credentials: null, callerIsPlatformAdmin: true,
+            services, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        Code(result).ShouldBe("ExternalCredentialUnavailable");
+    }
+
+    [Fact]
+    public async Task AnAdministratorSwitchingToExternalCredentialsRetiresOnlyWhatTheStoreMinted()
+    {
+        var before = ConnectionCredentialSlots.From("SqlAuth", [Password], Stored());
+        var (type, connection) = SqlAuthConnection(Kept());
+        var (services, _, _) = ExternalServices();
+
+        var result = await ConnectionCredentialStore.Prepare(
+            type.Object, before, connection, credentials: null, callerIsPlatformAdmin: true,
+            services, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Retiring.ShouldBe([new StoredSecret(Store, MintedName)]);
     }
 }

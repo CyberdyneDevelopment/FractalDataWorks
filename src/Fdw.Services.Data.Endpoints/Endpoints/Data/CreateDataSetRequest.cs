@@ -51,9 +51,6 @@ public class CreateDataSetRequest
     /// </summary>
     public string? FederationStrategy { get; set; }
 
-    /// <summary>Gets or sets the SQL or expression that transforms the source data for a Compound dataset.</summary>
-    public string? TransformExpression { get; set; }
-
     /// <summary>Gets or sets the name of the source dataset this Compound dataset is derived from.</summary>
     public string? SourceDataSetName { get; set; }
 

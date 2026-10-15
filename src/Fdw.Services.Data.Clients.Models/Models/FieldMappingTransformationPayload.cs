@@ -7,7 +7,7 @@ namespace Fdw.Services.Data.Clients.Models;
 /// A transformation attached to a field mapping, in chain order (FDW-846). The attachment itself is
 /// only the field mapping, the transformation and the position; the rest describes the transformation.
 /// </summary>
-public sealed class FieldMappingTransformPayload
+public sealed class FieldMappingTransformationPayload
 {
     /// <summary>Gets or sets the field mapping.</summary>
     public Guid FieldMappingId { get; set; }

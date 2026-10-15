@@ -21,13 +21,14 @@ public static class UpdatePipelineChanges
 
     private static readonly (string Name, Func<UpdatePipelineRequest, bool> Stated)[] Members =
     [
-        (nameof(UpdatePipelineRequest.SourceConnectionName), request => request.SourceConnectionName is not null),
-        (nameof(UpdatePipelineRequest.DestinationConnectionName), request => request.DestinationConnectionName is not null),
         (nameof(UpdatePipelineRequest.SourceDataSet), request => request.SourceDataSet is not null),
         (nameof(UpdatePipelineRequest.SourceDataStoreName), request => request.SourceDataStoreName is not null),
         (nameof(UpdatePipelineRequest.SourceDataStorePath), request => request.SourceDataStorePath is not null),
         (nameof(UpdatePipelineRequest.SourceContainerName), request => request.SourceContainerName is not null),
         (nameof(UpdatePipelineRequest.DestinationDataSet), request => request.DestinationDataSet is not null),
+        (nameof(UpdatePipelineRequest.DestinationDataStoreName), request => request.DestinationDataStoreName is not null),
+        (nameof(UpdatePipelineRequest.DestinationDataStorePath), request => request.DestinationDataStorePath is not null),
+        (nameof(UpdatePipelineRequest.DestinationContainerName), request => request.DestinationContainerName is not null),
         (nameof(UpdatePipelineRequest.Description), request => request.Description is not null),
         (nameof(UpdatePipelineRequest.IsEnabled), request => request.IsEnabled.HasValue),
         (nameof(UpdatePipelineRequest.TruncateBeforeLoad), request => request.TruncateBeforeLoad.HasValue),

@@ -167,12 +167,14 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
             if (!string.IsNullOrEmpty(src.ConnectionName))
                 connectionNames.Add(src.ConnectionName);
         }
-        foreach (var p in pipelines)
+        foreach (var storeName in PipelineLineageStores.Names(pipelines))
         {
-            if (!string.IsNullOrEmpty(p.SourceConnectionName))
-                connectionNames.Add(p.SourceConnectionName);
-            if (!string.IsNullOrEmpty(p.DestinationConnectionName))
-                connectionNames.Add(p.DestinationConnectionName);
+            graph.Nodes.Add(new LineageNode
+            {
+                Id = PipelineLineageStores.NodeId(storeName),
+                Type = LineageNodeTypes.ByName("DataStore"),
+                Name = storeName
+            });
         }
         foreach (var connName in connectionNames)
         {
@@ -290,24 +292,24 @@ public abstract class GetLineageGraphEndpointBase : Endpoint<LineageGraphRequest
                 producesDataSetCount++;
             }
 
-            if (!string.IsNullOrEmpty(p.DestinationConnectionName))
+            if (!string.IsNullOrEmpty(p.DestinationDataStoreName))
             {
                 graph.Edges.Add(new LineageEdge
                 {
                     Id = $"e{edgeId++}",
                     SourceId = $"Pipeline_{p.Name}",
-                    TargetId = $"Connection_{p.DestinationConnectionName}",
+                    TargetId = PipelineLineageStores.NodeId(p.DestinationDataStoreName),
                     Type = LineageEdgeTypes.ByName("WritesTo")
                 });
                 writesToCount++;
             }
 
-            if (!string.IsNullOrEmpty(p.SourceConnectionName))
+            if (!string.IsNullOrEmpty(p.SourceDataStoreName))
             {
                 graph.Edges.Add(new LineageEdge
                 {
                     Id = $"e{edgeId++}",
-                    SourceId = $"Connection_{p.SourceConnectionName}",
+                    SourceId = PipelineLineageStores.NodeId(p.SourceDataStoreName),
                     TargetId = $"Pipeline_{p.Name}",
                     Type = LineageEdgeTypes.ByName("ReadsFrom")
                 });

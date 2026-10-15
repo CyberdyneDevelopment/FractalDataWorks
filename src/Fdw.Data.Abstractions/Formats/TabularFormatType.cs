@@ -23,7 +23,8 @@ public sealed class TabularFormatType : FormatTypeBase
             mimeType: "application/vnd.tabular",
             isBinary: false,
             supportsStreaming: true,
-            canonicalFileExtension: "")
+            canonicalFileExtension: "",
+            family: "Tabular")
     {
     }
 }

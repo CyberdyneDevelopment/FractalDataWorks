@@ -116,6 +116,11 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
     {
         if (_headerWritten) return;
         _headerWritten = true;
+        if (_options.WriteByteOrderMark)
+        {
+            _target.Write('\uFEFF');
+        }
+
         if (_options.WriteHeader)
         {
             var headerRow = new Dictionary<string, object?>(StringComparer.Ordinal);
@@ -145,11 +150,20 @@ public sealed class DelimitedStreamRowWriter : IRowWriter
         {
             if (i > 0) sb.Append(_options.Separator);
             var raw = row.TryGetValue(_columns[i], out var v) ? v : null;
-            sb.Append(QuoteIfNeeded(RecordValueText.IsAbsent(raw) ? string.Empty : RecordValueText.Format(raw!, _columns[i])));
+            sb.Append(QuoteIfNeeded(RecordValueText.IsAbsent(raw) ? string.Empty : Guarded(raw!, RecordValueText.Format(raw!, _columns[i]))));
         }
 
         return sb.ToString();
     }
+
+    // Only text is guarded: a number or a date is never a formula, and a negative number must keep its sign.
+    private string Guarded(object raw, string text)
+        => _options.NeutralizeFormulas && raw is string && text.Length > 0 && FormulaStarts.Contains(text[0])
+            ? "'" + text
+            : text;
+
+    // A spreadsheet reads a cell starting with one of these as a formula and runs it.
+    private const string FormulaStarts = "=+-@\t\r";
 
     private string QuoteIfNeeded(string value)
     {

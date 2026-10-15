@@ -19,14 +19,6 @@ public abstract class CreatePipelineRequestValidator : FdwEndpointValidator<Crea
             .NotEmpty()
             .WithMessage("PipelineType is required");
 
-        RuleFor(x => x.SourceConnectionName)
-            .NotEmpty()
-            .WithMessage("SourceConnectionName is required");
-
-        RuleFor(x => x.DestinationConnectionName)
-            .NotEmpty()
-            .WithMessage("DestinationConnectionName is required");
-
         RuleForEach(x => x.Transforms).ChildRules(transform =>
         {
             transform.RuleFor(t => t.Name)

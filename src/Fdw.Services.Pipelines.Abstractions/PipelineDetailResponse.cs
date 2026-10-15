@@ -17,12 +17,6 @@ public class PipelineDetailResponse : IPipelineLoadFields
     /// <summary>Gets or sets the pipeline type (e.g., "BatchCopy", "Streaming").</summary>
     public required string PipelineType { get; set; }
 
-    /// <summary>Gets or sets the source connection name.</summary>
-    public required string SourceConnectionName { get; set; }
-
-    /// <summary>Gets or sets the destination connection name.</summary>
-    public required string DestinationConnectionName { get; set; }
-
     /// <summary>Gets or sets the source DataSet name.</summary>
     public string? SourceDataSet { get; set; }
 
@@ -37,6 +31,15 @@ public class PipelineDetailResponse : IPipelineLoadFields
 
     /// <summary>Gets or sets the destination DataSet name.</summary>
     public string? DestinationDataSet { get; set; }
+
+    /// <summary>Gets or sets the data store the pipeline writes to, when its destination is a data store container (FDW-1269).</summary>
+    public string? DestinationDataStoreName { get; set; }
+
+    /// <summary>Gets or sets the path within that data store.</summary>
+    public string? DestinationDataStorePath { get; set; }
+
+    /// <summary>Gets or sets the container within that path.</summary>
+    public string? DestinationContainerName { get; set; }
 
     /// <summary>Gets or sets the description.</summary>
     public string? Description { get; set; }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -30,6 +31,12 @@ public sealed class RoundNode : CalculationNodeBase
         : base("Round", "Rounds a number to a stated number of decimal places in a stated midpoint mode.", 1, 1)
     {
     }
+
+    /// <inheritdoc />
+    public override IReadOnlyList<string> Members { get; } = new[] { "places", "mode" };
+
+    /// <inheritdoc />
+    public override IReadOnlyList<string> Modes => ModeNames;
 
     /// <inheritdoc />
     public override IGenericResult Check(CalculationNode node, ICalculationScope scope)

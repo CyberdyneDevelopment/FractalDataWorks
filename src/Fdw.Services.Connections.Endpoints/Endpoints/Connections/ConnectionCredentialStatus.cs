@@ -19,4 +19,11 @@ public sealed class ConnectionCredentialStatus
 
     /// <summary>Gets or sets a value indicating whether the connection has a stored credential for the field.</summary>
     public bool IsSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the credential is kept outside the platform's credential store: a platform
+    /// administrator named the secret manager and the secret, and only a platform administrator may change them
+    /// (FDW-1327). Never the name of either.
+    /// </summary>
+    public bool IsExternal { get; set; }
 }

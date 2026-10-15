@@ -125,7 +125,7 @@ public abstract class CreatePipelineEndpointBase<TConfig> : CrudCreateEndpointBa
             return notifies;
         }
 
-        var load = await _loadDraft.Prepare(request, request.DestinationDataSet, PipelineDraft.TransformExpressions(request.Transforms), ct).ConfigureAwait(false);
+        var load = await _loadDraft.Prepare(request, request.DestinationDataSet, PipelineDraft.StageFilterExpressions(request.Transforms), ct).ConfigureAwait(false);
         if (!load.IsSuccess)
         {
             return load;

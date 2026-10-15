@@ -22,7 +22,7 @@ public sealed class BranchTransformTypeTests
         var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, value) in parameters)
             values[name] = value;
-        return new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransform>>(), parameters: values);
+        return new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), parameters: values);
     }
 
     private static PipelineTransformPathConfiguration Path(string name, string condition, int ordinal, params PipelineTransformConfiguration[] stages) => new()

@@ -22,14 +22,14 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Reorders the transformations attached to a field mapping (FDW-846):
-/// <c>POST /field-mappings/{FieldMappingId}/transforms/reorder</c>.
+/// <c>POST /field-mappings/{FieldMappingId}/transformations/reorder</c>.
 /// </summary>
 /// <remarks>
 /// Attachments are child configuration rows (<c>transform.FieldMappingTransformation</c>), so each
 /// position change is a <c>ConfigurationSaveCommand</c> through the data gateway, addressed by the
 /// attachment's Id. Where they live comes from the Transformation domain provider's registration.
 /// </remarks>
-public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<ReorderFieldMappingTransformsRequest>
+public abstract class ReorderFieldMappingTransformationsEndpointBase : Endpoint<ReorderFieldMappingTransformationsRequest>
 {
     private readonly TransformationConfigurationProvider _transformations;
     private readonly IConfigurationGatewayProvider _configurationGateways;
@@ -37,12 +37,12 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// <summary>Gets the logger instance.</summary>
     protected new ILogger Logger { get; }
 
-    /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformsEndpointBase"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="ReorderFieldMappingTransformationsEndpointBase"/> class.</summary>
     /// <remarks>
     /// The attachments are configuration rows in the transformation store the host declared, so they are read and
     /// written through that store's configuration gateway: the main gateway refuses a request over a host-declared store.
     /// </remarks>
-    protected ReorderFieldMappingTransformsEndpointBase(ILogger logger, IConfigurationGatewayProvider configurationGateways,
+    protected ReorderFieldMappingTransformationsEndpointBase(ILogger logger, IConfigurationGatewayProvider configurationGateways,
         TransformationConfigurationProvider transformations)
     {
         Logger = logger;
@@ -53,7 +53,7 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// <inheritdoc/>
     public override void Configure()
     {
-        Post("/field-mappings/{FieldMappingId}/transforms/reorder");
+        Post("/field-mappings/{FieldMappingId}/transformations/reorder");
 #if DEVELOP
         AllowAnonymous();
 #else
@@ -77,11 +77,11 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     }
 
     /// <inheritdoc/>
-    public override async Task HandleAsync(ReorderFieldMappingTransformsRequest req, CancellationToken ct)
+    public override async Task HandleAsync(ReorderFieldMappingTransformationsRequest req, CancellationToken ct)
     {
         try
         {
-            var result = await ReorderTransforms(req.FieldMappingId, req.TransformationNames, ct).ConfigureAwait(false);
+            var result = await ReorderTransformations(req.FieldMappingId, req.TransformationNames, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -103,10 +103,10 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
     /// Re-saves each attachment whose position changed. The request must name every attached
     /// transformation exactly once, so a reorder can never silently drop or duplicate one.
     /// </summary>
-    protected virtual async Task<IGenericResult> ReorderTransforms(
+    protected virtual async Task<IGenericResult> ReorderTransformations(
         Guid fieldMappingId, IList<string> transformationNames, CancellationToken ct)
     {
-        FieldMappingTransformEndpointLog.ReorderingTransforms(Logger, fieldMappingId);
+        FieldMappingTransformationEndpointLog.ReorderingTransforms(Logger, fieldMappingId);
 
         var gateway = _configurationGateways.Get(_transformations.DataStoreName);
         if (gateway.IsFailure)
@@ -117,7 +117,7 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
             .ConfigureAwait(false);
         if (attached.IsFailure)
         {
-            FieldMappingTransformEndpointLog.ReorderTransformsFailed(Logger, fieldMappingId);
+            FieldMappingTransformationEndpointLog.ReorderTransformationsFailed(Logger, fieldMappingId);
             return attached;
         }
 
@@ -137,13 +137,13 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
         if (requested.Count != transformationNames.Count
             || requested.Count != byName.Count
             || !requested.SetEquals(byName.Keys))
-            return GenericResult.Failure(FieldMappingTransformEndpointLog.ReorderSetMismatch(Logger, fieldMappingId));
+            return GenericResult.Failure(FieldMappingTransformationEndpointLog.ReorderSetMismatch(Logger, fieldMappingId));
 
         var written = await WriteOrdinals(gateway.Value!, byName, transformationNames, fieldMappingId, ct).ConfigureAwait(false);
         if (written.IsFailure)
             return written;
 
-        FieldMappingTransformEndpointLog.ReorderedTransforms(Logger, fieldMappingId);
+        FieldMappingTransformationEndpointLog.ReorderedTransforms(Logger, fieldMappingId);
         return GenericResult.Success();
     }
 
@@ -172,7 +172,7 @@ public abstract class ReorderFieldMappingTransformsEndpointBase : Endpoint<Reord
                 .ConfigureAwait(false);
             if (saved.IsFailure)
             {
-                FieldMappingTransformEndpointLog.ReorderTransformsFailed(Logger, fieldMappingId);
+                FieldMappingTransformationEndpointLog.ReorderTransformationsFailed(Logger, fieldMappingId);
                 return saved;
             }
         }

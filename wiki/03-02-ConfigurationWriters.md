@@ -47,7 +47,7 @@ Top-level named configurations (Connection, DataStore, DataSet, Pipeline, Schedu
 SecretManager) are written through their domain provider's `Save()` / `Delete()` (the provider
 implements `IServiceConfigurationWriter<TConfig>`), which builds and executes the appropriate command
 via the gateway and invalidates the `"{schema}.{table}"` cache tag. Child configuration records
-(e.g. `FieldMappingTransform` children) use `ConfigurationSaveCommand<T>` via `IDataGateway` directly.
+(e.g. `FieldMappingTransformation` children) use `ConfigurationSaveCommand<T>` via `IDataGateway` directly.
 
 ## See Also
 

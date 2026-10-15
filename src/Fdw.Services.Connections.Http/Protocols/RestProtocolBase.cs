@@ -836,7 +836,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
     protected override bool HasRowReaderForFormat(IStorageContainer container)
     {
         if (container.Format is null) return false;
-        return RecordSourceTypes.ByName(container.Format.Name) != RecordSourceTypes.NotFound;
+        return RecordSourceTypes.ByName(container.Format.Family) != RecordSourceTypes.NotFound;
     }
 
     /// <inheritdoc />
@@ -844,14 +844,14 @@ public abstract class RestProtocolBase : HttpProtocolBase
     {
         if (container.Format is null) return null;
 
-        var sourceType = RecordSourceTypes.ByName(container.Format.Name);
+        var sourceType = RecordSourceTypes.ByName(container.Format.Family);
         if (sourceType == RecordSourceTypes.NotFound) return null;
 
         return sourceType.CreateReader(content, BuildRowSourceOptions(container));
     }
 
     private static RowSourceOptions? BuildRowSourceOptions(IStorageContainer container)
-        => container.Format.Name switch
+        => container.Format.Family switch
         {
             "Json" => BuildJsonOptions(container.Metadata),
             "Xml" => BuildXmlOptions(container.Metadata),

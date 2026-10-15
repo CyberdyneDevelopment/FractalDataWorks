@@ -24,6 +24,9 @@ public sealed class ConstantNode : CalculationNodeBase
     }
 
     /// <inheritdoc />
+    public override IReadOnlyList<string> Members { get; } = new[] { "value", "flag" };
+
+    /// <inheritdoc />
     public override Type ResultType(CalculationNode node, Type expected, IReadOnlyList<Type> operandTypes) =>
         node.Flag.HasValue ? typeof(bool) : typeof(decimal);
 

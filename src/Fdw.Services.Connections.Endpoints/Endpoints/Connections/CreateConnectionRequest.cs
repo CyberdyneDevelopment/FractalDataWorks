@@ -109,9 +109,17 @@ public class CreateConnectionRequest : ResourceCreateRequest
     /// method uses (for example <c>SecretKeyName</c> for a password, <c>ApiKeySecretName</c> for an API key).
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Write-only. The server stores each value in the platform's credential secret manager under a secret it chooses
     /// and points the connection at it; no response, log line or endpoint ever returns a value, and a caller never
     /// names the secret manager or the secret (FDW-1086). Required, in full, when the authentication method uses credentials.
+    /// </para>
+    /// <para>
+    /// The one exception is a platform administrator's (FDW-1327): to keep the credentials in a secret manager that
+    /// something else manages, the administrator names the secret manager and each secret in the connection's
+    /// authentication values and sends no values here. The platform checks that they can be read and never writes or
+    /// deletes them; nobody but a platform administrator may then change them.
+    /// </para>
     /// </remarks>
     public IDictionary<string, string>? Credentials { get; set; }
 }

@@ -3,7 +3,7 @@ using System;
 namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>Detaches a transformation from a field mapping. The transformation itself is untouched.</summary>
-public class DeleteFieldMappingTransformRequest
+public class DeleteFieldMappingTransformationRequest
 {
     /// <summary>Gets or sets the field mapping.</summary>
     public Guid FieldMappingId { get; set; }

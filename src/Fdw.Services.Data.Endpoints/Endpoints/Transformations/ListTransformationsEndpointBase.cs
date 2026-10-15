@@ -16,7 +16,7 @@ using Fdw.Web.RestEndpoints.Models;
 
 namespace Fdw.Services.Data.Endpoints;
 
-/// <summary>Lists the transformations (FDW-846): <c>GET /transforms</c>, one page at a time in name order (FDW-951).</summary>
+/// <summary>Lists the transformations (FDW-846): <c>GET /transformations</c>, one page at a time in name order (FDW-951).</summary>
 /// <remarks>Each transformation on the page is read whole: its payload carries its parameters.</remarks>
 public abstract class ListTransformationsEndpointBase : CrudPageEndpointBase<ITransformationImplementationConfiguration, TransformationPayload>
 {
@@ -30,7 +30,7 @@ public abstract class ListTransformationsEndpointBase : CrudPageEndpointBase<ITr
     }
 
     /// <inheritdoc/>
-    protected override string ResourceName => "transforms";
+    protected override string ResourceName => "transformations";
 
     /// <inheritdoc/>
     protected override string ReadPolicy => "datasets:read";
@@ -46,7 +46,7 @@ public abstract class ListTransformationsEndpointBase : CrudPageEndpointBase<ITr
     protected override Task<IGenericResult<ConfigurationPage<ITransformationImplementationConfiguration>>> LoadPage(
         PaginatedListRequest paging, CancellationToken ct)
     {
-        FieldMappingTransformEndpointLog.ListingTransformations(Logger);
+        FieldMappingTransformationEndpointLog.ListingTransformations(Logger);
         return _transformations.Get(paging.Skip, paging.Take, ConfigurationLevels.WholeAggregate, ct);
     }
 

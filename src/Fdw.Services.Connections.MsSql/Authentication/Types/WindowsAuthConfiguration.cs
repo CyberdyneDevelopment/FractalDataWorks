@@ -17,7 +17,7 @@ public sealed class WindowsAuthConfiguration : MsSqlAuthenticationConfiguration
         : base("WindowsAuth",
                "Windows Authentication",
                "Windows Integrated Security (Trusted Connection)",
-               [], [], [], requiresSecret: false)
+               [], [], requiresSecret: false)
     {
     }
 

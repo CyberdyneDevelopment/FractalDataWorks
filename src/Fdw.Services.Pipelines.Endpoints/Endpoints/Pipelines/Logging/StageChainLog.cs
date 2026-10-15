@@ -29,11 +29,6 @@ public static partial class StageChainLog
         Message = "The chain of field mapping '{mappingName}' has {stepCount} step(s), so its ordinals must run from 1 without gaps, each used once")]
     public static partial IGenericMessage OrdinalsNotConsecutive(ILogger logger, string mappingName, int stepCount);
 
-    /// <summary>Logs a field mapping that states both a transform expression and a chain.</summary>
-    [MessageLogging(EventId = 20314, Level = LogLevel.Warning,
-        Message = "Field mapping '{mappingName}' states both transformExpression and a chain of transforms; state one of them")]
-    public static partial IGenericMessage ExpressionAndChain(ILogger logger, string mappingName);
-
     /// <summary>Logs a chain step that names a Transformation that does not exist.</summary>
     [MessageLogging(EventId = 20315, Level = LogLevel.Warning,
         Message = "Step {ordinal} of the chain of field mapping '{mappingName}' names Transformation '{transformationName}', which does not exist")]

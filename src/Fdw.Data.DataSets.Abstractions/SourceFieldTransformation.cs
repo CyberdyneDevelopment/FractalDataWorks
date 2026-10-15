@@ -9,7 +9,7 @@ namespace Fdw.Data.DataSets.Abstractions;
 /// <remarks>
 /// Execution is dispatched via <c>TransformationTypes.ByName(TransformType)</c> — no switch over type names.
 /// </remarks>
-public sealed class SourceFieldTransform
+public sealed class SourceFieldTransformation
 {
     /// <summary>
     /// Gets or sets the transform type name — must match a registered <c>TransformationTypes</c> option.

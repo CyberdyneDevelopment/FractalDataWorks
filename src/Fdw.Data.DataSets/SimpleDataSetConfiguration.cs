@@ -52,9 +52,6 @@ public sealed partial class SimpleDataSetConfiguration : ISimpleDataSetConfigura
     /// <summary>Gets or sets the is filterable.</summary>
     public bool IsFilterable { get; set; }
 
-    /// <summary>Gets or sets the transform expression.</summary>
-    public string? TransformExpression { get; set; }
-
     /// <summary>Gets or sets the source data set name.</summary>
     public string? SourceDataSetName { get; set; }
 

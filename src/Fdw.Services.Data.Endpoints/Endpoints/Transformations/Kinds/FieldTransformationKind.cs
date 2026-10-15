@@ -64,7 +64,7 @@ public sealed class FieldTransformationKind : TransformationKindBase
 
         if (existing is not IFieldTransformationConfiguration field)
         {
-            return Refused(FieldMappingTransformEndpointLog.TransformationNotFieldLevel(context.Logger, existing.Name, existing.Implementation));
+            return Refused(FieldMappingTransformationEndpointLog.TransformationNotFieldLevel(context.Logger, existing.Name, existing.Implementation));
         }
 
         var type = request.TransformationType ?? field.TransformationType;

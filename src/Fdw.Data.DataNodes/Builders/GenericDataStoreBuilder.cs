@@ -61,6 +61,8 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
         DataStoreLoaderLog.ContainerSubtypeChosen(Logger, containerCfg.Name, containerType.Name);
         DataStoreLoaderLog.ContainerFieldsBuilt(Logger, containerCfg.Name, fields.Count);
 
+        var format = ContainerComposition.ResolveFormat(containerCfg, _defaultResponseFormat);
+
         return new DataContainer(
             containerCfg.Name,
             containerCfg.Description,
@@ -69,10 +71,10 @@ public sealed class GenericDataStoreBuilder : DataStoreBuilderBase
             keys,
             referencingKeys,
             containerType,
-            ContainerComposition.ResolveFormat(containerCfg, _defaultResponseFormat),
+            format,
             new GenericContainerPath(parent.Name),
             ["Query"],
-            ContainerComposition.BuildMetadata(containerCfg),
+            ContainerComposition.BuildMetadata(containerCfg, format),
             Logger);
     }
 }

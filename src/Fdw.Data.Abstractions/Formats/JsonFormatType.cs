@@ -22,7 +22,8 @@ public sealed class JsonFormatType : FormatTypeBase
             mimeType: "application/json",
             isBinary: false,
             supportsStreaming: true,
-            canonicalFileExtension: ".json")
+            canonicalFileExtension: ".json",
+            family: "Json")
     {
     }
 }

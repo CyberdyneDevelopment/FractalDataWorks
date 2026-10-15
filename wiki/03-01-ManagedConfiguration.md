@@ -310,7 +310,7 @@ Endpoints inject the domain provider (e.g. `ConnectionConfigurationProvider`,
 |------|-------------|
 | Domain provider `Save()` / `Delete()` | Top-level named configs (Connection, DataStore, DataSet, Pipeline, Schedule, Settings, Role, SecretManager) |
 | `IDynamicConfigurationWriter.Save()` / `.Delete()` | Generic admin UI with dynamic types |
-| `ConfigurationSaveCommand<T>` via DataGateway | Child config records only (e.g. FieldMappingTransform, FieldMappingTransformParameter) |
+| `ConfigurationSaveCommand<T>` via DataGateway | Child config records only (e.g. FieldMappingTransformation, FieldMappingTransformParameter) |
 
 There is **no** `IConfigurationWriter<T>` — top-level writes go through the domain provider's own
 `Save()` / `Delete()`. See [Configuration Writers](03-02-ConfigurationWriters.md).

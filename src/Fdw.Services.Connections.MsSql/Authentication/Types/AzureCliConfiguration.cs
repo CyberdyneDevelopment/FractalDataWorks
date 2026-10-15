@@ -19,7 +19,7 @@ public sealed class AzureCliConfiguration : MsSqlAuthenticationConfiguration
         : base("AzureCli",
                "Azure CLI",
                "Azure CLI token-based auth (developer machines)",
-               [], [], [], requiresSecret: false)
+               [], [], requiresSecret: false)
     {
     }
 

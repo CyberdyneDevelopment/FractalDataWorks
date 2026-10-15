@@ -35,12 +35,6 @@ public class PipelineFieldMappingClientRequest
     public string? TargetType { get; set; }
 
     /// <summary>
-    /// Gets or sets the optional named transform expression applied before TargetType coercion
-    /// (e.g. "FromUnixMilliseconds").
-    /// </summary>
-    public string? TransformExpression { get; set; }
-
-    /// <summary>
     /// Gets or sets whether the source field is required (a missing required field reports an error).
     /// </summary>
     public bool IsRequired { get; set; }
@@ -62,7 +56,7 @@ public class PipelineFieldMappingClientRequest
 
     /// <summary>
     /// Gets or sets the chain of named Transformations the mapping's value goes through, in order (the wire member
-    /// <c>transforms</c>). Null or empty when the mapping states none.
+    /// <c>transformations</c>). Null or empty when the mapping states none.
     /// </summary>
-    public IList<PipelineFieldTransformationReference>? Transforms { get; set; }
+    public IList<PipelineFieldTransformationReference>? Transformations { get; set; }
 }

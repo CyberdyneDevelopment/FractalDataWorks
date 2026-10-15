@@ -19,13 +19,19 @@ public sealed class ConnectionAuthenticationMethod
     /// <param name="displayName">The method's display name.</param>
     /// <param name="usesHostIdentity">Whether the method, with none of its own options set, acts as the host.</param>
     /// <param name="credentials">The credentials the method asks for.</param>
+    /// <param name="settings">The non-secret values the method requires besides its credentials.</param>
     public ConnectionAuthenticationMethod(
-        string name, string displayName, bool usesHostIdentity, IReadOnlyList<ConnectionCredentialField> credentials)
+        string name,
+        string displayName,
+        bool usesHostIdentity,
+        IReadOnlyList<ConnectionCredentialField> credentials,
+        IReadOnlyList<ConnectionSettingField> settings)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
         UsesHostIdentity = usesHostIdentity;
         Credentials = credentials ?? throw new ArgumentNullException(nameof(credentials));
+        Settings = settings ?? throw new ArgumentNullException(nameof(settings));
     }
 
     /// <summary>Gets the method's name, as a connection names it.</summary>
@@ -44,6 +50,9 @@ public sealed class ConnectionAuthenticationMethod
     /// <summary>Gets the credentials the method asks for; empty for a method that carries none.</summary>
     public IReadOnlyList<ConnectionCredentialField> Credentials { get; }
 
+    /// <summary>Gets the non-secret values the method requires besides its credentials; empty for a method that needs none.</summary>
+    public IReadOnlyList<ConnectionSettingField> Settings { get; }
+
     /// <summary>Describes an authentication method from its own declarations.</summary>
     /// <typeparam name="TSelf">The method's own type.</typeparam>
     /// <param name="method">The authentication method.</param>
@@ -56,6 +65,7 @@ public sealed class ConnectionAuthenticationMethod
             method.Name,
             method.DisplayName,
             method.UsesHostIdentity(new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)),
-            method.Credentials);
+            method.Credentials,
+            method.Settings);
     }
 }

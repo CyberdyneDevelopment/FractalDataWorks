@@ -95,7 +95,6 @@ internal static class DataSetQueryHelper
         Version = config.Version,
         Implementation = config.Implementation,
         FederationStrategy = config.FederationStrategyOrNone(),
-        TransformExpression = config.TransformExpression,
         SourceDataSetName = config.SourceDataSetName,
         RecordTypeName = config.RecordTypeName,
         Fields = config.Fields
@@ -218,7 +217,7 @@ internal static class DataSetQueryHelper
         IsPrimary = source.IsPrimary,
         IsActive = source.IsCurrent && !source.IsDeleted,
         // Why the Id goes out: attaching a transformation addresses the mapping by it
-        // (/field-mappings/{id}/transforms), so a client that cannot read it cannot attach one.
+        // (/field-mappings/{id}/transformations), so a client that cannot read it cannot attach one.
         FieldMappings = source.Mappings
             .Where(m => m.IsCurrent && !m.IsDeleted)
             .OrderBy(m => m.Ordinal)
@@ -228,7 +227,6 @@ internal static class DataSetQueryHelper
                 DataSetFieldName = m.LogicalFieldName,
                 SourceName = source.SourceName,
                 SourceFieldName = m.PhysicalFieldName,
-                TransformExpression = m.TransformExpression,
                 Ordinal = m.Ordinal
             })
             .ToList()
@@ -370,7 +368,6 @@ internal static class DataSetQueryHelper
             SourceKind = source.SourceKind,
             // An empty source field on the wire is the absence of one; the column spells that NULL.
             PhysicalFieldName = string.IsNullOrEmpty(m.SourceFieldName) ? null : m.SourceFieldName,
-            TransformExpression = m.TransformExpression,
             Ordinal = m.Ordinal
         }).ToList();
     }

@@ -12,13 +12,13 @@ namespace Fdw.Services.Etl;
 /// A step built with no parameters reports exactly that, so a transform requiring one fails loud
 /// instead of silently running with an empty bag.
 /// </remarks>
-internal sealed class FieldMappingTransform : IFieldMappingTransform
+internal sealed class FieldMappingTransformation : IFieldMappingTransformation
 {
-    /// <summary>Initializes a new instance of the <see cref="FieldMappingTransform"/> class.</summary>
+    /// <summary>Initializes a new instance of the <see cref="FieldMappingTransformation"/> class.</summary>
     /// <param name="transformType">The registered transform name to run.</param>
     /// <param name="ordinal">Position in the chain; ascending order is applied first.</param>
     /// <param name="parameters">The configured parameter values, or null when none were configured.</param>
-    public FieldMappingTransform(
+    public FieldMappingTransformation(
         string transformType,
         int ordinal,
         IReadOnlyDictionary<string, string>? parameters = null)

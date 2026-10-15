@@ -88,7 +88,7 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         config.ClassificationId = request.ClassificationId;
         config.CreatedAt = DateTimeOffset.UtcNow;
 
-        var tree = ApplyTree(config, request.Paths);
+        var tree = ApplyTree(config, request.Paths, storeType.Value!);
         if (tree.IsFailure)
         {
             return tree.ToNewResult<DataStoreDetailResponse>();
@@ -131,19 +131,25 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
     /// <summary>Puts the requested tree - paths, their containers, and each container's fields and keys - on the configuration before it is saved.</summary>
     /// <param name="target">The configuration about to be saved.</param>
     /// <param name="paths">The paths the caller asked for, if any.</param>
-    /// <returns>Success, or the first key that could not be resolved.</returns>
+    /// <param name="storeTypeName">The data store type the store is being created as, for the rules of how its containers are addressed.</param>
+    /// <returns>Success, or the first container the store cannot take or key that could not be resolved.</returns>
     /// <remarks>
     /// Keys are resolved in two passes over every container in the request - the other keys first, then
     /// the Foreign ones - so a Foreign key may reference a key of any container in the same request,
     /// wherever it sits in the tree (FDW-920).
     /// </remarks>
-    protected IGenericResult ApplyTree(TConfig target, IList<CreateDataStorePathRequest>? paths)
+    protected IGenericResult ApplyTree(TConfig target, IList<CreateDataStorePathRequest>? paths, string storeTypeName)
     {
         ArgumentNullException.ThrowIfNull(target);
 
         if (paths is null || paths.Count == 0)
         {
             return GenericResult.Success();
+        }
+
+        if (ContainerRefusal(paths, DataStoreTypes.ByName(storeTypeName).AddressesContainersAsFiles) is { } refusal)
+        {
+            return refusal;
         }
 
         var containers = BuildPaths(target, paths);
@@ -193,6 +199,29 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
         }
     }
 
+    // The first container of the tree that states a file option its format does not take, or is named with its
+    // format's own extension in a store that addresses files; null when every container is one the store can read.
+    private IGenericResult? ContainerRefusal(IList<CreateDataStorePathRequest> paths, bool storeAddressesContainersAsFiles)
+    {
+        foreach (var container in paths.SelectMany(p => p.Containers))
+        {
+            var options = DataStoreContainerBuilder.FileOptionsRefusal(
+                container.Name, container.Format, container.HasHeader, container.Separator, container.SheetName, Logger);
+            if (options is not null)
+            {
+                return options;
+            }
+
+            var named = DataStoreContainerBuilder.NameRefusal(container.Name, container.Format, storeAddressesContainersAsFiles, Logger);
+            if (named is not null)
+            {
+                return named;
+            }
+        }
+
+        return null;
+    }
+
     private static List<(CreateDataStorePathContainerRequest Request, DataContainerConfiguration Container)> BuildPaths(
         TConfig target, IList<CreateDataStorePathRequest> paths)
     {
@@ -219,6 +248,9 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                     RecordSelector = containerRequest.RecordSelector,
                     FlattenNestedObjects = containerRequest.FlattenNestedObjects,
                     FlattenSeparator = containerRequest.FlattenSeparator,
+                    HasHeader = containerRequest.HasHeader,
+                    Separator = containerRequest.Separator,
+                    SheetName = containerRequest.SheetName,
                     ClassificationId = containerRequest.ClassificationId,
                     Fields = DataStoreContainerBuilder.Fields(containerRequest.Fields),
                 };

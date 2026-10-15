@@ -37,7 +37,11 @@ public class DataflowLayersTests
         };
 
     private static PipelineLineageRecord Pipeline(
-        string name, string? reads = null, string? writes = null, string? readsFrom = null, string? writesTo = null)
+        string name,
+        string? reads = null,
+        string? writes = null,
+        (string Store, string Container)? readsFrom = null,
+        (string Store, string Container)? writesTo = null)
         => new()
         {
             Id = Guid.NewGuid(),
@@ -45,8 +49,10 @@ public class DataflowLayersTests
             Implementation = "BatchCopy",
             SourceDataSet = reads,
             DestinationDataSet = writes,
-            SourceConnectionName = readsFrom,
-            DestinationConnectionName = writesTo
+            SourceDataStoreName = readsFrom?.Store,
+            SourceContainerName = readsFrom?.Container,
+            DestinationDataStoreName = writesTo?.Store,
+            DestinationContainerName = writesTo?.Container
         };
 
     private static DataflowGraphInputs Inputs(
@@ -198,15 +204,16 @@ public class DataflowLayersTests
     }
 
     [Fact]
-    public void SourcesLayer_DrawsOnlyTheSourcesOfReachableDataSetsAndThePipelinesConnections()
+    public void SourcesLayer_DrawsOnlyTheSourcesOfReachableDataSetsAndThePipelinesContainers()
     {
         var a = DataSet("A", Source("Store1", "Orders", "Conn1"));
         var b = DataSet("B", Source("Store1", "Audit", "Orphan"));
         var graph = DataflowSourcesLayer.Build(
-            Inputs([a, b], Pipeline("P", reads: "A", readsFrom: "Feed", writesTo: "Warehouse")));
+            Inputs([a, b], Pipeline("P", reads: "A", readsFrom: ("Feed", "feedOrders"), writesTo: ("Warehouse", "whOrders"))));
 
-        graph.Nodes.Where(n => n.NodeType == "connection").Select(n => n.Label).OrderBy(l => l, StringComparer.Ordinal)
-            .ShouldBe(["Conn1", "Feed", "Warehouse"]);
+        graph.Nodes.Where(n => n.NodeType == "connection").Select(n => n.Label).ShouldBe(["Conn1"]);
+        graph.Nodes.Where(n => n.NodeType == "container").Select(n => n.Label).OrderBy(l => l, StringComparer.Ordinal)
+            .ShouldBe(["feedOrders", "whOrders"]);
         graph.Stats.SourceCount.ShouldBe(1);
         graph.Edges.Select(e => e.RelationType).Distinct(StringComparer.Ordinal).OrderBy(r => r, StringComparer.Ordinal)
             .ShouldBe(["reads_from", "uses_connection", "uses_source", "writes_to"]);
@@ -216,7 +223,7 @@ public class DataflowLayersTests
     public void SourcesLayer_EdgesOnlyJoinNodesOfTheTwoLayers()
     {
         var a = DataSet("A", Source("Store1", "Orders", "Conn1"));
-        var inputs = Inputs([a], Pipeline("P", reads: "A", readsFrom: "Feed"));
+        var inputs = Inputs([a], Pipeline("P", reads: "A", readsFrom: ("Feed", "feedOrders")));
         var drawn = DataflowBaseLayer.Build(inputs).Nodes.Concat(DataflowSourcesLayer.Build(inputs).Nodes)
             .Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
 

@@ -10,7 +10,7 @@ namespace Fdw.Services.Etl.Abstractions;
 /// Dispatch is by name through <c>TransformationTypes.ByName(TransformType)</c> — there is no
 /// switch over transform names anywhere, and adding a transform means adding a TypeOption.
 /// </remarks>
-public interface IFieldMappingTransform
+public interface IFieldMappingTransformation
 {
     /// <summary>
     /// Gets the transform type name — must match a registered <c>TransformationTypes</c> option.

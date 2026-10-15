@@ -75,4 +75,14 @@ public interface IRecordSourceType : ITypeOption<int, RecordSourceTypeBase>
     /// Gets the data format this source handles (Tabular, Json, Xml).
     /// </summary>
     string Format { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether this format's file is bytes, not text (an Excel workbook is a zip).
+    /// </summary>
+    /// <remarks>
+    /// The read-side counterpart of <see cref="IRecordWriterType.WritesBinary"/>. A caller that holds a file's content
+    /// asks this before choosing how to read it: a text format is decoded and handed over as text, a binary one must
+    /// reach the reader as the file's own bytes.
+    /// </remarks>
+    bool ReadsBinary { get; }
 }

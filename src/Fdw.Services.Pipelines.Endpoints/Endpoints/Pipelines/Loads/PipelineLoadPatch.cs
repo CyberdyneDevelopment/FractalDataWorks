@@ -93,7 +93,7 @@ public static class PipelineLoadPatch
             return request.DestinationDataSet;
         }
 
-        return request.DestinationConnectionName is not null ? null : existing.DestinationDataSet;
+        return request.DestinationDataStoreName is not null ? null : existing.DestinationDataSet;
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public static class PipelineLoadPatch
     {
         if (request.Transforms is not null)
         {
-            return PipelineDraft.TransformExpressions(request.Transforms);
+            return PipelineDraft.StageFilterExpressions(request.Transforms);
         }
 
         return original is IEtlPipelineImplementationConfiguration { Transforms: { } stored }

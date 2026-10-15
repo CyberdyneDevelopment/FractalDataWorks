@@ -51,7 +51,6 @@ internal static class DataSetConfigurationFactory
         config.KeyFields = request.KeyFields
             .Select((name, i) => new DataSetKeyFieldConfiguration { KeyName = name, KeyType = "Surrogate", Ordinal = i })
             .ToList();
-        config.TransformExpression = request.TransformExpression;
         config.SourceDataSetName = request.SourceDataSetName;
         config.Fields = DataSetQueryHelper.MapFields(request.Fields);
         // Nothing exists yet on create, so no source has a prior identity to keep.

@@ -36,7 +36,7 @@ public abstract class GetTransformationEndpointBase : CrudGetEndpointBase<Transf
     }
 
     /// <inheritdoc />
-    protected override string ResourceName => "transforms";
+    protected override string ResourceName => "transformations";
 
     /// <inheritdoc />
     protected override string ReadPolicy => "datasets:read";
