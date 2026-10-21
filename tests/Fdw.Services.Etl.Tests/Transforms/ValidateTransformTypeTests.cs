@@ -22,7 +22,7 @@ public sealed class ValidateTransformTypeTests
         var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, value) in parameters)
             values[name] = value;
-        return new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), parameters: values);
+        return new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), parameters: values);
     }
 
     private static PipelineTransformConfiguration Stage(string? onFail, params (string Name, string Expression)[] checks) => new()
@@ -218,7 +218,6 @@ public sealed class ValidateTransformTypeTests
         // Assert
         owned["Filter"].ShouldBe("filterExpression");
         owned["Validate"].ShouldBe("checks,onFail");
-        owned["Map"].ShouldBe("fieldMappings,transformations");
         owned["Sort"].ShouldBe("sort");
         owned["LatestBy"].ShouldBe("latestBy");
         owned["Distinct"].ShouldBe("distinct");
@@ -358,8 +357,6 @@ public sealed class ValidateTransformTypeTests
         public int ExecutionOrder { get; set; }
 
         public bool IsEnabled { get; set; } = true;
-
-        public IReadOnlyList<IFieldMapping> FieldMappings { get; set; } = [];
 
         public IReadOnlyList<string> GroupByFields { get; set; } = [];
 

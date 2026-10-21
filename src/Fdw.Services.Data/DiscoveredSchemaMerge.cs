@@ -18,6 +18,12 @@ namespace Fdw.Services.Data;
 /// brought in line with it, and fields the source has and the container lacks are added.
 /// </para>
 /// <para>
+/// A field records two types (FDW-1588): <c>DataType</c> is the store's own (<c>nvarchar</c>), as the discovered field's
+/// <c>FieldType.TypeName</c> reports it, and <c>FrameworkDataType</c> is the portable type the store reads it as
+/// (<c>String</c>), the discovered field's <c>ExplicitType</c>. A store type FDW has no native type for leaves the portable
+/// type unstated for a person to state.
+/// </para>
+/// <para>
 /// A discovered field whose datum type identifies its record (a primary-key column is discovered as
 /// Identifier) becomes a key field of the container's Surrogate key, named <c>Surrogate_{Container}</c>
 /// (FDW-988).
@@ -94,7 +100,8 @@ internal static class DiscoveredSchemaMerge
     {
         Id = Guid.CreateVersion7(),
         Name = field.Name,
-        DataType = TypeNameOf(field.FieldType.ClrType),
+        DataType = field.FieldType.TypeName,
+        FrameworkDataType = field.ExplicitType?.Name,
         IsNullable = field.IsNullable,
         Ordinal = ordinal,
         IsSystemProvided = field.IsSystemProvided || field.IsIdentity || field.IsComputed,
@@ -102,10 +109,6 @@ internal static class DiscoveredSchemaMerge
         DatumTypeId = field.Role.Id,
         Description = field.Description,
     };
-
-    // A nullable column's CLR type is Nullable<T>; the field records T and says nullable separately.
-    private static string TypeNameOf(Type clrType)
-        => Nullable.GetUnderlyingType(clrType) is { } underlying ? underlying.Name : clrType.Name;
 
     // Why the datum type's IsKeyRole and not its name: a datum type says what a column's data is, a key
     // type says what a key is, and the two collections share no names. Before FDW-988 discovery gave a
@@ -141,8 +144,9 @@ internal static class DiscoveredSchemaMerge
         ];
     }
 
-    // A refresh re-reads the source, so a column whose type or nullability changed there changes here;
-    // everything else about the field (its id, ordinal, visibility, description) is left as it is.
+    // A refresh re-reads the source, so a column whose type or nullability changed there changes here, and a field discovered
+    // before FDW-1588 (a .NET name in DataType, no portable type) is repaired. A portable type already stated, by a person or
+    // by discovery, is never replaced. Everything else about the field (its id, ordinal, visibility, description) is left as it is.
     private static int UpdateExistingFields(DataContainerConfiguration existing, IStorageContainer source)
     {
         var updated = 0;
@@ -152,12 +156,16 @@ internal static class DiscoveredSchemaMerge
             if (match is null)
                 continue;
 
-            var dataType = TypeNameOf(field.FieldType.ClrType);
-            if (string.Equals(match.DataType, dataType, StringComparison.Ordinal) && match.IsNullable == field.IsNullable)
+            var portableUnstated = string.IsNullOrEmpty(match.FrameworkDataType) && field.ExplicitType is not null;
+            if (string.Equals(match.DataType, field.FieldType.TypeName, StringComparison.Ordinal)
+                && match.IsNullable == field.IsNullable
+                && !portableUnstated)
                 continue;
 
-            match.DataType = dataType;
+            match.DataType = field.FieldType.TypeName;
             match.IsNullable = field.IsNullable;
+            if (string.IsNullOrEmpty(match.FrameworkDataType) && field.ExplicitType is { } portable)
+                match.FrameworkDataType = portable.Name;
             updated++;
         }
 

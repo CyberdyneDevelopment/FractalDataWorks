@@ -29,7 +29,6 @@ public sealed class TransformContext : ITransformContext
     /// <param name="executionId">The parent pipeline execution ID.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="variables">Pipeline variables.</param>
-    /// <param name="fieldTransformChains">The transformer chains the run resolved for the field mappings of its Map stages, by mapping id. The caller states them: a run whose mappings state no chain passes an empty map, so what the run resolved is never assumed here.</param>
     /// <param name="calculationEngine">The calculation engine (optional).</param>
     /// <param name="connectionProvider">The connection provider (optional).</param>
     /// <param name="dataGateway">The data gateway for lookups (optional).</param>
@@ -42,7 +41,6 @@ public sealed class TransformContext : ITransformContext
         Guid executionId,
         ILogger logger,
         IReadOnlyDictionary<string, object?> variables,
-        IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> fieldTransformChains,
         object? calculationEngine = null,
         object? connectionProvider = null,
         object? dataGateway = null,
@@ -61,7 +59,6 @@ public sealed class TransformContext : ITransformContext
         Services = services ?? EmptyServiceProvider.Instance;
         CancellationToken = cancellationToken;
         Parameters = parameters is null ? EmptyParameters : parameters;
-        FieldTransformChains = fieldTransformChains;
         BuiltCalculations = builtCalculations is null ? NoBuiltCalculations : builtCalculations;
         BuiltSets = builtSets is null ? NoBuiltSets : builtSets;
     }
@@ -83,9 +80,6 @@ public sealed class TransformContext : ITransformContext
 
     /// <inheritdoc />
     public IReadOnlyDictionary<string, object?> Parameters { get; }
-
-    /// <inheritdoc />
-    public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> FieldTransformChains { get; }
 
     /// <inheritdoc />
     public IReadOnlyDictionary<Guid, ICompiledCalculation> BuiltCalculations { get; }

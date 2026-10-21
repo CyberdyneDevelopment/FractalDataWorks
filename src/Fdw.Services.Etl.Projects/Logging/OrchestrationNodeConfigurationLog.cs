@@ -25,7 +25,8 @@ public static partial class OrchestrationNodeConfigurationLog
     [MessageLogging(
         EventId = 21000,
         Level = LogLevel.Warning,
-        Message = "Validation failed for '{configurationType}' '{name}': {errors}")]
+        Message = "Validation failed for '{configurationType}' '{name}': {errors}",
+        ClientMessage = "{errors}")]
     public static partial IGenericMessage ValidationFailed(
         ILogger logger,
         string configurationType,

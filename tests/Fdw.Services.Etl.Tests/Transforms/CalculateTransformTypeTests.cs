@@ -24,7 +24,7 @@ public sealed class CalculateTransformTypeTests
     private readonly CalculateTransformType _sut = new();
 
     private static TransformContext CreateContext(object? calculationEngine = null) =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), calculationEngine: calculationEngine);
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), calculationEngine: calculationEngine);
 
     private static PipelineTransformConfiguration CreateConfig(params PipelineTransformCalculationConfiguration[] calculations) =>
         new() { Id = Guid.NewGuid(), Name = "Calc1", OperationType = "Calculate", Calculations = [.. calculations] };

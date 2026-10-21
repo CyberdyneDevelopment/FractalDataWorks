@@ -102,31 +102,10 @@ public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTransl
     }
 
     /// <summary>
-    /// Builds the dialect-correct fully-qualified table name from a database path.
-    /// Includes the database segment when present; omits the schema segment when the dialect
-    /// does not support a schema namespace (e.g., SQLite).
-    /// Examples:
-    /// <list type="bullet">
-    /// <item>TSql, database present: <c>[Database].[Schema].[Object]</c></item>
-    /// <item>TSql, no database: <c>[Schema].[Object]</c></item>
-    /// <item>SQLite (schemaless): <c>"Object"</c></item>
-    /// </list>
+    /// Builds the dialect-correct fully-qualified table name from a database path: <see cref="SqlNames.QualifiedTable"/>.
     /// </summary>
     /// <param name="path">The database path providing the three-part name and dialect.</param>
-    protected static string BuildQualifiedTableName(IDatabasePath path)
-    {
-        var dialect = path.Dialect;
-        var quotedObject = dialect.QuoteIdentifier(path.ObjectName);
-
-        if (!dialect.SupportsSchemaNamespace || string.IsNullOrEmpty(path.Schema))
-            return quotedObject;
-
-        var schemaQualified = $"{dialect.QuoteIdentifier(path.Schema)}.{quotedObject}";
-
-        return string.IsNullOrEmpty(path.Database)
-            ? schemaQualified
-            : $"{dialect.QuoteIdentifier(path.Database)}.{schemaQualified}";
-    }
+    protected static string BuildQualifiedTableName(IDatabasePath path) => SqlNames.QualifiedTable(path);
 
     /// <summary>
     /// Builds the schema-qualified (no database segment) table name.

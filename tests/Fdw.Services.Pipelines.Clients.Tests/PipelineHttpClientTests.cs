@@ -16,77 +16,6 @@ public sealed class PipelineHttpClientTests
         return new PipelineHttpClient(httpClient, Mock.Of<ILogger<PipelineHttpClient>>());
     }
 
-    // --- Validate ---
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
-    public async Task ValidateSendsPostRequestToValidatePathAndReadsTheProblems()
-    {
-        var response = new ValidatePipelineResponse
-        {
-            Problems = [new PipelineProblem { Stage = "Map1", Field = "FieldMappings[0].SourceField", Reason = "SourceField is required" }]
-        };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(response)
-        });
-        var sut = CreateClient(handler);
-
-        var result = await sut.ValidatePipeline(new CreatePipelineClientRequest { Name = "demo" }, TestContext.Current.CancellationToken);
-
-        handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/pipelines/validate");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value!.Problems.Count.ShouldBe(1);
-        result.Value.Problems[0].Stage.ShouldBe("Map1");
-        result.Value.Problems[0].Reason.ShouldBe("SourceField is required");
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
-    public async Task ValidateReadsAnEmptyProblemListAsACleanDraft()
-    {
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new ValidatePipelineResponse())
-        });
-        var sut = CreateClient(handler);
-
-        var result = await sut.ValidatePipeline(new CreatePipelineClientRequest { Name = "demo" }, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-        result.Value!.Problems.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
-    public async Task ValidateASavedPipelineSendsPostToItsNamedValidatePathAndReadsTheProblems()
-    {
-        var response = new ValidatePipelineResponse
-        {
-            Problems = [new PipelineProblem { Stage = "Upsert orders", Field = "Options.WriteColumns", Reason = "Column 'Nmae' is not on 'Orders'" }]
-        };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(response)
-        });
-        var sut = CreateClient(handler);
-
-        var result = await sut.ValidatePipeline("demo", new UpdatePipelineClientRequest { Description = "x" }, TestContext.Current.CancellationToken);
-
-        handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/pipelines/demo/validate");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
-        result.IsSuccess.ShouldBeTrue();
-        result.Value!.Problems.Count.ShouldBe(1);
-        result.Value.Problems[0].Stage.ShouldBe("Upsert orders");
-    }
-
     // --- List ---
 
     [Fact]
@@ -114,8 +43,8 @@ public sealed class PipelineHttpClientTests
     {
         var pipelines = new List<PipelineSummaryResponse>
         {
-            new() { Name = "demo-pipeline", PipelineType = "BatchCopy" },
-            new() { Name = "nfl-pipeline", PipelineType = "Streaming" }
+            new() { Name = "demo-pipeline", PipelineType = "Graph" },
+            new() { Name = "nfl-pipeline", PipelineType = "Graph" }
         };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -129,7 +58,7 @@ public sealed class PipelineHttpClientTests
         result.Value.ShouldNotBeNull();
         result.Value!.Count.ShouldBe(2);
         result.Value[0].Name.ShouldBe("demo-pipeline");
-        result.Value[0].PipelineType.ShouldBe("BatchCopy");
+        result.Value[0].PipelineType.ShouldBe("Graph");
         result.Value[1].Name.ShouldBe("nfl-pipeline");
     }
 
@@ -159,7 +88,7 @@ public sealed class PipelineHttpClientTests
         var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
             body = await request.Content!.ReadAsStringAsync(ct);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "BatchCopy" }) };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "Graph" }) };
         });
         var sut = CreateClient(handler);
 
@@ -181,7 +110,7 @@ public sealed class PipelineHttpClientTests
         var handler = new MockHttpMessageHandler(async (request, ct) =>
         {
             body = await request.Content!.ReadAsStringAsync(ct);
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "BatchCopy" }) };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PipelineDetailResponse { Name = "demo-pipeline", PipelineType = "Graph" }) };
         });
         var sut = CreateClient(handler);
 
@@ -200,10 +129,7 @@ public sealed class PipelineHttpClientTests
         {
             Id = Guid.NewGuid(),
             Name = "demo-pipeline",
-            PipelineType = "BatchCopy",
-            DestinationDataStoreName = "target-db",
-            DestinationDataStorePath = "etl",
-            DestinationContainerName = "orders",
+            PipelineType = "Graph",
             IsEnabled = true
         };
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
@@ -217,9 +143,7 @@ public sealed class PipelineHttpClientTests
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
         result.Value!.Name.ShouldBe("demo-pipeline");
-        result.Value.PipelineType.ShouldBe("BatchCopy");
-        result.Value.DestinationDataStoreName.ShouldBe("target-db");
-        result.Value.DestinationContainerName.ShouldBe("orders");
+        result.Value.PipelineType.ShouldBe("Graph");
         result.Value.IsEnabled.ShouldBeTrue();
     }
 

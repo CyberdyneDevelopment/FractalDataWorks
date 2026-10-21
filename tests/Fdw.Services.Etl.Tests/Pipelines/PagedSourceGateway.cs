@@ -23,11 +23,13 @@ internal sealed class PagedSourceGateway
     /// <param name="events">Receives one entry per gateway call, in call order.</param>
     /// <param name="failReads">Whether every read fails instead of returning a page.</param>
     /// <param name="onRead">Called with the requested skip after each read is recorded.</param>
+    /// <param name="ignoresPaging">Whether the source answers its whole set whatever skip and take it is asked for, as a source that cannot page does.</param>
     public PagedSourceGateway(
         IReadOnlyList<Dictionary<string, object?>> source,
         List<string> events,
         bool failReads = false,
-        Action<int>? onRead = null)
+        Action<int>? onRead = null,
+        bool ignoresPaging = false)
     {
         var gateway = new Mock<IDataGateway>();
 
@@ -44,7 +46,7 @@ internal sealed class PagedSourceGateway
                 IGenericResult<IEnumerable<Dictionary<string, object?>>> page = failReads
                     ? GenericResult<IEnumerable<Dictionary<string, object?>>>.Failure(new GenericMessage("source unavailable"))
                     : GenericResult<IEnumerable<Dictionary<string, object?>>>.Success(
-                        source.Skip(skip).Take(paging?.Take ?? int.MaxValue).ToList());
+                        (ignoresPaging ? source : source.Skip(skip).Take(paging?.Take ?? int.MaxValue)).ToList());
                 return Task.FromResult(page);
             });
 

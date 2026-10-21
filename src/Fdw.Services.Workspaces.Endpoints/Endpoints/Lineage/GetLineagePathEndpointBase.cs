@@ -21,10 +21,11 @@ public abstract class GetLineagePathEndpointBase : LineageEndpointBase<LineagePa
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IFrameworkAuthorizationService authorization)
-        : base(logger, dataSets, dataStores, pipelines, variations, workspaces, access, authorization)
+        : base(logger, dataSets, dataStores, pipelines, variations, categories, workspaces, access, authorization)
     {
     }
 
@@ -49,7 +50,7 @@ public abstract class GetLineagePathEndpointBase : LineageEndpointBase<LineagePa
         var missing = Missing(graph.Value!, query.Value!);
         return missing is not null
             ? MapRequestRefusals.NodeNotFound<LineagePathResponse>(LineageLogger, missing)
-            : await Answer(graph.Value!, query.Value!, ct).ConfigureAwait(false);
+            : Answer(graph.Value!, query.Value!);
     }
 
     private static string? Missing(LineageGraph graph, LineagePathQuery query)
@@ -58,16 +59,15 @@ public abstract class GetLineagePathEndpointBase : LineageEndpointBase<LineagePa
         return graph.Node(query.To) is null ? query.To : null;
     }
 
-    private async Task<IGenericResult<LineagePathResponse>> Answer(LineageGraph graph, LineagePathQuery query, CancellationToken ct)
+    private IGenericResult<LineagePathResponse> Answer(LineageGraph graph, LineagePathQuery query)
     {
         var walk = graph.Path(query.From, query.To, query.MaxDepth);
         var flows = new List<LineageFlow>();
         if (walk is not null) flows = walk.Flows;
 
-        var vias = await LineageResponses.Vias(Reader, graph, flows, true, ct).ConfigureAwait(false);
-        if (vias.IsFailure) return vias.ToNewResult<LineagePathResponse>();
+        var vias = LineageResponses.Vias(graph, flows, true);
 
         WorkspaceLineageLog.PathSearched(LineageLogger, query.From, query.To, query.MaxDepth, walk is null ? "not found" : "found");
-        return GenericResult<LineagePathResponse>.Success(LineageResponses.Path(walk, query.MaxDepth, vias.Value!));
+        return GenericResult<LineagePathResponse>.Success(LineageResponses.Path(walk, query.MaxDepth, vias));
     }
 }

@@ -133,11 +133,6 @@ public static partial class PipelineEndpointLog
         Message = "In {owner}: data set '{dataSet}' cannot be loaded or read by a load: {reason}")]
     public static partial IGenericMessage LoadDataSetUnusable(ILogger logger, string owner, string dataSet, string reason);
 
-    /// <summary>Logs truncateBeforeLoad stated true beside a load that does not truncate first.</summary>
-    [MessageLogging(EventId = 22016, Level = LogLevel.Warning,
-        Message = "truncateBeforeLoad is {truncate}, which disagrees with the load definition ({loadMode}); the load mode is the one definition and Replace means truncate then load")]
-    public static partial IGenericMessage TruncateDisagreesWithLoadMode(ILogger logger, bool truncate, string loadMode);
-
     /// <summary>Logs an Execute step whose data store could not be read.</summary>
     [MessageLogging(EventId = 22015, Level = LogLevel.Warning,
         Message = "In {owner}: data store '{dataStore}' could not be read: {reason}")]

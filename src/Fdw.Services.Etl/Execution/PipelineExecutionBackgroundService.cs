@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Extensions;
+using Fdw.Conventions;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Results;
@@ -11,6 +14,7 @@ using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines;
@@ -42,6 +46,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     private const string EtlSchemaPath = "etl";
 
     private readonly PipelineExecutionQueue _queue;
+    private readonly PipelineRunSlot _slot;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PipelineExecutionBackgroundService> _logger;
     private readonly IExecutionCompletionSignaler? _completionSignaler;
@@ -51,11 +56,13 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     /// </summary>
     public PipelineExecutionBackgroundService(
         PipelineExecutionQueue queue,
+        PipelineRunSlot slot,
         IServiceScopeFactory scopeFactory,
         ILogger<PipelineExecutionBackgroundService> logger,
         IExecutionCompletionSignaler? completionSignaler = null)
     {
         _queue = queue;
+        _slot = slot ?? throw new ArgumentNullException(nameof(slot));
         _scopeFactory = scopeFactory;
         _logger = logger ?? NullLogger<PipelineExecutionBackgroundService>.Instance;
         _completionSignaler = completionSignaler;
@@ -66,12 +73,31 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     {
         EtlLog.BackgroundExecutorStarted(_logger);
 
+        // Why each run on its own task: a run that waits for the pipeline it started has to leave the loop free to start that one.
+        // Why the slot is taken here: runs still start in the order they were queued and never overlap (FDW-1511).
+        List<Task> running = [];
         await foreach (var request in _queue.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
+        {
+            await _slot.Acquire(stoppingToken).ConfigureAwait(false);
+            running.RemoveAll(task => task.IsCompleted);
+            running.Add(Task.Run(() => RunHoldingSlot(request, stoppingToken), CancellationToken.None));
+        }
+
+        await Task.WhenAll(running).ConfigureAwait(false);
+        EtlLog.BackgroundExecutorStopping(_logger);
+    }
+
+    private async Task RunHoldingSlot(PipelineExecutionRequest request, CancellationToken stoppingToken)
+    {
+        _slot.MarkHeld();
+        try
         {
             await ProcessRequest(request, stoppingToken).ConfigureAwait(false);
         }
-
-        EtlLog.BackgroundExecutorStopping(_logger);
+        finally
+        {
+            _slot.Release();
+        }
     }
 
     private async Task ProcessRequest(PipelineExecutionRequest request, CancellationToken stoppingToken)
@@ -238,6 +264,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         }
     }
 
+    [ConventionOverride(MaxMethodLines = 95, MaxCyclomaticComplexity = 15)]  // One sequence of steps that each end the run with its reason: identity, pipeline, watermark read, execute, watermark write.
     private async Task RunPipeline(
         IServiceProvider services,
         IExecutionTracker executionTracker,
@@ -271,10 +298,34 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
 
         using var pipeline = pipelineResult.Value;
 
-        var executeResult = await ExecuteAs(services, runAs.Value, pipeline, request, stoppingToken).ConfigureAwait(false);
+        // Why the start instant is taken here: it is RunStarted for the run's steps and, after a successful run, the watermark the next run
+        // reads as LastSuccessfulRun, so the next run's window begins where this one's began.
+        var startedAt = DateTimeOffset.UtcNow;
+        var watermark = await ReadWatermark(dataGateways, request, stoppingToken).ConfigureAwait(false);
+        if (watermark.IsFailure)
+        {
+            await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
+                request.ExecutionId, request.PipelineName, orgId,
+                false, "WatermarkReadFailed", watermark.CurrentMessage, 0, 0, 0, 0).ConfigureAwait(false);
+            return;
+        }
+
+        var options = OptionsOf(request, startedAt, watermark.Value?.LastSuccessfulRun);
+        var executeResult = await ExecuteAs(services, runAs.Value, pipeline, options, stoppingToken).ConfigureAwait(false);
         if (executeResult.IsSuccess)
         {
             var metrics = executeResult.Value!;
+            var recorded = await RecordWatermark(dataGateways, request, watermark.Value, startedAt, stoppingToken).ConfigureAwait(false);
+            if (recorded.IsFailure)
+            {
+                await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
+                    request.ExecutionId, request.PipelineName, orgId,
+                    false, "WatermarkWriteFailed", recorded.CurrentMessage,
+                    metrics.RecordsExtracted, metrics.RecordsLoaded, metrics.RecordsFailed,
+                    (long)metrics.TotalDuration.TotalMilliseconds).ConfigureAwait(false);
+                return;
+            }
+
             await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                 request.ExecutionId, request.PipelineName, orgId,
                 true, "Success", null,
@@ -301,7 +352,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         IServiceProvider services,
         TenantRunAuthenticationContext runAs,
         IEtlPipeline pipeline,
-        PipelineExecutionRequest request,
+        PipelineExecutionOptions options,
         CancellationToken stoppingToken)
     {
         var accessor = services.GetRequiredService<IAuthenticationContextAccessor>();
@@ -311,13 +362,80 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         {
             // The run carries the parameters the trigger or schedule supplied and the tenant it acts for: the watermark is
             // kept per pipeline per tenant (FDW-1109).
-            var options = PipelineExecutionOptions.Production with { Parameters = request.Parameters, TenantId = request.TenantId };
+            // The run is the execution it was queued under, and a pipeline it starts acts with its roles (FDW-1381).
             return await pipeline.Execute(options, stoppingToken).ConfigureAwait(false);
         }
         finally
         {
             accessor.Current = bookkeeping;
         }
+    }
+
+    // The options a queued run executes with. A request that states a row cap per source is a test run: sources stop at the cap and no
+    // destination is written (FDW-1676); a request that states none is a real run.
+    internal static PipelineExecutionOptions OptionsOf(PipelineExecutionRequest request) => OptionsOf(request, null, null);
+
+    // The same, for a run the host started: it states when the run started (RunStarted) and, when the pipeline has a successful run on record,
+    // that run's start time as the LastSuccessfulRun parameter (FDW-1982). A LastSuccessfulRun the caller supplied is kept: it overrides the stored one.
+    internal static PipelineExecutionOptions OptionsOf(PipelineExecutionRequest request, DateTimeOffset? startedAt, DateTimeOffset? lastSuccessfulRun)
+    {
+        var parameters = request.Parameters;
+        if (lastSuccessfulRun is { } last && (parameters is null || !parameters.Keys.Any(key => string.Equals(key, RunFacts.LastSuccessfulRun, StringComparison.OrdinalIgnoreCase))))
+        {
+            var merged = parameters is null
+                ? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, object?>(parameters, StringComparer.OrdinalIgnoreCase);
+            merged[RunFacts.LastSuccessfulRun] = last;
+            parameters = merged;
+        }
+
+        var options = PipelineExecutionOptions.Production with
+        {
+            Parameters = parameters,
+            RunStarted = startedAt,
+            TenantId = request.TenantId,
+            ExecutionId = request.ExecutionId,
+            RunRoles = request.RunRoles
+        };
+        return request.TestRowsPerSource is { } rows
+            ? options with { IsTestMode = true, MaxRowsPerSource = rows, SkipDestinationWrites = true }
+            : options;
+    }
+
+    // The pipeline's watermark row for the run's tenant, read once as the run starts. ResolveTenantRun has already refused a run with no tenant, so
+    // a request without one is refused here too and never reads a row for a made-up tenant.
+    private async Task<IGenericResult<EtlPipelineWatermarkRecord?>> ReadWatermark(
+        IDataGatewayProvider dataGateways, PipelineExecutionRequest request, CancellationToken stoppingToken)
+    {
+        if (request.TenantId is not { } tenantId)
+        {
+            return GenericResult<EtlPipelineWatermarkRecord?>.Failure(
+                EtlLog.ExecutionRefusedNoTenant(_logger, request.ExecutionId, request.PipelineName));
+        }
+
+        return await PipelineWatermarks.Read(
+            dataGateways.ByName("Main"), EtlPipelineTypes.OperationalConnection, request.PipelineId, tenantId, request.PipelineName, _logger, stoppingToken)
+            .ConfigureAwait(false);
+    }
+
+    // A real run that succeeded moves the watermark to when it started. A test run writes nothing, so it never moves it.
+    private async Task<IGenericResult> RecordWatermark(
+        IDataGatewayProvider dataGateways, PipelineExecutionRequest request, EtlPipelineWatermarkRecord? existing, DateTimeOffset startedAt,
+        CancellationToken stoppingToken)
+    {
+        if (request.TestRowsPerSource is not null)
+        {
+            return GenericResult.Success();
+        }
+
+        if (request.TenantId is not { } tenantId)
+        {
+            return GenericResult.Failure(EtlLog.ExecutionRefusedNoTenant(_logger, request.ExecutionId, request.PipelineName));
+        }
+
+        return await PipelineWatermarks.Record(
+            dataGateways.ByName("Main"), EtlPipelineTypes.OperationalConnection, existing, request.PipelineId, tenantId, startedAt, request.ExecutionId,
+            request.PipelineName, _logger, stoppingToken).ConfigureAwait(false);
     }
 
     // The identity a run's work acts as (FDW-1087): the pipeline's tenant and the roles that tenant recorded

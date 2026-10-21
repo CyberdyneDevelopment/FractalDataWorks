@@ -34,23 +34,4 @@ public sealed class PipelineRunRolesClientRequestTests
     {
         new TriggerPipelineRequest().RunRoles.ShouldBeNull();
     }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void APipelinesOwnRequestsStateNoRunRoles()
-    {
-        JsonSerializer.Serialize(new CreatePipelineClientRequest(), Web).ShouldNotContain("runRoles");
-        JsonSerializer.Serialize(new UpdatePipelineClientRequest(), Web).ShouldNotContain("runRoles");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "CoreFramework")]
-    public void ARunRolesMemberSentToAPipelineIsNotRead()
-    {
-        var read = JsonSerializer.Deserialize<UpdatePipelineClientRequest>("""{"description":"x","runRoles":["Admin"]}""", Web);
-
-        JsonSerializer.Serialize(read, Web).ShouldNotContain("runRoles");
-    }
 }

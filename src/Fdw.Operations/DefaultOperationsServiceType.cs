@@ -26,6 +26,8 @@ using Fdw.Results;
 using Fdw.Services.Results;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Operations.Abstractions.Audit;
+using Fdw.Operations.Audit;
 
 namespace Fdw.Operations;
 
@@ -70,6 +72,10 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
                     sp.GetRequiredService<IDataGatewayProvider>(), lf, sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     OperationsServiceTypes.OperationalConnection, notificationProvider, ruleProvider);
             });
+
+            builder.Services.TryAddScoped<IAdministrativeAudit>(sp => new AdministrativeAuditService(
+                sp.GetRequiredService<IDataGatewayProvider>(), sp.GetRequiredService<ILoggerFactory>(),
+                sp.GetRequiredService<IAuthenticationContextAccessor>(), OperationsServiceTypes.OperationalConnection));
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>
             {

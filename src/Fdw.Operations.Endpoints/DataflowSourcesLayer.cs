@@ -56,8 +56,11 @@ internal static class DataflowSourcesLayer
 
     private static void AddPipelineConnections(DataflowGraphDraft draft, PipelineLineageRecord pipeline)
     {
-        AddPipelineContainer(draft, pipeline, pipeline.SourceDataStoreName, pipeline.SourceContainerName, reads: true);
-        AddPipelineContainer(draft, pipeline, pipeline.DestinationDataStoreName, pipeline.DestinationContainerName, reads: false);
+        foreach (var container in pipeline.ContainersRead)
+            AddPipelineContainer(draft, pipeline, container.DataStoreName, container.ContainerName, reads: true);
+
+        foreach (var container in pipeline.ContainersWritten)
+            AddPipelineContainer(draft, pipeline, container.DataStoreName, container.ContainerName, reads: false);
     }
 
     // A pipeline's data store source or destination is drawn as the container it names (FDW-1269).

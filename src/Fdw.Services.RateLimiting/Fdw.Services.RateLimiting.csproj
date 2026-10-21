@@ -26,6 +26,8 @@
 
     <!-- MessageLogging source generator -->
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
+    <ProjectReference Include="..\Fdw.Claims.Abstractions\Fdw.Claims.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

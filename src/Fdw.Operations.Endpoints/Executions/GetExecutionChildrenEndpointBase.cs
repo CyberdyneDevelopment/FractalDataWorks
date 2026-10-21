@@ -83,27 +83,10 @@ public abstract class GetExecutionChildrenEndpointBase : Endpoint<ExecutionIdReq
 
         var childDtos = children
             .OrderBy(c => c.CreatedAt)
-            .Select(MapToSummaryDto)
+            .Select(ExecutionSummaryResponse.Of)
             .ToList();
 
         await Send.OkAsync(childDtos, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Maps an execution item to a summary DTO.
-    /// </summary>
-    protected virtual ExecutionSummaryResponse MapToSummaryDto(IExecutionItem item)
-    {
-        return new ExecutionSummaryResponse
-        {
-            Id = item.Id,
-            ItemType = item.ItemType.Name,
-            Name = item.Name,
-            State = item.State.Name,
-            CorrelationId = item.CorrelationId,
-            CreatedAt = item.CreatedAt,
-            CompletedAt = item.CompletedAt
-        };
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class AfterStageRunPoint : RunPointBase
 {
     /// <summary>Initializes a new instance of the <see cref="AfterStageRunPoint"/> class.</summary>
-    public AfterStageRunPoint() : base("AfterStage", "After the last page", "Once, after the last page has been transformed and loaded; for a Streaming pipeline, when the stream ends", firesAfterStage: true, firesAfterLoad: false, firesOnFailure: false)
+    public AfterStageRunPoint() : base("AfterStage", "After the last page", "Once, after the last page has been transformed and loaded", firesAfterStage: true, firesAfterLoad: false, firesOnFailure: false)
     {
     }
 }

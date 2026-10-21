@@ -168,6 +168,9 @@ public sealed class ConfigurationCacheIsolationTests
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => throw new NotSupportedException("Transactions are not used by configuration reads.");
 
+        public Task<IGenericResult<T>> Execute<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException("Vectorized commands are not used by configuration reads.");
+
         // Why: the schema tree mirrors ConfigurationDb's data.* schema. Each OWNER container (DataStore,
         // DataPath) carries the Physical (RowId) + Logical (Id) keys the cascade resolves to build the
         // child JOIN; the leaf DataContainer is given the same keys so a nested recurse into it never

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Results;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +25,7 @@ public static class PipelineParameterCheck
         IList<PipelineParameterValue>? supplied,
         ILogger logger)
     {
-        var rows = declared is null ? null : (IList<PipelineRunParameterConfiguration>)[.. declared.Select(ToRow)];
+        var rows = declared is null ? null : (IReadOnlyList<IPipelineRunParameter>)[.. declared.Select(ToRow)];
         var values = supplied is null
             ? []
             : (IReadOnlyList<KeyValuePair<string, string>>)[.. supplied.Select(v => new KeyValuePair<string, string>(v.Name, v.Value))];
@@ -32,11 +33,14 @@ public static class PipelineParameterCheck
         return resolved.IsFailure ? resolved : GenericResult.Success();
     }
 
-    private static PipelineRunParameterConfiguration ToRow(PipelineParameterDeclaration declaration) => new()
+    // The graph's parameter record, because it is the one that states a list (FDW-1745); the old run-parameter row cannot.
+    private static PipelineParameterConfiguration ToRow(PipelineParameterDeclaration declaration) => new()
     {
         Name = declaration.Name,
         ParameterType = declaration.Type,
         IsRequired = declaration.Required,
+        IsList = declaration.IsList,
+        ShowsValue = declaration.ShowsValue,
         Description = declaration.Description,
     };
 }

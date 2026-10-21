@@ -2,7 +2,7 @@ namespace Fdw.Services.Scheduling.Abstractions;
 
 /// <summary>
 /// Command to create a new schedule. Translated by each implementation's own translator into that
-/// implementation's native call (e.g. Quartz's <c>ScheduleJob</c>, Hangfire's <c>AddOrUpdate</c>).
+/// implementation's native call (e.g. Quartz's <c>ScheduleJob</c>).
 /// </summary>
 public sealed class CreateScheduleCommand : SchedulingCommandBase
 {

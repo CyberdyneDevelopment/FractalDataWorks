@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Etl.Graphs;
 using Shouldly;
 using Xunit;
 
@@ -17,11 +18,15 @@ public class DataflowLayersTests
 {
     private static (DataSetRecord Record, SimpleDataSetConfiguration Owner) DataSet(
         string name, params DataSetSourceConfiguration[] sources)
+        => DataSet(name, null, sources);
+
+    private static (DataSetRecord Record, SimpleDataSetConfiguration Owner) DataSet(
+        string name, Guid? categoryId, params DataSetSourceConfiguration[] sources)
     {
         var id = Guid.NewGuid();
         return (
-            new DataSetRecord { Id = id, Name = name, Category = "Test" },
-            new SimpleDataSetConfiguration { Id = id, Name = name, Sources = sources.ToList() });
+            new DataSetRecord { Id = id, Name = name },
+            new SimpleDataSetConfiguration { Id = id, Name = name, CategoryId = categoryId, Sources = sources.ToList() });
     }
 
     private static DataSetSourceConfiguration Source(
@@ -42,18 +47,22 @@ public class DataflowLayersTests
         string? writes = null,
         (string Store, string Container)? readsFrom = null,
         (string Store, string Container)? writesTo = null)
-        => new()
-        {
-            Id = Guid.NewGuid(),
-            Name = name,
-            Implementation = "BatchCopy",
-            SourceDataSet = reads,
-            DestinationDataSet = writes,
-            SourceDataStoreName = readsFrom?.Store,
-            SourceContainerName = readsFrom?.Container,
-            DestinationDataStoreName = writesTo?.Store,
-            DestinationContainerName = writesTo?.Container
-        };
+    {
+        List<PipelineUse> uses = [];
+        if (reads is not null)
+            uses.Add(new PipelineUse(PipelineUseRelations.Reads, PipelineUseKinds.DataSet, reads, []));
+
+        if (writes is not null)
+            uses.Add(new PipelineUse(PipelineUseRelations.Writes, PipelineUseKinds.DataSet, writes, []));
+
+        if (readsFrom is { } from)
+            uses.Add(new PipelineUse(PipelineUseRelations.Reads, PipelineUseKinds.Container, from.Container, [from.Store]));
+
+        if (writesTo is { } to)
+            uses.Add(new PipelineUse(PipelineUseRelations.Writes, PipelineUseKinds.Container, to.Container, [to.Store]));
+
+        return new() { Id = Guid.NewGuid(), Name = name, Implementation = "Graph", Uses = uses };
+    }
 
     private static DataflowGraphInputs Inputs(
         IReadOnlyList<(DataSetRecord Record, SimpleDataSetConfiguration Owner)> dataSets,
@@ -69,7 +78,8 @@ public class DataflowLayersTests
             [new DataStoreRecord { Id = Guid.NewGuid(), Name = "Store1", Implementation = "MsSql" }],
             dataSets.Select(d => (IDataSetImplementationConfiguration)d.Owner).ToList(),
             pipelines,
-            variations);
+            variations,
+            dataSets.ToDictionary(d => d.Owner.Id, d => d.Owner.CategoryId is null ? null : "Sports / NFL"));
 
     private static DataSetVariationDomainConfiguration Variation(string name, Guid baseDataSetId, string implementation = "Scoped")
         => new()
@@ -96,6 +106,41 @@ public class DataflowLayersTests
         graph.Nodes.ShouldAllBe(n => !n.Metadata.ContainsKey("connectionName"));
         graph.Stats.SourceCount.ShouldBe(0);
         graph.Stats.ConnectionCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public void BaseLayer_NamesThePathOfTheCategoryADataSetSitsUnder()
+    {
+        var sorted = DataSet("A", Guid.NewGuid(), Source("Store1", "Orders", "Conn1"));
+        var unsorted = DataSet("B", Source("Store1", "Orders", "Conn1"));
+        var graph = DataflowBaseLayer.Build(Inputs([sorted, unsorted], Pipeline("P", reads: "A", writes: "B")));
+
+        graph.Nodes.Single(n => n.NodeType == "dataset" && n.Label == "A").Category.ShouldBe("Sports / NFL");
+        graph.Nodes.Single(n => n.NodeType == "dataset" && n.Label == "B").Category.ShouldBeNull();
+    }
+
+    [Fact]
+    public void BaseLayer_DrawsADataSetNodeFromTheDataSetItself()
+    {
+        var a = DataSet("A", Source("Store1", "Orders", "Conn1"));
+        a.Owner.Version = "2.3";
+        a.Owner.Description = "Orders placed online";
+        var graph = DataflowBaseLayer.Build(Inputs([a], Pipeline("P", reads: "A")));
+
+        var node = graph.Nodes.Single(n => n.NodeType == "dataset");
+        node.Metadata["version"].ShouldBe("2.3");
+        node.Metadata["description"].ShouldBe("Orders placed online");
+    }
+
+    [Fact]
+    public void BaseLayer_LeavesOutDescriptionAndRecordTypeADataSetDoesNotHold()
+    {
+        var a = DataSet("A", Source("Store1", "Orders", "Conn1"));
+        var graph = DataflowBaseLayer.Build(Inputs([a], Pipeline("P", reads: "A")));
+
+        var node = graph.Nodes.Single(n => n.NodeType == "dataset");
+        node.Metadata.ContainsKey("description").ShouldBeFalse();
+        node.Metadata.ContainsKey("recordType").ShouldBeFalse();
     }
 
     [Fact]

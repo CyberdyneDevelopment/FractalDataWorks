@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Users.Clients.Models;
 using Fdw.Services.Users.Configuration;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Users.Endpoints;
 
@@ -160,6 +161,9 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         if (!partial && await SendConflict(result, ct).ConfigureAwait(false))
             return;
 
+        if (!partial && await SendForbidden(result).ConfigureAwait(false))
+            return;
+
         await Send.ResultAsync(TypedResults.Json(new
         {
             errorCode = partial ? "UserPartiallyCreated" : "CreateUserFailed",
@@ -168,6 +172,18 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             created = partial ? details!["created"] : null,
             failed = partial ? details!["failed"] : null
         }, statusCode: partial ? 500 : 400)).ConfigureAwait(false);
+    }
+
+    // A refusal in the Forbidden band (the caller may not give a role, FDW-1577) answers 403 with its own code, not the
+    // general 400: the request is well formed and the caller is signed in. Returns whether one was sent.
+    private async Task<bool> SendForbidden(IGenericResult<UserCreated> result)
+    {
+        var (statusCode, problem) = ResultHttpStatusMapper.Map(result, HttpContext);
+        if (statusCode != StatusCodes.Status403Forbidden)
+            return false;
+
+        await Send.ResultAsync(TypedResults.Json(problem, statusCode: statusCode)).ConfigureAwait(false);
+        return true;
     }
 
     // The refusals that answer 409, each scoped to its own field so a client can tell them apart.
@@ -247,6 +263,15 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
         var usable = await MethodsAreUsable(methods, ct).ConfigureAwait(false);
         if (usable.IsFailure)
             return usable.ToNewResult<UserCreated>();
+
+        // Why before anything is written: the caller may give a new account only the roles whose rights they hold
+        // themselves (FDW-1577), the same rule as assigning a role to an existing one. An empty list gives nothing.
+        if (request.Roles!.Count > 0)
+        {
+            var allowed = await Resolve<IGrantRule>().CanGive([.. request.Roles], tenantId, ct).ConfigureAwait(false);
+            if (allowed.IsFailure)
+                return allowed.ToNewResult<UserCreated>();
+        }
 
         // Validated present before the handler runs; an empty list is an account with no roles.
         var passwordUsable = await PasswordIsUsable(request.Username, methods, request.Roles!, ct).ConfigureAwait(false);

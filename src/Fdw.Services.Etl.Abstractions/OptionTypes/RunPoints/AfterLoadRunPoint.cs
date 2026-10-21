@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class AfterLoadRunPoint : RunPointBase
 {
     /// <summary>Initializes a new instance of the <see cref="AfterLoadRunPoint"/> class.</summary>
-    public AfterLoadRunPoint() : base("AfterLoad", "After the load", "Once, after the load commits and the watermark is stored; for a Streaming pipeline, when the stream ends", firesAfterStage: false, firesAfterLoad: true, firesOnFailure: false)
+    public AfterLoadRunPoint() : base("AfterLoad", "After the load", "Once, after the load commits and the watermark is stored", firesAfterStage: false, firesAfterLoad: true, firesOnFailure: false)
     {
     }
 }

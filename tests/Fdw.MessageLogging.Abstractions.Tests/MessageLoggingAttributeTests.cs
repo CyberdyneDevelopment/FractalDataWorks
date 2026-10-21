@@ -26,6 +26,7 @@ public class MessageLoggingAttributeTests
         attribute.SkipEnabledCheck.ShouldBeFalse();
         attribute.Severity.ShouldBe(MessageSeverity.Information);
         attribute.AutoMapSeverity.ShouldBeTrue();
+        attribute.ClientMessage.ShouldBeNull();
     }
 
     [Fact]
@@ -167,6 +168,17 @@ public class MessageLoggingAttributeTests
 
         // Assert
         attribute.AutoMapSeverity.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "CoreFramework")]
+    public void AClientMessageTemplateCanBeSetBesideTheLogTemplate()
+    {
+        var attribute = new MessageLoggingAttribute { Message = "[Releases] Refused {operation}: {reason}", ClientMessage = "{reason}" };
+
+        attribute.ClientMessage.ShouldBe("{reason}");
+        attribute.Message.ShouldBe("[Releases] Refused {operation}: {reason}");
     }
 
     [Fact]

@@ -32,18 +32,6 @@ public sealed class TypeCollectionValueSummaryDto
     public IReadOnlyList<TypeCollectionValueParameterDto> Parameters { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets how many stages of this kind may nest inside one another (FDW-1120); null for an option that holds no
-    /// stages of its own. Only a Branch stage states it today.
-    /// </summary>
-    public int? MaxDepth { get; set; }
-
-    /// <summary>
-    /// Gets or sets the names of the pipeline types this option runs on (FDW-1120 phase 4), as a pipeline's pipelineType states
-    /// them; null for an option that runs on every pipeline type.
-    /// </summary>
-    public IReadOnlyList<string>? PipelineTypes { get; set; }
-
-    /// <summary>
     /// Gets or sets whether this option can write the records a pipeline's stages rejected (FDW-1148); null for an option that
     /// does not say. A load step kind states it, and a reject step may use only a kind that does.
     /// </summary>
@@ -54,4 +42,41 @@ public sealed class TypeCollectionValueSummaryDto
     /// say, an empty list for one that reserves none. The Reject load phase states the two a reject step's destination needs.
     /// </summary>
     public IReadOnlyList<string>? ReservedColumns { get; set; }
+
+    /// <summary>
+    /// Gets or sets the input nodes of a component kind (FDW-1395); null for an option that is not a component kind, an empty
+    /// list for a kind with no inputs, which is a source.
+    /// </summary>
+    public IReadOnlyList<TypeCollectionValueNodeDto>? Inputs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the output nodes of a component kind, error outputs included (FDW-1395); null for an option that is not a
+    /// component kind, an empty list for a kind with no outputs, which is a destination.
+    /// </summary>
+    public IReadOnlyList<TypeCollectionValueNodeDto>? Outputs { get; set; }
+
+    /// <summary>
+    /// Gets or sets the colour a console draws an option in (neutral, info, success, warning or error) when the option states one (FDW-2142); null otherwise.
+    /// </summary>
+    public string? Color { get; set; }
+
+    /// <summary>Gets or sets the rank of an option that has a place in an order; higher is more urgent (FDW-2142); null otherwise.</summary>
+    public int? Rank { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether an alert about something of this kind stays until a person acknowledges it (FDW-2142); null for an option with no such rule.
+    /// </summary>
+    public bool? NeedsAcknowledgement { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a component kind is an action or a loop (FDW-2041): it moves no rows and has no nodes; null for an option that
+    /// is not a component kind.
+    /// </summary>
+    public bool? IsAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a component kind is a loop, which runs the components that name it as their parent (FDW-2041); null for an
+    /// option that is not a component kind.
+    /// </summary>
+    public bool? HoldsComponents { get; set; }
 }

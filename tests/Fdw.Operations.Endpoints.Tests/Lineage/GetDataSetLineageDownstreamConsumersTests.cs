@@ -11,7 +11,7 @@ using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl;
-using Fdw.Services.Etl.Pipelines;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -38,37 +38,45 @@ public class GetDataSetLineageDownstreamConsumersTests
 {
     private sealed class TestableEndpoint(
         DataSetConfigurationProvider dataSets, PipelineServiceConfigurationProvider provider,
-        ICalculationConfigurationProvider calculations, LineageConfigurationProvider lineage,
-        ILogger<GetDataSetLineageEndpointBase> logger)
-        : GetDataSetLineageEndpointBase(dataSets, provider, calculations, lineage, logger)
+        ICalculationConfigurationProvider calculations, ILogger<GetDataSetLineageEndpointBase> logger)
+        : GetDataSetLineageEndpointBase(dataSets, provider, calculations, logger)
     {
         public Task<IReadOnlyList<LineageConsumerResponse>> InvokeBuildDownstreamConsumers(string dataSetName, CancellationToken ct) =>
             BuildDownstreamConsumers(dataSetName, ct);
     }
 
-    private static BatchCopyPipelineConfiguration ComposedPipeline(string name, string sourceDataSet, string destinationDataSet) => new()
+    private static GraphPipelineConfiguration ComposedPipeline(string name, string? reads, string? writes)
     {
-        Id = Guid.NewGuid(),
-        Name = name,
-        Domain = "Pipeline",
-        Implementation = "BatchCopy",
-        IsEnabled = true,
-        SourceDataSet = sourceDataSet,
-        DestinationDataSet = destinationDataSet,
-    };
+        List<PipelineComponentConfiguration> components = [];
+        if (reads is not null)
+            components.Add(new PipelineComponentConfiguration { Name = "src", ComponentType = "DataSetSource", DataSetName = reads });
+
+        if (writes is not null)
+            components.Add(new PipelineComponentConfiguration { Name = "out", ComponentType = "DataSetDestination", DataSetName = writes });
+
+        return new()
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Domain = "Pipeline",
+            Implementation = "Graph",
+            IsEnabled = true,
+            Components = components,
+        };
+    }
 
     // The providers are sealed and their reads are not virtual, so nothing can stand in for one. The
     // pipeline provider here is the real one: it reads the domain rows a faked store holds and dispatches
     // each to the implementation provider registered for its Implementation, the path production takes.
     // BuildDownstreamConsumers reads only through it; the DataSet provider is a constructor dependency.
-    private static TestableEndpoint CreateEndpoint(params BatchCopyPipelineConfiguration[] pipelines)
+    private static TestableEndpoint CreateEndpoint(params GraphPipelineConfiguration[] pipelines)
     {
         var gateway = new Mock<IConfigurationGateway>();
         gateway
             .Setup(g => g.Execute<IEnumerable<DomainConfiguration>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<DomainConfiguration>>.Success(pipelines
-                .Select(p => new DomainConfiguration { Id = p.Id, Name = p.Name, Domain = "Pipeline", Implementation = "BatchCopy" })
+                .Select(p => new DomainConfiguration { Id = p.Id, Name = p.Name, Domain = "Pipeline", Implementation = "Graph" })
                 .ToList()));
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways
@@ -90,7 +98,7 @@ public class GetDataSetLineageDownstreamConsumersTests
 
         var provider = new PipelineServiceConfigurationProvider(
             NullLogger<PipelineServiceConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "pipe", "Pipeline");
-        provider.Register("BatchCopy", implementations.Object);
+        provider.Register("Graph", implementations.Object);
 
         var dataSets = new DataSetConfigurationProvider(
             NullLogger<DataSetConfigurationProvider>.Instance, gateways.Object, "PlatformConfiguration", "data", "DataSet");
@@ -102,30 +110,29 @@ public class GetDataSetLineageDownstreamConsumersTests
             .ReturnsAsync(GenericResult<IReadOnlyList<ICalculationEntityImplementationConfiguration>>.Success([]));
 
         return new TestableEndpoint(
-            dataSets, provider, calculations.Object, new LineageConfigurationProvider(gateways.Object, dataSets),
-            NullLogger<GetDataSetLineageEndpointBase>.Instance);
+            dataSets, provider, calculations.Object, NullLogger<GetDataSetLineageEndpointBase>.Instance);
     }
 
     [Fact]
     public async Task DownstreamConsumersPopulatedWhenPipelineConsumesDataSet()
     {
-        var pipeline = ComposedPipeline("Consumer1", "UsgsDailySink", string.Empty);
+        var pipeline = ComposedPipeline("Consumer1", "UsgsDailySink", null);
 
         var consumers = await CreateEndpoint(pipeline)
             .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
 
-        consumers.ShouldContain(c => c.Name == "Consumer1" && c.ConsumerType.Contains("Pipeline (", StringComparison.Ordinal));
+        consumers.ShouldContain(c => c.Name == "Consumer1" && c.ConsumerType == "Pipeline (Graph)");
     }
 
     [Fact]
     public async Task DownstreamConsumersPopulatedWhenPipelineProducesDataSet()
     {
-        var pipeline = ComposedPipeline("Producer1", string.Empty, "UsgsDailySink");
+        var pipeline = ComposedPipeline("Producer1", null, "UsgsDailySink");
 
         var consumers = await CreateEndpoint(pipeline)
             .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
 
-        consumers.ShouldContain(c => c.Name == "Producer1" && c.ConsumerType.Contains("Producer", StringComparison.Ordinal));
+        consumers.ShouldContain(c => c.Name == "Producer1" && c.ConsumerType == "Pipeline Producer (Graph)");
     }
 
     [Fact]
@@ -137,5 +144,33 @@ public class GetDataSetLineageDownstreamConsumersTests
             .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
 
         consumers.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AGraphThatReadsSeveralDataSetsIsAConsumerOfEachOfThem()
+    {
+        var pipeline = ComposedPipeline("Joiner", "UsgsDailySink", "Summary");
+        pipeline.Components.Add(
+            new PipelineComponentConfiguration { Name = "second", ComponentType = "DataSetSource", DataSetName = "Teams" });
+
+        var endpoint = CreateEndpoint(pipeline);
+
+        var first = await endpoint.InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
+        var second = await endpoint.InvokeBuildDownstreamConsumers("Teams", TestContext.Current.CancellationToken);
+
+        first.ShouldContain(c => c.Name == "Joiner" && c.ConsumerType == "Pipeline (Graph)");
+        second.ShouldContain(c => c.Name == "Joiner" && c.ConsumerType == "Pipeline (Graph)");
+    }
+
+    [Fact]
+    public async Task AGraphThatReadsAndWritesTheSameDataSetIsListedOnceAsAConsumer()
+    {
+        var pipeline = ComposedPipeline("Rewriter", "UsgsDailySink", "UsgsDailySink");
+
+        var consumers = await CreateEndpoint(pipeline)
+            .InvokeBuildDownstreamConsumers("UsgsDailySink", TestContext.Current.CancellationToken);
+
+        consumers.Count(c => c.Name == "Rewriter").ShouldBe(1);
+        consumers.ShouldContain(c => c.ConsumerType == "Pipeline (Graph)");
     }
 }

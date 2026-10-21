@@ -13,8 +13,8 @@ public sealed class CreateDataSetPayload
     public string? Description { get; set; }
     /// <summary>Gets or sets the version.</summary>
     public string Version { get; set; } = "1.0";
-    /// <summary>Gets or sets the category.</summary>
-    public string Category { get; set; } = "Standard";
+    /// <summary>Gets or sets the name of the DataSet category the data set sits under; left out, it sits under none.</summary>
+    public string? Category { get; set; }
     /// <summary>Gets or sets the service option type.</summary>
     public string Implementation { get; set; } = "Standard";
     /// <summary>Gets or sets the record type name.</summary>

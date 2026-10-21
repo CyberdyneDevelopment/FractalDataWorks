@@ -15,7 +15,6 @@ An endpoint is an HTTP orchestrator. It does not open a gateway, and it does not
 | `CreateEscalationPolicyEndpointBase` | class | Abstract endpoint that creates an escalation policy. |
 | `DeleteEscalationPolicyEndpointBase` | class | Abstract endpoint that deletes an escalation policy. |
 | `DenyAgentActionEndpointBase` | class | Abstract endpoint that denies a pending agent action. |
-| `ExpandLineageNodeEndpointBase` | class | Abstract endpoint that expands a single lineage node, returning its direct (one-hop) upstream and… |
 | `GetAgentActionEndpointBase` | class | Abstract endpoint that gets a single agent action by ID. |
 | `GetAnalyticsEndpointBase` | class | Base endpoint for getting analytics summary for a time period. Route: GET /analytics |
 | `GetChildConfigurationTypesEndpoint` | class | Tier 2 default endpoint to list child configuration types for a parent. |
@@ -45,7 +44,6 @@ Endpoint-layer models are named `Request` / `Response`; the client layer names i
 | `ExecutionIdRequest` | class | Request for getting an execution by ID. |
 | `ExecutionStateRequest` | class | Request for state transition operations (cancel, pause, resume). |
 | `ExecutionSummaryResponse` | class | Summary execution information for listing. |
-| `ExpandLineageNodeRequest` | class | Request to expand a single lineage node, returning its direct upstream and downstream neighbors. Bound… |
 | `FieldConsumerResponse` | class | A downstream consumer of a field: another dataset's field, a pipeline step, or a calculation that reads… |
 
 ## Installation
@@ -56,7 +54,7 @@ dotnet add package Fdw.Operations.Endpoints --prerelease
 
 ## Dependencies
 
-`Fdw.Collections` · `Fdw.Commands.Data.Extensions` · `Fdw.Configuration` · `Fdw.Data.Abstractions` · `Fdw.Data.Lineage` · `Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Services.Abstractions` · `Fdw.Services.Agents.Abstractions` · `Fdw.Services.Audit.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Etl` · `Fdw.Services.Etl.Abstractions` · `Fdw.Services.Pipelines` · `Fdw.Web.Analytics.Clients.Abstractions` · `Fdw.Web.Endpoints` · `Fdw.Web.RestEndpoints`
+`Fdw.Collections` · `Fdw.Commands.Data.Extensions` · `Fdw.Configuration` · `Fdw.Data.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Services.Abstractions` · `Fdw.Services.Agents.Abstractions` · `Fdw.Services.Audit.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Etl` · `Fdw.Services.Etl.Abstractions` · `Fdw.Services.Pipelines` · `Fdw.Web.Analytics.Clients.Abstractions` · `Fdw.Web.Endpoints` · `Fdw.Web.RestEndpoints`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators` · `Fdw.Registration.SourceGenerators`
 

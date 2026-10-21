@@ -16,7 +16,7 @@ internal static class DataflowBaseLayer
         var draft = new DataflowGraphDraft();
 
         foreach (var owner in inputs.ReachableOwners)
-            draft.AddNode(DataflowNodes.DataSet(inputs.RecordFor(owner)));
+            draft.AddNode(DataflowNodes.DataSet(owner, inputs.CategoryPathOf(owner)));
 
         foreach (var pipeline in inputs.Pipelines)
             AddPipeline(inputs, draft, pipeline);
@@ -41,8 +41,11 @@ internal static class DataflowBaseLayer
     private static void AddPipeline(DataflowGraphInputs inputs, DataflowGraphDraft draft, PipelineLineageRecord pipeline)
     {
         draft.AddNode(DataflowNodes.Pipeline(pipeline));
-        AddPipelineEdge(inputs, draft, pipeline, pipeline.SourceDataSet, consumes: true);
-        AddPipelineEdge(inputs, draft, pipeline, pipeline.DestinationDataSet, consumes: false);
+        foreach (var dataSetName in pipeline.DataSetsRead)
+            AddPipelineEdge(inputs, draft, pipeline, dataSetName, consumes: true);
+
+        foreach (var dataSetName in pipeline.DataSetsWritten)
+            AddPipelineEdge(inputs, draft, pipeline, dataSetName, consumes: false);
     }
 
     private static void AddPipelineEdge(

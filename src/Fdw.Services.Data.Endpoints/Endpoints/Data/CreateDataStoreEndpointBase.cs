@@ -212,6 +212,13 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                 return options;
             }
 
+            var target = DataStoreContainerWriteTarget.Refusal(
+                container.Name, container.WriteEndpoint, container.WriteMethod, container.WriteContentType, Logger);
+            if (target is not null)
+            {
+                return target;
+            }
+
             var named = DataStoreContainerBuilder.NameRefusal(container.Name, container.Format, storeAddressesContainersAsFiles, Logger);
             if (named is not null)
             {
@@ -251,6 +258,9 @@ public abstract class CreateDataStoreEndpointBase<TConfig> : CrudCreateEndpointB
                     HasHeader = containerRequest.HasHeader,
                     Separator = containerRequest.Separator,
                     SheetName = containerRequest.SheetName,
+                    WriteEndpoint = containerRequest.WriteEndpoint,
+                    WriteMethod = containerRequest.WriteMethod,
+                    WriteContentType = containerRequest.WriteContentType,
                     ClassificationId = containerRequest.ClassificationId,
                     Fields = DataStoreContainerBuilder.Fields(containerRequest.Fields),
                 };

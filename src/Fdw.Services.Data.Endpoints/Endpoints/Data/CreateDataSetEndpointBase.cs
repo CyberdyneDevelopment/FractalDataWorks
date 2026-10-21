@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,11 +22,14 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateDataSetRequest, DataSetDetailResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly CategoryConfigurationProvider _categories;
 
     /// <inheritdoc />
-    protected CreateDataSetEndpointBase(ILogger<CreateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+    protected CreateDataSetEndpointBase(
+        ILogger<CreateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
+        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -98,7 +102,11 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         var typed = DataSetQueryHelper.ValidateFieldTypes(request.Fields, Logger);
         if (typed.IsFailure) return typed.ToNewResult<DataSetDetailResponse>();
 
-        var built = DataSetConfigurationFactory.Create(request, Logger);
+        // The category the request names, before anything is written.
+        var category = await DataSetCategoryLinks.Requested(_categories, request.Category, Logger, ct).ConfigureAwait(false);
+        if (category.IsFailure) return category.ToNewResult<DataSetDetailResponse>();
+
+        var built = DataSetConfigurationFactory.Create(request, category.Value.Id, Logger);
         if (built.IsFailure) return built.ToNewResult<DataSetDetailResponse>();
 
         var config = built.Value!;
@@ -110,7 +118,7 @@ public abstract class CreateDataSetEndpointBase : CrudCreateEndpointBase<CreateD
         }
 
         DataSetEndpointLog.DataSetCreated(Logger, config.Name);
-        return GenericResult<DataSetDetailResponse>.Success(DataSetQueryHelper.MapToDetail(config));
+        return DataSetCategoryLinks.Describe(DataSetQueryHelper.MapToDetail(config), category.Value.Tree, config.CategoryId, Logger);
     }
 
     /// <summary>Sends a 201 Created response with the data set detail.</summary>

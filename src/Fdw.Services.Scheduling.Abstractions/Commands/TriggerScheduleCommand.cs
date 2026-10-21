@@ -3,7 +3,7 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// <summary>
 /// Command to trigger immediate execution of a schedule, bypassing its normal timing. Translated
 /// by each implementation's own translator into that implementation's native call (e.g. Quartz's
-/// <c>TriggerJob</c>, Hangfire's <c>Trigger</c>).
+/// <c>TriggerJob</c>).
 /// </summary>
 public sealed class TriggerScheduleCommand : SchedulingCommandBase
 {

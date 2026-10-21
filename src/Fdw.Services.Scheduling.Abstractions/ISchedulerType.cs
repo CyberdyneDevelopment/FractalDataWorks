@@ -23,7 +23,7 @@ public interface ISchedulerType<TService, TConfiguration, TFactory> : IServiceTy
 public interface ISchedulerType : IServiceType
 {
     /// <summary>
-    /// Gets the name of the underlying scheduling engine (e.g., "Quartz.NET", "Hangfire").
+    /// Gets the name of the underlying scheduling engine (e.g., "Quartz.NET").
     /// </summary>
     string SchedulingEngine { get; }
 

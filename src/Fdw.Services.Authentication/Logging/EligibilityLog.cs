@@ -9,7 +9,7 @@ namespace Fdw.Services.Authentication.Logging;
 /// <summary>
 /// MessageLogging for deciding whether a principal may hold a token.
 /// </summary>
-/// <remarks>EventId range: 91200–91203.</remarks>
+/// <remarks>EventId range: 91200–91202.</remarks>
 [MessageLoggingTypeCode("AUTHENTICATION")]
 internal static partial class EligibilityLog
 {

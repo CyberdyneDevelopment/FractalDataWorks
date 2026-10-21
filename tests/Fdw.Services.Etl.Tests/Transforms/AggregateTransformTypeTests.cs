@@ -22,7 +22,7 @@ public sealed class AggregateTransformTypeTests
     private readonly AggregateTransformType _sut = new();
 
     private static TransformContext CreateContext() =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>());
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>());
 
     private static PipelineTransformConfiguration CreateConfig(
         IEnumerable<string> groupByFields,

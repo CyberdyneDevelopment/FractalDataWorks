@@ -1,4 +1,5 @@
-﻿using System;
+using Fdw.Services.Etl.Execution;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
     where TConfig : class, IScheduleImplementationConfiguration
 {
     private readonly ScheduleConfigurationProvider _provider;
-    private readonly ScheduleRunRoleAuthority _runRoles;
+    private readonly RunRoleAuthority _runRoles;
 
     /// <inheritdoc />
     protected CreateScheduleEndpointBase(
@@ -35,7 +36,7 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
         IRoleGrants grants) : base(logger)
     {
         _provider = provider;
-        _runRoles = new ScheduleRunRoleAuthority(grants);
+        _runRoles = new RunRoleAuthority(grants);
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -54,8 +55,8 @@ public abstract class CreateScheduleEndpointBase<TConfig> : CrudCreateEndpointBa
     /// <summary>Creates the schedule configuration and persists it via the DataGateway.</summary>
     protected override async Task<IGenericResult<ScheduleDetailDto>> Create(CreateScheduleRequest request, CancellationToken ct)
     {
-        // The zone the schedule is evaluated in must be one the server can resolve (FDW-1170); a bad one is refused before anything is stored.
-        var zone = ScheduleTimeZone.Check(request.TimeZoneId, Logger);
+        // The zone the schedule is evaluated in must be stated and one the server can resolve (FDW-1170, FDW-2059); a missing or bad one is refused before anything is stored.
+        var zone = ScheduleTimeZone.Require(request.TimeZoneId, Logger);
         if (zone.IsFailure)
         {
             return zone.ToNewResult<ScheduleDetailDto>();

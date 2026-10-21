@@ -117,6 +117,9 @@ public abstract class SearchDataStoreContainersEndpointBase : CrudPageEndpointBa
                     ClassificationId = container.ClassificationId,
                     PathId = path.Id,
                     PathName = path.Name,
+                    WriteEndpoint = container.WriteEndpoint,
+                    WriteMethod = container.WriteMethod,
+                    WriteContentType = container.WriteContentType,
                 }))
             .Where(item => (kind is null || string.Equals(item.ContainerType, kind, StringComparison.OrdinalIgnoreCase))
                 && Search.Selects(item.Name, item.PathName, item.ContainerType))

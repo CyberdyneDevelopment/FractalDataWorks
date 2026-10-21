@@ -57,7 +57,7 @@ public static class UpdateScheduleChanges
         new(nameof(UpdateScheduleRequest.Parameters), request => request.Parameters is not null,
             Apply: (request, schedule, _) => schedule.Parameters = ScheduleParameterMapper.ToConfiguration(request.Parameters)),
 
-        // The roles arrive already judged (ScheduleRunRoleAuthority); stated roles replace the recorded ones whole (FDW-1161).
+        // The roles arrive already judged (RunRoleAuthority); stated roles replace the recorded ones whole (FDW-1161).
         new(nameof(UpdateScheduleRequest.RunRoles), request => request.RunRoles is not null,
             Apply: (_, schedule, runRoles) => schedule.ReplaceRunRoles(runRoles!)),
     ];

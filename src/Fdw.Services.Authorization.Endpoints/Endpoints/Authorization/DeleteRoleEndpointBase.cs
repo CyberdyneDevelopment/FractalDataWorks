@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
+using Fdw.Operations.Abstractions.Audit;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.TokenManagers.Abstractions;
@@ -86,6 +88,15 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
 
         AuthorizationEndpointLog.RoleResolved(EndpointLogger, req.Name, existing.Value.Id);
 
+        // Why before OnDeletingRole and the delete: deleting the administrator role while people hold it in the global tenant
+        // would leave the platform with no administrator (FDW-1577).
+        var kept = await Resolve<IPlatformAdministratorGuard>().CanDeleteRole(req.Name, ct).ConfigureAwait(false);
+        if (kept.IsFailure)
+        {
+            await Send.ResultAsync(RoleChangeRefusal.Of(kept, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         OnDeletingRole(req.Name, existing.Value.Id);
 
         var result = await _roleProvider.Delete(existing.Value.Id, ct).ConfigureAwait(false);
@@ -102,6 +113,15 @@ public abstract class DeleteRoleEndpointBase : Endpoint<GetRoleRequest>
         var ended = await RoleHolderSessions.End(_userRoles, _revocations, existing.Value.Id, req.Name, EndpointLogger, ct).ConfigureAwait(false);
         if (ended.IsFailure)
         {
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var audited = await RoleChangeAudit.RecordRole(Resolve<IAdministrativeAudit>(), User, "RoleDeleted", req.Name,
+            RoleChangeAudit.Describe(existing.Value.DisplayName, existing.Value.Description), null, ct).ConfigureAwait(false);
+        if (audited.IsFailure)
+        {
+            AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RoleDeleted", req.Name, audited.CurrentMessage);
             await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
             return;
         }

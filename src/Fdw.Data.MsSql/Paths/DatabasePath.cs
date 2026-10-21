@@ -17,7 +17,7 @@ namespace Fdw.Data.MsSql;
 /// multiple container types (Table, View, StoredProcedure with same name in different schemas).
 /// Use Containers property to access typed SQL containers.
 /// </remarks>
-public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
+public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath, IReaddressablePath
 {
     private readonly List<IStorageContainer> _containers;
 
@@ -90,6 +90,14 @@ public sealed class DatabasePath : PathBase, IDataPath<IStorageContainer>, IData
     /// Gets the schema.object format (without database).
     /// </summary>
     public string SchemaQualifiedName => $"[{Schema}].[{ObjectName}]";
+
+    /// <inheritdoc />
+    /// <remarks>The path part is the schema and the name part is the table or view; the database is kept.</remarks>
+    public IPath Readdress(string? pathPart, string? namePart) =>
+        new DatabasePath(
+            Database,
+            string.IsNullOrWhiteSpace(pathPart) ? Schema : pathPart,
+            string.IsNullOrWhiteSpace(namePart) ? ObjectName : namePart);
 
     // IDatabasePath explicit implementation
     string? IDatabasePath.Database => Database;

@@ -37,6 +37,15 @@ public class DataStoreContainerResponse
     /// <summary>Gets or sets the worksheet to read, or null when not stated.</summary>
     public string? SheetName { get; set; }
 
+    /// <summary>Gets or sets the path the rows are sent to when this container is an HTTP destination, or null when not stated.</summary>
+    public string? WriteEndpoint { get; set; }
+
+    /// <summary>Gets or sets the HTTP method the rows are sent with, or null when not stated.</summary>
+    public string? WriteMethod { get; set; }
+
+    /// <summary>Gets or sets the content type the rows are sent as, or null when not stated.</summary>
+    public string? WriteContentType { get; set; }
+
     /// <summary>Gets or sets the auto-generated key field names.</summary>
     public IList<string> SurrogateKeyFields { get; set; } = [];
 

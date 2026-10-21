@@ -19,7 +19,8 @@ public sealed class WorkflowItemType : ExecutionItemTypeBase
             displayName: "Workflow",
             hierarchyLevel: 0,
             canHaveChildren: true,
-            canHaveParent: false)
+            canHaveParent: false,
+            canContainSelf: false)
     {
     }
 }

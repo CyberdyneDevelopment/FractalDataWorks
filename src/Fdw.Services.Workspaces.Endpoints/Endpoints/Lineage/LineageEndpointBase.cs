@@ -25,13 +25,14 @@ public abstract class LineageEndpointBase<TRequest, TResponse> : Endpoint<TReque
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IFrameworkAuthorizationService authorization)
     {
         LineageLogger = logger ?? NullLogger.Instance;
         Reader = new LineageReader(
-            new MapSources(dataSets, dataStores, pipelines, variations),
+            new MapSources(dataSets, dataStores, pipelines, variations, categories),
             new MapScopeSelector(workspaces, access, LineageLogger),
             authorization,
             LineageLogger);

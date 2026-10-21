@@ -5,6 +5,12 @@ namespace Fdw.Services.Data.Clients.Models;
 /// <summary>A transformation defined once and attachable to field mappings (FDW-846).</summary>
 public sealed class TransformationPayload
 {
+    /// <summary>
+    /// Gets or sets the transformation's id (FDW-2007): what a mapping's chain stores for it, so a chain read back by id can be shown by name and a deleted
+    /// transformation matches no item. Stated when a transformation is read or listed; a create or an update addresses it by <see cref="Name"/> and ignores it.
+    /// </summary>
+    public System.Guid Id { get; set; }
+
     /// <summary>Gets or sets the transformation's name -- how it is attached and addressed.</summary>
     public string Name { get; set; } = string.Empty;
 

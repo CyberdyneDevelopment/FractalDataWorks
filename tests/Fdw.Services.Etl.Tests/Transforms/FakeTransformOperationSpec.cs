@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Tests.Transforms;
 /// <c>TransformTypeBase.MapSpecToConfiguration</c> dispatch without depending on the
 /// web-layer request DTO (<c>CreatePipelineTransformRequest</c>).
 /// </summary>
-internal sealed class FakeTransformOperationSpec : ITransformOperationSpec, ITransformOrderingSpec, ITransformCheckingSpec, ITransformNotifyingSpec, ITransformUnionSpec
+internal sealed class FakeTransformOperationSpec : ITransformOperationSpec, ITransformOrderingSpec, ITransformCheckingSpec
 {
     /// <inheritdoc />
     public string Name { get; set; } = string.Empty;
@@ -20,9 +20,6 @@ internal sealed class FakeTransformOperationSpec : ITransformOperationSpec, ITra
     public int ExecutionOrder { get; set; }
 
     public bool IsEnabled { get; set; } = true;
-
-    /// <inheritdoc />
-    public IReadOnlyList<IFieldMapping> FieldMappings { get; set; } = [];
 
     /// <inheritdoc />
     public IReadOnlyList<string> GroupByFields { get; set; } = [];
@@ -53,10 +50,4 @@ internal sealed class FakeTransformOperationSpec : ITransformOperationSpec, ITra
 
     /// <inheritdoc />
     public string? OnFail { get; set; }
-
-    /// <inheritdoc />
-    public INotificationSpec? Notification { get; set; }
-
-    /// <inheritdoc />
-    public string? UnionSource { get; set; }
 }

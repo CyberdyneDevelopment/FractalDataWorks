@@ -52,10 +52,5 @@ public abstract class ListNotificationsEndpointBase : CrudPageEndpointBase<Notif
 
     /// <inheritdoc />
     protected override Task<IGenericResult<NotificationSummaryDto>> ToSummary(NotificationDomainConfiguration item, CancellationToken ct)
-        => Task.FromResult(GenericResult<NotificationSummaryDto>.Success(new NotificationSummaryDto
-        {
-            Id = item.Id,
-            Name = item.Name,
-            Implementation = item.Implementation,
-        }));
+        => Task.FromResult(GenericResult<NotificationSummaryDto>.Success(NotificationMapper.ToSummary(item)));
 }

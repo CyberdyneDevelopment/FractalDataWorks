@@ -16,12 +16,12 @@ public sealed class FixedWindowRateLimitAlgorithm : RateLimitAlgorithmBase
     public FixedWindowRateLimitAlgorithm() : base("FixedWindow") { }
 
     /// <inheritdoc />
-    public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>
+    public override RateLimiter CreateLimiter(RateLimitAllowance allowance) =>
         new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
         {
-            PermitLimit = policy.RequestsPerWindow,
-            Window = policy.Window,
-            QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0,
+            PermitLimit = allowance.RequestsPerWindow,
+            Window = allowance.Window,
+            QueueLimit = allowance.QueueExceededRequests ? allowance.QueueLimit : 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
         });
 }

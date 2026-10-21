@@ -9,7 +9,6 @@ The canonical reference implementation of an FDW ETL server lives in the **refer
 1. **Create an ASP.NET Core project** (Microsoft.NET.Sdk.Web, target net10.0).
 2. **Reference the ETL packages:**
    - `Fdw.Services.Etl` and `Fdw.Services.Etl.Abstractions`
-   - Per-pipeline-type implementation packages (e.g. `Fdw.Services.Etl.BatchCopy`, `Fdw.Services.Etl.Streaming`)
    - Per-transformation packages (`Fdw.Services.Transformations.*`)
 3. **Run the single `PlatformServices.Configure`/`Register`/`Initialize` sweep** — it drives `EtlPipelineTypes` and `TransformationTypes` (and every other `[ServiceTypeCollection]`) automatically in dependency-safe order; no hand-written per-domain calls.
 4. **Register the background executor:**

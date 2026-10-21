@@ -38,6 +38,10 @@ public sealed class LessThanOrEqualOperator : FilterOperatorBase
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A missing value on either side never matches, as SQL leaves out a row whose value is NULL. The comparer orders a
+    /// missing value as equal to anything, which the strict operators already turn away; this one must turn it away itself.
+    /// </remarks>
     public override bool Matches(object? left, object? right)
-        => FilterValueComparer.Compare(left, right) <= 0;
+        => left is not null && right is not null && FilterValueComparer.Compare(left, right) <= 0;
 }

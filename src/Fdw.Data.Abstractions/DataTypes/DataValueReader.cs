@@ -42,4 +42,28 @@ internal static class DataValueReader
 
     internal static TimeSpan? Duration(string text) =>
         TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out var parsed) ? parsed : (TimeSpan?)null;
+
+    // A vector: a JSON array of numbers, "[0.6,0.8,0]", each a float. An empty array is not a vector.
+    internal static float[]? Vector(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length < 3 || trimmed[0] != '[' || trimmed[trimmed.Length - 1] != ']')
+            return null;
+
+        var parts = trimmed.Substring(1, trimmed.Length - 2).Split(',');
+        var values = new float[parts.Length];
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (!float.TryParse(parts[i].Trim(), Floating, CultureInfo.InvariantCulture, out var value) || float.IsNaN(value) || float.IsInfinity(value))
+                return null;
+
+            values[i] = value;
+        }
+
+        return values;
+    }
+
+    // A vector's text: its numbers, invariant and round-trippable, as a JSON array, the form SQL Server converts to VECTOR.
+    internal static string VectorText(float[] values) =>
+        "[" + string.Join(",", Array.ConvertAll(values, value => value.ToString("R", CultureInfo.InvariantCulture))) + "]";
 }

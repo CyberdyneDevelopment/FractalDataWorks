@@ -44,37 +44,33 @@ public class PipelineHttpClient : ApiClientBase, IPipelineClient, IResourceQuery
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<PipelineDetailResponse>> CreatePipeline(
-        CreatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<GraphPayload>> GetGraph(string name, CancellationToken cancellationToken = default)
     {
-        return Post<CreatePipelineClientRequest, PipelineDetailResponse>("pipelines", request, cancellationToken);
+        return Get<GraphPayload>($"pipelines/{name}/graph", cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<ValidatePipelineResponse>> ValidatePipeline(
-        CreatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<GraphPayload>> CreateGraph(GraphPayload graph, CancellationToken cancellationToken = default)
     {
-        return Post<CreatePipelineClientRequest, ValidatePipelineResponse>("pipelines/validate", request, cancellationToken);
+        return Post<GraphPayload, GraphPayload>("pipelines/graph", graph, cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<ValidatePipelineResponse>> ValidatePipeline(
-        string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<GraphPayload>> ReplaceGraph(string name, GraphPayload graph, CancellationToken cancellationToken = default)
     {
-        return Post<UpdatePipelineClientRequest, ValidatePipelineResponse>($"pipelines/{name}/validate", request, cancellationToken);
+        return Put<GraphPayload, GraphPayload>($"pipelines/{name}/graph", graph, cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<PipelineDetailResponse>> UpdatePipeline(
-        string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default)
+    public Task<IGenericResult<GraphValidationPayload>> ValidateGraph(GraphPayload graph, CancellationToken cancellationToken = default)
     {
-        return Patch<UpdatePipelineClientRequest, PipelineDetailResponse>($"pipelines/{name}", request, cancellationToken);
+        return Post<GraphPayload, GraphValidationPayload>("pipelines/graph/validate", graph, cancellationToken);
     }
 
     /// <inheritdoc />
-    public Task<IGenericResult<IReadOnlyList<PipelineTypeSummary>>> GetPipelineTypes(CancellationToken cancellationToken = default)
+    public Task<IGenericResult<GraphDescriptionPayload>> DescribeGraph(GraphPayload graph, CancellationToken cancellationToken = default)
     {
-        return GetList<PipelineTypeSummary>("pipelines/types", cancellationToken);
+        return Post<GraphPayload, GraphDescriptionPayload>("pipelines/graph/describe", graph, cancellationToken);
     }
 
     /// <inheritdoc />

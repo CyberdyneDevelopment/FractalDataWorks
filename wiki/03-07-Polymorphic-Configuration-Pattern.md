@@ -91,27 +91,11 @@ Each concrete connection type gets its own typed-body table with an identity-onl
 
 **JSON dispatch:** when a `ConnectionConfiguration` round-trips through System.Text.Json, the variant is resolved by a custom `ConnectionConfigurationJsonConverter` keyed on the `Implementation` discriminator — **not** by `[JsonPolymorphic]`/`[JsonDerivedType]` attributes. The converter reads `Implementation`, resolves the concrete type from `ConnectionTypes` (populated by module initializers at assembly load), and deserializes the nested `Configuration` body into it. Attributes are deliberately avoided because the typed-body types live in packages that `Services.Connections` cannot reference.
 
-## Reference: Pipeline family (base-class inheritance variant)
+## Reference: Pipeline family (one typed body)
 
-The Pipeline family demonstrates the **inheritance** form of this pattern. `EtlPipelineConfiguration` is the identity-only anchor; the typed bodies inherit from it directly:
+The Pipeline domain has one typed body today: the graph. `pipe.Pipeline` holds the identity and `pipe.GraphPipelineConfiguration` holds the body (`Implementation = "Graph"`); the components, links and steps of a graph hang from it as cascade children. `GraphPipelineConfiguration` implements `IEtlPipelineImplementationConfiguration`, the marker that keeps the ETL domain closed: only a configuration carrying it can be registered against the domain or handed back by a read of it.
 
-- `BatchCopyPipelineConfiguration : EtlPipelineConfiguration` (`ServiceType = "BatchCopy"`)
-- `StreamingPipelineConfiguration : EtlPipelineConfiguration` (`ServiceType = "Streaming"`)
-- `ConnectorSourcePipelineConfiguration : EtlPipelineConfiguration` (`ServiceType = "ConnectorSource"`)
-
-(All three live in `Fdw.Services.Etl`.) Unlike the Connection family — where the typed body is a standalone POCO referenced via `Configuration` — here each variant is a subclass and the DDL generator emits a separate child table per subclass.
-
-The anchor `EtlPipelineConfiguration` declares only identity/dispatch properties: `Id, Name, ServiceType, Implementation, SectionName`, plus the `Transforms` child collection (populated after hydration, never a column).
-
-The variant subclasses carry the runtime fields the factory reads. Shared columns are repeated on each subclass; variant-specific columns appear only where relevant:
-
-| Class (→ generated table) | Declared runtime properties |
-|---|---|
-| `BatchCopyPipelineConfiguration` | `PipelineId, IsEnabled, SourceConnectionName, SourceDataSet, DestinationConnectionName, DestinationDataSet, BatchSize, ContinueOnError, MaxErrors, SecretManagerName, SecretKeyName, ResiliencyPolicyName, SourceDataSetId, SourceDataSetRowId, SinkDataSetId, SinkDataSetRowId, PipelineVersion, MaxParallelism, LoadMode, TruncateBeforeLoad` |
-| `StreamingPipelineConfiguration` | `PipelineId, IsEnabled, SourceConnectionName, SourceDataSet, DestinationConnectionName, DestinationDataSet, BatchSize, ContinueOnError, MaxErrors, SecretManagerName, SecretKeyName, ResiliencyPolicyName, SourceDataSetId, SourceDataSetRowId, SinkDataSetId, SinkDataSetRowId, PipelineVersion, BufferSize, FlushIntervalMs, UseWindowing, WindowDurationSeconds, MaxRecordsPerSecond` |
-| `ConnectorSourcePipelineConfiguration` | `IsEnabled, ConnectorName, Variables, DestinationConnectionName, DestinationDataSet, BatchSize, ContinueOnError, MaxErrors, SecretManagerName, ResiliencyPolicyName, PipelineVersion` |
-
-The variant-specific columns (`MaxParallelism`/`LoadMode`/`TruncateBeforeLoad` for batch; `BufferSize`/`FlushIntervalMs`/… for streaming; `ConnectorName`/`Variables` for connector-source) live only on the relevant subclass. Confirm exact table/column layout against the generated DDL rather than memorizing this list.
+Read what a graph holds from `fdw-anatomy/content/pipelines.json`, and its exact table and column layout from the DDL in the `databases` repo, rather than from a copy here.
 
 ## Auditing an existing domain
 

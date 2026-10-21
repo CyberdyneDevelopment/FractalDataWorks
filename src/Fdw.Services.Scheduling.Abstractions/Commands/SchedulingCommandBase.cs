@@ -6,7 +6,7 @@ namespace Fdw.Services.Scheduling.Abstractions;
 
 /// <summary>
 /// Abstract base for scheduling commands. One command per scheduling operation, shared by every
-/// implementation (Quartz, Hangfire, ...) — the command never varies per implementation, only the
+/// implementation (Quartz, ...) — the command never varies per implementation, only the
 /// translator that turns it into that implementation's native call does.
 /// </summary>
 /// <remarks>

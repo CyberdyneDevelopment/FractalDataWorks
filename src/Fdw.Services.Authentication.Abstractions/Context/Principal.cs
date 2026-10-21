@@ -23,4 +23,10 @@ public sealed record Principal
 
     /// <summary>Gets the tenant this principal belongs to.</summary>
     public required Guid TenantId { get; init; }
+
+    /// <summary>
+    /// Gets the organization (department) the token is to act in, or null when none is stated, in which
+    /// case the token carries none and the request pipeline resolves the tenant's default (FDW-1802).
+    /// </summary>
+    public Guid? OrganizationId { get; init; }
 }

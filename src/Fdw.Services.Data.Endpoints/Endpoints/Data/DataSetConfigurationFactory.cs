@@ -20,9 +20,10 @@ internal static class DataSetConfigurationFactory
 {
     /// <summary>Builds the configuration a create request describes.</summary>
     /// <param name="request">The create request; its implementation is already known to be a data set kind.</param>
+    /// <param name="categoryId">The identity of the category the request names; null when it names none.</param>
     /// <param name="logger">The logger a refusal is written to.</param>
     /// <returns>The configuration, or <c>ImplementationInvalid</c> when the kind has no implementation here.</returns>
-    internal static IGenericResult<IDataSetImplementationConfiguration> Create(CreateDataSetRequest request, ILogger logger)
+    internal static IGenericResult<IDataSetImplementationConfiguration> Create(CreateDataSetRequest request, Guid? categoryId, ILogger logger)
     {
         var kind = DataSetTypes.ByName(request.Implementation).Name;
         IDataSetImplementationConfiguration config;
@@ -45,7 +46,7 @@ internal static class DataSetConfigurationFactory
         config.Implementation = request.Implementation;
         config.Description = request.Description ?? string.Empty;
         config.ClassificationId = request.ClassificationId;
-        config.Category = request.Category ?? "Dataset";
+        config.CategoryId = categoryId;
         config.Version = request.Version;
         config.RecordTypeName = request.RecordTypeName;
         config.KeyFields = request.KeyFields

@@ -5,7 +5,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 
 /// <summary>
-/// When in a run one load row of a BatchCopy pipeline is written, and what it writes: Load or Reject (FDW-1142).
+/// When in a run one load row of a graph destination is written, and what it writes: Load or Reject (FDW-1142).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(LoadPhaseBase), typeof(ILoadPhase), typeof(LoadPhases))]

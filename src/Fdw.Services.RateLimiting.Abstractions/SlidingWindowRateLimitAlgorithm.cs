@@ -16,13 +16,13 @@ public sealed class SlidingWindowRateLimitAlgorithm : RateLimitAlgorithmBase
     public SlidingWindowRateLimitAlgorithm() : base("SlidingWindow") { }
 
     /// <inheritdoc />
-    public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>
+    public override RateLimiter CreateLimiter(RateLimitAllowance allowance) =>
         new SlidingWindowRateLimiter(new SlidingWindowRateLimiterOptions
         {
-            PermitLimit = policy.RequestsPerWindow,
-            Window = policy.Window,
-            SegmentsPerWindow = policy.SegmentsPerWindow,
-            QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0,
+            PermitLimit = allowance.RequestsPerWindow,
+            Window = allowance.Window,
+            SegmentsPerWindow = allowance.SegmentsPerWindow,
+            QueueLimit = allowance.QueueExceededRequests ? allowance.QueueLimit : 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
         });
 }

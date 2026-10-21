@@ -11,7 +11,10 @@ namespace Fdw.Services.Etl.Tests.Transforms;
 public sealed class NotifyTemplateTests
 {
     private static NotifyRunFacts Facts() =>
-        new(Guid.NewGuid(), "NightlyCopy", Guid.Parse("11111111-2222-3333-4444-555555555555"), rowsExtracted: 120, rowsRejected: 7, rowsLoaded: 113);
+        new(Guid.NewGuid(), "NightlyCopy", Guid.Parse("11111111-2222-3333-4444-555555555555"), rowsExtracted: 120, rowsRejected: 7, rowsLoaded: 113,
+            startedAt: new DateTimeOffset(2026, 10, 14, 19, 53, 57, TimeSpan.Zero),
+            endedAt: new DateTimeOffset(2026, 10, 14, 19, 54, 2, TimeSpan.Zero),
+            outcome: "Succeeded");
 
     [Fact]
     [Trait("Priority", "P0")]

@@ -12,8 +12,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Messages\Fdw.Messages.csproj" />
-    <!-- Registration generator scans referenced assemblies and generates the TypeOption module initializer in this entry point, so a run through BatchCopyPipeline finds the transform types -->
+    <!-- Registration generator scans referenced assemblies and generates the TypeOption module initializer in this entry point, so a run through a graph pipeline finds the transform types -->
     <ProjectReference Include="..\..\src\Fdw.Registration.SourceGenerators\Fdw.Registration.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\..\src\Fdw.Services.EtlGateway\Fdw.Services.EtlGateway.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

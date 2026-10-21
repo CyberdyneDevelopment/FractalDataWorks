@@ -19,8 +19,11 @@ public sealed class DataSetSummaryPayload
     public string? Description { get; set; }
     /// <summary>Gets or sets the version.</summary>
     public string Version { get; set; } = "1.0";
-    /// <summary>Gets or sets the category.</summary>
-    public string Category { get; set; } = "Standard";
+    /// <summary>Gets or sets the name of the category the data set sits under; null when it sits under none.</summary>
+    public string? Category { get; set; }
+
+    /// <summary>Gets or sets the display names from the top of the category tree down to the data set's category, joined by " / "; null when it sits under none.</summary>
+    public string? CategoryPath { get; set; }
     /// <summary>Gets or sets the service option type.</summary>
     public string Implementation { get; set; } = "Standard";
     /// <summary>Gets or sets the creation timestamp.</summary>

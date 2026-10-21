@@ -42,7 +42,7 @@ namespace Fdw.Services.Data;
 /// via the IDataNode tree, fires follow-up queries for each child container whose FK key points to
 /// the parent, and populates the matching collection property on each parent POCO via reflection.
 /// </remarks>
-public sealed class ConfigurationGateway : IConfigurationGateway, IDerivedConfigurationCache
+public sealed partial class ConfigurationGateway : IConfigurationGateway, IDerivedConfigurationCache
 {
     /// <inheritdoc />
     public string ConnectionName { get; }
@@ -407,20 +407,31 @@ public sealed class ConfigurationGateway : IConfigurationGateway, IDerivedConfig
 
     private async Task<IGenericResult<T>> ExecuteCore<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
+        var resolved = await ResolveTarget(target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<T>();
+
+        var (container, connection) = resolved.Value;
+        return await RunOnContainer(target, ct => connection.Execute<T>(command, container, ct), cancellationToken).ConfigureAwait(false);
+    }
+
+    // The connection this gateway reaches its stores by, and the container a target names in its schema: what every
+    // command run here needs first, a data command and a vectorized one alike.
+    private async Task<IGenericResult<(IDataContainer Container, IDataConnection Connection)>> ResolveTarget(
+        DataStoreTarget target, CancellationToken cancellationToken)
+    {
         ConfigurationGatewayLog.ExecuteEntry(_logger, target.DataStore, target.Path, target.Container);
 
         if (string.IsNullOrWhiteSpace(target.DataStore))
         {
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
                     "DataStoreTarget.DataStore is required"));
         }
 
         var connectionResult = await BuildConnection(cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value is null)
-            return connectionResult.ToNewResult<T>();
-
-        var connection = connectionResult.Value;
+            return connectionResult.ToNewResult<(IDataContainer, IDataConnection)>();
 
         var containerResult = ResolveContainerResult(target);
 
@@ -429,21 +440,26 @@ public sealed class ConfigurationGateway : IConfigurationGateway, IDerivedConfig
             ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
                 containerResult.CurrentMessage ?? "Container could not be resolved from the configuration schema");
 
-            return containerResult.ToNewResult<T>();
+            return containerResult.ToNewResult<(IDataContainer, IDataConnection)>();
         }
 
         if (containerResult.Value is null)
         {
-            return GenericResult<T>.Failure(
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(
                 ConfigurationGatewayLog.ExecuteFailed(_logger, target.Container,
                     "Container could not be resolved from the configuration schema"));
         }
 
-        var container = containerResult.Value;
+        return GenericResult<(IDataContainer, IDataConnection)>.Success((containerResult.Value, connectionResult.Value));
+    }
 
+    // Runs one command's work on the container: its exit logged, and a throw returned as a failure.
+    private async Task<IGenericResult<T>> RunOnContainer<T>(
+        DataStoreTarget target, Func<CancellationToken, Task<IGenericResult<T>>> run, CancellationToken cancellationToken)
+    {
         try
         {
-            var mainResult = await connection.Execute<T>(command, container, cancellationToken).ConfigureAwait(false);
+            var mainResult = await run(cancellationToken).ConfigureAwait(false);
             ConfigurationGatewayLog.ExecuteExit(_logger, target.Container, mainResult.IsSuccess);
             return mainResult;
         }

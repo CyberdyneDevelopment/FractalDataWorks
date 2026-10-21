@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Fdw.Services.EtlGateway.Registration</RootNamespace>
+
+    <PackageId>Fdw.Services.EtlGateway.Registration</PackageId>
+    <Description>The ETL gateway service-type registration: the [Implementation] only. References the gateway, so referencing THIS package brings the gateway with it and registers it; the ETL host references it.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Fdw.Services.EtlGateway\Fdw.Services.EtlGateway.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Etl\Fdw.Services.Etl.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Pipelines\Fdw.Services.Pipelines.csproj" />
+    <ProjectReference Include="..\Fdw.Collections.SourceGenerators\Fdw.Collections.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

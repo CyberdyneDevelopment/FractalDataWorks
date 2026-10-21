@@ -178,6 +178,40 @@ public sealed class EmitterTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "SourceGen")]
+    public void AMethodWithAClientTemplateReturnsAClientMessageCarryingTheCallersText()
+    {
+        string result = CreateEmitter(CreateTestCompilation()).Emit([LogClassOf("{reason}")], CancellationToken.None);
+
+        result.ShouldContain("return new global::Fdw.Messages.ClientMessage(");
+        result.ShouldContain("var __clientText = ");
+        result.ShouldContain("$\"{reason}\"");
+        result.ShouldNotContain("global::Fdw.Messages.GenericMessage.Create(");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public void AClientTemplateKeepsLiteralBracesAndAFormatAndBindsItsPlaceholdersToTheParameters()
+    {
+        string result = CreateEmitter(CreateTestCompilation()).Emit([LogClassOf("{{{Reason}}} after {count:N0} tries")], CancellationToken.None);
+
+        result.ShouldContain("$\"{{{reason}}} after {count:N0} tries\"");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
+    public void AMethodWithoutAClientTemplateReturnsAGenericMessageAsBefore()
+    {
+        string result = CreateEmitter(CreateTestCompilation()).Emit([LogClassOf(clientTemplate: null)], CancellationToken.None);
+
+        result.ShouldContain("return global::Fdw.Messages.GenericMessage.Create(");
+        result.ShouldNotContain("ClientMessage");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "SourceGen")]
     public void EmitterHandlesEmptyClassList()
     {
         var compilation = CreateTestCompilation();
@@ -216,6 +250,37 @@ public sealed class EmitterTests
 
         return (string)method.Invoke(null, new object[] { input })!;
     }
+
+    // One log class with one method over a reason and a count, with a template for the caller or none.
+    private static LoggerMessageGenerator.LoggerClass LogClassOf(string? clientTemplate) => new()
+    {
+        Keyword = "class",
+        Namespace = "TestNamespace",
+        Name = "TestLog",
+        ParentClass = null,
+        Methods =
+        {
+            new LoggerMessageGenerator.LoggerMethod
+            {
+                Name = "Refused",
+                UniqueName = "Refused",
+                Message = "[Releases] Refused {operation} after {count} tries: {reason}",
+                Level = 3, // Warning
+                EventId = 20001,
+                EventName = null,
+                IsExtensionMethod = false,
+                Modifiers = "public static",
+                SkipEnabledCheck = false,
+                ClientMessage = clientTemplate,
+                TemplateParameters =
+                {
+                    new LoggerMessageGenerator.LoggerParameter { Name = "operation", CodeName = "operation", Type = "string" },
+                    new LoggerMessageGenerator.LoggerParameter { Name = "count", CodeName = "count", Type = "int" },
+                    new LoggerMessageGenerator.LoggerParameter { Name = "reason", CodeName = "reason", Type = "string" },
+                },
+            },
+        },
+    };
 
     private static CSharpCompilation CreateTestCompilation()
     {

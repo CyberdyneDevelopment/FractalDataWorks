@@ -16,128 +16,47 @@ using Fdw.Services.Pipelines.Abstractions;
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
-/// Maps a stored pipeline, transforms included, to <see cref="PipelineDetailResponse"/>.
+/// Maps a stored pipeline to <see cref="PipelineDetailResponse"/>, and a tool's stage to its DTO.
 /// </summary>
+/// <remarks>
+/// A graph pipeline's sources, destinations and stages are its components, read through the graph endpoints, so the detail
+/// answers what the pipeline is (identity, description, enabled flag, dates) and the run parameters it declares. The response's
+/// members for the older engines (one source, one destination, stages, load steps) are not filled: nothing can fill them, and they
+/// leave the contract with the console (FDW-1591).
+/// </remarks>
 public static class PipelineDetailMapper
 {
-    /// <summary>
-    /// Reads a pipeline through its domain provider and maps it. A write answers with this so the
-    /// response is the pipeline as stored, not an echo of the request.
-    /// </summary>
-    public static async Task<IGenericResult<PipelineDetailResponse>> Read(
-        PipelineServiceConfigurationProvider provider, ITransformationConfigurationProvider transformations, string name, CancellationToken ct)
-    {
-        var result = await provider.Get(name, ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            return result.ToNewResult<PipelineDetailResponse>();
-        }
-
-        return result.Value is null
-            ? GenericResult<PipelineDetailResponse>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound"))
-            : await Detail(result.Value, transformations, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Maps a stored pipeline to its detail DTO with the name of each Transformation its field mappings chain beside the id,
-    /// read from the Transformation provider with one query for the whole pipeline (see <see cref="PipelineChainNames"/>).
-    /// </summary>
-    /// <param name="pipeline">The stored pipeline.</param>
-    /// <param name="transformations">The Transformation provider, read as the caller.</param>
-    /// <param name="ct">Cancels the read.</param>
-    /// <returns>The detail, or the failure of reading the Transformation names.</returns>
-    public static async Task<IGenericResult<PipelineDetailResponse>> Detail(
-        IPipelineImplementationConfiguration pipeline, ITransformationConfigurationProvider transformations, CancellationToken ct)
-    {
-        var names = await PipelineChainNames.Read(pipeline, transformations, ct).ConfigureAwait(false);
-        return names.IsSuccess
-            ? GenericResult<PipelineDetailResponse>.Success(Map(pipeline, names.Value!))
-            : names.ToNewResult<PipelineDetailResponse>();
-    }
-
-    /// <summary>
-    /// Extracts the transform DTOs the pipeline's implementation carries.
-    /// Returns an empty list for an implementation that has no transforms.
-    /// </summary>
-    private static List<PipelineTransformDto> ExtractTransforms(
-        IPipelineImplementationConfiguration pipeline, IReadOnlyDictionary<Guid, string> transformationNames)
-    {
-        var transforms = new List<PipelineTransformDto>();
-        if (pipeline is IEtlPipelineImplementationConfiguration { Transforms: { } operations })
-        {
-            foreach (var op in operations)
-                transforms.Add(MapTransformToDto(op, transformationNames));
-        }
-        return transforms;
-    }
-
-    /// <summary>
-    /// Maps a stored pipeline to its detail DTO without the names of the Transformations its field mappings chain: each chain
-    /// step carries its id only. For a caller that does not hand the chain on; a read the caller sees uses
-    /// <see cref="Detail"/>.
-    /// </summary>
-    /// <param name="pipeline">The stored pipeline.</param>
-    /// <returns>The detail.</returns>
-    public static PipelineDetailResponse Map(IPipelineImplementationConfiguration pipeline) =>
-        Map(pipeline, new Dictionary<Guid, string>());
-
     /// <summary>
     /// Maps a stored pipeline to its detail DTO. GET, create and update all answer with this, so a
     /// write returns exactly what a later read of the same pipeline returns.
     /// </summary>
     /// <param name="pipeline">The stored pipeline.</param>
-    /// <param name="transformationNames">
-    /// The name of each Transformation the caller can read, by id. A chain step whose Transformation is not in it carries its
-    /// id and a null name.
-    /// </param>
     /// <returns>The detail.</returns>
-    public static PipelineDetailResponse Map(IPipelineImplementationConfiguration pipeline, IReadOnlyDictionary<Guid, string> transformationNames)
+    public static PipelineDetailResponse Map(IPipelineImplementationConfiguration pipeline)
     {
-        // A domain read hands back the implementation, so the linkage is on the record itself --
-        // there is no header to reach through. Description is a column of the engine's own row and rides on
-        // the implementation. The schedule flag is still the app's to fill.
-        var etl = pipeline as IEtlPipelineImplementationConfiguration;
-        var dataStoreSource = pipeline as IDataStoreSourcedPipelineConfiguration;
-        var dataStoreDestination = pipeline as IDataStoreDestinedPipelineConfiguration;
-
         var response = new PipelineDetailResponse
         {
             Id = pipeline.Id,
             Name = pipeline.Name,
             PipelineType = pipeline.Implementation,
             Description = pipeline.Description,
-            SourceDataSet = etl?.SourceDataSet,
-            SourceDataStoreName = dataStoreSource?.SourceDataStoreName,
-            SourceDataStorePath = dataStoreSource?.SourceDataStorePath,
-            SourceContainerName = dataStoreSource?.SourceContainerName,
-            DestinationDataSet = etl?.DestinationDataSet,
-            DestinationDataStoreName = dataStoreDestination?.DestinationDataStoreName,
-            DestinationDataStorePath = dataStoreDestination?.DestinationDataStorePath,
-            DestinationContainerName = dataStoreDestination?.DestinationContainerName,
-            IsEnabled = etl?.IsEnabled ?? false,
+            IsEnabled = pipeline is IEnablablePipelineConfiguration { IsEnabled: true },
+            RequireApprovalToRun = pipeline is IApprovalGatedPipelineConfiguration { RequireApprovalToRun: true },
             CreatedAt = pipeline.CreateDate,
             UpdatedAt = pipeline.ModifyDate,
-            Transforms = ExtractTransforms(pipeline, transformationNames)
         };
 
-        // The load definition exactly as saved (FDW-1110): the pipeline's load mode, its own load's options and value
-        // sources, its steps in order, and its declared run parameters.
-        if (pipeline is IPipelineLoadConfiguration load)
+        // The run parameters the pipeline declares, whatever kind it is (FDW-1557): the forms that start or schedule a run read them here.
+        if (pipeline is IDeclaresRunParameters declaring)
         {
-            response.LoadMode = PipelineLoadReader.LoadMode(load);
-            response.LoadOptions = PipelineLoadReader.Options(load);
-            response.ValueSources = PipelineLoadReader.ValueSources(load);
-            response.LoadSteps = PipelineLoadReader.Steps(load);
-            response.RejectSteps = PipelineLoadReader.RejectSteps(load);
-            response.Parameters = PipelineLoadReader.Parameters(load);
-            response.TruncateBeforeLoad = PipelineTruncateConsistency.Derive(load.LoadMode);
+            response.Parameters = PipelineLoadReader.Parameters(declaring);
         }
 
         return response;
     }
 
     /// <summary>Maps a transform configuration to its DTO.</summary>
-    private static PipelineTransformDto MapTransformToDto(PipelineTransformConfiguration transform, IReadOnlyDictionary<Guid, string> transformationNames)
+    public static PipelineTransformDto MapTransformToDto(PipelineTransformConfiguration transform, IReadOnlyDictionary<Guid, string> transformationNames)
     {
         return new PipelineTransformDto
         {
@@ -153,32 +72,11 @@ public static class PipelineDetailMapper
             Distinct = MapDistinctDto(transform),
             Checks = MapChecksDto(transform),
             OnFail = transform.OnFail,
-            Paths = MapPathsDto(transform, transformationNames),
-            Unmatched = IsComposite(transform) ? transform.Unmatched : null,
-            Notification = MapNotificationDto(transform),
-            UnionSource = IsUnion(transform) ? transform.UnionSourceDataSet : null,
             Compute = MapComputeDto(transform, transformationNames),
             Lookup = MapLookupDto(transform),
             Calculation = MapCalculationDto(transform),
-            FieldMappings = MapFieldMappingsDto(transform, transformationNames),
         };
     }
-
-    /// <summary>Maps a Branch stage's paths to the contract's <c>paths</c> in the order they are tried, each with its stages in execution order, or null for any other stage.</summary>
-    private static List<PipelinePathDto>? MapPathsDto(PipelineTransformConfiguration transform, IReadOnlyDictionary<Guid, string> transformationNames) =>
-        IsComposite(transform)
-            ? [.. transform.Paths
-                .OrderBy(path => path.Ordinal)
-                .Select(path => new PipelinePathDto
-                {
-                    Name = path.Name,
-                    Condition = path.Condition,
-                    Stages = [.. path.Stages.OrderBy(stage => stage.ExecutionOrder).Select(stage => MapTransformToDto(stage, transformationNames))],
-                })]
-            : null;
-
-    private static bool IsComposite(PipelineTransformConfiguration transform) =>
-        TransformTypes.ByName(transform.OperationType) is ICompositeTransformType;
 
     /// <summary>Maps a Compute stage's Built transformation and input mapping to the contract's <c>compute</c>, or null for any other stage; the transformation is named when the caller can read it and always given by id.</summary>
     private static PipelineCompute? MapComputeDto(PipelineTransformConfiguration transform, IReadOnlyDictionary<Guid, string> transformationNames) =>
@@ -194,44 +92,6 @@ public static class PipelineDetailMapper
                 OnRowFailure = transform.ComputeOnRowFailure,
             }
             : null;
-
-    private static bool IsUnion(PipelineTransformConfiguration transform) =>
-        TransformTypes.ByName(transform.OperationType) is UnionTransformType;
-
-    /// <summary>Maps the typed FieldMappings children to a list of <see cref="PipelineFieldMappingDto"/>.</summary>
-    private static List<PipelineFieldMappingDto> MapFieldMappingsDto(PipelineTransformConfiguration transform, IReadOnlyDictionary<Guid, string> transformationNames)
-    {
-        return transform.FieldMappings
-            .Select(m => new PipelineFieldMappingDto
-            {
-                Id = m.Id,
-                Name = m.Name,
-                SourceField = m.SourceField,
-                DestinationField = m.DestinationField,
-                TargetType = m.TargetType,
-                IsEnabled = m.IsEnabled,
-                IsRequired = m.IsRequired,
-                DefaultValue = m.DefaultValue,
-                Transformations = ChainOf(m, transformationNames),
-            })
-            .ToList();
-    }
-
-    // The chain of named Transformations the mapping carries, in order; null (not empty) when it states none, as the request does.
-    // Each step carries the id it is stored by and, when the caller can read that Transformation, its name; a Transformation the
-    // caller cannot read has a null name and nothing is put in its place.
-    private static List<PipelineFieldTransformationReference>? ChainOf(
-        PipelineTransformFieldMappingConfiguration mapping, IReadOnlyDictionary<Guid, string> transformationNames) =>
-        mapping.TransformationChain.Count == 0
-            ? null
-            : [.. mapping.TransformationChain
-                .OrderBy(step => step.Ordinal)
-                .Select(step => new PipelineFieldTransformationReference
-                {
-                    TransformationId = step.TransformationId,
-                    Transformation = transformationNames.TryGetValue(step.TransformationId, out var name) ? name : null,
-                    Ordinal = step.Ordinal,
-                })];
 
     /// <summary>Maps the typed GroupByFields/Aggregations children to an <see cref="AggregationDto"/>, or null when absent.</summary>
     private static AggregationDto? MapAggregationDto(PipelineTransformConfiguration transform)
@@ -274,12 +134,6 @@ public static class PipelineDetailMapper
     private static List<PipelineCheck>? MapChecksDto(PipelineTransformConfiguration transform) =>
         TransformTypes.ByName(transform.OperationType) is ValidateTransformType
             ? [.. transform.Checks.OrderBy(c => c.Ordinal).Select(c => new PipelineCheck { Name = c.Name, Expression = c.Expression })]
-            : null;
-
-    /// <summary>Maps a Notify stage's rule, run point and message to the contract's <c>notification</c>, or null for any other stage.</summary>
-    private static PipelineNotification? MapNotificationDto(PipelineTransformConfiguration transform) =>
-        TransformTypes.ByName(transform.OperationType) is NotifyTransformType
-            ? new PipelineNotification { RuleName = transform.NotificationRuleName!, RunPoint = transform.RunPoint!, Message = transform.NotificationMessage! }
             : null;
 
     /// <summary>Maps a LatestBy transform to the contract's <c>latestBy</c>, or null for any other transform.</summary>

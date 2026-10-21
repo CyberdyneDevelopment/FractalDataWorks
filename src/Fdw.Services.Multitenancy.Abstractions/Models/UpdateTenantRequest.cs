@@ -9,6 +9,11 @@ namespace Fdw.Services.Multitenancy.Clients.Models;
 public sealed class UpdateTenantRequest
 {
     /// <summary>
+    /// Gets or sets the id of the tenant to update. It comes from the route (<c>tenants/{Id}</c>) and overrides anything in the body.
+    /// </summary>
+    public System.Guid Id { get; set; }
+
+    /// <summary>
     /// Gets or sets the updated tenant display name.
     /// </summary>
     [StringLength(200)]

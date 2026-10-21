@@ -28,4 +28,13 @@ public class DataStoreContainerListItem
 
     /// <summary>Gets or sets the name of the path the container is in.</summary>
     public string PathName { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the path the rows are sent to when this container is an HTTP destination (FDW-1757), or null when not stated.</summary>
+    public string? WriteEndpoint { get; set; }
+
+    /// <summary>Gets or sets the HTTP method the rows are sent with (FDW-1757), or null when not stated.</summary>
+    public string? WriteMethod { get; set; }
+
+    /// <summary>Gets or sets the content type the rows are sent as (FDW-1757), or null when not stated.</summary>
+    public string? WriteContentType { get; set; }
 }

@@ -35,10 +35,11 @@ public abstract class GetMapChildrenEndpointBase : MapEndpointBase<MapChildrenRe
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         IFrameworkAuthorizationService authorization)
         : base(logger)
     {
-        _sources = new MapSources(dataSets, dataStores, pipelines, variations);
+        _sources = new MapSources(dataSets, dataStores, pipelines, variations, categories);
         _authorization = authorization;
     }
 

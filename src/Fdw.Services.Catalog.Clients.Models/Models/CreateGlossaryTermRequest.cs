@@ -9,8 +9,8 @@ public sealed class CreateGlossaryTermRequest
     public string Term { get; set; } = string.Empty;
     /// <summary>Gets or sets the term definition.</summary>
     public string Definition { get; set; } = string.Empty;
-    /// <summary>Gets or sets the category the glossary term belongs to.</summary>
-    public string Category { get; set; } = string.Empty;
+    /// <summary>Gets or sets the name of the Glossary category the term sits under; left out, it sits under none.</summary>
+    public string? Category { get; set; }
     /// <summary>Gets or sets the owner of the glossary term.</summary>
     public string? Owner { get; set; }
 }

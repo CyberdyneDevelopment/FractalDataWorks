@@ -56,10 +56,10 @@ public interface IDataSetImplementationConfiguration : IImplementationConfigurat
     /// <summary>Gets or sets the version.</summary>
     string Version { get; set; }
 
-    /// <summary>Gets or sets the category.</summary>
-    string Category { get; set; }
-
-    /// <summary>Gets or sets the category id.</summary>
+    /// <summary>
+    /// Gets or sets the identity of the category the data set sits under (FDW-1473): a node of the <c>DataSet</c> category tree. Null
+    /// when it sits under none.
+    /// </summary>
     Guid? CategoryId { get; set; }
 
     /// <summary>Gets or sets the record type name.</summary>

@@ -7,7 +7,9 @@ using Fdw.Collections;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Configuration;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Users.Abstractions;
 using Fdw.Services.Users.Commands;
 using Fdw.Services.Users.Configuration;
@@ -92,6 +94,25 @@ public sealed class DefaultUserServiceType : UserServiceTypeBase
 
             builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddScoped<IUserCredentialService, UserCredentialService>();
+
+            // Scoped: the tenant writer it uses is scoped, as the tenant provider is (FDW-1578).
+            builder.Services.TryAddScoped<ITenantFounding>(sp =>
+                new TenantFounding(
+                    sp.GetRequiredService<ITenantWriter>(),
+                    sp.GetRequiredService<IUserConfigurationProvider>(),
+                    sp.GetRequiredService<IUserTenantConfigurationProvider>(),
+                    sp.GetRequiredService<IGrantRule>(),
+                    sp.GetRequiredService<IUserRoleAssignment>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<TenantFounding>()));
+            // Scoped, as the writer and bootstrap it uses are (FDW-1758).
+            builder.Services.TryAddScoped<IOrganizationFounding>(sp =>
+                new OrganizationFounding(
+                    sp.GetRequiredService<IOrganizationWriter>(),
+                    sp.GetRequiredService<IOrganizationProvider>(),
+                    sp.GetRequiredService<IOrganizationBootstrap>(),
+                    sp.GetRequiredService<IUserConfigurationProvider>(),
+                    sp.GetRequiredService<ITenantProvider>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<OrganizationFounding>()));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

@@ -157,6 +157,15 @@ public sealed class DataQueryTranslatorTests
     public void ColumnsAreEveryFieldInOrdinalOrder()
         => Translator().Columns().Select(c => c.Name).ShouldBe(new[] { "Region", "Units" });
 
+    [Fact]
+    public void ADataSetWithNoFieldsIsRefusedWithTheReason()
+    {
+        var translator = DataQueryTranslator.Create([], "AfcPlayers", NullLogger.Instance);
+
+        translator.IsFailure.ShouldBeTrue();
+        translator.CurrentMessage.ShouldNotBeNull().ShouldContain("it declares no fields");
+    }
+
     // ── FDW-997: a value is checked against the type the data set declares for the field ──
 
     private static IFilterNode? Root(DataQueryTranslator translator, string field, string op, string valueJson)

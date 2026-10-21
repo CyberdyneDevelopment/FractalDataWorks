@@ -261,6 +261,9 @@ public sealed class AggregateWriteCascadeTests
         public Task<IGenericResult<IDataGatewayTransaction>> BeginTransaction(string connectionName, CancellationToken cancellationToken = default)
             => Task.FromResult(GenericResult<IDataGatewayTransaction>.Success(Transaction));
 
+        public Task<IGenericResult<T>> Execute<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken = default)
+            => Task.FromResult(GenericResult<T>.Failure(new GenericMessage("Vectorized commands not supported in RecordingGateway test double")));
+
         // Held so a test can assert whether the unit was committed or abandoned.
         public RecordingTransaction Transaction => _transaction ??= new RecordingTransaction(this);
 

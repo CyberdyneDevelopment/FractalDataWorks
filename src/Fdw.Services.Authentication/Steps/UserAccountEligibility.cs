@@ -81,10 +81,30 @@ public sealed class UserAccountEligibility : IIssuanceEligibility
         if (!access.Value)
             return Deny(principal.Id, "the principal may not act in the tenant the token would be issued for");
 
+        // A token for a department is issued only to a person who may act in it (FDW-1802). The tenant provider answers, as it does for the
+        // tenant: it is handed to every run, so this check holds nothing it cannot be built with at start-up. No department stated is the
+        // ordinary token.
+        if (principal.OrganizationId is { } organizationId
+            && await RefusalForDepartment(principal, organizationId, tenants, cancellationToken).ConfigureAwait(false) is { } refusal)
+            return refusal;
+
         EligibilityLog.Permitted(_logger, principal.Id);
 
         return GenericResult<Decision>.Success(
             new Decision { Permitted = true, Reason = "the account is active" });
+    }
+
+    // Why a person may not be issued a token for a department, or null when they may.
+    private async Task<IGenericResult<Decision>?> RefusalForDepartment(
+        Principal principal, Guid organizationId, ITenantProvider tenants, CancellationToken cancellationToken)
+    {
+        var access = await tenants
+            .ValidateOrganizationAccess(principal.TenantId, organizationId, principal.Id.ToString(), cancellationToken)
+            .ConfigureAwait(false);
+        if (access.IsFailure)
+            return access.ToNewResult<Decision>();
+
+        return access.Value ? null : Deny(principal.Id, "the principal may not act in the department");
     }
 
     private IGenericResult<Decision> Deny(Guid principalId, string reason)

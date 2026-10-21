@@ -909,7 +909,7 @@ public static partial class EtlLog
         string operationType);
 
     /// <summary>
-    /// Logs when a set-based transform step starts in the <c>BatchCopyPipeline</c> fold.
+    /// Logs when a set-based transform step starts.
     /// </summary>
     [MessageLogging(
         EventId = 11041,
@@ -922,7 +922,7 @@ public static partial class EtlLog
         int inCount);
 
     /// <summary>
-    /// Logs when a set-based transform step completes in the <c>BatchCopyPipeline</c> fold.
+    /// Logs when a set-based transform step completes.
     /// </summary>
     [MessageLogging(
         EventId = 11042,

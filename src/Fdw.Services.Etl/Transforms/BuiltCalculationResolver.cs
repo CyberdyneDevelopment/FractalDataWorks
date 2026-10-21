@@ -80,15 +80,6 @@ public static class BuiltCalculationResolver
                     return resolved;
                 }
             }
-
-            foreach (var path in stage.Paths)
-            {
-                var nested = await ResolveStages(path.Stages, string.Concat(stageName, ".", path.Name), resolution, cancellationToken).ConfigureAwait(false);
-                if (nested is not null)
-                {
-                    return nested;
-                }
-            }
         }
 
         return null;

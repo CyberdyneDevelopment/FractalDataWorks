@@ -16,11 +16,11 @@ public sealed class ConcurrencyRateLimitAlgorithm : RateLimitAlgorithmBase
     public ConcurrencyRateLimitAlgorithm() : base("Concurrency") { }
 
     /// <inheritdoc />
-    public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>
+    public override RateLimiter CreateLimiter(RateLimitAllowance allowance) =>
         new ConcurrencyLimiter(new ConcurrencyLimiterOptions
         {
-            PermitLimit = policy.RequestsPerWindow,
-            QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0,
+            PermitLimit = allowance.RequestsPerWindow,
+            QueueLimit = allowance.QueueExceededRequests ? allowance.QueueLimit : 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
         });
 }

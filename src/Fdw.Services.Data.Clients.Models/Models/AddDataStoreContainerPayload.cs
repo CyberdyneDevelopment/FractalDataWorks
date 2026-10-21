@@ -50,4 +50,23 @@ public sealed class AddDataStoreContainerPayload
     /// <c>[ ] : * ? / \</c>; refused for any other format. Left out, a workbook with several worksheets is refused when read.
     /// </summary>
     public string? SheetName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the path, after the connection's address, that the rows are sent to when this container is the destination of
+    /// an HTTP connection, for example <c>/api/v1/ingest</c>. A full web address is refused. Left out, a destination that needs it
+    /// fails naming it when it runs.
+    /// </summary>
+    public string? WriteEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP method the rows are sent with: <c>POST</c> or <c>PUT</c>; anything else is refused. Left out, a
+    /// destination that needs it fails naming it when it runs.
+    /// </summary>
+    public string? WriteMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets the content type the rows are sent as, for example <c>application/json</c>; a value that is not a media type is
+    /// refused. Left out, a destination that needs it fails naming it when it runs.
+    /// </summary>
+    public string? WriteContentType { get; set; }
 }

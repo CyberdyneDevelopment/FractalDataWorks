@@ -15,7 +15,7 @@ namespace Fdw.Services.Scheduling;
 /// The scheduled execution handlers a host can register (FDW-902).
 /// </summary>
 /// <remarks>
-/// Quartz's ScheduledPipelineJob and Hangfire's HangfireJobDispatcher resolve an
+/// Quartz's ScheduledPipelineJob resolves an
 /// <see cref="IGenericScheduledExecutionHandler"/> for every fire. This collection is how one gets
 /// registered: by package reference and the three-phase lifecycle, never by hand in a host.
 /// </remarks>

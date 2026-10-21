@@ -20,10 +20,11 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IFrameworkAuthorizationService authorization)
-        : base(logger, dataSets, dataStores, pipelines, variations, workspaces, access, authorization)
+        : base(logger, dataSets, dataStores, pipelines, variations, categories, workspaces, access, authorization)
     {
     }
 
@@ -50,18 +51,16 @@ public abstract class GetLineageNeighbourhoodEndpointBase : LineageEndpointBase<
         var focus = graph.Value!.Node(query.Value!.Node);
         return focus is null
             ? MapRequestRefusals.NodeNotFound<LineageNeighbourhoodResponse>(LineageLogger, query.Value!.Node)
-            : await Answer(graph.Value!, focus, query.Value!, ct).ConfigureAwait(false);
+            : Answer(graph.Value!, focus, query.Value!);
     }
 
-    private async Task<IGenericResult<LineageNeighbourhoodResponse>> Answer(
-        LineageGraph graph, LineageNode focus, LineageNeighbourhoodQuery query, CancellationToken ct)
+    private IGenericResult<LineageNeighbourhoodResponse> Answer(LineageGraph graph, LineageNode focus, LineageNeighbourhoodQuery query)
     {
         var walk = graph.Neighbourhood(focus.Id, query.Direction, query.Depth, query.Kinds);
-        var vias = await LineageResponses.Vias(Reader, graph, walk.Flows, query.Kinds.Pipelines, ct).ConfigureAwait(false);
-        if (vias.IsFailure) return vias.ToNewResult<LineageNeighbourhoodResponse>();
+        var vias = LineageResponses.Vias(graph, walk.Flows, query.Kinds.Pipelines);
 
         WorkspaceLineageLog.NeighbourhoodWalked(
             LineageLogger, focus.Id, query.Direction.Wire, query.Depth, walk.Nodes.Count, walk.Flows.Count, walk.Truncated);
-        return GenericResult<LineageNeighbourhoodResponse>.Success(LineageResponses.Neighbourhood(focus, walk, query.Kinds, vias.Value!));
+        return GenericResult<LineageNeighbourhoodResponse>.Success(LineageResponses.Neighbourhood(focus, walk, query.Kinds, vias));
     }
 }

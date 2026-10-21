@@ -34,7 +34,8 @@ public sealed class ConnectionProvider
           IServiceFactory<IGenericConnection>,
           IConnectionConfigurationProvider>,
       IConnectionProvider,
-      IDataConnectionProvider
+      IDataConnectionProvider,
+      IDocumentConnectionProvider
 {
 
     private readonly ILogger<ConnectionProvider> _logger;
@@ -71,4 +72,20 @@ public sealed class ConnectionProvider
 
     async Task<IGenericResult<T>> IDataConnectionProvider.Get<T>(string name, CancellationToken cancellationToken)
         => Cast<T>(await Get(name, cancellationToken).ConfigureAwait(false));
+
+    // IDocumentConnectionProvider: every Get, cast to IDocumentConnection (FDW-1496)
+
+    async Task<IGenericResult<IDocumentConnection>> IDocumentConnectionProvider.Get(string name, CancellationToken cancellationToken)
+        => Cast<IDocumentConnection>(await Get(name, cancellationToken).ConfigureAwait(false));
+
+    async Task<IGenericResult<IDocumentConnection>> IDocumentConnectionProvider.Get(Guid id, CancellationToken cancellationToken)
+        => Cast<IDocumentConnection>(await Get(id, cancellationToken).ConfigureAwait(false));
+
+    async Task<IGenericResult<IReadOnlyList<IDocumentConnection>>> IDocumentConnectionProvider.Get(CancellationToken cancellationToken)
+    {
+        var result = await Get(cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess) return result.ToNewResult<IReadOnlyList<IDocumentConnection>>();
+        var typed = result.Value is { } connections ? connections.OfType<IDocumentConnection>().ToList() : [];
+        return GenericResult<IReadOnlyList<IDocumentConnection>>.Success(typed);
+    }
 }

@@ -76,4 +76,10 @@ public sealed class PipelineExecutionRequest
     /// name, a missing required one and an unreadable value). Null when none were supplied.
     /// </summary>
     public IReadOnlyDictionary<string, object?>? Parameters { get; init; }
+
+    /// <summary>
+    /// Gets how many rows each source may read when this execution is a test run (FDW-1676). When set, the run reads at most this many
+    /// rows from each source and writes nothing; null means a real run.
+    /// </summary>
+    public int? TestRowsPerSource { get; init; }
 }

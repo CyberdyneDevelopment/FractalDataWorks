@@ -1,4 +1,4 @@
-using Fdw.Services.Etl.Pipelines;
+using Fdw.Services.Etl.Graphs;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Shouldly;
@@ -32,65 +32,50 @@ public class PipelineLineageProjectionTests
                 It.IsAny<System.Func<It.IsAnyType, System.Exception?, string>>()),
             times);
 
-    [Fact]
-    public void FromBatchCopyImplementationExtractsLinkage()
+    private static PipelineComponentConfiguration Component(string name, string type, string? dataSet = null, string? store = null, string? container = null) => new()
     {
-        var configuration = new BatchCopyPipelineConfiguration
-        {
-            Id = System.Guid.NewGuid(),
-            Name = "UsgsDailyLoad",
-            Domain = "Pipeline",
-            Implementation = "BatchCopy",
-            IsEnabled = true,
-            SourceDataSet = string.Empty,
-            DestinationDataSet = string.Empty,
-            SourceDataStoreName = "UsgsHttp",
-            SourceDataStorePath = "feeds/v1",
-            SourceContainerName = "quakes",
-            DestinationDataStoreName = "NflDb",
-            DestinationDataStorePath = "etl",
-            DestinationContainerName = "quakeSink"
-        };
+        Name = name, ComponentType = type, DataSetName = dataSet, DataStoreName = store, ContainerName = container,
+    };
+
+    private static GraphPipelineConfiguration Graph(params PipelineComponentConfiguration[] components) => new()
+    {
+        Id = System.Guid.NewGuid(),
+        Name = "Load",
+        Implementation = "Graph",
+        IsEnabled = true,
+        Components = [.. components],
+    };
+
+    [Fact]
+    public void AGraphPipelineProjectsEveryDataSetAndContainerItReadsAndWrites()
+    {
+        var configuration = Graph(
+            Component("a", "DataSetSource", dataSet: "Orders"),
+            Component("b", "DataSetSource", dataSet: "Customers"),
+            Component("c", "DataSetDestination", dataSet: "OrderSummary"),
+            Component("d", "ContainerDestination", store: "Warehouse", container: "orders_out"));
 
         var record = PipelineLineageProjection.From(configuration, _logger.Object);
 
         record.Id.ShouldBe(configuration.Id);
-        record.Name.ShouldBe("UsgsDailyLoad");
-        record.Implementation.ShouldBe("BatchCopy");
-        record.SourceDataStoreName.ShouldBe("UsgsHttp");
-        record.SourceContainerName.ShouldBe("quakes");
-        record.DestinationDataStoreName.ShouldBe("NflDb");
-        record.DestinationContainerName.ShouldBe("quakeSink");
+        record.Implementation.ShouldBe("Graph");
         record.IsEnabled.ShouldBeTrue();
-        VerifyLogged(LogLevel.Debug, 11016, Times.Once());
+        record.DataSetsRead.ShouldBe(["Orders", "Customers"]);
+        record.DataSetsWritten.ShouldBe(["OrderSummary"]);
+        record.ContainersWritten.ShouldBe([new PipelineLineageContainer("Warehouse", "orders_out")]);
+        record.ContainersRead.ShouldBeEmpty();
         VerifyLogged(LogLevel.Debug, 11017, Times.Once());
     }
 
     [Fact]
-    public void FromStreamingImplementationExtractsLinkage()
+    public void AGraphPipelineThatWasNotReadWholeHasNoUsesAndIsNotInventedAny()
     {
-        var configuration = new StreamingPipelineConfiguration
-        {
-            Id = System.Guid.NewGuid(),
-            Name = "StreamingIngest",
-            Domain = "Pipeline",
-            Implementation = "Streaming",
-            IsEnabled = true,
-            SourceDataSet = "StreamSourceDs",
-            DestinationDataSet = "StreamSinkDs",
-            SourceConnectionName = "StreamSourceConn",
-            DestinationConnectionName = "StreamSinkConn"
-        };
-        // A streaming pipeline's source and destination are connections to a stream, not data store containers; its lineage
-        // shows the data sets only until streaming gets the same treatment (FDW-1269).
+        var configuration = new GraphPipelineConfiguration { Id = System.Guid.NewGuid(), Name = "Empty", Implementation = "Graph" };
 
         var record = PipelineLineageProjection.From(configuration, _logger.Object);
 
-        record.SourceDataSet.ShouldBe("StreamSourceDs");
-        record.DestinationDataSet.ShouldBe("StreamSinkDs");
-        record.SourceDataStoreName.ShouldBeNull();
-        record.DestinationDataStoreName.ShouldBeNull();
-        record.IsEnabled.ShouldBeTrue();
+        record.Uses.ShouldBeEmpty();
+        record.DataSetsRead.ShouldBeEmpty();
     }
 
     [Fact]
@@ -109,10 +94,7 @@ public class PipelineLineageProjectionTests
         record.Name.ShouldBe("NonEtlPipeline");
         record.Id.ShouldBe(configuration.Id);
         record.Implementation.ShouldBe("SomeOtherKind");
-        record.SourceDataSet.ShouldBeNull();
-        record.DestinationDataSet.ShouldBeNull();
-        record.SourceDataStoreName.ShouldBeNull();
-        record.DestinationDataStoreName.ShouldBeNull();
+        record.Uses.ShouldBeEmpty();
         record.IsEnabled.ShouldBeFalse();
         VerifyLogged(LogLevel.Debug, 31002, Times.Once());
     }

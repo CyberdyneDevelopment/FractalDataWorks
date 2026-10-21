@@ -117,6 +117,16 @@ public sealed class MessageLoggingAttribute : Attribute
     public bool AutoMapSeverity { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the text the caller is given, a template over the same parameters as <see cref="Message"/>: for a
+    /// refusal of the caller's own input, or of a state the caller can act on, said so a person learns why
+    /// (<c>"{reason}"</c>), while <see cref="Message"/> stays the operator's full line. When set, the method returns a
+    /// <c>ClientMessage</c> (<c>IClientMessage</c>) carrying both texts, and a web host answers a refused request with
+    /// this one as the reason. Leave it unset for anything written only for an operator: a message naming internals,
+    /// a stack, a connection or another tenant's data. Every placeholder in it must be one <see cref="Message"/> names.
+    /// </summary>
+    public string? ClientMessage { get; set; }
+
+    /// <summary>
     /// Gets or sets a type code prefix for the generated message code.
     /// The generated code will be "{TypeCode}-{EventId}" (e.g., "FDW-8001").
     /// Must be 2-6 uppercase alphanumeric characters.

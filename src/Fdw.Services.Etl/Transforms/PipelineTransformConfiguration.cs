@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Transforms;
 
 /// <summary>
 /// Database-backed configuration for a pipeline transform step.
-/// Child of an ETL pipeline implementation (pipe.BatchCopyPipeline / pipe.StreamingPipeline).
+/// The row a graph Stage component owns (pipe.PipelineTransform).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
@@ -51,11 +51,6 @@ public sealed partial class PipelineTransformConfiguration : IGenericConfigurati
     /// Gets or sets the filter expression (for Filter transforms).
     /// </summary>
     public string? FilterExpression { get; set; }
-
-    /// <summary>
-    /// Gets or sets the field mappings (for Map transforms).
-    /// </summary>
-    public IList<PipelineTransformFieldMappingConfiguration> FieldMappings { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the group-by fields (for Aggregate transforms). For LatestBy and Distinct transforms these are the key
@@ -108,46 +103,6 @@ public sealed partial class PipelineTransformConfiguration : IGenericConfigurati
     /// Cascade child (pipe.PipelineTransformCheck).
     /// </summary>
     public IList<PipelineTransformCheckConfiguration> Checks { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets what a Branch stage does with a record that matches none of its paths: an <see cref="UnmatchedActions"/>
-    /// option name (Pass or Reject). Stated for a Branch stage, never assumed; null on every other kind of stage.
-    /// </summary>
-    [ValuesFrom(typeof(UnmatchedActions))]
-    public string? Unmatched { get; set; }
-
-    /// <summary>
-    /// Gets or sets the paths of a Branch stage, tried in <see cref="PipelineTransformPathConfiguration.Ordinal"/> order; the
-    /// first whose condition is true takes the record. Cascade child (pipe.PipelineTransformPath), which in turn owns the stages
-    /// of its path.
-    /// </summary>
-    public IList<PipelineTransformPathConfiguration> Paths { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the run point a Notify stage fires at: a <see cref="RunPoints"/> option name (AfterStage, AfterLoad or
-    /// OnFailure). Stated for a Notify stage, never assumed; null on every other kind of stage.
-    /// </summary>
-    [ValuesFrom(typeof(RunPoints))]
-    public string? RunPoint { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the notification rule a Notify stage sends through; the rule chooses channel and severity and
-    /// its own conditions still decide whether it sends. Stated for a Notify stage; null on every other kind of stage.
-    /// </summary>
-    public string? NotificationRuleName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the message a Notify stage sends, a template that may use the reserved variables of a run in double braces.
-    /// Stated for a Notify stage, never assumed; null on every other kind of stage.
-    /// </summary>
-    public string? NotificationMessage { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the data set a Union stage appends after the last row of the pipeline's source (FDW-1120 phase 4).
-    /// Stated for a Union stage, never assumed; null on every other kind of stage. The stage's <see cref="FieldMappings"/> say how
-    /// its fields become the fields the stage outputs.
-    /// </summary>
-    public string? UnionSourceDataSet { get; set; }
 
     /// <summary>
     /// Gets or sets the id of the Built Transformation a Compute stage applies to each record (FDW-1209). Stated for a Compute

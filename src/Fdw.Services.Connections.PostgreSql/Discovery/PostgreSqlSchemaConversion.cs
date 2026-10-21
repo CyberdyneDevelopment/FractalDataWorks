@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Fdw.Conventions;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Data.PostgreSql;
 using Fdw.Schema;
 
 namespace Fdw.Services.Connections.PostgreSql.Discovery;
@@ -24,11 +25,14 @@ public static class PostgreSqlSchemaConversion
         return new Field
         {
             Name = discovered.Name,
+            // The column's type as PostgreSQL reports it, recorded as the container field's DataType; the portable type is the
+            // native type's own (FDW-1588).
             FieldType = new SimpleFieldType
             {
-                TypeName = clrType.Name,
+                TypeName = discovered.SqlType,
                 ClrType = clrType
             },
+            ExplicitType = PortableTypeOf(discovered.SqlType),
             // Why a primary key is Identifier and never DbKey: the catalog cannot tell a meaningless row
             // number from a business id the database happens to assign (an OrderId IDENTITY), and DbKey
             // withholds the column from every default read. Hiding a key is a person's decision, not
@@ -42,6 +46,13 @@ public static class PostgreSqlSchemaConversion
             ConverterTypeId = 0
         };
     }
+
+    // Why the native type's abstract type: it is the mapping PostgreSQL columns of that type are read with, so the portable type
+    // is the store's own statement, not a guess. A type FDW has no native type for stays unstated (FDW-1588).
+    private static IDataType? PortableTypeOf(string sqlType) =>
+        PostgreSqlNativeTypeResolver.Resolve(sqlType) is { } native && !ReferenceEquals(native, PostgreSqlNativeTypes.NotFound)
+            ? native.AbstractType
+            : null;
 
     /// <summary>Resolves an <see cref="IContainerType"/> by name from <see cref="ContainerTypes"/>.</summary>
     public static IContainerType GetContainerType(string containerTypeName)

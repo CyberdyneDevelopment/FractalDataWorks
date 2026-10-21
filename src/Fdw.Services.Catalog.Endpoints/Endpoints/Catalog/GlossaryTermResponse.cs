@@ -23,10 +23,23 @@ public class GlossaryTermResponse
     public string Definition { get; set; } = string.Empty;
 
     /// <summary>Gets or sets the category the glossary term belongs to.</summary>
-    public string Category { get; set; } = string.Empty;
+    public string? Category { get; set; }
+
+    /// <summary>Gets or sets the display names from the top of the Glossary category tree down to the term's category, joined by " / "; null when it sits under none.</summary>
+    public string? CategoryPath { get; set; }
 
     /// <summary>Gets or sets the owner of the glossary term.</summary>
     public string? Owner { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the term's name stands for (FDW-1682). A term that states it is an acronym; null for a term that is not one.
+    /// </summary>
+    public string? StandsFor { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether an acronym is approved (FDW-1682). An acronym states it; null for a term that is not an acronym.
+    /// </summary>
+    public bool? IsApproved { get; set; }
 
     /// <summary>Gets or sets the names of related DataSets.</summary>
     public IList<string> RelatedDataSets { get; set; } = [];

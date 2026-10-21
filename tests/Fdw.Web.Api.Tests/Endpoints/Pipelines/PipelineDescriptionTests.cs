@@ -1,5 +1,5 @@
 using Fdw.Data.Abstractions.Mappers.PocoMappers;
-using Fdw.Services.Etl.Pipelines;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Endpoints;
 
 namespace Fdw.Web.Api.Tests.Endpoints.Pipelines;
@@ -15,8 +15,7 @@ public sealed class PipelineDescriptionTests
     [Theory]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    [InlineData(nameof(BatchCopyPipelineConfiguration))]
-    [InlineData(nameof(StreamingPipelineConfiguration))]
+    [InlineData(nameof(GraphPipelineConfiguration))]
     public void EveryEngineCarriesADescription(string engine)
     {
         // Arrange / Act
@@ -32,7 +31,7 @@ public sealed class PipelineDescriptionTests
     public void TheDetailReadAnswersWithTheDescriptionTheReadStamped()
     {
         // Arrange
-        var pipeline = new BatchCopyPipelineConfiguration { Name = "Load", Implementation = "BatchCopy", Description = "Loads the daily feed" };
+        var pipeline = new GraphPipelineConfiguration { Name = "Load", Implementation = "Graph", Description = "Loads the daily feed" };
 
         // Act
         var detail = PipelineDetailMapper.Map(pipeline);
@@ -47,7 +46,7 @@ public sealed class PipelineDescriptionTests
     public void TheDetailReadLeavesTheDescriptionEmptyWhenNobodyWroteOne()
     {
         // Arrange
-        var pipeline = new BatchCopyPipelineConfiguration { Name = "Load", Implementation = "BatchCopy" };
+        var pipeline = new GraphPipelineConfiguration { Name = "Load", Implementation = "Graph" };
 
         // Act
         var detail = PipelineDetailMapper.Map(pipeline);

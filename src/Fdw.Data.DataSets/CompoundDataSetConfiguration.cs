@@ -67,10 +67,7 @@ public sealed partial class CompoundDataSetConfiguration : ICompoundDataSetConfi
     /// <summary>Gets or sets the version.</summary>
     public string Version { get; set; } = "1.0";
 
-    /// <summary>Gets or sets the category.</summary>
-    public string Category { get; set; } = "Dataset";
-
-    /// <summary>Gets or sets the category id.</summary>
+    /// <inheritdoc />
     public Guid? CategoryId { get; set; }
 
     /// <summary>Gets or sets the record type name.</summary>

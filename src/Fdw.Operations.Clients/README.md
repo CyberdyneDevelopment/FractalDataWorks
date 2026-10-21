@@ -15,7 +15,6 @@ Client models carry the `Payload` suffix: the body shape, minus transport concer
 | `DataflowApiClient` | class | API client for dataflow, lineage, and impact analysis endpoints. |
 | `EscalationApiClient` | class | API client for escalation policy management endpoints. |
 | `ExecutionApiClient` | class | API client for execution history and audit trail endpoints. |
-| `LineageApiClient` | class | API client for Data Lineage operations. |
 | `NotificationPreferencesApiClient` | class | API client for user notification preferences endpoints. |
 
 ## Payloads

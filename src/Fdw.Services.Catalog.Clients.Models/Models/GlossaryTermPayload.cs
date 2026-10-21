@@ -14,8 +14,11 @@ public sealed class GlossaryTermPayload
     public string Term { get; set; } = string.Empty;
     /// <summary>Gets or sets the term definition.</summary>
     public string Definition { get; set; } = string.Empty;
-    /// <summary>Gets or sets the category the glossary term belongs to.</summary>
-    public string Category { get; set; } = string.Empty;
+    /// <summary>Gets or sets the name of the Glossary category the term sits under; null when it sits under none.</summary>
+    public string? Category { get; set; }
+
+    /// <summary>Gets or sets the display names from the top of the category tree down to the term's category, joined by " / "; null when it sits under none.</summary>
+    public string? CategoryPath { get; set; }
     /// <summary>Gets or sets the owner of the glossary term.</summary>
     public string? Owner { get; set; }
     /// <summary>Gets or sets the names of related DataSets.</summary>

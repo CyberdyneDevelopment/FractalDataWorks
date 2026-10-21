@@ -421,7 +421,7 @@ public sealed class ConfigurationMenuScreen : ScreenBase
         {
             var row = new ListRowModel { Id = dataSet.Name };
             row.SetValue(ColumnName, dataSet.Name);
-            row.SetValue(ColumnCategory, dataSet.Category);
+            row.SetValue(ColumnCategory, dataSet.CategoryPath);
             row.SetValue(
                 ColumnCreated,
                 dataSet.CreatedAt.ToString("g", CultureInfo.CurrentCulture));

@@ -27,31 +27,29 @@ public interface IPipelineClient
     Task<IGenericResult<PipelineDetailResponse>> Get(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Creates a new pipeline.
+    /// Reads a graph pipeline as the graph the API states (FDW-1396).
     /// </summary>
-    Task<IGenericResult<PipelineDetailResponse>> CreatePipeline(CreatePipelineClientRequest request, CancellationToken cancellationToken = default);
+    Task<IGenericResult<GraphPayload>> GetGraph(string name, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks a pipeline draft exactly as creating it would, without saving anything, and returns every problem found.
+    /// Creates a graph pipeline (FDW-1396); the graph is refused whole when it cannot run.
     /// </summary>
-    Task<IGenericResult<ValidatePipelineResponse>> ValidatePipeline(CreatePipelineClientRequest request, CancellationToken cancellationToken = default);
+    Task<IGenericResult<GraphPayload>> CreateGraph(GraphPayload graph, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Checks an edit of a saved pipeline exactly as updating it would, without saving anything, and returns every problem
-    /// found (FDW-1105). The pipeline must exist.
+    /// Replaces a graph pipeline whole with the graph in the request (FDW-1396).
     /// </summary>
-    Task<IGenericResult<ValidatePipelineResponse>> ValidatePipeline(string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default);
+    Task<IGenericResult<GraphPayload>> ReplaceGraph(string name, GraphPayload graph, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing pipeline by name.
+    /// Checks a graph draft without saving it and answers every problem with the path to the part it concerns (FDW-1396).
     /// </summary>
-    Task<IGenericResult<PipelineDetailResponse>> UpdatePipeline(string name, UpdatePipelineClientRequest request, CancellationToken cancellationToken = default);
+    Task<IGenericResult<GraphValidationPayload>> ValidateGraph(GraphPayload graph, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all registered ETL pipeline engine types (e.g., "BatchCopy", "Streaming"), sourced from
-    /// the server-side <c>EtlPipelineTypes</c> ServiceTypeCollection — never hardcoded client-side.
+    /// Describes a graph draft: the fields a row has at every input and output node, and the problems the draft has (FDW-1397).
     /// </summary>
-    Task<IGenericResult<IReadOnlyList<PipelineTypeSummary>>> GetPipelineTypes(CancellationToken cancellationToken = default);
+    Task<IGenericResult<GraphDescriptionPayload>> DescribeGraph(GraphPayload graph, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a pipeline by name.

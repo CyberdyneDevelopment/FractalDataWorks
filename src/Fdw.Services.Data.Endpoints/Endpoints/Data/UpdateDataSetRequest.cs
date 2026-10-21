@@ -21,7 +21,10 @@ public class UpdateDataSetRequest
     /// </summary>
     public int? ClassificationId { get; set; }
 
-    /// <summary>Gets or sets the data set category.</summary>
+    /// <summary>
+    /// Gets or sets the name of the <c>DataSet</c> category the data set sits under. Left out, the current category stays; an empty
+    /// string takes the data set out of its category. A name that is not a category of that type is refused.
+    /// </summary>
     public string? Category { get; set; }
 
     /// <summary>Gets or sets the data set version.</summary>

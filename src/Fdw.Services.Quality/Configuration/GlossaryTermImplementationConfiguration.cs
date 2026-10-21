@@ -48,10 +48,8 @@ public sealed partial class GlossaryTermImplementationConfiguration
     /// </summary>
     public string? Formula { get; set; }
 
-    /// <summary>
-    /// Gets or sets the category this term belongs to.
-    /// </summary>
-    public string Category { get; set; } = string.Empty;
+    /// <inheritdoc />
+    public Guid? CategoryId { get; set; }
 
     /// <summary>
     /// Gets or sets the business owner of this term.
@@ -62,6 +60,12 @@ public sealed partial class GlossaryTermImplementationConfiguration
     /// Gets or sets the data steward responsible for this term.
     /// </summary>
     public string Steward { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    public string? StandsFor { get; set; }
+
+    /// <inheritdoc />
+    public bool? IsApproved { get; set; }
 
     /// <summary>
     /// Gets or sets the related terms for this glossary term.

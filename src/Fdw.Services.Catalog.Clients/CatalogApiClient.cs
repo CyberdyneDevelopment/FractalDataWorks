@@ -32,10 +32,11 @@ public sealed class CatalogApiClient : ApiClientBase
     /// <returns>A result containing the list of matching catalog entities.</returns>
     public Task<IGenericResult<IReadOnlyList<CatalogEntityPayload>>> Search(string query, string? entityType = null, CancellationToken ct = default)
     {
-        var path = $"catalog/search?query={Uri.EscapeDataString(query)}";
+        // Why q and entityTypes (FDW-1681): those are the names the search binds; the client used to send query and entityType, which it ignores.
+        var path = $"catalog/search?q={Uri.EscapeDataString(query)}";
         if (!string.IsNullOrEmpty(entityType))
         {
-            path += $"&entityType={Uri.EscapeDataString(entityType)}";
+            path += $"&entityTypes={Uri.EscapeDataString(entityType)}";
         }
         return GetList<CatalogEntityPayload>(path, ct);
     }

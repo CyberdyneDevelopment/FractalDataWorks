@@ -36,6 +36,7 @@ public abstract class GetMapSummaryEndpointBase : Endpoint<MapRequest, MapSummar
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IConnectionConfigurationProvider connections,
@@ -43,7 +44,7 @@ public abstract class GetMapSummaryEndpointBase : Endpoint<MapRequest, MapSummar
         IScheduleConfigurationProvider schedules)
     {
         _logger = logger ?? NullLogger<GetMapSummaryEndpointBase>.Instance;
-        _sources = new MapSources(dataSets, dataStores, pipelines, variations);
+        _sources = new MapSources(dataSets, dataStores, pipelines, variations, categories);
         _counts = new MapKindCounts(connections, qualityRules, schedules);
         _scopes = new MapScopeSelector(workspaces, access, _logger);
     }

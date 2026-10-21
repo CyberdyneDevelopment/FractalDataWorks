@@ -208,6 +208,30 @@ public sealed class ExecutionTrackingServiceTenantTests
     }
 
     [Fact]
+    public async Task ListNarrowedToARootRunFiltersOnTheRootExecutionItem()
+    {
+        Returns();
+        var run = Guid.NewGuid();
+
+        await Tracker(ActingIn(TenantA)).ListExecutions(rootId: run, cancellationToken: TestContext.Current.CancellationToken);
+
+        var filter = ((QueryCommand<ExecutionItem>)_itemQueries.Single()).Filter as FilterExpression;
+        Conditions(filter?.Root).ShouldContain(c => c.PropertyName == "RootExecutionItemId" && Equals(c.Value, run));
+        Conditions(filter?.Root).ShouldContain(c => c.PropertyName == "TenantId" && Equals(c.Value, TenantA));
+    }
+
+    [Fact]
+    public async Task ListWithNoRootRunHasNoRootTerm()
+    {
+        Returns();
+
+        await Tracker(ActingIn(TenantA)).ListExecutions(cancellationToken: TestContext.Current.CancellationToken);
+
+        var filter = ((QueryCommand<ExecutionItem>)_itemQueries.Single()).Filter as FilterExpression;
+        Conditions(filter?.Root).ShouldNotContain(c => c.PropertyName == "RootExecutionItemId");
+    }
+
+    [Fact]
     public async Task CallerWithNoTenantListsNothingAndQueriesNothing()
     {
         Returns(Item(TenantA));

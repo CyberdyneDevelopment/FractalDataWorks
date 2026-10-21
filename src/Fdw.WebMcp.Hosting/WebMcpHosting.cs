@@ -124,15 +124,33 @@ public sealed class WebMcpHosting
 
         var generator = host.Services.GetRequiredService<WebMcpJsGenerator>();
         var resolved = settings.Value!;
-        endpoints.MapGet(ScriptPath, (HttpContext httpContext) =>
-        {
-            httpContext.Response.Headers.CacheControl = "public, max-age=3600";
-            return Microsoft.AspNetCore.Http.Results.Content(generator.Generate(resolved), "application/javascript");
-        })
-        .ExcludeFromDescription();
+        endpoints.MapGet(ScriptPath, (HttpContext httpContext) => Script(httpContext, generator.Generate(resolved)))
+            .ExcludeFromDescription();
 
         WebMcpLog.ScriptMapped(logger, ScriptPath, registry.Tools.Count);
         return GenericResult<IHost>.Success(host);
+    }
+
+    /// <summary>The catalogue as one request gets it: in full, or 304 when the copy the caller holds is this one.</summary>
+    /// <param name="httpContext">The request.</param>
+    /// <param name="script">The catalogue as the generator writes it now.</param>
+    /// <returns>The script, or 304 Not Modified.</returns>
+    /// <remarks>
+    /// Why no-cache with an ETag rather than a max-age: the catalogue is the endpoint registry's, so it changes with every
+    /// deploy, and a cache that keeps it (a CDN in front of the host held one for hours) hides a deploy's tools from every
+    /// agent. no-cache lets a cache keep it but never answer from it without asking; asking costs a 304. The tag is the
+    /// script's own hash, so it changes exactly when the catalogue does. A CDN that compresses the script may weaken the tag
+    /// (W/"..."), which still holds it.
+    /// </remarks>
+    private static IResult Script(HttpContext httpContext, string script)
+    {
+        var tag = string.Concat("\"", System.Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(script))), "\"");
+        httpContext.Response.Headers.CacheControl = "no-cache";
+        httpContext.Response.Headers.ETag = tag;
+
+        return httpContext.Request.Headers.IfNoneMatch.ToString().Contains(tag, System.StringComparison.Ordinal)
+            ? Microsoft.AspNetCore.Http.Results.StatusCode(StatusCodes.Status304NotModified)
+            : Microsoft.AspNetCore.Http.Results.Content(script, "application/javascript");
     }
 
     /// <summary>The host's WebMCP settings, read through the reader this type registered.</summary>

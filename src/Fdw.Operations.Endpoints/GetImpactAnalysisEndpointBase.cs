@@ -17,6 +17,10 @@ using Fdw.Data.Abstractions;
 // ApiEndpointLog now in this namespace
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Logging;
+using Fdw.Data.DataSets.Results;
+using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
+using Microsoft.AspNetCore.Http;
 
 namespace Fdw.Operations.Endpoints;
 
@@ -26,12 +30,15 @@ namespace Fdw.Operations.Endpoints;
 public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisRequest, ImpactAnalysisResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly CategoryConfigurationProvider _categories;
     private readonly ILogger<GetImpactAnalysisEndpointBase> _logger;
 
     /// <inheritdoc />
-    protected GetImpactAnalysisEndpointBase(DataSetConfigurationProvider dataSetProvider, ILogger<GetImpactAnalysisEndpointBase> logger)
+    protected GetImpactAnalysisEndpointBase(
+        DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories, ILogger<GetImpactAnalysisEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
+        _categories = categories;
         _logger = logger;
     }
 
@@ -56,15 +63,23 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     {
         EndpointLog.GettingResource(_logger, "impact analysis", req.TargetName);
 
-        IReadOnlyList<ImpactedDataSetResponse> impactedDataSets = [];
+        IGenericResult<IReadOnlyList<ImpactedDataSetResponse>> analysis = GenericResult<IReadOnlyList<ImpactedDataSetResponse>>.Success([]);
 
         if (req.TargetType.Equals("connection", StringComparison.OrdinalIgnoreCase))
         {
-            impactedDataSets = await AnalyzeConnectionImpact(req.TargetName, ct).ConfigureAwait(false);
+            analysis = await AnalyzeConnectionImpact(req.TargetName, ct).ConfigureAwait(false);
         }
         else if (req.TargetType.Equals("datastore", StringComparison.OrdinalIgnoreCase))
         {
-            impactedDataSets = await AnalyzeDataStoreImpact(req.TargetName, ct).ConfigureAwait(false);
+            analysis = await AnalyzeDataStoreImpact(req.TargetName, ct).ConfigureAwait(false);
+        }
+
+        // A read that failed is a failed analysis, not "nothing is impacted".
+        if (analysis.IsFailure || analysis.Value is not { } impactedDataSets)
+        {
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(analysis, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
+            return;
         }
 
         await Send.OkAsync(new ImpactAnalysisResponse
@@ -79,12 +94,12 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     }
 
     /// <summary>Analyzes the impact of a connection change by finding all sources using that connection.</summary>
-    protected virtual Task<IReadOnlyList<ImpactedDataSetResponse>> AnalyzeConnectionImpact(
+    protected virtual Task<IGenericResult<IReadOnlyList<ImpactedDataSetResponse>>> AnalyzeConnectionImpact(
         string connectionName, CancellationToken ct) =>
         Impact(source => string.Equals(source.ConnectionName, connectionName, StringComparison.OrdinalIgnoreCase), ct);
 
     /// <summary>Analyzes the impact of a data store change by finding all sources using that data store.</summary>
-    protected virtual Task<IReadOnlyList<ImpactedDataSetResponse>> AnalyzeDataStoreImpact(
+    protected virtual Task<IGenericResult<IReadOnlyList<ImpactedDataSetResponse>>> AnalyzeDataStoreImpact(
         string dataStoreName, CancellationToken ct) =>
         Impact(source => string.Equals(source.DataStoreName, dataStoreName, StringComparison.OrdinalIgnoreCase), ct);
 
@@ -99,14 +114,19 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
     /// compile error, and only two properties were ever passed.
     /// </para>
     /// </remarks>
-    protected virtual async Task<IReadOnlyList<ImpactedDataSetResponse>> Impact(
+    protected virtual async Task<IGenericResult<IReadOnlyList<ImpactedDataSetResponse>>> Impact(
         Func<DataSetSourceConfiguration, bool> matches, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(matches);
 
         var dataSets = await _dataSetProvider.Get(ct).ConfigureAwait(false);
         if (dataSets.IsFailure || dataSets.Value is not { } all)
-            return [];
+            return dataSets.ToNewResult<IReadOnlyList<ImpactedDataSetResponse>>();
+
+        // The category tree the data sets sit in: an impacted data set answers the path of its category.
+        var tree = await CategoryTrees.Load(_categories, DataSetCategoryConfiguration.ImplementationName, _logger, ct).ConfigureAwait(false);
+        if (tree.IsFailure || tree.Value is null)
+            return tree.ToNewResult<IReadOnlyList<ImpactedDataSetResponse>>();
 
         var impacted = new List<ImpactedDataSetResponse>();
 
@@ -116,16 +136,30 @@ public abstract class GetImpactAnalysisEndpointBase : Endpoint<ImpactAnalysisReq
             if (affectedSources.Count == 0)
                 continue;
 
+            var path = CategoryPath(tree.Value, dataSet);
+            if (path.IsFailure)
+                return path.ToNewResult<IReadOnlyList<ImpactedDataSetResponse>>();
+
             impacted.Add(new ImpactedDataSetResponse
             {
                 DataSetName = dataSet.Name,
-                Category = dataSet.Category,
+                Category = path.Value,
                 ImpactLevel = affectedSources.Exists(s => s.Priority == 1) ? "High" : "Medium",
                 AffectedSourceCount = affectedSources.Count,
                 AffectedSources = affectedSources.ConvertAll(s => s.SourceName)
             });
         }
 
-        return impacted;
+        return GenericResult<IReadOnlyList<ImpactedDataSetResponse>>.Success(impacted);
+    }
+
+    // The path of the data set's category, null when it sits under none. A data set that cites a category that is not in the tree is a
+    // fault in the store and is reported as one.
+    private IGenericResult<string?> CategoryPath(CategoryTree tree, IDataSetImplementationConfiguration dataSet)
+    {
+        var label = CategoryLinks.Label(tree, DataSetCategoryConfiguration.ImplementationName, dataSet.CategoryId, _logger);
+        return label.IsFailure || label.Value is null
+            ? label.ToNewResult<string?>()
+            : GenericResult<string?>.Success(label.Value.Path);
     }
 }

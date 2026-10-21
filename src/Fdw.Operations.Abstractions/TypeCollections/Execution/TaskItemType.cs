@@ -19,7 +19,8 @@ public sealed class TaskItemType : ExecutionItemTypeBase
             displayName: "Task",
             hierarchyLevel: 4,
             canHaveChildren: false,
-            canHaveParent: true)
+            canHaveParent: true,
+            canContainSelf: false)
     {
     }
 }

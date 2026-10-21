@@ -5,8 +5,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
+using Fdw.Operations.Abstractions.Audit;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Commands;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Configuration;
@@ -137,6 +139,15 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
         if (resolved is null)
             return;
 
+        // Why after the names resolve and before anything is written: a role may carry only what its definer holds
+        // themselves (FDW-1577), and a refusal must touch nothing.
+        var allowed = Resolve<IGrantRule>().CanDefine([.. resolved.Select(p => p.Name)], owningTenant.Value);
+        if (allowed.IsFailure)
+        {
+            await Send.ResultAsync(RoleChangeRefusal.Of(allowed, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         var existingMappingsResult = await _rolePermissionProvider
             .Find<IRolePermissionImplementationConfiguration>(rp => rp.RoleId == role.Id, ct).ConfigureAwait(false);
         if (!existingMappingsResult.IsSuccess || existingMappingsResult.Value is null)
@@ -153,6 +164,15 @@ public abstract class SetRolePermissionsEndpointBase : Endpoint<SetRolePermissio
 
         if (!await ApplyAndEndSessions(req, role, resolved, existingMappingsResult.Value, authContext, owningTenant.Value, ct).ConfigureAwait(false))
             return;
+
+        var audited = await RoleChangeAudit.RecordRole(Resolve<IAdministrativeAudit>(), User, "RolePermissionsSet", req.Name,
+            null, string.Join(", ", resolved.Select(p => p.Name).Order(StringComparer.OrdinalIgnoreCase)), ct).ConfigureAwait(false);
+        if (audited.IsFailure)
+        {
+            AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RolePermissionsSet", req.Name, audited.CurrentMessage);
+            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            return;
+        }
 
         await Send.OkAsync(resolved, ct).ConfigureAwait(false);
     }

@@ -325,8 +325,8 @@ The pieces involved, all real and shipped in this release:
 - `Fdw.Services.Pipelines` — `PipelineServiceTypes` (the three-phase collection for the pipeline
   domain) and `IPipeline` / `IPipelineTypedConfiguration` (`Fdw.Services.Pipelines.Abstractions`)
   define what a pipeline *is*.
-- `Fdw.Services.Etl` — pipeline *kinds* (e.g. `StreamingPipelineType` in
-  `Fdw.Services.Etl/Pipelines/StreamingPipelineType.cs`) that actually execute steps against
+- `Fdw.Services.Etl` — pipeline *kinds* (`GraphPipelineType` in
+  `Fdw.Services.Etl/Graphs/GraphPipelineType.cs`) that actually execute steps against
   `IDataGateway`.
 - `Fdw.Services.Scheduling` — `SchedulerTypes` and trigger kinds (Cron/Interval/Once/Manual) that
   fire a pipeline run unattended.

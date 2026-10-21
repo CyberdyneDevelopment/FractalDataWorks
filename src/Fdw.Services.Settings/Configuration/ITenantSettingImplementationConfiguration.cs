@@ -20,4 +20,7 @@ public interface ITenantSettingImplementationConfiguration : IImplementationConf
 
     /// <summary>Gets or sets the TenantSetting IsActive.</summary>
     bool IsActive { get; set; }
+
+    /// <summary>Gets or sets whether the levels below this one are barred from setting their own value (FDW-1579).</summary>
+    bool IsLocked { get; set; }
 }

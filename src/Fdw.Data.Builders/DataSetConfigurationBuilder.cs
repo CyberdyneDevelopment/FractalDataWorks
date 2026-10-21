@@ -33,7 +33,7 @@ public sealed class DataSetConfigurationBuilder
     private string? _dataSetName;
     private string? _description;
     private string _version = "1.0";
-    private string _category = "Dataset";
+    private Guid? _categoryId;
     private string? _recordTypeName;
     private readonly List<DataSetFieldConfiguration> _fields = new();
     private readonly List<string> _keyFields = new();
@@ -94,13 +94,13 @@ public sealed class DataSetConfigurationBuilder
     }
 
     /// <summary>
-    /// Sets the category for grouping.
+    /// Sets the category the data set sits under.
     /// </summary>
-    /// <param name="category">The category name for organizational purposes (default: "Dataset").</param>
+    /// <param name="categoryId">The identity of a node of the DataSet category tree; null for none.</param>
     /// <returns>This builder instance for method chaining.</returns>
-    public DataSetConfigurationBuilder WithCategory(string category)
+    public DataSetConfigurationBuilder WithCategoryId(Guid? categoryId)
     {
-        _category = category ?? "Dataset";
+        _categoryId = categoryId;
         return this;
     }
 
@@ -388,7 +388,7 @@ public sealed class DataSetConfigurationBuilder
             Name = dataSetName,
             Description = _description ?? string.Empty,
             Version = _version,
-            Category = _category,
+            CategoryId = _categoryId,
             RecordTypeName = recordTypeName,
             Fields = new List<DataSetFieldConfiguration>(_fields),
             KeyFields = _keyFields
@@ -473,7 +473,7 @@ public sealed class DataSetConfigurationBuilder
         _dataSetName = null;
         _description = null;
         _version = "1.0";
-        _category = "Dataset";
+        _categoryId = null;
         _recordTypeName = null;
         _fields.Clear();
         _keyFields.Clear();

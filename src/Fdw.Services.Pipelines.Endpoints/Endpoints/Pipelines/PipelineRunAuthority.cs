@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
@@ -129,19 +128,14 @@ public sealed class PipelineRunAuthority
         if (dataSets.IsFailure)
             return dataSets;
 
-        var source = await ReachSourceContainer(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
-        if (source.IsFailure)
-            return source;
-
-        var destination = await ReachDestinationContainer(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
-        return destination.IsFailure ? destination : await ReachContainers(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
+        return await ReachContainers(reach, chosen, permissions, logger, ct).ConfigureAwait(false);
     }
 
-    // Every data set the pipeline reads or writes -- its own source and destination, and what its stages and steps name.
+    // Every data set the pipeline reads or writes -- what its components, stages and steps name.
     private async Task<IGenericResult> ReachDataSets(
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
     {
-        foreach (var reached in DataSetsTouched(reach))
+        foreach (var reached in reach.DataSets)
         {
             var refused = await ReachDataSet(reach, roles, permissions, reached, logger, ct).ConfigureAwait(false);
             if (refused.IsFailure)
@@ -207,60 +201,12 @@ public sealed class PipelineRunAuthority
             : Refuse(logger, reach, roles, $"the roles do not carry {needed}, which {Verb(writes)} data store '{name}' needs");
     }
 
-    // A data store container source (FDW-1103): the container must resolve under the caller's own row-level security, the store
-    // must not be one the host declares for itself (those are the platform's, refused to every user request at the gateway
-    // too), and the roles must carry datastores:read. All three parts are required, and a pipeline reads from one place.
-    private async Task<IGenericResult> ReachSourceContainer(
-        PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(reach.SourceDataStoreName)
-            && string.IsNullOrWhiteSpace(reach.SourceDataStorePath)
-            && string.IsNullOrWhiteSpace(reach.SourceContainerName))
-            return GenericResult.Success();
-
-        if (string.IsNullOrWhiteSpace(reach.SourceDataStoreName)
-            || string.IsNullOrWhiteSpace(reach.SourceDataStorePath)
-            || string.IsNullOrWhiteSpace(reach.SourceContainerName))
-            return Refuse(logger, reach, roles,
-                "a data store source names its store, path and container together (SourceDataStoreName, SourceDataStorePath, SourceContainerName)");
-
-        if (!string.IsNullOrWhiteSpace(reach.SourceDataSet))
-            return Refuse(logger, reach, roles, "a pipeline reads from one place: name a source data set or a data store container, not both");
-
-        return await ReachContainer(
-            reach, roles, permissions, new ReachedContainer(reach.SourceDataStoreName, reach.SourceDataStorePath, reach.SourceContainerName, false), logger, ct)
-            .ConfigureAwait(false);
-    }
-
-    // A data store container destination (FDW-1269), judged as the source is, but for writing: all three parts are named together, never
-    // beside a destination data set or a destination connection, and the roles must carry datastores:write.
-    private async Task<IGenericResult> ReachDestinationContainer(
-        PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(reach.DestinationDataStoreName)
-            && string.IsNullOrWhiteSpace(reach.DestinationDataStorePath)
-            && string.IsNullOrWhiteSpace(reach.DestinationContainerName))
-            return GenericResult.Success();
-
-        if (string.IsNullOrWhiteSpace(reach.DestinationDataStoreName)
-            || string.IsNullOrWhiteSpace(reach.DestinationDataStorePath)
-            || string.IsNullOrWhiteSpace(reach.DestinationContainerName))
-            return Refuse(logger, reach, roles,
-                "a data store destination names its store, path and container together (DestinationDataStoreName, DestinationDataStorePath, DestinationContainerName)");
-
-        if (!string.IsNullOrWhiteSpace(reach.DestinationDataSet))
-            return Refuse(logger, reach, roles, "a pipeline writes to one place: name a destination data set or a data store container, not both");
-
-        return await ReachContainer(
-            reach, roles, permissions, new ReachedContainer(reach.DestinationDataStoreName, reach.DestinationDataStorePath, reach.DestinationContainerName, true), logger, ct)
-            .ConfigureAwait(false);
-    }
-
-    // The containers the pipeline's Execute steps write.
+    // The data store containers the pipeline's components and stages read or write (FDW-1103, FDW-1269): each must name its store, path
+    // and container together.
     private async Task<IGenericResult> ReachContainers(
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ILogger logger, CancellationToken ct)
     {
-        foreach (var container in reach.Steps.Containers)
+        foreach (var container in reach.Containers)
         {
             var refused = await ReachContainer(reach, roles, permissions, container, logger, ct).ConfigureAwait(false);
             if (refused.IsFailure)
@@ -273,6 +219,10 @@ public sealed class PipelineRunAuthority
     private async Task<IGenericResult> ReachContainer(
         PipelineReach reach, IReadOnlyList<string> roles, IReadOnlyCollection<string> permissions, ReachedContainer reached, ILogger logger, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(reached.DataStore) || string.IsNullOrWhiteSpace(reached.Path) || string.IsNullOrWhiteSpace(reached.Container))
+            return Refuse(logger, reach, roles,
+                $"container '{reached.Container}' must name its data store, path and container together (store '{reached.DataStore}', path '{reached.Path}')");
+
         var store = await _dataStores.Get(reached.DataStore, ct).ConfigureAwait(false);
         if (!store.IsSuccess || store.Value is null)
             return Refuse(logger, reach, roles, $"data store '{reached.DataStore}' is not visible to the caller");
@@ -289,15 +239,6 @@ public sealed class PipelineRunAuthority
             ? GenericResult.Success()
             : Refuse(logger, reach, roles, $"the roles do not carry {needed}, which {Verb(reached.Writes)} data store '{reached.DataStore}' needs");
     }
-
-    private static IEnumerable<ReachedDataSet> DataSetsTouched(PipelineReach reach) =>
-        Named(reach.SourceDataSet).Select(name => new ReachedDataSet(name, false))
-            .Concat(reach.Steps.DataSets)
-            .Concat(Named(reach.DestinationDataSet).Select(name => new ReachedDataSet(name, true)))
-            .Distinct();
-
-    private static IEnumerable<string> Named(string? name)
-        => string.IsNullOrWhiteSpace(name) ? [] : [name];
 
     private static string Verb(bool writes) => writes ? "writing" : "reading";
 

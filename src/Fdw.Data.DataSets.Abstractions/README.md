@@ -12,7 +12,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IDataQuery` | interface | Represents a query against a dataset with LINQ expression support. This interface captures query… |
 | `IDataQuery<TSource>` | interface | Generic version of IDataQuery with strong typing for the source dataset. |
 | `IDataSetCatalog` | interface | Represents a catalog of datasets that provides type-safe lookup and enumeration capabilities. This… |
-| `IDataSetCategory` | interface | Marker interface for DataSet category type options. Implemented by and any compile-time… |
 | `IDataSetExecutionContext` | interface | Thin execution context handed to a strategy's so the strategy can run a command against the dataset's… |
 | `IDataSetSourceMapperType` | interface | Represents a data set source mapper type definition. Mapper types extract raw records from structured… |
 | `IDataSetType` | interface | Represents a dataset definition with schema information and query capabilities. Datasets define the… |
@@ -22,8 +21,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `DataSetCategories` | class | Registry of DataSet category type options (Model C — Hybrid). |
-| `DataSetCategoryBase` | class | Abstract base class for DataSet category type options. Derive from this class to declare compile-time… |
 | `DataSetSourceMapperTypeBase` | class | Base class for data set source mapper type definitions. Mappers extract raw records from structured… |
 | `DataSetTypeBase` | class | Abstract base class for dataset type definitions following the Fdw.Collections pattern. Provides common… |
 | `DataSetTypes` | class | Registry of dataset types. Pure type collection with no DI orchestration. DI registration is handled by… |
@@ -40,7 +37,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `DataFieldToFieldDefinitionAdapter` | class | Adapter that converts a to . |
 | `DataQueryBuilder<TSource>` | class | Concrete implementation of IDataQuery that builds LINQ expression trees. This class captures method… |
 | `DataSetAggregateDefinition` | class | Defines a single aggregate measure within a DataSet, including the group-by keys and the aggregate… |
-| `DataSetCategoryConfiguration` | class | Configuration record for a DataSet category, backed by data.DataSetCategory. Runtime-defined categories… |
 | `DataSetFilterConditionConfiguration` | class | Configuration for a filter condition stored with a DataSet definition. These filters are applied… |
 | `DataSetKeyFieldConfiguration` | class | Configuration for a key field within a DataSet. Loaded from data.DataSetKeyField as a child of… |
 | `DataSetSourceMapperContext` | class | Context bag passed to source mappers during record extraction. Contains the raw payload, record selector… |

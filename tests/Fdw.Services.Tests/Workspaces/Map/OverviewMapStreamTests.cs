@@ -9,6 +9,7 @@ using Fdw.Services.Connections;
 using Fdw.Services.Workspaces.Endpoints;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Services.Etl;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -39,7 +40,7 @@ public class OverviewMapStreamTests
             [orders, customers, orders],
             [DataStore(WarehouseId, "Warehouse")],
             NoVariations);
-        var stream = new OverviewMapStream(selection, null!, await Editing("datasets:write"), NullLogger.Instance);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing("datasets:write"), NullLogger.Instance);
 
         var nodes = new List<MapNodeDto>();
         await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
@@ -73,7 +74,7 @@ public class OverviewMapStreamTests
             [OrdersId] = [new WorkspaceMapVariationCountDto { Kind = "Scoped", Count = 2 }],
         };
         var selection = new FixedSelection([], [DataSet(OrdersId, "Orders", [])], [], variations);
-        var stream = new OverviewMapStream(selection, null!, await Editing(), NullLogger.Instance);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance);
 
         var nodes = new List<MapNodeDto>();
         await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
@@ -91,7 +92,7 @@ public class OverviewMapStreamTests
         var selection = new FixedSelection(
             [], [DataSet(OrdersId, "Orders", [])], [], NoVariations,
             GenericResult.Failure(WorkspacesResultCodes.ByName("MapRequestInvalid"), ResultDetails.Create("reason", "the variations could not be read")));
-        var stream = new OverviewMapStream(selection, null!, await Editing(), NullLogger.Instance);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance);
 
         var nodes = new List<MapNodeDto>();
         await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
@@ -101,20 +102,96 @@ public class OverviewMapStreamTests
         stream.State.Outcome.IsFailure.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task ADataSetNodeNamesThePathOfTheCategoryItSitsUnder()
+    {
+        var sports = Guid.NewGuid();
+        var nfl = Guid.NewGuid();
+        var categories = CategoryProviders.Holding(
+            CategoryProviders.Node(sports, null, "sports", "Sports"),
+            CategoryProviders.Node(nfl, sports, "nfl", "NFL"));
+        var selection = new FixedSelection(
+            [], [DataSet(OrdersId, "Orders", [], nfl), DataSet(CustomersId, "Customers", [])], [], NoVariations);
+        var stream = new OverviewMapStream(selection, Sources(categories), await Editing(), NullLogger.Instance);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        nodes.Single(node => node.Label == "Orders").Category.ShouldBe("Sports / NFL");
+        nodes.Single(node => node.Label == "Customers").Category.ShouldBeNull();
+        stream.State.Outcome.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ADataSetThatCitesACategoryNotInTheTreeEndsTheStreamAndSaysSo()
+    {
+        var selection = new FixedSelection([], [DataSet(OrdersId, "Orders", [], Guid.NewGuid())], [], NoVariations);
+        var stream = new OverviewMapStream(selection, Sources(), await Editing(), NullLogger.Instance);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        nodes.ShouldBeEmpty();
+        stream.State.Outcome.IsFailure.ShouldBeTrue();
+        stream.State.Outcome.Code.ShouldNotBeNull().Name.ShouldBe("CategoryTreeUnsound");
+
+        // The node that failed was never sent, so the state does not claim it: no edge can be drawn to it.
+        stream.State.HasNode(MapNodeIds.DataSet(OrdersId)).ShouldBeFalse();
+        stream.State.NodeCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AStreamThatDrawsNoCategoryDoesNotReadTheTreeNorFailBecauseOfIt()
+    {
+        var failure = GenericResult.Failure(WorkspacesResultCodes.ByName("MapRequestInvalid"), ResultDetails.Create("reason", "the categories could not be read"));
+        var selection = new FixedSelection([], [DataSet(OrdersId, "Orders", [], Guid.NewGuid())], [], NoVariations);
+        var stream = new OverviewMapStream(
+            selection, Sources(CategoryProviders.Failing(failure)), await Editing(), NullLogger.Instance, readVariations: false, readCategories: false);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        // Not read means no category on the node, which is not the same as sitting under none.
+        nodes.ShouldHaveSingleItem().Category.ShouldBeNull();
+        stream.State.Outcome.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task AnUnreadableCategoryTreeEndsTheStreamAfterThePipelinesAndSaysSo()
+    {
+        var failure = GenericResult.Failure(WorkspacesResultCodes.ByName("MapRequestInvalid"), ResultDetails.Create("reason", "the categories could not be read"));
+        var selection = new FixedSelection(
+            [Pipeline(LoadId, "Load", "Orders", "Customers")], [DataSet(OrdersId, "Orders", [])], [], NoVariations);
+        var stream = new OverviewMapStream(selection, Sources(CategoryProviders.Failing(failure)), await Editing(), NullLogger.Instance);
+
+        var nodes = new List<MapNodeDto>();
+        await foreach (var node in stream.Nodes(TestContext.Current.CancellationToken))
+            nodes.Add(node);
+
+        nodes.ShouldHaveSingleItem().Kind.ShouldBe(MapKinds.Pipeline);
+        stream.State.Outcome.IsFailure.ShouldBeTrue();
+    }
+
+    private static MapSources Sources(ICategoryConfigurationProvider? categories = null)
+        => new(null!, null!, null!, null!, categories ?? CategoryProviders.Empty());
+
     private static async Task<MapEditing> Editing(params string[] granted)
     {
         var editing = await MapEditing.Resolve(MapEditingTests.Authorization(granted).Object, MapEditingTests.Caller, mayEditWorkspace: false, CancellationToken.None);
         return editing.Value!;
     }
 
-    private static IDataSetImplementationConfiguration DataSet(Guid id, string name, string[] dataStoreNames)
+    private static IDataSetImplementationConfiguration DataSet(Guid id, string name, string[] dataStoreNames, Guid? categoryId = null)
     {
         var dataSet = new Mock<IDataSetImplementationConfiguration>();
         dataSet.SetupGet(d => d.Id).Returns(id);
         dataSet.SetupGet(d => d.Name).Returns(name);
-        dataSet.SetupGet(d => d.Category).Returns("Sales");
         dataSet.SetupGet(d => d.Description).Returns(string.Empty);
         dataSet.SetupGet(d => d.Version).Returns("1.0");
+        dataSet.SetupGet(d => d.CategoryId).Returns(categoryId);
         dataSet.SetupGet(d => d.RecordTypeName).Returns(string.Empty);
         dataSet.SetupGet(d => d.SourceDataSetName).Returns((string?)null);
         dataSet.SetupGet(d => d.Sources).Returns(dataStoreNames
@@ -133,17 +210,18 @@ public class OverviewMapStreamTests
         return dataStore.Object;
     }
 
-    private static IPipelineImplementationConfiguration Pipeline(Guid id, string name, string source, string destination)
+    private static IPipelineImplementationConfiguration Pipeline(Guid id, string name, string source, string destination) => new GraphPipelineConfiguration
     {
-        var pipeline = new Mock<IEtlPipelineImplementationConfiguration>();
-        pipeline.SetupGet(p => p.Id).Returns(id);
-        pipeline.SetupGet(p => p.Name).Returns(name);
-        pipeline.SetupGet(p => p.Implementation).Returns("BatchCopy");
-        pipeline.SetupGet(p => p.IsEnabled).Returns(true);
-        pipeline.SetupGet(p => p.SourceDataSet).Returns(source);
-        pipeline.SetupGet(p => p.DestinationDataSet).Returns(destination);
-        return pipeline.Object;
-    }
+        Id = id,
+        Name = name,
+        Implementation = "Graph",
+        IsEnabled = true,
+        Components =
+        [
+            new PipelineComponentConfiguration { Name = "src", ComponentType = "DataSetSource", DataSetName = source },
+            new PipelineComponentConfiguration { Name = "out", ComponentType = "DataSetDestination", DataSetName = destination },
+        ],
+    };
 
     // A selection that yields exactly what it was given, so the stream is tested apart from every provider.
     private sealed class FixedSelection(

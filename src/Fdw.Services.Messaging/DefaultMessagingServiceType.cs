@@ -8,8 +8,8 @@ using Fdw.Results;
 namespace Fdw.Services.Messaging;
 
 /// <summary>
-/// Default messaging service type that registers <see cref="IMessageService"/>
-/// and <see cref="IAccessRequestService"/> with the dependency injection container.
+/// Default messaging service type that registers <see cref="IMessageService"/>, <see cref="IAccessRequestService"/>
+/// and <see cref="IUiFeedbackService"/> with the dependency injection container.
 /// </summary>
 [ExcludeFromCodeCoverage]
 [Implementation(typeof(MessagingServiceTypes), "Default")]
@@ -23,12 +23,13 @@ public sealed class DefaultMessagingServiceType : MessagingServiceTypeBase
             "Default",
             "Messaging:Default",
             "Default Messaging",
-            "Default messaging services with message and access request support")
+            "Default messaging services with message, access request and UI comment support")
     {
         Registration((builder, loggerFactory) =>
         {
             builder.Services.AddScoped<IMessageService, MessageService>();
             builder.Services.AddScoped<IAccessRequestService, AccessRequestService>();
+            builder.Services.AddScoped<IUiFeedbackService, UiFeedbackService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

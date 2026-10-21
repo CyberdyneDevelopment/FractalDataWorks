@@ -40,9 +40,9 @@ public class ScheduleInfoDto
     public int? IntervalSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the time zone identifier.
+    /// Gets or sets the time zone identifier the schedule is evaluated in, as it was saved.
     /// </summary>
-    public string TimeZoneId { get; set; } = "UTC";
+    public string TimeZoneId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets a value indicating whether the schedule is enabled.

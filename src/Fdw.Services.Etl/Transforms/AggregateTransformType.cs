@@ -20,7 +20,7 @@ namespace Fdw.Services.Etl.Transforms;
 /// <remarks>
 /// Why: aggregation is inherently set-based (it reduces N rows to M groups) — there is no meaningful
 /// single-record aggregation, so <see cref="Transform"/> always fails loud and the real work lives in
-/// <see cref="TransformBatch"/>, invoked by <c>BatchCopyPipeline</c>'s set-based transform fold.
+/// <see cref="TransformBatch"/>, invoked by the set-based transform fold.
 /// </remarks>
 [TypeOption(typeof(OptionTransformTypes), "Aggregate")]
 public sealed class AggregateTransformType : TransformTypeBase

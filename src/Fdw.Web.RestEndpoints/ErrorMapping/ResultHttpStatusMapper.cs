@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Results.Abstractions;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,7 @@ public static class ResultHttpStatusMapper
                     category.IsRetryable,
                     category.ClientAction,
                     httpContext,
-                    ClientReason(code, result, category),
+                    ClientReason(code, result),
                     RelayedDetails(result, code)));
             }
         }
@@ -66,7 +67,8 @@ public static class ResultHttpStatusMapper
                     referenceId,
                     category.IsRetryable,
                     category.ClientAction,
-                    httpContext));
+                    httpContext,
+                    ClientReason(messageCode.Message)));
             }
         }
 
@@ -81,13 +83,18 @@ public static class ResultHttpStatusMapper
             httpContext));
     }
 
-    // Why only a validation refusal whose code opted in: the reason is the caller's own input, named back to them. Every
-    // other failure answers with its category's generic text, because its message was written for the log. The details
-    // are the result's own, so the code must be the result's own code and not one found further down its chain.
-    private static string? ClientReason(IResultCode code, IGenericResult result, IResultCategory category)
-        => ReferenceEquals(category, ResultCategories.ByName("Validation")) && ReferenceEquals(result.Code, code)
-            ? code.FormatClientMessage(result.Details)
-            : null;
+    // Why a code that opted in, in any category: a refusal says why (Mike, 2026-10-16, FDW-1566), and a code that formats a
+    // client message says its text was written for the caller. Every other failure answers with its category's generic
+    // text, because its message was written for the log. The details are the result's own, so the code must be the
+    // result's own code and not one found further down its chain.
+    private static string? ClientReason(IResultCode code, IGenericResult result)
+        => ReferenceEquals(result.Code, code) ? code.FormatClientMessage(result.Details) : null;
+
+    // The same for a failure built from a [MessageLogging] message: the reason is the text the method wrote for the caller
+    // (a ClientMessage template, so the message is an IClientMessage), never the log's own line. Any other message was
+    // written only for the log, and shows nothing, whatever its category.
+    private static string? ClientReason(IGenericMessage message)
+        => message is IClientMessage { ClientText: { } text } ? text : null;
 
     // Why only the result's own code: the details hold what the client captured from the downstream host's answer for THAT
     // failure. A code found further down a chain belongs to a different failure, and its id would trace the wrong call.
@@ -128,7 +135,7 @@ public static class ResultHttpStatusMapper
     /// Success and progress codes (10000-19999) are skipped: a failure that logged progress on its
     /// way must not be answered as a success status.
     /// </remarks>
-    private static (string Code, int Number)? ExtractMessageCode(IGenericResult result)
+    private static (string Code, int Number, IGenericMessage Message)? ExtractMessageCode(IGenericResult result)
     {
         foreach (var message in result.Messages)
         {
@@ -141,7 +148,7 @@ public static class ResultHttpStatusMapper
                 continue;
 
             if (number >= 20000)
-                return (text, number);
+                return (text, number, message);
         }
 
         return null;

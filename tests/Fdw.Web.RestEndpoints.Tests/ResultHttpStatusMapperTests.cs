@@ -324,7 +324,7 @@ public class ResultHttpStatusMapperTests
     }
 
     #endregion
-    #region Validation reasons (FDW-1046)
+    #region Reasons written for the caller (FDW-1046, every category since FDW-1566)
 
     private static IGenericResult CreateFailureWithClientMessage(int id, string? clientMessage)
     {
@@ -369,6 +369,9 @@ public class ResultHttpStatusMapperTests
         response.Detail.ShouldBe("The request was invalid");
     }
 
+    // A refusal says why in every category (Mike, 2026-10-16, FDW-1566): a code that formats a client message wrote that
+    // text for the caller, so it is the detail whatever the category. FDW-1046 had held it to Validation until audited; the
+    // audit found two such codes outside it, both written for the caller.
     [Theory]
     [Trait("Priority", "P0")]
     [Trait("Category", "Api")]
@@ -377,10 +380,93 @@ public class ResultHttpStatusMapperTests
     [InlineData(DependencyCode)]
     [InlineData(TransientCode)]
     [InlineData(InternalCode)]
-    public void OnlyTheValidationCategoryEverShowsAReason(int codeNumber)
+    public void AReasonItsCodeWroteForTheCallerShowsInEveryCategory(int codeNumber)
     {
         var (_, response) = ResultHttpStatusMapper.Map(
-            CreateFailureWithClientMessage(codeNumber, "server SRV01 refused the login"), CreateHttpContext());
+            CreateFailureWithClientMessage(codeNumber, "RUI is in no area; place it in one"), CreateHttpContext());
+
+        response.Detail.ShouldBe("RUI is in no area; place it in one");
+    }
+
+    #endregion
+    #region Reasons from [MessageLogging] messages written for the caller (FDW-1538)
+
+    // A failure as GenericResult.Failure(message) builds it: no result code, only the message the [MessageLogging] method
+    // returned, a ClientMessage when the method has a ClientMessage template.
+    private static IGenericResult CreateFailureFromMessage(IGenericMessage message)
+    {
+        var mockResult = new Mock<IGenericResult>();
+        mockResult.Setup(r => r.IsSuccess).Returns(false);
+        mockResult.Setup(r => r.IsFailure).Returns(true);
+        mockResult.Setup(r => r.Code).Returns((IResultCode?)null);
+        mockResult.Setup(r => r.CodeChain).Returns(new List<IResultCode>());
+        mockResult.Setup(r => r.Messages).Returns(new List<IGenericMessage> { message });
+        return mockResult.Object;
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void AValidationRefusalWithAClientTextShowsThatTextNotTheLogLine()
+    {
+        var message = new ClientMessage(MessageSeverity.Warning,
+            "[Releases] Refused Plan: 1.4.1 is a patch release, which is one project's: name the project", $"TCREL-{ValidationCode}", null,
+            "1.4.1 is a patch release, which is one project's: name the project");
+
+        var (statusCode, response) = ResultHttpStatusMapper.Map(CreateFailureFromMessage(message), CreateHttpContext());
+
+        statusCode.ShouldBe(400);
+        response.Detail.ShouldBe("1.4.1 is a patch release, which is one project's: name the project");
+        response.Title.ShouldBe("The request was invalid");
+        response.Extensions["code"].ShouldBe($"TCREL-{ValidationCode}");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void AValidationRefusalWrittenOnlyForTheLogKeepsTheGenericDetail()
+    {
+        var message = new GenericMessage(MessageSeverity.Warning, "row 42 of conn.Connection on SRV01 refused", $"TEST-{ValidationCode}");
+
+        var (_, response) = ResultHttpStatusMapper.Map(CreateFailureFromMessage(message), CreateHttpContext());
+
+        response.Detail.ShouldBe("The request was invalid");
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    [InlineData(ConflictCode)]
+    [InlineData(ConfigurationCode)]
+    [InlineData(DependencyCode)]
+    [InlineData(TransientCode)]
+    [InlineData(InternalCode)]
+    public void AMessagesClientTextShowsInEveryCategoryAndItsLogLineNever(int codeNumber)
+    {
+        var message = new ClientMessage(MessageSeverity.Error, "[Items] Refused filing on SRV01: RUI is in no area", $"TEST-{codeNumber}", null,
+            "RUI is in no area; place it in one");
+
+        var (_, response) = ResultHttpStatusMapper.Map(CreateFailureFromMessage(message), CreateHttpContext());
+
+        response.Detail.ShouldBe("RUI is in no area; place it in one");
+    }
+
+    // The line between a reason and the log: a message written only for the log (no ClientMessage template) never reaches
+    // the caller, in any category.
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData(ValidationCode)]
+    [InlineData(ConflictCode)]
+    [InlineData(ConfigurationCode)]
+    [InlineData(DependencyCode)]
+    [InlineData(TransientCode)]
+    [InlineData(InternalCode)]
+    public void AMessageWrittenOnlyForTheLogNeverShowsInAnyCategory(int codeNumber)
+    {
+        var message = new GenericMessage(MessageSeverity.Error, "row 42 of conn.Connection on SRV01 refused", $"TEST-{codeNumber}");
+
+        var (_, response) = ResultHttpStatusMapper.Map(CreateFailureFromMessage(message), CreateHttpContext());
 
         response.Detail.ShouldNotBeNull().ShouldNotContain("SRV01");
     }

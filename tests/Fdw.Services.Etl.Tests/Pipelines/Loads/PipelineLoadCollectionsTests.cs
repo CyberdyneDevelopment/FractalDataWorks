@@ -10,26 +10,6 @@ namespace Fdw.Services.Etl.Tests.Pipelines.Loads;
 public sealed class PipelineLoadCollectionsTests
 {
     [Theory]
-    [InlineData("Append", false, false, false, false, false, false)]
-    [InlineData("Replace", false, false, false, false, false, true)]
-    [InlineData("Upsert", true, true, true, true, true, false)]
-    public void LoadModeStatesWhichOptionsItTakesAndWhatItDoes(
-        string name, bool keys, bool compares, bool writes, bool versioning, bool softDelete, bool truncatesFirst)
-    {
-        // Act
-        var mode = LoadModes.ByName(name);
-
-        // Assert
-        ReferenceEquals(mode, LoadModes.NotFound).ShouldBeFalse();
-        mode.UsesKeyColumns.ShouldBe(keys);
-        mode.UsesCompareColumns.ShouldBe(compares);
-        mode.UsesWriteColumns.ShouldBe(writes);
-        mode.AllowsVersioning.ShouldBe(versioning);
-        mode.AllowsSoftDelete.ShouldBe(softDelete);
-        mode.TruncatesFirst.ShouldBe(truncatesFirst);
-    }
-
-    [Theory]
     [InlineData("BulkInsert", false, false, true, false, false, false, false, true)]
     [InlineData("BulkUpsert", true, true, true, true, true, false, false, true)]
     [InlineData("Update", true, false, true, false, true, false, false, true)]
@@ -122,16 +102,6 @@ public sealed class PipelineLoadCollectionsTests
 
         ReferenceEquals(type, Fdw.Data.Abstractions.DataTypes.NotFound).ShouldBeFalse();
         type.RendersInExpressions.ShouldBeTrue();
-    }
-
-    [Fact]
-    public void AnUnknownNameIsTheNotFoundOption()
-    {
-        // Act and Assert
-        ReferenceEquals(LoadModes.ByName("Merge"), LoadModes.NotFound).ShouldBeTrue();
-        ReferenceEquals(LoadStepKinds.ByName("Teleport"), LoadStepKinds.NotFound).ShouldBeTrue();
-        ReferenceEquals(SoftDeleteModes.ByName("Never"), SoftDeleteModes.NotFound).ShouldBeTrue();
-        ReferenceEquals(Fdw.Data.Abstractions.DataTypes.ByName("Telepathy"), Fdw.Data.Abstractions.DataTypes.NotFound).ShouldBeTrue();
     }
 
     [Theory]

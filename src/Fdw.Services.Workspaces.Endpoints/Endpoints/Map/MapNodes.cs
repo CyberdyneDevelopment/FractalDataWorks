@@ -19,12 +19,14 @@ internal static class MapNodes
     /// <summary>A data set node, carrying its variations as tokens.</summary>
     /// <param name="dataSet">The data set.</param>
     /// <param name="variations">Its variations counted by kind, or none.</param>
-    public static MapNodeDto DataSet(IDataSetImplementationConfiguration dataSet, IReadOnlyList<WorkspaceMapVariationCountDto> variations) => new()
+    /// <param name="categoryPath">The path of the category the data set sits under, from the DataSet category tree; null when it sits under none.</param>
+    public static MapNodeDto DataSet(
+        IDataSetImplementationConfiguration dataSet, IReadOnlyList<WorkspaceMapVariationCountDto> variations, string? categoryPath) => new()
     {
         Id = MapNodeIds.DataSet(dataSet.Id),
         Label = dataSet.Name,
         Kind = MapKinds.DataSet,
-        Category = dataSet.Category,
+        Category = categoryPath,
         CanExplode = true,
         Variations = variations,
         Metadata = Metadata(
@@ -57,7 +59,7 @@ internal static class MapNodes
         Category = pipeline.Implementation,
         CanExplode = false,
         Metadata = Metadata(
-            ("isEnabled", pipeline is IEtlPipelineImplementationConfiguration engine ? (object)engine.IsEnabled : null),
+            ("isEnabled", pipeline is IEnablablePipelineConfiguration enablable ? (object)enablable.IsEnabled : null),
             ("organizationId", pipeline.OrgId?.ToString("D", CultureInfo.InvariantCulture))),
     };
 

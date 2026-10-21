@@ -76,7 +76,7 @@ public interface IProjectApiClient
 
     /// <summary>
     /// Approves a project execution that is waiting for manual approval (RequireApprovalToRun).
-    /// Transitions the execution from AwaitingApproval to Triggered and enqueues it.
+    /// Transitions the execution from AwaitingApproval to Scheduled and queues it.
     /// </summary>
     Task<IGenericResult> ApproveExecution(
         Guid executionItemId,

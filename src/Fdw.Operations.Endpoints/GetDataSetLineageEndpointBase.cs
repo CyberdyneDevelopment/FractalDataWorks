@@ -34,20 +34,17 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
     private readonly ILogger<GetDataSetLineageEndpointBase> _logger;
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
     private readonly ICalculationConfigurationProvider _calculations;
-    private readonly LineageConfigurationProvider _lineage;
 
     /// <inheritdoc />
     protected GetDataSetLineageEndpointBase(
         DataSetConfigurationProvider dataSetProvider,
         PipelineServiceConfigurationProvider pipelineProvider,
         ICalculationConfigurationProvider calculations,
-        LineageConfigurationProvider lineage,
         ILogger<GetDataSetLineageEndpointBase> logger)
     {
         _dataSetProvider = dataSetProvider;
         _pipelineProvider = pipelineProvider;
         _calculations = calculations;
-        _lineage = lineage;
         _logger = logger ?? NullLogger<GetDataSetLineageEndpointBase>.Instance;
     }
 
@@ -81,13 +78,13 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
 
         var sources = GetSources(dataSet);
         var upstreamSources = BuildUpstreamSources(sources);
-        var fieldLineage = await BuildFieldLineage(sources, ct).ConfigureAwait(false);
+        var fieldLineage = await BuildFieldLineage(dataSet, sources, ct).ConfigureAwait(false);
 
         // Who reads each field (API-173). An unreadable relation fails the request: an empty
         // consumer list must mean "nothing reads this field", never "the read broke".
         var consumers = await FieldConsumerScanner.Scan(
             req.Name, [.. fieldLineage.Select(f => f.LogicalField)],
-            _dataSetProvider, _pipelineProvider, _calculations, _logger, ct).ConfigureAwait(false);
+            _dataSetProvider, _calculations, _pipelineProvider, _logger, ct).ConfigureAwait(false);
         if (consumers.IsFailure)
         {
             FieldConsumerScanLog.ScanFailed(_logger, req.Name);
@@ -97,7 +94,7 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         }
 
         foreach (var field in fieldLineage)
-            field.Consumers = consumers.Value![field.LogicalField];
+            field.Consumers = consumers.Value!.Consumers[field.LogicalField];
         var downstreamConsumers = await BuildDownstreamConsumers(req.Name, ct).ConfigureAwait(false);
 
         await Send.OkAsync(new DataSetLineageResponse
@@ -105,7 +102,8 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
             DataSetName = req.Name,
             UpstreamSources = upstreamSources.ToList(),
             DownstreamConsumers = downstreamConsumers.ToList(),
-            FieldLineage = fieldLineage.ToList()
+            FieldLineage = fieldLineage.ToList(),
+            PipelinesNotFollowed = [.. consumers.Value!.PipelinesNotFollowed]
         }, ct).ConfigureAwait(false);
     }
 
@@ -164,10 +162,16 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         }).ToList();
     }
 
-    /// <summary>Builds field-level lineage by loading field mappings for each source.</summary>
-    protected virtual async Task<IReadOnlyList<FieldLineageResponse>> BuildFieldLineage(IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken ct)
+    /// <summary>Builds field-level lineage: one row for each field of the data set, with the sources that map it.</summary>
+    /// <remarks>
+    /// Why the rows start from the data set's fields (FDW-2186): a field no source maps is still a field, and things read it; a row made only
+    /// from a mapping would leave it out, and with it its consumers. A mapping of a logical field the data set does not state keeps its own row.
+    /// </remarks>
+    protected virtual async Task<IReadOnlyList<FieldLineageResponse>> BuildFieldLineage(
+        IDataSetImplementationConfiguration dataSet, IReadOnlyList<DataSetSourceConfiguration> sources, CancellationToken ct)
     {
-        var fieldLineage = new List<FieldLineageResponse>();
+        var fieldLineage = new List<FieldLineageResponse>(
+            dataSet.Fields.Where(field => !field.IsDeleted).OrderBy(field => field.Ordinal).Select(field => new FieldLineageResponse { LogicalField = field.Name, Sources = [] }));
 
         foreach (var source in sources)
         {
@@ -209,10 +213,10 @@ public abstract class GetDataSetLineageEndpointBase : Endpoint<DataSetLineageReq
         var pipelines = await PipelineLineageLoader.Load(_pipelineProvider, _logger, ct).ConfigureAwait(false);
 
         var pipelinesAsSource = pipelines
-            .Where(p => string.Equals(p.SourceDataSet, dataSetName, StringComparison.OrdinalIgnoreCase))
+            .Where(p => p.DataSetsRead.Contains(dataSetName, StringComparer.OrdinalIgnoreCase))
             .ToList();
         var pipelinesAsDest = pipelines
-            .Where(p => string.Equals(p.DestinationDataSet, dataSetName, StringComparison.OrdinalIgnoreCase))
+            .Where(p => p.DataSetsWritten.Contains(dataSetName, StringComparer.OrdinalIgnoreCase))
             .ToList();
 
         foreach (var pipeline in pipelinesAsSource)

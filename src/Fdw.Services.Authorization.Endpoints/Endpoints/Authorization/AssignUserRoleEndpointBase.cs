@@ -1,13 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Claims.Abstractions;
+using Fdw.Operations.Abstractions.Audit;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Data.Abstractions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Clients.Models;
@@ -20,12 +21,6 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// </summary>
 public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, UserRolesResponse>
 {
-    // The domain and implementation a user-role row is written under. These are values the seed
-    // already writes (authz.UserRole Domain/Implementation = 'UserRole'), not names this endpoint
-    // chooses: a save under any other pair produces a row nothing composes on the next read.
-    private const string UserRoleDomain = "UserRole";
-    private const string UserRoleImplementation = "UserRole";
-
     /// <summary>Initializes a new instance of the <see cref="AssignUserRoleEndpointBase"/> class.</summary>
         private readonly IRoleConfigurationProvider _roleProvider;
     private readonly IUserRoleConfigurationProvider _userRoleProvider;
@@ -107,64 +102,7 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
 
         try
         {
-            var roleResult = await _roleProvider.Get(req.RoleName, ct).ConfigureAwait(false);
-            if (!roleResult.IsSuccess)
-            {
-                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, req.RoleName,
-                    roleResult.CurrentMessage);
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-                return;
-            }
-            if (roleResult.Value is null)
-            {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
-                return;
-            }
-            var role = roleResult.Value;
-
-            var granted = await Grant(userId, role.Id, role.Name, tenantId, ct).ConfigureAwait(false);
-            if (granted != StatusCodes.Status200OK)
-            {
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, granted, ct).ConfigureAwait(false);
-                return;
-            }
-
-            var allRolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
-            if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
-            {
-                AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, userIdString,
-                    allRolesResult.CurrentMessage);
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-                return;
-            }
-            var allRoles = allRolesResult.Value;
-            var userRolesResult = await _userRoleProvider
-                .Find<UserRoleImplementationConfiguration>(
-                    // authz.UserRoleConfiguration.UserId is a Guid stored as VARCHAR, so comparing
-                    // the TEXT makes the match depend on how each side happened to spell it. Both
-                    // sides are parsed and compared as the Guids they are (FDW-532).
-                    // The roles held in THIS tenant: a caller acting in the global tenant can read every
-                    // tenant's assignments, and a role held elsewhere is not one this change affected.
-                    ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId && ur.TenantId == tenantId, ct)
-                .ConfigureAwait(false);
-            if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
-            {
-                await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
-                return;
-            }
-
-            var roles = userRolesResult.Value
-                .Select(ur => allRoles.FirstOrDefault(r => r.Id == ur.RoleId)?.Name)
-                .Where(name => name is not null)
-                .ToList();
-
-            AuthorizationEndpointLog.UserRoleAssigned(EndpointLogger, req.RoleName, userIdString);
-
-            await Send.OkAsync(new UserRolesResponse
-            {
-                UserId = userId,
-                Roles = roles!
-            }, ct).ConfigureAwait(false);
+            await AssignRole(req.RoleName, userId, tenantId, ct).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -173,54 +111,92 @@ public abstract class AssignUserRoleEndpointBase : Endpoint<AssignRoleRequest, U
         }
     }
 
-    // Grants the role in the tenant unless the user already holds it there, and answers with the
-    // status the request should fail with -- 200 when the role is held afterwards.
-    private async Task<int> Grant(Guid userId, Guid roleId, string roleName, Guid tenantId, CancellationToken ct)
+    // Resolves the role, checks the caller may give it, grants it, and answers with the roles the user holds.
+    private async Task AssignRole(string roleName, Guid userId, Guid tenantId, CancellationToken ct)
+    {
+        var roleResult = await _roleProvider.Get(roleName, ct).ConfigureAwait(false);
+        if (!roleResult.IsSuccess)
+        {
+            AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, roleName,
+                roleResult.CurrentMessage);
+            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            return;
+        }
+        if (roleResult.Value is null)
+        {
+            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            return;
+        }
+        var role = roleResult.Value;
+
+        // Why before anything is written: the caller may give only what they hold themselves (FDW-1577), and a
+        // refusal must leave the user's roles untouched.
+        var allowed = await Resolve<IGrantRule>().CanGive([role.Name], tenantId, ct).ConfigureAwait(false);
+        if (allowed.IsFailure)
+        {
+            await Send.ResultAsync(RoleChangeRefusal.Of(allowed, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var granted = await Resolve<IUserRoleAssignment>().Assign(userId, role.Name, tenantId, ct).ConfigureAwait(false);
+        if (granted.IsFailure)
+        {
+            await Send.ResultAsync(RoleChangeRefusal.Of(granted, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        await SendRoles(roleName, role.Name, userId, tenantId, ct).ConfigureAwait(false);
+    }
+
+    // Records the assignment in the audit trail and answers with every role the user holds in the tenant.
+    private async Task SendRoles(string requestedRoleName, string roleName, Guid userId, Guid tenantId, CancellationToken ct)
     {
         var userIdString = userId.ToString();
-        var heldResult = await _userRoleProvider
-            .Find<UserRoleImplementationConfiguration>(
-                ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId
-                    && ur.RoleId == roleId && ur.TenantId == tenantId, ct)
-            .ConfigureAwait(false);
-        if (!heldResult.IsSuccess || heldResult.Value is null)
+        var allRolesResult = await _roleProvider.Get(ct).ConfigureAwait(false);
+        if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
         {
             AuthorizationEndpointLog.AuthorizationReadFailed(EndpointLogger, userIdString,
-                heldResult.CurrentMessage);
-            return StatusCodes.Status500InternalServerError;
+                allRolesResult.CurrentMessage);
+            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            return;
+        }
+        var allRoles = allRolesResult.Value;
+        var userRolesResult = await _userRoleProvider
+            .Find<UserRoleImplementationConfiguration>(
+                // authz.UserRoleConfiguration.UserId is a Guid stored as VARCHAR, so comparing
+                // the TEXT makes the match depend on how each side happened to spell it. Both
+                // sides are parsed and compared as the Guids they are (FDW-532).
+                // The roles held in THIS tenant: a caller acting in the global tenant can read every
+                // tenant's assignments, and a role held elsewhere is not one this change affected.
+                ur => Guid.TryParse(ur.UserId, out var assigned) && assigned == userId && ur.TenantId == tenantId, ct)
+            .ConfigureAwait(false);
+        if (!userRolesResult.IsSuccess || userRolesResult.Value is null)
+        {
+            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            return;
         }
 
-        // Assigning a role the user already holds in this tenant changes nothing. Saving again would
-        // write a second domain row before the unique (UserId, RoleId, TenantId) index refused the
-        // implementation row, leaving half an assignment behind.
-        if (heldResult.Value.Count > 0)
-            return StatusCodes.Status200OK;
+        var roles = userRolesResult.Value
+            .Select(ur => allRoles.FirstOrDefault(r => r.Id == ur.RoleId)?.Name)
+            .Where(name => name is not null)
+            .ToList();
 
-        var config = new UserRoleImplementationConfiguration
+        var audited = await RoleChangeAudit.RecordUserRole(Resolve<IAdministrativeAudit>(), User, "RoleAssigned", userId,
+            roleName, null, roleName, ct).ConfigureAwait(false);
+        if (audited.IsFailure)
         {
-            Id = Guid.NewGuid(),
-            UserId = userIdString,
-            RoleId = roleId,
-            TenantId = tenantId,
-            // The tenant is part of the name because the same role can be held in several tenants,
-            // and a save by an existing name versions THAT row -- a grant in a second tenant would
-            // otherwise replace the grant in the first.
-            Name = $"{userId}:{roleName}:{tenantId}",
-            AssignedAt = DateTimeOffset.UtcNow
-        };
-
-        // Not atomic. A save is two writes -- the domain row then the implementation row -- and
-        // nothing rolls the first back if the second fails. Deferred deliberately: this endpoint
-        // inherits atomicity the moment the provider's Save gets it, with no change here.
-        var assignResult = await _userRoleProvider
-            .Save(config, UserRoleDomain, UserRoleImplementation, config.Name, ct).ConfigureAwait(false);
-        if (!assignResult.IsSuccess)
-        {
-            AuthorizationEndpointLog.AtomicRoleChangeFailed(EndpointLogger, userIdString,
-                assignResult.CurrentMessage);
-            return StatusCodes.Status400BadRequest;
+            AuthorizationEndpointLog.RoleChangeNotAudited(EndpointLogger, "assignment", roleName, userIdString,
+                audited.CurrentMessage);
+            await Send.ResponseAsync(new UserRolesResponse { UserId = userId }, 500, ct).ConfigureAwait(false);
+            return;
         }
 
-        return StatusCodes.Status200OK;
+        AuthorizationEndpointLog.UserRoleAssigned(EndpointLogger, requestedRoleName, userIdString);
+
+        await Send.OkAsync(new UserRolesResponse
+        {
+            UserId = userId,
+            Roles = roles!
+        }, ct).ConfigureAwait(false);
     }
 }

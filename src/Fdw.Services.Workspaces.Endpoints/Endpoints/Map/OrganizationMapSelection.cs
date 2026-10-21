@@ -53,13 +53,18 @@ internal sealed class OrganizationMapSelection : MapSelection
         {
             if (pipeline.OrgId != _organizationId) continue;
 
-            if (pipeline is IEtlPipelineImplementationConfiguration engine)
+            // Why whole: the data sets that bring a graph pipeline's data sets into the scope are named in its steps.
+            var whole = await sources.Whole(pipeline, ct).ConfigureAwait(false);
+            if (whole.IsFailure)
             {
-                NameDataSet(engine.SourceDataSet);
-                NameDataSet(engine.DestinationDataSet);
+                state.Fail(whole);
+                yield break;
             }
 
-            yield return pipeline;
+            foreach (var name in PipelineDataSets.Reads(whole.Value!).Concat(PipelineDataSets.Writes(whole.Value!)))
+                NameDataSet(name);
+
+            yield return whole.Value!;
         }
     }
 

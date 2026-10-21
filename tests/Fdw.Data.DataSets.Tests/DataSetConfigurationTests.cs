@@ -22,7 +22,7 @@ public class DataSetConfigurationTests
         config.Name.ShouldBe(string.Empty);
         config.Description.ShouldBe(string.Empty);
         config.Version.ShouldBe("1.0");
-        config.Category.ShouldBe("Dataset");
+        config.CategoryId.ShouldBeNull();
         config.RecordTypeName.ShouldBe(string.Empty);
         config.Fields.ShouldNotBeNull();
         config.Fields.ShouldBeEmpty();
@@ -72,13 +72,14 @@ public class DataSetConfigurationTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Configuration")]
-    public void Category_CanBeSet()
+    public void CategoryId_CanBeSet()
     {
         // Arrange
-        var config = new SimpleDataSetConfiguration { Category = "Custom" };
+        var id = Guid.CreateVersion7();
+        var config = new SimpleDataSetConfiguration { CategoryId = id };
 
         // Assert
-        config.Category.ShouldBe("Custom");
+        config.CategoryId.ShouldBe(id);
     }
 
     [Fact]
@@ -212,12 +213,13 @@ public class DataSetConfigurationTests
     public void AllProperties_CanBeSetTogether()
     {
         // Arrange
+        var securityCategory = Guid.CreateVersion7();
         var config = new SimpleDataSetConfiguration
         {
             Name = "Users",
             Description = "User dataset",
             Version = "2.0",
-            Category = "Security",
+            CategoryId = securityCategory,
             RecordTypeName = "My.Namespace.User",
             Caching = new CachingConfiguration { Enabled = true }
         };
@@ -230,7 +232,7 @@ public class DataSetConfigurationTests
         config.Name.ShouldBe("Users");
         config.Description.ShouldBe("User dataset");
         config.Version.ShouldBe("2.0");
-        config.Category.ShouldBe("Security");
+        config.CategoryId.ShouldBe(securityCategory);
         config.RecordTypeName.ShouldBe("My.Namespace.User");
         config.Fields.Count.ShouldBe(1);
         config.KeyFields.Count.ShouldBe(1);

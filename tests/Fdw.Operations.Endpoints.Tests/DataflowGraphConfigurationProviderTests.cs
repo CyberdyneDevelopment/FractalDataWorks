@@ -43,6 +43,7 @@ public class DataflowGraphConfigurationProviderTests
             GatewayProviderFor(gateway.Object),
             dataSets.Object,
             variations.Object,
+            new Mock<ICategoryConfigurationProvider>().Object,
             NullLogger<DataflowGraphConfigurationProvider>.Instance);
 
     // Why the double answers for any connection: these tests exercise what the provider does with its

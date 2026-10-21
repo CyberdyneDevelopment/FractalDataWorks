@@ -9,8 +9,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
 /// Request body describing a single transform (operation) step on a create/update-pipeline request.
-/// Maps onto <c>PipelineTransformConfiguration</c> (pipe.PipelineOperation), with <see cref="FieldMappings"/>,
-/// <see cref="Aggregation"/>, <see cref="Lookup"/>, and <see cref="Calculation"/> persisting as its typed
+/// Maps onto <c>PipelineTransformConfiguration</c> (pipe.PipelineOperation), with <see cref="Aggregation"/>, <see cref="Lookup"/>, and <see cref="Calculation"/> persisting as its typed
 /// cascade-child rows.
 /// </summary>
 /// <remarks>
@@ -18,7 +17,7 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// <c>TransformTypeBase.MapSpecToConfiguration</c> — the per-option dispatch mechanism — without an
 /// app-owned adapter type or a switch on <see cref="OperationType"/>.
 /// </remarks>
-public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransformOrderingSpec, ITransformCheckingSpec, ITransformBranchingSpec, ITransformNotifyingSpec, ITransformUnionSpec, ITransformComputeSpec, IStatedMembersSpec
+public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransformOrderingSpec, ITransformCheckingSpec, ITransformComputeSpec, IStatedMembersSpec
 {
     /// <summary>
     /// Gets or sets the transform step name (display/identity within the pipeline).
@@ -46,11 +45,6 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
 
     /// <summary>Gets or sets whether the step runs. Enabled unless the request says otherwise.</summary>
     public bool IsEnabled { get; set; } = true;
-
-    /// <summary>
-    /// Gets or sets the field mappings for this transform (used by Map transforms).
-    /// </summary>
-    public IList<CreatePipelineFieldMappingRequest> FieldMappings { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the aggregation parameters (used by Aggregate transforms).
@@ -88,39 +82,12 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
     public string? OnFail { get; set; }
 
     /// <summary>
-    /// Gets or sets the paths of a Branch stage, in the order they are tried: the first whose condition a record meets takes
-    /// it. Refused on any other kind of stage.
-    /// </summary>
-    public IList<CreatePipelinePathRequest>? Paths { get; set; }
-
-    /// <summary>
-    /// Gets or sets what a Branch stage does with a record that matches no path: <c>Pass</c> or <c>Reject</c>. Required for a
-    /// Branch stage, no default; refused on any other kind of stage.
-    /// </summary>
-    public string? Unmatched { get; set; }
-
-    /// <summary>
-    /// Gets or sets the notification a Notify stage sends: the rule, the run point and the message. Required for a Notify stage,
-    /// no default; refused on any other kind of stage.
-    /// </summary>
-    public PipelineNotification? Notification { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the data set a Union stage appends after the last record the pipeline's source produces; its
-    /// <c>fieldMappings</c> say how that data set's fields become the stage's output fields. Required for a Union stage; refused
-    /// on any other kind of stage.
-    /// </summary>
-    public string? UnionSource { get; set; }
-
-    /// <summary>
     /// Gets or sets what a Compute stage applies: the Built transformation, by name or by id, and which field of the record
     /// feeds each of its inputs. Required for a Compute stage; refused on any other kind of stage.
     /// </summary>
     public PipelineCompute? Compute { get; set; }
 
     /// <inheritdoc />
-    IReadOnlyList<IFieldMapping> ITransformOperationSpec.FieldMappings => [.. FieldMappings];
-
     /// <inheritdoc />
     // Why one list for three transforms: an Aggregate groups by it, and LatestBy and Distinct keep one row per its
     // values -- the key columns of each travel in the spec's GroupByFields (FDW-1109).
@@ -129,10 +96,6 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
     IReadOnlyList<ITransformCheckSpec> ITransformCheckingSpec.Checks => Checks is null ? [] : [.. Checks.Select(check => new TransformCheckSpec(check.Name, check.Expression))];
 
     string? ITransformCheckingSpec.OnFail => OnFail;
-
-    IReadOnlyList<ITransformPathSpec> ITransformBranchingSpec.Paths => Paths is null ? [] : [.. Paths.Cast<ITransformPathSpec>()];
-
-    string? ITransformBranchingSpec.Unmatched => Unmatched;
 
     string? ITransformComputeSpec.ComputeTransformation => Compute?.Transformation;
 
@@ -152,19 +115,13 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
 
     string? ITransformComputeSpec.ComputeOnRowFailure => Compute?.OnRowFailure;
 
-    INotificationSpec? ITransformNotifyingSpec.Notification => Notification is null ? null : new TransformNotificationSpec(Notification.RuleName, Notification.RunPoint, Notification.Message);
-
     // Why the members are named here: a member stated on a stage of a kind that does not own it is refused, and it counts
     // as stated only when it is not null and not empty -- an absent member and an empty list are the same thing.
     IReadOnlyList<string> IStatedMembersSpec.StatedMembers => StatedMembers();
 
-    IReadOnlyList<string> IStatedMembersSpec.StatedMappingMembers =>
-        FieldMappings.Any(mapping => mapping.TransformationChain is { Count: > 0 }) ? ["transformations"] : [];
-
     private List<string> StatedMembers()
     {
         var stated = new List<string>();
-        AddIf(stated, "fieldMappings", FieldMappings.Count > 0);
         AddIf(stated, "aggregation", Aggregation is not null);
         AddIf(stated, "lookup", Lookup is not null);
         AddIf(stated, "calculation", Calculation is not null);
@@ -174,10 +131,6 @@ public class CreatePipelineTransformRequest : ITransformOperationSpec, ITransfor
         AddIf(stated, "distinct", Distinct is not null);
         AddIf(stated, "checks", Checks is { Count: > 0 });
         AddIf(stated, "onFail", !string.IsNullOrEmpty(OnFail));
-        AddIf(stated, "paths", Paths is { Count: > 0 });
-        AddIf(stated, "unmatched", !string.IsNullOrEmpty(Unmatched));
-        AddIf(stated, "notification", Notification is not null);
-        AddIf(stated, "unionSource", !string.IsNullOrWhiteSpace(UnionSource));
         AddIf(stated, "compute", Compute is not null);
         return stated;
     }

@@ -13,10 +13,10 @@ internal sealed class XlsxSheetCursor : IDisposable
     private readonly ZipArchive _archive;
     private readonly XmlReader _sheet;
     private readonly List<string> _shared;
-    private readonly List<XlsxValueKind> _styles;
+    private readonly List<IXlsxValueKind> _styles;
     private readonly bool _date1904;
 
-    private XlsxSheetCursor(ZipArchive archive, XmlReader sheet, List<string> shared, List<XlsxValueKind> styles, bool date1904)
+    private XlsxSheetCursor(ZipArchive archive, XmlReader sheet, List<string> shared, List<IXlsxValueKind> styles, bool date1904)
     {
         _archive = archive;
         _sheet = sheet;
@@ -112,11 +112,11 @@ internal sealed class XlsxSheetCursor : IDisposable
     }
 
     // A cell without an s attribute has style 0, the schema's own default.
-    private XlsxValueKind KindOf(string? style)
+    private IXlsxValueKind KindOf(string? style)
     {
         if (_styles.Count == 0)
         {
-            return XlsxValueKind.Number;
+            return XlsxStyles.KindNumber;
         }
 
         if (style is null)

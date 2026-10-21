@@ -16,10 +16,10 @@ public interface ICatalogService
     /// Searches glossary terms.
     /// </summary>
     /// <param name="query">Optional search query.</param>
-    /// <param name="category">Optional category filter.</param>
+    /// <param name="categoryId">Optional category filter: the identity of the Glossary category the terms sit under.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Result containing matching glossary terms.</returns>
-    Task<IGenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>> SearchTerms(string? query, string? category, CancellationToken ct = default);
+    Task<IGenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>> SearchTerms(string? query, Guid? categoryId, CancellationToken ct = default);
 
     /// <summary>
     /// Creates a new glossary term.

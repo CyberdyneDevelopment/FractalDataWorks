@@ -13,4 +13,8 @@ public sealed class CatalogEntityPayload
     public string Name { get; set; } = string.Empty;
     /// <summary>Gets or sets the type of entity.</summary>
     public string EntityType { get; set; } = string.Empty;
+    /// <summary>Gets or sets the description of the entity.</summary>
+    public string? Description { get; set; }
+    /// <summary>Gets or sets where the entity sits (the data set of a field, the "store / path" of a container).</summary>
+    public string? Location { get; set; }
 }

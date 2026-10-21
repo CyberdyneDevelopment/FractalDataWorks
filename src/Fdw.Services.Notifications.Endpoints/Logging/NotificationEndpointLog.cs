@@ -86,11 +86,16 @@ public static partial class NotificationEndpointLog
         Message = "No notification preferences found for user '{userId}', returning defaults")]
     public static partial IGenericMessage UserPreferencesNotFound(ILogger logger, string userId);
 
-    /// <summary>Warning: a create named an implementation the Notification domain does not have.</summary>
-    [MessageLogging(EventId = 91090, Level = LogLevel.Warning,
-        Message = "Cannot create notification '{notificationName}': '{implementationName}' is not a Notification implementation")]
+    /// <summary>
+    /// Warning: a create named an implementation the Notification domain does not have, or none. A validation refusal (category 2), so the
+    /// caller is answered with a client error that names the implementations that exist.
+    /// </summary>
+    [MessageLogging(EventId = 21000, Level = LogLevel.Warning,
+        Message = "Cannot create notification '{notificationName}': notificationType '{implementationName}' is not a Notification implementation; the implementations are {knownImplementations}",
+        ClientMessage = "notificationType '{implementationName}' is not a notification type; send one of {knownImplementations}")]
     public static partial IGenericMessage UnknownNotificationImplementation(
         ILogger logger,
         string notificationName,
-        string implementationName);
+        string implementationName,
+        string knownImplementations);
 }

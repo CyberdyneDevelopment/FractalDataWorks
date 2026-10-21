@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
+using Fdw.Commands.Data.Extensions;
 using Fdw.Results;
 using Fdw.Services.Authorization.Configuration;
 using Fdw.Services.Authorization.Logging;
@@ -133,5 +134,116 @@ public class TenantOrgAccessConfigurationProvider
         var grants = result.Value?.ToList() ?? [];
         TenantOrgAccessConfigurationProviderLog.GetByUserLoaded(_logger, userId, grants.Count);
         return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(grants);
+    }
+
+    /// <summary>
+    /// Lists every access row of an organization (FDW-1593): one per person and permission.
+    /// </summary>
+    /// <param name="tenantId">The tenant the organization belongs to.</param>
+    /// <param name="orgId">The organization.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The rows, or a failure result.</returns>
+    public virtual async Task<IGenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>> Members(
+        Guid tenantId,
+        Guid orgId,
+        CancellationToken cancellationToken = default)
+    {
+        var gateway = Gateway();
+        if (gateway.IsFailure || gateway.Value is not { } resolved)
+            return GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(
+                OrganizationAccessLog.ReadFailed(_logger, $"The access rows of organization '{orgId}'", gateway.CurrentMessage));
+
+        var read = await resolved.Execute<IEnumerable<TenantOrgAccessConfiguration>>(
+            Query.From<TenantOrgAccessConfiguration>(DataStoreName, PathName, ContainerName)
+                .Where("TenantId", tenantId)
+                .Where("OrgId", orgId)
+                .Build(),
+            cancellationToken).ConfigureAwait(false);
+        return read.IsSuccess && read.Value is { } rows
+            ? GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success([.. rows])
+            : GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(
+                OrganizationAccessLog.ReadFailed(_logger, $"The access rows of organization '{orgId}'", read.CurrentMessage));
+    }
+
+    /// <summary>
+    /// Gives a person exactly the permissions of a role in an organization (FDW-1593): their rows there are removed and one row per
+    /// permission is written, with the role's name on each.
+    /// </summary>
+    /// <param name="userId">The person.</param>
+    /// <param name="tenantId">The tenant the organization belongs to.</param>
+    /// <param name="orgId">The organization.</param>
+    /// <param name="roleName">The role, written on every row.</param>
+    /// <param name="permissions">The permissions of the role.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success, or a failure result. A failure after the old rows were removed leaves the person with fewer permissions, never more.</returns>
+    /// <remarks>
+    /// The table is a materialised access table that the row-security filters and the sign-in read, so its rows are removed rather than
+    /// marked: a marked row would still be read. There is no transaction across the writes; the order (remove, then write) is the one
+    /// whose failure grants nothing the role does not.
+    /// </remarks>
+    public virtual async Task<IGenericResult> Replace(
+        Guid userId,
+        Guid tenantId,
+        Guid orgId,
+        string roleName,
+        IReadOnlyList<string> permissions,
+        CancellationToken cancellationToken = default)
+    {
+        var cleared = await Clear(userId, tenantId, orgId, cancellationToken).ConfigureAwait(false);
+        if (cleared.IsFailure)
+            return cleared;
+
+        var gateway = Gateway();
+        if (gateway.IsFailure || gateway.Value is not { } resolved)
+            return GenericResult.Failure(OrganizationAccessLog.WriteFailed(_logger, $"The access rows of user '{userId}'", gateway.CurrentMessage));
+
+        foreach (var permission in permissions)
+        {
+            var written = await resolved.Execute<int>(
+                Insert.Into<TenantOrgAccessConfiguration>(ContainerName)
+                    .DataStore(DataStoreName)
+                    .Path(PathName)
+                    .Value(new TenantOrgAccessConfiguration
+                    {
+                        UserId = userId, TenantId = tenantId, OrgId = orgId, RoleName = roleName, PermissionName = permission,
+                    }),
+                cancellationToken).ConfigureAwait(false);
+            if (written.IsFailure)
+                return GenericResult.Failure(OrganizationAccessLog.WriteFailed(_logger, $"The access row '{permission}' of user '{userId}'", written.CurrentMessage));
+        }
+
+        return GenericResult.Success();
+    }
+
+    /// <summary>
+    /// Takes a person out of an organization (FDW-1593): every access row they hold there is removed.
+    /// </summary>
+    /// <param name="userId">The person.</param>
+    /// <param name="tenantId">The tenant the organization belongs to.</param>
+    /// <param name="orgId">The organization.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Success (also when they held none), or a failure result.</returns>
+    public virtual async Task<IGenericResult> Clear(
+        Guid userId,
+        Guid tenantId,
+        Guid orgId,
+        CancellationToken cancellationToken = default)
+    {
+        var gateway = Gateway();
+        if (gateway.IsFailure || gateway.Value is not { } resolved)
+            return GenericResult.Failure(OrganizationAccessLog.WriteFailed(_logger, $"The access rows of user '{userId}'", gateway.CurrentMessage));
+
+        var removed = await resolved.Execute<int>(
+            Delete.From(ContainerName)
+                .DataStore(DataStoreName)
+                .Path(PathName)
+                .Where("UserId", userId)
+                .Where("TenantId", tenantId)
+                .Where("OrgId", orgId)
+                .Build(),
+            cancellationToken).ConfigureAwait(false);
+        return removed.IsSuccess
+            ? GenericResult.Success()
+            : GenericResult.Failure(OrganizationAccessLog.WriteFailed(_logger, $"The access rows of user '{userId}'", removed.CurrentMessage));
     }
 }

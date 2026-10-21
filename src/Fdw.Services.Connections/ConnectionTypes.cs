@@ -113,6 +113,59 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<IConnectionConfigurationProvider>(sp => sp.GetRequiredService<ConnectionConfigurationProvider>());
 
+            // ConnectionGrant (FDW-1581): tenant.ConnectionGrant (domain) and tenant.ConnectionGrantConfiguration (implementation).
+            builder.Services.TryAddSingleton<IConnectionGrantImplementationConfigurationProvider>(sp =>
+                new ConnectionGrantImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ConnectionGrantImplementationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "tenant", "ConnectionGrantConfiguration"));
+            builder.Services.TryAddSingleton<ConnectionGrantConfigurationProvider>(sp =>
+            {
+                var domain = new ConnectionGrantConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ConnectionGrantConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "tenant", "ConnectionGrant");
+                domain.Register("ConnectionGrant", sp.GetRequiredService<IConnectionGrantImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IConnectionGrantConfigurationProvider>(sp => sp.GetRequiredService<ConnectionGrantConfigurationProvider>());
+
+            // ConnectionAssignment (FDW-1581): tenant.ConnectionAssignment (domain) and tenant.ConnectionAssignmentConfiguration (implementation).
+            builder.Services.TryAddSingleton<IConnectionAssignmentImplementationConfigurationProvider>(sp =>
+                new ConnectionAssignmentImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ConnectionAssignmentImplementationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "tenant", "ConnectionAssignmentConfiguration"));
+            builder.Services.TryAddSingleton<ConnectionAssignmentConfigurationProvider>(sp =>
+            {
+                var domain = new ConnectionAssignmentConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ConnectionAssignmentConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), ConnectionTypes.ConfigurationConnection, "tenant", "ConnectionAssignment");
+                domain.Register("ConnectionAssignment", sp.GetRequiredService<IConnectionAssignmentImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IConnectionAssignmentConfigurationProvider>(sp => sp.GetRequiredService<ConnectionAssignmentConfigurationProvider>());
+
+            // The resolver of an organization's store reads only singletons; the services that grant and assign read the tenant and the
+            // organization, which are scoped (FDW-1581).
+            builder.Services.TryAddSingleton<IDocumentStores>(sp =>
+                new DocumentStores(
+                    sp.GetRequiredService<IConnectionAssignmentConfigurationProvider>(),
+                    sp.GetRequiredService<IConnectionGrantConfigurationProvider>(),
+                    sp.GetRequiredService<IDocumentConnectionProvider>(),
+                    sp.GetService<ILoggerFactory>(),
+                    sp.GetService<ILogger<DocumentStores>>()));
+            builder.Services.TryAddScoped<IConnectionGrants>(sp =>
+                new ConnectionGrants(
+                    sp.GetRequiredService<IConnectionGrantConfigurationProvider>(),
+                    sp.GetRequiredService<IConnectionAssignmentConfigurationProvider>(),
+                    sp.GetRequiredService<IDocumentConnectionProvider>(),
+                    sp.GetRequiredService<Fdw.Services.Multitenancy.Abstractions.ITenantProvider>(),
+                    sp.GetService<ILogger<ConnectionGrants>>()));
+            builder.Services.TryAddScoped<IConnectionAssignments>(sp =>
+                new ConnectionAssignments(
+                    sp.GetRequiredService<Fdw.Services.Authorization.Abstractions.IOrganizationScope>(),
+                    sp.GetRequiredService<IConnectionAssignmentConfigurationProvider>(),
+                    sp.GetRequiredService<IConnectionGrantConfigurationProvider>(),
+                    sp.GetService<ILogger<ConnectionAssignments>>()));
+
             builder.Services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IHealthCheckable, ConnectionsHealthCheckable>());
 
@@ -130,6 +183,8 @@ public partial class ConnectionTypes : ServiceTypeCollectionBase<
 
             builder.Services.TryAddSingleton<IDataConnectionProvider>(sp =>
                 (IDataConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
+            builder.Services.TryAddSingleton<IDocumentConnectionProvider>(sp =>
+                (IDocumentConnectionProvider)sp.GetRequiredService<IConnectionProvider>());
 
             builder.Services.TryAddSingleton<IServiceConnectionProvider, ServiceConnectionProvider>();
 

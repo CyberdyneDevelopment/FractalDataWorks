@@ -1,46 +1,62 @@
-using Fdw.Services.Pipelines.Clients.Abstractions;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Fdw.Results;
+using Fdw.Services.Etl.Graphs;
+using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
-/// <summary>What a saved pipeline reads and writes, which the roles a run acts with must be able to reach (FDW-1087, FDW-1161).</summary>
+/// <summary>
+/// What a saved pipeline reads and writes for one run, which the roles the run acts with must be able to reach (FDW-1087, FDW-1161,
+/// FDW-1891): every data set and every data store container its components and stages use, each as a read or a write.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Why this is read from <see cref="GraphPipelineUses"/> and nowhere else: a run is judged for reach when it starts, against the
+/// pipeline as it is then stored, so starting it by hand, by a webhook call and by a schedule all answer from the one reading of what
+/// the pipeline uses, and the lineage and the data map answer from the same one.
+/// </para>
+/// <para>
+/// Why it takes the run's values: a source may name its data set by a parameter, and what the run reaches is the name it is given, so the
+/// components are rendered with the values first, exactly as the run builds them.
+/// </para>
+/// <para>
+/// A pipeline read as a record alone has no steps and so reaches nothing; the caller reads it whole.
+/// </para>
+/// </remarks>
 /// <param name="PipelineName">The pipeline's name.</param>
-/// <param name="SourceDataSet">The data set it reads, if any.</param>
-/// <param name="DestinationDataSet">The data set it writes, if any.</param>
-/// <param name="SourceDataStoreName">The data store whose container it reads, if any (FDW-1103).</param>
-/// <param name="SourceDataStorePath">The path within that data store.</param>
-/// <param name="SourceContainerName">The container within that path.</param>
-/// <param name="DestinationDataStoreName">The data store whose container it writes, if any (FDW-1269).</param>
-/// <param name="DestinationDataStorePath">The path within that data store.</param>
-/// <param name="DestinationContainerName">The container within that path.</param>
-/// <param name="Steps">What its stages and load steps touch beyond that: Union and Lookup sources, load and reject destinations, Execute containers.</param>
+/// <param name="DataSets">The data sets it reads or writes, each once.</param>
+/// <param name="Containers">The data store containers it reads or writes, each once.</param>
 public sealed record PipelineReach(
     string PipelineName,
-    string? SourceDataSet,
-    string? DestinationDataSet,
-    string? SourceDataStoreName,
-    string? SourceDataStorePath,
-    string? SourceContainerName,
-    string? DestinationDataStoreName,
-    string? DestinationDataStorePath,
-    string? DestinationContainerName,
-    StepReach Steps)
+    IReadOnlyList<ReachedDataSet> DataSets,
+    IReadOnlyList<ReachedContainer> Containers)
 {
-    /// <summary>Reads what a saved pipeline reads and writes from its stored detail.</summary>
-    /// <remarks>
-    /// The one place a pipeline's reach is read, so triggering it, scheduling it and listing the roles that can run it cannot
-    /// answer the question three ways.
-    /// </remarks>
-    /// <param name="pipeline">The saved pipeline as its detail reads it.</param>
-    /// <returns>The pipeline's reach.</returns>
-    public static PipelineReach Of(PipelineDetailResponse pipeline) => new(
-        pipeline.Name,
-        pipeline.SourceDataSet,
-        pipeline.DestinationDataSet,
-        pipeline.SourceDataStoreName,
-        pipeline.SourceDataStorePath,
-        pipeline.SourceContainerName,
-        pipeline.DestinationDataStoreName,
-        pipeline.DestinationDataStorePath,
-        pipeline.DestinationContainerName,
-        StepReach.Of(pipeline));
+    /// <summary>Reads what a pipeline reads and writes for a run given these values.</summary>
+    /// <param name="graph">The pipeline, read whole.</param>
+    /// <param name="parameters">The run's typed values by parameter name.</param>
+    /// <param name="logger">The logger the failures are written to.</param>
+    /// <returns>The pipeline's reach, or the failure that names the parameter the run was not given.</returns>
+    public static IGenericResult<PipelineReach> Of(GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> parameters, ILogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(graph);
+        var found = GraphPipelineUses.Of(graph, parameters, logger);
+        if (found.IsFailure || found.Value is null)
+        {
+            return found.ToNewResult<PipelineReach>();
+        }
+
+        var uses = found.Value;
+        return GenericResult<PipelineReach>.Success(new PipelineReach(
+            graph.Name,
+            [.. uses.Where(use => string.Equals(use.Kind, PipelineUseKinds.DataSet, StringComparison.Ordinal))
+                .Select(use => new ReachedDataSet(use.Name, Writes(use)))
+                .Distinct()],
+            [.. uses.Where(use => string.Equals(use.Kind, PipelineUseKinds.Container, StringComparison.Ordinal))
+                .Select(use => new ReachedContainer(use.Parents[0], use.Parents.Count > 1 ? use.Parents[1] : string.Empty, use.Name, Writes(use)))
+                .Distinct()]));
+    }
+
+    private static bool Writes(PipelineUse use) => string.Equals(use.Relation, PipelineUseRelations.Writes, StringComparison.Ordinal);
 }

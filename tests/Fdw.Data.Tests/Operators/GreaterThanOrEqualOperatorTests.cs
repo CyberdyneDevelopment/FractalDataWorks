@@ -1,3 +1,4 @@
+using System;
 using Fdw.Data;
 using Shouldly;
 using Xunit;
@@ -88,5 +89,34 @@ public sealed class GreaterThanOrEqualOperatorTests
     public void FormatODataValueFormatsUnknownTypeWithQuotes()
     {
         _sut.FormatODataValue("text").ShouldBe("'text'");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void MatchesNoRowWhoseValueIsMissing()
+    {
+        _sut.Matches(null, new DateTimeOffset(2026, 10, 15, 0, 0, 0, TimeSpan.Zero)).ShouldBeFalse();
+        _sut.Matches(null, 5).ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public void MatchesNothingAgainstAMissingBound()
+    {
+        _sut.Matches(5, null).ShouldBeFalse();
+        _sut.Matches(null, null).ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void MatchesAnEqualValueAndOneOnTheRightSide()
+    {
+        var bound = new DateTimeOffset(2026, 10, 15, 0, 0, 0, TimeSpan.Zero);
+        _sut.Matches(bound, bound).ShouldBeTrue();
+        _sut.Matches(bound.AddDays(1), bound).ShouldBeTrue();
+        _sut.Matches(bound.AddDays(-1), bound).ShouldBeFalse();
     }
 }

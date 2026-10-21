@@ -1,5 +1,6 @@
-﻿using System;
-using Fdw.Services.Etl;
+using System;
+using System.Linq;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Logging;
@@ -7,26 +8,20 @@ using Fdw.Web.RestEndpoints.Logging;
 namespace Fdw.Operations.Endpoints;
 
 /// <summary>
-/// Projects a configured pipeline onto the flat <see cref="PipelineLineageRecord"/> the lineage graph
+/// Projects a configured pipeline onto the <see cref="PipelineLineageRecord"/> the lineage graph
 /// builder consumes.
 /// </summary>
 /// <remarks>
-/// Why: the previous mechanism read <c>pipe.Pipeline</c> as a flat single-table row, which structurally
-/// cannot see the linkage columns (SourceDataSet/DestinationDataSet/SourceDataStoreName/
-/// DestinationDataStoreName/IsEnabled) that live on the engine's own row. A read through the Pipeline
-/// domain already dispatches to whichever implementation the row names, so this projection reads the
-/// linkage off that implementation — polymorphically through
-/// <see cref="IEtlPipelineImplementationConfiguration"/>, with no <c>is BatchCopy...</c> branch and no
-/// re-implementation of the join.
+/// Why: what a pipeline reads and writes is held in the settings of its components, so it is read the one way the whole
+/// workspace reads it (<see cref="GraphPipelineUses"/>), on a pipeline read whole. Nothing here knows an engine by name.
 /// </remarks>
 internal static class PipelineLineageProjection
 {
     /// <summary>
-    /// Projects one configured pipeline to a <see cref="PipelineLineageRecord"/>. A pipeline whose
-    /// implementation carries no ETL linkage renders NODE-ONLY — Name/Id/Implementation set, linkage
-    /// left null — with a Warning naming the gap. NO FALLBACKS: linkage is never fabricated.
+    /// Projects one configured pipeline to a <see cref="PipelineLineageRecord"/>. A pipeline that is not a graph renders
+    /// NODE-ONLY: Name, Id and Implementation set, no uses, with a Warning naming the gap. NO FALLBACKS: linkage is never fabricated.
     /// </summary>
-    /// <param name="configuration">The configured pipeline, as the Pipeline domain hands it back.</param>
+    /// <param name="configuration">The configured pipeline, as the Pipeline domain hands it back, read whole.</param>
     /// <param name="logger">Logger for verbose composition/linkage tracing.</param>
     public static PipelineLineageRecord From(IPipelineImplementationConfiguration configuration, ILogger logger)
     {
@@ -39,7 +34,7 @@ internal static class PipelineLineageProjection
             Implementation = configuration.Implementation
         };
 
-        if (configuration is not IEtlPipelineImplementationConfiguration engine)
+        if (configuration is not GraphPipelineConfiguration graph)
         {
             ApiEndpointLog.PipelineNodeOnlyNoBody(logger, configuration.Name);
             return record;
@@ -47,24 +42,12 @@ internal static class PipelineLineageProjection
 
         ApiEndpointLog.PipelineAggregateComposed(logger, configuration.Name, configuration.Implementation);
 
-        record.SourceDataSet = engine.SourceDataSet;
-        record.DestinationDataSet = engine.DestinationDataSet;
-        record.IsEnabled = engine.IsEnabled;
-        if (engine is IDataStoreSourcedPipelineConfiguration source)
-        {
-            record.SourceDataStoreName = source.SourceDataStoreName;
-            record.SourceContainerName = source.SourceContainerName;
-        }
-
-        if (engine is IDataStoreDestinedPipelineConfiguration destination)
-        {
-            record.DestinationDataStoreName = destination.DestinationDataStoreName;
-            record.DestinationContainerName = destination.DestinationContainerName;
-        }
+        record.IsEnabled = graph.IsEnabled;
+        record.Uses = GraphPipelineUses.Of(graph);
 
         ApiEndpointLog.PipelineLinkageExtracted(
-            logger, configuration.Name, engine.SourceDataSet, engine.DestinationDataSet,
-            record.SourceDataStoreName, record.DestinationDataStoreName);
+            logger, configuration.Name, record.DataSetsRead.Count(), record.ContainersRead.Count(),
+            record.DataSetsWritten.Count(), record.ContainersWritten.Count());
 
         return record;
     }

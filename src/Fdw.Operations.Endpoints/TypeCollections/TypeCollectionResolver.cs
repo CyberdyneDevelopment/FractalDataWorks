@@ -6,6 +6,7 @@ using System.Reflection;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
 using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Etl.Abstractions.Flow;
 
 namespace Fdw.Operations.Endpoints.TypeCollections;
 
@@ -191,12 +192,29 @@ internal static class TypeCollectionResolver
             ExpectedProperties = GetStringListProperty(typeOption, "ExpectedProperties"),
             RequiredProperties = GetStringListProperty(typeOption, "RequiredProperties"),
             Parameters = TypeCollectionParameters.For(typeOption),
-            MaxDepth = typeOption is INestedStageShape nested ? nested.MaxDepth : null,
-            PipelineTypes = typeOption is IStagePipelineTypesShape bound ? bound.PipelineTypes : null,
             AcceptsRejectedRecords = typeOption is IAcceptsRejectedRecordsShape rejects ? rejects.AcceptsRejectedRecords : null,
-            ReservedColumns = typeOption is IReservedColumnsShape reserved ? reserved.ReservedColumns : null
+            ReservedColumns = typeOption is IReservedColumnsShape reserved ? reserved.ReservedColumns : null,
+            Inputs = typeOption is IFlowComponentShape component ? Nodes(component.Inputs) : null,
+            Outputs = typeOption is IFlowComponentShape shaped ? Nodes(shaped.Outputs) : null,
+            Color = typeOption is IColorShape coloured ? coloured.Color : null,
+            Rank = typeOption is IRankShape ranked ? ranked.Rank : null,
+            NeedsAcknowledgement = typeOption is IAcknowledgementShape acknowledged ? acknowledged.NeedsAcknowledgement : null,
+            IsAction = typeOption is IComponentType action ? action.IsAction : null,
+            HoldsComponents = typeOption is IComponentType holder ? holder.HoldsComponents : null
         };
     }
+
+    private static List<TypeCollectionValueNodeDto> Nodes(IReadOnlyList<FlowNodeSpec> nodes) =>
+        nodes.Select(node => new TypeCollectionValueNodeDto
+        {
+            Name = node.Name,
+            IsNamedByUser = node.IsNamedByUser,
+            Min = node.Min,
+            Max = node.Max,
+            IsError = node.IsError,
+            HelpText = node.HelpText,
+            NamedBySetting = node.NamedBySetting
+        }).ToList();
 
     /// <summary>
     /// Reads a type option's Id via reflection.

@@ -25,7 +25,7 @@ public sealed class LookupTransformTypeTests
     private readonly LookupTransformType _sut = new();
 
     private static TransformContext CreateContext(IDataGateway? dataGateway = null) =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), dataGateway: dataGateway);
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), dataGateway: dataGateway);
 
     private static PipelineTransformConfiguration CreateConfig(params PipelineTransformLookupConfiguration[] lookups) =>
         new() { Id = Guid.NewGuid(), Name = "Lookup1", OperationType = "Lookup", Lookups = [.. lookups] };

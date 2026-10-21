@@ -104,6 +104,22 @@ public interface IDataGateway : IGenericService
         IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Executes a vectorized command (the rows nearest a vector, say) against a container whose store holds vectors.
+    /// </summary>
+    /// <remarks>
+    /// Only a connection implementing <c>IVectorizedDataConnection</c> takes it: a store whose connection does not is
+    /// refused, as <see cref="BeginTransaction"/> refuses a connection that cannot hold a transaction. A store the host
+    /// declares is reached as for a data command, through its configuration gateway and by the system context only. The
+    /// connection's limits apply as they do to a data command; the answer is never cached (FDW-1354).
+    /// </remarks>
+    /// <typeparam name="T">What the command answers with.</typeparam>
+    /// <param name="command">The vectorized command.</param>
+    /// <param name="target">The DataStore/Path/Container address for this command.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The command's answer, or why it was refused or failed.</returns>
+    Task<IGenericResult<T>> Execute<T>(IVectorizedDataCommand<T> command, DataStoreTarget target, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Opens a transaction scope on the named connection.
     /// </summary>
     /// <remarks>

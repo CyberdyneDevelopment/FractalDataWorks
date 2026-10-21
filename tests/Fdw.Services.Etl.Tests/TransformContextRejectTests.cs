@@ -10,7 +10,7 @@ namespace Fdw.Services.Etl.Tests;
 public sealed class TransformContextRejectTests
 {
     private static TransformContext Context() =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>());
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>());
 
     [Fact]
     [Trait("Priority", "P0")]

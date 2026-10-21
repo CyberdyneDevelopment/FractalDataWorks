@@ -35,6 +35,8 @@ public abstract class GetDataflowGraphEndpointBase : DataflowLayerEndpointBase
         });
     }
 
+    private protected override bool NamesCategories => true;
+
     private protected override DataflowGraphResponse BuildLayer(DataflowGraphInputs inputs)
         => DataflowBaseLayer.Build(inputs);
 }

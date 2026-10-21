@@ -53,6 +53,18 @@ public static partial class HttpRecordConnectorLog
     public static partial IGenericMessage FormatNotConfigured(ILogger logger, string connectionName, string container);
 
     /// <summary>
+    /// Logs that the container states no value for a write setting an HTTP destination needs (FDW-1757), naming which one so
+    /// the caller knows what to state on the container.
+    /// </summary>
+    /// <param name="logger">The logger used to emit the log event.</param>
+    /// <param name="connectionName">The name of the HTTP connection.</param>
+    /// <param name="container">The container that is missing the setting.</param>
+    /// <param name="member">The container member that states the setting: WriteEndpoint, WriteMethod or WriteContentType.</param>
+    /// <returns>The structured <see cref="IGenericMessage"/> for the event.</returns>
+    [MessageLogging(EventId = 61009, Level = LogLevel.Error, Message = "HTTP connection '{connectionName}': container '{container}' states no {member}, which an HTTP destination needs to send its rows")]
+    public static partial IGenericMessage WriteSettingNotConfigured(ILogger logger, string connectionName, string container, string member);
+
+    /// <summary>
     /// Logs that no record writer type is registered for the container's configured format.
     /// </summary>
     /// <param name="logger">The logger used to emit the log event.</param>

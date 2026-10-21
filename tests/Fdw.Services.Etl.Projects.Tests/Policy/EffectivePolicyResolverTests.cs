@@ -517,4 +517,39 @@ public sealed class EffectivePolicyResolverTests
         stepEffective.StageFailurePolicy.ShouldBe("HaltProject");    // from Stage
         stepEffective.MaxParallelPipelines.ShouldBe(4);              // from Step
     }
+
+    // ============================================================
+    // ResolveForRootNode — a node with no parent node inherits from the server defaults (FDW-1740)
+    // ============================================================
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void ResolveForRootNodeInheritsServerDefaultApprovalWhenNodeStatesNone()
+    {
+        // Arrange
+        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock(requireApprovalToRun: true).Object);
+
+        // Act
+        var effective = sut.ResolveForRootNode(CreateNode());
+
+        // Assert
+        effective.RequireApprovalToRun.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void ResolveForRootNodeUsesTheNodesOwnApprovalOverTheServerDefault()
+    {
+        // Arrange
+        var sut = new EffectivePolicyResolver(CreateServerDefaultsMock(requireApprovalToRun: false).Object);
+
+        // Act
+        var effective = sut.ResolveForRootNode(CreateNode(requireApprovalToRun: true));
+
+        // Assert
+        effective.RequireApprovalToRun.ShouldBeTrue();
+        effective.MaxParallelPipelines.ShouldBe(5);
+    }
 }

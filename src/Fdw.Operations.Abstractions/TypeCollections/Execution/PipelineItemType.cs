@@ -23,7 +23,8 @@ public sealed class PipelineItemType : ExecutionItemTypeBase
             displayName: "Pipeline",
             hierarchyLevel: 4,
             canHaveChildren: false,
-            canHaveParent: true)
+            canHaveParent: true,
+            canContainSelf: false)
     {
     }
 }

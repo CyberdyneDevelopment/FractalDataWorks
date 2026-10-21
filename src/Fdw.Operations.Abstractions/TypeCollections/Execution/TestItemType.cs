@@ -18,7 +18,8 @@ public sealed class TestItemType : ExecutionItemTypeBase
             displayName: "Test Execution",
             hierarchyLevel: 0,
             canHaveChildren: true,
-            canHaveParent: false)
+            canHaveParent: false,
+            canContainSelf: false)
     {
     }
 }

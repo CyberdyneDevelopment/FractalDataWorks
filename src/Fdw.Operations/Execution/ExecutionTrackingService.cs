@@ -489,6 +489,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         IExecutionItemType? itemType = null,
         IExecutionStateType? state = null,
         string? correlationId = null,
+        Guid? rootId = null,
         CancellationToken cancellationToken = default)
     {
         // Reported here rather than refused at registration: a host that never tracks an
@@ -503,7 +504,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                 new PagedResponse<IExecutionItem>(new List<IExecutionItem>(), page, pageSize, 0));
         }
 
-        var filter = BuildListFilter(itemType, state, correlationId, scope);
+        var filter = BuildListFilter(itemType, state, correlationId, rootId, scope);
 
         var queryCommand = new QueryCommand<ExecutionItem>
         {
@@ -546,6 +547,7 @@ public sealed class ExecutionTrackingService : IExecutionTracker
         IExecutionItemType? itemType,
         IExecutionStateType? state,
         string? correlationId,
+        Guid? rootId,
         ExecutionTenantScope scope)
     {
         var conditions = new List<FilterCondition>();
@@ -580,6 +582,16 @@ public sealed class ExecutionTrackingService : IExecutionTracker
                 PropertyName = "CorrelationId",
                 Operator = FilterOperators.ByName("Equal"),
                 Value = correlationId
+            });
+        }
+
+        if (rootId is { } root)
+        {
+            conditions.Add(new FilterCondition
+            {
+                PropertyName = "RootExecutionItemId",
+                Operator = FilterOperators.ByName("Equal"),
+                Value = root
             });
         }
 

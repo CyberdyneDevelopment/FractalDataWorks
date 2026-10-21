@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using Fdw.Messages;
 using Fdw.Operations.Endpoints;
 using Fdw.Results;
-using Fdw.Services.Etl.Pipelines;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -40,40 +41,12 @@ public class PipelineLineageLoaderTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             times);
 
-    private static BatchCopyPipelineConfiguration Configured(string name, string sourceDataSet, string destinationDataSet) => new()
-    {
-        Id = Guid.NewGuid(),
-        Name = name,
-        Domain = "Pipeline",
-        Implementation = "BatchCopy",
-        IsEnabled = true,
-        SourceDataSet = sourceDataSet,
-        DestinationDataSet = destinationDataSet
-    };
-
     private static Mock<IPipelineConfigurationProvider> ProviderReturning(
         IGenericResult<IReadOnlyList<IPipelineImplementationConfiguration>> result)
     {
         var provider = new Mock<IPipelineConfigurationProvider>();
-        provider.Setup(p => p.Get(It.IsAny<CancellationToken>())).ReturnsAsync(result);
+        provider.Setup(p => p.Get(It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
         return provider;
-    }
-
-    [Fact]
-    public async Task LoadProjectsLinkageFromEveryConfiguredPipeline()
-    {
-        var provider = ProviderReturning(
-            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success(
-                [Configured("P1", "DS1", "DS2"), Configured("P2", "DS3", "DS4")]));
-
-        var records = await PipelineLineageLoader.Load(
-            provider.Object, _logger.Object, TestContext.Current.CancellationToken);
-
-        records.Count.ShouldBe(2);
-        records.ShouldContain(r => r.Name == "P1" && r.SourceDataSet == "DS1" && r.DestinationDataSet == "DS2");
-        records.ShouldContain(r => r.Name == "P2" && r.SourceDataSet == "DS3" && r.DestinationDataSet == "DS4");
-        VerifyLogged(LogLevel.Debug, 11014, Times.Once());
-        VerifyLogged(LogLevel.Debug, 11019, Times.Once());
     }
 
     [Fact]
@@ -88,8 +61,54 @@ public class PipelineLineageLoaderTests
 
         records.Count.ShouldBe(1);
         records[0].Name.ShouldBe("Broken");
-        records[0].SourceDataSet.ShouldBeNull();
+        records[0].Uses.ShouldBeEmpty();
         VerifyLogged(LogLevel.Debug, 31002, Times.Once());
+    }
+
+    private static GraphPipelineConfiguration Whole(Guid id) => new()
+    {
+        Id = id,
+        Name = "Load",
+        Implementation = "Graph",
+        Components =
+        [
+            new PipelineComponentConfiguration { Name = "src", ComponentType = "DataSetSource", DataSetName = "Orders" },
+            new PipelineComponentConfiguration { Name = "out", ComponentType = "DataSetDestination", DataSetName = "OrderSummary" },
+        ],
+    };
+
+    [Fact]
+    public async Task AGraphPipelineListedAsARecordIsReadWholeSoItsUsesAreKnown()
+    {
+        var id = Guid.NewGuid();
+        var listed = new GraphPipelineConfiguration { Id = id, Name = "Load", Implementation = "Graph" };
+        var provider = ProviderReturning(
+            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([listed]));
+        provider
+            .Setup(p => p.Get(id, ConfigurationLevels.WholeAggregate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Success(Whole(id)));
+
+        var records = await PipelineLineageLoader.Load(provider.Object, _logger.Object, TestContext.Current.CancellationToken);
+
+        records.Count.ShouldBe(1);
+        records[0].DataSetsRead.ShouldBe(["Orders"]);
+        records[0].DataSetsWritten.ShouldBe(["OrderSummary"]);
+    }
+
+    [Fact]
+    public async Task AFailedWholeReadOfOnePipelineFailsTheReadInsteadOfDrawingItWithNoLines()
+    {
+        var id = Guid.NewGuid();
+        var listed = new GraphPipelineConfiguration { Id = id, Name = "Load", Implementation = "Graph" };
+        var provider = ProviderReturning(
+            GenericResult<IReadOnlyList<IPipelineImplementationConfiguration>>.Success([listed]));
+        provider
+            .Setup(p => p.Get(id, ConfigurationLevels.WholeAggregate, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IPipelineImplementationConfiguration>.Failure(new GenericMessage("steps failed")));
+
+        var read = await PipelineLineageLoader.Read(provider.Object, _logger.Object, TestContext.Current.CancellationToken);
+
+        read.IsFailure.ShouldBeTrue();
     }
 
     [Fact]

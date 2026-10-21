@@ -40,6 +40,21 @@ public interface ITenantProvider
         CancellationToken ct = default);
 
     /// <summary>
+    /// Validates that a user may act in a department (organization) of a tenant (FDW-1802): the department exists, belongs to that
+    /// tenant, is active, and the user holds access in it.
+    /// </summary>
+    /// <param name="tenantId">The tenant the token is for.</param>
+    /// <param name="organizationId">The department asked for.</param>
+    /// <param name="userId">The user, as the Guid text of their id.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>True when the user may act there, false when they may not, or a failure when the question could not be answered.</returns>
+    Task<IGenericResult<bool>> ValidateOrganizationAccess(
+        Guid tenantId,
+        Guid organizationId,
+        string userId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Resolves tenant from a request (hostname, header, route, etc.).
     /// </summary>
     Task<IGenericResult<ITenant>> ResolveTenant(

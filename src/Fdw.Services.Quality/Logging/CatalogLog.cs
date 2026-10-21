@@ -20,7 +20,7 @@ public static partial class CatalogLog
     /// <summary>Logs creation of a glossary term.</summary>
     [MessageLogging(EventId = 11000, Level = LogLevel.Information,
         Message = "Glossary term '{termName}' created in category '{category}'")]
-    public static partial IGenericMessage TermCreated(ILogger logger, string termName, string category);
+    public static partial IGenericMessage TermCreated(ILogger logger, string termName, Guid? category);
 
     /// <summary>Logs update of a glossary term.</summary>
     [MessageLogging(EventId = 11001, Level = LogLevel.Information,
@@ -35,7 +35,7 @@ public static partial class CatalogLog
     /// <summary>Logs a glossary search operation.</summary>
     [MessageLogging(EventId = 11003, Level = LogLevel.Debug,
         Message = "Searching glossary for '{query}' in category '{category}'")]
-    public static partial IGenericMessage SearchingTerms(ILogger logger, string query, string? category);
+    public static partial IGenericMessage SearchingTerms(ILogger logger, string query, Guid? category);
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Annotation Events (8510-8519)

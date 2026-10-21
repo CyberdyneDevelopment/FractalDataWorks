@@ -79,7 +79,7 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
 
     IFieldType IField.FieldType => _fieldType;
     string? IField.TypeSystemId => "MsSql";
-    int? IField.ConverterTypeId => MsSqlConverters.BySourceType(NativeType.Name).Id;
+    int? IField.ConverterTypeId => MsSqlConverters.BySourceType(NativeType.NativeName).Id;
     bool IField.IsIdentity => _isIdentity;
     bool IField.IsComputed => _isComputed;
     bool IField.IsSystemProvided => _isSystemProvided || _isIdentity || _isComputed;
@@ -120,8 +120,8 @@ public sealed class MsSqlDataField : IMsSqlDataField, IField
         _hasDefault = hasDefault;
         _fieldType = new SimpleFieldType
         {
-            TypeName = nativeType.Name,
-            ClrType = MsSqlConverters.BySourceType(nativeType.Name).TargetClrType,
+            TypeName = nativeType.NativeName,
+            ClrType = MsSqlConverters.BySourceType(nativeType.NativeName).TargetClrType,
         };
     }
 }

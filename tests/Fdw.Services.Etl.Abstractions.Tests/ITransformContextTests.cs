@@ -261,8 +261,6 @@ public class ITransformContextTests
         public object? CalculationEngine { get; set; }
         public object? ConnectionProvider { get; set; }
         public object? DataGateway { get; set; }
-        public IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> FieldTransformChains { get; set; } =
-            new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>();
         public IReadOnlyDictionary<Guid, ICompiledCalculation> BuiltCalculations { get; set; } =
             new Dictionary<Guid, ICompiledCalculation>();
         public IReadOnlyDictionary<Guid, ICompiledCalculationSet> BuiltSets { get; set; } =

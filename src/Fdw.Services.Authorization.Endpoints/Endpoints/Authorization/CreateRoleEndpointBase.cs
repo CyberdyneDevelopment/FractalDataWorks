@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -74,6 +75,15 @@ public abstract class CreateRoleEndpointBase : Endpoint<CreateRoleRequest, RoleS
 
         // Save stamps the record it was handed -- name, domain, implementation and the domain row's
         // durable Id -- and returns no value of its own, so the record IS what was written.
+        var audited = await RoleChangeAudit.RecordRole(Resolve<IAdministrativeAudit>(), User, "RoleCreated", req.Name,
+            null, RoleChangeAudit.Describe(config.DisplayName, config.Description), ct).ConfigureAwait(false);
+        if (audited.IsFailure)
+        {
+            AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RoleCreated", req.Name, audited.CurrentMessage);
+            await Send.ResponseAsync(new RoleSummaryResponse { Name = req.Name }, 500, ct).ConfigureAwait(false);
+            return;
+        }
+
         OnRoleCreated(config.Name, config.Id);
 
         await Send.ResponseAsync(MapToSummary(config), 201, ct).ConfigureAwait(false);

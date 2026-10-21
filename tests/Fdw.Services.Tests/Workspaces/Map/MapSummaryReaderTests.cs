@@ -34,7 +34,7 @@ public class MapSummaryReaderTests
         {
             [MapKinds.DataStore] = [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()],
         };
-        var sources = new MapSources(dataSets.Object, null!, pipelines.Object, new Mock<IDataSetVariationConfigurationProvider>().Object);
+        var sources = new MapSources(dataSets.Object, null!, pipelines.Object, new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
 
         var summary = await MapSummaryReader.Count(new DomainOnlyMapSelection(held: held), sources, Platform(), NullLogger.Instance, TestContext.Current.CancellationToken);
 
@@ -50,7 +50,7 @@ public class MapSummaryReaderTests
         var dataSets = Records<IDataSetConfigurationProvider>(total: null);
         var pipelines = Records<IPipelineConfigurationProvider>(total: 0);
         var held = new Dictionary<string, IReadOnlyCollection<Guid>>(StringComparer.Ordinal) { [MapKinds.DataStore] = [] };
-        var sources = new MapSources(dataSets.Object, null!, pipelines.Object, new Mock<IDataSetVariationConfigurationProvider>().Object);
+        var sources = new MapSources(dataSets.Object, null!, pipelines.Object, new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
 
         var summary = (await MapSummaryReader.Count(new DomainOnlyMapSelection(held: held), sources, Platform(), NullLogger.Instance, TestContext.Current.CancellationToken)).Value!;
 
@@ -68,7 +68,7 @@ public class MapSummaryReaderTests
     {
         var sources = new MapSources(
             new Mock<IDataSetConfigurationProvider>().Object, null!, new Mock<IPipelineConfigurationProvider>().Object,
-            new Mock<IDataSetVariationConfigurationProvider>().Object);
+            new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
 
         var summary = (await MapSummaryReader.Count(
             new DomainOnlyMapSelection(MapScopeKinds.Organization), sources, Platform(), NullLogger.Instance, TestContext.Current.CancellationToken)).Value!;
@@ -81,7 +81,7 @@ public class MapSummaryReaderTests
     {
         var sources = new MapSources(
             Records<IDataSetConfigurationProvider>(total: 12).Object, null!, Records<IPipelineConfigurationProvider>(total: 3).Object,
-            new Mock<IDataSetVariationConfigurationProvider>().Object);
+            new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
         var held = new Dictionary<string, IReadOnlyCollection<Guid>>(StringComparer.Ordinal) { [MapKinds.DataStore] = [] };
         var counts = new MapKindCounts(
             Records<IConnectionConfigurationProvider>(total: 7).Object,
@@ -103,7 +103,7 @@ public class MapSummaryReaderTests
     {
         var sources = new MapSources(
             Records<IDataSetConfigurationProvider>(total: 12).Object, null!, Records<IPipelineConfigurationProvider>(total: 3).Object,
-            new Mock<IDataSetVariationConfigurationProvider>().Object);
+            new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
         var held = new Dictionary<string, IReadOnlyCollection<Guid>>(StringComparer.Ordinal)
         {
             [MapKinds.DataSet] = [Guid.NewGuid()],
@@ -130,7 +130,7 @@ public class MapSummaryReaderTests
     {
         var sources = new MapSources(
             Records<IDataSetConfigurationProvider>(total: 12).Object, null!, Records<IPipelineConfigurationProvider>(total: 3).Object,
-            new Mock<IDataSetVariationConfigurationProvider>().Object);
+            new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
         var held = new Dictionary<string, IReadOnlyCollection<Guid>>(StringComparer.Ordinal) { [MapKinds.DataStore] = [] };
         var counts = new MapKindCounts(
             new Mock<IConnectionConfigurationProvider>().Object,

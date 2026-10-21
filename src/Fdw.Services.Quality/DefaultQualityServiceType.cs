@@ -102,7 +102,6 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
 
 
 
-            builder.Services.TryAddScoped<IQualityService, QualityService>();
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();
             builder.Services.TryAddSingleton<IPromotionService, PromotionService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);

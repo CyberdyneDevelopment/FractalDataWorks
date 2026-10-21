@@ -29,7 +29,7 @@ public sealed class SchedulePipelineTests
     [Trait("Category", "Security")]
     public async Task APipelineTheCallerCanSeeIsResolvedById()
     {
-        Answers(GenericResult<PipelineDetailResponse>.Success(new PipelineDetailResponse { Id = PipelineId, Name = "Nightly", PipelineType = "BatchCopy" }));
+        Answers(GenericResult<PipelineDetailResponse>.Success(new PipelineDetailResponse { Id = PipelineId, Name = "Nightly", PipelineType = "Graph" }));
 
         var result = await SchedulePipeline.Resolve(_pipelines.Object, "NightlyAt2", PipelineId,
             NullLogger.Instance, TestContext.Current.CancellationToken);

@@ -7,7 +7,7 @@ namespace Fdw.Configuration;
 /// <remarks>
 /// Why: a domain provider resolves a record by name and reads
 /// <see cref="IDomainConfiguration.Implementation"/> to pick the implementation. In most domains that
-/// is the whole dispatch. In a layered one — Pipeline names EtlPipeline, EtlPipeline names BatchCopy —
+/// is the whole dispatch. In a layered one — Pipeline names EtlPipeline, EtlPipeline names Graph —
 /// factories are registered under the deeper name, so stopping at the domain's own discriminator
 /// resolves the wrong factory. A domain that is layered says so by implementing this; one that is not
 /// does not implement it, and dispatches on its own <see cref="IDomainConfiguration.Implementation"/>.

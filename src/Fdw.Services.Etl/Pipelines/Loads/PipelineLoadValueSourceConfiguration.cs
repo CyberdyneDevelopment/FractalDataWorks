@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
-using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
 
@@ -11,18 +10,14 @@ namespace Fdw.Services.Etl.Pipelines.Loads;
 /// <summary>
 /// A value a load supplies for one target column: a field of the source row, the next value of a sequence, the
 /// current time or a constant (FDW-1108). On an Execute step it is one parameter of the executable container, and
-/// <see cref="ColumnName"/> holds the parameter's name. Persisted in <c>pipe.PipelineLoadValueSource</c>; cascade
-/// child of <see cref="PipelineLoadStepConfiguration"/>.
+/// <see cref="ColumnName"/> holds the parameter's name. The graph destination builders make these in memory for
+/// <see cref="PipelineLoadStepConfiguration"/>; nothing stores one.
 /// </summary>
 /// <remarks>
-/// Why: implements <see cref="IGenericConfiguration"/> so the configuration cascade-save discovers and persists this
-/// collection when the parent step is saved. <see cref="Name"/> carries the column's name, because the interface
-/// requires one.
+/// <see cref="Name"/> carries the column's name.
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Pipeline")]
-public sealed partial class PipelineLoadValueSourceConfiguration : IGenericConfiguration
+public sealed class PipelineLoadValueSourceConfiguration
 {
     /// <summary>
     /// Gets or sets the unique identifier.

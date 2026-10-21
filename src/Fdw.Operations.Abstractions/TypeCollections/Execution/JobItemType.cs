@@ -19,7 +19,8 @@ public sealed class JobItemType : ExecutionItemTypeBase
             displayName: "Job",
             hierarchyLevel: 1,
             canHaveChildren: true,
-            canHaveParent: true)
+            canHaveParent: true,
+            canContainSelf: true)
     {
     }
 }

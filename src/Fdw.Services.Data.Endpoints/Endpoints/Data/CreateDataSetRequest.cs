@@ -22,7 +22,10 @@ public class CreateDataSetRequest
     /// </summary>
     public int ClassificationId { get; set; } = DataClassifications.NotYetClassified.Id;
 
-    /// <summary>Gets or sets the data set category.</summary>
+    /// <summary>
+    /// Gets or sets the name of the <c>DataSet</c> category the data set sits under (see <c>GET /categories?type=DataSet</c>). Left out,
+    /// it sits under none. A name that is not a category of that type is refused.
+    /// </summary>
     public string? Category { get; set; }
 
     /// <summary>Gets or sets the data set version.</summary>
