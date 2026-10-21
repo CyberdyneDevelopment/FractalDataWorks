@@ -6,7 +6,6 @@ namespace Fdw.Services.Messaging.Logging;
 
 /// <summary>
 /// MessageLogging for messaging operations.
-/// EventId range: 8800-8849.
 /// </summary>
 [MessageLoggingTypeCode("MESSAGING")]
 public static partial class MessagingLog
@@ -199,11 +198,13 @@ public static partial class MessagingLog
     public static partial IGenericMessage UiFeedbackAcknowledged(ILogger logger, string feedbackId, string user);
 
     /// <summary>Logs a UI comment acknowledged again by someone who already had; nothing changed.</summary>
-    [MessageLogging(EventId = 11028, Level = LogLevel.Information, Message = "UI comment {feedbackId} was already acknowledged by {user}; nothing changed")]
+    // Why Debug, not Information: a per-call outcome that changes nothing; Information is for what an operator would act on or audit.
+    [MessageLogging(EventId = 11028, Level = LogLevel.Debug, Message = "UI comment {feedbackId} was already acknowledged by {user}; nothing changed")]
     public static partial IGenericMessage UiFeedbackAlreadyAcknowledged(ILogger logger, string feedbackId, string user);
 
     /// <summary>Logs the readers told about a new UI comment.</summary>
-    [MessageLogging(EventId = 11029, Level = LogLevel.Information, Message = "UI comment {feedbackId}: {count} reader(s) told")]
+    // Why Debug, not Information: it fires on every save; the save itself is the Information record (UiFeedbackSaved).
+    [MessageLogging(EventId = 11029, Level = LogLevel.Debug, Message = "UI comment {feedbackId}: {count} reader(s) told")]
     public static partial IGenericMessage UiFeedbackReadersTold(ILogger logger, string feedbackId, int count);
 
     /// <summary>The comment was saved but one reader could not be told.</summary>
@@ -213,4 +214,26 @@ public static partial class MessagingLog
     /// <summary>The comment was saved but the people to tell could not be found.</summary>
     [MessageLogging(EventId = 71006, Level = LogLevel.Error, Message = "UI comment {feedbackId} was saved but its readers could not be found: {reason}")]
     public static partial IGenericMessage UiFeedbackReadersNotFound(ILogger logger, string feedbackId, string? reason);
+
+    /// <summary>Logs a person agreeing with a UI comment.</summary>
+    [MessageLogging(EventId = 11030, Level = LogLevel.Information, Message = "UI comment {feedbackId} agreed with by {user}")]
+    public static partial IGenericMessage UiFeedbackAgreed(ILogger logger, string feedbackId, string user);
+
+    /// <summary>Logs a person agreeing again with a comment they already agreed with; nothing changed.</summary>
+    // Why Debug, not Information: a per-call outcome that changes nothing; Information is for what an operator would act on or audit.
+    [MessageLogging(EventId = 11031, Level = LogLevel.Debug, Message = "UI comment {feedbackId} was already agreed with by {user}; nothing changed")]
+    public static partial IGenericMessage UiFeedbackAlreadyAgreed(ILogger logger, string feedbackId, string user);
+
+    /// <summary>Logs a person taking back their agreement with a UI comment.</summary>
+    [MessageLogging(EventId = 11032, Level = LogLevel.Information, Message = "UI comment {feedbackId}: {user} took back their agreement")]
+    public static partial IGenericMessage UiFeedbackAgreementTakenBack(ILogger logger, string feedbackId, string user);
+
+    /// <summary>The person who left a comment tried to agree with it. A conflict (category 4): they are already counted by having written it.</summary>
+    [MessageLogging(EventId = 41001, Level = LogLevel.Warning, Message = "UI comment {feedbackId} was left by {user}, who may not agree with it",
+        ClientMessage = "You left this comment, so you cannot agree with it")]
+    public static partial IGenericMessage UiFeedbackOwnComment(ILogger logger, string feedbackId, string user);
+
+    /// <summary>Logs a comment written on a UI note.</summary>
+    [MessageLogging(EventId = 11033, Level = LogLevel.Information, Message = "UI comment {feedbackId} commented on by {user}")]
+    public static partial IGenericMessage UiFeedbackCommented(ILogger logger, string feedbackId, string user);
 }

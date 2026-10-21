@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
@@ -43,27 +44,33 @@ public sealed class FrameworkPermissionHandler : AuthorizationHandler<FdwPermiss
             return;
         }
 
-        FrameworkAuthorizationLog.CheckingRequirement(_logger, requirement.Resource, requirement.Action);
-
-        // Adapt ClaimsPrincipal to IAuthenticationContext
+        // Why every accepted permission is asked, in order: a requirement written as "a:x|b:y" is met by either, so the first that is held
+        // succeeds it; a check that errors is logged and the next is still asked, so one failing lookup cannot hide a permission that is held.
         var authContext = new ClaimsPrincipalAuthenticationContext(context.User);
-
-        var result = await _fdwAuthorizationService.Authorize(
-            authContext,
-            requirement.Resource,
-            requirement.Action).ConfigureAwait(false);
-
-        if (result.IsFailure)
+        foreach (var (resource, action) in Accepted(requirement))
         {
-            FrameworkAuthorizationLog.RequirementCheckFailed(
-                _logger, requirement.Resource, requirement.Action, result.CurrentMessage);
-            return;
-        }
+            FrameworkAuthorizationLog.CheckingRequirement(_logger, resource, action);
 
-        if (result.Value)
-        {
-            FrameworkAuthorizationLog.RequirementSatisfied(_logger, requirement.Resource, requirement.Action);
-            context.Succeed(requirement);
+            var result = await _fdwAuthorizationService.Authorize(authContext, resource, action).ConfigureAwait(false);
+            if (result.IsFailure)
+            {
+                FrameworkAuthorizationLog.RequirementCheckFailed(_logger, resource, action, result.CurrentMessage);
+                continue;
+            }
+
+            if (result.Value)
+            {
+                FrameworkAuthorizationLog.RequirementSatisfied(_logger, resource, action);
+                context.Succeed(requirement);
+                return;
+            }
         }
+    }
+
+    private static IEnumerable<(string Resource, string Action)> Accepted(FdwPermissionRequirement requirement)
+    {
+        yield return (requirement.Resource, requirement.Action);
+        foreach (var other in requirement.AlsoAccepted)
+            yield return other;
     }
 }

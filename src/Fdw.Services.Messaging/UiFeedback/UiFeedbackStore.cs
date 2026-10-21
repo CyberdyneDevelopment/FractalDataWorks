@@ -25,6 +25,8 @@ internal sealed class UiFeedbackStore
     private const string TagContainer = "UiFeedbackTag";
     private const string ScreenshotContainer = "UiFeedbackScreenshot";
     private const string AcknowledgementContainer = "UiFeedbackAcknowledgement";
+    private const string AgreementContainer = "UiFeedbackAgreement";
+    private const string CommentContainer = "UiFeedbackComment";
 
     private readonly ILogger _logger;
     private readonly IDataGatewayProvider _dataGateways;
@@ -136,6 +138,126 @@ internal sealed class UiFeedbackStore
         return rows.IsSuccess && rows.Value is { } found
             ? GenericResult<HashSet<Guid>>.Success(found.Select(row => row.FeedbackId).ToHashSet())
             : Failed<HashSet<Guid>>(rows, "read the acknowledgements of");
+    }
+
+    /// <summary>Reads the agreements with some comments.</summary>
+    /// <param name="ids">The comments' identifiers; not more than the store takes in one condition.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The agreements, so that each comment can say how many people agree and whether a given person does.</returns>
+    public async Task<IGenericResult<UiFeedbackAgreements>> FindAgreements(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+            return GenericResult<UiFeedbackAgreements>.Success(new UiFeedbackAgreements(Enumerable.Empty<UiFeedbackAgreementRow>().ToLookup(row => row.FeedbackId)));
+
+        var location = await Location(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return location.ToNewResult<UiFeedbackAgreements>();
+
+        var command = Query.From<UiFeedbackAgreementRow>(location.Value.DataStoreName, location.Value.PathName, AgreementContainer)
+            .Where(row => row.FeedbackId).In(ids)
+            .Build();
+
+        var rows = await Gateway.Execute<IEnumerable<UiFeedbackAgreementRow>>(command, cancellationToken).ConfigureAwait(false);
+        return rows.IsSuccess && rows.Value is { } found
+            ? GenericResult<UiFeedbackAgreements>.Success(new UiFeedbackAgreements(found.ToLookup(row => row.FeedbackId)))
+            : Failed<UiFeedbackAgreements>(rows, "read the agreements with");
+    }
+
+    /// <summary>Counts the comments on some notes.</summary>
+    /// <param name="ids">The notes' identifiers; not more than the store takes in one condition.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comments' marks, one for each comment, so each note can say how many it has.</returns>
+    public async Task<IGenericResult<UiFeedbackCommentCounts>> FindCommentCounts(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+            return GenericResult<UiFeedbackCommentCounts>.Success(UiFeedbackCommentCounts.None);
+
+        var location = await Location(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return location.ToNewResult<UiFeedbackCommentCounts>();
+
+        var command = Query.From<UiFeedbackCommentMarkRow>(location.Value.DataStoreName, location.Value.PathName, CommentContainer)
+            .Where(row => row.FeedbackId).In(ids)
+            .Build();
+
+        var rows = await Gateway.Execute<IEnumerable<UiFeedbackCommentMarkRow>>(command, cancellationToken).ConfigureAwait(false);
+        return rows.IsSuccess && rows.Value is { } found
+            ? GenericResult<UiFeedbackCommentCounts>.Success(new UiFeedbackCommentCounts(found.ToLookup(row => row.FeedbackId)))
+            : Failed<UiFeedbackCommentCounts>(rows, "count the comments on");
+    }
+
+    /// <summary>Reads the comments on a note, oldest first.</summary>
+    /// <param name="feedbackId">The note.</param>
+    /// <param name="skip">The number of comments to skip.</param>
+    /// <param name="take">The number of comments to take.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comments.</returns>
+    public async Task<IGenericResult<IReadOnlyList<UiFeedbackCommentRow>>> FindComments(Guid feedbackId, int skip, int take, CancellationToken cancellationToken)
+    {
+        var location = await Location(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return location.ToNewResult<IReadOnlyList<UiFeedbackCommentRow>>();
+
+        var command = Query.From<UiFeedbackCommentRow>(location.Value.DataStoreName, location.Value.PathName, CommentContainer)
+            .Where(row => row.FeedbackId).Equal(feedbackId)
+            .OrderBy(row => row.CreatedAt)
+            .OrderBy(row => row.Id)
+            .Paging(skip, take)
+            .Build();
+
+        var rows = await Gateway.Execute<IEnumerable<UiFeedbackCommentRow>>(command, cancellationToken).ConfigureAwait(false);
+        return rows.IsSuccess && rows.Value is { } found
+            ? GenericResult<IReadOnlyList<UiFeedbackCommentRow>>.Success(found.ToList())
+            : Failed<IReadOnlyList<UiFeedbackCommentRow>>(rows, "list the comments on");
+    }
+
+    /// <summary>Keeps a comment on a note.</summary>
+    /// <param name="row">The comment.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Success when the row was written.</returns>
+    public async Task<IGenericResult> AddComment(UiFeedbackCommentRow row, CancellationToken cancellationToken)
+    {
+        var location = await Location(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return (IGenericResult)location;
+
+        return await Execute(
+            CmdBuilders.Insert.Into<UiFeedbackCommentRow>(CommentContainer).DataStore(location.Value.DataStoreName).Path(location.Value.PathName).Value(row),
+            "comment on", row.FeedbackId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Keeps a person's agreement with a comment.</summary>
+    /// <param name="row">The agreement.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Success when the row was written.</returns>
+    public async Task<IGenericResult> AddAgreement(UiFeedbackAgreementRow row, CancellationToken cancellationToken)
+    {
+        var location = await Location(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return (IGenericResult)location;
+
+        return await Execute(
+            CmdBuilders.Insert.Into<UiFeedbackAgreementRow>(AgreementContainer).DataStore(location.Value.DataStoreName).Path(location.Value.PathName).Value(row),
+            "agree with", row.FeedbackId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Removes a person's agreement with a comment.</summary>
+    /// <param name="feedbackId">The comment.</param>
+    /// <param name="userId">The person.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Success when no agreement of theirs remains, whether or not there was one.</returns>
+    public async Task<IGenericResult> RemoveAgreement(Guid feedbackId, Guid userId, CancellationToken cancellationToken)
+    {
+        var location = await Location(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return (IGenericResult)location;
+
+        return await Execute(
+            CmdBuilders.Delete.From(AgreementContainer).DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
+                .Where(nameof(UiFeedbackAgreementRow.FeedbackId), feedbackId)
+                .Where(nameof(UiFeedbackAgreementRow.UserId), userId)
+                .Build(),
+            "take back the agreement with", feedbackId, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Keeps a person's acknowledgement of a comment.</summary>
@@ -258,7 +380,15 @@ internal sealed class UiFeedbackStore
         if (!location.IsSuccess)
             return (IGenericResult)location;
 
-        // Why the children first: msg.UiFeedbackAcknowledgement, msg.UiFeedbackTag and msg.UiFeedbackScreenshot reference the comment and carry no cascade.
+        // Why the children first: msg.UiFeedbackAcknowledgement, msg.UiFeedbackComment, msg.UiFeedbackAgreement, msg.UiFeedbackTag and msg.UiFeedbackScreenshot reference the comment and carry no cascade.
+        var comments = await Execute(DeleteCall(CommentContainer, nameof(UiFeedbackCommentRow.FeedbackId), id, location.Value), "delete the comments on", id, cancellationToken).ConfigureAwait(false);
+        if (!comments.IsSuccess)
+            return comments;
+
+        var agreements = await Execute(DeleteCall(AgreementContainer, nameof(UiFeedbackAgreementRow.FeedbackId), id, location.Value), "delete the agreements with", id, cancellationToken).ConfigureAwait(false);
+        if (!agreements.IsSuccess)
+            return agreements;
+
         var acknowledgements = await Execute(DeleteCall(AcknowledgementContainer, nameof(UiFeedbackAcknowledgementRow.FeedbackId), id, location.Value), "delete the acknowledgements of", id, cancellationToken).ConfigureAwait(false);
         if (!acknowledgements.IsSuccess)
             return acknowledgements;
@@ -287,7 +417,13 @@ internal sealed class UiFeedbackStore
         if (filter.Route is not null)
             builder = builder.Where(row => row.Route).Equal(filter.Route);
 
-        return filter.Urgency is null ? builder : builder.Where(row => row.Urgency).Equal(filter.Urgency);
+        if (filter.Urgency is not null)
+            builder = builder.Where(row => row.Urgency).Equal(filter.Urgency);
+
+        if (filter.Urgencies is { } urgencies)
+            builder = builder.Where(row => row.Urgency).In(urgencies);
+
+        return filter.AuthorUserId is { } authorUserId ? builder.Where(row => row.AuthorUserId).Equal(authorUserId) : builder;
     }
 
     private async Task<IGenericResult> Undo(Guid id, IGenericResult cause, CancellationToken cancellationToken)

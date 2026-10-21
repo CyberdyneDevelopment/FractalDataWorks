@@ -8,7 +8,7 @@ The service is `IUiFeedbackService` (Fdw.Services.Messaging); these endpoint bas
 | Permission | Allows |
 |---|---|
 | `ui-feedback:write` | Save a comment. Change the note of, or delete, your own. |
-| `ui-feedback:read` | List and open comments, read a picture. |
+| `ui-feedback:read` | List and open every comment, read a picture, and be told of a new one. |
 | `ui-feedback:resolve` | Resolve and reopen a comment. |
 
 The author and tenant of a comment are the caller's, never stated by the request. A reader reaches the comments of the tenant they act in. A caller acting in the global tenant (the platform administrator) reaches every tenant's. A comment out of reach is answered `404`, as if it did not exist. A permission is carried in the token, so a user who was just given one signs in again.
@@ -24,6 +24,10 @@ The author and tenant of a comment are the caller's, never stated by the request
 | `PATCH /ui-feedback/{id}` `{ body }` | write | `200`; `403` when the comment is another person's |
 | `DELETE /ui-feedback/{id}` | write | `204`; `403` when it is another person's |
 | `POST /ui-feedback/{id}/acknowledge` | read | `200` with `acknowledgedByMe` true; asking again changes nothing and still answers `200` |
+| `POST /ui-feedback/{id}/agree` | write | `200` with `agreedByMe` true and `agreeCount` (people who agree, the author not counted); asking again changes nothing; the author gets `409` |
+| `DELETE /ui-feedback/{id}/agree` | write | `200` with `agreedByMe` false; taking back an agreement not given changes nothing |
+| `POST /ui-feedback/{id}/comments` | write | `201` with the comment (`id`, `feedbackId`, `authorUserId`, `authorName`, `body`, `createdAt`); `body` is required, at most 4000 characters |
+| `GET /ui-feedback/{id}/comments?skip=&take=` | read or write | `200` with `{items}`, oldest first; `take` from 1 to 200 |
 | `POST /ui-feedback/{id}/resolve` | resolve | `200`; `409` when already resolved |
 | `POST /ui-feedback/{id}/reopen` | resolve | `200`; `409` when already open |
 

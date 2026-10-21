@@ -7,13 +7,12 @@ namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
 /// MessageLogging for messaging endpoint operations.
-/// EventId range: 7240-7279
 /// </summary>
 [MessageLoggingTypeCode("ENDPOINTS7")]
 public static partial class MessagingEndpointLog
 {
     // ═══════════════════════════════════════════════════════════════════════════
-    // Message read operations (7240-7249)
+    // Message read operations
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
@@ -71,7 +70,7 @@ public static partial class MessagingEndpointLog
     public static partial IGenericMessage UnreadCountFailed(ILogger logger, string userId, string reason);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Message state transitions (7250-7259)
+    // Message state transitions
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
@@ -135,7 +134,7 @@ public static partial class MessagingEndpointLog
     public static partial IGenericMessage MarkingAllRead(ILogger logger, string userId);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Mark all read continued + Access requests (7260-7279)
+    // Mark all read continued + Access requests
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>

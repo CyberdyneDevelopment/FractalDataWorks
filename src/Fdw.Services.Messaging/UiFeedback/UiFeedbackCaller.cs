@@ -10,4 +10,6 @@ namespace Fdw.Services.Messaging;
 /// <param name="Name">The person's name.</param>
 /// <param name="TenantId">The tenant the person acts in.</param>
 /// <param name="Scope">The tenants the person reaches.</param>
-internal readonly record struct UiFeedbackCaller(Guid UserId, string Name, Guid TenantId, ExecutionTenantScope Scope);
+/// <param name="SeesAll">Whether the person holds the read right, so sees the comments of every urgency; otherwise they see the comments that are not security
+/// issues and their own (FDW-2246).</param>
+internal readonly record struct UiFeedbackCaller(Guid UserId, string Name, Guid TenantId, ExecutionTenantScope Scope, bool SeesAll);

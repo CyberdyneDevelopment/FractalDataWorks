@@ -56,6 +56,15 @@ public sealed class UiFeedbackServiceTests
                 .Setup(g => g.Execute<IEnumerable<UiFeedbackAcknowledgementRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackAcknowledgementRow>>.Success(Acks.ToList()));
             gateway
+                .Setup(g => g.Execute<IEnumerable<UiFeedbackAgreementRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackAgreementRow>>.Success(Agreements.ToList()));
+            gateway
+                .Setup(g => g.Execute<IEnumerable<UiFeedbackCommentMarkRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackCommentMarkRow>>.Success(Comments.Select(c => new UiFeedbackCommentMarkRow { FeedbackId = c.FeedbackId }).ToList()));
+            gateway
+                .Setup(g => g.Execute<IEnumerable<UiFeedbackCommentRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackCommentRow>>.Success(Comments.ToList()));
+            gateway
                 .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
                 .Returns<IDataCommand, DataStoreTarget, CancellationToken>((_, target, _) =>
                 {
@@ -76,7 +85,7 @@ public sealed class UiFeedbackServiceTests
                 .ReturnsAsync(() => TenantLookup ?? GenericResult<IReadOnlyList<Guid>>.Success(TenantReaders));
             holders
                 .Setup(h => h.GetOnPlatform(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => GenericResult<IReadOnlyList<Guid>>.Success(PlatformReaders));
+                .ReturnsAsync(() => PlatformLookup ?? GenericResult<IReadOnlyList<Guid>>.Success(PlatformReaders));
 
             var messages = new Mock<IMessageService>(MockBehavior.Loose);
             messages
@@ -115,6 +124,10 @@ public sealed class UiFeedbackServiceTests
 
         public List<UiFeedbackAcknowledgementRow> Acks { get; } = [];
 
+        public List<UiFeedbackAgreementRow> Agreements { get; } = [];
+
+        public List<UiFeedbackCommentRow> Comments { get; } = [];
+
         /// <summary>The people who hold the read permission in the comment's tenant.</summary>
         public List<Guid> TenantReaders { get; } = [];
 
@@ -123,6 +136,9 @@ public sealed class UiFeedbackServiceTests
 
         /// <summary>When set, the lookup of the tenant's readers answers this instead of <see cref="TenantReaders"/>.</summary>
         public IGenericResult<IReadOnlyList<Guid>>? TenantLookup { get; set; }
+
+        /// <summary>When set, the lookup of the platform's readers answers this instead of <see cref="PlatformReaders"/>.</summary>
+        public IGenericResult<IReadOnlyList<Guid>>? PlatformLookup { get; set; }
 
         /// <summary>The one reader whose message fails to be created.</summary>
         public Guid? UnreachableReader { get; set; }
@@ -146,6 +162,13 @@ public sealed class UiFeedbackServiceTests
         public int FailWrite { get; set; }
 
         public Fixture SignedInAs(Guid userId, Guid tenantId, string name, bool globalTenant = false)
+            => SignedIn(userId, tenantId, name, globalTenant, ["ui-feedback:read"]);
+
+        /// <summary>Signs in a reviewer: someone who holds the write right and not the read right.</summary>
+        public Fixture SignedInAsReviewer(Guid userId, Guid tenantId, string name)
+            => SignedIn(userId, tenantId, name, false, ["ui-feedback:write"]);
+
+        private Fixture SignedIn(Guid userId, Guid tenantId, string name, bool globalTenant, string[] permissions)
         {
             var context = new Mock<IAuthenticationContext>(MockBehavior.Loose);
             context.SetupGet(c => c.IsAuthenticated).Returns(true);
@@ -153,6 +176,7 @@ public sealed class UiFeedbackServiceTests
             context.SetupGet(c => c.Username).Returns(name);
             context.SetupGet(c => c.ActiveTenantId).Returns(tenantId);
             context.SetupGet(c => c.IsSystemContext).Returns(false);
+            context.SetupGet(c => c.Permissions).Returns(permissions);
             context.SetupGet(c => c.Claims).Returns(globalTenant
                 ? new Dictionary<string, object> { [ClaimDefinitions.globalTenant.Name] = "true" }
                 : new Dictionary<string, object>());
@@ -323,7 +347,7 @@ public sealed class UiFeedbackServiceTests
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-71004");
-        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackAcknowledgement", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
+        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackComment", "UiFeedbackAgreement", "UiFeedbackAcknowledgement", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 
     // ── Telling the readers ─────────────────────────────────────────────────
@@ -401,6 +425,22 @@ public sealed class UiFeedbackServiceTests
         result.IsSuccess.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-71006");
         fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Dee]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task APlatformLookupThatFailsIsReportedAndTheTenantsReadersAreStillTold()
+    {
+        var fixture = AnaInA();
+        fixture.TenantReaders.Add(Ben);
+        fixture.PlatformLookup = GenericResult<IReadOnlyList<Guid>>.Failure(new GenericMessage("the tenants are unreadable"));
+
+        var result = await fixture.Service.Create(ValidRequest(), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71006");
+        fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben]);
     }
 
     // ── Acknowledge ─────────────────────────────────────────────────────────
@@ -560,7 +600,7 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.Delete(mine.Id, Ct);
 
         result.IsSuccess.ShouldBeTrue();
-        fixture.Writes.ShouldBe(["UiFeedbackAcknowledgement", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
+        fixture.Writes.ShouldBe(["UiFeedbackComment", "UiFeedbackAgreement", "UiFeedbackAcknowledgement", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 
     // ── Resolve and reopen ──────────────────────────────────────────────────
@@ -711,6 +751,39 @@ public sealed class UiFeedbackServiceTests
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-91001");
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AListThatWouldIncludeAnotherTenantsCommentFailsInsteadOfShowingIt()
+    {
+        // The test gateway ignores filters, as a store query with no tenant would: the service must not trust the query alone.
+        var fixture = AnaInA();
+        var mine = fixture.Add(TenantA, Ben);
+        var theirs = fixture.Add(TenantB, Cy);
+
+        var result = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91001");
+        result.CurrentMessage!.ShouldContain(theirs.Id.ToString("D"));
+        result.CurrentMessage!.ShouldNotContain(mine.Id.ToString("D"));
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task APlatformAdministratorListsEveryTenantsComments()
+    {
+        var fixture = new Fixture().SignedInAs(Ana, TenantA, "Ana", globalTenant: true);
+        fixture.Add(TenantA, Ben);
+        fixture.Add(TenantB, Cy);
+
+        var result = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Count.ShouldBe(2);
+    }
+
     // ── Picture ─────────────────────────────────────────────────────────────
 
     [Fact]
@@ -740,5 +813,432 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.GetPicture(without.Id, Ct);
 
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    // ── A reviewer sees the comments that are not security issues (FDW-2246) ──
+
+    private static Fixture ReviewerAna() => new Fixture().SignedInAsReviewer(Ana, TenantA, "Ana");
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerListsAnotherPersonsNonSecurityCommentAndTheirOwnSecurityComment()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben, urgency: "High");
+        var mine = fixture.Add(TenantA, Ana, urgency: "SecurityIssue", minutesAgo: 5);
+
+        var result = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Select(c => c.Id).ShouldBe([theirs.Id, mine.Id]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AListThatWouldShowAReviewerAnotherPersonsSecurityIssueFailsInsteadOfShowingIt()
+    {
+        var fixture = ReviewerAna();
+        fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91001");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReadHolderListsEverySecurityIssueToo()
+    {
+        var fixture = AnaInA();
+        var security = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Select(c => c.Id).ShouldBe([security.Id]);
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData("Low")]
+    [InlineData("Normal")]
+    [InlineData("High")]
+    public async Task AReviewerOpensAnotherPersonsNonSecurityComment(string urgency)
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben, urgency: urgency);
+
+        var result = await fixture.Service.Get(theirs.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.IsMine.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotOpenAnotherPersonsSecurityIssueAndItDoesNotExistForThem()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.Get(theirs.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotReadThePictureOfAnotherPersonsSecurityIssue()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben, urgency: "SecurityIssue", hasScreenshot: true);
+
+        var result = await fixture.Service.GetPicture(theirs.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerOpensTheirOwnSecurityIssue()
+    {
+        var fixture = ReviewerAna();
+        var mine = fixture.Add(TenantA, Ana, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.Get(mine.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerDoesNotSeeAnotherCompanysNonSecurityComment()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantB, Ben, urgency: "Normal");
+
+        var result = await fixture.Service.Get(theirs.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AnUrgencyTheCollectionDoesNotDeclareFailsTheReviewersReadInsteadOfBeingGuessedAt()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben, urgency: "Removed");
+
+        var result = await fixture.Service.Get(theirs.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-91001");
+    }
+
+    // ── Agreeing (FDW-2247) ─────────────────────────────────────────────────
+
+    private static UiFeedbackAgreementRow AgreementOf(UiFeedbackRow comment, Guid person)
+        => new() { FeedbackId = comment.Id, UserId = person, UserName = person == Ana ? "Ana" : "Ben", AgreedAt = DateTimeOffset.UtcNow };
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task AReviewerAgreesWithAnotherPersonsComment()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.Agree(theirs.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        fixture.Writes.ShouldBe(["UiFeedbackAgreement"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task AgreeingAgainChangesNothingAndStillSucceeds()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+        fixture.Agreements.Add(AgreementOf(theirs, Ana));
+
+        var result = await fixture.Service.Agree(theirs.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        fixture.Writes.ShouldBeEmpty();
+        result.Value!.AgreedByMe.ShouldBeTrue();
+        result.Value.AgreeCount.ShouldBe(1);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ThePersonWhoLeftACommentCannotAgreeWithIt()
+    {
+        var fixture = ReviewerAna();
+        var mine = fixture.Add(TenantA, Ana);
+
+        var result = await fixture.Service.Agree(mine.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-41001");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotAgreeWithACommentTheyMayNotSee()
+    {
+        var fixture = ReviewerAna();
+        var security = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+        var otherCompany = fixture.Add(TenantB, Ben);
+
+        var first = await fixture.Service.Agree(security.Id, Ct);
+        var second = await fixture.Service.Agree(otherCompany.Id, Ct);
+
+        first.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        second.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task ACommentCarriesHowManyPeopleAgreeAndWhetherTheCallerDoes()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+        var other = fixture.Add(TenantA, Ben, minutesAgo: 5);
+        fixture.Agreements.Add(AgreementOf(theirs, Ana));
+        fixture.Agreements.Add(AgreementOf(theirs, Guid.NewGuid()));
+        fixture.Agreements.Add(AgreementOf(other, Guid.NewGuid()));
+
+        var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+        var opened = await fixture.Service.Get(theirs.Id, Ct);
+
+        listed.IsSuccess.ShouldBeTrue();
+        listed.Value!.Single(c => c.Id == theirs.Id).AgreeCount.ShouldBe(2);
+        listed.Value!.Single(c => c.Id == theirs.Id).AgreedByMe.ShouldBeTrue();
+        listed.Value!.Single(c => c.Id == other.Id).AgreedByMe.ShouldBeFalse();
+        opened.Value!.AgreeCount.ShouldBe(2);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task AReviewerTakesBackTheirAgreement()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.TakeBackAgreement(theirs.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        fixture.Writes.ShouldBe(["UiFeedbackAgreement"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotTakeBackAnAgreementOnACommentTheyMayNotSee()
+    {
+        var fixture = ReviewerAna();
+        var security = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.TakeBackAgreement(security.Id, Ct);
+
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailedAgreementWriteIsReportedWhenThePersonDoesNotAgreeAfterwards()
+    {
+        var fixture = ReviewerAna();
+        fixture.FailWrite = 1;
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.Agree(theirs.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+    }
+
+    // ── Comments on a note (FDW-2248) ───────────────────────────────────────
+
+    private static UiFeedbackCommentRow CommentOn(UiFeedbackRow note, Guid person, string body, int minutesAgo = 0)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            FeedbackId = note.Id,
+            TenantId = note.TenantId,
+            AuthorUserId = person,
+            AuthorName = person == Ana ? "Ana" : "Ben",
+            Body = body,
+            CreatedAt = DateTimeOffset.UtcNow.AddMinutes(-minutesAgo)
+        };
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task AReviewerCommentsOnAnotherPersonsNote()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.AddComment(theirs.Id, "Same here on the totals column", Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        fixture.Writes.ShouldBe(["UiFeedbackComment"]);
+        result.Value!.FeedbackId.ShouldBe(theirs.Id);
+        result.Value.AuthorUserId.ShouldBe(Ana);
+        result.Value.AuthorName.ShouldBe("Ana");
+        result.Value.Body.ShouldBe("Same here on the totals column");
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData(null, "MESSAGING-21000")]
+    [InlineData("   ", "MESSAGING-21000")]
+    public async Task ACommentWithNoTextIsRefusedNamingTheField(string? body, string code)
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.AddComment(theirs.Id, body, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == code);
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ACommentLongerThanTheLimitIsRefusedNotCut()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.AddComment(theirs.Id, new string('x', UiFeedbackLimits.MaxBodyLength + 1), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-21001");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotCommentOnANoteTheyMayNotSee()
+    {
+        var fixture = ReviewerAna();
+        var security = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+        var otherCompany = fixture.Add(TenantB, Ben);
+
+        var first = await fixture.Service.AddComment(security.Id, "Seen this too", Ct);
+        var second = await fixture.Service.AddComment(otherCompany.Id, "Seen this too", Ct);
+
+        first.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        second.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ARefusalOfTheTextDoesNotTellAPersonWhoMayNotSeeTheNoteAnything()
+    {
+        var fixture = ReviewerAna();
+        var security = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.AddComment(security.Id, null, Ct);
+
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task TheCommentsOnANoteAreListed()
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+        var newer = CommentOn(theirs, Ben, "second", minutesAgo: 1);
+        var older = CommentOn(theirs, Ana, "first", minutesAgo: 5);
+        fixture.Comments.Add(newer);
+        fixture.Comments.Add(older);
+
+        var result = await fixture.Service.ListComments(theirs.Id, 0, 50, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        // The order is the store's ORDER BY (CreatedAt, Id); the fake gateway ignores it, so this shows the service returns every comment of the note.
+        result.Value!.Select(c => c.Body).ShouldBe(["second", "first"], ignoreOrder: true);
+    }
+
+    [Theory]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    [InlineData(-1, 50)]
+    [InlineData(0, 0)]
+    [InlineData(0, 201)]
+    public async Task AWindowOutsideTheLimitsIsRefused(int skip, int take)
+    {
+        var fixture = ReviewerAna();
+        var theirs = fixture.Add(TenantA, Ben);
+
+        var result = await fixture.Service.ListComments(theirs.Id, skip, take, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-21001");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotListTheCommentsOnANoteTheyMayNotSee()
+    {
+        var fixture = ReviewerAna();
+        var security = fixture.Add(TenantA, Ben, urgency: "SecurityIssue");
+
+        var result = await fixture.Service.ListComments(security.Id, 0, 50, Ct);
+
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task ANoteCarriesHowManyCommentsItHas()
+    {
+        var fixture = ReviewerAna();
+        var busy = fixture.Add(TenantA, Ben);
+        var quiet = fixture.Add(TenantA, Ben, minutesAgo: 5);
+        fixture.Comments.Add(CommentOn(busy, Ben, "one"));
+        fixture.Comments.Add(CommentOn(busy, Ana, "two"));
+
+        var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+        var opened = await fixture.Service.Get(busy.Id, Ct);
+
+        listed.Value!.Single(c => c.Id == busy.Id).CommentCount.ShouldBe(2);
+        listed.Value!.Single(c => c.Id == quiet.Id).CommentCount.ShouldBe(0);
+        opened.Value!.CommentCount.ShouldBe(2);
     }
 }

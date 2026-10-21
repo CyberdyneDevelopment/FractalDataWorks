@@ -405,16 +405,20 @@ public static partial class EndpointLogger
 
     /// <summary>
     /// Logs when the PermissionClaimsPreProcessor denies a request because the required
-    /// permission is absent from the token's baked <c>perm</c> claims.
+    /// permission is absent from the token's baked <c>perm</c> claims. Its number is in the
+    /// forbidden band, so the answer is a 403, and it carries the request's reference so the
+    /// journal line is found from the referenceId the caller was given.
     /// </summary>
     [MessageLogging(
-        EventId = 51001,
+        EventId = 101000,
         Level = LogLevel.Warning,
-        Message = "Permission denied by PreProcessor for userId='{userId}': required permission '{requiredPermission}' not in baked perm claims")]
+        Message = "Permission denied by PreProcessor for userId='{userId}' (reference '{referenceId}'): required permission '{requiredPermission}' not in baked perm claims",
+        ClientMessage = "This needs the permission '{requiredPermission}', which you do not hold.")]
     public static partial IGenericMessage PermissionDeniedByPreProcessor(
         ILogger logger,
         string userId,
-        string requiredPermission);
+        string requiredPermission,
+        string referenceId);
 
     /// <summary>
     /// Logs that a streamed page of a list was sent in full.

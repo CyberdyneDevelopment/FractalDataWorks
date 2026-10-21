@@ -35,7 +35,7 @@ public abstract class ListUiFeedbackEndpointBase : Endpoint<ListUiFeedbackEndpoi
     public override void Configure()
     {
         Get("/ui-feedback");
-        Policies("ui-feedback:read");
+        Policies("ui-feedback:read|ui-feedback:write");
         Summary(s => s.Summary = "List UI comments");
         ConfigureEndpoint();
     }

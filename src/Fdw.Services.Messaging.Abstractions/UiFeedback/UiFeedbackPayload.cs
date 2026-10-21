@@ -64,4 +64,13 @@ public sealed class UiFeedbackPayload
 
     /// <summary>Gets or sets whether the person asking has acknowledged the comment.</summary>
     public bool AcknowledgedByMe { get; set; }
+
+    /// <summary>Gets or sets how many people agree with the comment; the person who left it is not counted (FDW-2247).</summary>
+    public int AgreeCount { get; set; }
+
+    /// <summary>Gets or sets whether the person asking agrees with the comment (FDW-2247).</summary>
+    public bool AgreedByMe { get; set; }
+
+    /// <summary>Gets or sets how many comments the note has (FDW-2248).</summary>
+    public int CommentCount { get; set; }
 }

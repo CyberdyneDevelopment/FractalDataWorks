@@ -66,6 +66,15 @@ public class UiFeedbackResponse
     /// <summary>Gets or sets whether the person asking has acknowledged the comment.</summary>
     public bool AcknowledgedByMe { get; set; }
 
+    /// <summary>Gets or sets how many people agree with the comment; the person who left it is not counted.</summary>
+    public int AgreeCount { get; set; }
+
+    /// <summary>Gets or sets whether the person asking agrees with the comment.</summary>
+    public bool AgreedByMe { get; set; }
+
+    /// <summary>Gets or sets how many comments the note has.</summary>
+    public int CommentCount { get; set; }
+
     /// <summary>
     /// Makes the answer for a comment.
     /// </summary>
@@ -93,7 +102,10 @@ public class UiFeedbackResponse
             ResolvedByName = payload.ResolvedByName,
             ResolvedAt = payload.ResolvedAt,
             HasScreenshot = payload.HasScreenshot,
-            AcknowledgedByMe = payload.AcknowledgedByMe
+            AcknowledgedByMe = payload.AcknowledgedByMe,
+            AgreeCount = payload.AgreeCount,
+            AgreedByMe = payload.AgreedByMe,
+            CommentCount = payload.CommentCount
         };
     }
 

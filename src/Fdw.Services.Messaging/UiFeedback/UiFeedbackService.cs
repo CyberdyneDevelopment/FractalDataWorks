@@ -97,7 +97,7 @@ public sealed class UiFeedbackService : IUiFeedbackService
             // Why the comment is answered as saved whatever happens next: it is kept, and a reader who could not be told is a failure to report beside it, not a
             // reason to lose it.
             var untold = await TellReaders(row, cancellationToken).ConfigureAwait(false);
-            return GenericResult<UiFeedbackPayload>.Success(UiFeedbackMapping.ToPayload(row, tags, caller.Value.UserId, false), untold);
+            return GenericResult<UiFeedbackPayload>.Success(UiFeedbackMapping.ToPayload(row, tags, caller.Value.UserId, false, new UiFeedbackAgreements(Enumerable.Empty<UiFeedbackAgreementRow>().ToLookup(agreement => agreement.FeedbackId)), UiFeedbackCommentCounts.None), untold);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -121,11 +121,24 @@ public sealed class UiFeedbackService : IUiFeedbackService
             if (!request.IsSuccess)
                 return request.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
 
-            var rows = request.Value.NeedsWindow
-                ? await _store.FindRows(request.Value.Filter, 0, WindowSize, cancellationToken).ConfigureAwait(false)
-                : await _store.FindRows(request.Value.Filter, request.Value.Skip, request.Value.Take, cancellationToken).ConfigureAwait(false);
+            List<UiFeedbackFilter> reads = caller.Value.SeesAll ? [request.Value.Filter] : NarrowedFilters(request.Value.Filter, caller.Value.UserId);
+            var windowed = request.Value.NeedsWindow || reads.Count > 1;
+            var rows = await ReadRows(reads, request.Value, windowed, cancellationToken).ConfigureAwait(false);
             if (!rows.IsSuccess)
                 return rows.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+
+            // Why checked again after the query narrowed by tenant and by who may see what: a query built with no tenant would return everyone's comments, so the
+            // rule the single read applies (Reachable) is applied to every row of the page, and a row the caller may not see fails the list loudly.
+            foreach (var row in rows.Value!)
+            {
+                var seen = MaySee(caller.Value, row);
+                if (!seen.IsSuccess)
+                    return seen.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+
+                if (!seen.Value)
+                    return GenericResult<IReadOnlyList<UiFeedbackPayload>>.Failure(MessagingLog.UiFeedbackUnexpected(
+                        _logger, "list", $"the store returned comment {row.Id:D}, which the caller may not see"));
+            }
 
             var ids = rows.Value!.Select(row => row.Id).ToList();
             var tags = await _store.FindTags(ids, cancellationToken).ConfigureAwait(false);
@@ -133,9 +146,17 @@ public sealed class UiFeedbackService : IUiFeedbackService
                 return tags.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
 
             var acknowledged = await _store.FindAcknowledged(ids, caller.Value.UserId, cancellationToken).ConfigureAwait(false);
-            return acknowledged.IsSuccess
-                ? Page(caller.Value, request.Value, rows.Value!, tags.Value!, acknowledged.Value!)
-                : acknowledged.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+            if (!acknowledged.IsSuccess)
+                return acknowledged.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+
+            var agreements = await _store.FindAgreements(ids, cancellationToken).ConfigureAwait(false);
+            if (!agreements.IsSuccess)
+                return agreements.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
+
+            var comments = await _store.FindCommentCounts(ids, cancellationToken).ConfigureAwait(false);
+            return comments.IsSuccess
+                ? Page(caller.Value, request.Value, windowed, rows.Value!, tags.Value!, acknowledged.Value!, agreements.Value!, comments.Value!)
+                : comments.ToNewResult<IReadOnlyList<UiFeedbackPayload>>();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -263,6 +284,148 @@ public sealed class UiFeedbackService : IUiFeedbackService
     }
 
     /// <inheritdoc />
+    public async Task<IGenericResult<UiFeedbackCommentPayload>> AddComment(Guid id, string? body, CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceUiFeedbackEntry(_logger, "AddComment");
+
+        try
+        {
+            var caller = Caller("comment on");
+            if (!caller.IsSuccess)
+                return caller.ToNewResult<UiFeedbackCommentPayload>();
+
+            var note = await Reachable(caller.Value, id, cancellationToken).ConfigureAwait(false);
+            if (!note.IsSuccess)
+                return note.ToNewResult<UiFeedbackCommentPayload>();
+
+            // Why the text is checked after the note is found: a person who may not see the note learns nothing from the refusal, not even that it has a rule for text.
+            if (UiFeedbackChecks.BodyProblem(_logger, body) is { } problem)
+                return GenericResult<UiFeedbackCommentPayload>.Failure(problem);
+
+            var comment = UiFeedbackMapping.NewComment(caller.Value, note.Value!, body!);
+            var written = await _store.AddComment(comment, cancellationToken).ConfigureAwait(false);
+            if (!written.IsSuccess)
+                return written.ToNewResult<UiFeedbackCommentPayload>();
+
+            MessagingLog.UiFeedbackCommented(_logger, id.ToString("D"), caller.Value.Name);
+            return GenericResult<UiFeedbackCommentPayload>.Success(UiFeedbackMapping.ToCommentPayload(comment));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<UiFeedbackCommentPayload>.Failure(MessagingLog.UiFeedbackUnexpected(_logger, "comment on", ex.Message));
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<UiFeedbackCommentPayload>>> ListComments(Guid id, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceUiFeedbackEntry(_logger, "ListComments");
+
+        try
+        {
+            var caller = Caller("list the comments on");
+            if (!caller.IsSuccess)
+                return caller.ToNewResult<IReadOnlyList<UiFeedbackCommentPayload>>();
+
+            var note = await Reachable(caller.Value, id, cancellationToken).ConfigureAwait(false);
+            if (!note.IsSuccess)
+                return note.ToNewResult<IReadOnlyList<UiFeedbackCommentPayload>>();
+
+            if (WindowProblem(skip, take) is { } problem)
+                return GenericResult<IReadOnlyList<UiFeedbackCommentPayload>>.Failure(problem);
+
+            var rows = await _store.FindComments(id, skip, take, cancellationToken).ConfigureAwait(false);
+            return rows.IsSuccess
+                ? GenericResult<IReadOnlyList<UiFeedbackCommentPayload>>.Success([.. rows.Value!.Select(UiFeedbackMapping.ToCommentPayload)])
+                : rows.ToNewResult<IReadOnlyList<UiFeedbackCommentPayload>>();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<IReadOnlyList<UiFeedbackCommentPayload>>.Failure(MessagingLog.UiFeedbackUnexpected(_logger, "list the comments on", ex.Message));
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<UiFeedbackPayload>> Agree(Guid id, CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceUiFeedbackEntry(_logger, "Agree");
+
+        try
+        {
+            var caller = Caller("agree with");
+            if (!caller.IsSuccess)
+                return caller.ToNewResult<UiFeedbackPayload>();
+
+            var row = await Reachable(caller.Value, id, cancellationToken).ConfigureAwait(false);
+            if (!row.IsSuccess)
+                return row.ToNewResult<UiFeedbackPayload>();
+
+            // Why refused: the person who left the comment is already counted by having written it, so their agreement would count them twice.
+            if (row.Value!.AuthorUserId == caller.Value.UserId)
+                return GenericResult<UiFeedbackPayload>.Failure(MessagingLog.UiFeedbackOwnComment(_logger, id.ToString("D"), caller.Value.Name));
+
+            var held = await _store.FindAgreements([id], cancellationToken).ConfigureAwait(false);
+            if (!held.IsSuccess)
+                return held.ToNewResult<UiFeedbackPayload>();
+
+            if (held.Value!.AgreedBy(id, caller.Value.UserId))
+            {
+                MessagingLog.UiFeedbackAlreadyAgreed(_logger, id.ToString("D"), caller.Value.Name);
+            }
+            else
+            {
+                var written = await _store.AddAgreement(
+                    new UiFeedbackAgreementRow { FeedbackId = id, UserId = caller.Value.UserId, UserName = caller.Value.Name, AgreedAt = DateTimeOffset.UtcNow },
+                    cancellationToken).ConfigureAwait(false);
+                if (!written.IsSuccess)
+                {
+                    // Why asked again: two presses of Agree at once both find no agreement and both write, and the second is refused by the table's unique key. If the
+                    // agreement is there now, the person did agree and the answer is the same as for a repeat; if it is not, the write really failed.
+                    var now = await _store.FindAgreements([id], cancellationToken).ConfigureAwait(false);
+                    if (!now.IsSuccess || !now.Value!.AgreedBy(id, caller.Value.UserId))
+                        return written.ToNewResult<UiFeedbackPayload>();
+                }
+
+                MessagingLog.UiFeedbackAgreed(_logger, id.ToString("D"), caller.Value.Name);
+            }
+
+            return await Describe(caller.Value, row.Value, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<UiFeedbackPayload>.Failure(MessagingLog.UiFeedbackUnexpected(_logger, "agree with", ex.Message));
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<UiFeedbackPayload>> TakeBackAgreement(Guid id, CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceUiFeedbackEntry(_logger, "TakeBackAgreement");
+
+        try
+        {
+            var caller = Caller("take back the agreement with");
+            if (!caller.IsSuccess)
+                return caller.ToNewResult<UiFeedbackPayload>();
+
+            var row = await Reachable(caller.Value, id, cancellationToken).ConfigureAwait(false);
+            if (!row.IsSuccess)
+                return row.ToNewResult<UiFeedbackPayload>();
+
+            var removed = await _store.RemoveAgreement(id, caller.Value.UserId, cancellationToken).ConfigureAwait(false);
+            if (!removed.IsSuccess)
+                return removed.ToNewResult<UiFeedbackPayload>();
+
+            MessagingLog.UiFeedbackAgreementTakenBack(_logger, id.ToString("D"), caller.Value.Name);
+            return await Describe(caller.Value, row.Value!, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return GenericResult<UiFeedbackPayload>.Failure(MessagingLog.UiFeedbackUnexpected(_logger, "take back the agreement with", ex.Message));
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<IGenericResult<UiFeedbackPayload>> Acknowledge(Guid id, CancellationToken cancellationToken = default)
     {
         MessagingLog.TraceUiFeedbackEntry(_logger, "Acknowledge");
@@ -310,13 +473,13 @@ public sealed class UiFeedbackService : IUiFeedbackService
 
     /// <inheritdoc />
     public Task<IGenericResult<UiFeedbackPayload>> Resolve(Guid id, CancellationToken cancellationToken = default)
-        => Move(id, "Resolve", "Open", "Resolved", "resolved", cancellationToken);
+        => Move(id, "Resolve", "Open", "Resolved", "resolved", true, cancellationToken);
 
     /// <inheritdoc />
     public Task<IGenericResult<UiFeedbackPayload>> Reopen(Guid id, CancellationToken cancellationToken = default)
-        => Move(id, "Reopen", "Resolved", "Open", "reopened", cancellationToken);
+        => Move(id, "Reopen", "Resolved", "Open", "reopened", false, cancellationToken);
 
-    private async Task<IGenericResult<UiFeedbackPayload>> Move(Guid id, string operation, string stateNow, string stateNext, string change, CancellationToken cancellationToken)
+    private async Task<IGenericResult<UiFeedbackPayload>> Move(Guid id, string operation, string stateNow, string stateNext, string change, bool resolving, CancellationToken cancellationToken)
     {
         MessagingLog.TraceUiFeedbackEntry(_logger, operation);
 
@@ -333,7 +496,6 @@ public sealed class UiFeedbackService : IUiFeedbackService
             if (!string.Equals(row.Value!.State, stateNow, StringComparison.Ordinal))
                 return GenericResult<UiFeedbackPayload>.Failure(MessagingLog.UiFeedbackWrongState(_logger, id.ToString("D"), row.Value!.State));
 
-            var resolving = string.Equals(stateNext, "Resolved", StringComparison.Ordinal);
             var update = new UiFeedbackStateUpdate
             {
                 State = stateNext,
@@ -370,17 +532,22 @@ public sealed class UiFeedbackService : IUiFeedbackService
         var feedbackId = comment.Id.ToString("D");
         var untold = new List<IGenericMessage>();
 
+        // Each lookup stands on its own: a failed one is reported, and the readers the other found are still told.
+        var readers = new HashSet<Guid>();
         var inTenant = await _holders.Get(ReadPermission, comment.TenantId, cancellationToken).ConfigureAwait(false);
         var onPlatform = await _holders.GetOnPlatform(ReadPermission, cancellationToken).ConfigureAwait(false);
-        foreach (var lookup in new[] { inTenant, onPlatform }.Where(found => !found.IsSuccess))
-            untold.Add(MessagingLog.UiFeedbackReadersNotFound(_logger, feedbackId, lookup.CurrentMessage));
+        foreach (var lookup in new[] { inTenant, onPlatform })
+        {
+            if (lookup.IsSuccess && lookup.Value is { } found)
+                readers.UnionWith(found);
+            else
+                untold.Add(MessagingLog.UiFeedbackReadersNotFound(_logger, feedbackId, lookup.CurrentMessage));
+        }
 
-        // Why an empty list when a lookup failed: the failure is already among the ones returned, and the readers the other lookup found are still told.
-        IReadOnlyList<Guid> readers = inTenant.IsSuccess && inTenant.Value is { } tenantReaders ? tenantReaders : [];
-        readers = onPlatform.IsSuccess && onPlatform.Value is { } platformReaders ? readers.Union(platformReaders).ToList() : readers;
+        readers.Remove(comment.AuthorUserId);
 
         var told = 0;
-        foreach (var reader in readers.Where(reader => reader != comment.AuthorUserId))
+        foreach (var reader in readers)
         {
             var sent = await _messages.CreateMessage(AlertFor(comment, reader), cancellationToken).ConfigureAwait(false);
             if (sent.IsSuccess)
@@ -439,7 +606,7 @@ public sealed class UiFeedbackService : IUiFeedbackService
             || context.ActiveTenantId is not { } tenantId)
             return GenericResult<UiFeedbackCaller>.Failure(MessagingLog.UiFeedbackCallerRequired(_logger, operation));
 
-        return GenericResult<UiFeedbackCaller>.Success(new UiFeedbackCaller(userId, context.Username, tenantId, ExecutionTenantScope.For(context)));
+        return GenericResult<UiFeedbackCaller>.Success(new UiFeedbackCaller(userId, context.Username, tenantId, ExecutionTenantScope.For(context), PermissionCoverage.Covers(context.Permissions, ReadPermission)));
     }
 
     // A comment the caller does not reach does not exist for them.
@@ -449,9 +616,83 @@ public sealed class UiFeedbackService : IUiFeedbackService
         if (!found.IsSuccess)
             return found.ToNewResult<UiFeedbackRow>();
 
-        return found.Value is { } row && caller.Scope.Reaches(row.TenantId)
+        if (found.Value is not { } row)
+            return GenericResult<UiFeedbackRow>.Failure(MessagingLog.UiFeedbackNotFound(_logger, id.ToString("D")));
+
+        var seen = MaySee(caller, row);
+        if (!seen.IsSuccess)
+            return seen.ToNewResult<UiFeedbackRow>();
+
+        return seen.Value
             ? GenericResult<UiFeedbackRow>.Success(row)
             : GenericResult<UiFeedbackRow>.Failure(MessagingLog.UiFeedbackNotFound(_logger, id.ToString("D")));
+    }
+
+    // Whether the caller may see a comment: it is in their company's reach, and they either hold the read right, wrote it, or it is not a security issue.
+    // A security issue is an urgency whose collection entry needs acknowledging, never one picked out by its name (FDW-2246).
+    private IGenericResult<bool> MaySee(UiFeedbackCaller caller, UiFeedbackRow row)
+    {
+        if (!caller.Scope.Reaches(row.TenantId))
+            return GenericResult<bool>.Success(false);
+
+        if (caller.SeesAll || row.AuthorUserId == caller.UserId)
+            return GenericResult<bool>.Success(true);
+
+        var urgency = UiFeedbackUrgencies.ByName(row.Urgency);
+        return ReferenceEquals(urgency, UiFeedbackUrgencies.NotFound)
+            ? GenericResult<bool>.Failure(MessagingLog.UiFeedbackUnexpected(
+                _logger, "decide who may see", $"comment {row.Id:D} carries the urgency '{row.Urgency}', which UiFeedbackUrgencies does not declare"))
+            : GenericResult<bool>.Success(!urgency.NeedsAcknowledgement);
+    }
+
+    // The reads that together give a caller without the read right what they may see: the comments of every urgency that is not a security issue, and their own
+    // comments of the urgencies that are. The two sets do not overlap, so their union has no duplicate.
+    private static List<UiFeedbackFilter> NarrowedFilters(UiFeedbackFilter filter, Guid userId)
+    {
+        if (filter.Urgency is not null)
+        {
+            var stated = filter.Copy();
+            if (UiFeedbackUrgencies.ByName(filter.Urgency).NeedsAcknowledgement)
+                stated.AuthorUserId = userId;
+
+            return [stated];
+        }
+
+        var safe = filter.Copy();
+        safe.Urgencies = [.. UiFeedbackUrgencies.All().Where(urgency => !urgency.NeedsAcknowledgement).Select(urgency => urgency.Name)];
+        var reads = new List<UiFeedbackFilter> { safe };
+
+        var security = UiFeedbackUrgencies.All().Where(urgency => urgency.NeedsAcknowledgement).Select(urgency => urgency.Name).ToList();
+        if (security.Count > 0)
+        {
+            var own = filter.Copy();
+            own.Urgencies = security;
+            own.AuthorUserId = userId;
+            reads.Add(own);
+        }
+
+        return reads;
+    }
+
+    private async Task<IGenericResult<IReadOnlyList<UiFeedbackRow>>> ReadRows(
+        List<UiFeedbackFilter> reads, UiFeedbackListRequest request, bool windowed, CancellationToken cancellationToken)
+    {
+        if (reads.Count == 1)
+            return windowed
+                ? await _store.FindRows(reads[0], 0, WindowSize, cancellationToken).ConfigureAwait(false)
+                : await _store.FindRows(reads[0], request.Skip, request.Take, cancellationToken).ConfigureAwait(false);
+
+        var merged = new List<UiFeedbackRow>();
+        foreach (var read in reads)
+        {
+            var rows = await _store.FindRows(read, 0, WindowSize, cancellationToken).ConfigureAwait(false);
+            if (!rows.IsSuccess)
+                return rows;
+
+            merged.AddRange(rows.Value!);
+        }
+
+        return GenericResult<IReadOnlyList<UiFeedbackRow>>.Success([.. merged.DistinctBy(row => row.Id).OrderByDescending(row => row.CreatedAt).ThenBy(row => row.Id)]);
     }
 
     private async Task<IGenericResult<UiFeedbackRow>> Own(UiFeedbackCaller caller, Guid id, string action, CancellationToken cancellationToken)
@@ -469,9 +710,18 @@ public sealed class UiFeedbackService : IUiFeedbackService
             return tags.ToNewResult<UiFeedbackPayload>();
 
         var acknowledged = await _store.FindAcknowledged([row.Id], caller.UserId, cancellationToken).ConfigureAwait(false);
-        return acknowledged.IsSuccess
-            ? GenericResult<UiFeedbackPayload>.Success(UiFeedbackMapping.ToPayload(row, tags.Value![row.Id], caller.UserId, acknowledged.Value!.Contains(row.Id)))
-            : acknowledged.ToNewResult<UiFeedbackPayload>();
+        if (!acknowledged.IsSuccess)
+            return acknowledged.ToNewResult<UiFeedbackPayload>();
+
+        var agreements = await _store.FindAgreements([row.Id], cancellationToken).ConfigureAwait(false);
+        if (!agreements.IsSuccess)
+            return agreements.ToNewResult<UiFeedbackPayload>();
+
+        var comments = await _store.FindCommentCounts([row.Id], cancellationToken).ConfigureAwait(false);
+        return comments.IsSuccess
+            ? GenericResult<UiFeedbackPayload>.Success(
+                UiFeedbackMapping.ToPayload(row, tags.Value![row.Id], caller.UserId, acknowledged.Value!.Contains(row.Id), agreements.Value!, comments.Value!))
+            : comments.ToNewResult<UiFeedbackPayload>();
     }
 
     private IGenericResult<UiFeedbackListRequest> ListRequestFor(UiFeedbackCaller caller, UiFeedbackQuery query)
@@ -499,12 +749,14 @@ public sealed class UiFeedbackService : IUiFeedbackService
             new UiFeedbackListRequest(filter, query.Tag is null ? null : canonicalTag, query.SortByUrgency, query.Skip, query.Take));
     }
 
-    private IGenericMessage? ListWindowProblem(UiFeedbackQuery query)
+    private IGenericMessage? ListWindowProblem(UiFeedbackQuery query) => WindowProblem(query.Skip, query.Take);
+
+    private IGenericMessage? WindowProblem(int skip, int take)
     {
-        if (query.Skip < 0)
+        if (skip < 0)
             return MessagingLog.UiFeedbackFieldInvalid(_logger, "skip", "must not be negative");
 
-        return query.Take is < 1 or > UiFeedbackLimits.MaxPageSize
+        return take is < 1 or > UiFeedbackLimits.MaxPageSize
             ? MessagingLog.UiFeedbackFieldInvalid(_logger, "take", $"must be from 1 to {UiFeedbackLimits.MaxPageSize}")
             : null;
     }
@@ -512,11 +764,14 @@ public sealed class UiFeedbackService : IUiFeedbackService
     private IGenericResult<IReadOnlyList<UiFeedbackPayload>> Page(
         UiFeedbackCaller caller,
         UiFeedbackListRequest request,
+        bool windowed,
         IReadOnlyList<UiFeedbackRow> rows,
         ILookup<Guid, string> tags,
-        HashSet<Guid> acknowledged)
+        HashSet<Guid> acknowledged,
+        UiFeedbackAgreements agreements,
+        UiFeedbackCommentCounts comments)
     {
-        var payloads = rows.Select(row => UiFeedbackMapping.ToPayload(row, tags[row.Id], caller.UserId, acknowledged.Contains(row.Id)));
+        var payloads = rows.Select(row => UiFeedbackMapping.ToPayload(row, tags[row.Id], caller.UserId, acknowledged.Contains(row.Id), agreements, comments));
         if (request.Tag is not null)
             payloads = payloads.Where(payload => payload.Tags.Contains(request.Tag, StringComparer.Ordinal));
 
@@ -532,7 +787,7 @@ public sealed class UiFeedbackService : IUiFeedbackService
                 .ThenByDescending(payload => payload.CreatedAt);
         }
 
-        if (request.NeedsWindow)
+        if (windowed)
             payloads = payloads.Skip(request.Skip).Take(request.Take);
 
         return GenericResult<IReadOnlyList<UiFeedbackPayload>>.Success(payloads.ToList());

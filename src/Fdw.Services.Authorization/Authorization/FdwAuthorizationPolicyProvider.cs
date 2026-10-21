@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Logging;
@@ -11,8 +12,8 @@ namespace Fdw.Services.Authorization.Authorization;
 
 /// <summary>
 /// Dynamic policy provider that creates authorization policies for
-/// "{resource}:{action}" policy names. Falls back to the default
-/// policy provider for non-matching policies.
+/// "{resource}:{action}" policy names, and for "{resource}:{action}|{resource}:{action}" names that any one of the
+/// permissions satisfies. Falls back to the default policy provider for non-matching policies.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -94,18 +95,17 @@ public sealed class FdwAuthorizationPolicyProvider : IAuthorizationPolicyProvide
             return Task.FromResult<AuthorizationPolicy?>(policy);
         }
 
-        // "{resource}:{action}" shape — claim it as a permission policy.
-        var parts = policyName.Split(':', 2);
-        if (parts.Length == 2
-            && !string.IsNullOrEmpty(parts[0])
-            && !string.IsNullOrEmpty(parts[1]))
+        // "{resource}:{action}" shape, or several joined by a bar when any one is enough (FDW-2246): claim it as a permission policy. The name is read by
+        // PermissionPolicyName, the rule the pre-processor reads it by too.
+        if (PermissionPolicyName.TryParse(policyName, out var permissions))
         {
-            var policy = new AuthorizationPolicyBuilder()
-                .AddRequirements(new FdwPermissionRequirement(parts[0], parts[1]))
-                .Build();
+            var (resource, action) = permissions[0];
+            var requirement = permissions.Count == 1
+                ? new FdwPermissionRequirement(resource, action)
+                : new FdwPermissionRequirement(resource, action, permissions.Skip(1).ToList());
 
-            FrameworkAuthorizationLog.PolicyResolvedToPermission(_logger, policyName, parts[0], parts[1]);
-            return Task.FromResult<AuthorizationPolicy?>(policy);
+            FrameworkAuthorizationLog.PolicyResolvedToPermission(_logger, policyName, resource, action);
+            return Task.FromResult<AuthorizationPolicy?>(new AuthorizationPolicyBuilder().AddRequirements(requirement).Build());
         }
 
         FrameworkAuthorizationLog.PolicyFellThroughToDefault(_logger, policyName);

@@ -58,8 +58,11 @@ internal static class UiFeedbackMapping
     /// <param name="tags">The comment's tags.</param>
     /// <param name="callerUserId">The person asking, whose own comments are marked as theirs.</param>
     /// <param name="acknowledgedByCaller">Whether the person asking has acknowledged the comment.</param>
+    /// <param name="agreements">The agreements read for the comment's page.</param>
+    /// <param name="comments">The comment counts read for the comment's page.</param>
     /// <returns>The payload.</returns>
-    public static UiFeedbackPayload ToPayload(UiFeedbackRow row, IEnumerable<string> tags, Guid callerUserId, bool acknowledgedByCaller)
+    public static UiFeedbackPayload ToPayload(
+        UiFeedbackRow row, IEnumerable<string> tags, Guid callerUserId, bool acknowledgedByCaller, UiFeedbackAgreements agreements, UiFeedbackCommentCounts comments)
     {
         return new UiFeedbackPayload
         {
@@ -81,7 +84,46 @@ internal static class UiFeedbackMapping
             ResolvedByName = row.ResolvedByName,
             ResolvedAt = row.ResolvedAt,
             HasScreenshot = row.HasScreenshot,
-            AcknowledgedByMe = acknowledgedByCaller
+            AcknowledgedByMe = acknowledgedByCaller,
+            AgreeCount = agreements.CountOf(row.Id),
+            AgreedByMe = agreements.AgreedBy(row.Id, callerUserId),
+            CommentCount = comments.CountOf(row.Id)
         };
     }
+
+    /// <summary>
+    /// Makes the row for a new comment on a note. It belongs to the note's company and carries the author's name as it is now.
+    /// </summary>
+    /// <param name="caller">The author.</param>
+    /// <param name="note">The note commented on.</param>
+    /// <param name="body">The text, already checked.</param>
+    /// <returns>The row.</returns>
+    public static UiFeedbackCommentRow NewComment(UiFeedbackCaller caller, UiFeedbackRow note, string body)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            FeedbackId = note.Id,
+            TenantId = note.TenantId,
+            AuthorUserId = caller.UserId,
+            AuthorName = caller.Name,
+            Body = body,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+    /// <summary>
+    /// Makes what the API answers for a comment on a note.
+    /// </summary>
+    /// <param name="row">The comment's row.</param>
+    /// <returns>The payload.</returns>
+    public static UiFeedbackCommentPayload ToCommentPayload(UiFeedbackCommentRow row)
+        => new()
+        {
+            Id = row.Id,
+            FeedbackId = row.FeedbackId,
+            AuthorUserId = row.AuthorUserId,
+            AuthorName = row.AuthorName,
+            Body = row.Body,
+            CreatedAt = row.CreatedAt
+        };
 }
+

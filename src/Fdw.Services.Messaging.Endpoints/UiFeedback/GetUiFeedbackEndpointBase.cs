@@ -32,7 +32,7 @@ public abstract class GetUiFeedbackEndpointBase : Endpoint<UiFeedbackIdRequest, 
     public override void Configure()
     {
         Get("/ui-feedback/{Id}");
-        Policies("ui-feedback:read");
+        Policies("ui-feedback:read|ui-feedback:write");
         Summary(s => s.Summary = "Read a UI comment");
         ConfigureEndpoint();
     }

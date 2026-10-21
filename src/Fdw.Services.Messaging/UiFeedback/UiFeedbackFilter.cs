@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Messaging;
 
@@ -18,4 +19,22 @@ internal sealed class UiFeedbackFilter
 
     /// <summary>Gets or sets the urgency to read.</summary>
     public string? Urgency { get; set; }
+
+    /// <summary>Gets or sets the urgencies to read, any one of them; null does not narrow by this (FDW-2246).</summary>
+    public IReadOnlyList<string>? Urgencies { get; set; }
+
+    /// <summary>Gets or sets the one author whose comments to read; null reads every author (FDW-2246).</summary>
+    public Guid? AuthorUserId { get; set; }
+
+    /// <summary>Makes an independent copy, to narrow further without changing this one.</summary>
+    /// <returns>The copy.</returns>
+    public UiFeedbackFilter Copy() => new()
+    {
+        TenantId = TenantId,
+        State = State,
+        Route = Route,
+        Urgency = Urgency,
+        Urgencies = Urgencies,
+        AuthorUserId = AuthorUserId
+    };
 }

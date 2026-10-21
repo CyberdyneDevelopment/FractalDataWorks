@@ -43,7 +43,7 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
     /// <inheritdoc />
     public override void Configure()
     {
-        Get("/tenants/{Name}");
+        Get("/tenants/{Id}");
         ConfigureEndpoint();
     }
 
@@ -57,17 +57,17 @@ public abstract class GetTenantEndpointBase : Endpoint<GetTenantRequest, TenantD
     {
         
         IGenericResult<ITenant> tenantResult;
-        if (Guid.TryParse(req.Name, out var parsedId))
+        if (Guid.TryParse(req.Id, out var parsedId))
         {
             tenantResult = await _tenantProvider.GetTenant(parsedId, ct).ConfigureAwait(false);
         }
         else
         {
-            tenantResult = await _tenantProvider.GetTenantBySlug(req.Name, ct).ConfigureAwait(false);
+            tenantResult = await _tenantProvider.GetTenantBySlug(req.Id, ct).ConfigureAwait(false);
             if (!tenantResult.IsSuccess || tenantResult.Value is null)
             {
-                var lower = req.Name.ToLowerInvariant();
-                if (!string.Equals(lower, req.Name, StringComparison.Ordinal))
+                var lower = req.Id.ToLowerInvariant();
+                if (!string.Equals(lower, req.Id, StringComparison.Ordinal))
                 {
                     tenantResult = await _tenantProvider.GetTenantBySlug(lower, ct).ConfigureAwait(false);
                 }

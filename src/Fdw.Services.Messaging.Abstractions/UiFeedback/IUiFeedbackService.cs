@@ -62,6 +62,38 @@ public interface IUiFeedbackService
     /// <returns>The comment with <see cref="UiFeedbackPayload.AcknowledgedByMe"/> set; not found when it is out of the caller's reach.</returns>
     Task<IGenericResult<UiFeedbackPayload>> Acknowledge(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Agrees with a comment as the caller. A person agrees once: agreeing again changes nothing and still succeeds. The person who left the comment cannot agree
+    /// with it.
+    /// </summary>
+    /// <param name="id">The comment's identifier.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comment with <see cref="UiFeedbackPayload.AgreeCount"/> and <see cref="UiFeedbackPayload.AgreedByMe"/> as they now stand; not found when it is out of
+    /// the caller's sight; a conflict when the caller left it.</returns>
+    Task<IGenericResult<UiFeedbackPayload>> Agree(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Takes back the caller's agreement with a comment. Taking back an agreement that was not given changes nothing and still succeeds.</summary>
+    /// <param name="id">The comment's identifier.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comment as it now stands; not found when it is out of the caller's sight.</returns>
+    Task<IGenericResult<UiFeedbackPayload>> TakeBackAgreement(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a comment to a note, as the caller.</summary>
+    /// <param name="id">The note's identifier.</param>
+    /// <param name="body">The text of the comment.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comment as kept; refused naming the field when the text is missing or longer than <see cref="UiFeedbackLimits.MaxBodyLength"/>; not found when the
+    /// note is out of the caller's sight.</returns>
+    Task<IGenericResult<UiFeedbackCommentPayload>> AddComment(Guid id, string? body, CancellationToken cancellationToken = default);
+
+    /// <summary>Lists the comments on a note, oldest first.</summary>
+    /// <param name="id">The note's identifier.</param>
+    /// <param name="skip">The number of comments to skip.</param>
+    /// <param name="take">The number of comments to take, from 1 to <see cref="UiFeedbackLimits.MaxPageSize"/>.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The comments; not found when the note is out of the caller's sight.</returns>
+    Task<IGenericResult<IReadOnlyList<UiFeedbackCommentPayload>>> ListComments(Guid id, int skip, int take, CancellationToken cancellationToken = default);
+
     /// <summary>Resolves an open comment.</summary>
     /// <param name="id">The comment's identifier.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
