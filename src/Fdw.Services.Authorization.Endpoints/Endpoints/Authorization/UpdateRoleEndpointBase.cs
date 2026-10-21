@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Microsoft.AspNetCore.Http;
+using Fdw.Operations.Abstractions.Audit;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -82,6 +83,9 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
 
         AuthorizationEndpointLog.RoleResolved(EndpointLogger, req.Name, existing.Value.Id);
 
+        // Taken before ApplyUpdates: it changes the instance it is given, so the "before" would otherwise read as the "after".
+        var before = RoleChangeAudit.Describe(existing.Value.DisplayName, existing.Value.Description);
+
         var updated = ApplyUpdates(existing.Value, req);
 
         var result = await _roleProvider.Save(updated, RoleDomain, RoleImplementation, updated.Name, ct).ConfigureAwait(false);
@@ -89,6 +93,15 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
         {
             AuthorizationEndpointLog.RoleWriteFailed(EndpointLogger, "update", req.Name, result.CurrentMessage);
             await Send.ResponseAsync(null, 400, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var audited = await RoleChangeAudit.RecordRole(Resolve<IAdministrativeAudit>(), User, "RoleUpdated", req.Name,
+            before, RoleChangeAudit.Describe(updated.DisplayName, updated.Description), ct).ConfigureAwait(false);
+        if (audited.IsFailure)
+        {
+            AuthorizationEndpointLog.RoleDefinitionNotAudited(EndpointLogger, "RoleUpdated", req.Name, audited.CurrentMessage);
+            await Send.ResponseAsync(null, 500, ct).ConfigureAwait(false);
             return;
         }
 

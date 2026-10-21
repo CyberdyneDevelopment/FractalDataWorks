@@ -18,7 +18,7 @@ namespace Fdw.Services.Etl.Tests.Execution;
 public sealed class PipelineExecutionBackgroundServiceTests
 {
     private static PipelineExecutionBackgroundService CreateSut() =>
-        new(new PipelineExecutionQueue(), Mock.Of<IServiceScopeFactory>(),
+        new(new PipelineExecutionQueue(), new PipelineRunSlot(), Mock.Of<IServiceScopeFactory>(),
             NullLogger<PipelineExecutionBackgroundService>.Instance);
 
     private static PipelineExecutionRequest CreateRequest(Guid? tenantId) => new()
@@ -111,5 +111,51 @@ public sealed class PipelineExecutionBackgroundServiceTests
 
         // Act / Assert — no accessor registered (Connections.MsSql not loaded) must be a safe no-op.
         Should.NotThrow(() => sut.EstablishSystemAuthenticationContext(provider, request));
+    }
+
+    private static PipelineExecutionRequest RequestWithCap(int? rowsPerSource) => new()
+    {
+        ExecutionId = Guid.NewGuid(),
+        PipelineId = Guid.NewGuid(),
+        PipelineName = "TestPipeline",
+        TriggerSource = "Test",
+        RunRoles = ["DataWriter"],
+        TestRowsPerSource = rowsPerSource
+    };
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void RequestWithARowCapRunsAsATestRunThatWritesNothing()
+    {
+        var options = PipelineExecutionBackgroundService.OptionsOf(RequestWithCap(5));
+
+        options.IsTestMode.ShouldBeTrue();
+        options.MaxRowsPerSource.ShouldBe(5);
+        options.SkipDestinationWrites.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Etl")]
+    public void RequestWithoutARowCapRunsForReal()
+    {
+        var options = PipelineExecutionBackgroundService.OptionsOf(RequestWithCap(null));
+
+        options.IsTestMode.ShouldBeFalse();
+        options.SkipDestinationWrites.ShouldBe(PipelineExecutionOptions.Production.SkipDestinationWrites);
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "Etl")]
+    public void TestRunKeepsTheTenantExecutionAndRolesOfTheRequest()
+    {
+        var request = RequestWithCap(3);
+
+        var options = PipelineExecutionBackgroundService.OptionsOf(request);
+
+        options.ExecutionId.ShouldBe(request.ExecutionId);
+        options.RunRoles.ShouldBe(request.RunRoles);
     }
 }

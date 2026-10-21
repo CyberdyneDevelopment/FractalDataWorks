@@ -11,7 +11,7 @@ namespace Fdw.Services.Scheduling.Abstractions.Models;
 /// the scheduler's own create and update endpoints.
 /// </summary>
 /// <remarks>
-/// Why one check: the triggers, the Quartz and Hangfire translators all resolve the stored id with
+/// Why one check: the triggers and the Quartz translators all resolve the stored id with
 /// <see cref="TimeZoneInfo.FindSystemTimeZoneById(string)"/>, so a zone is good exactly when that call accepts it. Judging it with
 /// any other rule would accept a zone the scheduler later throws on, or refuse one it would have run.
 /// </remarks>
@@ -47,6 +47,15 @@ public static class ScheduleTimeZone
             return Refuse(logger, timeZoneId, ex.Message);
         }
     }
+
+    /// <summary>Checks the time zone of a schedule that is being created: it must be stated, and be one the scheduler can resolve (FDW-2059).</summary>
+    /// <param name="timeZoneId">The stated zone; <see langword="null"/> when the request left it out.</param>
+    /// <param name="logger">The logger the refusal is written to.</param>
+    /// <returns>Success, or the coded refusal that names the value (an empty value when none was stated).</returns>
+    public static IGenericResult Require(string? timeZoneId, ILogger logger) =>
+        timeZoneId is null
+            ? Refuse(logger, string.Empty, "the schedule does not state its time zone")
+            : Check(timeZoneId, logger);
 
     private static IGenericResult Refuse(ILogger logger, string timeZoneId, string reason) =>
         GenericResult.Failure(SchedulingResultCodes.ByName("ScheduleTimeZoneInvalid"), logger,

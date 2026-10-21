@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
-using System.Globalization;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -61,7 +60,15 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
     /// <summary>Fetches the quality rule, queries the associated DataSet, and executes the check. Returns Skipped if the rule is disabled, or 404 if the rule is not found.</summary>
     public override async Task HandleAsync(QualityRuleIdRequest req, CancellationToken ct)
     {
-        
+        // Why the tenant is read first: a verdict is kept under the caller's active tenant, so a caller with none is refused
+        // before any row is read, not after a check has run whose verdict could not be kept.
+        var tenant = QualityRuleExecutions.CallerTenant(User, Logger);
+        if (tenant.IsFailure)
+        {
+            await Send.ResultAsync(TypedResults.Json(new { Error = "No active tenant", Details = tenant.CurrentMessage }, statusCode: 400)).ConfigureAwait(false);
+            return;
+        }
+
         var ruleResult = await _provider.Get(req.Id, ct).ConfigureAwait(false);
 
         if (!ruleResult.IsSuccess)
@@ -111,216 +118,23 @@ public abstract class ExecuteQualityCheckEndpointBase : Endpoint<QualityRuleIdRe
 
         var totalCount = data.Count;
 
-        var result = ExecuteRule(rule, data, totalCount);
+        var clock = Stopwatch.StartNew();
+        var result = QualityRuleEvaluator.Evaluate(rule, data, totalCount);
+        clock.Stop();
         result.RuleId = req.Id;
         result.ExecutedAt = DateTime.UtcNow;
 
+        // Why a verdict that cannot be kept is the answer and not a 200 (FDW-1363): a check nobody can read back again is
+        // the unrecorded "it passed" this feature exists to end.
+        var record = QualityRuleExecutions.Of(req.Id, rule, result, tenant.Value, clock.ElapsedMilliseconds);
+        var kept = await QualityRuleExecutions.Record(Gateway, QualityServiceTypes.OperationalConnection, record, Logger, ct).ConfigureAwait(false);
+        if (kept.IsFailure)
+        {
+            await Send.ResultAsync(TypedResults.Json(new { Error = "The check ran but its verdict was not recorded", Details = kept.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            return;
+        }
+
+        result.ExecutionId = record.Id;
         await Send.OkAsync(result, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Executes a single quality rule against the provided data and returns the result.</summary>
-    protected virtual QualityCheckResultResponse ExecuteRule(IQualityRuleImplementationConfiguration rule, IReadOnlyList<Dictionary<string, object>> data, int totalCount)
-    {
-        return rule.RuleType switch
-        {
-            "NotNull" => ValidateNotNull(data, rule.FieldName, totalCount),
-            "Unique" => ValidateUnique(data, rule.FieldName, totalCount),
-            "InRange" => ValidateInRange(data, rule.FieldName, rule.MinValue, rule.MaxValue, totalCount),
-            "MatchesPattern" => ValidatePattern(data, rule.FieldName, rule.Pattern, totalCount),
-            "CustomExpression" => new QualityCheckResultResponse
-            {
-                Status = "NotSupported",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "CustomExpression rules are not yet supported"
-            },
-            _ => new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = $"Unknown rule type: {rule.RuleType}"
-            }
-        };
-    }
-
-    /// <summary>Validates that the specified field is not null or empty in all rows.</summary>
-    protected static QualityCheckResultResponse ValidateNotNull(IReadOnlyList<Dictionary<string, object>> data, string? fieldName, int totalCount)
-    {
-        if (string.IsNullOrWhiteSpace(fieldName))
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "FieldName is required for NotNull rule"
-            };
-        }
-
-        var failureCount = data.Count(row =>
-            !row.ContainsKey(fieldName) ||
-            row[fieldName] == null ||
-            (row[fieldName] is string str && string.IsNullOrWhiteSpace(str)));
-
-        return new QualityCheckResultResponse
-        {
-            Status = failureCount == 0 ? "Passed" : "Failed",
-            FailureCount = failureCount,
-            TotalCount = totalCount
-        };
-    }
-
-    /// <summary>Validates that the specified field contains unique values across all rows.</summary>
-    protected static QualityCheckResultResponse ValidateUnique(IReadOnlyList<Dictionary<string, object>> data, string? fieldName, int totalCount)
-    {
-        if (string.IsNullOrWhiteSpace(fieldName))
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "FieldName is required for Unique rule"
-            };
-        }
-
-        var values = data
-            .Where(row => row.ContainsKey(fieldName) && row[fieldName] != null)
-            .Select(row => row[fieldName]?.ToString() ?? string.Empty)
-            .ToList();
-
-        var uniqueValues = values.Distinct(StringComparer.Ordinal).Count();
-        var failureCount = values.Count - uniqueValues;
-
-        return new QualityCheckResultResponse
-        {
-            Status = failureCount == 0 ? "Passed" : "Failed",
-            FailureCount = failureCount,
-            TotalCount = totalCount
-        };
-    }
-
-    /// <summary>Validates that the specified field values fall within the given numeric range.</summary>
-    protected static QualityCheckResultResponse ValidateInRange(
-        IReadOnlyList<Dictionary<string, object>> data,
-        string? fieldName,
-        string? minValue,
-        string? maxValue,
-        int totalCount)
-    {
-        if (string.IsNullOrWhiteSpace(fieldName))
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "FieldName is required for InRange rule"
-            };
-        }
-
-        if (!double.TryParse(minValue, CultureInfo.InvariantCulture, out var min) || !double.TryParse(maxValue, CultureInfo.InvariantCulture, out var max))
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "MinValue and MaxValue must be numeric"
-            };
-        }
-
-        var failureCount = data.Count(row =>
-        {
-            if (!row.TryGetValue(fieldName, out var fieldValue) || fieldValue == null)
-                return true;
-
-            var valueStr = fieldValue.ToString();
-            if (!double.TryParse(valueStr, CultureInfo.InvariantCulture, out var value))
-                return true;
-
-            return value < min || value > max;
-        });
-
-        return new QualityCheckResultResponse
-        {
-            Status = failureCount == 0 ? "Passed" : "Failed",
-            FailureCount = failureCount,
-            TotalCount = totalCount
-        };
-    }
-
-    /// <summary>Validates that the specified field values match the given regex pattern.</summary>
-    protected static QualityCheckResultResponse ValidatePattern(
-        IReadOnlyList<Dictionary<string, object>> data,
-        string? fieldName,
-        string? pattern,
-        int totalCount)
-    {
-        if (string.IsNullOrWhiteSpace(fieldName))
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "FieldName is required for MatchesPattern rule"
-            };
-        }
-
-        if (string.IsNullOrWhiteSpace(pattern))
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = "Pattern is required for MatchesPattern rule"
-            };
-        }
-
-        Regex regex;
-        try
-        {
-            regex = new Regex(pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
-        }
-        catch (Exception ex)
-        {
-            return new QualityCheckResultResponse
-            {
-                Status = "Failed",
-                FailureCount = 0,
-                TotalCount = totalCount,
-                ErrorMessage = $"Invalid regex pattern: {ex.Message}"
-            };
-        }
-
-        var failureCount = data.Count(row =>
-        {
-            if (!row.TryGetValue(fieldName, out var fieldValue) || fieldValue == null)
-                return true;
-
-            var valueStr = fieldValue.ToString();
-            if (string.IsNullOrEmpty(valueStr))
-                return true;
-
-            try
-            {
-                return !regex.IsMatch(valueStr);
-            }
-            catch (System.Text.RegularExpressions.RegexMatchTimeoutException ex)
-            {
-                _ = ex;
-                return true;
-            }
-        });
-
-        return new QualityCheckResultResponse
-        {
-            Status = failureCount == 0 ? "Passed" : "Failed",
-            FailureCount = failureCount,
-            TotalCount = totalCount
-        };
     }
 }

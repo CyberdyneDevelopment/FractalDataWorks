@@ -4,11 +4,13 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Configuration;
+using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
 using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Workspaces.Logging;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Services.Pipelines.Abstractions;
@@ -32,16 +34,19 @@ internal sealed class MapSources
     /// <param name="dataStores">The data store domain.</param>
     /// <param name="pipelines">The pipeline domain.</param>
     /// <param name="variations">The data set variation domain.</param>
+    /// <param name="categories">The category domain, whose DataSet tree names the path of the category a data set sits under.</param>
     public MapSources(
         IDataSetConfigurationProvider dataSets,
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
-        IDataSetVariationConfigurationProvider variations)
+        IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories)
     {
         DataSets = dataSets;
         DataStores = dataStores;
         Pipelines = pipelines;
         Variations = variations;
+        Categories = categories;
     }
 
     /// <summary>Gets the data set domain.</summary>
@@ -55,6 +60,16 @@ internal sealed class MapSources
 
     /// <summary>Gets the data set variation domain.</summary>
     public IDataSetVariationConfigurationProvider Variations { get; }
+
+    /// <summary>Gets the category domain.</summary>
+    public ICategoryConfigurationProvider Categories { get; }
+
+    /// <summary>Reads the DataSet category tree, once, for a map or lineage read that names its data sets' category paths.</summary>
+    /// <param name="logger">The logger a stored tree that is not sound is reported through.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The tree, or the failure that says why the read failed or the stored nodes do not make a tree.</returns>
+    public Task<IGenericResult<CategoryTree>> DataSetCategories(ILogger logger, CancellationToken ct)
+        => CategoryTrees.Load(Categories, DataSetCategoryConfiguration.ImplementationName, logger, ct);
 
     /// <summary>Gets the data set domain table as a list: names and ids read from the domain row alone, no data set composed.</summary>
     /// <param name="logger">Records the refusal when the registered provider cannot list its domain table.</param>
@@ -97,6 +112,18 @@ internal sealed class MapSources
         state.NoteUnresolved();
         WorkspaceMapLog.ReferenceUnresolved(logger, kind, reference, namedBy);
         return null;
+    }
+
+    /// <summary>Reads a graph pipeline whole, because the data sets it reads and writes are named in its components; any other pipeline is returned as it is.</summary>
+    /// <param name="pipeline">The pipeline as the scope read it.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>The pipeline with its components, or the failure of the read.</returns>
+    public async Task<IGenericResult<IPipelineImplementationConfiguration>> Whole(IPipelineImplementationConfiguration pipeline, CancellationToken ct)
+    {
+        if (pipeline is not GraphPipelineConfiguration graph || graph.Components.Count > 0)
+            return GenericResult<IPipelineImplementationConfiguration>.Success(pipeline);
+
+        return await Pipelines.Get(pipeline.Id, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
     }
 
     /// <summary>Takes the domain list out of a provider, or refuses when the registered provider does not list.</summary>

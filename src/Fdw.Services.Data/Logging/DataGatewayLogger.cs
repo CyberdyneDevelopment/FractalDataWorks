@@ -626,6 +626,17 @@ public static partial class DataGatewayLogger
         Message = "Connection '{connectionName}' does not support transactions")]
     public static partial IGenericMessage TransactionNotSupported(ILogger logger, string connectionName);
 
+    // Why Error: the caller sent a vectorized command to a store that cannot hold vectors; it fails, and the caller is told.
+    /// <summary>
+    /// Logs a vectorized command refused because the store's connection is not vectorized (FDW-1354).
+    /// </summary>
+    [MessageLogging(
+        EventId = 61013,
+        Level = LogLevel.Error,
+        Message = "Data store '{dataStore}' does not hold vectors: its connection is not vectorized, so the {commandType} command is refused")]
+    public static partial IGenericMessage VectorizedNotSupported(ILogger logger, string dataStore, string commandType);
+
+
     /// <summary>
     /// Logs when beginning a transaction fails.
     /// </summary>

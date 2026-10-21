@@ -26,10 +26,11 @@ namespace Fdw.Services.Pipelines.Tests;
 public sealed class PipelineRunAuthorityTests
 {
     private static readonly Guid TenantId = new("11111111-1111-1111-1111-111111111111");
-    private static readonly StepReach NoSteps = new([], []);
-    private static readonly PipelineReach Reach = new("Nightly", "Orders", "OrdersCopy", null, null, null, null, null, null, NoSteps);
-    private static readonly PipelineReach StoreReach = new("Nightly", null, "OrdersCopy", "Feeds", "orders/v1", "orders", null, null, null, NoSteps);
-    private static readonly PipelineReach DestinationStoreReach = new("Nightly", "Orders", null, null, null, null, "Warehouse", "orders/v1", "orders", NoSteps);
+    private static readonly PipelineReach Reach = new("Nightly", [new ReachedDataSet("Orders", false), new ReachedDataSet("OrdersCopy", true)], []);
+    private static readonly PipelineReach StoreReach = new(
+        "Nightly", [new ReachedDataSet("OrdersCopy", true)], [new ReachedContainer("Feeds", "orders/v1", "orders", false)]);
+    private static readonly PipelineReach DestinationStoreReach = new(
+        "Nightly", [new ReachedDataSet("Orders", false)], [new ReachedContainer("Warehouse", "orders/v1", "orders", true)]);
 
     private readonly Mock<IRoleGrants> _grants = new();
     private readonly Mock<IDataSetConfigurationProvider> _dataSets = new();
@@ -263,7 +264,7 @@ public sealed class PipelineRunAuthorityTests
     {
         RolesCarryAll();
         EverythingVisible();
-        var reach = Reach with { Steps = new StepReach([new ReachedDataSet("OrdersArchive", false)], []) };
+        var reach = Reach with { DataSets = [.. Reach.DataSets, new ReachedDataSet("OrdersArchive", false)] };
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -279,7 +280,7 @@ public sealed class PipelineRunAuthorityTests
         RolesCarryAll();
         EverythingVisible();
         Visible("Orders", "OrdersCopy", "OrdersArchive");
-        var reach = Reach with { Steps = new StepReach([new ReachedDataSet("OrdersArchive", false)], []) };
+        var reach = Reach with { DataSets = [.. Reach.DataSets, new ReachedDataSet("OrdersArchive", false)] };
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -296,8 +297,7 @@ public sealed class PipelineRunAuthorityTests
         Visible("Orders", "Rejects");
         ConnectionsVisible("Main");
         StoreVisible("Store");
-        var reach = new PipelineReach("Nightly", "Orders", null, null, null, null, null, null, null,
-            new StepReach([new ReachedDataSet("Rejects", true)], []));
+        var reach = new PipelineReach("Nightly", [new ReachedDataSet("Orders", false), new ReachedDataSet("Rejects", true)], []);
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -314,8 +314,7 @@ public sealed class PipelineRunAuthorityTests
         RolesCarry("datasets:read", "datasets:write", "connections:read", "connections:write", "datastores:write");
         StoreVisible("Reference");
         ContainerVisible("Reference", "ref/v1", "customers", visible: true);
-        var reach = new PipelineReach("Nightly", null, null, null, null, null, null, null, null,
-            new StepReach([], [new ReachedContainer("Reference", "ref/v1", "customers", false)]));
+        var reach = new PipelineReach("Nightly", [], [new ReachedContainer("Reference", "ref/v1", "customers", false)]);
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -332,8 +331,7 @@ public sealed class PipelineRunAuthorityTests
         RolesCarry("datasets:read", "datasets:write", "connections:read", "connections:write", "datastores:read");
         StoreVisible("Feeds");
         ContainerVisible("Feeds", "orders/v1", "orders", visible: true);
-        var reach = new PipelineReach("Nightly", null, null, null, null, null, null, null, null,
-            new StepReach([], [new ReachedContainer("Feeds", "orders/v1", "orders", true)]));
+        var reach = new PipelineReach("Nightly", [], [new ReachedContainer("Feeds", "orders/v1", "orders", true)]);
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -351,7 +349,7 @@ public sealed class PipelineRunAuthorityTests
         EverythingVisible();
         StoreVisible("Feeds");
         ContainerVisible("Feeds", "orders/v1", "orders", visible: true);
-        var reach = Reach with { Steps = new StepReach([], [new ReachedContainer("Feeds", "orders/v1", "orders", true)]) };
+        var reach = Reach with { Containers = [new ReachedContainer("Feeds", "orders/v1", "orders", true)] };
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
@@ -441,33 +439,53 @@ public sealed class PipelineRunAuthorityTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Validation")]
-    public async Task AHalfAddressedDataStoreSourceIsRefused()
+    public async Task AHalfAddressedDataStoreContainerIsRefused()
     {
         RolesCarryAll();
         EverythingVisible();
-        var partial = StoreReach with { SourceContainerName = null };
+        var partial = StoreReach with { Containers = [new ReachedContainer("Feeds", string.Empty, "orders", false)] };
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), partial, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("data store, path and container together");
     }
 
+    // FDW-1891: a graph reads from and writes to many places, and every one is judged.
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Validation")]
-    public async Task ADataStoreSourceBesideASourceDataSetIsRefused()
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task EveryDataSetAGraphReadsIsJudgedNotOnlyTheFirst()
     {
         RolesCarryAll();
-        EverythingVisible();
-        StoreVisible("Feeds");
-        ContainerVisible("Feeds", "orders/v1", "orders", visible: true);
-        var doubled = StoreReach with { SourceDataSet = "Orders" };
+        Visible("Orders", "OrdersCopy");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
+        var reach = Reach with { DataSets = [.. Reach.DataSets, new ReachedDataSet("Customers", false)] };
 
-        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), doubled, ["DataEngineer"],
+        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), reach, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Customers");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ARoleThatCannotReachAnyDataSetTheGraphUsesIsRefusedBeforeTheRun()
+    {
+        RolesCarry("connections:read");
+        Visible("Orders", "OrdersCopy");
+        ConnectionsVisible("Main");
+        StoreVisible("Store");
+
+        var result = await Build().Authorize(Caller(TenantId, "Nobody"), Reach, ["Nobody"],
+            NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("datasets:read");
     }
 
     [Fact]
@@ -520,42 +538,6 @@ public sealed class PipelineRunAuthorityTests
         ContainerVisible("Warehouse", "orders/v1", "orders", visible: true);
 
         var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), DestinationStoreReach, ["DataEngineer"],
-            NullLogger.Instance, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Validation")]
-    public async Task AHalfAddressedDataStoreDestinationIsRefused()
-    {
-        RolesCarryAll();
-        Visible("Orders");
-        ConnectionsVisible("Main");
-        StoreVisible("Store");
-        var partial = DestinationStoreReach with { DestinationContainerName = null };
-
-        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), partial, ["DataEngineer"],
-            NullLogger.Instance, TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeFalse();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Validation")]
-    public async Task ADataStoreDestinationBesideADestinationDataSetIsRefused()
-    {
-        RolesCarryAll();
-        Visible("Orders", "OrdersCopy");
-        ConnectionsVisible("Main");
-        StoreVisible("Store");
-        StoreVisible("Warehouse");
-        ContainerVisible("Warehouse", "orders/v1", "orders", visible: true);
-        var doubled = DestinationStoreReach with { DestinationDataSet = "OrdersCopy" };
-
-        var result = await Build().Authorize(Caller(TenantId, "DataEngineer"), doubled, ["DataEngineer"],
             NullLogger.Instance, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeFalse();

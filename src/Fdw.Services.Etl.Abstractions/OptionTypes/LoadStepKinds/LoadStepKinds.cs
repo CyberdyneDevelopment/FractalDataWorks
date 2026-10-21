@@ -5,7 +5,7 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 
 /// <summary>
-/// What one load step of a BatchCopy pipeline does: BulkInsert, BulkUpsert, InsertFromQuery, Update, Delete, Truncate or Execute (FDW-1108).
+/// What one load step of a graph destination does: BulkInsert, BulkUpsert, InsertFromQuery, Update, Delete, Truncate or Execute (FDW-1108).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(LoadStepKindBase), typeof(ILoadStepKind), typeof(LoadStepKinds))]

@@ -34,9 +34,4 @@ public sealed class OptionWordsTests
     public void TheValidateFailingActionsCarryTheirOwnWords() =>
         ShouldCarryItsOwnWords(ValidateFailActions.All().Cast<ValidateFailActionBase>().Select(option => (option.Name, option.DisplayName, option.Description)), "Reject", "Fail");
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public void TheUnmatchedActionsCarryTheirOwnWords() =>
-        ShouldCarryItsOwnWords(UnmatchedActions.All().Cast<UnmatchedActionBase>().Select(option => (option.Name, option.DisplayName, option.Description)), "Pass", "Reject");
 }

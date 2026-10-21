@@ -51,6 +51,8 @@
     <ProjectReference Include="..\Fdw.Data.Configuration\Fdw.Data.Configuration.csproj" />
 
     <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
+
+    <ProjectReference Include="..\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

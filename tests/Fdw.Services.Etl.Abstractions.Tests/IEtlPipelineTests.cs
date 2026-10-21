@@ -46,7 +46,7 @@ public class IEtlPipelineTests
     public void PipelineTypePropertyCanBeReadFromImplementation()
     {
         // Arrange
-        const string expectedType = "BatchCopy";
+        const string expectedType = "Graph";
         var pipeline = new TestEtlPipeline { PipelineType = expectedType };
 
         // Act

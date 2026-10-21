@@ -12,7 +12,7 @@ namespace Fdw.Services.Etl.Transforms;
 /// output column — the lookup connection/keys are shared across the rows for the same transform.
 /// </summary>
 /// <remarks>
-/// Why: implements <see cref="IGenericConfiguration"/> (mirroring <see cref="PipelineTransformFieldMappingConfiguration"/>)
+/// Why: implements <see cref="IGenericConfiguration"/>
 /// so the configuration cascade-save discovers and persists this collection when the parent transform is
 /// saved. Without this interface the Lookups collection would be silently skipped.
 /// </remarks>

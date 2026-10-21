@@ -21,7 +21,7 @@ public sealed class FilterTransformRunParameterTests
         var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
         foreach (var (name, value) in parameters)
             values[name] = value;
-        return new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), parameters: values);
+        return new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), parameters: values);
     }
 
     private static PipelineTransformConfiguration Filter(string expression) =>

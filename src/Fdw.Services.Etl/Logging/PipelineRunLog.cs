@@ -5,8 +5,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Etl.Logging;
 
 /// <summary>
-/// MessageLogging for what a BatchCopy run does with its load definition and run parameters (FDW-1109): reading the
-/// parameters a trigger or schedule supplies, resolving the <c>{{name}}</c> references in expressions, planning the load
+/// MessageLogging for what a run does with its run parameters (FDW-1109): reading the
+/// parameters a trigger or schedule supplies, resolving the <c>{{name}}</c> references in expressions
 /// and keeping the last-successful watermark. Every refusal is logged and returned in the failure result.
 /// EventId range: 20201-20299.
 /// </summary>
@@ -27,6 +27,11 @@ public static partial class PipelineRunLog
     [MessageLogging(EventId = 20203, Level = LogLevel.Warning,
         Message = "Run parameter '{parameterName}' is required and has no value")]
     public static partial IGenericMessage RunParameterRequiredMissing(ILogger logger, string parameterName);
+
+    /// <summary>Logs a refused run: the default a pipeline declares for a parameter the run did not give is not a value of the parameter's type.</summary>
+    [MessageLogging(EventId = 20001, Level = LogLevel.Warning,
+        Message = "The default declared for run parameter '{parameterName}' is not a valid {parameterType}, and the run did not give the parameter")]
+    public static partial IGenericMessage RunParameterDefaultUnreadable(ILogger logger, string parameterName, string parameterType);
 
     /// <summary>Logs a refused run parameter: its text is not a value of the declared type.</summary>
     [MessageLogging(EventId = 20204, Level = LogLevel.Warning,

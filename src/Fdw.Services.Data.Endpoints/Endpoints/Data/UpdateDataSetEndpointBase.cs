@@ -21,11 +21,14 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateDataSetRequest, DataSetDetailResponse>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly CategoryConfigurationProvider _categories;
 
     /// <inheritdoc />
-    protected UpdateDataSetEndpointBase(ILogger<UpdateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+    protected UpdateDataSetEndpointBase(
+        ILogger<UpdateDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
+        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -66,7 +69,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
             return GenericResult<DataSetDetailResponse?>.Success((DataSetDetailResponse?)null);
         }
 
-        return GenericResult<DataSetDetailResponse?>.Success((DataSetDetailResponse?)DataSetQueryHelper.MapToDetail(result.Value));
+        return await Detail(result.Value, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -105,8 +108,12 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         var childrenValidation = ValidateRequestedChildren(request);
         if (childrenValidation.IsFailure) return childrenValidation.ToNewResult<DataSetDetailResponse>();
 
+        var category = await RequestedCategory(request, existing, ct).ConfigureAwait(false);
+        if (category.IsFailure) return category.ToNewResult<DataSetDetailResponse>();
+
         // Merge updates
         ApplyRequestedValues(existing, request);
+        existing.CategoryId = category.Value;
         existing.Version = request.Version;
         existing.RecordTypeName = request.RecordTypeName;
         if (existing is IFederatedDataSetConfiguration federated)
@@ -121,7 +128,33 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
         }
 
         DataSetEndpointLog.DataSetUpdated(Logger, request.Name);
-        return GenericResult<DataSetDetailResponse>.Success(DataSetQueryHelper.MapToDetail(existing));
+        var detail = await Detail(existing, ct).ConfigureAwait(false);
+        return detail.IsFailure || detail.Value is null ? detail.ToNewResult<DataSetDetailResponse>() : GenericResult<DataSetDetailResponse>.Success(detail.Value);
+    }
+
+    // A category left out leaves the stored one; an empty name takes the data set out of its category; a name must be a category of the
+    // DataSet type.
+    private async Task<IGenericResult<Guid?>> RequestedCategory(
+        UpdateDataSetRequest request, IDataSetImplementationConfiguration existing, CancellationToken ct)
+    {
+        if (request.Category is null) return GenericResult<Guid?>.Success(existing.CategoryId);
+
+        var tree = await DataSetCategoryLinks.Tree(_categories, Logger, ct).ConfigureAwait(false);
+        return tree.IsFailure || tree.Value is null
+            ? tree.ToNewResult<Guid?>()
+            : DataSetCategoryLinks.Resolve(tree.Value, request.Category, Logger);
+    }
+
+    // The data set as the API answers it: its category by name and path.
+    private async Task<IGenericResult<DataSetDetailResponse?>> Detail(IDataSetImplementationConfiguration dataSet, CancellationToken ct)
+    {
+        var tree = await DataSetCategoryLinks.Tree(_categories, Logger, ct).ConfigureAwait(false);
+        if (tree.IsFailure || tree.Value is null) return tree.ToNewResult<DataSetDetailResponse?>();
+
+        var described = DataSetCategoryLinks.Describe(DataSetQueryHelper.MapToDetail(dataSet), tree.Value, dataSet.CategoryId, Logger);
+        return described.IsFailure
+            ? described.ToNewResult<DataSetDetailResponse?>()
+            : GenericResult<DataSetDetailResponse?>.Success(described.Value);
     }
 
     // Each kind is its own implementation (FDW-1031): a data set cannot become another kind, and carries only
@@ -174,7 +207,6 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
             existing.ClassificationId = classificationId;
         }
 
-        existing.Category = request.Category ?? existing.Category;
         existing.SourceDataSetName = request.SourceDataSetName ?? existing.SourceDataSetName;
     }
 

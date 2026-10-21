@@ -48,4 +48,7 @@ public sealed partial class ServerSettingImplementationConfiguration : IServerSe
 
     /// <inheritdoc/>
     public bool IsActive { get; set; } = true;
+
+    /// <summary>Gets or sets whether the levels below this one are barred from setting their own value (FDW-1579).</summary>
+    public bool IsLocked { get; set; }
 }

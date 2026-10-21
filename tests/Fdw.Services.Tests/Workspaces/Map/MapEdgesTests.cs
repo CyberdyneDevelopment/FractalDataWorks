@@ -71,7 +71,7 @@ public class MapEdgesTests
         var state = new MapState();
         state.DataSetsByName["Orders"] = Orders;
         state.DataSetsByName["Customers"] = Customers;
-        state.Pipelines.Add(new MapPipelineLinks(Load, "orders", "Customers"));
+        state.Pipelines.Add(new MapPipelineLinks(Load, ["orders"], ["Customers"]));
 
         var edges = MapEdges.ForPipelines(state).ToList();
 
@@ -87,7 +87,7 @@ public class MapEdgesTests
     {
         var state = new MapState();
         state.DataSetsByName["Orders"] = Orders;
-        state.Pipelines.Add(new MapPipelineLinks(Load, null, ""));
+        state.Pipelines.Add(new MapPipelineLinks(Load, [], [""]));
 
         MapEdges.ForPipelines(state).ShouldBeEmpty();
     }

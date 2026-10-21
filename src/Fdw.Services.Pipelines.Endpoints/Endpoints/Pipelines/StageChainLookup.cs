@@ -12,8 +12,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
-/// Looks up the named Transformations that the field mappings of a pipeline request chain together, and reports every problem
-/// with a chain, each on its stage, without saving anything.
+/// Looks up the named Transformations that the mappings on the inputs of a graph's components chain together, and reports every problem
+/// with a chain, each on its component, without saving anything.
 /// </summary>
 /// <remarks>
 /// Why this is one check shared by create, update and the two validate endpoints: they must refuse exactly what saving
@@ -40,26 +40,32 @@ public sealed class StageChainLookup
     }
 
     /// <summary>
-    /// Looks up every chain stated by the field mappings of <paramref name="stages"/>.
+    /// Looks up every chain stated by <paramref name="maps"/>, and checks the Compute of <paramref name="stages"/>.
     /// </summary>
     /// <param name="pipelineName">The name of the pipeline the request is for, used to log the outcome.</param>
     /// <param name="stages">The stages the request states; null when it states none.</param>
+    /// <param name="maps">The chains the mappings on the request's component inputs state; null when it states none.</param>
     /// <param name="cancellationToken">Cancels the lookup.</param>
     /// <returns>The ids of the Transformations the request names, and the problems found.</returns>
     public async Task<StageChains> Resolve(
         string pipelineName,
         IList<CreatePipelineTransformRequest>? stages,
+        IReadOnlyList<MapChain>? maps,
         CancellationToken cancellationToken = default)
     {
         var found = new Found();
         await LookIn(stages, [], "Transforms", found, cancellationToken).ConfigureAwait(false);
+        foreach (var map in maps ?? [])
+        {
+            await LookAtMap(map, found, cancellationToken).ConfigureAwait(false);
+        }
+
         StageChainLog.ChainsLookedUp(_logger, pipelineName, found.Steps, found.Problems.Count);
         return new StageChains(found.Ids, found.Problems);
     }
 
-    // Looks through one list of stages and, below each, through the stages inside its paths, however deeply they nest. The
-    // names are the stage and path names down to this list, which place a problem; the positions say the same by index, for a
-    // stage that has no name yet.
+    // Looks through one list of stages. The names are the stage names down to this list, which place a problem; the positions say
+    // the same by index, for a stage that has no name yet.
     private async Task LookIn(
         IList<CreatePipelineTransformRequest>? stages,
         IReadOnlyList<string> names,
@@ -72,39 +78,23 @@ public sealed class StageChainLookup
             var stage = stages[stageIndex];
             var stageNames = names.Append(stage.Name).ToList();
             var stagePositions = $"{positions}[{stageIndex}]";
-            await LookAtMappings(stage, stageNames, stagePositions, found, cancellationToken).ConfigureAwait(false);
             if (stage.Compute is not null)
             {
                 await _compute.Check(stageNames, stagePositions, stage.Compute, found.Ids, found.Problems, cancellationToken).ConfigureAwait(false);
             }
-
-            for (var pathIndex = 0; stage.Paths is not null && pathIndex < stage.Paths.Count; pathIndex++)
-            {
-                var path = stage.Paths[pathIndex];
-                await LookIn(path.Stages, [.. stageNames, path.Name], $"{stagePositions}.Paths[{pathIndex}].Stages", found, cancellationToken).ConfigureAwait(false);
-            }
         }
     }
 
-    // The chain each field mapping of one stage states.
-    private async Task LookAtMappings(
-        CreatePipelineTransformRequest stage,
-        IReadOnlyList<string> stageNames,
-        string stagePositions,
-        Found found,
-        CancellationToken cancellationToken)
+    // The chain one mapping on a component input states. A mapping that states none has nothing to look up.
+    private async Task LookAtMap(MapChain map, Found found, CancellationToken cancellationToken)
     {
-        for (var mappingIndex = 0; mappingIndex < stage.FieldMappings.Count; mappingIndex++)
+        if (map.Chain.Count == 0)
         {
-            if (stage.FieldMappings[mappingIndex].TransformationChain is not { Count: > 0 } chain)
-            {
-                continue;
-            }
-
-            found.Steps += chain.Count;
-            var at = new ChainAt(stageNames, stagePositions, mappingIndex, stage.FieldMappings[mappingIndex]);
-            await CheckMapping(at, chain, found, cancellationToken).ConfigureAwait(false);
+            return;
         }
+
+        found.Steps += map.Chain.Count;
+        await CheckMapping(new ChainAt(map), map.Chain, found, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task CheckMapping(
@@ -116,7 +106,7 @@ public sealed class StageChainLookup
         var mapping = at.Mapping;
         if (!chain.Select(step => step.Ordinal).OrderBy(ordinal => ordinal).SequenceEqual(Enumerable.Range(1, chain.Count)))
         {
-            found.Problems.Add(at.Problem("Transformations", StageChainLog.OrdinalsNotConsecutive(_logger, mapping.Name, chain.Count).Message));
+            found.Problems.Add(at.Problem("Transformations", StageChainLog.OrdinalsNotConsecutive(_logger, mapping.Target, chain.Count).Message));
         }
 
         for (var stepIndex = 0; stepIndex < chain.Count; stepIndex++)
@@ -134,7 +124,7 @@ public sealed class StageChainLookup
     {
         var name = string.IsNullOrWhiteSpace(step.Transformation) ? null : step.Transformation;
         var field = StepField(stepIndex, "Transformation");
-        var shape = ReferenceShapeProblem(at.Mapping.Name, step, name);
+        var shape = ReferenceShapeProblem(at.Mapping.Target, step, name);
         if (shape is not null)
         {
             found.Problems.Add(at.Problem(field, shape));
@@ -147,7 +137,7 @@ public sealed class StageChainLookup
         }
 
         var looked = await Find(name, step.TransformationId, cancellationToken).ConfigureAwait(false);
-        var problem = FoundProblem(at.Mapping.Name, step, name, looked);
+        var problem = FoundProblem(at.Mapping.Target, step, name, looked);
         if (problem is not null)
         {
             found.Problems.Add(at.Problem(field, problem));
@@ -209,18 +199,12 @@ public sealed class StageChainLookup
         public int Steps { get; set; }
     }
 
-    // Where a chain sits in the request, so each problem is placed on its stage and names the mapping and step it is about. A
-    // stage with no name yet cannot be placed by name, so its problem is located by position instead.
-    private sealed class ChainAt(IReadOnlyList<string> stageNames, string stagePositions, int mappingIndex, CreatePipelineFieldMappingRequest mapping)
+    // Where a chain sits in the request, so each problem is placed on its component and names the mapping and step it is about.
+    private sealed class ChainAt(MapChain mapping)
     {
-        public CreatePipelineFieldMappingRequest Mapping { get; } = mapping;
+        public MapChain Mapping { get; } = mapping;
 
-        public PipelineProblem Problem(string field, string? reason)
-        {
-            var relative = $"FieldMappings[{mappingIndex}].{field}";
-            return stageNames.Any(string.IsNullOrWhiteSpace)
-                ? PipelineProblems.OfPipeline($"{stagePositions}.{relative}", reason ?? string.Empty)
-                : PipelineProblems.OfStage(stageNames, relative, reason ?? string.Empty);
-        }
+        public PipelineProblem Problem(string field, string? reason) =>
+            PipelineProblems.OfStage([Mapping.Component], $"Maps[{Mapping.Index}].{field}", reason ?? string.Empty);
     }
 }

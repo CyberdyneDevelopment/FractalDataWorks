@@ -10,57 +10,12 @@ namespace Fdw.Web.Api.Tests.Endpoints.Pipelines;
 /// that dispatches <see cref="CreatePipelineTransformRequest"/> specs onto typed
 /// <c>PipelineTransformConfiguration</c> aggregates via <c>TransformTypes</c> (FDW-556). Covers
 /// per-operation-type dispatch (never a switch) and the create-time fail-loud gate for every combine
-/// transform (Aggregate/Lookup/Calculate/Filter) plus Map and unknown operation types.
+/// transform (Aggregate/Lookup/Calculate/Filter) plus unknown operation types.
 /// </summary>
 public sealed class PipelineTransformConfigurationMapperTests
 {
-    private static CreatePipelineTransformRequest MapRequest(params CreatePipelineFieldMappingRequest[] mappings) =>
-        new()
-        {
-            Name = "Map1",
-            OperationType = "Map",
-            FieldMappings = [.. mappings],
-        };
-
-    // ── Map dispatch ─────────────────────────────────────────────────────────────────────
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void MapDispatchesToMapTransformTypeAndPopulatesFieldMappings()
-    {
-        // Arrange
-        var request = MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" });
-
-        // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-        result.Value!.Count.ShouldBe(1);
-        result.Value[0].OperationType.ShouldBe("Map");
-        result.Value[0].FieldMappings.Count.ShouldBe(1);
-        result.Value[0].FieldMappings[0].SourceField.ShouldBe("A");
-        result.Value[0].FieldMappings[0].DestinationField.ShouldBe("B");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void MapFailsLoudWhenFieldMappingsEmpty()
-    {
-        // Arrange
-        var request = new CreatePipelineTransformRequest { Name = "Map1", OperationType = "Map" };
-
-        // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
-
-        // Assert
-        result.IsSuccess.ShouldBeFalse();
-        result.Code!.Id.ShouldBe(20001);
-        result.Details!.GetValue<string>("StepName").ShouldBe("Map1");
-        result.Details!.GetValue<string>("Reason").ShouldBe("Map 'Map1' has no field mappings");
-    }
+    private static CreatePipelineTransformRequest FilterRequest(string name) =>
+        new() { Name = name, OperationType = "Filter", FilterExpression = "B == 1" };
 
     // ── Aggregate dispatch ───────────────────────────────────────────────────────────────
 
@@ -82,7 +37,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -104,7 +59,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Agg1", OperationType = "Aggregate" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -136,7 +91,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -157,7 +112,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Lookup1", OperationType = "Lookup" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -187,7 +142,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -215,7 +170,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -234,7 +189,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Calc1", OperationType = "Calculate" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -254,7 +209,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter", FilterExpression = "Age >= 18" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -270,7 +225,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -290,7 +245,7 @@ public sealed class PipelineTransformConfigurationMapperTests
         var request = new CreatePipelineTransformRequest { Name = "Weird1", OperationType = "Median" };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -306,7 +261,7 @@ public sealed class PipelineTransformConfigurationMapperTests
     {
         var request = new CreatePipelineTransformRequest { Name = "Weird1", OperationType = "Median" };
 
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         result.Code!.FormatClientMessage(result.Details)
             .ShouldBe("Pipeline step 'Weird1' is invalid: Unknown transform type 'Median'");
@@ -320,17 +275,17 @@ public sealed class PipelineTransformConfigurationMapperTests
         // Arrange
         var requests = new List<CreatePipelineTransformRequest>
         {
-            MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" }),
-            new CreatePipelineTransformRequest { Name = "Filter1", OperationType = "Filter", FilterExpression = "B == 1" },
+            FilterRequest("Filter0"),
+            FilterRequest("Filter1"),
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", requests, NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map(requests, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Count.ShouldBe(2);
-        result.Value[0].OperationType.ShouldBe("Map");
+        result.Value[0].OperationType.ShouldBe("Filter");
         result.Value[1].OperationType.ShouldBe("Filter");
         result.Value[0].Id.ShouldNotBe(result.Value[1].Id);
         result.Value[0].Id.ShouldNotBe(Guid.Empty);
@@ -341,15 +296,15 @@ public sealed class PipelineTransformConfigurationMapperTests
     [Trait("Category", "DataIntegrity")]
     public void MapStopsAtFirstFailureAndDoesNotProcessLaterSteps()
     {
-        // Arrange — second step is a valid Map, but the first (Aggregate, param-less) must short-circuit.
+        // Arrange — second step is a valid Filter, but the first (Aggregate, param-less) must short-circuit.
         var requests = new List<CreatePipelineTransformRequest>
         {
             new CreatePipelineTransformRequest { Name = "Agg1", OperationType = "Aggregate" },
-            MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" }),
+            FilterRequest("Filter0"),
         };
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", requests, NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map(requests, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
@@ -366,11 +321,11 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapCarriesAStepThatIsDisabledInsteadOfEnablingIt()
     {
         // Arrange
-        var request = MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" });
+        var request = FilterRequest("Filter0");
         request.IsEnabled = false;
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -383,10 +338,10 @@ public sealed class PipelineTransformConfigurationMapperTests
     public void MapEnablesAStepThatDoesNotSay()
     {
         // Arrange
-        var request = MapRequest(new CreatePipelineFieldMappingRequest { Name = "M1", SourceField = "A", DestinationField = "B" });
+        var request = FilterRequest("Filter0");
 
         // Act
-        var result = PipelineTransformConfigurationMapper.Map("BatchCopy", [request], NullLogger.Instance);
+        var result = PipelineTransformConfigurationMapper.Map([request], NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();

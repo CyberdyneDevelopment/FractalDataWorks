@@ -39,12 +39,18 @@ internal sealed class DataQueryTranslator
     /// <param name="fields">The data set's current fields.</param>
     /// <param name="dataSetName">The data set queried, for refusals.</param>
     /// <param name="logger">The logger refusals are written to.</param>
-    /// <returns>The translator, or a refusal when two fields' names differ only by case.</returns>
+    /// <returns>The translator, or a refusal when the data set declares no fields or two fields' names differ only by case.</returns>
     public static IGenericResult<DataQueryTranslator> Create(
         IEnumerable<DataSetFieldConfiguration> fields, string dataSetName, ILogger logger)
     {
         var declared = fields.ToList();
         var refusals = new DataQueryRefusals(dataSetName, logger);
+
+        // Why refused here: a data set reads only the fields it declares, so with none a query has no column to select and used to
+        // answer rows of empty arrays (FDW-2114). This is where every query over a data set is built, so every route inherits it.
+        if (declared.Count == 0)
+            return refusals.Invalid<DataQueryTranslator>("it declares no fields, so there are no columns to read; declare its fields first");
+
         var queryable = declared.Select(f => Queryable(f, dataSetName)).ToList();
         var translator = QueryTranslator.Create(queryable, "this data set", refusals);
         if (translator.IsFailure) return translator.ToNewResult<DataQueryTranslator>();

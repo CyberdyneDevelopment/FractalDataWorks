@@ -25,6 +25,13 @@ public interface IField : IPropertyDefinition
     IFieldType FieldType { get; }
 
     /// <summary>
+    /// The portable type the store reads this field as: the <c>DataTypes</c> option its store type normalizes to
+    /// (<c>nvarchar</c> reads as <c>String</c>, <c>date</c> as <c>Date</c>), from the store's own native type
+    /// (FDW-1588). <see langword="null"/> when the store's type has no native type in FDW, so nobody has stated it.
+    /// </summary>
+    IDataType? ExplicitType { get; }
+
+    /// <summary>
     /// Whether this field can be null.
     /// </summary>
     /// <remarks>

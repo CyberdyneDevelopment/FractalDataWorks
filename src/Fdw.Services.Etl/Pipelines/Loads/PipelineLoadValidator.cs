@@ -11,239 +11,26 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Etl.Pipelines.Loads;
 
 /// <summary>
-/// Checks the structure of a BatchCopy pipeline's load configuration (FDW-1108) and refuses what is incomplete or
-/// contradicts itself, with a reason, before anything is saved or run.
+/// Checks the options one load row states (FDW-1108): its column lists, its versioning, its soft delete and its value sources, and
+/// refuses what is incomplete or contradicts itself, with a reason, before anything is saved or run.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A pipeline states a load mode (and, for Upsert, load options) or load steps, never both. The rules each mode and
-/// each step kind carries are flags on its option, so one check validates the options of either and never branches
-/// on a name. Beyond that it checks only what the configuration says about itself: known names, step orders and
-/// names that are not repeated, option pairs that are stated together, and the options each kind needs. It never
-/// fills a missing option in: a missing one is a refusal. Whether the columns exist in the data sets is for the API,
+/// The rules each load kind carries are flags on its option (<see cref="ILoadOptionShape"/>), so one check validates the options of any kind and
+/// never branches on a name. It checks only what the row says about itself: known names, option pairs that are stated together, and the options
+/// the kind needs. It never fills a missing option in: a missing one is a refusal. Whether the columns exist in the data sets is for the API,
 /// which validates against the data set schemas.
 /// </para>
 /// <para>
-/// Why a static class: it holds no state, and the API's create, update and validate paths and the engine all call
-/// the same code, so they cannot disagree about what a valid load is.
+/// Why a static class: it holds no state, and the graph's destination components and the engine call the same code, so they cannot disagree
+/// about what a valid load row is. The checks of a whole stage-list pipeline's load (its mode, its steps, its reject steps, its run parameters)
+/// went with that pipeline (FDW-1591).
 /// </para>
 /// </remarks>
 public static class PipelineLoadValidator
 {
-    private const string OwnLoadLabel = "the pipeline's own load";
 
-    /// <summary>
-    /// Validates the load configuration of one pipeline.
-    /// </summary>
-    /// <param name="loadMode">The pipeline's load mode name, or <see langword="null"/> when it states none.</param>
-    /// <param name="loadSteps">
-    /// The pipeline's load rows, each stating its phase: the row of its own load (step order <see langword="null"/>), its
-    /// load steps and its reject steps, or <see langword="null"/> when it states none.
-    /// </param>
-    /// <param name="runParameters">The pipeline's declared run parameters, or <see langword="null"/> when it declares none.</param>
-    /// <param name="pipelineDestinationDataSet">The data set the pipeline's own load writes to, or <see langword="null"/> when its destination is not a data set; a reject step may not write there.</param>
-    /// <param name="logger">The logger the refusals are written to.</param>
-    /// <returns>Success, or a failure whose message says what is wrong.</returns>
-    public static IGenericResult Validate(
-        string? loadMode,
-        IList<PipelineLoadStepConfiguration>? loadSteps,
-        IList<PipelineRunParameterConfiguration>? runParameters,
-        string? pipelineDestinationDataSet,
-        ILogger logger)
-    {
-        var phased = SplitByPhase(loadSteps, logger);
-        if (phased.IsFailure)
-            return phased;
-
-        var load = ValidateLoadPhase(loadMode, phased.Value!.Loading, logger);
-        if (load.IsFailure)
-            return load;
-
-        var reject = PipelineRejectStepValidator.Validate(phased.Value.Rejecting, phased.Value.Loading, pipelineDestinationDataSet, logger);
-        return reject.IsFailure ? reject : ValidateRunParameters(runParameters, logger);
-    }
-
-    // Every row states a phase that names one of the load phases; none is assumed. The rows that load the output and the
-    // reject steps are then judged each by their own rules.
-    private static IGenericResult<PhasedRows> SplitByPhase(IList<PipelineLoadStepConfiguration>? rows, ILogger logger)
-    {
-        var loading = new List<PipelineLoadStepConfiguration>();
-        var rejecting = new List<PipelineLoadStepConfiguration>();
-        foreach (var row in rows is null ? [] : rows)
-        {
-            var owner = row.StepOrder is null ? OwnLoadLabel : string.Concat("load step '", row.Name, "'");
-            if (string.IsNullOrWhiteSpace(row.Phase))
-                return GenericResult<PhasedRows>.Failure(PipelineLoadLog.LoadPhaseMissing(logger, owner));
-
-            var phase = LoadPhases.ByName(row.Phase);
-            if (ReferenceEquals(phase, LoadPhases.NotFound))
-                return GenericResult<PhasedRows>.Failure(PipelineLoadLog.LoadPhaseUnknown(logger, owner, row.Phase));
-            (phase.ReadsRejectedRecords ? rejecting : loading).Add(row);
-        }
-
-        return GenericResult<PhasedRows>.Success(new PhasedRows(loading, rejecting));
-    }
-
-    private static IGenericResult ValidateLoadPhase(string? loadMode, List<PipelineLoadStepConfiguration> rows, ILogger logger)
-    {
-        PipelineLoadStepConfiguration? ownLoad = null;
-        var ownLoadCount = 0;
-        var steps = new List<(int Order, PipelineLoadStepConfiguration Step)>();
-        foreach (var row in rows)
-        {
-            if (row.StepOrder is { } order)
-            {
-                steps.Add((order, row));
-            }
-            else
-            {
-                ownLoad = row;
-                ownLoadCount++;
-            }
-        }
-
-        if (ownLoadCount > 1)
-            return GenericResult.Failure(PipelineLoadLog.OwnLoadRepeated(logger));
-
-        return steps.Count == 0
-            ? ValidateImplicitLoad(loadMode, ownLoad, logger)
-            : ValidateStepLoad(loadMode, ownLoad, steps, logger);
-    }
-
-    private sealed record PhasedRows(List<PipelineLoadStepConfiguration> Loading, List<PipelineLoadStepConfiguration> Rejecting);
-
-    private static IGenericResult ValidateImplicitLoad(string? loadMode, PipelineLoadStepConfiguration? ownLoad, ILogger logger)
-    {
-        if (string.IsNullOrWhiteSpace(loadMode))
-            return GenericResult.Failure(PipelineLoadLog.LoadModeMissing(logger));
-
-        var mode = LoadModes.ByName(loadMode);
-        if (ReferenceEquals(mode, LoadModes.NotFound))
-            return GenericResult.Failure(PipelineLoadLog.PipelineLoadModeUnknown(logger, loadMode));
-        if (ownLoad is null)
-        {
-            return mode.UsesKeyColumns || mode.UsesWriteColumns
-                ? GenericResult.Failure(PipelineLoadLog.LoadModeNeedsOptions(logger, loadMode))
-                : GenericResult.Success();
-        }
-
-        var fields = ValidateOwnLoadFields(ownLoad, logger);
-        if (fields.IsFailure)
-            return fields;
-        var options = ValidateOptions(OwnLoadLabel, ownLoad, mode, loadMode, logger);
-        return options.IsFailure ? options : ValidateValueSources(OwnLoadLabel, ownLoad, hasSourceDataSet: false, forContainer: false, logger);
-    }
-
-    private static IGenericResult ValidateOwnLoadFields(PipelineLoadStepConfiguration ownLoad, ILogger logger)
-    {
-        if (Has(ownLoad.Kind))
-            return GenericResult.Failure(PipelineLoadLog.OwnLoadStatesStepOption(logger, "a kind"));
-        if (Has(ownLoad.DestinationDataSet))
-            return GenericResult.Failure(PipelineLoadLog.OwnLoadStatesStepOption(logger, "a destination data set"));
-        if (Has(ownLoad.SourceDataSet))
-            return GenericResult.Failure(PipelineLoadLog.OwnLoadStatesStepOption(logger, "a source data set"));
-        if (Has(ownLoad.FilterExpression))
-            return GenericResult.Failure(PipelineLoadLog.OwnLoadStatesStepOption(logger, "a filter expression"));
-        return Has(ownLoad.DestinationDataStoreName) || Has(ownLoad.DestinationPathName) || Has(ownLoad.DestinationContainerName)
-            ? GenericResult.Failure(PipelineLoadLog.OwnLoadStatesStepOption(logger, "a destination container"))
-            : GenericResult.Success();
-    }
-
-    private static IGenericResult ValidateStepLoad(
-        string? loadMode,
-        PipelineLoadStepConfiguration? ownLoad,
-        List<(int Order, PipelineLoadStepConfiguration Step)> steps,
-        ILogger logger)
-    {
-        if (!string.IsNullOrWhiteSpace(loadMode))
-            return GenericResult.Failure(PipelineLoadLog.LoadModeWithSteps(logger, loadMode));
-        if (ownLoad is not null)
-            return GenericResult.Failure(PipelineLoadLog.OwnLoadWithSteps(logger));
-
-        var seenOrders = new HashSet<int>();
-        var seenNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (order, step) in steps)
-        {
-            var identity = ValidateStepIdentity(order, step, steps.Count, seenOrders, seenNames, logger);
-            if (identity.IsFailure)
-                return identity;
-            var result = ValidateStep(step, string.Concat("load step '", step.Name, "'"), logger);
-            if (result.IsFailure)
-                return result;
-        }
-
-        return GenericResult.Success();
-    }
-
-    internal static IGenericResult ValidateStepIdentity(
-        int order,
-        PipelineLoadStepConfiguration step,
-        int stepCount,
-        HashSet<int> seenOrders,
-        HashSet<string> seenNames,
-        ILogger logger)
-    {
-        if (string.IsNullOrWhiteSpace(step.Name))
-            return GenericResult.Failure(PipelineLoadLog.LoadStepNameBlank(logger, order));
-        if (order < 1 || order > stepCount)
-            return GenericResult.Failure(PipelineLoadLog.LoadStepOrderInvalid(logger, step.Name, order, stepCount));
-        if (!seenOrders.Add(order))
-            return GenericResult.Failure(PipelineLoadLog.LoadStepOrderDuplicated(logger, order));
-        return seenNames.Add(step.Name)
-            ? GenericResult.Success()
-            : GenericResult.Failure(PipelineLoadLog.LoadStepNameDuplicated(logger, step.Name));
-    }
-
-    internal static IGenericResult ValidateStep(PipelineLoadStepConfiguration step, string owner, ILogger logger)
-    {
-        if (string.IsNullOrWhiteSpace(step.Kind))
-            return GenericResult.Failure(PipelineLoadLog.LoadStepKindMissing(logger, owner));
-
-        var kind = LoadStepKinds.ByName(step.Kind);
-        if (ReferenceEquals(kind, LoadStepKinds.NotFound))
-            return GenericResult.Failure(PipelineLoadLog.LoadStepKindUnknown(logger, owner, step.Kind));
-        if (!Has(step.DestinationDataSet))
-            return GenericResult.Failure(PipelineLoadLog.LoadStepDestinationMissing(logger, owner));
-
-        var fields = ValidateKindFields(owner, step, kind, logger);
-        if (fields.IsFailure)
-            return fields;
-        var options = ValidateOptions(owner, step, kind, kind.Name, logger);
-        return options.IsFailure ? options : ValidateValueSources(owner, step, kind.UsesSourceDataSet, kind.UsesDestinationContainer, logger);
-    }
-
-    private static IGenericResult ValidateKindFields(string owner, PipelineLoadStepConfiguration step, ILoadStepKind kind, ILogger logger)
-    {
-        var source = CheckOption(owner, "a source data set", Has(step.SourceDataSet), kind.UsesSourceDataSet, kind.UsesSourceDataSet, kind.Name, logger);
-        if (source.IsFailure)
-            return source;
-        var filter = CheckOption(owner, "a filter expression", Has(step.FilterExpression), required: false, allowed: kind.UsesSourceDataSet, kind.Name, logger);
-        if (filter.IsFailure)
-            return filter;
-        var store = CheckOption(owner, "a destination data store", Has(step.DestinationDataStoreName), kind.UsesDestinationContainer, kind.UsesDestinationContainer, kind.Name, logger);
-        if (store.IsFailure)
-            return store;
-        var path = CheckOption(owner, "a destination container path", Has(step.DestinationPathName), kind.UsesDestinationContainer, kind.UsesDestinationContainer, kind.Name, logger);
-        return path.IsFailure
-            ? path
-            : CheckOption(owner, "a destination container name", Has(step.DestinationContainerName), kind.UsesDestinationContainer, kind.UsesDestinationContainer, kind.Name, logger);
-    }
-
-    private static IGenericResult ValidateOptions(
-        string owner,
-        PipelineLoadStepConfiguration row,
-        ILoadOptionShape shape,
-        string shapeName,
-        ILogger logger)
-    {
-        var columns = ValidateColumnLists(owner, row, shape, shapeName, logger);
-        if (columns.IsFailure)
-            return columns;
-        var versioning = ValidateVersioning(owner, row, shape, shapeName, logger);
-        return versioning.IsFailure ? versioning : ValidateSoftDelete(owner, row, shape, shapeName, logger);
-    }
-
-    private static IGenericResult ValidateColumnLists(
+    internal static IGenericResult ValidateColumnLists(
         string owner,
         PipelineLoadStepConfiguration row,
         ILoadOptionShape shape,
@@ -295,7 +82,7 @@ public static class PipelineLoadValidator
             : GenericResult.Failure(PipelineLoadLog.LoadStepOptionNotApplicable(logger, owner, option, shapeName));
     }
 
-    private static IGenericResult ValidateVersioning(
+    internal static IGenericResult ValidateVersioning(
         string owner,
         PipelineLoadStepConfiguration row,
         ILoadOptionShape shape,
@@ -341,7 +128,7 @@ public static class PipelineLoadValidator
         return GenericResult.Failure(PipelineLoadLog.LoadOptionPairIncomplete(logger, owner, option, hasFirst ? secondName : firstName));
     }
 
-    private static IGenericResult ValidateSoftDelete(
+    internal static IGenericResult ValidateSoftDelete(
         string owner,
         PipelineLoadStepConfiguration row,
         ILoadOptionShape shape,
@@ -406,7 +193,7 @@ public static class PipelineLoadValidator
         return GenericResult.Success();
     }
 
-    private static IGenericResult ValidateValueSources(
+    internal static IGenericResult ValidateValueSources(
         string owner,
         PipelineLoadStepConfiguration row,
         bool hasSourceDataSet,
@@ -507,32 +294,6 @@ public static class PipelineLoadValidator
         return ReferenceEquals(DataTypes.ByName(source.ConstantDataType!), DataTypes.NotFound)
             ? GenericResult.Failure(PipelineLoadLog.ValueSourceConstantTypeUnknown(logger, owner, source.ColumnName, source.ConstantDataType!))
             : GenericResult.Success();
-    }
-
-    private static IGenericResult ValidateRunParameters(IList<PipelineRunParameterConfiguration>? runParameters, ILogger logger)
-    {
-        if (runParameters is null)
-            return GenericResult.Success();
-
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var parameter in runParameters)
-        {
-            if (string.IsNullOrWhiteSpace(parameter.Name))
-                return GenericResult.Failure(PipelineLoadLog.RunParameterNameBlank(logger));
-            if (!seen.Add(parameter.Name))
-                return GenericResult.Failure(PipelineLoadLog.RunParameterNameDuplicated(logger, parameter.Name));
-            if (!IsRunParameterType(parameter.ParameterType))
-                return GenericResult.Failure(PipelineLoadLog.RunParameterTypeUnknown(logger, parameter.Name, parameter.ParameterType));
-        }
-
-        return GenericResult.Success();
-    }
-
-    // A run parameter's type is a data type whose values have a text form that fits in an expression.
-    private static bool IsRunParameterType(string name)
-    {
-        var type = DataTypes.ByName(name);
-        return !ReferenceEquals(type, DataTypes.NotFound) && type.RendersInExpressions;
     }
 
     private static bool Has(string? value) => !string.IsNullOrWhiteSpace(value);

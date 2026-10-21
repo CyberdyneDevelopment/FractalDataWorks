@@ -10,7 +10,7 @@ namespace Fdw.Services.Connections.Abstractions;
 /// <c>[TypeOption(typeof(CommandCapabilityTypes), …)]</c> registered in any loaded assembly.
 /// </summary>
 /// <remarks>
-/// Use <c>CommandCapabilityTypes.ByName("RawQuery")</c> for O(1) lookup.
+/// Use <c>CommandCapabilityTypes.ByName("Scripted")</c> for O(1) lookup.
 /// Use <c>CommandCapabilityTypes.All()</c> for enumeration.
 /// Connection types override <c>SupportedCommands</c> by calling <c>CommandCapabilityTypes.ByName(…)</c>
 /// rather than instantiating capability objects directly — the TypeCollection owns the singletons.

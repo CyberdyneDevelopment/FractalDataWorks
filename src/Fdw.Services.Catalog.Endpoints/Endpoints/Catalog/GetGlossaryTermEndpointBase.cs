@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Data;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
@@ -12,12 +14,15 @@ namespace Fdw.Services.Catalog.Endpoints;
 public abstract class GetGlossaryTermEndpointBase : Endpoint<GlossaryTermIdRequest, GlossaryTermResponse>
 {
     private readonly IGlossaryTermConfigurationProvider _provider;
+    private readonly ICategoryConfigurationProvider _categories;
 
     /// <summary>Initializes a new instance of the <see cref="GetGlossaryTermEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected GetGlossaryTermEndpointBase(IGlossaryTermConfigurationProvider provider)
+    /// <param name="categories">Reads the Glossary category tree the terms are organised in.</param>
+    protected GetGlossaryTermEndpointBase(IGlossaryTermConfigurationProvider provider, ICategoryConfigurationProvider categories)
     {
         _provider = provider;
+        _categories = categories;
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -52,19 +57,20 @@ public abstract class GetGlossaryTermEndpointBase : Endpoint<GlossaryTermIdReque
             return;
         }
 
-        await Send.OkAsync(MapToDto(result.Value), ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Maps a GlossaryTermImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual GlossaryTermResponse MapToDto(IGlossaryTermImplementationConfiguration config)
-    {
-        return new GlossaryTermResponse
+        var tree = await CategoryTrees.Load(_categories, GlossaryCategoryConfiguration.ImplementationName, Logger, ct).ConfigureAwait(false);
+        if (tree.IsFailure || tree.Value is null)
         {
-            Id = config.Id,
-            Name = config.Name,
-            Definition = config.Definition,
-            Category = config.Category,
-            Owner = config.Owner
-        };
+            await Send.ResultAsync(GlossaryCategoryLinks.Failure(tree, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var described = GlossaryCategoryLinks.Describe(result.Value, tree.Value, Logger);
+        if (described.IsFailure || described.Value is null)
+        {
+            await Send.ResultAsync(GlossaryCategoryLinks.Failure(described, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(described.Value, ct).ConfigureAwait(false);
     }
 }

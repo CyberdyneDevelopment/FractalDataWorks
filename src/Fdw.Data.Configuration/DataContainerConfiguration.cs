@@ -123,6 +123,25 @@ public partial class DataContainerConfiguration : IGenericConfiguration
     public string? SheetName { get; set; }
 
     /// <summary>
+    /// Gets or sets the path, after the connection's address, that the rows are sent to when this container is the destination
+    /// of an HTTP connection, for example <c>/api/v1/ingest</c>. Maps to <c>data.DataContainer.WriteEndpoint</c>. Null means
+    /// not stated: a destination that needs it fails naming it.
+    /// </summary>
+    public string? WriteEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP method the rows are sent with, <c>POST</c> or <c>PUT</c>. Maps to
+    /// <c>data.DataContainer.WriteMethod</c>. Null means not stated: a destination that needs it fails naming it.
+    /// </summary>
+    public string? WriteMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets the content type the rows are sent as, for example <c>application/json</c>. Maps to
+    /// <c>data.DataContainer.WriteContentType</c>. Null means not stated: a destination that needs it fails naming it.
+    /// </summary>
+    public string? WriteContentType { get; set; }
+
+    /// <summary>
     /// Gets or sets the fields (columns) within this container.
     /// </summary>
     /// <remarks>

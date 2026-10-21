@@ -28,7 +28,7 @@ public abstract class CommandCapabilityTypeBase : TypeOptionBase<CommandCapabili
     /// <summary>
     /// Initializes a new instance of the <see cref="CommandCapabilityTypeBase"/> class.
     /// </summary>
-    /// <param name="name">The TypeCollection lookup name (e.g., <c>"RawQuery"</c>).</param>
+    /// <param name="name">The TypeCollection lookup name (e.g., <c>"Scripted"</c>).</param>
     /// <param name="displayName">Human-readable label shown in the capability picker dropdown.</param>
     /// <param name="configurationFields">
     /// Field descriptors rendered as the properties-panel form for this capability.

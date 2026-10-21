@@ -37,12 +37,13 @@ public abstract class GetMapEndpointBase : MapEndpointBase<MapRequest>
         DataStoreConfigurationProvider dataStores,
         IPipelineConfigurationProvider pipelines,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IFrameworkAuthorizationService authorization)
         : base(logger)
     {
-        _sources = new MapSources(dataSets, dataStores, pipelines, variations);
+        _sources = new MapSources(dataSets, dataStores, pipelines, variations, categories);
         _scopes = new MapScopeSelector(workspaces, access, MapLogger);
         _authorization = authorization;
     }

@@ -26,14 +26,11 @@ This package declares 1 interface(s), 2 service/provider type(s), 5 model(s).
 | `OrchestrationNodeConfigurationProvider` | class | Configuration provider for OrchestrationNode — the blessed self-referencing-tree carve-out. |
 | `OrchestrationNodeOrchestratorBackgroundService` | class | Background service that dequeues orchestration node execution requests and dispatches them to in… |
 
-## Records (5)
+## Records (2)
 
 | Type | Kind | Purpose |
 |---|---|---|
 | `OrchestrationNodeExecutionRequest` | class | Work item enqueued by endpoints and dequeued by the orchestrator background service. Uses the root… |
-| `OrchestrationNodeLineageRecord` | class | Internal query record for reading pipe.OrchestrationNode rows for the lineage graph. Replaces the v1… |
-| `OrchestrationNodePipelineLineageRecord` | class | Internal query record for reading pipe.OrchestrationNodePipeline rows for the lineage graph. Represents… |
-| `OrchestrationNodePipelinePrerequisiteLineageRecord` | class | Internal query record for reading pipe.OrchestrationNodePipelinePrerequisite rows for the lineage graph.… |
 | `ProjectExecutionRequest` | class | Work item enqueued by endpoints and dequeued by the project orchestrator background service. |
 
 ## Types (19)
@@ -61,7 +58,7 @@ dotnet add package Fdw.Services.Etl.Projects --prerelease
 
 ## Dependencies
 
-`Fdw.Commands.Data` · `Fdw.Commands.Data.Extensions` · `Fdw.Configuration` · `Fdw.Data` · `Fdw.Data.Lineage` · `Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Operations.Endpoints` · `Fdw.Results` · `Fdw.Services` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Etl` · `Fdw.Services.Etl.Abstractions` · `Fdw.Services.Pipelines` · `Fdw.Services.Resiliency`
+`Fdw.Commands.Data` · `Fdw.Commands.Data.Extensions` · `Fdw.Configuration` · `Fdw.Data` · `Fdw.MessageLogging.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Operations.Endpoints` · `Fdw.Results` · `Fdw.Services` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Etl` · `Fdw.Services.Etl.Abstractions` · `Fdw.Services.Pipelines` · `Fdw.Services.Resiliency`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Configuration.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 

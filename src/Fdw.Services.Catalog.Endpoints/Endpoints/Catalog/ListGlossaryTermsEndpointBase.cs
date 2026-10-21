@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
 using Microsoft.AspNetCore.Http;
@@ -13,12 +14,15 @@ namespace Fdw.Services.Catalog.Endpoints;
 public abstract class ListGlossaryTermsEndpointBase : EndpointWithoutRequest<List<GlossaryTermResponse>>
 {
     private readonly IGlossaryTermConfigurationProvider _provider;
+    private readonly ICategoryConfigurationProvider _categories;
 
     /// <summary>Initializes a new instance of the <see cref="ListGlossaryTermsEndpointBase"/> class.</summary>
     /// <param name="provider">The configuration provider for quality and catalog data.</param>
-    protected ListGlossaryTermsEndpointBase(IGlossaryTermConfigurationProvider provider)
+    /// <param name="categories">Reads the Glossary category tree the terms are organised in.</param>
+    protected ListGlossaryTermsEndpointBase(IGlossaryTermConfigurationProvider provider, ICategoryConfigurationProvider categories)
     {
         _provider = provider;
+        _categories = categories;
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -52,28 +56,44 @@ public abstract class ListGlossaryTermsEndpointBase : EndpointWithoutRequest<Lis
 
         var terms = result.Value ?? [];
 
-        if (!string.IsNullOrWhiteSpace(query))
+        // ?q matches the name, the definition and what an acronym stands for; ?acronym= and ?approved= take true or false (FDW-1682).
+        var filtered = GlossaryTermFilter.Apply(
+            terms, query, HttpContext.Request.Query["acronym"].FirstOrDefault(), HttpContext.Request.Query["approved"].FirstOrDefault(), Logger);
+        if (filtered.IsFailure || filtered.Value is null)
         {
-            terms = terms
-                .Where(t =>
-                    t.Name.Contains(query, System.StringComparison.OrdinalIgnoreCase) ||
-                    t.Definition.Contains(query, System.StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            await Send.ResultAsync(GlossaryCategoryLinks.Failure(filtered, HttpContext)).ConfigureAwait(false);
+            return;
         }
 
-        await Send.OkAsync(terms.Select(MapToDto).ToList(), ct).ConfigureAwait(false);
-    }
+        terms = filtered.Value;
 
-    /// <summary>Maps a GlossaryTermImplementationConfiguration to its corresponding DTO.</summary>
-    protected virtual GlossaryTermResponse MapToDto(IGlossaryTermImplementationConfiguration config)
-    {
-        return new GlossaryTermResponse
+        // ?category= names a category of the Glossary tree: the terms under it and under every category below it.
+        var category = await GlossaryCategoryLinks.Requested(_categories, HttpContext.Request.Query["category"].FirstOrDefault(), Logger, ct).ConfigureAwait(false);
+        if (category.IsFailure)
         {
-            Id = config.Id,
-            Name = config.Name,
-            Definition = config.Definition,
-            Category = config.Category,
-            Owner = config.Owner
-        };
+            await Send.ResultAsync(GlossaryCategoryLinks.Failure(category, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        if (category.Value.Id is { } categoryId)
+        {
+            var under = category.Value.Tree.SelfAndDescendants(categoryId);
+            terms = terms.Where(t => t.CategoryId is { } cited && under.Contains(cited)).ToList();
+        }
+
+        List<GlossaryTermResponse> answers = [];
+        foreach (var term in terms)
+        {
+            var described = GlossaryCategoryLinks.Describe(term, category.Value.Tree, Logger);
+            if (described.IsFailure || described.Value is null)
+            {
+                await Send.ResultAsync(GlossaryCategoryLinks.Failure(described, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            answers.Add(described.Value);
+        }
+
+        await Send.OkAsync(answers, ct).ConfigureAwait(false);
     }
 }

@@ -27,8 +27,11 @@ public class DataSetDetailResponse : ResourceDetail
     /// <summary>Gets or sets the data set version.</summary>
     public string? Version { get; set; }
 
-    /// <summary>Gets or sets the data set category.</summary>
+    /// <summary>Gets or sets the name of the category the data set sits under; null when it sits under none.</summary>
     public string? Category { get; set; }
+
+    /// <summary>Gets or sets the display names from the top of the category tree down to the data set's category, joined by " / "; null when it sits under none.</summary>
+    public string? CategoryPath { get; set; }
 
     /// <summary>
     /// Gets or sets the dataset strategy discriminator: "Simple", "Compound", or "Federated"

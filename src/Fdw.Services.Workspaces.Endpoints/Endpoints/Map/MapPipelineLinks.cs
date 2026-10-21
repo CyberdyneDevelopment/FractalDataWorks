@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 
 namespace Fdw.Services.Workspaces.Endpoints;
 
 /// <summary>What a pipeline's edges are drawn from: the data sets it names, by name, as the pipeline configuration holds them.</summary>
 /// <param name="Id">The pipeline's logical id.</param>
-/// <param name="SourceDataSetName">The data set it reads, or nothing when it names none.</param>
-/// <param name="DestinationDataSetName">The data set it writes, or nothing when it names none.</param>
-internal sealed record MapPipelineLinks(Guid Id, string? SourceDataSetName, string? DestinationDataSetName);
+/// <param name="SourceDataSetNames">The data sets it reads: none when it names none, several for a graph with several sources.</param>
+/// <param name="DestinationDataSetNames">The data sets it writes: none when it names none, several for a graph with several destinations.</param>
+internal sealed record MapPipelineLinks(Guid Id, IReadOnlyList<string> SourceDataSetNames, IReadOnlyList<string> DestinationDataSetNames);

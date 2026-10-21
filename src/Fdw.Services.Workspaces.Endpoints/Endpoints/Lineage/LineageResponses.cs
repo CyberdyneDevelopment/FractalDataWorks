@@ -10,31 +10,26 @@ namespace Fdw.Services.Workspaces.Endpoints;
 /// <summary>Shapes lineage walks into the responses the endpoints send.</summary>
 internal static class LineageResponses
 {
-    /// <summary>Reads the pipeline each edge passes through, when pipelines are named at all; one stage-count read per pipeline.</summary>
-    public static async Task<IGenericResult<Dictionary<string, LineageViaDto>>> Vias(
-        LineageReader reader, LineageGraph graph, List<LineageFlow> flows, bool named, CancellationToken ct)
+    /// <summary>Names the pipeline each edge passes through, when pipelines are named at all.</summary>
+    public static Dictionary<string, LineageViaDto> Vias(LineageGraph graph, List<LineageFlow> flows, bool named)
     {
         var vias = new Dictionary<string, LineageViaDto>(StringComparer.Ordinal);
-        if (!named) return GenericResult<Dictionary<string, LineageViaDto>>.Success(vias);
+        if (!named) return vias;
 
         var ids = flows
             .Where(flow => flow.PipelineId is not null)
             .Select(flow => flow.PipelineId!)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        var counts = await reader.StageCounts(ids, ct).ConfigureAwait(false);
-        if (counts.IsFailure) return counts.ToNewResult<Dictionary<string, LineageViaDto>>();
+            .Distinct(StringComparer.Ordinal);
 
         foreach (var id in ids)
         {
             var pipeline = graph.Pipeline(id);
             if (pipeline is null) continue;
 
-            counts.Value!.TryGetValue(id, out var stages);
-            vias[id] = new LineageViaDto { Id = id, Name = pipeline.Name, IsEnabled = pipeline.IsEnabled, StageCount = stages, CanEdit = pipeline.CanEdit };
+            vias[id] = new LineageViaDto { Id = id, Name = pipeline.Name, IsEnabled = pipeline.IsEnabled, CanEdit = pipeline.CanEdit };
         }
 
-        return GenericResult<Dictionary<string, LineageViaDto>>.Success(vias);
+        return vias;
     }
 
     /// <summary>Shapes a neighbourhood walk.</summary>

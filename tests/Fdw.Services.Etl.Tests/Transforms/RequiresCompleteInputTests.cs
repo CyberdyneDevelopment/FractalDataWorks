@@ -3,7 +3,7 @@ using Fdw.Services.Etl.Transforms;
 namespace Fdw.Services.Etl.Tests.Transforms;
 
 /// <summary>
-/// Which transforms need the whole input decides whether <c>BatchCopyPipeline</c> may hand records on
+/// Which transforms need the whole input decides whether a stage may hand records on
 /// page by page (FDW-946). Getting it wrong for an aggregate would give per-page groups instead of
 /// whole-set groups, so the answer is pinned per transform.
 /// </summary>
@@ -27,7 +27,6 @@ public sealed class RequiresCompleteInputTests
     public void RowAtATimeTransformsDoNotRequireCompleteInput()
     {
         // Act / Assert
-        new MapTransformType().RequiresCompleteInput.ShouldBeFalse();
         new FilterTransformType().RequiresCompleteInput.ShouldBeFalse();
         new CalculateTransformType().RequiresCompleteInput.ShouldBeFalse();
         new LookupTransformType().RequiresCompleteInput.ShouldBeFalse();

@@ -9,6 +9,8 @@ using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Pipelines.Commands;
+using Fdw.Services.Pipelines.Scripts;
+using Fdw.Services.Pipelines.Webhooks;
 using Fdw.ServiceTypes;
 using Fdw.ServiceTypes.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -115,6 +117,46 @@ public partial class PipelineServiceTypes : ServiceTypeCollectionBase<PipelineSe
 
                 return provider;
             });
+
+            // A stored SQL script is its own domain with one implementation, Sql (FDW-1442). It is registered beside the
+            // pipeline domain and is read through its own provider; it never appears among the pipelines.
+            builder.Services.TryAddSingleton<SqlScriptConfigurationProvider>(sp =>
+                new SqlScriptConfigurationProvider(
+                    sp.GetRequiredService<ILogger<SqlScriptConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    PipelineServiceTypes.ConfigurationConnection, "pipe", "SqlScriptConfiguration"));
+            builder.Services.TryAddSingleton<ScriptConfigurationProvider>(sp =>
+            {
+                var domain = new ScriptConfigurationProvider(
+                    sp.GetRequiredService<ILogger<ScriptConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    PipelineServiceTypes.ConfigurationConnection, "pipe", "Script");
+                domain.Register("Sql", sp.GetRequiredService<SqlScriptConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IScriptConfigurationProvider>(sp => sp.GetRequiredService<ScriptConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ISqlScriptImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IScriptConfigurationProvider>());
+
+            // A webhook trigger is its own domain with one implementation, Webhook (FDW-1884), registered beside the stored
+            // scripts the same way: it is read through its own provider and never appears among the pipelines.
+            builder.Services.TryAddSingleton<WebhookTriggerImplementationProvider>(sp =>
+                new WebhookTriggerImplementationProvider(
+                    sp.GetRequiredService<ILogger<WebhookTriggerImplementationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    PipelineServiceTypes.ConfigurationConnection, "pipe", "WebhookTriggerConfiguration"));
+            builder.Services.TryAddSingleton<WebhookTriggerConfigurationProvider>(sp =>
+            {
+                var domain = new WebhookTriggerConfigurationProvider(
+                    sp.GetRequiredService<ILogger<WebhookTriggerConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    PipelineServiceTypes.ConfigurationConnection, "pipe", "WebhookTrigger");
+                domain.Register("Webhook", sp.GetRequiredService<WebhookTriggerImplementationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IWebhookTriggerConfigurationProvider>(sp => sp.GetRequiredService<WebhookTriggerConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<IWebhookTriggerImplementationConfiguration>>(
+                sp => sp.GetRequiredService<IWebhookTriggerConfigurationProvider>());
 
             foreach (var option in Options)
             {

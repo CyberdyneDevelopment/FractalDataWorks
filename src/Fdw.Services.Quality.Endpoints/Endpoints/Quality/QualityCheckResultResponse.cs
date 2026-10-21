@@ -8,6 +8,9 @@ public class QualityCheckResultResponse
     /// <summary>Gets or sets the identifier of the quality rule that was executed.</summary>
     public Guid RuleId { get; set; }
 
+    /// <summary>Gets or sets the identifier under which this execution's verdict was recorded (read it at <c>GET /quality/rules/{Id}/executions</c>).</summary>
+    public Guid ExecutionId { get; set; }
+
     /// <summary>Gets or sets the execution status (e.g., Passed, Failed, Skipped, NotRun, NotSupported).</summary>
     public string Status { get; set; } = "NotRun";
 

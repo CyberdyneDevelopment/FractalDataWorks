@@ -1,3 +1,4 @@
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Pipelines.Loads;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -9,7 +10,7 @@ namespace Fdw.Services.Etl.Tests.Pipelines.Loads;
 /// </summary>
 public sealed class PipelineRunParameterValuesTests
 {
-    private static PipelineRunParameterConfiguration Declared(string name, string type, bool required = false) =>
+    private static PipelineParameterConfiguration Declared(string name, string type, bool required = false) =>
         new() { Name = name, ParameterType = type, IsRequired = required };
 
     private static List<KeyValuePair<string, string>> Supplied(params (string Name, string Value)[] pairs) =>
@@ -21,7 +22,7 @@ public sealed class PipelineRunParameterValuesTests
     public void ResolveReadsEachValueAsItsDeclaredType()
     {
         // Arrange
-        IList<PipelineRunParameterConfiguration> declared =
+        IList<PipelineParameterConfiguration> declared =
         [
             Declared("Region", "String"), Declared("Limit", "Int64"), Declared("Rate", "Decimal"), Declared("Since", "DateTimeOffset"), Declared("Full", "Bool"),
         ];

@@ -10,8 +10,7 @@ namespace Fdw.Services.Scheduling.Abstractions;
 /// <see cref="ISchedulingCommand"/> into an implementation's native call — mirrors
 /// <c>IDataCommandTranslator&lt;TCommand&gt;</c> for connections.
 /// </summary>
-/// <typeparam name="TNative">The native type this translator produces (e.g. Quartz's <c>ITrigger</c>,
-/// Hangfire's recurring-job call shape).</typeparam>
+/// <typeparam name="TNative">The native type this translator produces (e.g. Quartz's <c>ITrigger</c>).</typeparam>
 /// <remarks>
 /// One command per operation, shared by every implementation. Only the translator varies per
 /// implementation — each implementation collects its own family of translators in its own
@@ -21,7 +20,7 @@ namespace Fdw.Services.Scheduling.Abstractions;
 public interface ISchedulingCommandTranslator<TNative> : ITypeOption<int>
 {
     /// <summary>
-    /// Gets the implementation name this translator targets (e.g. "Quartz", "Hangfire").
+    /// Gets the implementation name this translator targets (e.g. "Quartz").
     /// </summary>
     string DomainName { get; }
 

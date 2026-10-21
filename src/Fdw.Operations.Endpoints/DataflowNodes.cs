@@ -13,12 +13,14 @@ namespace Fdw.Operations.Endpoints;
 internal static class DataflowNodes
 {
     /// <summary>A data set node.</summary>
-    public static DataflowNodeDto DataSet(DataSetRecord dataSet) => new()
+    /// <param name="dataSet">The data set, composed.</param>
+    /// <param name="categoryPath">The path of the category the data set sits under; null when it sits under none.</param>
+    public static DataflowNodeDto DataSet(IDataSetImplementationConfiguration dataSet, string? categoryPath) => new()
     {
         Id = DataflowNodeIds.DataSet(dataSet.Id),
         Label = dataSet.Name,
         NodeType = "dataset",
-        Category = dataSet.Category,
+        Category = categoryPath,
         Metadata = Metadata(
             ("version", dataSet.Version),
             ("description", dataSet.Description),
@@ -100,6 +102,6 @@ internal static class DataflowNodes
 
     private static Dictionary<string, object> Metadata(params (string Key, object? Value)[] entries)
         => entries
-            .Where(e => e.Value is not null)
+            .Where(e => e.Value is not null and not "")
             .ToDictionary(e => e.Key, e => e.Value!, StringComparer.Ordinal);
 }

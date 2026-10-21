@@ -23,8 +23,11 @@ public sealed class CatalogServiceTests
         return new CatalogService(loggerFactory, termsMonitor.Object, annotationsMonitor.Object);
     }
 
-    private static GlossaryTermImplementationConfiguration MakeTerm(string name, string definition = "def", string category = "Finance")
-        => new() { Name = name, Definition = definition, Category = category };
+    private static readonly Guid Finance = Guid.CreateVersion7();
+    private static readonly Guid Engineering = Guid.CreateVersion7();
+
+    private static GlossaryTermImplementationConfiguration MakeTerm(string name, string definition = "def", Guid? category = null)
+        => new() { Name = name, Definition = definition, CategoryId = category };
 
     // ── SearchTerms ─────────────────────────────────────────────────────────
 
@@ -65,10 +68,10 @@ public sealed class CatalogServiceTests
     public async Task SearchTermsWithCategoryFilterReturnsMatchingCategoryOnly()
     {
         var service = CreateService();
-        await service.CreateTerm(MakeTerm("Revenue", category: "Finance"), TestContext.Current.CancellationToken);
-        await service.CreateTerm(MakeTerm("Latency", category: "Engineering"), TestContext.Current.CancellationToken);
+        await service.CreateTerm(MakeTerm("Revenue", category: Finance), TestContext.Current.CancellationToken);
+        await service.CreateTerm(MakeTerm("Latency", category: Engineering), TestContext.Current.CancellationToken);
 
-        var result = await service.SearchTerms(null, "engineering", TestContext.Current.CancellationToken);
+        var result = await service.SearchTerms(null, Engineering, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Count.ShouldBe(1);

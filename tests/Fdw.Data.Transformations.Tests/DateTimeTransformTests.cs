@@ -67,6 +67,50 @@ public sealed class DateTimeTransformTests
     }
 
     [Fact]
+    public async Task AddDurationInTicksAddsExactlyOneHundredNanosecondsPerTick()
+    {
+        // FDW-1983: "the last successful run plus one tick" and "the run's start minus one tick" are written in the unit Ticks.
+        var start = new DateTimeOffset(2026, 8, 26, 10, 0, 0, TimeSpan.Zero);
+
+        var after = await new AddDurationFieldTransformer().Transform(
+            start, TransformTestContext.With(("amount", "1"), ("unit", "Ticks")), TestContext.Current.CancellationToken);
+        var before = await new AddDurationFieldTransformer().Transform(
+            start, TransformTestContext.With(("amount", "-1"), ("unit", "Ticks")), TestContext.Current.CancellationToken);
+
+        after.IsSuccess.ShouldBeTrue();
+        after.Value.ShouldBeOfType<DateTimeOffset>().Ticks.ShouldBe(start.Ticks + 1);
+        before.Value.ShouldBeOfType<DateTimeOffset>().Ticks.ShouldBe(start.Ticks - 1);
+    }
+
+    [Fact]
+    public async Task AddDurationInMillisecondsAddsThousandthsOfASecond()
+    {
+        var result = await new AddDurationFieldTransformer().Transform(
+            new DateTimeOffset(2026, 8, 26, 10, 0, 0, TimeSpan.Zero),
+            TransformTestContext.With(("amount", "250"), ("unit", "Milliseconds")),
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBeOfType<DateTimeOffset>().ToUniversalTime().ShouldBe(new DateTimeOffset(2026, 8, 26, 10, 0, 0, 250, TimeSpan.Zero));
+    }
+
+    [Theory]
+    [InlineData("1.5")]
+    [InlineData("1e30")]
+    public void AnAmountOfTicksThatIsNotAWholeNumberThatFitsIsRefusedNotRounded(string amount)
+    {
+        var refused = Should.Throw<InvalidOperationException>(() =>
+        {
+            _ = new AddDurationFieldTransformer().Transform(
+                new DateTimeOffset(2026, 8, 26, 10, 0, 0, TimeSpan.Zero),
+                TransformTestContext.With(("amount", amount), ("unit", "Ticks")),
+                TestContext.Current.CancellationToken);
+        });
+
+        refused.Message.ShouldContain("Ticks");
+    }
+
+    [Fact]
     public async Task TimezoneMovesTheInstantIntoTheNamedZone()
     {
         // Same instant, expressed in Eastern — August is daylight time, so UTC-4. The zone name is a

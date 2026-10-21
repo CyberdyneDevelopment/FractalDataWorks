@@ -19,6 +19,12 @@ public sealed class NotificationConfigurationValidatorTests
 
         public string Domain { get; set; } = string.Empty;
         public string Implementation { get; set; } = string.Empty;
+
+        public bool IsEnabled { get; set; }
+
+        public string? SecretManagerName { get; set; }
+
+        public string? SecretKeyName { get; set; }
     }
 
     private readonly NotificationConfigurationValidator _sut = new();

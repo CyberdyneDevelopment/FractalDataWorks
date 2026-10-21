@@ -35,7 +35,7 @@ public abstract class SchedulerTypeBase<TService, TConfiguration, TFactory> :
     /// </summary>
     /// <remarks>
     /// Identifies the underlying scheduling framework or implementation
-    /// (e.g., "Quartz.NET", "Hangfire", "FluentScheduler", "TaskScheduler").
+    /// (e.g., "Quartz.NET", "FluentScheduler", "TaskScheduler").
     /// </remarks>
     public string SchedulingEngine { get; }
 

@@ -8,6 +8,7 @@ public sealed class RateLimitingTypeCollectionFixture
     public RateLimitingTypeCollectionFixture()
     {
         _ = RateLimitPolicies.All();
+        _ = RateLimitPartitionings.All();
     }
 }
 

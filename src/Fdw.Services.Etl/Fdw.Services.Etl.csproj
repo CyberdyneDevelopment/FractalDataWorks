@@ -19,7 +19,7 @@
     <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />
     <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
     <!-- Why: IHttpRecordWriterConnection is in Http.Abstractions — needed for write-capability feature detection
-         in BatchCopyPipeline.LoadToConnection (connection type invisible above the connection layer). -->
+         in the HTTP record loads (connection type invisible above the connection layer). -->
     <ProjectReference Include="..\Fdw.Services.Connections.Http.Abstractions\Fdw.Services.Connections.Http.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
@@ -34,6 +34,7 @@
     <ProjectReference Include="..\Fdw.Data.DataSets\Fdw.Data.DataSets.csproj" />
     <ProjectReference Include="..\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Connections\Fdw.Services.Connections.csproj" />
+    <ProjectReference Include="..\Fdw.Services.EtlGateway\Fdw.Services.EtlGateway.csproj" />
     <ProjectReference Include="..\Fdw.Services.Notifications.Abstractions\Fdw.Services.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\Fdw.Services.Calculations\Fdw.Services.Calculations.csproj" />

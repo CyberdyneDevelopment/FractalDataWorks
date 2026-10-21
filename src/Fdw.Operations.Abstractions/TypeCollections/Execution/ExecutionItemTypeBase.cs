@@ -1,3 +1,4 @@
+using System;
 using Fdw.Collections;
 
 namespace Fdw.Operations.Abstractions.TypeCollections.Execution;
@@ -24,6 +25,7 @@ public abstract class ExecutionItemTypeBase : TypeOptionBase<ExecutionItemTypeBa
         HierarchyLevel = -1;
         CanHaveChildren = false;
         CanHaveParent = false;
+        CanContainSelf = false;
     }
 
     /// <summary>
@@ -34,17 +36,20 @@ public abstract class ExecutionItemTypeBase : TypeOptionBase<ExecutionItemTypeBa
     /// <param name="hierarchyLevel">Level in the hierarchy (0 = root).</param>
     /// <param name="canHaveChildren">Whether this type can have children.</param>
     /// <param name="canHaveParent">Whether this type can have a parent.</param>
+    /// <param name="canContainSelf">Whether an item of this type can contain another item of the same type (a Job that starts a Job).</param>
     protected ExecutionItemTypeBase(
         string name,
         string displayName,
         int hierarchyLevel,
         bool canHaveChildren,
-        bool canHaveParent)
+        bool canHaveParent,
+        bool canContainSelf)
         : base(name, $"TypeOptions:{name}", displayName, $"Execution item type: {name}", null)
     {
         HierarchyLevel = hierarchyLevel;
         CanHaveChildren = canHaveChildren;
         CanHaveParent = canHaveParent;
+        CanContainSelf = canContainSelf;
     }
 
     /// <inheritdoc />
@@ -55,6 +60,9 @@ public abstract class ExecutionItemTypeBase : TypeOptionBase<ExecutionItemTypeBa
 
     /// <inheritdoc />
     public bool CanHaveParent { get; }
+
+    /// <inheritdoc />
+    public bool CanContainSelf { get; }
 
     /// <inheritdoc />
     public bool CanContain(IExecutionItemType childType)
@@ -73,6 +81,8 @@ public abstract class ExecutionItemTypeBase : TypeOptionBase<ExecutionItemTypeBa
 
         // Flexible containment: any type can contain any type at a lower hierarchy level
         // This allows Workflow to directly contain Task, or use full hierarchy as needed
-        return childType.HierarchyLevel > HierarchyLevel;
+        // A type that states it nests (a Job: a pipeline run that starts another) may also contain its own type.
+        return childType.HierarchyLevel > HierarchyLevel
+            || (CanContainSelf && string.Equals(childType.Name, Name, StringComparison.Ordinal));
     }
 }

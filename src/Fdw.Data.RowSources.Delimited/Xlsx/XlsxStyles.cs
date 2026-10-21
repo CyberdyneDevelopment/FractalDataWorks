@@ -17,14 +17,19 @@ internal static class XlsxStyles
 {
     private const string Part = "xl/styles.xml";
 
+    // The kinds, looked up once by name: the collection holds them.
+    internal static readonly IXlsxValueKind KindNumber = XlsxValueKinds.ByName("Number");
+    private static readonly IXlsxValueKind KindDateTime = XlsxValueKinds.ByName("DateTime");
+    private static readonly IXlsxValueKind KindTime = XlsxValueKinds.ByName("Time");
+
     /// <summary>
     /// Reads the kind of every cell style, by style position. A workbook with no styles part has no number formats, so
     /// every number in it is a number: the table is empty.
     /// </summary>
     /// <param name="archive">The workbook's zip.</param>
-    internal static List<XlsxValueKind> Load(ZipArchive archive)
+    internal static List<IXlsxValueKind> Load(ZipArchive archive)
     {
-        var kinds = new List<XlsxValueKind>();
+        var kinds = new List<IXlsxValueKind>();
         if (archive.GetEntry(Part) is null)
         {
             return kinds;
@@ -70,7 +75,7 @@ internal static class XlsxStyles
             : throw new InvalidDataException($"'{text}' is not a number format id.");
     }
 
-    private static XlsxValueKind KindOf(int formatId, Dictionary<int, string> custom)
+    private static IXlsxValueKind KindOf(int formatId, Dictionary<int, string> custom)
     {
         if (custom.TryGetValue(formatId, out var code))
         {
@@ -79,16 +84,16 @@ internal static class XlsxStyles
 
         return formatId switch
         {
-            14 or 15 or 16 or 17 or 22 or (>= 27 and <= 36) or (>= 50 and <= 58) => XlsxValueKind.DateTime,
-            18 or 19 or 20 or 21 or 45 or 46 or 47 => XlsxValueKind.Time,
-            _ => XlsxValueKind.Number,
+            14 or 15 or 16 or 17 or 22 or (>= 27 and <= 36) or (>= 50 and <= 58) => KindDateTime,
+            18 or 19 or 20 or 21 or 45 or 46 or 47 => KindTime,
+            _ => KindNumber,
         };
     }
 
     // A format with a year or a day is a date; one with only hours or seconds is a time. A lone m is a month (it is a
     // minute only beside an h or an s, which already make it a time). Only the first section is read: it is the one a
     // positive number takes.
-    private static XlsxValueKind KindOfCode(string code)
+    private static IXlsxValueKind KindOfCode(string code)
     {
         var date = false;
         var time = false;
@@ -100,10 +105,10 @@ internal static class XlsxStyles
 
         if (date)
         {
-            return XlsxValueKind.DateTime;
+            return KindDateTime;
         }
 
-        return time ? XlsxValueKind.Time : XlsxValueKind.Number;
+        return time ? KindTime : KindNumber;
     }
 
     private static string Visible(string code)

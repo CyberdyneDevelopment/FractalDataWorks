@@ -17,7 +17,7 @@ public interface IPipeline : IDisposable, IGenericService
     string Name { get; }
 
     /// <summary>
-    /// Gets the pipeline type name (the engine discriminator, e.g. "BatchCopy", "Streaming").
+    /// Gets the pipeline type name (the engine discriminator, "Graph").
     /// </summary>
     string PipelineType { get; }
 

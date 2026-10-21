@@ -71,6 +71,17 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             });
             builder.Services.TryAddSingleton<ITenantSettingConfigurationProvider>(sp => sp.GetRequiredService<TenantSettingConfigurationProvider>());
 
+            builder.Services.AddSingleton<IOrganizationSettingImplementationConfigurationProvider, OrganizationSettingImplementationConfigurationProvider>(sp => new OrganizationSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<OrganizationSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "OrganizationSettingConfiguration"));
+            builder.Services.TryAddSingleton<OrganizationSettingConfigurationProvider>(sp =>
+            {
+                var domain = new OrganizationSettingConfigurationProvider(
+                    sp.GetRequiredService<ILogger<OrganizationSettingConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "OrganizationSetting");
+                domain.Register("OrganizationSetting", sp.GetRequiredService<IOrganizationSettingImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IOrganizationSettingConfigurationProvider>(sp => sp.GetRequiredService<OrganizationSettingConfigurationProvider>());
+
 
             builder.Services.AddSingleton<IServerSettingImplementationConfigurationProvider, ServerSettingImplementationConfigurationProvider>(sp => new ServerSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "ServerSettingConfiguration"));
             // The domain is built with its one implementation registered into it, as RoleMapping is:
@@ -86,6 +97,13 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<IServerSettingConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
+            // Scoped: it finds an organization's tenant through the organization scope of the caller acting in it (FDW-1579).
+            builder.Services.TryAddScoped<IInheritedSettings>(sp => new InheritedSettings(
+                sp.GetRequiredService<IServerSettingConfigurationProvider>(),
+                sp.GetRequiredService<ITenantSettingConfigurationProvider>(),
+                sp.GetRequiredService<IOrganizationSettingConfigurationProvider>(),
+                sp.GetRequiredService<Fdw.Services.Authorization.Abstractions.IOrganizationScope>(),
+                sp.GetService<ILogger<InheritedSettings>>()));
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

@@ -80,7 +80,10 @@ public abstract class GetDataStorePathsEndpointBase : CrudGetEndpointBase<DataSt
             Format = container.Format,
             HasHeader = container.HasHeader,
             Separator = container.Separator,
-            SheetName = container.SheetName
+            SheetName = container.SheetName,
+            WriteEndpoint = container.WriteEndpoint,
+            WriteMethod = container.WriteMethod,
+            WriteContentType = container.WriteContentType
         };
     }
 

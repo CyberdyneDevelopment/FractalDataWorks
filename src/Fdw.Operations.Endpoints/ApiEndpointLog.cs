@@ -14,47 +14,6 @@ namespace Fdw.Operations.Endpoints;
 public static partial class ApiEndpointLog
 {
 
-    /// <summary>Logs that a lineage graph build is starting for a specific entity.</summary>
-    [MessageLogging(
-        EventId = 11011,
-        Level = LogLevel.Trace,
-        Message = "Building lineage graph for {entityType} '{entityName}'")]
-    public static partial IGenericMessage BuildingLineageGraph(
-        ILogger logger,
-        string entityType,
-        string entityName);
-
-    /// <summary>Logs the result of a lineage graph build with node and edge counts.</summary>
-    [MessageLogging(
-        EventId = 11012,
-        Level = LogLevel.Information,
-        Message = "Lineage graph built: {nodeCount} nodes, {edgeCount} edges")]
-    public static partial IGenericMessage LineageGraphBuilt(
-        ILogger logger,
-        int nodeCount,
-        int edgeCount);
-
-    /// <summary>Logs a warning that the requested entity was not found in the lineage graph.</summary>
-    [MessageLogging(
-        EventId = 31001,
-        Level = LogLevel.Warning,
-        Message = "{entityType} '{entityName}' not found in lineage graph")]
-    public static partial IGenericMessage EntityNotFoundInLineageGraph(
-        ILogger logger,
-        string entityType,
-        string entityName);
-
-    /// <summary>Logs that a field-level lineage build is starting for a specific field.</summary>
-    [MessageLogging(
-        EventId = 11013,
-        Level = LogLevel.Trace,
-        Message = "Building field lineage for {entityType} '{entityName}' field '{fieldName}'")]
-    public static partial IGenericMessage BuildingFieldLineage(
-        ILogger logger,
-        string entityType,
-        string entityName,
-        string fieldName);
-
     /// <summary>Logs the number of pipeline headers loaded for lineage composition.</summary>
     [MessageLogging(
         EventId = 11014,
@@ -84,31 +43,18 @@ public static partial class ApiEndpointLog
         string name,
         string engineType);
 
-    /// <summary>Logs the linkage extracted from a composed pipeline aggregate's engine body.</summary>
+    /// <summary>Logs what a graph pipeline reads and writes, read from its uses.</summary>
     [MessageLogging(
         EventId = 11017,
         Level = LogLevel.Debug,
-        Message = "Pipeline {name} linkage src={sourceDataSet} dst={destinationDataSet} srcStore={sourceDataStore} dstStore={destinationDataStore}")]
+        Message = "Pipeline {name} reads {dataSetsRead} data sets and {containersRead} containers, writes {dataSetsWritten} data sets and {containersWritten} containers")]
     public static partial IGenericMessage PipelineLinkageExtracted(
         ILogger logger,
         string name,
-        string sourceDataSet,
-        string destinationDataSet,
-        string? sourceDataStore,
-        string? destinationDataStore);
-
-    /// <summary>Logs the per-kind edge counts produced while building a lineage graph.</summary>
-    [MessageLogging(
-        EventId = 11018,
-        Level = LogLevel.Information,
-        Message = "Lineage edges created: Consumes={consumes} ProducesDataSet={producesDataSet} WritesTo={writesTo} ReadsFrom={readsFrom} DerivesFrom={derivesFrom}")]
-    public static partial IGenericMessage LineageEdgesCreated(
-        ILogger logger,
-        int consumes,
-        int producesDataSet,
-        int writesTo,
-        int readsFrom,
-        int derivesFrom);
+        int dataSetsRead,
+        int containersRead,
+        int dataSetsWritten,
+        int containersWritten);
 
     /// <summary>Logs the total number of pipelines projected for lineage, and how many were node-only.</summary>
     [MessageLogging(

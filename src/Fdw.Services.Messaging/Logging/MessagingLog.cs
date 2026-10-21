@@ -145,4 +145,72 @@ public static partial class MessagingLog
     /// <summary>Logs access request not found.</summary>
     [MessageLogging(EventId = 31001, Level = LogLevel.Warning, Message = "Access request {requestId} not found")]
     public static partial IGenericMessage AccessRequestNotFound(ILogger logger, string requestId);
+
+    /// <summary>Trace entry for a UI comment operation.</summary>
+    [MessageLogging(EventId = 11024, Level = LogLevel.Trace, Message = "Entering UI comment {operation}")]
+    public static partial IGenericMessage TraceUiFeedbackEntry(ILogger logger, string operation);
+
+    /// <summary>Logs a UI comment saved.</summary>
+    [MessageLogging(EventId = 11025, Level = LogLevel.Information, Message = "UI comment {feedbackId} saved by {author} on {route} with urgency {urgency}")]
+    public static partial IGenericMessage UiFeedbackSaved(ILogger logger, string feedbackId, string author, string route, string urgency);
+
+    /// <summary>Logs a UI comment changed: its note edited, resolved, reopened or deleted.</summary>
+    [MessageLogging(EventId = 11026, Level = LogLevel.Information, Message = "UI comment {feedbackId} {change} by {user}")]
+    public static partial IGenericMessage UiFeedbackChanged(ILogger logger, string feedbackId, string change, string user);
+
+    /// <summary>A UI comment refused because a field was not sent. A validation refusal (category 2), answered with a client error that names the field.</summary>
+    [MessageLogging(EventId = 21000, Level = LogLevel.Warning, Message = "UI comment refused: {field} is required",
+        ClientMessage = "{field} is required")]
+    public static partial IGenericMessage UiFeedbackFieldMissing(ILogger logger, string field);
+
+    /// <summary>A UI comment refused because a field was sent wrong. A validation refusal (category 2), answered with a client error that says what is wrong.</summary>
+    [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "UI comment refused: {field} {reason}",
+        ClientMessage = "{field} {reason}")]
+    public static partial IGenericMessage UiFeedbackFieldInvalid(ILogger logger, string field, string reason);
+
+    /// <summary>A UI comment that does not exist, or is not in the caller's reach.</summary>
+    [MessageLogging(EventId = 31004, Level = LogLevel.Warning, Message = "UI comment {feedbackId} not found")]
+    public static partial IGenericMessage UiFeedbackNotFound(ILogger logger, string feedbackId);
+
+    /// <summary>A UI comment that is already in the state asked for. A conflict (category 4).</summary>
+    [MessageLogging(EventId = 41000, Level = LogLevel.Warning, Message = "UI comment {feedbackId} is already {state}",
+        ClientMessage = "The comment is already {state}")]
+    public static partial IGenericMessage UiFeedbackWrongState(ILogger logger, string feedbackId, string state);
+
+    /// <summary>The caller has no signed-in user, name or tenant to act as. An authentication failure (category 5).</summary>
+    [MessageLogging(EventId = 51001, Level = LogLevel.Warning, Message = "UI comment {operation} needs a signed-in caller with a user, a name and a tenant")]
+    public static partial IGenericMessage UiFeedbackCallerRequired(ILogger logger, string operation);
+
+    /// <summary>The comment is another person's, so the caller may not change or delete it. A forbidden refusal (category 10).</summary>
+    [MessageLogging(EventId = 100000, Level = LogLevel.Warning, Message = "UI comment {feedbackId} belongs to another person; {user} may not {action} it",
+        ClientMessage = "Only the person who left the comment can {action} it")]
+    public static partial IGenericMessage UiFeedbackNotYours(ILogger logger, string feedbackId, string user, string action);
+
+    /// <summary>The store failed a UI comment operation.</summary>
+    [MessageLogging(EventId = 71004, Level = LogLevel.Error, Message = "UI comment {operation} failed in the store: {error}")]
+    public static partial IGenericMessage UiFeedbackStoreFailed(ILogger logger, string operation, string? error);
+
+    /// <summary>A UI comment operation failed in a way nothing anticipated.</summary>
+    [MessageLogging(EventId = 91001, Level = LogLevel.Error, Message = "UI comment {operation} failed unexpectedly: {error}")]
+    public static partial IGenericMessage UiFeedbackUnexpected(ILogger logger, string operation, string? error);
+
+    /// <summary>Logs a UI comment acknowledged.</summary>
+    [MessageLogging(EventId = 11027, Level = LogLevel.Information, Message = "UI comment {feedbackId} acknowledged by {user}")]
+    public static partial IGenericMessage UiFeedbackAcknowledged(ILogger logger, string feedbackId, string user);
+
+    /// <summary>Logs a UI comment acknowledged again by someone who already had; nothing changed.</summary>
+    [MessageLogging(EventId = 11028, Level = LogLevel.Information, Message = "UI comment {feedbackId} was already acknowledged by {user}; nothing changed")]
+    public static partial IGenericMessage UiFeedbackAlreadyAcknowledged(ILogger logger, string feedbackId, string user);
+
+    /// <summary>Logs the readers told about a new UI comment.</summary>
+    [MessageLogging(EventId = 11029, Level = LogLevel.Information, Message = "UI comment {feedbackId}: {count} reader(s) told")]
+    public static partial IGenericMessage UiFeedbackReadersTold(ILogger logger, string feedbackId, int count);
+
+    /// <summary>The comment was saved but one reader could not be told.</summary>
+    [MessageLogging(EventId = 71005, Level = LogLevel.Error, Message = "UI comment {feedbackId} was saved but reader {userId} could not be told: {reason}")]
+    public static partial IGenericMessage UiFeedbackReaderNotTold(ILogger logger, string feedbackId, string userId, string? reason);
+
+    /// <summary>The comment was saved but the people to tell could not be found.</summary>
+    [MessageLogging(EventId = 71006, Level = LogLevel.Error, Message = "UI comment {feedbackId} was saved but its readers could not be found: {reason}")]
+    public static partial IGenericMessage UiFeedbackReadersNotFound(ILogger logger, string feedbackId, string? reason);
 }

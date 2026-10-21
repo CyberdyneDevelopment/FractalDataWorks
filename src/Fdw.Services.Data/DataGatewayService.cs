@@ -62,7 +62,7 @@ namespace Fdw.Services.Data;
 /// cursor. A limit that cannot be resolved refuses the call rather than lifting the limits (FDW-949).
 /// </remarks>
 [ExcludeFromCodeCoverage]
-public sealed class DataGatewayService : IDataGateway
+public sealed partial class DataGatewayService : IDataGateway
 {
     private readonly ILogger<DataGatewayService> _logger;
     private readonly IDataConnectionProvider _connectionProvider;
@@ -208,15 +208,19 @@ public sealed class DataGatewayService : IDataGateway
         if (await IsHostDeclared(target.DataStore, cancellationToken).ConfigureAwait(false))
             return await ExecuteOnHostStore<T>(command, target, cancellationToken).ConfigureAwait(false);
 
-        return await ExecuteAdmitted<T>(command, target, useCache, cancellationToken).ConfigureAwait(false);
+        return await ExecuteAdmitted(
+            command, target.DataStore, ct => ExecuteWithCache<T>(command, target, useCache, ct), cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<IGenericResult<T>> ExecuteAdmitted<T>(IDataCommand command, DataStoreTarget target, bool useCache, CancellationToken cancellationToken)
+    // Runs one command's work under the limits of the store it targets: a data command and a vectorized one alike, so a
+    // connection's limits hold whatever is sent to it.
+    private async Task<IGenericResult<T>> ExecuteAdmitted<T>(
+        IGenericCommand command, string dataStore, Func<CancellationToken, Task<IGenericResult<T>>> run, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return GenericResult<T>.Failure(ConnectionLimitLog.OperationCancelled(_logger, Guid.Empty));
 
-        var admitted = Admit(target.DataStore, command, cancellationToken);
+        var admitted = Admit(dataStore, command, cancellationToken);
         if (!admitted.IsSuccess)
             return admitted.ToNewResult<T>();
 
@@ -224,13 +228,13 @@ public sealed class DataGatewayService : IDataGateway
         using var lease = admitted.Value!;
         var limits = lease.Limits;
         if (limits.Count == 0)
-            return await ExecuteWithCache<T>(command, target, useCache, cancellationToken).ConfigureAwait(false);
+            return await run(cancellationToken).ConfigureAwait(false);
 
         var effectiveCt = ApplyQueryTimeout(limits, cancellationToken, out var timeoutCts);
 
         try
         {
-            var result = await ExecuteWithCache<T>(command, target, useCache, effectiveCt).ConfigureAwait(false);
+            var result = await run(effectiveCt).ConfigureAwait(false);
 
             if (result.IsSuccess)
                 IncrementDailyCounters(limits);
@@ -357,49 +361,78 @@ public sealed class DataGatewayService : IDataGateway
 
     private async Task<IGenericResult<T>> ExecuteCore<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken)
     {
+        var resolved = await ResolveTargetConnection(target, cancellationToken).ConfigureAwait(false);
+        if (!resolved.IsSuccess)
+            return resolved.ToNewResult<T>();
+
+        var (dataContainer, connection) = resolved.Value;
+        return await RunOnContainer(command, target, ct => connection.Execute<T>(command, dataContainer, ct), cancellationToken).ConfigureAwait(false);
+    }
+
+    // The container a target names and the connection its store reaches it by: what every command run on a store needs
+    // before it runs, a data command and a vectorized one alike.
+    private async Task<IGenericResult<(IDataContainer Container, IDataConnection Connection)>> ResolveTargetConnection(
+        DataStoreTarget target, CancellationToken cancellationToken)
+    {
         if (string.IsNullOrWhiteSpace(target.DataStore))
-            return GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(DataServiceResultCodes.ByName("DataStoreNameRequired"));
 
         DataGatewayLogger.ExecuteContainerEntering(_logger, target.DataStore, target.Path, target.Container);
 
         var containerResult = await ResolveContainerResult(target, cancellationToken).ConfigureAwait(false);
         if (!containerResult.IsSuccess)
-            return containerResult.ToNewResult<T>();
+            return containerResult.ToNewResult<(IDataContainer, IDataConnection)>();
 
         var dataContainer = containerResult.Value;
         if (dataContainer is null)
-            return GenericResult<T>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
+            return GenericResult<(IDataContainer, IDataConnection)>.Failure(DataGatewayLogger.ContainerNotFound(_logger, target.Container));
 
+        var connectionResult = await ResolveStoreConnection(target.DataStore, cancellationToken).ConfigureAwait(false);
+        if (!connectionResult.IsSuccess || connectionResult.Value is null)
+            return connectionResult.ToNewResult<(IDataContainer, IDataConnection)>();
+
+        return GenericResult<(IDataContainer, IDataConnection)>.Success((dataContainer, connectionResult.Value));
+    }
+
+    // The connection a data store reaches its data by: what a command needs whether or not it names a container, a scripted
+    // command naming none.
+    private async Task<IGenericResult<IDataConnection>> ResolveStoreConnection(string dataStore, CancellationToken cancellationToken)
+    {
         // The store's row alone: ConnectionId is a field of it. Reading it whole composed every path,
         // container, field and key under it, a query per collection per row, on every command (FDW-970).
-        var storeResult = await _dataStoreConfigProvider.Get(target.DataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
+        var storeResult = await _dataStoreConfigProvider.Get(dataStore, ConfigurationLevels.RecordOnly, cancellationToken).ConfigureAwait(false);
         if (!storeResult.IsSuccess || storeResult.Value is null)
         {
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.DataStoreNotFoundForSource(_logger, target.DataStore));
+            return GenericResult<IDataConnection>.Failure(
+                DataGatewayLogger.DataStoreNotFoundForSource(_logger, dataStore));
         }
 
         var store = storeResult.Value;
         if (store.ConnectionId == Guid.Empty)
         {
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.DataStoreHasNoConnectionId(_logger, target.DataStore));
+            return GenericResult<IDataConnection>.Failure(
+                DataGatewayLogger.DataStoreHasNoConnectionId(_logger, dataStore));
         }
 
         var connectionResult = await _connectionProvider.Get(store.ConnectionId, cancellationToken).ConfigureAwait(false);
         if (!connectionResult.IsSuccess || connectionResult.Value == null)
         {
             var reason = connectionResult.CurrentMessage ?? "Unknown error";
-            return GenericResult<T>.Failure(
-                DataGatewayLogger.DataStoreConnectionNotResolved(_logger, target.DataStore, store.ConnectionId.ToString(), reason));
+            return GenericResult<IDataConnection>.Failure(
+                DataGatewayLogger.DataStoreConnectionNotResolved(_logger, dataStore, store.ConnectionId.ToString(), reason));
         }
 
-        var connection = connectionResult.Value;
+        return GenericResult<IDataConnection>.Success(connectionResult.Value);
+    }
 
+    // Runs one command's work on the container, timed and logged the same for every command.
+    private async Task<IGenericResult<T>> RunOnContainer<T>(
+        IGenericCommand command, DataStoreTarget target, Func<CancellationToken, Task<IGenericResult<T>>> run, CancellationToken cancellationToken)
+    {
         DataGatewayLogger.ExecutingContainerCommand(_logger, command.GetType().Name, target.Container, target.DataStore);
 
         var stopwatch = Stopwatch.StartNew();
-        var result = await connection.Execute<T>(command, dataContainer, cancellationToken).ConfigureAwait(false);
+        var result = await run(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
 
         if (result.IsSuccess)
@@ -711,7 +744,7 @@ public sealed class DataGatewayService : IDataGateway
     // lease carries the limits that applied and any concurrency slots taken, and the caller disposes it
     // when the work is finished. A limit that cannot be read is a refusal, not "no limit" (FDW-949); an
     // empty list is the normal state of a connection nobody has limited.
-    private IGenericResult<ConnectionLimitLease> Admit(string connectionName, IDataCommand command, CancellationToken cancellationToken)
+    private IGenericResult<ConnectionLimitLease> Admit(string connectionName, IGenericCommand command, CancellationToken cancellationToken)
     {
         var limitsResult = _limitResolver.Resolve(connectionName, cancellationToken);
         if (!limitsResult.IsSuccess)
@@ -743,7 +776,7 @@ public sealed class DataGatewayService : IDataGateway
 
     private IGenericResult<T>? CheckLimit<T>(
         ConnectionLimitConfiguration limit,
-        IDataCommand command,
+        IGenericCommand command,
         string connectionName,
         ConnectionLimitLease lease)
     {
@@ -818,9 +851,17 @@ public sealed class DataGatewayService : IDataGateway
         return null;
     }
 
-    private IGenericResult<T>? CheckMaxResultSize<T>(ConnectionLimitConfiguration limit, IDataCommand command)
+    private IGenericResult<T>? CheckMaxResultSize<T>(ConnectionLimitConfiguration limit, IGenericCommand command)
     {
         int maxRows = limit.EnforceMaxRows!.Value;
+
+        // A nearest search asks for its rows by count, as a page does.
+        if (command is INearestCommand nearest && nearest.Take > maxRows)
+        {
+            return GenericResult<T>.Failure(
+                ConnectionLimitLog.MaxResultSizeExceeded(_logger, limit.ConnectionConfigurationId, nearest.Take, maxRows));
+        }
+
         if (command is IQueryCommand qc && qc.Paging is not null)
         {
             int requested = qc.Paging.Take ?? int.MaxValue;

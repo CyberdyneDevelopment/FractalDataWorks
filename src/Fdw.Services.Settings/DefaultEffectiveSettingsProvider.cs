@@ -81,11 +81,13 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
         var effectiveValue = serverSetting.SettingValue;
         SettingsLog.SettingResolvedAtServerLevel(_logger, settingName, effectiveValue);
 
-        if (tenantId.HasValue)
+        // Why: a lock held by a level binds every level below it (FDW-1579), so a locked server value is the value for every tenant and role.
+        if (tenantId.HasValue && !serverSetting.IsLocked)
         {
             var tenantSettingsResult = _tenant.Get().GetAwaiter().GetResult();
             var tenantSettings = tenantSettingsResult.IsSuccess ? tenantSettingsResult.Value! : (IReadOnlyList<ITenantSettingImplementationConfiguration>)[];
 
+            var tenantLocked = false;
             foreach (var ts in tenantSettings)
             {
                 if (ts.TenantId == tenantId.Value
@@ -93,12 +95,13 @@ public sealed class DefaultEffectiveSettingsProvider : IEffectiveSettingsProvide
                     && ts.IsActive)
                 {
                     effectiveValue = ts.SettingValue;
+                    tenantLocked = ts.IsLocked;
                     SettingsLog.SettingOverriddenAtTenantLevel(_logger, settingName, tenantId.Value.ToString());
                     break;
                 }
             }
 
-            if (roleName is not null)
+            if (roleName is not null && !tenantLocked)
             {
                 var roleSettingsResult = _role.Get().GetAwaiter().GetResult();
                 var roleSettings = roleSettingsResult.IsSuccess ? roleSettingsResult.Value! : (IReadOnlyList<IRoleSettingImplementationConfiguration>)[];

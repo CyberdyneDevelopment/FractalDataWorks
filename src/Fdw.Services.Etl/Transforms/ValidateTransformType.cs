@@ -37,6 +37,13 @@ public sealed class ValidateTransformType : TransformTypeBase
 {
     private const string Kind = "Validate";
 
+    /// <inheritdoc />
+    /// <remarks>A Validate that rejects sends the failing records to the component's error output in a graph; one that fails the run rejects none.</remarks>
+    public override bool RejectsRecords(IGenericConfiguration configuration) =>
+        configuration is PipelineTransformConfiguration { OnFail: { Length: > 0 } onFail }
+        && !ReferenceEquals(ValidateFailActions.ByName(onFail), ValidateFailActions.NotFound)
+        && !ValidateFailActions.ByName(onFail).StopsRun;
+
     private static readonly StageMember[] OwnedMembers =
     [
         new("checks", "CheckList", true, "The checks a record must pass, each a name and a condition; may reference {{run parameters}}"),

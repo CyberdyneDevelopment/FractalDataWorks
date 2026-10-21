@@ -50,9 +50,9 @@ public class CreateScheduleClientRequest
     public string? EventName { get; set; }
 
     /// <summary>
-    /// Gets or sets the time zone identifier.
+    /// Gets or sets the time zone identifier the schedule is evaluated in. Required: it is not defaulted, and the scheduler refuses a create that leaves it out.
     /// </summary>
-    public string TimeZoneId { get; set; } = "UTC";
+    public string TimeZoneId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether the schedule is enabled.

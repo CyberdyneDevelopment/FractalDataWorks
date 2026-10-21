@@ -11,6 +11,7 @@
     <ProjectReference Include="..\..\src\Fdw.Services.Settings\Fdw.Services.Settings.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Validation\Fdw.Validation.csproj" />
     <ProjectReference Include="..\..\src\Fdw.Services.Data\Fdw.Services.Data.csproj" />
+    <ProjectReference Include="..\..\src\Fdw.Services.Settings.Endpoints\Fdw.Services.Settings.Endpoints.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FluentValidation" />

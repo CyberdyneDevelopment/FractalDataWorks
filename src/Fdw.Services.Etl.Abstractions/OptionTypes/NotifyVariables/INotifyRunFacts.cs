@@ -22,4 +22,13 @@ public interface INotifyRunFacts
 
     /// <summary>Gets the records loaded so far.</summary>
     int RowsLoaded { get; }
+
+    /// <summary>Gets when the run started (UTC).</summary>
+    DateTimeOffset StartedAt { get; }
+
+    /// <summary>Gets the moment the run point fired (UTC): the end of the run as far as the run point can know it.</summary>
+    DateTimeOffset EndedAt { get; }
+
+    /// <summary>Gets how the run stands at the run point: <c>Succeeded</c> before the run's end, <c>Failed</c> at OnFailure.</summary>
+    string Outcome { get; }
 }

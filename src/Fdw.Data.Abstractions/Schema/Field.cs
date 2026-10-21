@@ -18,6 +18,9 @@ public sealed class Field : IField
     /// </summary>
     public required IFieldType FieldType { get; init; }
 
+    /// <inheritdoc />
+    public IDataType? ExplicitType { get; init; }
+
     /// <summary>
     /// Gets or initializes the field role (from DatumTypes TypeCollection).
     /// </summary>

@@ -20,4 +20,10 @@ public interface ITenantSwitchRequestAccessor
 
     /// <summary>Gets the tenant the caller asks to act in, or null when none was named.</summary>
     Guid? RequestedTenantId { get; }
+
+    /// <summary>
+    /// Gets the organization (department) of that tenant the caller asks to act in, or null when the request names none
+    /// (a switch of tenant alone, which leaves the token without a department; FDW-1802).
+    /// </summary>
+    Guid? RequestedOrganizationId { get; }
 }

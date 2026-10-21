@@ -274,6 +274,27 @@ public static partial class AuthorizationEndpointLog
         Message = "Role '{roleName}' was revoked from user '{userId}' but their live sessions could not be ended; existing tokens keep the role until they expire")]
     public static partial IGenericMessage RoleRevokedSessionsNotEnded(ILogger logger, string roleName, string userId);
 
+    /// <summary>
+    /// Logs when a role change was made but could not be written to the administrative audit.
+    /// </summary>
+    [MessageLogging(EventId = 71010, Level = LogLevel.Error,
+        Message = "The {changeKind} of role '{roleName}' for user '{userId}' was made but could not be recorded in the administrative audit: {reason}")]
+    public static partial IGenericMessage RoleChangeNotAudited(ILogger logger, string changeKind, string roleName, string userId, string? reason);
+
+    /// <summary>
+    /// Logs that a change to an organization's roles or members was made but could not be recorded in the administrative audit (FDW-1593).
+    /// </summary>
+    [MessageLogging(EventId = 71012, Level = LogLevel.Error,
+        Message = "The {changeKind} of '{itemId}' in organization '{organizationId}' was made but could not be recorded in the administrative audit: {reason}")]
+    public static partial IGenericMessage OrganizationChangeNotAudited(ILogger logger, string changeKind, string itemId, Guid organizationId, string? reason);
+
+    /// <summary>
+    /// Logs when a change to a role itself was made but could not be written to the administrative audit.
+    /// </summary>
+    [MessageLogging(EventId = 71011, Level = LogLevel.Error,
+        Message = "The {changeKind} of role '{roleName}' was made but could not be recorded in the administrative audit: {reason}")]
+    public static partial IGenericMessage RoleDefinitionNotAudited(ILogger logger, string changeKind, string roleName, string? reason);
+
     /// <summary>Logs that every holder of a changed or deleted role had their sessions ended.</summary>
     [MessageLogging(EventId = 11595, Level = LogLevel.Information,
         Message = "Ended the live sessions of {holderCount} holder(s) of role '{roleName}'")]

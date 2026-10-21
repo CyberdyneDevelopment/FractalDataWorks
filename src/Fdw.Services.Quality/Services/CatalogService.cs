@@ -39,9 +39,9 @@ public sealed class CatalogService : ICatalogService
     }
 
     /// <inheritdoc/>
-    public Task<IGenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>> SearchTerms(string? query, string? category, CancellationToken ct = default)
+    public Task<IGenericResult<IReadOnlyList<GlossaryTermImplementationConfiguration>>> SearchTerms(string? query, Guid? categoryId, CancellationToken ct = default)
     {
-        CatalogLog.SearchingTerms(_logger, query ?? string.Empty, category);
+        CatalogLog.SearchingTerms(_logger, query ?? string.Empty, categoryId);
 
         var results = _inMemoryTerms.AsEnumerable();
 
@@ -52,9 +52,9 @@ public sealed class CatalogService : ICatalogService
                 t.Definition.Contains(query, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (!string.IsNullOrWhiteSpace(category))
+        if (categoryId is { } category)
         {
-            results = results.Where(t => t.Category.Equals(category, StringComparison.OrdinalIgnoreCase));
+            results = results.Where(t => t.CategoryId == category);
         }
 
         var list = results.ToList();
@@ -75,7 +75,7 @@ public sealed class CatalogService : ICatalogService
             term.Id = term.Id == Guid.Empty ? Guid.NewGuid() : term.Id;
             _inMemoryTerms.Add(term);
 
-            CatalogLog.TermCreated(_logger, term.Name, term.Category);
+            CatalogLog.TermCreated(_logger, term.Name, term.CategoryId);
             return Task.FromResult(GenericResult<GlossaryTermImplementationConfiguration>.Success(term));
         }
         catch (Exception ex)

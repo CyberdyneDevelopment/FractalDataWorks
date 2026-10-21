@@ -39,9 +39,7 @@ internal static class DataflowReachability
 
     private static HashSet<string> NamedByPipelines(IReadOnlyList<PipelineLineageRecord> pipelines)
         => pipelines
-            .SelectMany(p => new[] { p.SourceDataSet, p.DestinationDataSet })
-            .Where(name => !string.IsNullOrEmpty(name))
-            .Select(name => name!)
+            .SelectMany(p => p.DataSetsRead.Concat(p.DataSetsWritten))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static void Reach(

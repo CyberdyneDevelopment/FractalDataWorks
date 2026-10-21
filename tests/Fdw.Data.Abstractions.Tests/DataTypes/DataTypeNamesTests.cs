@@ -18,6 +18,7 @@ public class DataTypeNamesTests
     [InlineData("Int64", typeof(long))]
     [InlineData("DateTimeOffset", typeof(DateTimeOffset))]
     [InlineData("Binary", typeof(byte[]))]
+    [InlineData("Vector", typeof(float[]))]
     public void AnOptionsNameFindsTheOption(string name, Type clrType)
     {
         var found = DataTypeNames.Find(name);

@@ -82,4 +82,15 @@ public sealed class EffectivePolicyResolver : IEffectivePolicyResolver
             AllowCrossTenant: node.AllowCrossTenant ?? parentEffective.AllowCrossTenant,
             ResiliencyPolicyId: node.ResiliencyPolicyId ?? parentEffective.ResiliencyPolicyId);
     }
+
+    /// <inheritdoc/>
+    public ExecutionPolicySnapshot ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node) =>
+        ResolveForNode(node, new ExecutionPolicySnapshot(
+            StepFailurePolicy: _serverDefaults.StepFailurePolicy,
+            StageFailurePolicy: _serverDefaults.StageFailurePolicy,
+            MaxParallelPipelines: _serverDefaults.MaxParallelPipelines,
+            RequireApprovalToRun: _serverDefaults.RequireApprovalToRun,
+            AllowResume: _serverDefaults.AllowResume,
+            AllowCrossTenant: _serverDefaults.AllowCrossTenant,
+            ResiliencyPolicyId: _serverDefaults.ResiliencyPolicyId));
 }

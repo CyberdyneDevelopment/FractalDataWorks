@@ -1,129 +1,111 @@
-using Fdw.Services.Pipelines.Clients.Abstractions;
+using System.Collections.Generic;
+using Fdw.Services.Etl.Graphs;
+using Fdw.Services.Etl.Transforms;
 using Fdw.Services.Pipelines.Endpoints;
+using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
 
 namespace Fdw.Services.Pipelines.Tests;
 
 /// <summary>
-/// What a saved pipeline reaches (FDW-1161): triggering it, scheduling it and judging the roles for it all read
-/// <see cref="PipelineReach.Of"/> from the stored detail, so a run is judged on the pipeline as it is stored, stages and load
-/// steps included.
+/// What a saved pipeline reaches (FDW-1161, FDW-1891): triggering it, scheduling it and judging the roles for it all read
+/// <see cref="PipelineReach.Of"/> from the pipeline read whole, so a graph's run is judged on what its components and stages use.
 /// </summary>
 public sealed class PipelineReachTests
 {
-    private static PipelineDetailResponse SavedOverADataSet() => new()
+    private static readonly IReadOnlyDictionary<string, object?> NoValues = new Dictionary<string, object?>();
+
+    private static PipelineReach ReachOf(GraphPipelineConfiguration graph) => ReachOf(graph, NoValues);
+
+    private static PipelineReach ReachOf(GraphPipelineConfiguration graph, IReadOnlyDictionary<string, object?> values)
     {
-        Name = "Nightly",
-        PipelineType = "BatchCopy",
-        SourceDataSet = "Orders",
-        DestinationDataSet = "OrdersCopy"
+        var found = PipelineReach.Of(graph, values, NullLogger.Instance);
+        found.IsSuccess.ShouldBeTrue(found.CurrentMessage);
+        return found.Value.ShouldNotBeNull();
+    }
+
+    private static PipelineComponentConfiguration Component(string type, string? dataSet = null, string? store = null, string? path = null, string? container = null) => new()
+    {
+        Name = type, ComponentType = type, DataSetName = dataSet, DataStoreName = store, PathName = path, ContainerName = container,
     };
 
-    private static PipelineDetailResponse SavedOverAContainer() => new()
+    private static GraphPipelineConfiguration Graph(params PipelineComponentConfiguration[] components) => new()
     {
         Name = "Nightly",
-        PipelineType = "BatchCopy",
-        // The engine record writes an unused data set side as an empty string, and the detail carries it as read.
-        SourceDataSet = string.Empty,
-        SourceDataStoreName = "Feeds",
-        SourceDataStorePath = "orders/v1",
-        SourceContainerName = "orders",
-        DestinationDataSet = "OrdersCopy"
-    };
-
-    private static PipelineDetailResponse SavedIntoAContainer() => new()
-    {
-        Name = "Nightly",
-        PipelineType = "BatchCopy",
-        SourceDataSet = "Orders",
-        DestinationDataSet = string.Empty,
-        DestinationDataStoreName = "Warehouse",
-        DestinationDataStorePath = "orders/v1",
-        DestinationContainerName = "orders"
-    };
-
-    private static PipelineLoadStep Step(string destination, string? source = null, PipelineLoadDestinationContainer? container = null) => new()
-    {
-        Name = "Step",
-        Kind = "BulkInsert",
-        DestinationDataSet = destination,
-        Options = new PipelineLoadStepOptions { SourceDataSet = source, DestinationContainer = container }
+        Components = [.. components],
     };
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ASavedPipelineReachesItsOwnSourceAndDestination()
+    public void AGraphReadsItsSourceDataSetAndWritesItsDestinationDataSet()
     {
-        var reach = PipelineReach.Of(SavedOverADataSet());
+        var reach = ReachOf(Graph(Component("DataSetSource", dataSet: "Orders"), Component("DataSetDestination", dataSet: "OrdersCopy")));
 
         reach.PipelineName.ShouldBe("Nightly");
-        reach.SourceDataSet.ShouldBe("Orders");
-        reach.DestinationDataSet.ShouldBe("OrdersCopy");
-        reach.Steps.DataSets.ShouldBeEmpty();
-        reach.Steps.Containers.ShouldBeEmpty();
+        reach.DataSets.ShouldBe([new ReachedDataSet("Orders", false), new ReachedDataSet("OrdersCopy", true)]);
+        reach.Containers.ShouldBeEmpty();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ASavedPipelineIntoADataStoreContainerReachesItsThreeDestinationParts()
+    public void AGraphWithSeveralSourcesReachesEveryOne()
     {
-        var reach = PipelineReach.Of(SavedIntoAContainer());
+        var reach = ReachOf(Graph(
+            Component("DataSetSource", dataSet: "Orders"),
+            Component("DataSetSource", dataSet: "Customers"),
+            Component("DataSetDestination", dataSet: "Joined")));
 
-        reach.DestinationDataStoreName.ShouldBe("Warehouse");
-        reach.DestinationDataStorePath.ShouldBe("orders/v1");
-        reach.DestinationContainerName.ShouldBe("orders");
-        reach.SourceDataSet.ShouldBe("Orders");
+        reach.DataSets.ShouldBe([new ReachedDataSet("Orders", false), new ReachedDataSet("Customers", false), new ReachedDataSet("Joined", true)]);
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void ASavedPipelineOverADataStoreContainerReachesItsThreeParts()
+    public void AGraphOverDataStoreContainersReachesTheirThreePartsAsAReadAndAWrite()
     {
-        var reach = PipelineReach.Of(SavedOverAContainer());
+        var reach = ReachOf(Graph(
+            Component("ContainerSource", store: "Feeds", path: "orders/v1", container: "orders"),
+            Component("ContainerDestination", store: "Warehouse", path: "orders/v1", container: "orders-clean")));
 
-        reach.SourceDataStoreName.ShouldBe("Feeds");
-        reach.SourceDataStorePath.ShouldBe("orders/v1");
-        reach.SourceContainerName.ShouldBe("orders");
-        reach.DestinationDataSet.ShouldBe("OrdersCopy");
+        reach.Containers.ShouldBe([
+            new ReachedContainer("Feeds", "orders/v1", "orders", false),
+            new ReachedContainer("Warehouse", "orders/v1", "orders-clean", true)]);
+        reach.DataSets.ShouldBeEmpty();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void AUnionAndALookupInsideABranchAreReadWhereverTheStageNests()
+    public void AContainerThatNamesNoPathIsReachedWithAnEmptyPathSoTheAuthorityRefusesIt()
     {
-        var saved = SavedOverADataSet();
-        saved.Transforms =
+        var reach = ReachOf(Graph(Component("ContainerSource", store: "Feeds", container: "orders")));
+
+        reach.Containers.ShouldBe([new ReachedContainer("Feeds", string.Empty, "orders", false)]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ALookupAndAComputeTableInsideAToolAreReachedWhereverTheStageSits()
+    {
+        var tool = Component("Compute");
+        tool.Stages =
         [
-            new PipelineTransformDto
+            new PipelineTransformConfiguration
             {
-                Name = "Split",
-                OperationType = "Branch",
-                Paths =
-                [
-                    new PipelinePathDto
-                    {
-                        Stages =
-                        [
-                            new PipelineTransformDto { Name = "AddArchive", OperationType = "Union", UnionSource = "OrdersArchive" },
-                            new PipelineTransformDto
-                            {
-                                Name = "Enrich",
-                                OperationType = "Lookup",
-                                Lookup = new LookupDto { LookupDataSet = "Customers" }
-                            }
-                        ]
-                    }
-                ]
-            }
+                Name = "Enrich",
+                Lookups = [new PipelineTransformLookupConfiguration { Name = "a", LookupDataSet = "Customers" }],
+                ComputeTables = [new PipelineTransformComputeTableConfiguration { TableName = "t", FromKind = "DataSet", FromName = "Prices" }],
+            },
         ];
 
-        var steps = PipelineReach.Of(saved).Steps;
+        var reach = ReachOf(Graph(tool));
 
-        steps.DataSets.ShouldBe([new ReachedDataSet("OrdersArchive", false), new ReachedDataSet("Customers", false)]);
+        reach.DataSets.ShouldBe([
+            new ReachedDataSet("Customers", false),
+            new ReachedDataSet("Prices", false)]);
     }
 
     [Fact]
@@ -131,79 +113,89 @@ public sealed class PipelineReachTests
     [Trait("Category", "Security")]
     public void ALookupOverADataStoreContainerReadsThatContainerAndReachesNoDataSet()
     {
-        var saved = SavedOverADataSet();
-        saved.Transforms =
+        var tool = Component("Compute");
+        tool.Stages =
         [
-            new PipelineTransformDto
+            new PipelineTransformConfiguration
             {
                 Name = "Enrich",
-                OperationType = "Lookup",
-                Lookup = new LookupDto
-                {
-                    LookupDataStoreName = "Warehouse",
-                    LookupDataStorePath = "ref/v1",
-                    LookupContainerName = "customers"
-                }
-            }
+                Lookups =
+                [
+                    new PipelineTransformLookupConfiguration
+                    {
+                        Name = "a", LookupDataStoreName = "Warehouse", LookupDataStorePath = "ref/v1", LookupContainerName = "customers",
+                    },
+                ],
+            },
         ];
 
-        var steps = PipelineReach.Of(saved).Steps;
+        var reach = ReachOf(Graph(tool));
 
-        steps.Containers.ShouldBe([new ReachedContainer("Warehouse", "ref/v1", "customers", false)]);
-        steps.DataSets.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void LoadAndRejectStepsWriteTheirDestinationsAndReadTheirSources()
-    {
-        var saved = SavedOverADataSet();
-        saved.LoadSteps = [Step("Staging", source: "Orders")];
-        saved.RejectSteps = [Step("Rejects")];
-
-        var steps = PipelineReach.Of(saved).Steps;
-
-        steps.DataSets.ShouldBe([
-            new ReachedDataSet("Staging", true),
-            new ReachedDataSet("Orders", false),
-            new ReachedDataSet("Rejects", true)]);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Security")]
-    public void AnExecuteStepsContainerIsWrittenByTheStore()
-    {
-        var saved = SavedOverADataSet();
-        saved.LoadSteps = [Step("Staging", container: new PipelineLoadDestinationContainer { DataStoreName = "Warehouse", PathName = "dbo", ContainerName = "Rollup" })];
-
-        var steps = PipelineReach.Of(saved).Steps;
-
-        steps.Containers.ShouldBe([new ReachedContainer("Warehouse", "dbo", "Rollup", true)]);
+        reach.Containers.ShouldBe([new ReachedContainer("Warehouse", "ref/v1", "customers", false)]);
+        reach.DataSets.ShouldBeEmpty();
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void ANameSeveralStagesAndStepsShareAppearsOnce()
+    public void ANameSeveralComponentsShareAppearsOnce()
     {
-        var saved = SavedOverADataSet();
-        saved.LoadSteps = [Step("Staging"), Step("Staging")];
-        saved.RejectSteps = [Step("Staging")];
+        var reach = ReachOf(Graph(
+            Component("DataSetDestination", dataSet: "Staging"),
+            Component("DataSetDestination", dataSet: "STAGING")));
 
-        PipelineReach.Of(saved).Steps.DataSets.ShouldBe([new ReachedDataSet("Staging", true)]);
+        reach.DataSets.ShouldBe([new ReachedDataSet("Staging", true)]);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Security")]
-    public void ABlankNameIsNotReached()
+    public void ABlankNameIsNotReachedAndAPipelineReadAsARecordAloneReachesNothing()
     {
-        var saved = SavedOverADataSet();
-        saved.Transforms = [new PipelineTransformDto { Name = "AddNothing", OperationType = "Union", UnionSource = " " }];
-        saved.LoadSteps = [Step(string.Empty)];
+        ReachOf(Graph(Component("DataSetSource", dataSet: " "))).DataSets.ShouldBeEmpty();
 
-        PipelineReach.Of(saved).Steps.DataSets.ShouldBeEmpty();
+        var record = ReachOf(new GraphPipelineConfiguration { Name = "Nightly" });
+
+        record.DataSets.ShouldBeEmpty();
+        record.Containers.ShouldBeEmpty();
+    }
+
+    // FDW-1891: a source may name its data set by a parameter, and the run reaches the name it is given.
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ADataSetNamedByAPlaceholderIsJudgedByTheValueTheRunIsGiven()
+    {
+        var graph = Graph(Component("DataSetSource", dataSet: "{{Which}}"), Component("DataSetDestination", dataSet: "Out"));
+
+        var reach = ReachOf(graph, new Dictionary<string, object?> { ["Which"] = "BreweryFeed" });
+
+        reach.DataSets.ShouldBe([new ReachedDataSet("BreweryFeed", false), new ReachedDataSet("Out", true)]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void ADataSetBoundToAParameterIsJudgedByTheValueTheRunIsGiven()
+    {
+        var source = Component("DataSetSource");
+        source.SettingBindings = [new PipelineComponentSettingBindingConfiguration { SettingName = "dataSet", ParameterName = "Which" }];
+
+        var reach = ReachOf(Graph(source), new Dictionary<string, object?> { ["Which"] = "BreweryRejects" });
+
+        reach.DataSets.ShouldBe([new ReachedDataSet("BreweryRejects", false)]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void AParameterTheRunWasNotGivenRefusesTheReachNamingIt()
+    {
+        var graph = Graph(Component("DataSetSource", dataSet: "{{Which}}"));
+
+        var found = PipelineReach.Of(graph, NoValues, NullLogger.Instance);
+
+        found.IsSuccess.ShouldBeFalse();
+        found.CurrentMessage.ShouldNotBeNull().ShouldContain("Which");
     }
 }

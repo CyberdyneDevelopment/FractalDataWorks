@@ -232,6 +232,11 @@ public static class SettingDefinitions
     /// Attempts to resolve a well-known server setting definition by name.
     /// Returns <c>false</c> for names that are not part of the platform registry.
     /// </summary>
+    /// <remarks>
+    /// The registry is the settings listed above and the rate limit settings of every policy in
+    /// <c>RateLimitPolicies</c> (<c>RateLimit.{policy}.{field}</c>, FDW-1945), which are made from that collection rather than
+    /// listed.
+    /// </remarks>
     public static bool TryGet(string name, out SettingDefinition definition)
-        => KnownSettings.TryGetValue(name, out definition!);
+        => KnownSettings.TryGetValue(name, out definition!) || RateLimitSettingDefinitions.TryGet(name, out definition);
 }

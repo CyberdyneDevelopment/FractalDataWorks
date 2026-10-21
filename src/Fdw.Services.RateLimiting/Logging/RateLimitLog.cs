@@ -79,11 +79,10 @@ public static partial class RateLimitLog
     [MessageLogging(
         EventId = 11002,
         Level = LogLevel.Information,
-        Message = "Rate limit policy '{policyName}' registered with algorithm '{algorithm}'")]
+        Message = "Rate limit policy '{policyName}' registered; its allowance is read from its settings for each request")]
     public static partial IGenericMessage PolicyRegistered(
         ILogger logger,
-        string policyName,
-        string algorithm);
+        string policyName);
 
     /// <summary>
     /// Logs when a rate limit policy is not found.
@@ -173,25 +172,36 @@ public static partial class RateLimitLog
         string policyName,
         string error);
 
+    /// <summary>
+    /// Logs when a policy's allowance cannot be read because one of its settings is not set, or holds a value that is not of the kind
+    /// the setting holds. The request is refused: nothing is assumed for a setting that is missing.
+    /// </summary>
+    [MessageLogging(
+        EventId = 31001,
+        Level = LogLevel.Error,
+        Message = "Rate limit setting '{settingName}' of policy '{policyName}' is not set, or its value is not of the kind the setting holds")]
+    public static partial IGenericMessage AllowanceSettingUnreadable(
+        ILogger logger,
+        string policyName,
+        string settingName);
+
+    /// <summary>
+    /// Logs when a policy's allowance cannot be read because one of its settings holds a value the limiter cannot use.
+    /// </summary>
+    [MessageLogging(
+        EventId = 21001,
+        Level = LogLevel.Error,
+        Message = "Rate limit setting '{settingName}' of policy '{policyName}' is '{value}', which is not {rule}")]
+    public static partial IGenericMessage AllowanceSettingRefused(
+        ILogger logger,
+        string policyName,
+        string settingName,
+        string value,
+        string rule);
+
     // ===============================================================================
     // Diagnostic Events (6241-6250)
     // ===============================================================================
-
-    /// <summary>
-    /// Logs detailed policy configuration for debugging.
-    /// </summary>
-    [MessageLogging(
-        EventId = 11006,
-        Level = LogLevel.Debug,
-        Message = "Policy '{policyName}' configuration - RequestsPerWindow: {requestsPerWindow}, Window: {windowMs}ms, Algorithm: {algorithm}, AllowBurst: {allowBurst}, BurstLimit: {burstLimit}")]
-    public static partial IGenericMessage PolicyConfiguration(
-        ILogger logger,
-        string policyName,
-        int requestsPerWindow,
-        double windowMs,
-        string algorithm,
-        bool allowBurst,
-        int burstLimit);
 
     /// <summary>
     /// Logs when the rate limiting middleware is initialized.

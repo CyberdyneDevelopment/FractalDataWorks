@@ -31,7 +31,7 @@ public sealed class CatalogApiClientTests
         var result = await sut.Search("test query", ct: TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/catalog/search?query=test%20query");
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/catalog/search?q=test%20query");
         handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
@@ -56,7 +56,7 @@ public sealed class CatalogApiClientTests
         var result = await sut.Search("test", "DataSet", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/catalog/search?query=test&entityType=DataSet");
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/catalog/search?q=test&entityTypes=DataSet");
         handler.LastRequest.Method.ShouldBe(HttpMethod.Get);
         result.IsSuccess.ShouldBeTrue();
     }
@@ -75,7 +75,7 @@ public sealed class CatalogApiClientTests
         await sut.Search("q", null, TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldNotContain("entityType");
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldNotContain("entityTypes");
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public sealed class CatalogApiClientTests
         await sut.Search("q", "", TestContext.Current.CancellationToken);
 
         handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldNotContain("entityType");
+        handler.LastRequest.RequestUri!.PathAndQuery.ShouldNotContain("entityTypes");
     }
 
     [Fact]

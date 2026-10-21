@@ -19,7 +19,8 @@ public sealed class StepItemType : ExecutionItemTypeBase
             displayName: "Step",
             hierarchyLevel: 3,
             canHaveChildren: true,
-            canHaveParent: true)
+            canHaveParent: true,
+            canContainSelf: false)
     {
     }
 }

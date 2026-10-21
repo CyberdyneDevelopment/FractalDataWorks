@@ -15,7 +15,7 @@ namespace Fdw.Data.Http.Paths;
 /// Format: /segment/segment/{parameter} (e.g., "/api/v1/customers/{id}")
 /// </summary>
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
-public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
+public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>, IReaddressablePath
 {
     private readonly List<IStorageContainer> _containers;
     private readonly Dictionary<string, PathParameter> _parameters;
@@ -44,6 +44,26 @@ public sealed class HttpPath : PathBase, IDataPath<IStorageContainer>
 
     /// <inheritdoc/>
     public override string Domain => "Http";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The path part replaces the whole request path, query string included, so a run can read <c>v1/data?from=...&amp;to=...</c> with dates worked out when it
+    /// started (FDW-1985). The name part replaces the last segment of the path and keeps the query string. A blank part keeps what the path has.
+    /// </remarks>
+    public IPath Readdress(string? pathPart, string? namePart)
+    {
+        var address = string.IsNullOrWhiteSpace(pathPart) ? PathValue : pathPart;
+        if (string.IsNullOrWhiteSpace(namePart))
+        {
+            return new HttpPath(address, _containers, _parameters);
+        }
+
+        var queryAt = address.IndexOf('?', StringComparison.Ordinal);
+        var route = queryAt < 0 ? address : address[..queryAt];
+        var query = queryAt < 0 ? string.Empty : address[queryAt..];
+        var prefix = route[..(route.LastIndexOf('/') + 1)];
+        return new HttpPath(prefix + namePart + query, _containers, _parameters);
+    }
 
     // IDataNodePath implementation
     string IDataNodePath.Id => PathValue;

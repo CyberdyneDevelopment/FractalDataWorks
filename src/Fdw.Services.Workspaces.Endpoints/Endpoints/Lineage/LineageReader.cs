@@ -56,21 +56,4 @@ internal sealed class LineageReader
             ? selection.ToNewResult<LineageSearchPage>()
             : await LineageSearchReader.Search(selection.Value!, _sources, query, _logger, ct).ConfigureAwait(false);
     }
-
-    /// <summary>Reads how many stages each named pipeline has; null for one whose configuration has no stage list.</summary>
-    public async Task<IGenericResult<Dictionary<string, int?>>> StageCounts(List<string> pipelineNodeIds, CancellationToken ct)
-    {
-        var counts = new Dictionary<string, int?>(StringComparer.Ordinal);
-        foreach (var nodeId in pipelineNodeIds)
-        {
-            if (!MapNodeIds.TryParse(nodeId, out _, out var id)) continue;
-
-            var read = await _sources.Pipelines.Get(id, ConfigurationLevels.Children, ct).ConfigureAwait(false);
-            if (read.IsFailure) return read.ToNewResult<Dictionary<string, int?>>();
-
-            counts[nodeId] = read.Value is IEtlPipelineImplementationConfiguration engine ? engine.Transforms?.Count : null;
-        }
-
-        return GenericResult<Dictionary<string, int?>>.Success(counts);
-    }
 }

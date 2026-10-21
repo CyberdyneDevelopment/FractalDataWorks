@@ -26,7 +26,8 @@ public sealed class ProjectItemType : ExecutionItemTypeBase
             displayName: "Project",
             hierarchyLevel: 0,
             canHaveChildren: true,
-            canHaveParent: false)
+            canHaveParent: false,
+            canContainSelf: false)
     {
     }
 }

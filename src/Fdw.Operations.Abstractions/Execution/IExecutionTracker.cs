@@ -145,6 +145,7 @@ public interface IExecutionTracker
     /// <param name="itemType">Optional filter by execution item type.</param>
     /// <param name="state">Optional filter by current state.</param>
     /// <param name="correlationId">Optional filter by correlation ID.</param>
+    /// <param name="rootId">Optional filter by root execution: the run itself and everything under it (FDW-1690).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Paged result of execution items.</returns>
     Task<IGenericResult<IPagedResponse<IExecutionItem>>> ListExecutions(
@@ -153,5 +154,6 @@ public interface IExecutionTracker
         IExecutionItemType? itemType = null,
         IExecutionStateType? state = null,
         string? correlationId = null,
+        Guid? rootId = null,
         CancellationToken cancellationToken = default);
 }

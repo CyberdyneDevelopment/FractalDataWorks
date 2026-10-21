@@ -55,7 +55,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
         Summary(s =>
         {
             s.Summary = "List executions";
-            s.Description = "Returns a paginated list of executions with optional filtering by correlation ID, item type, state, or root ID.";
+            s.Description = "Returns a paginated list of executions with optional filtering by correlation ID, item type, state, or root ID. With no item type, root ID or correlation ID the list holds runs (Job items) only; ask for a root or a correlation ID to get every item of that family, or name an item type.";
             s.ExampleRequest = new ListExecutionsRequest { Page = 1, PageSize = 25 };
         });
     }
@@ -73,6 +73,11 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
 
         var page = paging.Value!;
         OnListingExecutions(req.Page, page.Take);
+        var itemTypeFilter = ExecutionListItemType.Of(req.ItemType, req.RootId.HasValue, !string.IsNullOrWhiteSpace(req.CorrelationId), out var refusal);
+        if (refusal is not null)
+        {
+            ThrowError(refusal, 400);
+        }
 
         // If correlation ID is provided, use the specialized query
         if (!string.IsNullOrWhiteSpace(req.CorrelationId))
@@ -94,7 +99,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
                 .OrderByDescending(x => x.CreatedAt)
                 .Skip(page.Skip)
                 .Take(page.Take)
-                .Select(MapToSummaryDto)
+                .Select(ExecutionSummaryResponse.Of)
                 .ToList();
 
             OnExecutionsListed(filteredItems.Count);
@@ -109,14 +114,6 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
             return;
         }
 
-        IExecutionItemType? itemTypeFilter = null;
-        if (!string.IsNullOrWhiteSpace(req.ItemType))
-        {
-            var resolved = ExecutionItemTypes.ByName(req.ItemType);
-            if (resolved != ExecutionItemTypes.NotFound)
-                itemTypeFilter = resolved;
-        }
-
         IExecutionStateType? stateFilter = null;
         if (!string.IsNullOrWhiteSpace(req.State))
         {
@@ -127,7 +124,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
 
         var listResult = await _tracker.ListExecutions(
             req.Page, page.Take,
-            itemTypeFilter, stateFilter, req.CorrelationId, ct).ConfigureAwait(false);
+            itemTypeFilter, stateFilter, req.CorrelationId, req.RootId, ct).ConfigureAwait(false);
 
         if (!listResult.IsSuccess || listResult.Value == null)
         {
@@ -142,7 +139,7 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
 
         await Send.OkAsync(new PaginatedResponse<ExecutionSummaryResponse>
         {
-            Items = pagedResult.Items.Select(MapToSummaryDto).ToList(),
+            Items = pagedResult.Items.Select(ExecutionSummaryResponse.Of).ToList(),
             Page = pagedResult.Page,
             PageSize = pagedResult.PageSize,
             TotalCount = (int)pagedResult.TotalCount
@@ -172,23 +169,6 @@ public abstract class ListExecutionsEndpointBase : Endpoint<ListExecutionsReques
         }
 
         return filtered.ToList();
-    }
-
-    /// <summary>
-    /// Maps an execution item to a summary DTO.
-    /// </summary>
-    protected virtual ExecutionSummaryResponse MapToSummaryDto(IExecutionItem item)
-    {
-        return new ExecutionSummaryResponse
-        {
-            Id = item.Id,
-            ItemType = item.ItemType.Name,
-            Name = item.Name,
-            State = item.State.Name,
-            CorrelationId = item.CorrelationId,
-            CreatedAt = item.CreatedAt,
-            CompletedAt = item.CompletedAt
-        };
     }
 
     /// <summary>

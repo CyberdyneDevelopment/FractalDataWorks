@@ -12,11 +12,11 @@ public sealed class DrainingStreamTests
         var stream = new DrainingStream(target, 8);
 
         stream.Write(new byte[] { 1, 2, 3 }, 0, 3);
-        await stream.DrainIfFull();
+        await stream.DrainIfFull(TestContext.Current.CancellationToken);
         target.Length.ShouldBe(0);
 
         stream.Write(new byte[] { 4, 5, 6, 7, 8 }, 0, 5);
-        await stream.DrainIfFull();
+        await stream.DrainIfFull(TestContext.Current.CancellationToken);
         target.ToArray().ShouldBe(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
         stream.PendingByteCount.ShouldBe(0);
         stream.DrainedByteCount.ShouldBe(8);
@@ -29,7 +29,7 @@ public sealed class DrainingStreamTests
         var stream = new DrainingStream(target, 4);
 
         stream.Write(new byte[100], 0, 100);
-        await stream.Complete();
+        await stream.Complete(TestContext.Current.CancellationToken);
 
         target.Length.ShouldBe(100);
     }

@@ -109,7 +109,7 @@ public class LineageSearchReaderTests
     private static Task<IGenericResult<LineageSearchPage>> Search(Mock<IDataSetConfigurationProvider> dataSets, LineageSearchQuery query, MapSelection? selection = null)
         => LineageSearchReader.Search(
             selection ?? new DomainOnlyMapSelection(),
-            new MapSources(dataSets.Object, null!, new Mock<IPipelineConfigurationProvider>().Object, new Mock<IDataSetVariationConfigurationProvider>().Object),
+            new MapSources(dataSets.Object, null!, new Mock<IPipelineConfigurationProvider>().Object, new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty()),
             query,
             NullLogger.Instance,
             CancellationToken.None);

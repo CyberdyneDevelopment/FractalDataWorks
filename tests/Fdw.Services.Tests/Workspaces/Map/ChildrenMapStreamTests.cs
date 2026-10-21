@@ -82,7 +82,7 @@ public class ChildrenMapStreamTests
         provider
             .Setup(p => p.Get(OrdersId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IDataSetImplementationConfiguration>.Success(dataSet.Object));
-        var sources = new MapSources(provider.Object, null!, new Mock<Fdw.Services.Pipelines.Abstractions.IPipelineConfigurationProvider>().Object, new Mock<IDataSetVariationConfigurationProvider>().Object);
+        var sources = new MapSources(provider.Object, null!, new Mock<Fdw.Services.Pipelines.Abstractions.IPipelineConfigurationProvider>().Object, new Mock<IDataSetVariationConfigurationProvider>().Object, CategoryProviders.Empty());
         var editing = (await MapEditing.Resolve(MapEditingTests.Authorization().Object, MapEditingTests.Caller, false, CancellationToken.None)).Value!;
         var query = MapChildrenQuery.Parse(request, MapKinds.DataSet, NullLogger.Instance).Value!;
 

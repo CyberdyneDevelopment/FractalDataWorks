@@ -14,7 +14,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 /// <summary>
 /// Abstract base class for transform types that define data transformations in ETL pipelines.
 /// </summary>
-public abstract class TransformTypeBase : TypeOptionBase<TransformTypeBase>, ITypeOption<int, TransformTypeBase>, ITransformType, IStageMemberShape, IStagePipelineTypesShape
+public abstract class TransformTypeBase : TypeOptionBase<TransformTypeBase>, ITypeOption<int, TransformTypeBase>, ITransformType, IStageMemberShape
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="TransformTypeBase"/> class.
@@ -79,9 +79,10 @@ public abstract class TransformTypeBase : TypeOptionBase<TransformTypeBase>, ITy
     /// <remarks>A kind that owns body members overrides this; the default is none.</remarks>
     public virtual IReadOnlyList<StageMember> Members => Array.Empty<StageMember>();
 
-    /// <inheritdoc />
-    /// <remarks>A kind that only some pipeline types can run overrides this; null, the default, is every pipeline type.</remarks>
-    public virtual IReadOnlyList<string>? PipelineTypes => null;
+    /// <summary>Tells whether a stage of this kind, as configured, rejects records instead of passing or dropping them.</summary>
+    /// <param name="configuration">The stage's configuration.</param>
+    /// <returns><see langword="true"/> when the stage can reject a record; a graph then needs an error output to take them. The default is <see langword="false"/>.</returns>
+    public virtual bool RejectsRecords(IGenericConfiguration configuration) => false;
 
     /// <inheritdoc />
     [ExcludeFromCodeCoverage] // Abstract method - implementation coverage tested in derived classes

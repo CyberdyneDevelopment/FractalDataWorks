@@ -56,6 +56,26 @@ public sealed record PipelineExecutionOptions
     public Guid? TenantId { get; init; }
 
     /// <summary>
+    /// Gets the identifier of the execution record this run is tracked under (the id <c>IExecutionTracker</c> gave the run when
+    /// it was queued). A run that starts another pipeline links the new run to this one as its parent (FDW-1381); a run with no
+    /// tracked execution has nothing to link to, so a StartPipeline stage in it is refused rather than started unlinked.
+    /// </summary>
+    public Guid? ExecutionId { get; init; }
+
+    /// <summary>
+    /// Gets the instant the run started (FDW-1982): the one the host stamped when it took the run off the queue, and the one it records as the
+    /// pipeline's watermark after the run succeeds. A graph pipeline offers it as the read-only <c>RunStarted</c>; a run that is not started by the
+    /// host's queue states none, and anything that names <c>RunStarted</c> then fails saying the run has no value for it.
+    /// </summary>
+    public DateTimeOffset? RunStarted { get; init; }
+
+    /// <summary>
+    /// Gets the roles the run acts with. A pipeline the run starts acts with the same roles, so starting a run never grants
+    /// more than the starter holds (FDW-1161); a run with none stated cannot start another pipeline.
+    /// </summary>
+    public IReadOnlyList<string>? RunRoles { get; init; }
+
+    /// <summary>
     /// Gets the production-mode defaults (no test mode, no sample retention).
     /// </summary>
     public static PipelineExecutionOptions Production { get; } = new();

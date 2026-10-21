@@ -17,7 +17,7 @@ namespace Fdw.Data.PostgreSql;
 /// PostgreSQL does not typically use three-part names (database.schema.table)
 /// since cross-database queries are not directly supported.
 /// </remarks>
-public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath
+public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContainer>, IDatabasePath, IReaddressablePath
 {
     private readonly List<IStorageContainer> _containers;
 
@@ -86,6 +86,14 @@ public sealed class PostgreSqlDatabasePath : PathBase, IDataPath<IStorageContain
     /// Gets the schema.object format with quoting.
     /// </summary>
     public string SchemaQualifiedName => $"\"{Schema}\".\"{ObjectName}\"";
+
+    /// <inheritdoc />
+    /// <remarks>The path part is the schema and the name part is the table or view; the database is kept.</remarks>
+    public IPath Readdress(string? pathPart, string? namePart) =>
+        new PostgreSqlDatabasePath(
+            Database,
+            string.IsNullOrWhiteSpace(pathPart) ? Schema : pathPart,
+            string.IsNullOrWhiteSpace(namePart) ? ObjectName : namePart);
 
     string? IDatabasePath.Database => Database;
     string? IDatabasePath.Schema => Schema;

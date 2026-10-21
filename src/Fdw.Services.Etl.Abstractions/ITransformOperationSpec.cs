@@ -21,9 +21,6 @@ public interface ITransformOperationSpec
     /// <summary>Gets whether the step runs. A step that does not say is enabled.</summary>
     bool IsEnabled { get; }
 
-    /// <summary>Gets the field mappings (for Map transforms).</summary>
-    IReadOnlyList<IFieldMapping> FieldMappings { get; }
-
     /// <summary>Gets the group-by field names (for Aggregate transforms).</summary>
     IReadOnlyList<string> GroupByFields { get; }
 

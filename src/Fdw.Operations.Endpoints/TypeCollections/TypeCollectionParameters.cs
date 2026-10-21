@@ -2,8 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Fdw.Collections;
+using Fdw.Data.Transformations;
 using Fdw.Services.Etl.Abstractions;
+using Fdw.Services.Etl.Abstractions.Flow;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
+using Fdw.Services.Etl.Graphs;
 
 namespace Fdw.Operations.Endpoints.TypeCollections;
 
@@ -28,6 +31,10 @@ internal static class TypeCollectionParameters
             AddValueSourceParameters(source, parameters);
         if (typeOption is IStageMemberShape stage)
             AddStageMembers(stage, parameters);
+        if (typeOption is IFlowComponentShape component)
+            AddComponentSettings(component, parameters);
+        if (typeOption is FieldTransformationBase transformation)
+            AddTransformationParameters(transformation, parameters);
         return parameters;
     }
 
@@ -65,6 +72,32 @@ internal static class TypeCollectionParameters
     {
         foreach (var member in stage.Members)
             parameters.Add(Parameter(member.Name, member.Kind, member.IsRequired, member.HelpText));
+    }
+
+    // A component kind lists the settings it takes, so the console builds the form of a component of that kind from them.
+    private static void AddComponentSettings(IFlowComponentShape component, List<TypeCollectionValueParameterDto> parameters)
+    {
+        foreach (var setting in component.Settings)
+        {
+            var listed = Parameter(setting.Name, setting.Kind, setting.IsRequired, setting.HelpText);
+            listed.BindsTo = setting.ShapesGraph ? null : BindsTo(BindableKind(setting));
+            listed.Bindable = listed.BindsTo is not null;
+            listed.BindsToList = listed.Bindable && SettingBindingRules.IsListKind(SettingBindingRules.BoundKind(setting));
+            listed.AcceptsParameterText = setting.TakesParameterText;
+            parameters.Add(listed);
+        }
+    }
+
+    // A field transformation states the parameters it takes (FDW-1988), so a transformation added later lists its own with no change here. A step passes
+    // every one as text, and the text may name a parameter or a variable in double braces.
+    private static void AddTransformationParameters(FieldTransformationBase transformation, List<TypeCollectionValueParameterDto> parameters)
+    {
+        foreach (var definition in transformation.ExpectedParameters)
+        {
+            var listed = Parameter(definition.Name, "Text", definition.IsRequired, string.Concat(definition.HelpText));
+            listed.AcceptsParameterText = true;
+            parameters.Add(listed);
+        }
     }
 
     private static void AddValueSourceParameters(IValueSourceKind source, List<TypeCollectionValueParameterDto> parameters)
@@ -106,6 +139,16 @@ internal static class TypeCollectionParameters
                 string.Concat(type.GetProperty("Label")?.GetValue(descriptor) as string)));
         }
     }
+
+    // The type of parameter that supplies a setting, from what the binding registry says the setting holds; the same rule the save checks with.
+    // The kind a component setting binds as: a single-value setting by the kind its column holds, a list of columns as itself (FDW-1745).
+    private static string? BindableKind(StageMember setting) =>
+        ComponentSettingBindings.Find(setting.Name) is { } scalar ? scalar.Kind
+        : SettingBindingRules.IsListKind(SettingBindingRules.BoundKind(setting)) ? SettingBindingRules.BoundKind(setting)
+        : null;
+
+    private static string? BindsTo(string? settingKind) =>
+        settingKind is not null && SettingBindingRules.ParameterTypeFor(settingKind) is { Length: > 0 } type ? type : null;
 
     private static TypeCollectionValueParameterDto Parameter(string name, string kind, bool isRequired, string helpText) =>
         new() { Name = name, Kind = kind, IsRequired = isRequired, HelpText = helpText };

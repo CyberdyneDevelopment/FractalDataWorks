@@ -24,6 +24,7 @@ internal static class TransformationEndpointSupport
     {
         var payload = new TransformationPayload
         {
+            Id = transformation.Id,
             Name = transformation.Name,
             Description = transformation.Description,
             Implementation = transformation.Implementation,

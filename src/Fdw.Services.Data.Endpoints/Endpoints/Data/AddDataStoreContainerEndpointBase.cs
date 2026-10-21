@@ -63,6 +63,9 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             HasHeader = request.HasHeader,
             Separator = request.Separator,
             SheetName = request.SheetName,
+            WriteEndpoint = request.WriteEndpoint,
+            WriteMethod = request.WriteMethod,
+            WriteContentType = request.WriteContentType,
             ClassificationId = request.ClassificationId,
             Fields = BuildFields(request.Fields),
         };
@@ -125,6 +128,10 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             request.ContainerName, request.Format, request.HasHeader, request.Separator, request.SheetName, Logger);
         if (refusal is not null) return refusal;
 
+        var target = DataStoreContainerWriteTarget.Refusal(
+            request.ContainerName, request.WriteEndpoint, request.WriteMethod, request.WriteContentType, Logger);
+        if (target is not null) return target;
+
         return GenericResult.Success();
     }
 
@@ -151,6 +158,9 @@ public abstract class AddDataStoreContainerEndpointBase : CrudCreateEndpointBase
             HasHeader = container.HasHeader,
             Separator = container.Separator,
             SheetName = container.SheetName,
+            WriteEndpoint = container.WriteEndpoint,
+            WriteMethod = container.WriteMethod,
+            WriteContentType = container.WriteContentType,
             Fields = container.Fields.Select(f => new DataStoreFieldResponse
             {
                 Id = f.Id,

@@ -214,6 +214,7 @@
     <PackageVersion Include="Parquet.Net" Version="4.25.0" />
     <PackageVersion Include="Avro" Version="1.12.0" />
     <!-- Schema Importers -->
+    <!-- 1.6.31: patched for GHSA-7pxr-59rr-hqj2 (denial of service via YAML alias expansion); 1.6.29 made NuGet audit refuse the Release restore. -->
     <PackageVersion Include="Microsoft.OpenApi.Readers" Version="1.6.31" />
     <PackageVersion Include="Microsoft.OData.Edm" Version="8.4.3" />
     <PackageVersion Include="System.Xml.XDocument" Version="4.3.0" />

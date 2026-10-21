@@ -61,17 +61,19 @@ internal static class MapEdges
             .Select(origin => Between(MapRelations.DerivedFrom, MapNodeIds.DataSet(dataSet.Id), MapNodeIds.DataSet(origin)));
 
     private static IEnumerable<MapEdgeDto> Consumes(MapState state, MapPipelineLinks pipeline)
-        => Named(state, pipeline.SourceDataSetName)
+        => Named(state, pipeline.SourceDataSetNames)
             .Select(dataSet => Between(MapRelations.ConsumedBy, MapNodeIds.DataSet(dataSet), MapNodeIds.Pipeline(pipeline.Id)));
 
     private static IEnumerable<MapEdgeDto> Produces(MapState state, MapPipelineLinks pipeline)
-        => Named(state, pipeline.DestinationDataSetName)
+        => Named(state, pipeline.DestinationDataSetNames)
             .Select(dataSet => Between(MapRelations.Produces, MapNodeIds.Pipeline(pipeline.Id), MapNodeIds.DataSet(dataSet)));
 
-    private static IEnumerable<Guid> Named(MapState state, string? dataSetName)
-        => !string.IsNullOrEmpty(dataSetName) && state.DataSetsByName.TryGetValue(dataSetName, out var id)
-            ? [id]
-            : [];
+    // A name the scope holds no data set for draws no edge; the same data set named twice draws one.
+    private static IEnumerable<Guid> Named(MapState state, IReadOnlyList<string> dataSetNames)
+        => dataSetNames
+            .Where(name => !string.IsNullOrEmpty(name) && state.DataSetsByName.ContainsKey(name))
+            .Select(name => state.DataSetsByName[name])
+            .Distinct();
 
     private static Dictionary<string, object> DeclaredMetadata(WorkspaceRelationshipConfiguration relationship)
     {

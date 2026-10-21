@@ -11,13 +11,11 @@ namespace Fdw.Services.Etl.Transforms;
 
 /// <summary>
 /// Orders a list of stages and runs it, and answers what a list needs of the run: the one place that knows how a stage list
-/// is read, for the stages of a pipeline and for the stages inside a Branch path alike.
+/// is read.
 /// </summary>
 /// <remarks>
-/// FDW-1120. Both pipelines order their stages here and ask here whether any stage, however deeply nested, needs the whole
-/// input; a Branch runs the stages of a path through <see cref="RunBatch"/>. The policy for a failing stage (continue on
-/// error, maximum errors) stays with the pipeline that owns the run: a failure inside a path fails the Branch stage, and the
-/// pipeline applies its policy to that stage as it does to any other.
+/// FDW-1120. A tool component orders its stages here and asks here whether any stage needs the whole input; <see cref="RunBatch"/>
+/// runs them. The policy for a failing stage stays with the pipeline that owns the run.
 /// </remarks>
 internal static class StageRunner
 {
@@ -27,7 +25,7 @@ internal static class StageRunner
     public static List<PipelineTransformConfiguration> Ordered(IEnumerable<PipelineTransformConfiguration>? stages) =>
         stages is null ? [] : stages.Where(stage => stage.IsEnabled).OrderBy(stage => stage.ExecutionOrder).ToList();
 
-    /// <summary>Returns whether any enabled stage in the list, or inside one of its paths, needs the whole input at once.</summary>
+    /// <summary>Returns whether any enabled stage in the list needs the whole input at once.</summary>
     /// <param name="stages">The stages to look through.</param>
     /// <returns>True when a run over this list cannot stream.</returns>
     public static bool RequiresCompleteInput(IEnumerable<PipelineTransformConfiguration>? stages)
@@ -35,11 +33,6 @@ internal static class StageRunner
         foreach (var stage in Ordered(stages))
         {
             if (OptionTransformTypes.ByName(stage.OperationType).RequiresCompleteInput)
-            {
-                return true;
-            }
-
-            if (stage.Paths.Any(path => RequiresCompleteInput(path.Stages)))
             {
                 return true;
             }

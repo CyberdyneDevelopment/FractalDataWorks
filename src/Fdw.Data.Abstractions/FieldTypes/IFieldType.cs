@@ -9,7 +9,10 @@ namespace Fdw.Data.Abstractions;
 public interface IFieldType
 {
     /// <summary>
-    /// Type name (e.g., "Int32", "String", "Array&lt;Order&gt;").
+    /// The store's own name for the type, as the store reports it (e.g. <c>nvarchar</c>, <c>int</c>, <c>int4</c>, a JSON
+    /// Schema <c>string</c>, or "Array&lt;Order&gt;" for a nested structure). It is what a data store container field
+    /// records as its <c>DataType</c> and what DDL writes as a column's type; the portable type is
+    /// <see cref="IField.ExplicitType"/> (FDW-1588).
     /// </summary>
     string TypeName { get; }
 

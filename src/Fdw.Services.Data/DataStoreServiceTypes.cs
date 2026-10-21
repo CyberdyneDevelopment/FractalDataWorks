@@ -152,6 +152,43 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetVariationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IDataSetVariationConfigurationProvider>());
 
+            // A category is one node of a category tree (FDW-1270, FDW-1465): its own domain whose implementation is its
+            // type, DataSet, Glossary or Custom. Each type's table holds only the key; the fields of a node live on the domain row, so
+            // the whole tree reads in one query.
+            builder.Services.TryAddSingleton<DataSetCategoryConfigurationProvider>(sp =>
+                new DataSetCategoryConfigurationProvider(
+                    sp.GetRequiredService<ILogger<DataSetCategoryConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection, "catalog", "DataSetCategoryConfiguration"));
+            builder.Services.TryAddSingleton<CustomCategoryConfigurationProvider>(sp =>
+                new CustomCategoryConfigurationProvider(
+                    sp.GetRequiredService<ILogger<CustomCategoryConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection, "catalog", "CustomCategoryConfiguration"));
+            builder.Services.TryAddSingleton<GlossaryCategoryConfigurationProvider>(sp =>
+                new GlossaryCategoryConfigurationProvider(
+                    sp.GetRequiredService<ILogger<GlossaryCategoryConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection, "catalog", "GlossaryCategoryConfiguration"));
+            builder.Services.TryAddSingleton<CategoryConfigurationProvider>(sp =>
+            {
+                var domain = new CategoryConfigurationProvider(
+                    sp.GetRequiredService<ILogger<CategoryConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
+                    DataStoreTypes.ConfigurationConnection, "catalog", "Category");
+                domain.Register(DataSetCategoryConfiguration.ImplementationName,
+                    sp.GetRequiredService<DataSetCategoryConfigurationProvider>());
+                domain.Register(CustomCategoryConfiguration.ImplementationName,
+                    sp.GetRequiredService<CustomCategoryConfigurationProvider>());
+                domain.Register(GlossaryCategoryConfiguration.ImplementationName,
+                    sp.GetRequiredService<GlossaryCategoryConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<ICategoryConfigurationProvider>(
+                sp => sp.GetRequiredService<CategoryConfigurationProvider>());
+            builder.Services.TryAddSingleton<IDomainConfigurationProvider<ICategoryImplementationConfiguration>>(
+                sp => sp.GetRequiredService<ICategoryConfigurationProvider>());
+
             // A transformation is defined once and used later (FDW-846, FDW-962). Field transforms one
             // column and is attached to field mappings; Map, Filter, Calculate, Aggregate and Lookup
             // transform whole inputs and run in pipeline stages. Each is an implementation of the one
@@ -218,14 +255,6 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
 
             // What makes an attached transformation apply on a data-set read (FDW-877).
             builder.Services.TryAddSingleton<FieldMappingTransformationResolver>();
-
-            // Lineage reads containers that span domains and, in the transform schema, have no
-            // configuration types of their own. It is registered beside the DataSet provider because
-            // that is the closest thing to an owner it has.
-            builder.Services.TryAddSingleton<LineageConfigurationProvider>(sp =>
-                new LineageConfigurationProvider(
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(),
-                    sp.GetRequiredService<IDataSetConfigurationProvider>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });

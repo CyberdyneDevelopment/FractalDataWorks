@@ -16,7 +16,7 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 ///
 /// It returns a <see cref="RateLimiter"/> from System.Threading.RateLimiting rather than taking
 /// ASP.NET's RateLimiterOptions, which keeps this package on netstandard2.0 — the host-side
-/// registrar wraps what this returns into a named policy.
+/// registrar wraps what this returns into a named allowance.
 /// </remarks>
 public abstract class RateLimitAlgorithmBase : TypeOptionBase<RateLimitAlgorithmBase>, IRateLimitAlgorithm
 {
@@ -26,9 +26,9 @@ public abstract class RateLimitAlgorithmBase : TypeOptionBase<RateLimitAlgorithm
     protected RateLimitAlgorithmBase(string name) : base(name) { }
 
     /// <summary>
-    /// Builds the limiter this algorithm describes, configured from <paramref name="policy"/>.
+    /// Builds the limiter this algorithm describes, configured from <paramref name="allowance"/>.
     /// </summary>
-    /// <param name="policy">The policy supplying window, limits and queueing behaviour.</param>
+    /// <param name="allowance">The numbers supplying window, limits and queueing behaviour.</param>
     /// <returns>The configured limiter.</returns>
-    public abstract RateLimiter CreateLimiter(IRateLimitPolicy policy);
+    public abstract RateLimiter CreateLimiter(RateLimitAllowance allowance);
 }

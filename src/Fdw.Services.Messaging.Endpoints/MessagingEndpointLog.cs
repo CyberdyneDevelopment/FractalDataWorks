@@ -274,4 +274,18 @@ public static partial class MessagingEndpointLog
     /// </summary>
     [MessageLogging(EventId = 91000, Level = LogLevel.Error, Message = "Messaging endpoint exception during '{operation}'")]
     public static partial IGenericMessage MessagingException(ILogger logger, Exception ex, string operation);
+
+    /// <summary>
+    /// Logged at Trace level when a UI comment endpoint is entered.
+    /// </summary>
+    [MessageLogging(EventId = 11024, Level = LogLevel.Trace, Message = "UI comment endpoint '{operation}'")]
+    public static partial IGenericMessage TraceUiFeedbackEndpoint(ILogger logger, string operation);
+
+    /// <summary>
+    /// Logged at Warning level when a list of UI comments is asked to sort by something other than urgency. A validation refusal (category 2), answered with a
+    /// client error that names the one order there is.
+    /// </summary>
+    [MessageLogging(EventId = 21000, Level = LogLevel.Warning, Message = "Refused UI comment list sorted by '{sort}'; only 'urgency' is a sort",
+        ClientMessage = "sort '{sort}' is not a sort; send urgency, or leave it out for newest first")]
+    public static partial IGenericMessage UiFeedbackSortUnknown(ILogger logger, string sort);
 }

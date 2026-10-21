@@ -29,6 +29,9 @@ public abstract class DataflowLayerEndpointBase : EndpointWithoutRequest<Dataflo
         _logger = logger;
     }
 
+    /// <summary>Gets whether the layer draws the category path of a data set, which makes the load read the category tree.</summary>
+    private protected abstract bool NamesCategories { get; }
+
     /// <summary>Draws the layer this endpoint serves from the inputs.</summary>
     private protected abstract DataflowGraphResponse BuildLayer(DataflowGraphInputs inputs);
 
@@ -37,7 +40,7 @@ public abstract class DataflowLayerEndpointBase : EndpointWithoutRequest<Dataflo
     {
         EndpointLog.ListingResources(_logger, "dataflow graph");
 
-        var loaded = await DataflowGraphInputsLoader.Load(_provider, _pipelineProvider, _logger, ct).ConfigureAwait(false);
+        var loaded = await DataflowGraphInputsLoader.Load(_provider, _pipelineProvider, _logger, NamesCategories, ct).ConfigureAwait(false);
         if (!loaded.IsSuccess)
         {
             await WriteReadFailure(loaded.CurrentMessage, ct).ConfigureAwait(false);

@@ -10,8 +10,9 @@ namespace Fdw.Data.PostgreSql;
 /// <remarks>
 /// DDL and system catalogs store type names in PostgreSQL's lowercase form (e.g., "int4", "text").
 /// <see cref="PostgreSqlNativeTypes"/> TypeCollection names match those lowercase names directly
-/// (e.g., "int4", "text"). This resolver wraps <c>ByName</c> with a normalization map to handle
-/// common aliases (e.g., "integer" → "int4", "boolean" → "bool").
+/// (e.g., "int4", "text"), except <c>Bool</c> and <c>Char</c>: an option's name is also its generated property's name, and
+/// <c>bool</c> and <c>char</c> are C# keywords. This resolver wraps <c>ByName</c> with a normalization map for the common
+/// aliases (e.g., "integer" → "int4") and for those two (e.g., "boolean" and "bool" → "Bool"), FDW-1588.
 /// </remarks>
 public static class PostgreSqlNativeTypeResolver
 {
@@ -22,9 +23,11 @@ public static class PostgreSqlNativeTypeResolver
             ["int"]                = "int4",
             ["bigint"]             = "int8",
             ["smallint"]           = "int2",
-            ["boolean"]            = "bool",
+            ["boolean"]            = "Bool",
+            ["bool"]               = "Bool",
             ["character varying"]  = "varchar",
-            ["character"]          = "char",
+            ["character"]          = "Char",
+            ["char"]               = "Char",
             ["double precision"]   = "float8",
             ["real"]               = "float4",
             ["timestamp without time zone"] = "timestamp",

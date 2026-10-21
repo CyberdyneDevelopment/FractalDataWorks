@@ -53,21 +53,23 @@ public sealed class LoadUnit
             : new LoadUnit(owner, kind, step) { DataSet = step.DestinationDataSet };
     }
 
-    /// <summary>Makes the unit of the pipeline's own load, which writes where the pipeline's destination says.</summary>
-    /// <param name="configuration">The pipeline.</param>
-    /// <param name="row">The row of the pipeline's own load (its options and value sources).</param>
-    /// <param name="kind">The kind of load the load mode means.</param>
+    /// <summary>Makes the unit of a graph destination that loads a data set.</summary>
+    /// <param name="owner">What the load is, for messages.</param>
+    /// <param name="kind">The kind of load.</param>
+    /// <param name="row">The row that carries the load's options and columns.</param>
+    /// <param name="dataSet">The destination data set.</param>
     /// <returns>The unit.</returns>
-    public static LoadUnit ForOwnLoad(BatchCopyPipelineConfiguration configuration, PipelineLoadStepConfiguration row, ILoadStepKind kind)
-    {
-        const string owner = "the pipeline's own load";
-        return string.IsNullOrWhiteSpace(configuration.DestinationDataSet)
-            ? new LoadUnit(owner, kind, row)
-            {
-                DataStore = configuration.DestinationDataStoreName,
-                Path = configuration.DestinationDataStorePath,
-                Container = configuration.DestinationContainerName,
-            }
-            : new LoadUnit(owner, kind, row) { DataSet = configuration.DestinationDataSet };
-    }
+    public static LoadUnit ForDataSet(string owner, ILoadStepKind kind, PipelineLoadStepConfiguration row, string dataSet)
+        => new(owner, kind, row) { DataSet = dataSet };
+
+    /// <summary>Makes the unit of a graph destination that loads a named container of a data store.</summary>
+    /// <param name="owner">What the load is, for messages.</param>
+    /// <param name="kind">The kind of load.</param>
+    /// <param name="row">The row that carries the load's options and columns.</param>
+    /// <param name="dataStore">The destination data store.</param>
+    /// <param name="path">The path in the data store; empty when it states none.</param>
+    /// <param name="container">The destination container.</param>
+    /// <returns>The unit.</returns>
+    public static LoadUnit ForContainer(string owner, ILoadStepKind kind, PipelineLoadStepConfiguration row, string dataStore, string path, string container)
+        => new(owner, kind, row) { DataStore = dataStore, Path = path, Container = container };
 }

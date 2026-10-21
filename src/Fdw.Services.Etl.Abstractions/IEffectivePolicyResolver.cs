@@ -48,4 +48,12 @@ public interface IEffectivePolicyResolver
     /// <param name="parentEffective">The already-resolved effective policy of the parent node (or server defaults at root).</param>
     /// <returns>The fully resolved policy snapshot with no null values.</returns>
     ExecutionPolicySnapshot ResolveForNode(IOrchestrationNodeImplementationConfiguration node, ExecutionPolicySnapshot parentEffective);
+
+    /// <summary>
+    /// Resolves the effective policy for a node that has no parent node (a project at the root of its tree), inheriting
+    /// from the server defaults for NULL fields (FDW-1740).
+    /// </summary>
+    /// <param name="node">The root orchestration node configuration.</param>
+    /// <returns>The fully resolved policy snapshot with no null values.</returns>
+    ExecutionPolicySnapshot ResolveForRootNode(IOrchestrationNodeImplementationConfiguration node);
 }

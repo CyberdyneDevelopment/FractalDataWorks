@@ -16,13 +16,13 @@ public sealed class TokenBucketRateLimitAlgorithm : RateLimitAlgorithmBase
     public TokenBucketRateLimitAlgorithm() : base("TokenBucket") { }
 
     /// <inheritdoc />
-    public override RateLimiter CreateLimiter(IRateLimitPolicy policy) =>
+    public override RateLimiter CreateLimiter(RateLimitAllowance allowance) =>
         new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
         {
-            TokenLimit = policy.AllowBurst ? policy.BurstLimit : policy.RequestsPerWindow,
-            ReplenishmentPeriod = policy.Window,
-            TokensPerPeriod = policy.RequestsPerWindow,
-            QueueLimit = policy.QueueExceededRequests ? policy.QueueLimit : 0,
+            TokenLimit = allowance.AllowBurst ? allowance.BurstLimit : allowance.RequestsPerWindow,
+            ReplenishmentPeriod = allowance.Window,
+            TokensPerPeriod = allowance.RequestsPerWindow,
+            QueueLimit = allowance.QueueExceededRequests ? allowance.QueueLimit : 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
         });
 }

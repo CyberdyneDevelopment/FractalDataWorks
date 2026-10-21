@@ -2,16 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
-using Fdw.Data;
 using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Services.Etl.Abstractions.OptionTypes;
 
 namespace Fdw.Services.Etl.Pipelines.Loads;
 
 /// <summary>
-/// One load step of a BatchCopy pipeline, or the pipeline's own load (FDW-1108). Persisted in
-/// <c>pipe.PipelineLoadStep</c>; cascade child of <c>BatchCopyPipelineConfiguration</c> (key
-/// <c>BatchCopyPipelineConfigurationRowId</c>).
+/// One load step, or the load of a graph destination (FDW-1108). The graph destination builders make these rows in memory
+/// from the component's settings; nothing reads one from a table.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -30,9 +28,7 @@ namespace Fdw.Services.Etl.Pipelines.Loads;
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
-[GenerateMapper]
-[ManagedConfiguration(ServiceCategory = "Pipeline")]
-public sealed partial class PipelineLoadStepConfiguration : IGenericConfiguration
+public sealed class PipelineLoadStepConfiguration
 {
     /// <summary>
     /// The name the row of the pipeline's own load is stored under.
@@ -155,12 +151,12 @@ public sealed partial class PipelineLoadStepConfiguration : IGenericConfiguratio
     public bool IsEnabled { get; set; }
 
     /// <summary>
-    /// Gets or sets the key, compare and write column lists, each ordered by role and ordinal. Rows live in <c>pipe.PipelineLoadColumn</c>, each holding this row's key in <c>PipelineLoadStepRowId</c>.
+    /// Gets or sets the key, compare and write column lists, each ordered by role and ordinal..
     /// </summary>
     public IList<PipelineLoadColumnConfiguration> Columns { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the value sources of the step (the parameters, on an Execute step). Rows live in <c>pipe.PipelineLoadValueSource</c>.
+    /// Gets or sets the value sources of the step (the parameters, on an Execute step).
     /// </summary>
     public IList<PipelineLoadValueSourceConfiguration> ValueSources { get; set; } = [];
 }

@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Transforms;
 /// <see cref="PipelineTransformConfiguration"/> (pipe.AggregationOperationConfiguration).
 /// </summary>
 /// <remarks>
-/// Why: implements <see cref="IGenericConfiguration"/> (mirroring <see cref="PipelineTransformFieldMappingConfiguration"/>)
+/// Why: implements <see cref="IGenericConfiguration"/>
 /// so the configuration cascade-save discovers and persists this collection when the parent transform is
 /// saved. Without this interface the Aggregations collection would be silently skipped.
 /// </remarks>

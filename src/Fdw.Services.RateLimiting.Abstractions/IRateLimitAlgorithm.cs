@@ -8,7 +8,7 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 /// build the limiter it names.
 /// </summary>
 /// <remarks>
-/// Why the contract carries the behaviour and not just identity: callers hold a policy whose
+/// Why the contract carries the behaviour and not just identity: callers hold an allowance whose
 /// <c>Algorithm</c> is typed as this interface, so this is where the ability to build a limiter has
 /// to be visible. Declaring it only on the base left every caller reading <c>Name</c> and switching
 /// on it, which is how a four-case switch with no default came to decide whether a policy existed.
@@ -16,9 +16,9 @@ namespace Fdw.Services.RateLimiting.Abstractions;
 public interface IRateLimitAlgorithm : ITypeOption<int, RateLimitAlgorithmBase>
 {
     /// <summary>
-    /// Builds the limiter this algorithm describes, configured from <paramref name="policy"/>.
+    /// Builds the limiter this algorithm describes, configured from <paramref name="allowance"/>.
     /// </summary>
-    /// <param name="policy">The policy supplying window, limits and queueing behaviour.</param>
+    /// <param name="allowance">The numbers supplying window, limits and queueing behaviour.</param>
     /// <returns>The configured limiter.</returns>
-    RateLimiter CreateLimiter(IRateLimitPolicy policy);
+    RateLimiter CreateLimiter(RateLimitAllowance allowance);
 }

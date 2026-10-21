@@ -42,10 +42,9 @@ public sealed class ScheduleInsertRecord
     public int? IntervalSeconds { get; set; }
 
     /// <summary>
-    /// Gets or sets the IANA timezone ID for schedule evaluation.
-    /// Defaults to UTC.
+    /// Gets or sets the IANA timezone ID for schedule evaluation. It has no default: the create endpoint refuses a schedule that does not state one.
     /// </summary>
-    public string TimeZoneId { get; set; } = "UTC";
+    public string TimeZoneId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets whether the schedule is enabled.

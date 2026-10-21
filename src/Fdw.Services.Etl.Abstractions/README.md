@@ -18,7 +18,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | `IEtlPipelineFactory<TPipeline, TConfiguration>` | interface | Generic interface for ETL pipeline factories with typed configuration. |
 | `IEtlPipelineType` | interface | Non-generic interface for ETL pipeline type definitions. |
 | `IEtlPipelineType<TPipeline, TConfiguration, TFactory>` | interface | Generic interface for typed ETL pipeline type definitions. |
-| `IEtlPipelineTypedConfiguration` | interface | Typed body for an ETL ENGINE (e.g. BatchCopyPipelineConfiguration, StreamingPipelineConfiguration). The… |
 | `IExecutionCompletionSignaler` | interface | Singleton registry that allows the project orchestrator to await pipeline completion without polling.… |
 | `IExpressionEvaluator` | interface | Interface for evaluating expressions in ETL transforms. |
 | `IFieldMapping` | interface | Represents a field mapping in a Map transform. |

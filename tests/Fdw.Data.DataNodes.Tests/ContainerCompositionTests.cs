@@ -127,6 +127,35 @@ public sealed class ContainerCompositionTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "CoreFramework")]
+    public void BuildMetadataCarriesTheWriteTargetUnderTheKeysTheHttpWriterReadsOnlyWhenItIsStated()
+    {
+        var stated = ContainerComposition.BuildMetadata(
+            new DataContainerConfiguration
+            {
+                Name = "BreweryOut",
+                WriteEndpoint = "/api/v1/ingest",
+                WriteMethod = "POST",
+                WriteContentType = "application/json",
+            },
+            FormatTypes.Json);
+        var onlyEndpoint = ContainerComposition.BuildMetadata(
+            new DataContainerConfiguration { Name = "BreweryOut", WriteEndpoint = "/api/v1/ingest" }, FormatTypes.Json);
+        var none = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "Empty" }, FormatTypes.Json);
+
+        stated["Endpoint"].ShouldBe("/api/v1/ingest");
+        stated["Method"].ShouldBe("POST");
+        stated["ContentType"].ShouldBe("application/json");
+        onlyEndpoint["Endpoint"].ShouldBe("/api/v1/ingest");
+        onlyEndpoint.ContainsKey("Method").ShouldBeFalse();
+        onlyEndpoint.ContainsKey("ContentType").ShouldBeFalse();
+        none.ContainsKey("Endpoint").ShouldBeFalse();
+        none.ContainsKey("Method").ShouldBeFalse();
+        none.ContainsKey("ContentType").ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "CoreFramework")]
     public void BuildMetadataStatesTheSeparatorOnceFromTheFormatThatDefinesOne()
     {
         var csv = ContainerComposition.BuildMetadata(new DataContainerConfiguration { Name = "People" }, FormatTypes.Csv);

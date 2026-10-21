@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -20,20 +20,16 @@ namespace Fdw.Services.Pipelines.Endpoints;
 public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineRequest, PipelineDetailResponse>
 {
     private readonly PipelineServiceConfigurationProvider _pipelineProvider;
-    private readonly ITransformationConfigurationProvider _transformations;
 
     /// <summary>Initializes a new instance of the <see cref="GetPipelineDetailEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="pipelineProvider">Reads the pipeline.</param>
-    /// <param name="transformations">Reads the names of the Transformations the pipeline's field mappings chain.</param>
     protected GetPipelineDetailEndpointBase(
         ILogger logger,
-        PipelineServiceConfigurationProvider pipelineProvider,
-        ITransformationConfigurationProvider transformations)
+        PipelineServiceConfigurationProvider pipelineProvider)
     {
         EndpointLogger = logger;
         _pipelineProvider = pipelineProvider;
-        _transformations = transformations ?? throw new ArgumentNullException(nameof(transformations));
     }
 
 
@@ -97,17 +93,9 @@ public abstract class GetPipelineDetailEndpointBase : Endpoint<GetPipelineReques
             return;
         }
 
-        var mapped = await PipelineDetailMapper.Detail(pipeline, _transformations, ct).ConfigureAwait(false);
-        if (mapped.IsFailure)
-        {
-            OnPipelineFetchFailed(asked, mapped.CurrentMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to read the Transformations the pipeline chains", Details = mapped.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
-            return;
-        }
-
         OnPipelineRetrieved(asked);
 
-        await Send.OkAsync(mapped.Value!, ct).ConfigureAwait(false);
+        await Send.OkAsync(PipelineDetailMapper.Map(pipeline), ct).ConfigureAwait(false);
     }
 
     /// <summary>Called when fetching pipeline. Override for custom logging.</summary>

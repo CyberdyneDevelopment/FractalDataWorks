@@ -40,8 +40,11 @@ public class CreateScheduleRequest : ResourceCreateRequest
     /// <summary>Gets or sets the triggering event name for Event-type schedules.</summary>
     public string? EventName { get; set; }
 
-    /// <summary>Gets or sets the IANA timezone ID for schedule evaluation (e.g., "America/New_York").</summary>
-    public string TimeZoneId { get; set; } = "UTC";
+    /// <summary>
+    /// Gets or sets the IANA timezone ID the schedule is evaluated in (e.g., "America/New_York"). Required: a create that does not state it, or states
+    /// one the server does not know, is refused. A schedule that wants UTC says "UTC".
+    /// </summary>
+    public string TimeZoneId { get; set; } = string.Empty;
 
     /// <summary>Gets or sets whether the schedule is enabled.</summary>
     public bool IsEnabled { get; set; }

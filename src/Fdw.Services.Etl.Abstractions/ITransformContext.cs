@@ -42,18 +42,6 @@ public interface ITransformContext : IExecutionContext
     object? DataGateway { get; }
 
     /// <summary>
-    /// Gets the transformer chains the run resolved for the field mappings of its Map stages, by the id of the mapping.
-    /// A mapping that states a chain of named Transformations has an entry; a mapping that states none has not.
-    /// </summary>
-    /// <remarks>
-    /// Why the run resolves them and the stage only reads them: naming a Transformation by id is configuration, and turning
-    /// it into a transformation type with its parameters needs the Transformation domain, which a stage running per record
-    /// cannot reach. The run resolves every chain once when it starts, so a Transformation that no longer resolves fails the
-    /// run before any record moves, naming it.
-    /// </remarks>
-    IReadOnlyDictionary<Guid, IReadOnlyList<IFieldMappingTransformation>> FieldTransformChains { get; }
-
-    /// <summary>
     /// Gets the calculations the run compiled for its Compute stages, by the id of the stage. A Compute stage has an entry; a
     /// stage that is not a Compute stage has none. The run resolves and compiles them once, when it starts, so a stage never
     /// reaches the Transformation domain per record.

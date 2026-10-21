@@ -16,6 +16,7 @@ using Fdw.Services.Authorization.Logging;
 using Fdw.Services.Authorization.SystemRoleConfiguration;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -73,6 +74,38 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<RoleGrants>()));
 
+            builder.Services.TryAddSingleton<IGrantRule>(sp =>
+                new GrantRule(
+                    sp.GetRequiredService<IRoleGrants>(),
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<GrantRule>()));
+
+            builder.Services.TryAddSingleton<IUserRoleAssignment>(sp =>
+                new UserRoleAssignment(
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IUserRoleConfigurationProvider>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<UserRoleAssignment>()));
+
+            // Scoped, not singleton: it reads the tenants, and ITenantProvider is registered per scope.
+            builder.Services.TryAddScoped<IPlatformAdministratorGuard>(sp =>
+                new PlatformAdministratorGuard(
+                    sp.GetRequiredService<ISystemRoleConfiguration>(),
+                    sp.GetRequiredService<ITenantProvider>(),
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IUserRoleConfigurationProvider>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<PlatformAdministratorGuard>()));
+
+            // Scoped for the same reason: it reads the tenants.
+            builder.Services.TryAddScoped<IPermissionHolders>(sp =>
+                new PermissionHolders(
+                    sp.GetRequiredService<IRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IPermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
+                    sp.GetRequiredService<IUserRoleConfigurationProvider>(),
+                    sp.GetRequiredService<ITenantProvider>(),
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<PermissionHolders>()));
+
             builder.Services.TryAddSingleton<IFrameworkAuthorizationService, DefaultAuthorizationService>();
 
             builder.Services.AddSingleton<IAspNetAuthorizationPolicyProvider, FdwAuthorizationPolicyProvider>();
@@ -112,6 +145,51 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 return domain;
             });
             builder.Services.TryAddSingleton<IUserRoleConfigurationProvider>(sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+
+            // The roles an organization defines for its own members (FDW-1593): tenant.OrganizationRole (domain), tenant.OrganizationRoleConfiguration
+            // (implementation) and tenant.OrganizationRolePermission (the cascade children).
+            builder.Services.AddSingleton<IOrganizationRoleImplementationConfigurationProvider, OrganizationRoleImplementationConfigurationProvider>(sp =>
+                new OrganizationRoleImplementationConfigurationProvider(
+                    sp.GetRequiredService<ILogger<OrganizationRoleImplementationConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "tenant", "OrganizationRoleConfiguration"));
+            builder.Services.TryAddSingleton<OrganizationRoleConfigurationProvider>(sp =>
+            {
+                var domain = new OrganizationRoleConfigurationProvider(
+                    sp.GetRequiredService<ILogger<OrganizationRoleConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "tenant", "OrganizationRole");
+                domain.Register("OrganizationRole", sp.GetRequiredService<IOrganizationRoleImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IOrganizationRoleConfigurationProvider>(sp => sp.GetRequiredService<OrganizationRoleConfigurationProvider>());
+
+            // Scoped: the organization provider they read through is scoped, as the tenant provider is.
+            builder.Services.TryAddScoped<IOrganizationScope>(sp =>
+                new OrganizationScope(
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                    sp.GetRequiredService<IOrgContext>(),
+                    sp.GetRequiredService<IOrganizationProvider>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<OrganizationScope>()));
+            builder.Services.TryAddScoped<IOrganizationRoles>(sp =>
+                new OrganizationRoles(
+                    sp.GetRequiredService<IOrganizationScope>(),
+                    sp.GetRequiredService<IOrganizationRoleConfigurationProvider>(),
+                    sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
+                    sp.GetRequiredService<IGrantRule>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<OrganizationRoles>()));
+            // Scoped, as the other organization services are: acts for the tenant that owns a new organization (FDW-1758).
+            builder.Services.TryAddScoped<IOrganizationBootstrap>(sp =>
+                new OrganizationBootstrap(
+                    sp.GetRequiredService<IOrganizationRoleConfigurationProvider>(),
+                    sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
+                    sp.GetRequiredService<IGrantRule>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<OrganizationBootstrap>()));
+            builder.Services.TryAddScoped<IOrganizationMembers>(sp =>
+                new OrganizationMembers(
+                    sp.GetRequiredService<IOrganizationScope>(),
+                    sp.GetRequiredService<IOrganizationRoles>(),
+                    sp.GetRequiredService<TenantOrgAccessConfigurationProvider>(),
+                    sp.GetRequiredService<IGrantRule>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<OrganizationMembers>()));
 
 
             builder.Services.AddSingleton<IPermissionImplementationConfigurationProvider, PermissionImplementationConfigurationProvider>(sp => new PermissionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<PermissionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz", "PermissionConfiguration"));

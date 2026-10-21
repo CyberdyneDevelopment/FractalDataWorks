@@ -565,13 +565,13 @@ When configurations are loaded from the database via `MsSqlConfigurationProvider
 |-----------------|---------------------------|---------------------------|
 | Connection | Connections | `Connections:MsSql:0:Name`, `Connections:MsSql:0:Server` |
 | SecretManager | SecretManagers | `SecretManagers:EnvironmentVariable:0:Name`, `SecretManagers:EnvironmentVariable:0:Prefix` |
-| Pipeline | Pipelines | `Pipelines:BatchCopy:0:Name`, `Pipelines:BatchCopy:0:BatchSize` |
+| Pipeline | Pipelines | `Pipelines:Graph:0:Name`, `Pipelines:Graph:0:LinkCapacity` |
 | Schedule | Schedules | `Schedules:Cron:0:Name`, `Schedules:Cron:0:Expression` |
 
 **Components:**
 - **ServiceCategory**: Singular form (Connection, SecretManager, Pipeline, Schedule)
 - **ConfigurationSectionPrefix**: Plural form (Connections, SecretManagers, Pipelines, Schedules)
-- **ServiceType**: From database discriminator field (MsSql, EnvironmentVariable, BatchCopy, Cron)
+- **ServiceType**: From database discriminator field (MsSql, EnvironmentVariable, Graph, Cron)
 - **Index**: Zero-based array index (0, 1, 2...) for multiple configurations of same type
 - **Property**: Property name from configuration class
 
@@ -666,7 +666,7 @@ VALUES
 | Connection | conn.Connection | conn.MsSqlConnection, conn.HttpConnection | ✅ Complete |
 | SecretManager | sec.SecretManager | sec.EnvironmentVariableSecretManager, sec.AzureKeyVaultSecretManager | ✅ Complete |
 | Authentication | auth.Authentication | auth.JwtAuthentication, auth.BasicAuthentication, auth.OAuth2Authentication | ✅ Complete |
-| Pipeline | pipe.Pipeline | pipe.BatchCopyPipeline, pipe.StreamingPipeline | ✅ Complete |
+| Pipeline | pipe.Pipeline | pipe.GraphPipelineConfiguration | ✅ Complete |
 | Schedule | sched.Schedule | (no typed-body tables — CronExpression/IntervalSeconds on parent) | ✅ Complete |
 
 ### Troubleshooting

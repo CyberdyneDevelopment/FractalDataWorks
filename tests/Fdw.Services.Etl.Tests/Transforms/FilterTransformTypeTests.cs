@@ -21,7 +21,7 @@ public sealed class FilterTransformTypeTests
     private readonly FilterTransformType _sut = new();
 
     private static TransformContext CreateContext(object? calculationEngine = null) =>
-        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), fieldTransformChains: new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(), calculationEngine: calculationEngine);
+        new(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), calculationEngine: calculationEngine);
 
     private static PipelineTransformConfiguration CreateConfig(string? filterExpression) =>
         new() { Id = Guid.NewGuid(), Name = "Filter1", OperationType = "Filter", FilterExpression = filterExpression };

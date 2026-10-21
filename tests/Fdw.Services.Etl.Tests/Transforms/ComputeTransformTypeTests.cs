@@ -103,7 +103,6 @@ public sealed class ComputeTransformTypeTests
             Guid.NewGuid(),
             NullLogger.Instance,
             new Dictionary<string, object?>(),
-            new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>(),
             builtCalculations: resolved.Value!.Calculations);
         return (context, stage);
     }
@@ -158,7 +157,7 @@ public sealed class ComputeTransformTypeTests
     public async Task AStageTheRunDidNotResolveFailsInsteadOfComputingNothing()
     {
         var stage = ComputeStage();
-        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>(), new Dictionary<Guid, IReadOnlyList<IFieldMappingTransformation>>());
+        var context = new TransformContext(Guid.NewGuid(), NullLogger.Instance, new Dictionary<string, object?>());
 
         var result = await new ComputeTransformType().Transform(Interval(15m), stage, context, TestContext.Current.CancellationToken);
 
@@ -170,7 +169,7 @@ public sealed class ComputeTransformTypeTests
     [Trait("Category", "Etl")]
     public async Task APipelineWithNoComputeStageNeedsNoProviderAndNoSettings()
     {
-        var stage = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Shape", OperationType = "Map" };
+        var stage = new PipelineTransformConfiguration { Id = Guid.NewGuid(), Name = "Shape", OperationType = "Filter" };
 
         var resolved = await BuiltCalculationResolver.Resolve([stage], null, null, NullLogger.Instance, TestContext.Current.CancellationToken);
 

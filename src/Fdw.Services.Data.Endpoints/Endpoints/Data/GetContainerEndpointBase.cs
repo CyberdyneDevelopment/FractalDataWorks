@@ -79,6 +79,9 @@ public abstract class GetContainerEndpointBase : CrudGetEndpointBase<GetContaine
             HasHeader = container.HasHeader,
             Separator = container.Separator,
             SheetName = container.SheetName,
+            WriteEndpoint = container.WriteEndpoint,
+            WriteMethod = container.WriteMethod,
+            WriteContentType = container.WriteContentType,
             Fields = fields
         };
     }

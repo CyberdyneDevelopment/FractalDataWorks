@@ -195,27 +195,27 @@ public sealed class DataSetConfigurationBuilderTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void WithCategorySetsCategory()
+    public void WithCategoryIdSetsTheCategoryTheDataSetSitsUnder()
     {
+        var id = Guid.CreateVersion7();
+
         var result = CreateValidBuilder()
-            .WithCategory("Reference")
+            .WithCategoryId(id)
             .Build();
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Category.ShouldBe("Reference");
+        result.Value!.CategoryId.ShouldBe(id);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void WithCategoryNullDefaultsToDataset()
+    public void ADataSetSitsUnderNoCategoryUntilOneIsSet()
     {
-        var result = CreateValidBuilder()
-            .WithCategory(null!)
-            .Build();
+        var result = CreateValidBuilder().Build();
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Category.ShouldBe("Dataset");
+        result.Value!.CategoryId.ShouldBeNull();
     }
 
     [Fact]
@@ -600,7 +600,7 @@ public sealed class DataSetConfigurationBuilderTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Version.ShouldBe("1.0");
-        result.Value.Category.ShouldBe("Dataset");
+        result.Value.CategoryId.ShouldBeNull();
         result.Value.Id.ShouldNotBe(Guid.Empty);
     }
 }

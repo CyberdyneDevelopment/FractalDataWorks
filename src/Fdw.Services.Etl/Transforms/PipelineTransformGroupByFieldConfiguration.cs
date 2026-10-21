@@ -11,7 +11,7 @@ namespace Fdw.Services.Etl.Transforms;
 /// <see cref="Ordinal"/>.
 /// </summary>
 /// <remarks>
-/// Why: implements <see cref="IGenericConfiguration"/> (mirroring <see cref="PipelineTransformFieldMappingConfiguration"/>)
+/// Why: implements <see cref="IGenericConfiguration"/>
 /// so the configuration cascade-save discovers and persists this collection when the parent transform is
 /// saved. Without this interface the GroupByFields collection would be silently skipped.
 /// </remarks>

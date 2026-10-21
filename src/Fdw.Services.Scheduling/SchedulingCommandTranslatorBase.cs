@@ -19,7 +19,7 @@ public abstract class SchedulingCommandTranslatorBase<TNative> : ISchedulingComm
 {
     /// <summary>Initializes a new instance of the <see cref="SchedulingCommandTranslatorBase{TNative}"/> class.</summary>
     /// <param name="name">Name of the translator (must match the command kind, e.g. "Create", "Pause").</param>
-    /// <param name="domainName">The implementation this translator targets (e.g. "Quartz", "Hangfire").</param>
+    /// <param name="domainName">The implementation this translator targets (e.g. "Quartz").</param>
     protected SchedulingCommandTranslatorBase(string name, string domainName)
     {
         if (string.IsNullOrEmpty(name))

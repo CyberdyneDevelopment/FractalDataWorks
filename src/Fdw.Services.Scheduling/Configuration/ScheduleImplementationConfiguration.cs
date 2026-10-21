@@ -81,7 +81,7 @@ public sealed partial class ScheduleImplementationConfiguration : IScheduleImple
     public string? EventName { get; set; }
 
     /// <inheritdoc/>
-    public string TimeZoneId { get; set; } = "UTC";
+    public string TimeZoneId { get; set; } = string.Empty;
 
     /// <inheritdoc/>
     public int MaxRetries { get; set; }

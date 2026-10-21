@@ -8,6 +8,7 @@ using Fdw.Operations.Abstractions.TypeCollections.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Results;
 using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Logging;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
@@ -23,7 +24,7 @@ namespace Fdw.Services.Etl.Projects.Execution;
 /// <summary>
 /// Recursive orchestration engine for the OrchestrationNode hierarchy.
 /// Branch nodes (CanHostPipelines=false) execute children sequentially in Ordinal order.
-/// Leaf nodes (CanHostPipelines=true) execute pipeline memberships in parallel bounded by MaxParallelPipelines.
+/// Leaf nodes (CanHostPipelines=true) execute pipeline memberships as their prerequisites allow, bounded by MaxParallelPipelines.
 /// Stage-band nodes (NodeTypeId=StageNodeType.Id) additionally wrap their execution in IResiliencyExecutor.
 /// </summary>
 /// <remarks>
@@ -42,10 +43,8 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
     private readonly IEffectivePolicyResolver _policyResolver;
     private readonly IResiliencyExecutor _resiliencyExecutor;
     private readonly IExecutionTracker _tracker;
-    private readonly IPipelineExecutionQueue _pipelineQueue;
-    private readonly IExecutionCompletionSignaler _signaler;
+    private readonly IPipelineRunStarter _starter;
     private readonly IPipelineStatusBroadcaster _broadcaster;
-    private readonly IServerPolicyDefaults _serverDefaults;
     private readonly ILogger<OrchestrationNodeOrchestrator> _logger;
 
     /// <summary>Initializes a new instance of <see cref="OrchestrationNodeOrchestrator"/>.</summary>
@@ -54,20 +53,16 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         IEffectivePolicyResolver policyResolver,
         IResiliencyExecutor resiliencyExecutor,
         IExecutionTracker tracker,
-        IPipelineExecutionQueue pipelineQueue,
-        IExecutionCompletionSignaler signaler,
+        IPipelineRunStarter starter,
         IPipelineStatusBroadcaster broadcaster,
-        IServerPolicyDefaults serverDefaults,
         ILogger<OrchestrationNodeOrchestrator>? logger = null)
     {
         _nodeProvider = nodeProvider ?? throw new ArgumentNullException(nameof(nodeProvider));
         _policyResolver = policyResolver ?? throw new ArgumentNullException(nameof(policyResolver));
         _resiliencyExecutor = resiliencyExecutor ?? throw new ArgumentNullException(nameof(resiliencyExecutor));
         _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
-        _pipelineQueue = pipelineQueue ?? throw new ArgumentNullException(nameof(pipelineQueue));
-        _signaler = signaler ?? throw new ArgumentNullException(nameof(signaler));
+        _starter = starter ?? throw new ArgumentNullException(nameof(starter));
         _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
-        _serverDefaults = serverDefaults ?? throw new ArgumentNullException(nameof(serverDefaults));
         _logger = logger ?? NullLogger<OrchestrationNodeOrchestrator>.Instance;
     }
 
@@ -104,12 +99,12 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         await _broadcaster.BroadcastStatusChange(rootNode.Name, request.ExecutionId, "Running", orgId: null)
             .ConfigureAwait(false);
 
-        // Build root policy from server defaults (root inherits from server).
-        var serverDefaultPolicy = BuildServerDefaultPolicy();
-        var rootPolicy = _policyResolver.ResolveForNode(rootNode, serverDefaultPolicy);
+        // The root inherits from the server defaults.
+        var rootPolicy = _policyResolver.ResolveForRootNode(rootNode);
 
         // Recursive execution.
-        var overallSuccess = await ExecuteNode(rootNode, rootPolicy, request.ExecutionId, request.RunRoles, cancellationToken)
+        var overallSuccess = await ExecuteNode(
+            rootNode, rootPolicy, request.ExecutionId, new RunScope(request.TenantId, request.RunRoles), cancellationToken)
             .ConfigureAwait(false);
 
         var finalStatus = overallSuccess ? "Succeeded" : "Failed";
@@ -129,7 +124,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         IOrchestrationNodeImplementationConfiguration node,
         ExecutionPolicySnapshot effectivePolicy,
         Guid parentExecutionItemId,
-        IReadOnlyList<string> runRoles,
+        RunScope scope,
         CancellationToken cancellationToken)
     {
         var nodeType = OrchestrationNodeTypes.ById(node.NodeTypeId);
@@ -137,7 +132,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         if (nodeType.CanHostPipelines)
         {
             // Leaf: execute pipeline memberships.
-            return await ExecuteLeafNode(node, effectivePolicy, parentExecutionItemId, runRoles, cancellationToken)
+            return await ExecuteLeafNode(node, effectivePolicy, parentExecutionItemId, scope, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -180,7 +175,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
 
             OrchestrationNodeOrchestratorLog.ChildNodeExecutionStarted(_logger, child.Name, child.Ordinal, childItem.Id);
 
-            var childSucceeded = await ExecuteChildNode(child, childPolicy, parentExecutionItemId, childItem.Id, runRoles, cancellationToken)
+            var childSucceeded = await ExecuteChildNode(child, childPolicy, parentExecutionItemId, childItem.Id, scope, cancellationToken)
                 .ConfigureAwait(false);
 
             var childCompleteResult = await _tracker.Complete(
@@ -221,7 +216,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
         ExecutionPolicySnapshot childPolicy,
         Guid parentExecutionItemId,
         Guid childItemId,
-        IReadOnlyList<string> runRoles,
+        RunScope scope,
         CancellationToken cancellationToken)
     {
         if (child.NodeTypeId == StageNodeTypeId && childPolicy.ResiliencyPolicyId.HasValue)
@@ -236,7 +231,7 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
                 childPolicy.ResiliencyPolicyId,
                 async ct =>
                 {
-                    var nodeSucceeded = await ExecuteNode(child, childPolicy, childItemId, runRoles, ct).ConfigureAwait(false);
+                    var nodeSucceeded = await ExecuteNode(child, childPolicy, childItemId, scope, ct).ConfigureAwait(false);
                     return nodeSucceeded
                         ? GenericResult.Success()
                         : GenericResult.Failure(OrchestrationNodeOrchestratorLog.NodeFailed(_logger, childItemId));
@@ -247,18 +242,18 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             return resiliencyResult.IsSuccess;
         }
 
-        return await ExecuteNode(child, childPolicy, childItemId, runRoles, cancellationToken).ConfigureAwait(false);
+        return await ExecuteNode(child, childPolicy, childItemId, scope, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Executes a leaf node by running its pipeline memberships in parallel,
-    /// bounded by MaxParallelPipelines in the effective policy.
+    /// Executes a leaf node by running its pipeline memberships as their prerequisites allow,
+    /// never more than MaxParallelPipelines in the effective policy at once.
     /// </summary>
     private async Task<bool> ExecuteLeafNode(
         IOrchestrationNodeImplementationConfiguration node,
         ExecutionPolicySnapshot effectivePolicy,
         Guid parentExecutionItemId,
-        IReadOnlyList<string> runRoles,
+        RunScope scope,
         CancellationToken cancellationToken)
     {
         if (node.PipelineMemberships.Count == 0)
@@ -266,86 +261,54 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             return true;
         }
 
-        // Build topological order from prerequisites.
-        var orderedPipelineIds = BuildTopologicalOrder(node);
-
-        var stepSuccess = true;
-        var results = new System.Collections.Concurrent.ConcurrentBag<bool>();
-
-        var parallelOptions = new ParallelOptions
+        if (scope.TenantId is not { } tenantId)
         {
-            MaxDegreeOfParallelism = effectivePolicy.MaxParallelPipelines,
-            CancellationToken = cancellationToken
-        };
-
-        await Parallel.ForEachAsync(orderedPipelineIds, parallelOptions, async (pipelineId, ct) =>
-        {
-            // A child belongs to its parent's tenant, so it states none of its own.
-            var childItemResult = await _tracker.CreateItem(
-                ExecutionItemTypes.ByName("Task"),
-                $"Pipeline:{pipelineId}",
-                tenantId: null,
-                parentId: parentExecutionItemId,
-                correlationId: parentExecutionItemId.ToString("N"),
-                triggerSource: $"Node:{node.Name}",
-                cancellationToken: ct).ConfigureAwait(false);
-
-            if (!childItemResult.IsSuccess || childItemResult.Value is null)
-            {
-                results.Add(false);
-                return;
-            }
-
-            var childExecutionId = childItemResult.Value.Id;
-            _signaler.Register(childExecutionId);
-
-            var membership = node.PipelineMemberships.FirstOrDefault(p => p.PipelineId == pipelineId);
-            var pipelineName = membership?.Name ?? pipelineId.ToString("N");
-
-            OrchestrationNodeOrchestratorLog.PipelineDispatched(_logger, node.Name, pipelineId, childExecutionId);
-
-            var enqueueResult = await _pipelineQueue.Enqueue(
-                new PipelineExecutionRequest
-                {
-                    ExecutionId = childExecutionId,
-                    PipelineId = pipelineId,
-                    PipelineName = pipelineName,
-                    RunRoles = runRoles,
-                    TriggerSource = $"Node:{node.Name}"
-                }, ct).ConfigureAwait(false);
-
-            if (!enqueueResult)
-            {
-                _signaler.Deregister(childExecutionId);
-                OrchestrationNodeOrchestratorLog.OrchestratorQueueFull(_logger, pipelineName);
-                results.Add(false);
-                return;
-            }
-
-            bool pipelineSucceeded;
-            try
-            {
-                pipelineSucceeded = await _signaler.Await(childExecutionId, ct).ConfigureAwait(false);
-            }
-            finally
-            {
-                _signaler.Deregister(childExecutionId);
-            }
-
-            OrchestrationNodeOrchestratorLog.PipelineCompletionReceived(_logger, childExecutionId, pipelineSucceeded);
-            results.Add(pipelineSucceeded);
-        }).ConfigureAwait(false);
-
-        foreach (var result in results)
-        {
-            if (!result)
-            {
-                stepSuccess = false;
-                break;
-            }
+            PipelineRunStartLog.OrchestrationHasNoTenant(_logger, node.Name);
+            return false;
         }
 
-        return stepSuccess;
+        var scheduled = await PipelinePrerequisiteScheduler.Execute(
+            _logger,
+            node.Name,
+            node.PipelineMemberships.OrderBy(p => p.Ordinal).Select(p => p.PipelineId).ToList(),
+            node.PipelinePrerequisites,
+            effectivePolicy.MaxParallelPipelines,
+            (pipelineId, ct) => RunPipeline(node, pipelineId, parentExecutionItemId, tenantId, scope, ct),
+            cancellationToken).ConfigureAwait(false);
+
+        return scheduled.IsSuccess && scheduled.Value;
+    }
+
+    // Started under this node's execution item: its child, in its tenant, with its correlation, acting with its roles.
+    private async Task<bool> RunPipeline(
+        IOrchestrationNodeImplementationConfiguration node,
+        Guid pipelineId,
+        Guid parentExecutionItemId,
+        Guid tenantId,
+        RunScope scope,
+        CancellationToken cancellationToken)
+    {
+        var started = await _starter.Start(
+            new PipelineRunStart
+            {
+                ParentExecutionId = parentExecutionItemId,
+                PipelineId = pipelineId,
+                TenantId = tenantId,
+                RunRoles = scope.RunRoles,
+                TriggerSource = $"Node:{node.Name}",
+                Parameters = [],
+                AwaitCompletion = true
+            }, cancellationToken).ConfigureAwait(false);
+        if (started.IsFailure)
+        {
+            return false;
+        }
+
+        OrchestrationNodeOrchestratorLog.PipelineDispatched(_logger, node.Name, pipelineId, started.Value);
+
+        var pipelineSucceeded = await _starter.Await(started.Value, cancellationToken).ConfigureAwait(false);
+        OrchestrationNodeOrchestratorLog.PipelineCompletionReceived(_logger, started.Value, pipelineSucceeded);
+        return pipelineSucceeded;
     }
 
     /// <summary>
@@ -397,80 +360,6 @@ public sealed class OrchestrationNodeOrchestrator : IOrchestrationNodeOrchestrat
             .ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Builds server-default policy snapshot as the root of the inheritance chain.
-    /// </summary>
-    private ExecutionPolicySnapshot BuildServerDefaultPolicy()
-    {
-        return new ExecutionPolicySnapshot(
-            StepFailurePolicy: _serverDefaults.StepFailurePolicy,
-            StageFailurePolicy: _serverDefaults.StageFailurePolicy,
-            MaxParallelPipelines: _serverDefaults.MaxParallelPipelines,
-            RequireApprovalToRun: _serverDefaults.RequireApprovalToRun,
-            AllowResume: _serverDefaults.AllowResume,
-            AllowCrossTenant: _serverDefaults.AllowCrossTenant,
-            ResiliencyPolicyId: _serverDefaults.ResiliencyPolicyId);
-    }
-
-    /// <summary>
-    /// Builds a topological order over the pipeline IDs in a leaf node, respecting prerequisite edges.
-    /// Uses Kahn's algorithm. The node validator guarantees a DAG (no cycles).
-    /// </summary>
-    private static List<Guid> BuildTopologicalOrder(IOrchestrationNodeImplementationConfiguration node)
-    {
-        var dependents = new Dictionary<Guid, List<Guid>>();
-        var inDegree = new Dictionary<Guid, int>();
-
-        foreach (var membership in node.PipelineMemberships)
-        {
-            if (!dependents.ContainsKey(membership.PipelineId))
-                dependents[membership.PipelineId] = [];
-            if (!inDegree.ContainsKey(membership.PipelineId))
-                inDegree[membership.PipelineId] = 0;
-        }
-
-        foreach (var prereq in node.PipelinePrerequisites)
-        {
-            if (!dependents.ContainsKey(prereq.PrerequisitePipelineId))
-                dependents[prereq.PrerequisitePipelineId] = [];
-            dependents[prereq.PrerequisitePipelineId].Add(prereq.PipelineId);
-
-            if (!inDegree.ContainsKey(prereq.PipelineId))
-                inDegree[prereq.PipelineId] = 0;
-            inDegree[prereq.PipelineId]++;
-        }
-
-        // Kahn's algorithm: start with all zero-in-degree nodes.
-        var queue = new Queue<Guid>();
-        foreach (var kvp in inDegree)
-        {
-            if (kvp.Value == 0)
-                queue.Enqueue(kvp.Key);
-        }
-
-        var result = new List<Guid>(node.PipelineMemberships.Count);
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-            result.Add(current);
-
-            if (!dependents.TryGetValue(current, out var deps)) continue;
-            foreach (var dep in deps)
-            {
-                inDegree[dep]--;
-                if (inDegree[dep] == 0)
-                    queue.Enqueue(dep);
-            }
-        }
-
-        if (result.Count < node.PipelineMemberships.Count)
-        {
-            return node.PipelineMemberships
-                .OrderBy(p => p.Ordinal)
-                .Select(p => p.PipelineId)
-                .ToList();
-        }
-
-        return result;
-    }
+    // What a started pipeline belongs to: the tenant of the orchestration run and the roles it acts with.
+    private sealed record RunScope(Guid? TenantId, IReadOnlyList<string> RunRoles);
 }

@@ -14,6 +14,6 @@ public class PipelineSummaryResponse
     /// <summary>Gets or sets the pipeline name.</summary>
     public required string Name { get; set; }
 
-    /// <summary>Gets or sets the pipeline type name (e.g., "BatchCopy", "Streaming").</summary>
+    /// <summary>Gets or sets the pipeline type name ("Graph").</summary>
     public required string PipelineType { get; set; }
 }

@@ -60,6 +60,40 @@ namespace Fdw.MessageLogging.Generators
                 return _builder.ToString();
             }
 
+            // The statement that returns the method's message, closing the method. A method with a ClientMessage template also
+            // formats the caller's text from the same arguments and returns a ClientMessage carrying both: a web host's status
+            // mapper answers a refusal with the caller's text, and the log keeps its own line. Every other method returns a
+            // GenericMessage, as it always has.
+            private void GenMessageReturn(LoggerMethod lm, string nestedIndentation, string severityMapping, string messageCode)
+            {
+                if (lm.ClientMessage is not { } clientTemplate)
+                {
+                    _builder.Append($@"
+            {nestedIndentation}return global::Fdw.Messages.GenericMessage.Create(
+                {nestedIndentation}    {severityMapping},
+                {nestedIndentation}    __messageText,
+                {nestedIndentation}    {messageCode},
+                {nestedIndentation}    null);
+        {nestedIndentation}}}");
+                    return;
+                }
+
+                bool formatted = clientTemplate.Contains('{') || clientTemplate.Contains('}');
+                string clientBegin = !formatted ? "" :
+                    _hasStringCreate ? "string.Create(global::System.Globalization.CultureInfo.InvariantCulture, $" :
+                    "global::System.FormattableString.Invariant($";
+                string clientEnd = formatted ? ")" : "";
+                _builder.Append($@"
+            {nestedIndentation}var __clientText = {clientBegin}""{ClientInterpolation(lm, clientTemplate)}""{clientEnd};
+            {nestedIndentation}return new global::Fdw.Messages.ClientMessage(
+                {nestedIndentation}    {severityMapping},
+                {nestedIndentation}    __messageText,
+                {nestedIndentation}    {messageCode},
+                {nestedIndentation}    null,
+                {nestedIndentation}    __clientText);
+        {nestedIndentation}}}");
+            }
+
             private static bool UseLoggerMessageDefine(LoggerMethod lm)
             {
                 bool result =
@@ -488,14 +522,7 @@ namespace {lc.Namespace}
                     _builder.Append($@".ToString();");
                 }
 
-                string messageCode = $"\"{lm.TypeCode}-{lm.EventId}\"";
-                _builder.Append($@"
-            {nestedIndentation}return global::Fdw.Messages.GenericMessage.Create(
-                {nestedIndentation}    {severityMapping},
-                {nestedIndentation}    __messageText,
-                {nestedIndentation}    {messageCode},
-                {nestedIndentation}    null);
-        {nestedIndentation}}}");
+                GenMessageReturn(lm, nestedIndentation, severityMapping, $"\"{lm.TypeCode}-{lm.EventId}\"");
 
                 static string GetException(LoggerMethod lm)
                 {
@@ -724,5 +751,62 @@ internal static class __LoggerMessageGenerator
         /// <remarks>This code only handles starting symbols. Symbols inside string will be kept.</remarks>
         private static ReadOnlySpan<char> RemoveSpecialSymbol(ReadOnlySpan<char> variableOrTemplateName)
             => ContainsSpecialSymbol(variableOrTemplateName) ? variableOrTemplateName.Slice(1) : variableOrTemplateName;
+
+        // Where a hole's name ends and its ,alignment or :format begins.
+        private static readonly char[] HoleDelimiters = { ',', ':' };
+
+        /// <summary>
+        /// The caller's template as the body of an interpolated string over the method's own parameters: each
+        /// <c>{placeholder}</c> becomes the parameter the log's template binds it to, keeping any <c>,alignment</c> or
+        /// <c>:format</c>, and <c>{{</c> and <c>}}</c> stay literal braces. Quotes and line ends are escaped as for the log text.
+        /// </summary>
+        /// <remarks>The parser has already refused a template whose braces are malformed or that names a placeholder the log's
+        /// template does not, so every hole here finds its parameter.</remarks>
+        private static string ClientInterpolation(LoggerMethod lm, string template)
+        {
+            var text = new StringBuilder(template.Length + 16);
+            int index = 0;
+            while (index < template.Length)
+            {
+                char current = template[index];
+                if ((current == '{' || current == '}') && index + 1 < template.Length && template[index + 1] == current)
+                {
+                    text.Append(current).Append(current);
+                    index += 2;
+                    continue;
+                }
+
+                if (current == '{')
+                {
+                    int close = template.IndexOf('}', index + 1);
+                    string hole = template.Substring(index + 1, close - index - 1);
+                    int cut = hole.IndexOfAny(HoleDelimiters);
+                    string name = cut < 0 ? hole : hole.Substring(0, cut);
+                    text.Append('{').Append(ParameterOf(lm, name)).Append(cut < 0 ? string.Empty : hole.Substring(cut)).Append('}');
+                    index = close + 1;
+                    continue;
+                }
+
+                text.Append(current);
+                index++;
+            }
+
+            return ConvertEndOfLineAndQuotationCharactersToEscapeForm(text.ToString());
+        }
+
+        // The parameter a template placeholder names, matched as the log's template matches it: by name, ignoring case and
+        // a leading '@'.
+        private static string ParameterOf(LoggerMethod lm, string placeholder)
+        {
+            foreach (LoggerParameter p in lm.TemplateParameters)
+            {
+                if (RemoveSpecialSymbol(placeholder.AsSpan()).Equals(RemoveSpecialSymbol(p.Name.AsSpan()), StringComparison.OrdinalIgnoreCase))
+                {
+                    return p.CodeName;
+                }
+            }
+
+            return placeholder;
+        }
     }
 }

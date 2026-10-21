@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Configuration;
+using Fdw.Data;
 
 namespace Fdw.Services.Etl.Projects.Abstractions.Configuration;
 
@@ -13,6 +14,7 @@ namespace Fdw.Services.Etl.Projects.Abstractions.Configuration;
 /// Replaces <c>StepPipelineMembershipConfiguration</c> (v1 pipe.StepPipeline table).
 /// </remarks>
 [ExcludeFromCodeCoverage]
+[GenerateMapper]
 [ManagedConfiguration( ServiceCategory = "Orchestration",
     ServiceType = "NodePipeline")]
 public sealed partial class OrchestrationNodePipelineMembershipConfiguration : IGenericConfiguration

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Abstractions;
+using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Pipelines.Abstractions;
 using Microsoft.Extensions.Logging;
 using Fdw.Web.RestEndpoints.Logging;
@@ -12,10 +14,8 @@ namespace Fdw.Operations.Endpoints;
 /// Loads every configured pipeline for lineage through <see cref="IPipelineConfigurationProvider"/>.
 /// </summary>
 /// <remarks>
-/// One read: the domain's list overload dispatches each row to the implementation provider it names,
-/// so what comes back already carries the engine linkage the lineage graph needs. The per-pipeline
-/// compose this loader used to do — list headers, then <c>Get(id)</c> each — was the shape of the
-/// header/typed-body chain, and there is no header to compose from any more.
+/// Why whole: what a graph pipeline reads and writes is named in the settings of its components, so the list is read as records and
+/// each graph is then read whole, as the workspace map reads it. A pipeline listed with its steps already is not read again.
 /// </remarks>
 internal static class PipelineLineageLoader
 {
@@ -57,7 +57,7 @@ internal static class PipelineLineageLoader
         ILogger logger,
         CancellationToken ct)
     {
-        var configured = await provider.Get(ct).ConfigureAwait(false);
+        var configured = await provider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
         if (!configured.IsSuccess)
             return configured.ToNewResult<IReadOnlyList<PipelineLineageRecord>>();
 
@@ -69,9 +69,12 @@ internal static class PipelineLineageLoader
 
         foreach (var pipeline in pipelines)
         {
-            var record = PipelineLineageProjection.From(pipeline, logger);
-            if (string.IsNullOrEmpty(record.SourceDataSet) && string.IsNullOrEmpty(record.DestinationDataSet) &&
-                string.IsNullOrEmpty(record.SourceDataStoreName) && string.IsNullOrEmpty(record.DestinationDataStoreName))
+            var whole = await Whole(provider, pipeline, ct).ConfigureAwait(false);
+            if (whole.IsFailure)
+                return whole.ToNewResult<IReadOnlyList<PipelineLineageRecord>>();
+
+            var record = PipelineLineageProjection.From(whole.Value!, logger);
+            if (record.Uses.Count == 0)
                 nodeOnlyCount++;
 
             records.Add(record);
@@ -79,5 +82,42 @@ internal static class PipelineLineageLoader
 
         ApiEndpointLog.PipelinesProjectedForLineage(logger, records.Count, nodeOnlyCount);
         return GenericResult<IReadOnlyList<PipelineLineageRecord>>.Success(records);
+    }
+
+    /// <summary>Reads every configured graph pipeline whole (FDW-2157), for what needs the graph and not only what it uses.</summary>
+    /// <param name="provider">The pipeline domain provider.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The graph pipelines; a failed read is handed back, never an empty list.</returns>
+    public static async Task<IGenericResult<IReadOnlyList<GraphPipelineConfiguration>>> ReadGraphs(
+        IPipelineConfigurationProvider provider,
+        CancellationToken ct)
+    {
+        var configured = await provider.Get(ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        if (!configured.IsSuccess)
+            return configured.ToNewResult<IReadOnlyList<GraphPipelineConfiguration>>();
+
+        var graphs = new List<GraphPipelineConfiguration>();
+        foreach (var pipeline in configured.Value!)
+        {
+            var whole = await Whole(provider, pipeline, ct).ConfigureAwait(false);
+            if (whole.IsFailure)
+                return whole.ToNewResult<IReadOnlyList<GraphPipelineConfiguration>>();
+
+            if (whole.Value is GraphPipelineConfiguration graph)
+                graphs.Add(graph);
+        }
+
+        return GenericResult<IReadOnlyList<GraphPipelineConfiguration>>.Success(graphs);
+    }
+
+    private static async Task<IGenericResult<IPipelineImplementationConfiguration>> Whole(
+        IPipelineConfigurationProvider provider,
+        IPipelineImplementationConfiguration pipeline,
+        CancellationToken ct)
+    {
+        if (pipeline is not GraphPipelineConfiguration graph || graph.Components.Count > 0)
+            return GenericResult<IPipelineImplementationConfiguration>.Success(pipeline);
+
+        return await provider.Get(pipeline.Id, ConfigurationLevels.WholeAggregate, ct).ConfigureAwait(false);
     }
 }

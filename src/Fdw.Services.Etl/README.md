@@ -15,8 +15,6 @@ Registration lives in the option, not in a host's `Program.cs`. Each option carr
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BatchCopyPipelineType` | class | Service type definition for batch copy pipelines. Provides metadata, factory creation, and configuration… |
-| `StreamingPipelineType` | class | Service type definition for streaming pipelines. Provides metadata, factory creation, and configuration… |
 
 Shipped options are reference implementations, not canon — a consumer adds a kind by declaring its own option against this collection, in its own assembly.
 
@@ -26,7 +24,6 @@ Configuration classes are `[ManagedConfiguration]`: they generate their own DDL,
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BatchCopyPipelineConfiguration` | class | Configuration for batch copy pipelines — the "BatchCopy" ENGINE typed body of EtlPipelineConfiguration.… |
 | `EtlPipelineConfiguration` | class | The ETL-KIND typed body of PipelineConfiguration (kind "Etl"). Persisted in pipe.EtlPipeline as a… |
 | `PipelineTransformAggregationConfiguration` | class | Configuration for a single aggregation within an Aggregate transform. Cascade child of… |
 | `PipelineTransformCalculationConfiguration` | class | Configuration for a single computed column within a Calculate transform. Cascade child of… |
@@ -34,7 +31,6 @@ Configuration classes are `[ManagedConfiguration]`: they generate their own DDL,
 | `PipelineTransformFieldMappingConfiguration` | class | Configuration for a field mapping within a Map transform. |
 | `PipelineTransformGroupByFieldConfiguration` | class | Configuration for a single group-by field within an Aggregate transform. Cascade child of… |
 | `PipelineTransformLookupConfiguration` | class | Configuration for a single brought-across column within a Lookup transform. Cascade child of… |
-| `StreamingPipelineConfiguration` | class | Configuration for streaming pipelines — the "Streaming" ENGINE typed body of EtlPipelineConfiguration.… |
 
 ## Installation
 

@@ -30,11 +30,6 @@ public static partial class OrchestrationNodeOrchestratorLog
         Message = "OrchestrationNode orchestrator background service stopping, draining queue")]
     public static partial IGenericMessage OrchestratorStopping(ILogger logger);
 
-    /// <summary>Logs when the execution queue is full and a request is dropped.</summary>
-    [MessageLogging(EventId = 81000, Level = LogLevel.Warning,
-        Message = "OrchestrationNode execution queue full, dropping request for node '{nodeName}'")]
-    public static partial IGenericMessage OrchestratorQueueFull(ILogger logger, string nodeName);
-
     /// <summary>Logs when an execution item is not found in the tracker.</summary>
     [MessageLogging(EventId = 31004, Level = LogLevel.Error,
         Message = "OrchestrationNode execution item not found: executionItemId={executionItemId}")]
@@ -130,6 +125,24 @@ public static partial class OrchestrationNodeOrchestratorLog
         Message = "Halting execution due to policy '{policy}' at '{level}' (ExecutionId: {executionId})")]
     public static partial IGenericMessage HaltingDueToPolicy(
         ILogger logger, string policy, string level, Guid executionId);
+
+    /// <summary>Logs that a pipeline was not started because a pipeline it needs did not succeed.</summary>
+    [MessageLogging(EventId = 41010, Level = LogLevel.Warning,
+        Message = "Pipeline '{pipelineId}' in node '{nodeName}' was not started: its prerequisite pipeline '{prerequisitePipelineId}' did not succeed")]
+    public static partial IGenericMessage PipelineNotStartedPrerequisiteNotMet(
+        ILogger logger, string nodeName, Guid pipelineId, Guid prerequisitePipelineId);
+
+    /// <summary>Logs that a prerequisite names a pipeline that is not a member of the node being run.</summary>
+    [MessageLogging(EventId = 31013, Level = LogLevel.Error,
+        Message = "Node '{nodeName}' cannot run: pipeline '{pipelineId}' has a prerequisite on '{prerequisitePipelineId}', and one of the two is not a member of the node")]
+    public static partial IGenericMessage PrerequisiteOutsideNode(
+        ILogger logger, string nodeName, Guid pipelineId, Guid prerequisitePipelineId);
+
+    /// <summary>Logs that the effective maximum number of parallel pipelines is not a positive number.</summary>
+    [MessageLogging(EventId = 31014, Level = LogLevel.Error,
+        Message = "Node '{nodeName}' cannot run: the maximum number of parallel pipelines is {maxParallelPipelines}, and it must be at least 1")]
+    public static partial IGenericMessage MaxParallelPipelinesInvalid(
+        ILogger logger, string nodeName, int maxParallelPipelines);
 
     /// <summary>Logs when a node fails after all children have been attempted.</summary>
     [MessageLogging(EventId = 91003, Level = LogLevel.Error,

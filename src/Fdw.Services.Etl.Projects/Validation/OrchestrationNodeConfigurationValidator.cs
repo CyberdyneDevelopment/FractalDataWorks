@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using FluentValidation;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Etl.Projects.Abstractions.Configuration;
 using Fdw.Services.Etl.Projects.Abstractions.TypeCollections;
+using Fdw.Services.Etl.Projects.Execution;
 
 namespace Fdw.Services.Etl.Projects.Validation;
 
@@ -24,6 +26,7 @@ public sealed class OrchestrationNodeConfigurationValidator : AbstractValidator<
         RegisterNodeTypeRules();
         RegisterPolicyRules(serverDefaults);
         RegisterResiliencyRules();
+        RegisterPrerequisiteRules();
     }
 
     private void RegisterBasicRules()
@@ -128,6 +131,38 @@ public sealed class OrchestrationNodeConfigurationValidator : AbstractValidator<
             .Must(val => val is null || !val.Value || serverDefaults.AllowCrossTenant)
             .When(x => x.AllowCrossTenant is not null)
             .WithMessage("AllowCrossTenant cannot be true when server default is false.");
+    }
+
+    // The pipelines of a prerequisite must both be members of the node, and the prerequisites must not form a cycle (a pipeline
+    // that needs itself is one). The cycle test is the one the run-time scheduler uses, so a graph that saves can be run.
+    private void RegisterPrerequisiteRules()
+    {
+        RuleForEach(x => x.PipelinePrerequisites)
+            .Must((config, prerequisite) =>
+                config.PipelineMemberships.Any(m => m.PipelineId == prerequisite.PipelineId) &&
+                config.PipelineMemberships.Any(m => m.PipelineId == prerequisite.PrerequisitePipelineId))
+            .WithMessage((config, prerequisite) =>
+                $"Node '{config.Name}': prerequisite '{Describe(config, prerequisite)}' names a pipeline the node does not hold, and both pipelines of a prerequisite must be members of the node.");
+
+        RuleFor(x => x.PipelinePrerequisites)
+            .Must((config, prerequisites) =>
+                PipelinePrerequisiteGraph.FindCyclic(config.PipelineMemberships.Select(m => m.PipelineId), prerequisites).Count == 0)
+            .WithMessage(config =>
+                $"Node '{config.Name}': the prerequisites form a cycle through pipeline '{Label(config, PipelinePrerequisiteGraph.FindCyclic(config.PipelineMemberships.Select(m => m.PipelineId), config.PipelinePrerequisites)[0])}'.");
+    }
+
+    // Names a prerequisite for the person who sent the node: the name it was saved with, or the two pipelines it joins.
+    private static string Describe(OrchestrationNodeImplementationConfiguration config, OrchestrationNodePipelinePrerequisiteConfiguration prerequisite)
+        => prerequisite.Name.Length > 0
+            ? prerequisite.Name
+            : $"{Label(config, prerequisite.PipelineId)} needs {Label(config, prerequisite.PrerequisitePipelineId)}";
+
+    // Names a pipeline for the person who sent the node: the name its membership was saved with, or its id when that membership has no name
+    // (a pipeline the node does not hold has no membership to name it).
+    private static string Label(OrchestrationNodeImplementationConfiguration config, Guid pipelineId)
+    {
+        var membership = config.PipelineMemberships.FirstOrDefault(m => m.PipelineId == pipelineId);
+        return membership is { Name.Length: > 0 } ? membership.Name : pipelineId.ToString();
     }
 
     private void RegisterResiliencyRules()

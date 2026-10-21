@@ -18,7 +18,19 @@ internal sealed class NotifyRunFacts : INotifyRunFacts
     /// <param name="rowsExtracted">Records extracted so far.</param>
     /// <param name="rowsRejected">Records rejected so far.</param>
     /// <param name="rowsLoaded">Records loaded so far.</param>
-    public NotifyRunFacts(Guid pipelineId, string pipelineName, Guid executionId, int rowsExtracted, int rowsRejected, int rowsLoaded)
+    /// <param name="startedAt">When the run started.</param>
+    /// <param name="endedAt">The moment the run point fires.</param>
+    /// <param name="outcome">How the run stands at the run point.</param>
+    public NotifyRunFacts(
+        Guid pipelineId,
+        string pipelineName,
+        Guid executionId,
+        int rowsExtracted,
+        int rowsRejected,
+        int rowsLoaded,
+        DateTimeOffset startedAt,
+        DateTimeOffset endedAt,
+        string outcome)
     {
         PipelineId = pipelineId;
         PipelineName = pipelineName;
@@ -26,6 +38,9 @@ internal sealed class NotifyRunFacts : INotifyRunFacts
         RowsExtracted = rowsExtracted;
         RowsRejected = rowsRejected;
         RowsLoaded = rowsLoaded;
+        StartedAt = startedAt;
+        EndedAt = endedAt;
+        Outcome = outcome;
     }
 
     /// <summary>Gets the pipeline's id.</summary>
@@ -46,11 +61,28 @@ internal sealed class NotifyRunFacts : INotifyRunFacts
     /// <inheritdoc/>
     public int RowsLoaded { get; }
 
+    /// <inheritdoc/>
+    public DateTimeOffset StartedAt { get; }
+
+    /// <inheritdoc/>
+    public DateTimeOffset EndedAt { get; }
+
+    /// <inheritdoc/>
+    public string Outcome { get; }
+
     /// <summary>Reads the facts of a run from its result as it stands now.</summary>
     /// <param name="pipelineId">The pipeline's id.</param>
     /// <param name="pipelineName">The pipeline's name.</param>
     /// <param name="result">The run's result so far.</param>
     /// <returns>The facts a message can use.</returns>
     public static NotifyRunFacts Of(Guid pipelineId, string pipelineName, EtlPipelineExecutionResult result) =>
-        new(pipelineId, pipelineName, result.ExecutionId, result.RecordsExtracted, result.RecordsFailed, result.RecordsLoaded);
+        new(pipelineId, pipelineName, result.ExecutionId, result.RecordsExtracted, result.RecordsFailed, result.RecordsLoaded,
+            new DateTimeOffset(DateTime.SpecifyKind(result.StartedAt, DateTimeKind.Utc)), DateTimeOffset.UtcNow, "Succeeded");
+
+    /// <summary>Gives the facts the outcome the run point they are read at implies.</summary>
+    /// <param name="point">The run point that fires.</param>
+    /// <returns>The same facts at that moment, with <c>Failed</c> at OnFailure and <c>Succeeded</c> before it.</returns>
+    public NotifyRunFacts AtRunPoint(IRunPoint point) =>
+        new(PipelineId, PipelineName, ExecutionId, RowsExtracted, RowsRejected, RowsLoaded, StartedAt, DateTimeOffset.UtcNow,
+            point.FiresOnFailure ? "Failed" : "Succeeded");
 }

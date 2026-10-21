@@ -25,6 +25,21 @@ public static class DataGatewayCallExtensions
         => gateway.Execute<T>(call.Command, call.Target, cancellationToken);
 
     /// <summary>
+    /// Executes a <see cref="VectorizedDataGatewayCall{TResult}"/> against the gateway: refused when the target's store
+    /// is not vectorized.
+    /// </summary>
+    /// <typeparam name="T">What the command answers with.</typeparam>
+    /// <param name="gateway">The gateway to execute against.</param>
+    /// <param name="call">The bundled vectorized command and target.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The execution result.</returns>
+    public static Task<IGenericResult<T>> Execute<T>(
+        this IDataGateway gateway,
+        VectorizedDataGatewayCall<T> call,
+        CancellationToken cancellationToken = default)
+        => gateway.Execute(call.Command, call.Target, cancellationToken);
+
+    /// <summary>
     /// Executes a <see cref="DataGatewayCall"/> inside the given transaction scope, returning a typed result.
     /// </summary>
     /// <typeparam name="T">The result type.</typeparam>

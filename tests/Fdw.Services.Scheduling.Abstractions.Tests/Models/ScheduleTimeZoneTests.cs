@@ -49,6 +49,38 @@ public class ScheduleTimeZoneTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Scheduling")]
+    public void ACreateThatDoesNotStateAZoneIsRefusedWithTheTimeZoneCode()
+    {
+        var result = ScheduleTimeZone.Require(null, NullLogger.Instance);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Code.ShouldBeSameAs(SchedulingResultCodes.ScheduleTimeZoneInvalid);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("Not/AZone")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Scheduling")]
+    public void ACreateThatStatesABlankOrUnknownZoneIsRefused(string zone)
+    {
+        ScheduleTimeZone.Require(zone, NullLogger.Instance).IsFailure.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("UTC")]
+    [InlineData("America/Chicago")]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Scheduling")]
+    public void ACreateThatStatesAZoneTheSchedulerKnowsIsAccepted(string zone)
+    {
+        ScheduleTimeZone.Require(zone, NullLogger.Instance).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Scheduling")]
     public void TheRefusalNamesTheValueTheCallerSent()
     {
         var result = ScheduleTimeZone.Check("Not/AZone", NullLogger.Instance);

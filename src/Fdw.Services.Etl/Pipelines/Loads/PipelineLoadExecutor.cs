@@ -38,6 +38,7 @@ public sealed class PipelineLoadExecutor
     private readonly IConnectionProvider? _connections;
     private readonly IConnectionTypeResolver? _connectionTypes;
     private readonly ILogger _logger;
+    private readonly HttpRecordLoads _httpLoads;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PipelineLoadExecutor"/> class.
@@ -56,6 +57,7 @@ public sealed class PipelineLoadExecutor
         _connections = connections;
         _connectionTypes = connectionTypes;
         _logger = logger ?? NullLogger.Instance;
+        _httpLoads = new HttpRecordLoads(_resolver, _connections, _logger);
     }
 
     /// <summary>Runs the load units.</summary>
@@ -82,8 +84,12 @@ public sealed class PipelineLoadExecutor
             return GenericResult<int>.Success(0);
         }
 
+        var split = await _httpLoads.Split(pipelineName, units, cancellationToken).ConfigureAwait(false);
+        if (split.IsFailure || split.Value is not { } loads)
+            return split.ToNewResult<int>();
+
         var planned = new List<PlannedStep>();
-        foreach (var unit in units)
+        foreach (var unit in loads.Database)
         {
             var steps = await Plan(unit, rows, parameters, now, cancellationToken).ConfigureAwait(false);
             if (steps.IsFailure)
@@ -92,9 +98,18 @@ public sealed class PipelineLoadExecutor
         }
 
         var interleaved = planned.Count > 0 ? FirstInterleaved(planned) : null;
-        return interleaved is not null
-            ? GenericResult<int>.Failure(PipelineRunLog.StepsInterleaved(_logger, interleaved.Description))
-            : await RunGroups(pipelineName, planned, cancellationToken).ConfigureAwait(false);
+        if (interleaved is not null)
+            return GenericResult<int>.Failure(PipelineRunLog.StepsInterleaved(_logger, interleaved.Description));
+
+        var committed = planned.Count > 0
+            ? await RunGroups(pipelineName, planned, cancellationToken).ConfigureAwait(false)
+            : GenericResult<int>.Success(0);
+        if (committed.IsFailure || loads.Http.Count == 0)
+            return committed;
+
+        // Why the endpoints after the database: the rows reach the endpoint only once the database loads of the run have committed.
+        var sent = await _httpLoads.Write(pipelineName, loads.Http, rows, cancellationToken).ConfigureAwait(false);
+        return sent.IsFailure ? sent : GenericResult<int>.Success(committed.Value + sent.Value);
     }
 
     private async Task<IGenericResult<List<PlannedStep>>> Plan(

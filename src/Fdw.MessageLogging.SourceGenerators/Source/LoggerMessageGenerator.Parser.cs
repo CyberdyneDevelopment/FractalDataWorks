@@ -114,6 +114,7 @@ namespace Fdw.MessageLogging.Generators
                             (int eventId, int? level, string message, string? eventName, bool skipEnabledCheck) = (-1, null, string.Empty, null, false);
                             int? severity = null;
                             bool autoMapSeverity = true;
+                            string? clientMessage = null;
                             string? typeCode = null;
                             bool suppliedEventId = false;
 
@@ -237,6 +238,9 @@ namespace Fdw.MessageLogging.Generators
                                                         case "AutoMapSeverity":
                                                             autoMapSeverity = (bool)GetItem(value);
                                                             break;
+                                                        case "ClientMessage":
+                                                            clientMessage = value.IsNull ? null : (string)GetItem(value);
+                                                            break;
                                                         case "TypeCode":
                                                             if (value.Kind == TypedConstantKind.Array && !value.IsNull)
                                                             {
@@ -296,6 +300,7 @@ namespace Fdw.MessageLogging.Generators
                                         SkipEnabledCheck = skipEnabledCheck,
                                         Severity = severity,
                                         AutoMapSeverity = autoMapSeverity,
+                                        ClientMessage = string.IsNullOrEmpty(clientMessage) ? null : clientMessage,
                                         TypeCode = resolvedTypeCode
                                     };
 
@@ -307,6 +312,8 @@ namespace Fdw.MessageLogging.Generators
                                         Diag(DiagnosticDescriptors.MalformedFormatStrings, method.Identifier.GetLocation(), method.Identifier.ToString());
                                         keepMethod = false;
                                     }
+
+                                    keepMethod &= ClientTemplateFits(lm, method.Identifier);
 
                                     if (lm.Name[0] == '_')
                                     {
@@ -787,6 +794,32 @@ namespace Fdw.MessageLogging.Generators
 
             private static readonly char[] _formatDelimiters = { ',', ':' };
 
+            // The caller's text is formatted from the same arguments as the log's, so its braces must be well formed and every
+            // placeholder in it must be one the log's template names. True when the method has no such template, or it fits.
+            private bool ClientTemplateFits(LoggerMethod lm, SyntaxToken identifier)
+            {
+                if (lm.ClientMessage is not { } clientTemplate)
+                {
+                    return true;
+                }
+
+                var clientMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                if (!ExtractTemplates(clientTemplate, clientMap, new List<string>()))
+                {
+                    Diag(DiagnosticDescriptors.MalformedFormatStrings, identifier.GetLocation(), identifier.ToString());
+                    return false;
+                }
+
+                bool fits = true;
+                foreach (string name in clientMap.Keys.Where(name => !lm.TemplateMap.ContainsKey(name)))
+                {
+                    Diag(DiagnosticDescriptors.TemplateHasNoCorrespondingArgument, identifier.GetLocation(), name);
+                    fits = false;
+                }
+
+                return fits;
+            }
+
             /// <summary>
             /// Finds the template arguments contained in the message string.
             /// </summary>
@@ -974,6 +1007,7 @@ namespace Fdw.MessageLogging.Generators
             public bool SkipEnabledCheck;
             public int? Severity;
             public bool AutoMapSeverity = true;
+            public string? ClientMessage;
             public string TypeCode = "FDW";
         }
 

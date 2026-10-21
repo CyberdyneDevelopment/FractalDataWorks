@@ -33,8 +33,8 @@ public sealed class ProxyCreateScheduleRequest
     /// <summary>Gets or sets the triggering event name for Event-type schedules.</summary>
     public string? EventName { get; set; }
 
-    /// <summary>Gets or sets the IANA timezone ID for schedule evaluation.</summary>
-    public string TimeZoneId { get; set; } = "UTC";
+    /// <summary>Gets or sets the IANA timezone ID the schedule is evaluated in. Required; see <see cref="CreateScheduleRequest.TimeZoneId"/>.</summary>
+    public string TimeZoneId { get; set; } = string.Empty;
 
     /// <summary>Gets or sets whether the schedule is enabled.</summary>
     public bool IsEnabled { get; set; } = true;

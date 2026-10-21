@@ -15,6 +15,7 @@ internal sealed class DataflowGraphInputs
     private readonly IReadOnlyList<IDataSetImplementationConfiguration> _owners;
     private readonly IReadOnlyList<DataSetVariationDomainConfiguration> _allVariations;
     private readonly Dictionary<Guid, DataSetRecord> _recordsById;
+    private readonly IReadOnlyDictionary<Guid, string?> _categoryPaths;
 
     /// <summary>Initializes the inputs and works out which data sets the pipelines reach.</summary>
     public DataflowGraphInputs(
@@ -22,9 +23,11 @@ internal sealed class DataflowGraphInputs
         IReadOnlyList<DataStoreRecord> dataStores,
         IReadOnlyList<IDataSetImplementationConfiguration> owners,
         IReadOnlyList<PipelineLineageRecord> pipelines,
-        IReadOnlyList<DataSetVariationDomainConfiguration> variations)
+        IReadOnlyList<DataSetVariationDomainConfiguration> variations,
+        IReadOnlyDictionary<Guid, string?> categoryPaths)
     {
         _dataSets = dataSets;
+        _categoryPaths = categoryPaths;
         _owners = owners;
         _allVariations = variations;
         DataStores = dataStores;
@@ -50,8 +53,8 @@ internal sealed class DataflowGraphInputs
     /// </summary>
     public IReadOnlyList<DataSetVariationDomainConfiguration> Variations { get; }
 
-    /// <summary>The record a reachable data set is drawn from.</summary>
-    public DataSetRecord RecordFor(IDataSetImplementationConfiguration owner) => _recordsById[owner.Id];
+    /// <summary>The path of the category a data set sits under, from the DataSet category tree; null when it sits under none.</summary>
+    public string? CategoryPathOf(IDataSetImplementationConfiguration owner) => _categoryPaths[owner.Id];
 
     /// <summary>The reachable data set of the name, or null when no pipeline reaches one.</summary>
     public IDataSetImplementationConfiguration? ReachableNamed(string name)
@@ -69,5 +72,5 @@ internal sealed class DataflowGraphInputs
     public DataflowGraphInputs ForPipeline(string name)
         => new(_dataSets, DataStores, _owners,
             Pipelines.Where(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)).ToList(),
-            _allVariations);
+            _allVariations, _categoryPaths);
 }

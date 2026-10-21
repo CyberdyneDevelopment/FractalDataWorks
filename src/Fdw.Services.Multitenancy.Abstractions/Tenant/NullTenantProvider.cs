@@ -44,6 +44,15 @@ public sealed class NullTenantProvider : ITenantProvider
             GenericResult<bool>.Failure(TenantTypesLog.TenantLookupUnavailable(NullLogger.Instance)));
 
     /// <inheritdoc />
+    public Task<IGenericResult<bool>> ValidateOrganizationAccess(
+        Guid tenantId,
+        Guid organizationId,
+        string userId,
+        CancellationToken ct = default)
+        => Task.FromResult<IGenericResult<bool>>(
+            GenericResult<bool>.Failure(TenantTypesLog.TenantLookupUnavailable(NullLogger.Instance)));
+
+    /// <inheritdoc />
     public Task<IGenericResult<ITenant>> ResolveTenant(
         ITenantResolutionContext context,
         CancellationToken ct = default)

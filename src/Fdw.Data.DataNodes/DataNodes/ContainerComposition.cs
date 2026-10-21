@@ -48,7 +48,8 @@ public static class ContainerComposition
     /// <summary>
     /// Builds the <c>IStorageContainer.Metadata</c> bag that the record-source readers consume
     /// (<c>RecordSelector</c>, <c>FlattenNestedObjects</c>, <c>FlattenSeparator</c>, and for a file
-    /// <c>HasHeader</c>, <c>Separator</c>, <c>SheetName</c>), sourced directly from the inline
+    /// <c>HasHeader</c>, <c>Separator</c>, <c>SheetName</c>, and for a destination that sends over HTTP <c>Endpoint</c>,
+    /// <c>Method</c>, <c>ContentType</c>), sourced directly from the inline
     /// row-shaping options on the container config — no typed-body resolution.
     /// </summary>
     /// <param name="cfg">The container configuration.</param>
@@ -78,6 +79,12 @@ public static class ContainerComposition
             meta["Separator"] = cfg.Separator!;
         if (!string.IsNullOrWhiteSpace(cfg.SheetName))
             meta["SheetName"] = cfg.SheetName!;
+        if (!string.IsNullOrWhiteSpace(cfg.WriteEndpoint))
+            meta["Endpoint"] = cfg.WriteEndpoint!;
+        if (!string.IsNullOrWhiteSpace(cfg.WriteMethod))
+            meta["Method"] = cfg.WriteMethod!;
+        if (!string.IsNullOrWhiteSpace(cfg.WriteContentType))
+            meta["ContentType"] = cfg.WriteContentType!;
 
         return meta;
     }

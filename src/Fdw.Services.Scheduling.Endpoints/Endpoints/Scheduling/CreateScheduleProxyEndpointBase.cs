@@ -61,7 +61,7 @@ public abstract class CreateScheduleProxyEndpointBase : Endpoint<ProxyCreateSche
     {
         ScheduleProxyEndpointLog.ProxyRequest(EndpointLogger, "POST", "Scheduler", "schedules");
 
-        var zone = ScheduleTimeZone.Check(req.TimeZoneId, EndpointLogger);
+        var zone = ScheduleTimeZone.Require(req.TimeZoneId, EndpointLogger);
         if (zone.IsFailure)
         {
             var (zoneStatus, zoneRefusal) = ResultHttpStatusMapper.Map(zone, HttpContext);

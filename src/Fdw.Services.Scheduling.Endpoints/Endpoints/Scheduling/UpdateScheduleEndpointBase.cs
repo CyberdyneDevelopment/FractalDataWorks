@@ -1,4 +1,5 @@
-﻿using System;
+using Fdw.Services.Etl.Execution;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
     where TConfig : class, IScheduleImplementationConfiguration
 {
     private readonly ScheduleConfigurationProvider _provider;
-    private readonly ScheduleRunRoleAuthority _runRoles;
+    private readonly RunRoleAuthority _runRoles;
 
     /// <inheritdoc />
     protected UpdateScheduleEndpointBase(
@@ -30,7 +31,7 @@ public abstract class UpdateScheduleEndpointBase<TConfig> : CrudUpdateEndpointBa
         IRoleGrants grants) : base(logger)
     {
         _provider = provider;
-        _runRoles = new ScheduleRunRoleAuthority(grants);
+        _runRoles = new RunRoleAuthority(grants);
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>

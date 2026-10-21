@@ -1,3 +1,4 @@
+using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Services.Data.Clients.Models;
 using System;
@@ -7,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Results;
+using Fdw.Services.Data;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -33,6 +35,7 @@ public class DataflowGraphConfigurationProvider
     private readonly IConfigurationGatewayProvider _gatewayProvider;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IDataSetVariationConfigurationProvider _variations;
+    private readonly ICategoryConfigurationProvider _categories;
     private readonly ILogger<DataflowGraphConfigurationProvider> _logger;
 
     private Task<IGenericResult<IConfigurationGateway>> Gateway()
@@ -45,11 +48,13 @@ public class DataflowGraphConfigurationProvider
         IConfigurationGatewayProvider gatewayProvider,
         IDataSetConfigurationProvider dataSets,
         IDataSetVariationConfigurationProvider variations,
+        ICategoryConfigurationProvider categories,
         ILogger<DataflowGraphConfigurationProvider>? logger = null)
     {
         _gatewayProvider = gatewayProvider ?? throw new ArgumentNullException(nameof(gatewayProvider));
         _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
         _variations = variations ?? throw new ArgumentNullException(nameof(variations));
+        _categories = categories ?? throw new ArgumentNullException(nameof(categories));
         _logger = logger ?? NullLogger<DataflowGraphConfigurationProvider>.Instance;
     }
 
@@ -109,6 +114,12 @@ public class DataflowGraphConfigurationProvider
     public virtual Task<IGenericResult<IReadOnlyList<IDataSetImplementationConfiguration>>> LoadDataSetSources(
         CancellationToken cancellationToken = default)
         => _dataSets.Get(cancellationToken);
+
+    /// <summary>
+    /// Returns the DataSet category tree, read once, so each data set node can name the path of the category it sits under.
+    /// </summary>
+    public virtual Task<IGenericResult<CategoryTree>> LoadDataSetCategories(CancellationToken cancellationToken = default)
+        => CategoryTrees.Load(_categories, DataSetCategoryConfiguration.ImplementationName, _logger, cancellationToken);
 
     /// <summary>
     /// Returns every data set variation, read as domain rows in one query. A variation is not a data

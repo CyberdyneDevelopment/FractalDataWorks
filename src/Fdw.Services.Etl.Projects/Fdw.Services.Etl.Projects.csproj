@@ -24,7 +24,6 @@
     <ProjectReference Include="..\Fdw.Operations.Abstractions\Fdw.Operations.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Operations.Endpoints\Fdw.Operations.Endpoints.csproj" />
     <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
-    <ProjectReference Include="..\Fdw.Data.Lineage\Fdw.Data.Lineage.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
     <ProjectReference Include="..\Fdw.Commands.Data.Fluency\Fdw.Commands.Data.Fluency.csproj" />
     <ProjectReference Include="..\Fdw.Configuration\Fdw.Configuration.csproj" />

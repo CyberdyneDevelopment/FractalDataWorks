@@ -1,12 +1,14 @@
 using System;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Fdw.Services.RateLimiting.Abstractions;
 using Fdw.Services.RateLimiting.Handlers;
 using Fdw.Services.RateLimiting.Logging;
+using Fdw.Services.Settings;
 
 namespace Fdw.Services.RateLimiting.Extensions;
 
@@ -39,14 +41,14 @@ public static class RateLimitingServiceExtensions
     /// </para>
     /// <list type="number">
     /// <item>Iterates all policies from <see cref="RateLimitPolicies.All()"/></item>
-    /// <item>Registers each policy as a named rate limiter based on its <see cref="IRateLimitAlgorithm"/></item>
+    /// <item>Registers each policy as a named rate limiter whose allowance is read from its settings for each request</item>
     /// <item>Sets the rejection handler to <see cref="RateLimitRejectionHandler.HandleRejection"/></item>
     /// <item>Applies any additional configuration from the <paramref name="configure"/> action</item>
     /// </list>
     /// <para>
-    /// The algorithm switch is acceptable here because it dispatches on the Algorithm property
-    /// of a policy already retrieved from the TypeCollection. We're not using switch to identify
-    /// WHICH policy, only HOW to configure the .NET rate limiter based on the policy's algorithm.
+    /// The host must also register the platform's settings (<see cref="IEffectiveSettingsProvider"/>) and have each policy's
+    /// <c>RateLimit.{policy}.*</c> settings in its baseline runtime script: a request under a policy whose setting is absent
+    /// is refused with a 500 that names the setting, never given a made-up allowance (FDW-1945).
     /// </para>
     /// </remarks>
     /// <example>
@@ -132,15 +134,7 @@ public static class RateLimitingServiceExtensions
 
                 if (logger != null)
                 {
-                    RateLimitLog.PolicyRegistered(logger, policy.Name, policy.Algorithm.Name);
-                    RateLimitLog.PolicyConfiguration(
-                        logger,
-                        policy.Name,
-                        policy.RequestsPerWindow,
-                        policy.Window.TotalMilliseconds,
-                        policy.Algorithm.Name,
-                        policy.AllowBurst,
-                        policy.BurstLimit);
+                    RateLimitLog.PolicyRegistered(logger, policy.Name);
                 }
             }
 
@@ -165,16 +159,68 @@ public static class RateLimitingServiceExtensions
     /// <param name="options">The rate limiter options to register the policy with.</param>
     /// <param name="policy">The rate limit policy to register.</param>
     /// <remarks>
-    /// <para>
-    /// The switch on Algorithm is intentional - we're dispatching based on the policy's
-    /// declared algorithm, not identifying which policy to use. The policy lookup happens
-    /// via TypeCollection; this switch only configures HOW to implement that policy.
-    /// </para>
+    /// The policy is registered by its name only. Which algorithm counts its requests, and with what numbers, is not known
+    /// until a request arrives: <see cref="PartitionFor"/> reads it from the policy's settings and the algorithm builds its own
+    /// limiter, so there is no switch on the algorithm here.
     /// </remarks>
     private static void RegisterPolicy(RateLimiterOptions options, IRateLimitPolicy policy)
     {
-        options.AddPolicy(policy.Name, _ =>
-            RateLimitPartition.Get(policy.Name, _ => policy.Algorithm.CreateLimiter(policy)));
+        options.AddPolicy(policy.Name, httpContext => PartitionFor(policy, httpContext));
     }
 
+    /// <summary>
+    /// Gets the bucket a request counts against under a policy: the one its partitioning names for the request, each with
+    /// the allowance the policy's settings give for the request.
+    /// </summary>
+    /// <param name="policy">The policy the request is counted under.</param>
+    /// <param name="httpContext">The request.</param>
+    /// <returns>The request's bucket.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the policy or the request is null.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the policy's allowance cannot be read from its settings (a setting that is not set, or holds a value the
+    /// limiter cannot use; the message names it), or when the request has no identity the policy's partitioning needs. It is
+    /// never given a made-up allowance or a bucket everyone shares: the limiter runs after authentication, so either is a fault
+    /// to find, not a case to absorb.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    /// The allowance is read for each request (FDW-1945), for the company the caller is acting in (FDW-1946), so a setting an
+    /// operator changes holds from the next request, and a company's own value for it holds for its callers. The bucket's key
+    /// begins with the allowance's fingerprint, so a changed setting starts a new bucket under the new numbers and the old one
+    /// is left to age out; a limiter is never edited in place. Two companies held to different numbers never share a bucket for
+    /// that reason; two held to the same numbers share exactly as much as the policy's way of counting says (a shared bucket is
+    /// still one, each caller's and each address's is still their own).
+    /// </para>
+    /// <para>
+    /// Before TC-380 every policy used its own name as the key, so all callers shared one bucket per policy and one busy
+    /// caller, or a restart that made every client retry at once, refused all the others.
+    /// </para>
+    /// </remarks>
+    public static RateLimitPartition<string> PartitionFor(IRateLimitPolicy policy, HttpContext httpContext)
+    {
+        if (policy is null)
+        {
+            throw new ArgumentNullException(nameof(policy));
+        }
+
+        if (httpContext is null)
+        {
+            throw new ArgumentNullException(nameof(httpContext));
+        }
+
+        var allowance = RateLimitAllowances.Read(
+            httpContext.RequestServices.GetRequiredService<IEffectiveSettingsProvider>(),
+            policy,
+            RateLimitCompany.Of(httpContext.User),
+            httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(RateLimitingServiceExtensions)));
+        if (allowance.IsFailure)
+        {
+            throw new InvalidOperationException(allowance.CurrentMessage);
+        }
+
+        var held = allowance.Value!;
+        return RateLimitPartition.Get(
+            held.Fingerprint + "|" + held.Partitioning.KeyOf(policy, httpContext.User, httpContext.Connection.RemoteIpAddress),
+            _ => held.Algorithm.CreateLimiter(held));
+    }
 }

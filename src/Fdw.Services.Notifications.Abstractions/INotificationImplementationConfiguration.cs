@@ -12,4 +12,12 @@ namespace Fdw.Services.Notifications.Abstractions;
 /// </remarks>
 public interface INotificationImplementationConfiguration : IImplementationConfiguration
 {
+    /// <summary>Gets or sets whether the notification is enabled. Stored on the domain row; every implementation declares it.</summary>
+    bool IsEnabled { get; set; }
+
+    /// <summary>Gets or sets the name of the secret manager that holds the notification's credentials, or null when it needs none.</summary>
+    string? SecretManagerName { get; set; }
+
+    /// <summary>Gets or sets the key of the notification's credentials in the secret manager, or null when it needs none.</summary>
+    string? SecretKeyName { get; set; }
 }

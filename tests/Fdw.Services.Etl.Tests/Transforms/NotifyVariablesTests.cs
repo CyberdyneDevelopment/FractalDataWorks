@@ -13,7 +13,10 @@ namespace Fdw.Services.Etl.Tests.Transforms;
 public sealed class NotifyVariablesTests
 {
     private static NotifyRunFacts Facts() =>
-        new(Guid.NewGuid(), "NightlyCopy", Guid.Parse("11111111-2222-3333-4444-555555555555"), rowsExtracted: 120, rowsRejected: 7, rowsLoaded: 113);
+        new(Guid.NewGuid(), "NightlyCopy", Guid.Parse("11111111-2222-3333-4444-555555555555"), rowsExtracted: 120, rowsRejected: 7, rowsLoaded: 113,
+            startedAt: new DateTimeOffset(2026, 10, 14, 19, 53, 57, TimeSpan.Zero),
+            endedAt: new DateTimeOffset(2026, 10, 14, 19, 54, 2, TimeSpan.Zero),
+            outcome: "Succeeded");
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -21,7 +24,7 @@ public sealed class NotifyVariablesTests
     public void TheCollectionListsEveryVariableByBareName()
     {
         NotifyVariables.All().Select(variable => variable.Name)
-            .ShouldBe(new[] { "ExecutionId", "PipelineName", "RowsExtracted", "RowsLoaded", "RowsRejected" }, ignoreOrder: true);
+            .ShouldBe(new[] { "EndedAt", "ExecutionId", "Outcome", "PipelineName", "RowsExtracted", "RowsLoaded", "RowsRejected", "StartedAt" }, ignoreOrder: true);
     }
 
     [Fact]
@@ -49,6 +52,9 @@ public sealed class NotifyVariablesTests
         NotifyVariables.ByName("RowsExtracted").ValueOf(facts).ShouldBe("120");
         NotifyVariables.ByName("RowsRejected").ValueOf(facts).ShouldBe("7");
         NotifyVariables.ByName("RowsLoaded").ValueOf(facts).ShouldBe("113");
+        NotifyVariables.ByName("StartedAt").ValueOf(facts).ShouldBe("2026-10-14T19:53:57.0000000+00:00");
+        NotifyVariables.ByName("EndedAt").ValueOf(facts).ShouldBe("2026-10-14T19:54:02.0000000+00:00");
+        NotifyVariables.ByName("Outcome").ValueOf(facts).ShouldBe("Succeeded");
     }
 
     [Fact]
