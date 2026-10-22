@@ -56,4 +56,10 @@ public sealed partial class SessionEntity
 
     /// <summary>Gets or sets when the session was revoked; null while it is live.</summary>
     public DateTimeOffset? RevokedAt { get; set; }
+
+    /// <summary>Gets or sets the session this one was started from by acting with a role (FDW-2282); null for an ordinary sign-in.</summary>
+    public Guid? ParentSessionId { get; set; }
+
+    /// <summary>Gets or sets when the session was put to sleep because a session above it is in use; null while it is awake.</summary>
+    public DateTimeOffset? AsleepAt { get; set; }
 }

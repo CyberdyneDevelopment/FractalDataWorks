@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Claims.Abstractions;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Extensions;
 using Fdw.Data;
@@ -47,6 +48,9 @@ public sealed class DatabaseSessionStore : ISessionStore
 {
     private const string PathName = "auth";
     private const string Container = "Session";
+
+    // How many sessions deep a chain of acting may run before the rows are taken to be broken. A person steps down a few roles, not dozens.
+    private const int MaxChainDepth = 32;
 
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly IAuthenticationContextAccessor _authContextAccessor;
@@ -93,22 +97,195 @@ public sealed class DatabaseSessionStore : ISessionStore
     public async Task<IGenericResult<IssuedToken>> Create(
         string serviceName, string flowName, IssuanceRequest assertion, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(serviceName) || string.IsNullOrEmpty(flowName) || assertion is null)
+        var created = await CreateSession(serviceName, flowName, assertion, null, cancellationToken).ConfigureAwait(false);
+        return created.IsFailure
+            ? created.ToNewResult<IssuedToken>()
+            : GenericResult<IssuedToken>.Success(created.Value.Token);
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IssuedToken>> Act(
+        Guid parentSessionId, IssuanceRequest assertion, CancellationToken cancellationToken = default)
+    {
+        if (assertion is null)
             return GenericResult<IssuedToken>.Failure(SessionLog.CreateArgumentsMissing(_logger));
+
+        using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
+
+        var read = await _gateways.Execute<IEnumerable<SessionEntity>>(
+            AuthenticationStepTypes.StateConnection,
+            Query.From<SessionEntity>(AuthenticationStepTypes.StateConnection, PathName, Container)
+                .Where(r => r.Id).Equal(parentSessionId)
+                .Build(),
+            cancellationToken).ConfigureAwait(false);
+        if (read.IsFailure)
+            return read.ToNewResult<IssuedToken>();
+
+        var parentRow = read.Value!.FirstOrDefault();
+        var refusal = parentRow is null ? "no session has this id" : NotLive(parentRow, parentRow.ServiceName, DateTimeOffset.UtcNow);
+        if (refusal is not null)
+            return GenericResult<IssuedToken>.Failure(SessionLog.SessionNotLive(_logger, "(act)", refusal));
+
+        var parent = read.Value!.First();
+
+        // The acting session never outlives the session it came from, and the claims it asserts carry that end.
+        var capped = assertion with
+        {
+            ValidUntil = assertion.ValidUntil is { } validUntil && validUntil < parent.AbsoluteExpiresAt ? validUntil : parent.AbsoluteExpiresAt,
+        };
+
+        var created = await CreateSession(parent.ServiceName, parent.FlowName, capped, parent.Id, cancellationToken).ConfigureAwait(false);
+        if (created.IsFailure)
+            return created.ToNewResult<IssuedToken>();
+
+        // The parent sleeps only once the session above it exists, and the new one is revoked again if it cannot, so a failure leaves
+        // the person in the session they were in and never in two live ones.
+        var slept = await Sleep(parent.Id, cancellationToken).ConfigureAwait(false);
+        if (slept.IsFailure)
+        {
+            var undone = await Revoke(created.Value.Id, cancellationToken).ConfigureAwait(false);
+            if (undone.IsFailure)
+                SessionLog.SessionWriteFailed(_logger, "undo an acting session");
+
+            return slept.ToNewResult<IssuedToken>();
+        }
+
+        return GenericResult<IssuedToken>.Success(created.Value.Token);
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IssuedToken>> Return(Guid actingSessionId, int step, CancellationToken cancellationToken = default)
+    {
+        var ancestry = await Ancestry(actingSessionId, cancellationToken).ConfigureAwait(false);
+        if (ancestry.IsFailure)
+            return ancestry.ToNewResult<IssuedToken>();
+
+        var current = ancestry.Value![0];
+        if (NotLive(current, current.ServiceName, DateTimeOffset.UtcNow) is { } notLive)
+            return GenericResult<IssuedToken>.Failure(SessionLog.SessionNotLive(_logger, "(return)", notLive));
+
+        var plan = ActingReturn.Of([.. ancestry.Value!.Select(row => row.Id)], step, out var refusal);
+        if (plan is null)
+            return GenericResult<IssuedToken>.Failure(SessionLog.ReturnRefused(_logger, refusal!));
+
+        // Ended top first and before the wake, so a failure part way never leaves two sessions awake: at worst the person has no live
+        // session left in the chain and signs in again.
+        foreach (var above in plan.Revoke)
+        {
+            var revoked = await Revoke(above, cancellationToken).ConfigureAwait(false);
+            if (revoked.IsFailure)
+                return revoked.ToNewResult<IssuedToken>();
+        }
+
+        var woken = await Wake(plan.Wake, cancellationToken).ConfigureAwait(false);
+        if (woken.IsSuccess)
+            SessionLog.ActingReturned(_logger, plan.Wake, plan.Revoke.Count);
+
+        return woken;
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IReadOnlyList<ActingStep>>> Chain(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        var ancestry = await Ancestry(sessionId, cancellationToken).ConfigureAwait(false);
+        if (ancestry.IsFailure)
+            return ancestry.ToNewResult<IReadOnlyList<ActingStep>>();
+
+        var steps = new List<ActingStep>(ancestry.Value!.Count);
+        for (var i = ancestry.Value!.Count - 1; i >= 0; i--)
+        {
+            var row = ancestry.Value![i];
+            var assertion = await ReadAssertion(row, cancellationToken).ConfigureAwait(false);
+            if (assertion.IsFailure)
+                return assertion.ToNewResult<IReadOnlyList<ActingStep>>();
+
+            steps.Add(new ActingStep
+            {
+                Step = steps.Count,
+                SessionId = row.Id,
+                Role = assertion.Value!.Claims.TryGetValue(ClaimDefinitions.actingRole.Name, out var role) && role.Count > 0 ? role[0] : null,
+                StartedAt = row.CreatedAt,
+                IsCurrent = i == 0,
+            });
+        }
+
+        return GenericResult<IReadOnlyList<ActingStep>>.Success(steps);
+    }
+
+    // The session and every session it was started from, current first, ending at the person's own. A parent that cannot be read, or a
+    // chain that loops or runs past MaxChainDepth, is a fault in the rows and is refused rather than cut short.
+    private async Task<IGenericResult<IReadOnlyList<SessionEntity>>> Ancestry(Guid sessionId, CancellationToken cancellationToken)
+    {
+        using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
+
+        var chain = new List<SessionEntity>();
+        var seen = new HashSet<Guid>();
+        Guid? next = sessionId;
+        while (next is { } id)
+        {
+            if (chain.Count >= MaxChainDepth || !seen.Add(id))
+                return GenericResult<IReadOnlyList<SessionEntity>>.Failure(SessionLog.ChainBroken(_logger, sessionId));
+
+            var read = await _gateways.Execute<IEnumerable<SessionEntity>>(
+                AuthenticationStepTypes.StateConnection,
+                Query.From<SessionEntity>(AuthenticationStepTypes.StateConnection, PathName, Container)
+                    .Where(r => r.Id).Equal(id)
+                    .Build(),
+                cancellationToken).ConfigureAwait(false);
+            if (read.IsFailure)
+                return read.ToNewResult<IReadOnlyList<SessionEntity>>();
+
+            if (read.Value!.FirstOrDefault() is not { } row)
+                return GenericResult<IReadOnlyList<SessionEntity>>.Failure(SessionLog.SessionNotLive(_logger, "(chain)", "no session has this id"));
+
+            chain.Add(row);
+            next = row.ParentSessionId;
+        }
+
+        return GenericResult<IReadOnlyList<SessionEntity>>.Success(chain);
+    }
+
+    private async Task<IGenericResult<IssuanceRequest>> ReadAssertion(SessionEntity entity, CancellationToken cancellationToken)
+    {
+        var key = await FlowKey(entity.FlowName, cancellationToken).ConfigureAwait(false);
+        if (key.IsFailure)
+            return key.ToNewResult<IssuanceRequest>();
+
+        var plaintext = await _encryption.Execute(
+            new DecryptCommand
+            {
+                SecretManagerName = key.Value.SecretManagerName,
+                SecretKeyName = key.Value.SecretKeyName,
+                Ciphertext = entity.ClaimsData,
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (plaintext.IsFailure)
+            return plaintext.ToNewResult<IssuanceRequest>();
+
+        return JsonSerializer.Deserialize<IssuanceRequest>(plaintext.Value!) is { } assertion
+            ? GenericResult<IssuanceRequest>.Success(assertion)
+            : GenericResult<IssuanceRequest>.Failure(SessionLog.ClaimsUnreadable(_logger, entity.Id));
+    }
+
+    private async Task<IGenericResult<(IssuedToken Token, Guid Id)>> CreateSession(
+        string serviceName, string flowName, IssuanceRequest assertion, Guid? parentSessionId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(serviceName) || string.IsNullOrEmpty(flowName) || assertion is null)
+            return GenericResult<(IssuedToken Token, Guid Id)>.Failure(SessionLog.CreateArgumentsMissing(_logger));
 
         using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
 
         var key = await FlowKey(flowName, cancellationToken).ConfigureAwait(false);
         if (key.IsFailure)
-            return key.ToNewResult<IssuedToken>();
+            return key.ToNewResult<(IssuedToken Token, Guid Id)>();
 
         var idleMinutes = await PositiveSetting(SettingDefinitions.SessionTimeoutMinutes, cancellationToken).ConfigureAwait(false);
         if (idleMinutes.IsFailure)
-            return idleMinutes.ToNewResult<IssuedToken>();
+            return idleMinutes.ToNewResult<(IssuedToken Token, Guid Id)>();
 
         var absoluteHours = await PositiveSetting(SettingDefinitions.SessionAbsoluteLifetimeHours, cancellationToken).ConfigureAwait(false);
         if (absoluteHours.IsFailure)
-            return absoluteHours.ToNewResult<IssuedToken>();
+            return absoluteHours.ToNewResult<(IssuedToken Token, Guid Id)>();
 
         var now = DateTimeOffset.UtcNow;
         var absoluteExpiresAt = now.AddHours(absoluteHours.Value);
@@ -118,7 +295,7 @@ public sealed class DatabaseSessionStore : ISessionStore
         if (assertion.ValidUntil is { } validUntil && validUntil < absoluteExpiresAt)
         {
             if (validUntil <= now)
-                return GenericResult<IssuedToken>.Failure(
+                return GenericResult<(IssuedToken Token, Guid Id)>.Failure(
                     SessionLog.ClaimsAlreadyExpired(_logger, flowName, assertion.PrincipalId, validUntil));
 
             absoluteExpiresAt = validUntil;
@@ -136,7 +313,7 @@ public sealed class DatabaseSessionStore : ISessionStore
             },
             cancellationToken).ConfigureAwait(false);
         if (claims.IsFailure)
-            return claims.ToNewResult<IssuedToken>();
+            return claims.ToNewResult<(IssuedToken Token, Guid Id)>();
 
         var sessionId = Base64Url(RandomNumberGenerator.GetBytes(32));
         var id = Guid.CreateVersion7();
@@ -157,22 +334,23 @@ public sealed class DatabaseSessionStore : ISessionStore
                 LastSeenAt = now,
                 IdleExpiresAt = idleExpiresAt,
                 AbsoluteExpiresAt = absoluteExpiresAt,
+                ParentSessionId = parentSessionId,
             });
 
         var written = await _gateways.Execute<int>(AuthenticationStepTypes.StateConnection, call, cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
         {
             SessionLog.SessionWriteFailed(_logger, "create a session");
-            return written.ToNewResult<IssuedToken>();
+            return written.ToNewResult<(IssuedToken Token, Guid Id)>();
         }
 
         SessionLog.SessionCreated(_logger, id, serviceName, flowName, absoluteExpiresAt);
-        return GenericResult<IssuedToken>.Success(new IssuedToken
+        return GenericResult<(IssuedToken Token, Guid Id)>.Success((new IssuedToken
         {
             AccessToken = sessionId,
             TokenType = SessionRecord.TokenType,
             ExpiresAt = absoluteExpiresAt,
-        });
+        }, id));
     }
 
     /// <inheritdoc />
@@ -199,23 +377,11 @@ public sealed class DatabaseSessionStore : ISessionStore
 
         var entity = read.Value!.First();
 
-        var key = await FlowKey(entity.FlowName, cancellationToken).ConfigureAwait(false);
-        if (key.IsFailure)
-            return key.ToNewResult<SessionRecord>();
+        var readAssertion = await ReadAssertion(entity, cancellationToken).ConfigureAwait(false);
+        if (readAssertion.IsFailure)
+            return readAssertion.ToNewResult<SessionRecord>();
 
-        var plaintext = await _encryption.Execute(
-            new DecryptCommand
-            {
-                SecretManagerName = key.Value.SecretManagerName,
-                SecretKeyName = key.Value.SecretKeyName,
-                Ciphertext = entity.ClaimsData,
-            },
-            cancellationToken).ConfigureAwait(false);
-        if (plaintext.IsFailure)
-            return plaintext.ToNewResult<SessionRecord>();
-
-        if (JsonSerializer.Deserialize<IssuanceRequest>(plaintext.Value!) is not { } assertion)
-            return GenericResult<SessionRecord>.Failure(SessionLog.ClaimsUnreadable(_logger, entity.Id));
+        var assertion = readAssertion.Value!;
 
         // Why the slide is not written on every request: every session-authenticated request made a write
         // command and a read command against the session table only to move LastSeenAt forward a few
@@ -304,6 +470,95 @@ public sealed class DatabaseSessionStore : ISessionStore
     }
 
     /// <inheritdoc />
+    public async Task<IGenericResult> Sleep(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
+
+        // Guarded on the row being live and awake: a session that was revoked, or is already asleep, is not put to sleep again.
+        var slept = await _gateways.Execute<int>(
+            AuthenticationStepTypes.StateConnection,
+            Update.In<SessionSleepUpdate>(Container)
+                .DataStore(AuthenticationStepTypes.StateConnection)
+                .Path(PathName)
+                .Where(nameof(SessionEntity.Id), id)
+                .Where(nameof(SessionEntity.RevokedAt), new IsNullOperator(), null)
+                .Where(nameof(SessionEntity.AsleepAt), new IsNullOperator(), null)
+                .Value(new SessionSleepUpdate { AsleepAt = DateTimeOffset.UtcNow }),
+            cancellationToken).ConfigureAwait(false);
+        if (slept.IsFailure)
+        {
+            SessionLog.SessionWriteFailed(_logger, "put a session to sleep");
+            return slept;
+        }
+
+        if (slept.Value != 1)
+            return GenericResult.Failure(SessionLog.SessionNotLive(_logger, "(sleep)", "no live, awake session has this Id"));
+
+        SessionLog.SessionSlept(_logger, id);
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<IssuedToken>> Wake(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
+
+        var read = await _gateways.Execute<IEnumerable<SessionEntity>>(
+            AuthenticationStepTypes.StateConnection,
+            Query.From<SessionEntity>(AuthenticationStepTypes.StateConnection, PathName, Container)
+                .Where(r => r.Id).Equal(id)
+                .Build(),
+            cancellationToken).ConfigureAwait(false);
+        if (read.IsFailure)
+            return read.ToNewResult<IssuedToken>();
+
+        var now = DateTimeOffset.UtcNow;
+        if (NotWakeable(read.Value!.FirstOrDefault(), now) is { } refusal)
+            return GenericResult<IssuedToken>.Failure(SessionLog.SessionNotLive(_logger, "(wake)", refusal));
+
+        var entity = read.Value!.First();
+
+        // Time asleep is not idleness: the idle clock starts again from the wake, never past the absolute end.
+        var idleExpiresAt = Earlier(now.AddSeconds(entity.IdleTimeoutSeconds), entity.AbsoluteExpiresAt);
+        var sessionId = Base64Url(RandomNumberGenerator.GetBytes(32));
+
+        // Guarded on the row still being live and asleep: a revoke or a second wake landing between the read and this write wins.
+        var woken = await _gateways.Execute<int>(
+            AuthenticationStepTypes.StateConnection,
+            Update.In<SessionWakeUpdate>(Container)
+                .DataStore(AuthenticationStepTypes.StateConnection)
+                .Path(PathName)
+                .Where(nameof(SessionEntity.Id), id)
+                .Where(nameof(SessionEntity.RevokedAt), new IsNullOperator(), null)
+                .Where(nameof(SessionEntity.AsleepAt), new IsNotNullOperator(), null)
+                .Value(new SessionWakeUpdate
+                {
+                    SessionIdHash = Hash(sessionId),
+                    AsleepAt = null,
+                    CsrfTokenHash = null,
+                    LastSeenAt = now,
+                    IdleExpiresAt = idleExpiresAt,
+                }),
+            cancellationToken).ConfigureAwait(false);
+        if (woken.IsFailure)
+        {
+            SessionLog.SessionWriteFailed(_logger, "wake a session");
+            return woken.ToNewResult<IssuedToken>();
+        }
+
+        if (woken.Value != 1)
+            return GenericResult<IssuedToken>.Failure(SessionLog.SessionNotLive(_logger, "(wake)", "it changed while it was being woken"));
+
+        SessionLog.SessionWoken(_logger, id, idleExpiresAt);
+        return GenericResult<IssuedToken>.Success(new IssuedToken
+        {
+            AccessToken = sessionId,
+            TokenType = SessionRecord.TokenType,
+            ExpiresAt = entity.AbsoluteExpiresAt,
+        });
+    }
+
+    /// <inheritdoc />
     public async Task<IGenericResult<string>> IssueCsrfToken(Guid id, CancellationToken cancellationToken = default)
     {
         using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
@@ -367,14 +622,26 @@ public sealed class DatabaseSessionStore : ISessionStore
     }
 
     // Why a session cannot be used, for the operator's log; null when it is live for this service.
-    private static string? NotLive(SessionEntity? row, string serviceName, DateTimeOffset now) => row switch
+    internal static string? NotLive(SessionEntity? row, string serviceName, DateTimeOffset now) => row switch
     {
         null => "no session has this id",
         { } live when !string.Equals(live.ServiceName, serviceName, StringComparison.Ordinal)
             => $"it belongs to service '{live.ServiceName}'",
         { RevokedAt: not null } => "it was revoked",
+        { AsleepAt: not null } => "it is asleep: a session started from it is in use",
         { } live when live.AbsoluteExpiresAt <= now => "it reached its absolute end",
         { } live when live.IdleExpiresAt <= now => "it was idle past its timeout",
+        _ => null,
+    };
+
+    // Why a session cannot be woken, for the operator's log; null when it is asleep and can be. Idleness is not checked: a session
+    // sleeps for as long as the session above it is in use, and its idle clock starts again at the wake.
+    internal static string? NotWakeable(SessionEntity? row, DateTimeOffset now) => row switch
+    {
+        null => "no session has this id",
+        { RevokedAt: not null } => "it was revoked",
+        { } live when live.AbsoluteExpiresAt <= now => "it reached its absolute end",
+        { AsleepAt: null } => "it is not asleep",
         _ => null,
     };
 

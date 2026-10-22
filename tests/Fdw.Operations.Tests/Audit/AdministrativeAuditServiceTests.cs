@@ -68,7 +68,7 @@ public sealed class AdministrativeAuditServiceTests
         return new AdministrativeAuditService(new StubGatewayProvider(_gateway.Object), NullLoggerFactory.Instance, accessor.Object, store);
     }
 
-    private static IAuthenticationContext Signed(Guid? tenantId, bool global = false, string userId = "0c000000-0000-0000-0000-00000000000c", string name = "Jo")
+    private static IAuthenticationContext Signed(Guid? tenantId, bool global = false, string userId = "0c000000-0000-0000-0000-00000000000c", string name = "Jo", string? actingRole = null)
     {
         var caller = new Mock<IAuthenticationContext>();
         caller.SetupGet(c => c.IsAuthenticated).Returns(true);
@@ -76,9 +76,12 @@ public sealed class AdministrativeAuditServiceTests
         caller.SetupGet(c => c.Username).Returns(name);
         caller.SetupGet(c => c.ActiveTenantId).Returns(tenantId);
         caller.SetupGet(c => c.IsSystemContext).Returns(false);
-        caller.SetupGet(c => c.Claims).Returns(global
+        var claims = global
             ? new Dictionary<string, object>(StringComparer.Ordinal) { ["globalTenant"] = "true" }
-            : new Dictionary<string, object>(StringComparer.Ordinal));
+            : new Dictionary<string, object>(StringComparer.Ordinal);
+        if (actingRole is not null)
+            claims["actingRole"] = actingRole;
+        caller.SetupGet(c => c.Claims).Returns(claims);
         return caller.Object;
     }
 
@@ -117,6 +120,31 @@ public sealed class AdministrativeAuditServiceTests
         row.ChangeKind.ShouldBe("RoleAssigned");
         row.NewValue.ShouldBe("Admin");
         row.Reason.ShouldBe("new hire");
+    }
+
+    [Fact]
+    public async Task RecordNamesTheRoleActedWithAndStillTheRealPerson()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA, actingRole: "Viewer")).Record(Entry(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var row = Written().ShouldNotBeNull();
+        row.ActingRole.ShouldBe("Viewer");
+        row.ActorUserId.ShouldBe(Person);
+        row.ActorName.ShouldBe("Jo");
+    }
+
+    [Fact]
+    public async Task RecordLeavesTheActingRoleEmptyForAChangeMadeInThePersonsOwnSession()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Record(Entry(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        Written().ShouldNotBeNull().ActingRole.ShouldBeNull();
     }
 
     [Fact]

@@ -133,6 +133,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // deny-list it consults is; the Session authentication type states the same registration.
             builder.Services.TryAddScoped<ISessionAuthenticator, SessionAuthenticator>();
             builder.Services.TryAddSingleton<ISessionCookieDelivery, SessionCookieDelivery>();
+            builder.Services.TryAddScoped<ISessionActing, SessionActing>();
 
             builder.Services.TryAddSingleton<IAuthorizationRequestStore>(sp =>
                 new InMemoryAuthorizationRequestStore(

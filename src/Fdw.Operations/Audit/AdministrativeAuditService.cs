@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Abstractions;
+using Fdw.Claims.Abstractions;
 using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
@@ -104,7 +105,9 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
             OrganizationId = entry.OrganizationId,
             OldValue = entry.OldValue,
             NewValue = entry.NewValue,
-            Reason = entry.Reason
+            Reason = entry.Reason,
+            // The person is the actor above; the role is the one their session acts with, read from the same context, never stated by the caller.
+            ActingRole = caller.Claims.TryGetValue(ClaimDefinitions.actingRole.Name, out var acting) ? acting as string : null
         };
 
         var inserted = await Gateway.Execute<int>(new InsertCommand<AdministrativeChange>(row), target, cancellationToken).ConfigureAwait(false);
@@ -209,7 +212,7 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
 
     private static AdministrativeChangeRecord ToRecord(AdministrativeChange row)
         => new(row.Id, row.OccurredAt, row.ActorUserId, row.ActorName, row.ChangeKind, row.ItemKind, row.ItemId, row.Level,
-            row.TenantId, row.OrganizationId, row.OldValue, row.NewValue, row.Reason);
+            row.TenantId, row.OrganizationId, row.OldValue, row.NewValue, row.Reason, row.ActingRole);
 
     private static PagedResponse<AdministrativeChangeRecord> EmptyPage(AdministrativeChangeFilter filter)
         => new(new List<AdministrativeChangeRecord>(), filter.Page, filter.PageSize, 0);

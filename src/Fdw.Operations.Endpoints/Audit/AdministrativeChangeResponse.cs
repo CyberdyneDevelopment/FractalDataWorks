@@ -47,6 +47,9 @@ public class AdministrativeChangeResponse
     /// <summary>Gets or sets why, when a reason was given.</summary>
     public string? Reason { get; set; }
 
+    /// <summary>Gets or sets the role the actor was acting with when the change was made, or null when they made it in their own session.</summary>
+    public string? ActingRole { get; set; }
+
     /// <summary>
     /// Builds the response for a recorded change.
     /// </summary>
@@ -70,7 +73,8 @@ public class AdministrativeChangeResponse
             OrganizationId = record.OrganizationId,
             OldValue = record.OldValue,
             NewValue = record.NewValue,
-            Reason = record.Reason
+            Reason = record.Reason,
+            ActingRole = record.ActingRole
         };
     }
 }
