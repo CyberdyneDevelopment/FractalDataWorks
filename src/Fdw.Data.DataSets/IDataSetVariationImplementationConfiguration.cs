@@ -40,4 +40,7 @@ public interface IDataSetVariationImplementationConfiguration : IImplementationC
 
     /// <summary>Gets or sets when the variation was created: stamped from the domain row, never persisted by the implementation.</summary>
     DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Gets or sets the tenant the variation is in: the scope it is judged at (FDW-2328).</summary>
+    Guid? TenantId { get; set; }
 }

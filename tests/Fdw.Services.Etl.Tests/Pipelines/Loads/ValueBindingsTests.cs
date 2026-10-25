@@ -101,7 +101,7 @@ public sealed class ValueBindingsTests
         var now = new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero);
 
         // Act
-        var result = ValueBindings.RowValues(bindings, "test", "BulkInsert", now, NullLogger.Instance);
+        var result = ValueBindings.RowValues(bindings, "test", "Insert", now, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
@@ -120,12 +120,12 @@ public sealed class ValueBindingsTests
         var bindings = ValueBindings.Build([source], "test", NullLogger.Instance).Value!;
 
         // Act
-        var result = ValueBindings.RowValues(bindings, "load step 'x'", "BulkInsert", DateTimeOffset.UtcNow, NullLogger.Instance);
+        var result = ValueBindings.RowValues(bindings, "load step 'x'", "Insert", DateTimeOffset.UtcNow, NullLogger.Instance);
 
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.Messages[^1].Code.ShouldBe("PIPELINERUN-20213");
-        result.CurrentMessage.ShouldNotBeNull().ShouldContain("BulkInsert");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("Insert");
     }
 
     [Fact]

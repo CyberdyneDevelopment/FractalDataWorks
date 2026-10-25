@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Calculations.SignalR;
@@ -20,7 +21,7 @@ namespace Fdw.SignalR.Tests;
 public sealed class MigratedHubVerbTests
 {
     [Fact]
-    public async Task PipelineHubSubscribeVerbsBuildExpectedGroups()
+    public async Task PipelineHubRefusesAGroupWhoseOwnerItCannotName()
     {
         var groups = HubFixtures.GroupManager();
         var hub = new PipelineStatusHub(new RecordingLogger<PipelineStatusHub>())
@@ -35,8 +36,8 @@ public sealed class MigratedHubVerbTests
         await hub.UnsubscribeFromPipeline("nfl");
         await hub.UnsubscribeFromExecution(executionId);
 
-        groups.Verify(g => g.AddToGroupAsync("conn-1", "pipeline:nfl", It.IsAny<CancellationToken>()), Times.Once);
-        groups.Verify(g => g.AddToGroupAsync("conn-1", $"execution:{executionId}", It.IsAny<CancellationToken>()), Times.Once);
+        // FDW-2804: no owner is stored for a pipeline name, and this hub has no execution tracker, so neither join is made.
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         groups.Verify(g => g.RemoveFromGroupAsync("conn-1", "pipeline:nfl", It.IsAny<CancellationToken>()), Times.Once);
         groups.Verify(g => g.RemoveFromGroupAsync("conn-1", $"execution:{executionId}", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -92,7 +93,7 @@ public sealed class MigratedHubVerbTests
         await hub.UnsubscribeFromCalculation("c7");
 
         groups.Verify(g => g.AddToGroupAsync("conn-1", "user:bob", It.IsAny<CancellationToken>()), Times.Once);
-        groups.Verify(g => g.AddToGroupAsync("conn-1", "calc:c7", It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.AddToGroupAsync("conn-1", "calc:c7", It.IsAny<CancellationToken>()), Times.Never);
         groups.Verify(g => g.AddToGroupAsync("conn-1", "all-calculations", It.IsAny<CancellationToken>()), Times.Once);
         groups.Verify(g => g.RemoveFromGroupAsync("conn-1", "calc:c7", It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -113,28 +114,28 @@ public sealed class MigratedHubVerbTests
         await hub.UnsubscribeFromDiscovery("d9");
 
         groups.Verify(g => g.AddToGroupAsync("conn-1", "user:carol", It.IsAny<CancellationToken>()), Times.Once);
-        groups.Verify(g => g.AddToGroupAsync("conn-1", "discovery:d9", It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.AddToGroupAsync("conn-1", "discovery:d9", It.IsAny<CancellationToken>()), Times.Never);
         groups.Verify(g => g.AddToGroupAsync("conn-1", "all-discoveries", It.IsAny<CancellationToken>()), Times.Once);
         groups.Verify(g => g.RemoveFromGroupAsync("conn-1", "discovery:d9", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task MessageHubJoinAndLeaveUseRawUserGroup()
+    public async Task MessageHubJoinAndLeaveUseTheCallersUserScope()
     {
+        const string userId = "8a1f0c1e-0000-0000-0000-000000000001";
         var groups = HubFixtures.GroupManager();
         var hub = new MessageHub(new RecordingLogger<MessageHub>())
         {
-            Context = HubFixtures.Context("conn-1").Object,
+            Context = HubFixtures.Context("conn-1", new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", userId)], "test"))).Object,
             Groups = groups.Object,
         };
-        const string userId = "8a1f0c1e-0000-0000-0000-000000000001";
 
         await hub.OnConnectedAsync();
         await hub.JoinUserGroup(userId);
         await hub.LeaveUserGroup(userId);
         await hub.OnDisconnectedAsync(exception: null);
 
-        groups.Verify(g => g.AddToGroupAsync("conn-1", userId, It.IsAny<CancellationToken>()), Times.Once);
-        groups.Verify(g => g.RemoveFromGroupAsync("conn-1", userId, It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.AddToGroupAsync("conn-1", HubScopes.User(userId), It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.RemoveFromGroupAsync("conn-1", HubScopes.User(userId), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

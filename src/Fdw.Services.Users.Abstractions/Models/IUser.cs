@@ -28,11 +28,6 @@ public interface IUser
     bool IsActive { get; }
 
     /// <summary>
-    /// Gets the last login timestamp.
-    /// </summary>
-    DateTimeOffset? LastLoginAt { get; }
-
-    /// <summary>
     /// Gets the account creation timestamp.
     /// </summary>
     DateTimeOffset CreatedAt { get; }

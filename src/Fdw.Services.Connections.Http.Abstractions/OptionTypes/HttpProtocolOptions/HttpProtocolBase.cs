@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -95,6 +96,13 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
 
     /// <inheritdoc/>
     public string DefaultContentType { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>The base maps the four commands <see cref="GetHttpMethod"/> names: Query, Insert, Update and Delete.</remarks>
+    public virtual bool Maps(string commandType) => commandType is "Query" or "Insert" or "Update" or "Delete";
+
+    /// <inheritdoc />
+    public virtual int InsertRowsPerRequest => 1;
 
     /// <inheritdoc/>
     public virtual async Task<IGenericResult<HttpRequestMessage>> Translate(
@@ -235,12 +243,38 @@ public abstract class HttpProtocolBase : TypeOptionBase<HttpProtocolBase>, IHttp
         // For commands with input data, serialize to JSON
         if (command is IDataCommandWithInput commandWithInput && commandWithInput.InputData is not null)
         {
-            var json = JsonSerializer.Serialize(commandWithInput.InputData, DefaultJsonOptions);
+            var json = JsonSerializer.Serialize(RequestInput(command, commandWithInput), DefaultJsonOptions);
             var content = new StringContent(json, System.Text.Encoding.UTF8, DefaultContentType);
             return Task.FromResult(GenericResult<HttpContent?>.Success(content));
         }
 
         return Task.FromResult(GenericResult<HttpContent?>.Success(null));
+    }
+
+    /// <summary>
+    /// Reads the input one HTTP request carries. An insert holds its rows as a list, and one request writes one row: the
+    /// single row is the input, and an insert of any other number of rows is refused (the translation catches the
+    /// exception and answers a CommandTranslationFailed failure). Every other command's input is its data as given.
+    /// </summary>
+    /// <param name="command">The data command being translated.</param>
+    /// <param name="input">The same command, as one that carries input.</param>
+    /// <returns>The object the request body or variables carry.</returns>
+    /// <exception cref="InvalidOperationException">The command is an insert of a number of rows other than one.</exception>
+    protected object? RequestInput(IDataCommand command, IDataCommandWithInput input)
+    {
+        if (!string.Equals(command.CommandType, "Insert", StringComparison.Ordinal) || input.InputData is not System.Collections.IEnumerable rows)
+        {
+            return input.InputData;
+        }
+
+        var held = rows.Cast<object?>().ToList();
+        if (held.Count > InsertRowsPerRequest)
+        {
+            throw new InvalidOperationException($"An HTTP request writes up to {InsertRowsPerRequest} insert rows; the command carries {held.Count}.");
+        }
+
+        // A protocol that sends a list sends one for every request, so a last batch of one row is still a list.
+        return InsertRowsPerRequest == 1 ? held[0] : held;
     }
 
     /// <summary>

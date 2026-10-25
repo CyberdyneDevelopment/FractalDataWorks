@@ -37,6 +37,16 @@ public abstract class TransformationKindBase : TypeOptionBase<TransformationKind
     /// <param name="payload">The payload that already carries the members every kind has.</param>
     public abstract void Describe(ITransformationImplementationConfiguration transformation, TransformationPayload payload);
 
+    /// <summary>Adds what the kind can tell about the type of each result to a payload, as a list and a read show it.</summary>
+    /// <param name="transformation">The stored transformation.</param>
+    /// <param name="payload">The payload <see cref="Describe"/> has filled.</param>
+    /// <param name="context">The settings and logger.</param>
+    /// <remarks>A kind whose transformations produce no typed results leaves the payload as it is.</remarks>
+    public virtual void AddValueTypes(
+        ITransformationImplementationConfiguration transformation, TransformationPayload payload, TransformationKindContext context)
+    {
+    }
+
     /// <summary>Adds everything this kind has to a payload, as the read of one transformation shows it.</summary>
     /// <param name="transformation">The stored transformation.</param>
     /// <param name="payload">The payload that already carries the members every kind has.</param>
@@ -46,6 +56,7 @@ public abstract class TransformationKindBase : TypeOptionBase<TransformationKind
         ITransformationImplementationConfiguration transformation, TransformationPayload payload, TransformationKindContext context)
     {
         Describe(transformation, payload);
+        AddValueTypes(transformation, payload, context);
         return GenericResult.Success();
     }
 }

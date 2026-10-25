@@ -144,7 +144,7 @@ public sealed class PipelineWatermarksTests
         result.IsSuccess.ShouldBeTrue();
         var (command, target) = _calls.Single();
         target.ShouldBe(new DataStoreTarget("Ops", "etl", "PipelineWatermark"));
-        var record = command.ShouldBeOfType<InsertCommand<EtlPipelineWatermarkRecord>>().Data;
+        var record = command.ShouldBeOfType<InsertCommand<EtlPipelineWatermarkRecord>>().Data.Single();
         record.Id.ShouldNotBe(Guid.Empty);
         record.PipelineId.ShouldBe(Pipeline);
         record.TenantId.ShouldBe(Tenant);

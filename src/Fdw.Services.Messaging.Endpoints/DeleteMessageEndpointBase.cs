@@ -9,27 +9,27 @@ namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
 /// Abstract base class for deleting a message (DELETE /messages/{Id}).
-/// Why: Messaging service has no hard-delete primitive; "delete" maps to
-/// <see cref="IMessageService.Dismiss"/> (user removes from their inbox).
+/// Why: Messaging service has no hard-delete primitive; "delete" is the Dismiss action of the message's alert (FDW-2429), the user
+/// removing it from their inbox.
 /// </summary>
 public abstract class DeleteMessageEndpointBase : Endpoint<MessageIdRequest>
 {
-    private readonly IMessageService _messageService;
+    private readonly IAlertActionService _alerts;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DeleteMessageEndpointBase"/> class.
     /// </summary>
     protected DeleteMessageEndpointBase(
-        IMessageService messageService,
+        IAlertActionService alerts,
         ILogger logger)
     {
-        _messageService = messageService;
+        _alerts = alerts;
         _logger = logger;
     }
 
-    /// <summary>Gets the message service.</summary>
-    protected IMessageService MessageService => _messageService;
+    /// <summary>Gets the alert action service.</summary>
+    protected IAlertActionService Alerts => _alerts;
 
     /// <summary>Gets the logger.</summary>
     protected ILogger EndpointLogger => _logger;
@@ -53,20 +53,11 @@ public abstract class DeleteMessageEndpointBase : Endpoint<MessageIdRequest>
     {
         try
         {
-            var getResult = await _messageService.GetMessage(req.Id, ct).ConfigureAwait(false);
-            if (!getResult.IsSuccess || getResult.Value is null)
-            {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
-                return;
-            }
-
-            var result = await _messageService.Dismiss(req.Id, ct).ConfigureAwait(false);
+            var result = await _alerts.Apply(MessageAlert.Kind, req.Id, MessageAlert.DismissAction, null, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
-                MessagingEndpointLog.DismissFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                AddError("Failed to delete message");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(MessagingFailures.Of(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

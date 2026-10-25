@@ -231,7 +231,9 @@ public abstract class ConfigurationCommandBase<TConfig> : IConfigurationCommands
             .Where(string.Concat(parentTable, ".", parentKeyColumn), parentKeyValue);
 
         if (asOf is null)
-            builder = builder.Where(string.Concat(parentTable, ".IsCurrent"), true);
+            builder = builder
+                .Where(string.Concat(parentTable, ".IsCurrent"), true)
+                .Where(string.Concat(parentTable, ".IsDeleted"), false);
 
         return builder.Build().Command;
     }

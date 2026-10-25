@@ -96,4 +96,7 @@ public sealed class QueryCommand<T> : DataCommandBase<IEnumerable<T>>, IQueryCom
     /// </summary>
     /// <value>The joins to apply, or empty for no joins.</value>
     public IReadOnlyList<IJoinExpression> Joins { get; init; } = [];
+
+    /// <inheritdoc />
+    public bool ReadsForWrite { get; init; }
 }

@@ -12,7 +12,7 @@ public sealed class FlowLoadDestinationTests
 {
     private static LoadUnit Unit(string? softDeleteMode)
     {
-        var kind = LoadStepKinds.ByName("BulkUpsert");
+        var kind = LoadStepKinds.ByName("Upsert");
         var row = new PipelineLoadStepConfiguration { Name = "load", Phase = "Load", Kind = kind.Name, IsEnabled = true, SoftDeleteMode = softDeleteMode };
         return LoadUnit.ForDataSet("graph destination 'load'", kind, row, "Orders");
     }

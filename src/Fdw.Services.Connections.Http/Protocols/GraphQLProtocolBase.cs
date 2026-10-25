@@ -388,7 +388,7 @@ public abstract class GraphQLProtocolBase : HttpProtocolBase
         // Add input data for mutations
         if (command is IDataCommandWithInput commandWithInput && commandWithInput.InputData is not null)
         {
-            variables["input"] = commandWithInput.InputData;
+            variables["input"] = RequestInput(command, commandWithInput);
         }
 
         // Add filter variables

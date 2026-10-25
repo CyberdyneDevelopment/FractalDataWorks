@@ -76,10 +76,9 @@ public partial class RoleImplementationConfiguration
     /// </summary>
     /// <remarks>
     /// <c>authz.Role</c> has carried both of these since the table shipped and
-    /// <c>configurationSchema.json</c> declares both, but this type had neither -- so a role
-    /// deleted through the versioned write path (current row stamped IsCurrent=0, a copy inserted
-    /// with IsDeleted=1) went on appearing in every listing and went on naming itself for every
-    /// user still assigned to it. No read could filter what the type could not carry.
+    /// <c>configurationSchema.json</c> declares both. A role deleted through the versioned write
+    /// path keeps IsCurrent=1 and gets IsDeleted=1, so a read that does not test IsDeleted lists
+    /// it in every listing and names it for every user still assigned to it.
     /// </remarks>
     public bool IsDeleted { get; set; }
 

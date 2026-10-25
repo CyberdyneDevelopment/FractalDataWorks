@@ -17,17 +17,11 @@ namespace Fdw.Commands.Data.Extensions;
 ///     .Path("sales")
 ///     .Value(customer);
 ///
-/// // Batch insert (batched multi-row VALUES)
+/// // Many rows (the connection takes its bulk path above its configured MaxSerialInsert)
 /// var cmd = Insert.IntoMany&lt;Customer&gt;("Customers")
 ///     .DataStore("CRM")
 ///     .Path("sales")
 ///     .Values(customers);
-///
-/// // Bulk insert (SqlBulkCopy)
-/// var cmd = Insert.Bulk&lt;Customer&gt;("Customers")
-///     .DataStore("CRM")
-///     .Path("sales")
-///     .Values(largeCustomerList);
 /// </code>
 /// </para>
 /// </remarks>
@@ -45,8 +39,8 @@ public static class Insert
     }
 
     /// <summary>
-    /// Starts building a batch insert command for multiple entities.
-    /// Uses ACID-compliant batched multi-row INSERT statements.
+    /// Starts building an insert command for multiple entities.
+    /// The connection runs the rows in batched multi-row INSERT statements, or takes its bulk path above its configured MaxSerialInsert.
     /// </summary>
     /// <typeparam name="T">The entity type.</typeparam>
     /// <param name="containerName">The container name.</param>
@@ -54,17 +48,5 @@ public static class Insert
     public static InsertBatchBuilder<T> IntoMany<T>(string containerName)
     {
         return new InsertBatchBuilder<T>(containerName);
-    }
-
-    /// <summary>
-    /// Starts building a bulk insert command for large datasets.
-    /// Uses database-specific bulk mechanisms (SqlBulkCopy, etc.).
-    /// </summary>
-    /// <typeparam name="T">The entity type.</typeparam>
-    /// <param name="containerName">The container name.</param>
-    /// <returns>A builder for bulk inserts.</returns>
-    public static BulkInsertBuilder<T> Bulk<T>(string containerName)
-    {
-        return new BulkInsertBuilder<T>(containerName);
     }
 }

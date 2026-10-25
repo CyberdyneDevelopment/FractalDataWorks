@@ -39,7 +39,7 @@ public sealed class RetentionPoliciesTests
             .ReturnsAsync(GenericResult<int>.Success(1));
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
-        return (new RetentionPolicies(gateways.Object, Tables, NullLogger<RetentionPolicies>.Instance), gateway);
+        return (new RetentionPolicies(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<RetentionPolicies>.Instance), gateway);
     }
 
     private static void Writes(Mock<IConfigurationGateway> gateway, Times times)
@@ -51,7 +51,7 @@ public sealed class RetentionPoliciesTests
     {
         var (service, gateway) = Create();
 
-        var set = await service.Set(Tenant, Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "SignedDate", "Delete"), TestContext.Current.CancellationToken);
+        var set = await service.Set(Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "SignedDate", "Delete"), TestContext.Current.CancellationToken);
 
         set.IsSuccess.ShouldBeTrue();
         set.Value!.Years.ShouldBe(7);
@@ -64,9 +64,9 @@ public sealed class RetentionPoliciesTests
     public async Task SettingAgainTheTypeThatHasAPolicyKeepsItsId()
     {
         var (service, gateway) = Create("Contract");
-        var before = await service.List(Tenant, Finance, TestContext.Current.CancellationToken);
+        var before = await service.List(Finance, TestContext.Current.CancellationToken);
 
-        var set = await service.Set(Tenant, Finance, new NewRetentionPolicy("contract", 5, 0, 0, "SignedDate", "Archive"), TestContext.Current.CancellationToken);
+        var set = await service.Set(Finance, new NewRetentionPolicy("contract", 5, 0, 0, "SignedDate", "Archive"), TestContext.Current.CancellationToken);
 
         set.IsSuccess.ShouldBeTrue();
         set.Value!.Id.ShouldBe(before.Value![0].Id);
@@ -85,7 +85,7 @@ public sealed class RetentionPoliciesTests
     {
         var (service, gateway) = Create();
 
-        var set = await service.Set(Tenant, Finance, new NewRetentionPolicy(documentType, years, months, days, startField, endAction), TestContext.Current.CancellationToken);
+        var set = await service.Set(Finance, new NewRetentionPolicy(documentType, years, months, days, startField, endAction), TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -97,7 +97,7 @@ public sealed class RetentionPoliciesTests
     {
         var (service, gateway) = Create("Contract");
 
-        var removed = await service.Remove(Tenant, Finance, "Invoice", TestContext.Current.CancellationToken);
+        var removed = await service.Remove(Finance, "Invoice", TestContext.Current.CancellationToken);
 
         removed.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -109,7 +109,7 @@ public sealed class RetentionPoliciesTests
     {
         var (service, gateway) = Create("Contract");
 
-        var removed = await service.Remove(Tenant, Finance, "Contract", TestContext.Current.CancellationToken);
+        var removed = await service.Remove(Finance, "Contract", TestContext.Current.CancellationToken);
 
         removed.IsSuccess.ShouldBeTrue();
         Writes(gateway, Times.Once());
@@ -121,9 +121,9 @@ public sealed class RetentionPoliciesTests
     {
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(GenericResult<IConfigurationGateway>.Failure(new GenericMessage("the configuration gateway is down")));
-        var service = new RetentionPolicies(gateways.Object, Tables, NullLogger<RetentionPolicies>.Instance);
+        var service = new RetentionPolicies(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<RetentionPolicies>.Instance);
 
-        var set = await service.Set(Tenant, Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "SignedDate", "Delete"), TestContext.Current.CancellationToken);
+        var set = await service.Set(Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "SignedDate", "Delete"), TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
     }

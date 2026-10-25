@@ -58,10 +58,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddSingleton<IAuthenticationContextAccessor, AuthenticationContextAccessor>();
             builder.Services.TryAddSingleton<IUserPermissions>(sp =>
                 new UserPermissions(
-                    sp.GetRequiredService<IRoleConfigurationProvider>(),
-                    sp.GetRequiredService<IPermissionConfigurationProvider>(),
-                    sp.GetRequiredService<IRolePermissionConfigurationProvider>(),
-                    sp.GetRequiredService<IUserRoleConfigurationProvider>(),
+                    sp.GetRequiredService<IUserPermissionGrants>(),
                     sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<UserPermissions>(),
                     sp.GetRequiredService<IOrgAccessProvider>()));
@@ -79,6 +76,14 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                     sp.GetRequiredService<IRoleGrants>(),
                     sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<GrantRule>()));
+
+            // The rule for whether a caller may act on a thing at its place in the scope tree (FDW-2327). TryAdd, so a host or
+            // package that registers its own rule first keeps it: another policy is another implementation, not an edit here.
+            builder.Services.TryAddSingleton<IScopeAuthority>(sp =>
+                new HierarchyScopeAuthority(
+                    sp.GetRequiredService<IAuthenticationContextAccessor>(),
+                    sp.GetRequiredService<IUserPermissions>(),
+                    sp.GetService<ILoggerFactory>()?.CreateLogger<HierarchyScopeAuthority>()));
 
             builder.Services.TryAddSingleton<IUserRoleAssignment>(sp =>
                 new UserRoleAssignment(
@@ -145,6 +150,14 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 return domain;
             });
             builder.Services.TryAddSingleton<IUserRoleConfigurationProvider>(sp => sp.GetRequiredService<UserRoleConfigurationProvider>());
+
+            // The roles one person holds, read by the person's id and not by reading every assignment (FDW-2668).
+            builder.Services.TryAddSingleton<IUserRolesHeld>(sp => new UserRolesHeld(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz",
+                sp.GetRequiredService<ILogger<UserRolesHeld>>()));
+            builder.Services.TryAddSingleton<IUserPermissionGrants>(sp => new UserPermissionGrants(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthorizationServiceTypes.ConfigurationConnection, "authz",
+                sp.GetRequiredService<ILogger<UserPermissionGrants>>()));
 
             // The roles an organization defines for its own members (FDW-1593): tenant.OrganizationRole (domain), tenant.OrganizationRoleConfiguration
             // (implementation) and tenant.OrganizationRolePermission (the cascade children).

@@ -32,10 +32,12 @@
     <ProjectReference Include="..\Fdw.MessageLogging.Abstractions\Fdw.MessageLogging.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.MessageLogging.SourceGenerators\Fdw.MessageLogging.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 

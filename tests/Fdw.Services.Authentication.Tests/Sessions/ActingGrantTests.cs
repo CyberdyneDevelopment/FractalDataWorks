@@ -28,9 +28,9 @@ public sealed class ActingGrantTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public void TheSuperGrantCoversNothingSoItDoesNotAllowARole()
+    public void TheSuperGrantCoversEveryPermissionSoItAllowsAnyRole()
     {
-        string.Join(",", ActingGrant.NotCovered(["*:*"], ["projects:read"])).ShouldBe("projects:read");
+        ActingGrant.NotCovered(["*:*"], ["projects:read"]).ShouldBeEmpty();
     }
 
     [Fact]

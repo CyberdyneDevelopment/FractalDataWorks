@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
+using Fdw.Services.Calculations.Abstractions.RelativeTime;
 using Shouldly;
 using Xunit;
 
@@ -17,6 +18,8 @@ public sealed class CalculationNodeCatalogTests
     [InlineData("Field", new[] { "name" })]
     [InlineData("Ref", new[] { "name" })]
     [InlineData("Round", new[] { "places", "mode" })]
+    [InlineData("Now", new[] { "name", "mode" })]
+    [InlineData("AddTime", new[] { "name", "mode" })]
     public void AnOperationThatReadsExtraMembersNamesThem(string op, string[] members)
     {
         CalculationNodeTypes.ByName(op).Members.ShouldBe(members);
@@ -25,7 +28,7 @@ public sealed class CalculationNodeCatalogTests
     [Fact]
     public void EveryOtherOperationTakesOnlyOperands()
     {
-        var withMembers = new[] { "Constant", "Field", "Ref", "Round" };
+        var withMembers = new[] { "Constant", "Field", "Ref", "Round", "Now", "AddTime" };
 
         CalculationNodeTypes.All()
             .Where(type => !withMembers.Contains(type.Name, StringComparer.Ordinal))
@@ -41,10 +44,20 @@ public sealed class CalculationNodeCatalogTests
     }
 
     [Fact]
-    public void OnlyRoundOffersModes()
+    public void NowOffersEveryAnchorAndAddTimeEveryUnit()
     {
+        CalculationNodeTypes.ByName("Now").Modes.ShouldBe(TimeAnchors.All().Select(anchor => anchor.Name));
+        CalculationNodeTypes.ByName("AddTime").Modes.ShouldBe(new[] { "Seconds", "Minutes", "Hours", "Days", "Weeks", "Months", "Years" }, ignoreOrder: true);
+        CalculationNodeTypes.ByName("AddTime").OperandNames.ShouldBe(new[] { "time", "amount" });
+    }
+
+    [Fact]
+    public void OnlyRoundAndTheTimeOperationsOfferModes()
+    {
+        var withModes = new[] { "Round", "Now", "AddTime" };
+
         CalculationNodeTypes.All()
-            .Where(type => !string.Equals(type.Name, "Round", StringComparison.Ordinal))
+            .Where(type => !withModes.Contains(type.Name, StringComparer.Ordinal))
             .Where(type => type.Modes.Count > 0)
             .Select(type => type.Name)
             .ShouldBeEmpty();

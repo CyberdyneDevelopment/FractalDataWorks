@@ -101,6 +101,11 @@ public static partial class AuthenticationValidationLog
         Message = "Authentication service '{serviceName}' conferred {roleCount} role(s) and {permissionCount} permission(s) on subject '{subject}'")]
     public static partial IGenericMessage DeclaredRolesConferred(ILogger logger, string serviceName, int roleCount, int permissionCount, string subject);
 
+    /// <summary>Logs the platform claims a validated external token carried and had removed.</summary>
+    [MessageLogging(EventId = 31103, Level = LogLevel.Warning,
+        Message = "A token accepted by authentication service '{serviceName}' for subject '{subject}' carried platform claims it has no standing to make; removed: [{claimTypes}]")]
+    public static partial IGenericMessage ForeignPlatformClaimsRemoved(ILogger logger, string serviceName, string subject, string claimTypes);
+
     /// <summary>Logs a bearer token whose payload segment could not be read.</summary>
     [MessageLogging(EventId = 11103, Level = LogLevel.Debug,
         Message = "The bearer token on {path} has an unreadable payload; no issuer to select a scheme by")]
@@ -229,6 +234,12 @@ public static partial class AuthenticationValidationLog
     [MessageLogging(EventId = 51501, Level = LogLevel.Warning,
         Message = "A {kind} owned by user '{userId}' was refused: the owner does not hold '{permission}', which this API key service requires of that kind")]
     public static partial IGenericMessage ApiKeyNotPermitted(ILogger logger, string kind, string userId, string permission);
+
+    /// <summary>Logged when the sign-in of an authenticated API key or personal access token request could not be recorded (FDW-2729).</summary>
+    // Error, not Warning: the request is authenticated and goes on, but the log of sign-ins is now missing one that happened.
+    [MessageLogging(EventId = 91500, Level = LogLevel.Error,
+        Message = "The sign-in of user '{userId}' by {kind} was not recorded; the request is authenticated")]
+    public static partial IGenericMessage KeySignInNotRecorded(ILogger logger, string kind, string userId);
 
     /// <summary>Logged when the ApiKey service row a scheme was taken for cannot be read (FDW-910).</summary>
     [MessageLogging(EventId = 61500, Level = LogLevel.Error,

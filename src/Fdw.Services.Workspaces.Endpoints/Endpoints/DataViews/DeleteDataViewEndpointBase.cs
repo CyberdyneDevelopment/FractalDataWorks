@@ -47,6 +47,17 @@ public abstract class DeleteDataViewEndpointBase : CrudDeleteEndpointBase<DataVi
             : GenericResult<bool>.Success(found.Value is not null);
     }
 
+    /// <summary>Says whether the caller may delete the view (FDW-2328).</summary>
+    /// <param name="view">The view a delete is asked of.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Success when the caller may; otherwise the refusal.</returns>
+    /// <remarks>
+    /// The framework's answer is the person who saved the view. Who else may is policy, so it is a rule a developer replaces by overriding
+    /// this: the reference API also lets a holder of the right at the view's scope or above delete it, through <c>IScopeAuthority</c>.
+    /// </remarks>
+    protected virtual Task<IGenericResult> MayChange(IDataViewDataSetVariationConfiguration view, CancellationToken cancellationToken)
+        => Task.FromResult(DataViewStore.OwnedByCaller(_authContext, view, Logger));
+
     /// <inheritdoc />
     protected override async Task<IGenericResult> Delete(DataViewNameRequest request, CancellationToken ct)
     {
@@ -61,7 +72,7 @@ public abstract class DeleteDataViewEndpointBase : CrudDeleteEndpointBase<DataVi
                 ResultDetails.Create("name", request.Name));
         }
 
-        var owned = DataViewStore.OwnedByCaller(_authContext, view, Logger);
+        var owned = await MayChange(view, ct).ConfigureAwait(false);
         if (owned.IsFailure) return owned;
 
         var dependent = await DataViewStore.FirstDependent(_variations, view.Id, ct).ConfigureAwait(false);

@@ -88,7 +88,7 @@ public sealed class ExecutionTrackingServiceTenantTests
     }
 
     private ExecutionItem? InsertedItem()
-        => _writes.OfType<InsertCommand<ExecutionItem>>().Select(c => c.Data).SingleOrDefault();
+        => _writes.OfType<InsertCommand<ExecutionItem>>().SelectMany(c => c.Data).SingleOrDefault();
 
     private static IEnumerable<FilterCondition> Conditions(IFilterNode? node) => node switch
     {

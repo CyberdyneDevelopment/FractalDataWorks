@@ -87,7 +87,7 @@ internal static class DestinationOptions
             (null, ColumnListsBound(component) ? GenericResult.Success() : PipelineLoadValidator.ValidateColumnLists(owner, row, kind, kind.Name, logger)),
             ("effectiveFromColumn", PipelineLoadValidator.ValidateVersioning(owner, row, kind, kind.Name, logger)),
             ("softDeleteMode", PipelineLoadValidator.ValidateSoftDelete(owner, row, kind, kind.Name, logger)),
-            ("valueSources", PipelineLoadValidator.ValidateValueSources(owner, row, hasSourceDataSet: false, forContainer: false, logger)),
+            ("valueSources", PipelineLoadValidator.ValidateValueSources(owner, row, hasSourceDataSet: false, logger)),
         };
         return [.. checks.Where(check => check.Result.IsFailure).Select(check => Problem(component, check.Setting, check.Result))];
     }

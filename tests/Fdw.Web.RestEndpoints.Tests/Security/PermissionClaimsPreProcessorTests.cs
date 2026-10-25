@@ -104,7 +104,7 @@ public sealed class PermissionClaimsPreProcessorTests
 
     [Fact]
     [Trait("Category", "Authorization")]
-    public async Task PreProcessAsync_GlobalWildcard_DoesNotGrantAccess_Returns403()
+    public async Task PreProcessAsync_GlobalWildcard_GrantsAccess()
     {
         // Arrange: token has the *:* super-grant
         var context = BuildContext(
@@ -119,9 +119,8 @@ public sealed class PermissionClaimsPreProcessorTests
         // Act
         await sut.PreProcessAsync(context, CancellationToken.None);
 
-        // Assert — the *:* super-grant was deliberately removed; only resource:action and
-        // resource:* are accepted. OpenIddict tokens carry explicit perms; no wildcard bypass.
-        context.HttpContext.Response.StatusCode.ShouldBe(403);
+        // Assert — a held *:* covers every permission, as it does at every other check (PermissionCoverage).
+        context.HttpContext.Response.StatusCode.ShouldNotBe(403);
     }
 
     [Fact]

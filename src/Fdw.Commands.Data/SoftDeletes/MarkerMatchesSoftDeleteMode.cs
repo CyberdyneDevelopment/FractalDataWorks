@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -15,4 +16,18 @@ public sealed class MarkerMatchesSoftDeleteMode : SoftDeleteModeBase
         : base("MarkerMatches", "Flag the rows whose marker column equals the marker value", requiresMarker: true)
     {
     }
+
+    /// <inheritdoc />
+    public override string? Problem(SoftDeleteOptions options)
+    {
+        if (options.AbsentFromSource is not null)
+            return "a marker-matches soft delete takes no source set";
+        return options.Marker is null || string.IsNullOrWhiteSpace(options.Marker.Column) || options.Marker.Value is null
+            ? "a marker-matches soft delete names a marker column and a marker value"
+            : null;
+    }
+
+    /// <inheritdoc />
+    public override IReadOnlyList<SoftDeleteMarker> Conditions(SoftDeleteOptions options)
+        => options.Marker is { } marker ? [marker] : [];
 }

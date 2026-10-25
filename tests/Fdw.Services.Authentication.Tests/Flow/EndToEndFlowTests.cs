@@ -117,7 +117,8 @@ public sealed class EndToEndFlowTests
             new InMemoryExecutionStore(),
             new StaticFlowProvider(flow),
             steps.Lookup,
-            new Mock<ITenantProvider>().Object);
+            new Mock<ITenantProvider>().Object,
+            new RecordingSignIns());
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 
@@ -225,7 +226,8 @@ public sealed class EndToEndFlowTests
             new InMemoryExecutionStore(),
             new StaticFlowProvider(flow),
             steps.Lookup,
-            new Mock<ITenantProvider>().Object);
+            new Mock<ITenantProvider>().Object,
+            new RecordingSignIns());
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 
@@ -292,7 +294,7 @@ public sealed class EndToEndFlowTests
         var issuer = new RecordingIssuer();
         var runner = new AuthenticationRunner(
             TestAssuranceLevels.Policy(), issuer, new Mock<ISessionStore>(MockBehavior.Strict).Object, new InMemoryExecutionStore(),
-            new StaticFlowProvider(flow), steps.Lookup, new Mock<ITenantProvider>().Object);
+            new StaticFlowProvider(flow), steps.Lookup, new Mock<ITenantProvider>().Object, new RecordingSignIns());
 
         var result = await runner.Run(flow, TestContext.Current.CancellationToken);
 

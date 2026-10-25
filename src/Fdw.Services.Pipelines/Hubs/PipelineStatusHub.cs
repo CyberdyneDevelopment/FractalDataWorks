@@ -1,5 +1,7 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Operations.Abstractions.Execution;
 using Microsoft.Extensions.Logging;
 using Fdw.SignalR;
 
@@ -36,9 +38,61 @@ public class PipelineStatusHub : RealTimeHubBase<IPipelineStatusHubClient>
     /// Initializes a new instance of the <see cref="PipelineStatusHub"/> class.
     /// </summary>
     /// <param name="logger">The logger for hub lifecycle and subscription events.</param>
-    public PipelineStatusHub(ILogger<PipelineStatusHub> logger)
+    /// <param name="executionTracker">
+    /// Says which tenant an execution belongs to. Optional so a host that does not register it still starts the hub; every
+    /// <c>execution:</c> join on such a host is refused.
+    /// </param>
+    public PipelineStatusHub(ILogger<PipelineStatusHub> logger, IExecutionTracker? executionTracker = null)
         : base(logger)
     {
+        _executionTracker = executionTracker;
+    }
+
+    private readonly IExecutionTracker? _executionTracker;
+
+    private const string ExecutionPrefix = "execution:";
+    private const string PipelinePrefix = "pipeline:";
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// <para>
+    /// An <c>execution:{id}</c> group may be joined only by a connection whose tenant is the tenant of that run
+    /// (<see cref="IExecutionTracker.GetItem"/>). A run that is not found, a lookup that fails, a connection with no tenant, and a host with no
+    /// tracker are all refusals (FDW-2804).
+    /// </para>
+    /// <para>
+    /// A <c>pipeline:{name}</c> group is refused for everyone: a pipeline's configuration exposes no tenant, so there is no owner to compare to.
+    /// Nothing is published into it on the API's hub today. When a pipeline's tenant can be read by name this check is added here.
+    /// </para>
+    /// </remarks>
+    protected override async Task<bool> AuthorizeJoin(string scopeKey, CancellationToken cancellationToken)
+    {
+        if (!CanJoin(scopeKey))
+        {
+            return false;
+        }
+
+        if (scopeKey.StartsWith(PipelinePrefix, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return !scopeKey.StartsWith(ExecutionPrefix, StringComparison.Ordinal)
+            || await ExecutionIsCallers(scopeKey[ExecutionPrefix.Length..], cancellationToken).ConfigureAwait(false);
+    }
+
+    // The run exists and belongs to the caller's tenant. Every other state, including a host with no tracker, is a refusal.
+    private async Task<bool> ExecutionIsCallers(string executionKey, CancellationToken cancellationToken)
+    {
+        if (_executionTracker is null || CallerTenantId is not { } callerTenant || !Guid.TryParse(executionKey, out var executionId))
+        {
+            return false;
+        }
+
+        var item = await _executionTracker.GetItem(executionId, cancellationToken).ConfigureAwait(false);
+        return item.IsSuccess
+            && item.Value is { } run
+            && string.Equals(run.TenantId.ToString("D"), callerTenant, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <inheritdoc/>
@@ -56,7 +110,7 @@ public class PipelineStatusHub : RealTimeHubBase<IPipelineStatusHubClient>
             return Task.CompletedTask;
         }
 
-        return JoinScope($"org:{orgId}:pipeline-updates");
+        return JoinScope(HubScopes.Org(orgId, "pipeline-updates"));
     }
 
     /// <summary>

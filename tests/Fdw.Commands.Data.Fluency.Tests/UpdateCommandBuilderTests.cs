@@ -206,4 +206,40 @@ public sealed class UpdateCommandBuilderTests
 
         cmd.Filter.ShouldBeNull();
     }
+
+    /// <summary>FDW-1307 — a condition written after an OR group is ANDed with the group, not added to it as one more alternative.</summary>
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnOrGroupClosedFirstIsAndedWithAConditionWrittenAfterIt()
+    {
+        var root = ((UpdateCommand<TestEntity>)(Update.In<TestEntity>("Customers").DataStore("CRM").Path("sales")
+            .BeginOrGroup().Where("Status", "A").Where("Status", "B").EndGroup()
+            .Where("Active", true)
+            .Value(new TestEntity { Id = 1, Name = "Updated" })).Command).Filter!.Root.ShouldBeOfType<FilterGroup>();
+
+        root.Operator.ShouldBe(LogicalOperator.And);
+        root.Nodes.Count.ShouldBe(2);
+        var alternatives = root.Nodes[0].ShouldBeOfType<FilterGroup>();
+        alternatives.Operator.ShouldBe(LogicalOperator.Or);
+        alternatives.Nodes.Count.ShouldBe(2);
+        root.Nodes[1].ShouldBeOfType<FilterCondition>().PropertyName.ShouldBe("Active");
+    }
+
+    /// <summary>FDW-1307 — two groups written one after the other are ANDed.</summary>
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void TwoGroupsWrittenInARowAreAnded()
+    {
+        var root = ((UpdateCommand<TestEntity>)(Update.In<TestEntity>("Customers").DataStore("CRM").Path("sales")
+            .BeginOrGroup().Where("Status", "A").Where("Status", "B").EndGroup()
+            .BeginOrGroup().Where("Region", "C").Where("Region", "D").EndGroup()
+            .Value(new TestEntity { Id = 1, Name = "Updated" })).Command).Filter!.Root.ShouldBeOfType<FilterGroup>();
+
+        root.Operator.ShouldBe(LogicalOperator.And);
+        root.Nodes.Count.ShouldBe(2);
+        root.Nodes[0].ShouldBeOfType<FilterGroup>().Operator.ShouldBe(LogicalOperator.Or);
+        root.Nodes[1].ShouldBeOfType<FilterGroup>().Operator.ShouldBe(LogicalOperator.Or);
+    }
 }

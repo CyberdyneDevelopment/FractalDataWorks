@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Workspaces.Logging;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Web.RestEndpoints.Crud;
@@ -39,6 +40,7 @@ public abstract class CreateDataSetVariationEndpointBase
     private readonly IWorkspaceAccessPolicy _access;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IDataSetVariationConfigurationProvider _variations;
+    private readonly IFilterCalculations? _calculations;
 
     /// <summary>Initializes a new instance of the <see cref="CreateDataSetVariationEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
@@ -46,13 +48,16 @@ public abstract class CreateDataSetVariationEndpointBase
     /// <param name="access">Decides whether the caller may write the workspace and attach the data set.</param>
     /// <param name="dataSets">Resolves the main data set.</param>
     /// <param name="variations">Finds and saves the variation.</param>
+    /// <param name="calculations">Evaluates the calculations the view's filter names; null when the host has none.</param>
     protected CreateDataSetVariationEndpointBase(
         ILogger<CreateDataSetVariationEndpointBase> logger,
         IWorkspaceConfigurationProvider workspaces,
         IWorkspaceAccessPolicy access,
         IDataSetConfigurationProvider dataSets,
-        IDataSetVariationConfigurationProvider variations) : base(logger)
+        IDataSetVariationConfigurationProvider variations,
+        IFilterCalculations? calculations = null) : base(logger)
     {
+        _calculations = calculations;
         _workspaces = workspaces;
         _access = access;
         _dataSets = dataSets;
@@ -139,10 +144,12 @@ public abstract class CreateDataSetVariationEndpointBase
         if (based.IsFailure) return based.ToNewResult<DataSetVariationResponse>();
 
         var main = based.Value!.Main;
-        var filter = DataViewFilter.Translate(
+        var filter = await DataViewFilter.Translate(
             request.Filters,
             main.Fields.Where(f => f.IsCurrent && !f.IsDeleted).ToList(),
-            new DataViewRefusals(request.Name, Logger, "DataSetVariationInvalid"));
+            new DataViewRefusals(request.Name, Logger, "DataSetVariationInvalid"),
+            _calculations,
+            ct).ConfigureAwait(false);
         if (filter.IsFailure) return filter.ToNewResult<DataSetVariationResponse>();
 
         var permitted = await _access.MayAttachDataSet(workspace.Value, main.Id, ct).ConfigureAwait(false);

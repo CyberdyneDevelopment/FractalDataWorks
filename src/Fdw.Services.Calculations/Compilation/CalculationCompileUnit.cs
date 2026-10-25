@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
 using Fdw.Services.Calculations.Abstractions.Runtime;
 using Fdw.Services.Calculations.Abstractions.TreeResultCodes;
@@ -30,6 +31,7 @@ internal sealed class CalculationCompileUnit
     private readonly ParameterExpression _state = Expression.Parameter(typeof(CalculationRunState), "state");
     private readonly ParameterExpression _results = Expression.Parameter(typeof(decimal[]), "results");
     private readonly List<string> _labels = new();
+    private readonly List<ICalculationValueKind> _emittedKinds = new();
     private readonly List<ParameterExpression> _variables = new();
     private readonly List<Expression> _prologue = new();
     private readonly Dictionary<string, ParameterExpression> _fieldSlots = new(StringComparer.Ordinal);
@@ -37,22 +39,28 @@ internal sealed class CalculationCompileUnit
 
     public List<string> Labels => _labels;
 
+    // The kind of value each emitted result carries, in the order the results are written to the results array.
+    public List<ICalculationValueKind> EmittedKinds => _emittedKinds;
+
     // Emits the statement that computes one result into its slot, and into the results array when it is written out. The slot
     // is entered in the result table only after the tree is emitted, so a result cannot reach itself.
     public ConditionalExpression Statement(CalculationResultDefinition result, int resultIndex, int emittedIndex)
     {
         var rootIndex = _labels.Count;
-        var slot = Expression.Variable(typeof(decimal), result.Name);
+        var body = Emit(result.Expression, typeof(decimal));
+        var moment = CalculationCoercion.IsDateTime(body.Type);
+        var slot = Expression.Variable(moment ? typeof(DateTimeOffset) : typeof(decimal), result.Name);
         var steps = new List<Expression>
         {
             Expression.Assign(Expression.Property(_state, nameof(CalculationRunState.Current)), Expression.Constant(resultIndex)),
-            Expression.Assign(slot, CalculationCoercion.Coerce(Emit(result.Expression, typeof(decimal)), typeof(decimal), _state, rootIndex)),
+            Expression.Assign(slot, moment ? body : CalculationCoercion.Coerce(body, typeof(decimal), _state, rootIndex)),
         };
         _variables.Add(slot);
         _resultSlots[result.Name] = slot;
         if (emittedIndex >= 0)
         {
-            steps.Add(Expression.Assign(Expression.ArrayAccess(_results, Expression.Constant(emittedIndex)), slot));
+            steps.Add(Expression.Assign(Expression.ArrayAccess(_results, Expression.Constant(emittedIndex)), Carried(slot)));
+            _emittedKinds.Add(KindOf(slot.Type));
         }
 
         return Expression.IfThen(
@@ -71,6 +79,21 @@ internal sealed class CalculationCompileUnit
             _record,
             _state,
             _results).Compile();
+
+    // A number goes into the results array as it is; a date-time goes in as its UTC ticks (CalculationValueKindBase explains why).
+    private static Expression Carried(ParameterExpression slot) =>
+        slot.Type == typeof(decimal)
+            ? slot
+            : Expression.Call(typeof(CalculationRuntime).GetMethod(nameof(CalculationRuntime.Carry))
+                ?? throw new InvalidOperationException("CalculationRuntime.Carry was not found"), slot);
+
+    private static ICalculationValueKind KindOf(Type type)
+    {
+        var kind = CalculationValueKinds.OfClrType(type);
+        return ReferenceEquals(kind, CalculationValueKinds.NotFound)
+            ? throw new InvalidOperationException($"No calculation value kind computes values as {type.Name}")
+            : kind;
+    }
 
     private CatchBlock OverflowHandler() =>
         Expression.Catch(

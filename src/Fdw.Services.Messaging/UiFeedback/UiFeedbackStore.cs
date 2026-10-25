@@ -23,14 +23,15 @@ internal sealed class UiFeedbackStore
     private const string MessagingServiceName = "Messaging";
     private const string FeedbackContainer = "UiFeedback";
     private const string TagContainer = "UiFeedbackTag";
+    private const string AnchorContainer = "UiFeedbackAnchor";
     private const string ScreenshotContainer = "UiFeedbackScreenshot";
-    private const string AcknowledgementContainer = "UiFeedbackAcknowledgement";
     private const string AgreementContainer = "UiFeedbackAgreement";
     private const string CommentContainer = "UiFeedbackComment";
 
     private readonly ILogger _logger;
     private readonly IDataGatewayProvider _dataGateways;
     private readonly IMessagingConfigurationProvider _messaging;
+    private readonly AlertStore _alerts;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UiFeedbackStore"/> class.
@@ -43,6 +44,7 @@ internal sealed class UiFeedbackStore
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
+        _alerts = new AlertStore(logger, dataGateways, messaging);
     }
 
     // Why resolved here rather than injected: the gateway is scoped and the service is not, so holding one would be a captive dependency.
@@ -115,29 +117,29 @@ internal sealed class UiFeedbackStore
             : Failed<ILookup<Guid, string>>(rows, "read the tags of");
     }
 
-    /// <summary>Reads which of some comments a person has acknowledged.</summary>
+    /// <summary>Reads the components of some comments, each comment's in the order they were given.</summary>
     /// <param name="ids">The comments' identifiers; not more than the store takes in one condition.</param>
-    /// <param name="userId">The person.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The identifiers of the comments they have acknowledged.</returns>
-    public async Task<IGenericResult<HashSet<Guid>>> FindAcknowledged(IReadOnlyCollection<Guid> ids, Guid userId, CancellationToken cancellationToken)
+    /// <returns>The components' JSON texts of each comment, ordered by their position; a comment with none has no entry.</returns>
+    public async Task<IGenericResult<ILookup<Guid, string>>> FindAnchors(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         if (ids.Count == 0)
-            return GenericResult<HashSet<Guid>>.Success([]);
+            return GenericResult<ILookup<Guid, string>>.Success(Enumerable.Empty<UiFeedbackAnchorRow>().ToLookup(row => row.FeedbackId, row => row.Anchor));
 
         var location = await Location(cancellationToken).ConfigureAwait(false);
         if (!location.IsSuccess)
-            return location.ToNewResult<HashSet<Guid>>();
+            return location.ToNewResult<ILookup<Guid, string>>();
 
-        var command = Query.From<UiFeedbackAcknowledgementRow>(location.Value.DataStoreName, location.Value.PathName, AcknowledgementContainer)
-            .Where(row => row.UserId).Equal(userId)
+        var command = Query.From<UiFeedbackAnchorRow>(location.Value.DataStoreName, location.Value.PathName, AnchorContainer)
             .Where(row => row.FeedbackId).In(ids)
             .Build();
 
-        var rows = await Gateway.Execute<IEnumerable<UiFeedbackAcknowledgementRow>>(command, cancellationToken).ConfigureAwait(false);
+        var rows = await Gateway.Execute<IEnumerable<UiFeedbackAnchorRow>>(command, cancellationToken).ConfigureAwait(false);
+
+        // Why ordered here and not trusted to the query: the order is the reviewer's, and a lookup keeps the order its rows arrive in.
         return rows.IsSuccess && rows.Value is { } found
-            ? GenericResult<HashSet<Guid>>.Success(found.Select(row => row.FeedbackId).ToHashSet())
-            : Failed<HashSet<Guid>>(rows, "read the acknowledgements of");
+            ? GenericResult<ILookup<Guid, string>>.Success(found.OrderBy(row => row.Ordinal).ToLookup(row => row.FeedbackId, row => row.Anchor))
+            : Failed<ILookup<Guid, string>>(rows, "read the components of");
     }
 
     /// <summary>Reads the agreements with some comments.</summary>
@@ -260,21 +262,6 @@ internal sealed class UiFeedbackStore
             "take back the agreement with", feedbackId, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Keeps a person's acknowledgement of a comment.</summary>
-    /// <param name="row">The acknowledgement.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>Success when the row was written.</returns>
-    public async Task<IGenericResult> AddAcknowledgement(UiFeedbackAcknowledgementRow row, CancellationToken cancellationToken)
-    {
-        var location = await Location(cancellationToken).ConfigureAwait(false);
-        if (!location.IsSuccess)
-            return (IGenericResult)location;
-
-        return await Execute(
-            CmdBuilders.Insert.Into<UiFeedbackAcknowledgementRow>(AcknowledgementContainer).DataStore(location.Value.DataStoreName).Path(location.Value.PathName).Value(row),
-            "acknowledge", row.FeedbackId, cancellationToken).ConfigureAwait(false);
-    }
-
     /// <summary>Reads the picture kept with a comment.</summary>
     /// <param name="id">The comment's identifier.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
@@ -300,10 +287,12 @@ internal sealed class UiFeedbackStore
     /// </summary>
     /// <param name="row">The comment.</param>
     /// <param name="tags">Its tags.</param>
+    /// <param name="anchors">The components it is about, in order.</param>
     /// <param name="picture">Its picture, or <see langword="null"/> when it has none.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>Success when every row was written.</returns>
-    public async Task<IGenericResult> Add(UiFeedbackRow row, IReadOnlyList<UiFeedbackTagRow> tags, UiFeedbackScreenshotRow? picture, CancellationToken cancellationToken)
+    public async Task<IGenericResult> Add(
+        UiFeedbackRow row, IReadOnlyList<UiFeedbackTagRow> tags, IReadOnlyList<UiFeedbackAnchorRow> anchors, UiFeedbackScreenshotRow? picture, CancellationToken cancellationToken)
     {
         var location = await Location(cancellationToken).ConfigureAwait(false);
         if (!location.IsSuccess)
@@ -320,6 +309,14 @@ internal sealed class UiFeedbackStore
                 .ConfigureAwait(false);
             if (!tagged.IsSuccess)
                 return await Undo(row.Id, tagged, cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (var anchor in anchors)
+        {
+            var anchored = await Execute(CmdBuilders.Insert.Into<UiFeedbackAnchorRow>(AnchorContainer).DataStore(location.Value.DataStoreName).Path(location.Value.PathName).Value(anchor), "save a component of", row.Id, cancellationToken)
+                .ConfigureAwait(false);
+            if (!anchored.IsSuccess)
+                return await Undo(row.Id, anchored, cancellationToken).ConfigureAwait(false);
         }
 
         if (picture is null)
@@ -380,7 +377,11 @@ internal sealed class UiFeedbackStore
         if (!location.IsSuccess)
             return (IGenericResult)location;
 
-        // Why the children first: msg.UiFeedbackAcknowledgement, msg.UiFeedbackComment, msg.UiFeedbackAgreement, msg.UiFeedbackTag and msg.UiFeedbackScreenshot reference the comment and carry no cascade.
+        // Why the children first: what was done to the comment as an alert (msg.AlertAction, msg.AlertEveryoneAction), msg.UiFeedbackAnchor, msg.UiFeedbackComment, msg.UiFeedbackAgreement, msg.UiFeedbackTag and msg.UiFeedbackScreenshot reference the comment and carry no cascade.
+        var anchors = await Execute(DeleteCall(AnchorContainer, nameof(UiFeedbackAnchorRow.FeedbackId), id, location.Value), "delete the components of", id, cancellationToken).ConfigureAwait(false);
+        if (!anchors.IsSuccess)
+            return anchors;
+
         var comments = await Execute(DeleteCall(CommentContainer, nameof(UiFeedbackCommentRow.FeedbackId), id, location.Value), "delete the comments on", id, cancellationToken).ConfigureAwait(false);
         if (!comments.IsSuccess)
             return comments;
@@ -389,9 +390,9 @@ internal sealed class UiFeedbackStore
         if (!agreements.IsSuccess)
             return agreements;
 
-        var acknowledgements = await Execute(DeleteCall(AcknowledgementContainer, nameof(UiFeedbackAcknowledgementRow.FeedbackId), id, location.Value), "delete the acknowledgements of", id, cancellationToken).ConfigureAwait(false);
-        if (!acknowledgements.IsSuccess)
-            return acknowledgements;
+        var alerts = await _alerts.RemoveAllFor(UiFeedbackAlert.Kind, id, cancellationToken).ConfigureAwait(false);
+        if (!alerts.IsSuccess)
+            return alerts;
 
         var tags = await Execute(DeleteCall(TagContainer, nameof(UiFeedbackTagRow.FeedbackId), id, location.Value), "delete the tags of", id, cancellationToken).ConfigureAwait(false);
         if (!tags.IsSuccess)

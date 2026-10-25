@@ -1,4 +1,6 @@
 using System;
+using System.Security.Claims;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -106,7 +108,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
             return;
         }
 
-        if (!CanJoin(scopeKey))
+        if (!await AuthorizeJoin(scopeKey, Context.ConnectionAborted).ConfigureAwait(false))
         {
             SignalRLog.SubscriptionRejectedNotAuthorized(Logger, Context.ConnectionId, HubName, scopeKey);
             return;
@@ -150,10 +152,47 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     /// <param name="scopeKey">The requested group key.</param>
     /// <returns><see langword="true"/> if the connection may join the group.</returns>
     /// <remarks>
-    /// The default permits any non-empty key, preserving the pre-existing per-hub behavior. This is
-    /// the declared seam where tenant/org-scoped subscription authorization lands (FDW-545 follow-up).
+    /// <para>
+    /// A <c>user:</c> scope (<see cref="HubScopes.User"/>) is the group of one person and a connection may join only its own: the key must name the
+    /// caller's id, and a connection with no id joins no user scope. An <c>org:</c> scope (<see cref="HubScopes.Org"/>) is the group of one
+    /// organization and a connection may join only the organization its <c>org_id</c> claim names. Without this a signed-in person could name
+    /// another person's or organization's scope and receive what is published there (FDW-2792).
+    /// </para>
+    /// <para>
+    /// Any other key is a resource scope such as <c>execution:{id}</c>; whether a caller may watch that resource is a rule only the hub knows, so the
+    /// default allows it and a hub that has the rule overrides this method.
+    /// </para>
     /// </remarks>
-    protected virtual bool CanJoin(string scopeKey) => true;
+    protected virtual bool CanJoin(string scopeKey)
+    {
+        if (scopeKey.StartsWith(HubScopes.UserPrefix, StringComparison.Ordinal))
+        {
+            return CallerUserId is { } caller
+                && string.Equals(scopeKey, HubScopes.User(caller), StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (scopeKey.StartsWith(HubScopes.OrgPrefix, StringComparison.Ordinal))
+        {
+            return Context.User?.FindFirst("org_id")?.Value is { Length: > 0 } org
+                && scopeKey.StartsWith(string.Concat(HubScopes.OrgPrefix, org, ":"), StringComparison.OrdinalIgnoreCase);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Authorizes a <see cref="Subscribe"/> request when the answer has to be looked up.
+    /// </summary>
+    /// <param name="scopeKey">The requested group key.</param>
+    /// <param name="cancellationToken">Cancelled when the connection is aborted.</param>
+    /// <returns><see langword="true"/> if the connection may join the group.</returns>
+    /// <remarks>
+    /// <see cref="Subscribe"/> asks this method. The default answers <see cref="CanJoin"/>, so a hub whose rule needs no lookup overrides
+    /// <see cref="CanJoin"/> and nothing else. A hub that must ask a store whose a resource is (FDW-2804) overrides this method, calls
+    /// <see cref="CanJoin"/> first so the person and organization rule still applies, and refuses when the owner cannot be found.
+    /// </remarks>
+    protected virtual Task<bool> AuthorizeJoin(string scopeKey, CancellationToken cancellationToken)
+        => Task.FromResult(CanJoin(scopeKey));
 
     /// <summary>
     /// Joins the calling connection to <paramref name="scopeKey"/> with consistent logging.
@@ -186,7 +225,7 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
             return Task.CompletedTask;
         }
 
-        return JoinScope($"user:{userId}");
+        return JoinScope(HubScopes.User(userId));
     }
 
     /// <summary>
@@ -198,4 +237,39 @@ public abstract class RealTimeHubBase<TClient> : Hub<TClient>
     /// must fail loud (log + skip) rather than invent one — there is no <c>?? "anonymous"</c>.
     /// </remarks>
     protected string? AuthenticatedUserId => Context.User?.Identity?.Name;
+
+    /// <summary>
+    /// Gets the tenant the connection is signed in under: the <c>tenantId</c> claim, and nothing else.
+    /// </summary>
+    /// <remarks><see langword="null"/> when the connection carries no tenant. A hub that compares a resource's tenant to this one refuses on <see langword="null"/>.</remarks>
+    protected string? CallerTenantId
+    {
+        get
+        {
+            var tenant = Context.User?.FindFirst("tenantId")?.Value;
+            return string.IsNullOrEmpty(tenant) ? null : tenant;
+        }
+    }
+
+    /// <summary>
+    /// Gets the id of the person the connection is signed in as: the <c>sub</c> claim, else the name identifier, and nothing else.
+    /// </summary>
+    /// <remarks>
+    /// This is the person's id, which is what scopes and message recipients are named by. It does not fall back to the display name, which two people
+    /// can share and which is not an id. <see langword="null"/> when the connection carries neither claim.
+    /// </remarks>
+    protected string? CallerUserId
+    {
+        get
+        {
+            var sub = Context.User?.FindFirst("sub")?.Value;
+            if (!string.IsNullOrEmpty(sub))
+            {
+                return sub;
+            }
+
+            var nameIdentifier = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return string.IsNullOrEmpty(nameIdentifier) ? null : nameIdentifier;
+        }
+    }
 }

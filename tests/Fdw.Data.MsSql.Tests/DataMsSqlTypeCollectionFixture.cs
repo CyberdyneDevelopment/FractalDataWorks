@@ -1,6 +1,5 @@
 using Fdw.Data;
 using Fdw.Data.Abstractions;
-using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Data.MsSql.Tests.Translators;
 using Xunit;
 
@@ -14,8 +13,6 @@ public sealed class DataMsSqlTypeCollectionFixture
         _ = FilterOperators.All();
         _ = SortDirections.All();
         _ = ContainerTypes.All();
-
-        PocoMapperCollection.RegisterMember(new TestKvpRowPocoMapper());
     }
 }
 

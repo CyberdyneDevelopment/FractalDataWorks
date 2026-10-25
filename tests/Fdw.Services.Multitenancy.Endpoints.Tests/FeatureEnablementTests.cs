@@ -42,7 +42,7 @@ public sealed class FeatureEnablementTests
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(gatewayFails
             ? GenericResult<IConfigurationGateway>.Failure(new GenericMessage("the configuration gateway is down"))
             : GenericResult<IConfigurationGateway>.Success(gateway.Object));
-        return (new FeatureEnablement(gateways.Object, Tables, NullLogger<FeatureEnablement>.Instance), gateway);
+        return (new FeatureEnablement(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<FeatureEnablement>.Instance), gateway);
     }
 
     private static void Writes(Mock<IConfigurationGateway> gateway, Times times)
@@ -71,7 +71,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create([], ["Documents"]);
 
-        var states = await service.ForOrganization(Tenant, Finance);
+        var states = await service.ForOrganization(Finance);
 
         var documents = states.Value!.Single(state => state.Name == "Documents");
         documents.Enabled.ShouldBeFalse();
@@ -84,7 +84,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create(["Documents"], []);
 
-        var states = await service.ForOrganization(Tenant, Finance);
+        var states = await service.ForOrganization(Finance);
 
         var documents = states.Value!.Single(state => state.Name == "Documents");
         documents.Enabled.ShouldBeFalse();
@@ -97,7 +97,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, _) = Create(["Documents"], ["Documents"]);
 
-        var states = await service.ForOrganization(Tenant, Finance);
+        var states = await service.ForOrganization(Finance);
 
         states.Value!.Single(state => state.Name == "Documents").Enabled.ShouldBeTrue();
     }
@@ -108,7 +108,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create([], []);
 
-        var set = await service.SetForOrganization(Tenant, Finance, "Documents", true);
+        var set = await service.SetForOrganization(Finance, "Documents", true);
 
         set.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -120,7 +120,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create(["Documents"], []);
 
-        var set = await service.SetForOrganization(Tenant, Finance, "Documents", true);
+        var set = await service.SetForOrganization(Finance, "Documents", true);
 
         set.IsSuccess.ShouldBeTrue();
         Writes(gateway, Times.Once());
@@ -132,7 +132,7 @@ public sealed class FeatureEnablementTests
     {
         var (service, gateway) = Create([], ["Documents"]);
 
-        var set = await service.SetForOrganization(Tenant, Finance, "Documents", false);
+        var set = await service.SetForOrganization(Finance, "Documents", false);
 
         set.IsSuccess.ShouldBeTrue();
         Writes(gateway, Times.Once());

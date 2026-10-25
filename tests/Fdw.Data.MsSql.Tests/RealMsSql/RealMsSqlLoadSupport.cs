@@ -90,7 +90,7 @@ internal static class RealMsSqlLoadSupport
         {
             if (command is IDatabaseConnectionCommand routed && routed.ReroutesToBulk(MaxSerialInsert))
             {
-                var plan = MsSqlBulkInsertTranslator.Plan(command, container);
+                var plan = MsSqlInsertTranslator.Plan(command, container);
                 return plan.IsSuccess
                     ? GenericResult<int>.Success(await MsSqlBulkCopy.Write(plan.Value!, connection, transaction, cancellationToken))
                     : plan.ToNewResult<int>();
@@ -166,17 +166,16 @@ internal static class RealMsSqlLoadSupport
         return provider.Object;
     }
 
-    /// <summary>A connection type that lists the named command capabilities and executes the named container types.</summary>
-    internal static IConnectionType ConnectionType(IEnumerable<string> capabilities, params string[] executableContainerTypes)
+    /// <summary>A connection type that lists the named command capabilities.</summary>
+    internal static IConnectionType ConnectionType(IEnumerable<string> capabilities)
     {
         var type = new Mock<IConnectionType>();
         type.SetupGet(t => t.SupportedCommands).Returns(capabilities.Select(name => (ICommandCapabilityType)CommandCapabilityTypes.ByName(name)).ToList());
-        type.As<ISupportsExecutableContainerTypes>().SetupGet(t => t.ExecutableContainerTypes).Returns(executableContainerTypes);
         return type.Object;
     }
 
     internal static readonly string[] AllCapabilities =
-        ["Query", "Execute", "Insert", "Update", "Upsert", "BulkInsert", "BulkUpsert", "InsertFromQuery", "SoftDelete", "UnitOfWork"];
+        ["SoftDelete", "UnitOfWork"];
 
     /// <summary>Answers every connection id with one connection type.</summary>
     internal sealed class SingleTypeResolver(IConnectionType type) : IConnectionTypeResolver
@@ -308,7 +307,7 @@ internal static class RealMsSqlLoadSupport
         {
             var (record, insert) = command switch
             {
-                InsertCommand<EtlPipelineWatermarkRecord> add => (add.Data, true),
+                InsertCommand<EtlPipelineWatermarkRecord> add => (add.Data.Single(), true),
                 UpdateCommand<EtlPipelineWatermarkRecord> change => (change.Data, false),
                 _ => throw new InvalidOperationException($"unexpected watermark command {command.GetType().Name}"),
             };

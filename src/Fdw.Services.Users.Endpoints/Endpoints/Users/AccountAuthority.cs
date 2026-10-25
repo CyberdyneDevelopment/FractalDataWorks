@@ -68,4 +68,15 @@ public static class AccountAuthority
     public static bool ManagesKeys(
         ClaimsPrincipal caller, IUserImplementationConfiguration account, ISystemRoleConfiguration roles)
         => IsSelf(caller, account) || Administers(caller, account, roles);
+
+    /// <summary>
+    /// Answers whether the caller may read the account's sign-ins: the account itself, or somebody who
+    /// administers it.
+    /// </summary>
+    /// <param name="caller">The calling principal.</param>
+    /// <param name="account">The account whose sign-ins are in question.</param>
+    /// <param name="roles">Names the platform's roles and answers what the caller holds.</param>
+    public static bool ReadsSignIns(
+        ClaimsPrincipal caller, IUserImplementationConfiguration account, ISystemRoleConfiguration roles)
+        => IsSelf(caller, account) || Administers(caller, account, roles);
 }

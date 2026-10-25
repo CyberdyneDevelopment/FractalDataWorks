@@ -77,12 +77,10 @@ public partial class UserRoleImplementationConfiguration
 
     /// <summary>Gets or sets whether this is the live version of the assignment.</summary>
     /// <remarks>
-    /// Configuration writes are versioned rather than destructive: a delete sets IsCurrent = 0 on
-    /// the existing row and inserts a copy with IsDeleted = 1. So a revoked assignment is still a
-    /// row, and a read that does not test this returns access that was taken away.
-    ///
-    /// The container has always declared IsCurrent and IsDeleted; this type did not carry them, so
-    /// no caller could filter on them even by hand. See FDW-732.
+    /// Configuration writes are versioned rather than destructive: a delete keeps IsCurrent = 1 on
+    /// the existing row and sets IsDeleted = 1. So a revoked assignment is still a current row,
+    /// and a read that does not test IsDeleted returns access that was taken away. A save closes
+    /// the previous row (IsCurrent = 0) and inserts the new version.
     /// </remarks>
     public bool IsCurrent { get; set; } = true;
 

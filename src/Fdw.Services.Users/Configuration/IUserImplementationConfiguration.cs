@@ -47,9 +47,6 @@ public interface IUserImplementationConfiguration : IImplementationConfiguration
     /// <summary>Gets or sets the Users CreatedAt.</summary>
     DateTimeOffset CreatedAt { get; set; }
 
-    /// <summary>Gets or sets the Users LastLoginAt.</summary>
-    DateTimeOffset? LastLoginAt { get; set; }
-
     /// <summary>Gets or sets the Users CreateDate.</summary>
     DateTimeOffset CreateDate { get; set; }
 

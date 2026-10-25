@@ -247,7 +247,7 @@ public class SignInGatingTests
         var issuer = new RecordingIssuer();
         var runner = new AuthenticationRunner(
             new CountingAcrPolicy(), issuer, new Mock<ISessionStore>(MockBehavior.Strict).Object,
-            new InMemoryExecutions(), new StaticFlowProvider(Flow()), steps.Lookup, new Mock<ITenantProvider>().Object);
+            new InMemoryExecutions(), new StaticFlowProvider(Flow()), steps.Lookup, new Mock<ITenantProvider>().Object, new RecordingSignIns());
         return (runner, issuer);
     }
 

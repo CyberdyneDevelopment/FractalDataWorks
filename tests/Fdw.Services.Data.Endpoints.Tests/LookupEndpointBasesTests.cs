@@ -1,3 +1,4 @@
+using Fdw.Data.DataSets.Abstractions;
 using System;
 using Fdw.Configuration;
 using Fdw.Services.Data.Configuration;
@@ -57,7 +58,7 @@ public sealed class LookupEndpointBasesTests
     private sealed class DataSetLookup : LookupDataSetsEndpointBase
     {
         public DataSetLookup()
-            : base(NullLogger<LookupDataSetsEndpointBase>.Instance, null!)
+            : base(NullLogger<LookupDataSetsEndpointBase>.Instance, null!, new Mock<IDataSetVariationConfigurationProvider>().Object)
         {
         }
 

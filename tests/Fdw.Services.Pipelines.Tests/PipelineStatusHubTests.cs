@@ -2,6 +2,9 @@ using System;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Messages;
+using Fdw.Operations.Abstractions.Execution;
+using Fdw.Results;
 using Fdw.Services.Pipelines.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,7 +25,7 @@ namespace Fdw.Services.Pipelines.Tests;
 [Trait("Category", "CoreFramework")]
 public sealed class PipelineStatusHubTests
 {
-    private static (PipelineStatusHub Hub, Mock<IGroupManager> Groups, string ConnectionId) CreateHub(ClaimsPrincipal? user)
+    private static (PipelineStatusHub Hub, Mock<IGroupManager> Groups, string ConnectionId) CreateHub(ClaimsPrincipal? user, IExecutionTracker? tracker = null)
     {
         var connectionId = Guid.NewGuid().ToString();
         var contextMock = new Mock<HubCallerContext>();
@@ -37,12 +40,28 @@ public sealed class PipelineStatusHubTests
             .Setup(g => g.RemoveFromGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var hub = new PipelineStatusHub(NullLogger<PipelineStatusHub>.Instance)
+        var hub = new PipelineStatusHub(NullLogger<PipelineStatusHub>.Instance, tracker)
         {
             Context = contextMock.Object,
             Groups = groupsMock.Object,
         };
         return (hub, groupsMock, connectionId);
+    }
+
+    private static readonly Guid OwnTenant = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
+    private static readonly Guid OtherTenant = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000002");
+
+    private static ClaimsPrincipal TenantPrincipal(Guid tenant) =>
+        new(new ClaimsIdentity([new Claim("tenantId", tenant.ToString())]));
+
+    private static IExecutionTracker TrackerWith(Guid executionId, Guid tenant)
+    {
+        var item = new Mock<IExecutionItem>();
+        item.SetupGet(i => i.TenantId).Returns(tenant);
+        var tracker = new Mock<IExecutionTracker>();
+        tracker.Setup(t => t.GetItem(executionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IExecutionItem>.Success(item.Object));
+        return tracker.Object;
     }
 
     private static ClaimsPrincipal PrincipalWithOrgClaim(Guid orgId) =>
@@ -112,13 +131,13 @@ public sealed class PipelineStatusHubTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public async Task SubscribeToPipelineJoinsPipelineGroup()
+    public async Task SubscribeToPipelineIsRefusedBecauseNoOwnerOfAPipelineIsStored()
     {
-        var (hub, groups, connectionId) = CreateHub(user: null);
+        var (hub, groups, _) = CreateHub(TenantPrincipal(OwnTenant));
 
         await hub.SubscribeToPipeline("nfl");
 
-        groups.Verify(g => g.AddToGroupAsync(connectionId, "pipeline:nfl", It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -136,14 +155,82 @@ public sealed class PipelineStatusHubTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "CoreFramework")]
-    public async Task SubscribeToExecutionJoinsExecutionGroup()
+    public async Task SubscribeToExecutionOfTheCallersTenantJoinsTheExecutionGroup()
     {
         var executionId = Guid.NewGuid();
-        var (hub, groups, connectionId) = CreateHub(user: null);
+        var (hub, groups, connectionId) = CreateHub(TenantPrincipal(OwnTenant), TrackerWith(executionId, OwnTenant));
 
         await hub.SubscribeToExecution(executionId);
 
         groups.Verify(g => g.AddToGroupAsync(connectionId, $"execution:{executionId}", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task SubscribeToExecutionOfAnotherTenantIsRefused()
+    {
+        var executionId = Guid.NewGuid();
+        var (hub, groups, _) = CreateHub(TenantPrincipal(OwnTenant), TrackerWith(executionId, OtherTenant));
+
+        await hub.SubscribeToExecution(executionId);
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task SubscribeToAnExecutionThatIsNotFoundIsRefused()
+    {
+        var tracker = new Mock<IExecutionTracker>();
+        tracker.Setup(t => t.GetItem(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IExecutionItem>.Failure(new GenericMessage("not found")));
+        var (hub, groups, _) = CreateHub(TenantPrincipal(OwnTenant), tracker.Object);
+
+        await hub.SubscribeToExecution(Guid.NewGuid());
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task SubscribeToExecutionWithoutATenantClaimIsRefusedAndTheTrackerIsNotAsked()
+    {
+        var executionId = Guid.NewGuid();
+        var tracker = TrackerWith(executionId, OwnTenant);
+        var (hub, groups, _) = CreateHub(new ClaimsPrincipal(new ClaimsIdentity()), tracker);
+
+        await hub.SubscribeToExecution(executionId);
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        Mock.Get(tracker).Verify(t => t.GetItem(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task SubscribeToExecutionOnAHostWithNoTrackerIsRefused()
+    {
+        var (hub, groups, _) = CreateHub(TenantPrincipal(OwnTenant), tracker: null);
+
+        await hub.SubscribeToExecution(Guid.NewGuid());
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task AnotherPersonsUserScopeIsStillRefusedByTheBaseRule()
+    {
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "u-1"), new Claim("tenantId", OwnTenant.ToString())]));
+        var (hub, groups, _) = CreateHub(principal, TrackerWith(Guid.NewGuid(), OwnTenant));
+
+        await hub.Subscribe("user:u-2");
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -266,4 +266,63 @@ public sealed class PostgreSqlFindTranslatorTests
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldNotContain("TOP");
     }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateSelectsAMatchColumnForEachSearchedField()
+    {
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("name", typeof(string)),
+            CreateMockField("age", typeof(int)),
+            CreateMockField("email", typeof(string))
+        });
+        var command = new FindCommand<object> { SearchTerm = "acme", CaseSensitive = false };
+
+        var result = await _sut.Translate(command, container, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var sql = result.Value!.CommandText;
+        var select = sql.Substring(0, sql.IndexOf(" FROM ", StringComparison.Ordinal));
+        select.ShouldContain("CASE WHEN \"name\" ILIKE @searchTerm THEN 1 ELSE 0 END AS \"__fdw_match_name\"");
+        select.ShouldContain("CASE WHEN \"email\" ILIKE @searchTerm THEN 1 ELSE 0 END AS \"__fdw_match_email\"");
+        select.ShouldNotContain("__fdw_match_age");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateMeasuresACaseSensitiveMatchWithLike()
+    {
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("name", typeof(string))
+        });
+        var command = new FindCommand<object> { SearchTerm = "Acme", CaseSensitive = true };
+
+        var result = await _sut.Translate(command, container, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var sql = result.Value!.CommandText;
+        sql.ShouldContain("CASE WHEN \"name\" LIKE @searchTerm THEN 1 ELSE 0 END AS \"__fdw_match_name\"");
+        sql.ShouldNotContain("ILIKE");
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "DataGateway")]
+    public async Task TranslateSelectsNoMatchColumnsWhenNoSearchableColumns()
+    {
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("id", typeof(int))
+        });
+        var command = new FindCommand<object> { SearchTerm = "acme" };
+
+        var result = await _sut.Translate(command, container, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldNotContain("__fdw_match_");
+    }
 }

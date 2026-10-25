@@ -45,7 +45,7 @@ public abstract class DestinationFlowComponentBuilderBase : FlowComponentBuilder
                 GraphLog.ChoiceUnknown(context.Logger, component.Name, "loadKind", loadKindName, nameof(LoadStepKinds)));
         }
 
-        if (!kind.UsesRows || kind.UsesSourceDataSet || kind.UsesDestinationContainer)
+        if (!kind.UsesRows || kind.UsesSourceDataSet)
         {
             return GenericResult<IFlowComponent>.Failure(GraphLog.ComponentInvalid(
                 context.Logger, component.Name, component.ComponentType,

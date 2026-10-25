@@ -67,6 +67,12 @@ public class ValidationReasonCodesTests
             .ShouldBe("Workspace 'Quakes' rejected: autoApproveRole 'Owner' manages members, and is never granted to whoever asks");
 
     [Fact]
+    public void AnOrganizationRefusalSaysWhy()
+        => WorkspacesResultCodes.ByName("WorkspaceOrganizationInvalid")
+            .FormatClientMessage(ResultDetails.Create("name", "Quakes", "value", "0197a3c4-5b6d-7e8f-9a0b-2d3e4f5a6b7c", "reason", "is not an organization of this workspace's tenant"))
+            .ShouldBe("Workspace 'Quakes' rejected: organizationId '0197a3c4-5b6d-7e8f-9a0b-2d3e4f5a6b7c' is not an organization of this workspace's tenant");
+
+    [Fact]
     public void AValidationCodeThatDidNotOptInShowsNothing()
         => WorkspacesResultCodes.ByName("WorkspaceNoteInvalid")
             .FormatClientMessage(ResultDetails.Create("value", "x"))

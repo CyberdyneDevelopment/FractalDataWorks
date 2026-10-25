@@ -27,7 +27,7 @@ public sealed class PipelineLoadValidatorTests
         var softDelete = PipelineLoadValidator.ValidateSoftDelete(Owner, step, kind, kind.Name, NullLogger.Instance);
         return softDelete.IsFailure
             ? softDelete
-            : PipelineLoadValidator.ValidateValueSources(Owner, step, kind.UsesSourceDataSet, kind.UsesDestinationContainer, NullLogger.Instance);
+            : PipelineLoadValidator.ValidateValueSources(Owner, step, kind.UsesSourceDataSet, NullLogger.Instance);
     }
 
     private static PipelineLoadColumnConfiguration Column(string role, string column, int ordinal = 0) =>
@@ -38,24 +38,15 @@ public sealed class PipelineLoadValidatorTests
         var step = new PipelineLoadStepConfiguration { Phase = "Load", Name = name, StepOrder = order, Kind = kind, DestinationDataSet = "Orders", IsEnabled = true };
         switch (kind)
         {
-            case "BulkInsert":
+            case "Insert":
                 step.Columns = [Column("Write", "Name")];
                 break;
-            case "BulkUpsert":
+            case "Upsert":
             case "Update":
                 step.Columns = [Column("Key", "Id"), Column("Write", "Name")];
                 break;
             case "Delete":
                 step.Columns = [Column("Key", "Id")];
-                break;
-            case "InsertFromQuery":
-                step.SourceDataSet = "Staging";
-                step.Columns = [Column("Write", "Name")];
-                break;
-            case "Execute":
-                step.DestinationDataStoreName = "Main";
-                step.DestinationPathName = "dbo";
-                step.DestinationContainerName = "LoadSummary";
                 break;
         }
 
@@ -75,13 +66,11 @@ public sealed class PipelineLoadValidatorTests
     // ---- a load row of each kind
 
     [Theory]
-    [InlineData("BulkInsert")]
-    [InlineData("BulkUpsert")]
-    [InlineData("InsertFromQuery")]
+    [InlineData("Insert")]
+    [InlineData("Upsert")]
     [InlineData("Update")]
     [InlineData("Delete")]
     [InlineData("Truncate")]
-    [InlineData("Execute")]
     public void EveryKindIsValidWithItsOwnOptions(string kind) => Check(Step(kind)).IsSuccess.ShouldBeTrue();
 
     // ---- what each kind takes
@@ -103,11 +92,11 @@ public sealed class PipelineLoadValidatorTests
     }
 
     [Fact]
-    public void ABulkInsertRefusesKeyColumns()
+    public void AnInsertRefusesKeyColumns()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         step.Columns = [Column("Key", "Id"), Column("Write", "Name")];
-        Fails(Check(step), "which BulkInsert does not use");
+        Fails(Check(step), "which Insert does not use");
     }
 
     [Fact]
@@ -139,12 +128,12 @@ public sealed class PipelineLoadValidatorTests
     }
 
     [Fact]
-    public void ABulkInsertRefusesASoftDelete()
+    public void AnInsertRefusesASoftDelete()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         step.SoftDeleteMode = "AbsentFromSource";
         step.DeletedFlagColumn = "IsDeleted";
-        Fails(Check(step), "which BulkInsert does not use");
+        Fails(Check(step), "which Insert does not use");
     }
 
     // ---- column lists
@@ -194,7 +183,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void VersioningNeedsBothColumns()
     {
-        var load = Step("BulkUpsert");
+        var load = Step("Upsert");
         load.EffectiveFromColumn = "ValidFrom";
         Fails(Check(load), "EffectiveToColumn");
     }
@@ -202,7 +191,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ACurrentFlagColumnNeedsVersioning()
     {
-        var load = Step("BulkUpsert");
+        var load = Step("Upsert");
         load.CurrentFlagColumn = "IsCurrent";
         Fails(Check(load), "EffectiveFromColumn");
     }
@@ -210,7 +199,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void AnInsertOnlyRuleNeedsVersioning()
     {
-        var load = Step("BulkUpsert");
+        var load = Step("Upsert");
         load.InsertOnlyRuleColumn = "Source";
         load.InsertOnlyRuleValue = "Manual";
         Fails(Check(load), "EffectiveFromColumn");
@@ -219,7 +208,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void AnInsertOnlyRuleNeedsItsValue()
     {
-        var load = Step("BulkUpsert");
+        var load = Step("Upsert");
         load.EffectiveFromColumn = "ValidFrom";
         load.EffectiveToColumn = "ValidTo";
         load.InsertOnlyRuleColumn = "Source";
@@ -284,25 +273,23 @@ public sealed class PipelineLoadValidatorTests
     // ---- value sources
 
     [Fact]
-    public void AStepMaySupplyEveryKindOfValueSource()
+    public void AStepMaySupplySequenceTimestampAndConstantValueSources()
     {
-        var step = Step("InsertFromQuery");
+        var step = Step("Insert");
         var sequence = Source("NextSequenceValue", "Number");
         sequence.SequenceName = "dbo.OrderNumbers";
         sequence.SequenceOrderColumns = [Column("SequenceOrder", "CreatedAt")];
         var constant = Source("Constant", "Origin");
         constant.ConstantValue = "import";
         constant.ConstantDataType = "String";
-        var column = Source("Column", "Label");
-        column.SourceField = "Name";
-        step.ValueSources = [sequence, Source("CurrentTimestamp", "LoadedAt"), constant, column];
+        step.ValueSources = [sequence, Source("CurrentTimestamp", "LoadedAt"), constant];
         Check(step).IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
     public void ASequenceMayBeQualifiedWithASchemaAndADatabase()
     {
-        var step = Step("InsertFromQuery");
+        var step = Step("Insert");
         var sequence = Source("NextSequenceValue", "Number");
         sequence.SequenceName = "OrderNumbers";
         sequence.SequenceSchema = "dbo";
@@ -315,7 +302,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ASequenceSchemaOnAConstantIsRefused()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         var source = Source("Constant");
         source.ConstantValue = "1";
         source.ConstantDataType = "Int32";
@@ -327,7 +314,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ASequenceDatabaseOnATimestampIsRefused()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         var source = Source("CurrentTimestamp");
         source.SequenceDatabase = "Sales";
         step.ValueSources = [source];
@@ -335,8 +322,8 @@ public sealed class PipelineLoadValidatorTests
     }
 
     [Theory]
-    [InlineData("BulkInsert")]
-    [InlineData("BulkUpsert")]
+    [InlineData("Insert")]
+    [InlineData("Upsert")]
     public void AColumnValueSourceIsRefusedWhereTheStepTakesRows(string kind)
     {
         var step = Step(kind);
@@ -347,17 +334,9 @@ public sealed class PipelineLoadValidatorTests
     }
 
     [Fact]
-    public void AColumnValueSourceNeedsItsSourceField()
-    {
-        var step = Step("InsertFromQuery");
-        step.ValueSources = [Source("Column")];
-        Fails(Check(step), "a source field");
-    }
-
-    [Fact]
     public void ASourceFieldOnAConstantIsRefused()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         var source = Source("Constant");
         source.ConstantValue = "1";
         source.ConstantDataType = "Int32";
@@ -369,7 +348,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ANextSequenceValueNeedsASequenceName()
     {
-        var step = Step("InsertFromQuery");
+        var step = Step("Insert");
         var source = Source("NextSequenceValue");
         source.SequenceOrderColumns = [Column("SequenceOrder", "CreatedAt")];
         step.ValueSources = [source];
@@ -379,7 +358,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ANextSequenceValueNeedsOrderingColumns()
     {
-        var step = Step("InsertFromQuery");
+        var step = Step("Insert");
         var source = Source("NextSequenceValue");
         source.SequenceName = "dbo.OrderNumbers";
         step.ValueSources = [source];
@@ -389,7 +368,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ASequenceOrderingColumnMustHaveTheSequenceOrderRole()
     {
-        var step = Step("InsertFromQuery");
+        var step = Step("Insert");
         var source = Source("NextSequenceValue");
         source.SequenceName = "dbo.OrderNumbers";
         source.SequenceOrderColumns = [Column("Key", "Id")];
@@ -400,7 +379,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void AConstantNeedsItsValueAndType()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         var source = Source("Constant");
         source.ConstantValue = "1";
         step.ValueSources = [source];
@@ -410,7 +389,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void AConstantTypeMustBeADataType()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         var source = Source("Constant");
         source.ConstantValue = "1";
         source.ConstantDataType = "Telepathy";
@@ -421,7 +400,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void ACurrentTimestampRefusesAConstant()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         var source = Source("CurrentTimestamp");
         source.ConstantValue = "1";
         step.ValueSources = [source];
@@ -431,7 +410,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void AValueSourceKindMustExist()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         step.ValueSources = [Source("Random")];
         Fails(Check(step), "not a value source kind");
     }
@@ -439,7 +418,7 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void AValueSourceNeedsATargetColumn()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         step.ValueSources = [Source("CurrentTimestamp", " ")];
         Fails(Check(step), "the target column name");
     }
@@ -447,30 +426,8 @@ public sealed class PipelineLoadValidatorTests
     [Fact]
     public void TwoValueSourcesCannotSupplyTheSameColumn()
     {
-        var step = Step("BulkInsert");
+        var step = Step("Insert");
         step.ValueSources = [Source("CurrentTimestamp", "LoadedAt"), Source("CurrentTimestamp", "loadedat")];
         Fails(Check(step), "by two value sources");
-    }
-
-    [Fact]
-    public void AnExecuteStepTakesItsParametersAsConstantAndTimestampValueSources()
-    {
-        var step = Step("Execute");
-        var constant = Source("Constant", "Origin");
-        constant.ConstantValue = "import";
-        constant.ConstantDataType = "String";
-        step.ValueSources = [constant, Source("CurrentTimestamp", "LoadedAt")];
-        Check(step).IsSuccess.ShouldBeTrue();
-    }
-
-    [Fact]
-    public void AnExecuteStepRefusesASequenceParameter()
-    {
-        var step = Step("Execute");
-        var sequence = Source("NextSequenceValue", "Number");
-        sequence.SequenceName = "OrderNumbers";
-        sequence.SequenceOrderColumns = [Column("SequenceOrder", "CreatedAt")];
-        step.ValueSources = [sequence];
-        Fails(Check(step), "cannot supply the parameter of an executable container");
     }
 }

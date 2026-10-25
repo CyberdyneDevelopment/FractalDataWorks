@@ -52,7 +52,7 @@ public sealed class PostgreSqlInsertTranslatorTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataGateway")]
-    public async Task TranslateInsertUsesDoubleQuoteQuotingAndReturningClause()
+    public async Task TranslateInsertUsesDoubleQuoteQuotingAndPositionalParameters()
     {
         var fields = new[]
         {
@@ -65,14 +65,14 @@ public sealed class PostgreSqlInsertTranslatorTests
         var entity = new { name = "Acme", email = "info@acme.com" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("INSERT INTO \"public\".\"customers\"");
         result.Value.CommandText.ShouldContain("(\"name\", \"email\")");
-        result.Value.CommandText.ShouldContain("RETURNING \"id\"");
+        result.Value.CommandText.ShouldContain("VALUES (@p0, @p1)");
         // Must NOT contain T-SQL SCOPE_IDENTITY()
         result.Value.CommandText.ShouldNotContain("SCOPE_IDENTITY");
     }
@@ -92,7 +92,7 @@ public sealed class PostgreSqlInsertTranslatorTests
         var entity = new { name = "Test" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
@@ -116,7 +116,7 @@ public sealed class PostgreSqlInsertTranslatorTests
         var entity = new { name = "Test" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
@@ -131,7 +131,7 @@ public sealed class PostgreSqlInsertTranslatorTests
     {
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(new { name = "Test" });
+        command.Setup(c => c.InputData).Returns(new[] { new { name = "Test" } });
 
         var result = await _sut.Translate(command.Object, null!, TestContext.Current.CancellationToken);
 
@@ -154,7 +154,7 @@ public sealed class PostgreSqlInsertTranslatorTests
 
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(new { name = "Test" });
+        command.Setup(c => c.InputData).Returns(new[] { new { name = "Test" } });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
@@ -235,6 +237,18 @@ public sealed class QueryTranslator
             : $"operator '{used}' cannot be used on '{field.Name}'; it takes {string.Join(", ", allowed)}");
     }
 
+    /// <summary>
+    /// Replaces the calculation references in a filter tree with the values the calculations yield, checked against the type of the
+    /// field each is compared with. Run it on a filter before translating it; the translator refuses a reference that is still there.
+    /// </summary>
+    /// <param name="node">The filter tree, or null for no filter. It is not changed.</param>
+    /// <param name="calculations">Evaluates the calculations; null for a host that has none, which refuses any reference.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The tree with a literal where each reference was, or a refusal that names the field and the calculation.</returns>
+    public Task<IGenericResult<QueryFilterNode?>> ResolveCalculations(
+        QueryFilterNode? node, IFilterCalculations? calculations, CancellationToken cancellationToken = default)
+        => new FilterCalculationResolver(_fields, _refusals, calculations).Resolve(node, cancellationToken);
+
     /// <summary>Builds the filter a request's tree asks for, checked against the fields this translator knows.</summary>
     /// <param name="node">The filter tree, or null for no filter.</param>
     /// <returns>The filter (null when there is none), or a refusal naming the first thing that did not resolve.</returns>
@@ -311,6 +325,10 @@ public sealed class QueryTranslator
             return _refusals.Invalid<IFilterNode>($"filter field '{node.Field}' is not a field of {_subject}");
         if (field.IsCalculated && !_allowCalculated)
             return _refusals.Invalid<IFilterNode>($"'{field.Name}' is calculated after the rows are read, so it cannot be filtered on");
+        if (FilterCalculationReference.HoldsReference(node.Value) || FilterCalculationReference.HoldsReference(node.StartDate)
+            || FilterCalculationReference.HoldsReference(node.EndDate))
+            return _refusals.Invalid<IFilterNode>(
+                $"filter condition on '{field.Name}' still holds a calculation: calculations are resolved with ResolveCalculations before a filter is translated");
         if (Composite(node, field) is { } composite)
             return composite;
         if (node.Operator is null)

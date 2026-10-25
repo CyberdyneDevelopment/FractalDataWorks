@@ -3,19 +3,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Fdw.Data.Sqlite.Logging;
 using Fdw.Data.Sqlite.Results;
 using Fdw.Data.Sqlite.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 using Microsoft.Data.Sqlite;
 
 namespace Fdw.Services.Connections.Sqlite;
 
 /// <summary>
-/// Translates DeleteCommand to a SQLite DELETE statement.
-/// Always requires a WHERE clause to prevent accidental full-table deletion.
+/// Translates DeleteCommand to a SQLite DELETE statement. A command with no filter has no condition, so it deletes
+/// every row: the container is emptied. A command that carries soft-delete options flags the rows instead (an UPDATE
+/// that sets the deleted-flag column).
 /// </summary>
 [TypeOption(typeof(SqliteDataCommandTranslators), "Delete", RestrictToCurrentCompilation = true)]
 public sealed class SqliteDeleteTranslator : SqliteDataCommandTranslatorBase
@@ -58,11 +61,13 @@ public sealed class SqliteDeleteTranslator : SqliteDataCommandTranslatorBase
             if (container.Path is not IDatabasePath dbPath)
                 return Task.FromResult(GenericResult<SqliteCommand>.Failure(SqliteDataResultCodes.ByName("InvalidContainerPath")));
 
-            var filter = command.Filter;
-            if (filter == null || filter.Root == null)
-                return Task.FromResult(GenericResult<SqliteCommand>.Failure(SqliteDataResultCodes.ByName("MissingDeleteFilter")));
+            if (command is ISoftDeletableCommand { SoftDelete: { } soft })
+                return Task.FromResult(GenericResult<SqliteCommand>.Success(BuildSoftDeleteStatement(dbPath, container, soft, command.Filter)));
 
-            return Task.FromResult(GenericResult<SqliteCommand>.Success(BuildDeleteStatement(dbPath, filter)));
+            return Task.FromResult(GenericResult<SqliteCommand>.Success(
+                command.Filter is { Root: not null } filter
+                    ? BuildDeleteStatement(dbPath, filter)
+                    : CreateCommand($"DELETE FROM {BuildQualifiedTableName(dbPath)}")));
         }
         catch (Exception ex)
         {
@@ -72,6 +77,24 @@ public sealed class SqliteDeleteTranslator : SqliteDataCommandTranslatorBase
                     SqliteDataResultCodes.ByName("DeleteTranslationFailed"),
                     ResultDetails.Create("ErrorMessage", ex.Message)));
         }
+    }
+
+    private static SqliteCommand BuildSoftDeleteStatement(
+        IDatabasePath dbPath,
+        IStorageContainer container,
+        SoftDeleteOptions soft,
+        IFilterExpression? filter)
+    {
+        var command = CreateCommand(string.Empty);
+        command.CommandText = BuildSoftDeleteUpdate(
+            BuildQualifiedTableName(dbPath),
+            dbPath.Dialect,
+            soft,
+            container,
+            "CURRENT_TIMESTAMP",
+            filter is { Root: not null } ? BuildWhereClause(filter, dbPath.Dialect, (n, v) => AddParameter(command, n, v)) : null,
+            (n, v) => AddParameter(command, n, v));
+        return command;
     }
 
     private static SqliteCommand BuildDeleteStatement(IDatabasePath dbPath, IFilterExpression filter)

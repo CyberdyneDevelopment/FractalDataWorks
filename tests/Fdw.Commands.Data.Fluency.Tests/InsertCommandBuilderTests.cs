@@ -31,7 +31,7 @@ public sealed class InsertCommandBuilderTests
         call.Target.Container.ShouldBe("Customers");
         call.Target.DataStore.ShouldBe("CRM");
         call.Target.Path.ShouldBe("sales");
-        cmd.Data.ShouldBe(entity);
+        cmd.Data.ShouldBe([entity]);
     }
 
     [Fact]
@@ -137,68 +137,5 @@ public sealed class InsertCommandBuilderTests
     {
         Should.Throw<ArgumentNullException>(() =>
             Insert.IntoMany<TestEntity>("Customers").Path(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void BulkInsertBuildsCorrectCommand()
-    {
-        var entities = new[]
-        {
-            new TestEntity { Id = 1, Name = "A" },
-            new TestEntity { Id = 2, Name = "B" }
-        };
-
-        var call = Insert.Bulk<TestEntity>("Customers")
-            .DataStore("CRM")
-            .Path("sales")
-            .Values(entities);
-
-        call.Target.Container.ShouldBe("Customers");
-        call.Target.DataStore.ShouldBe("CRM");
-        call.Target.Path.ShouldBe("sales");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void BulkInsertThrowsWhenDataStoreNotSpecified()
-    {
-        var entities = new[] { new TestEntity { Id = 1, Name = "A" } };
-        var builder = Insert.Bulk<TestEntity>("Customers")
-            .Path("sales");
-
-        Should.Throw<InvalidOperationException>(() => builder.Values(entities));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void BulkInsertThrowsWhenPathNotSpecified()
-    {
-        var entities = new[] { new TestEntity { Id = 1, Name = "A" } };
-        var builder = Insert.Bulk<TestEntity>("Customers")
-            .DataStore("CRM");
-
-        Should.Throw<InvalidOperationException>(() => builder.Values(entities));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void BulkInsertDataStoreThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Insert.Bulk<TestEntity>("Customers").DataStore(null!));
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public void BulkInsertPathThrowsForNull()
-    {
-        Should.Throw<ArgumentNullException>(() =>
-            Insert.Bulk<TestEntity>("Customers").Path(null!));
     }
 }

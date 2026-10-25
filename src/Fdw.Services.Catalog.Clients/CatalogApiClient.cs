@@ -102,7 +102,7 @@ public sealed class CatalogApiClient : ApiClientBase
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A result containing the list of matching glossary terms.</returns>
     public Task<IGenericResult<IReadOnlyList<GlossaryTermPayload>>> SearchTerms(string query, CancellationToken ct = default)
-        => GetList<GlossaryTermPayload>($"catalog/glossary?query={Uri.EscapeDataString(query)}", ct);
+        => GetList<GlossaryTermPayload>($"catalog/glossary?q={Uri.EscapeDataString(query)}", ct);
 
     /// <summary>
     /// Gets a specific glossary term by identifier.

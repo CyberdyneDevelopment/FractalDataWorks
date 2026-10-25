@@ -212,7 +212,7 @@ public sealed class PlatformAdministratorGuardTests
             NullLogger<PlatformAdministratorGuard>.Instance);
     }
 
-    private static IEnumerable<ITenant> Tenants(int globalTenants)
+    private static List<ITenant> Tenants(int globalTenants)
     {
         var all = new List<ITenant>
         {

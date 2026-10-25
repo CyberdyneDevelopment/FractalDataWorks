@@ -107,6 +107,9 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
         var classification = DataClassificationValidator.Validate(request.ClassificationId, Logger);
         if (classification.IsFailure) return classification.ToNewResult<WorkspaceDetailResponse>();
 
+        var inTenant = await CheckOrganization(request, config, ct).ConfigureAwait(false);
+        if (inTenant.IsFailure) return inTenant.ToNewResult<WorkspaceDetailResponse>();
+
         ApplyFields(config, request);
 
         // The role travels with the policy it is stored under: kept while the policy still auto-approves,
@@ -149,6 +152,17 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
             : GenericResult<WorkspaceDetailResponse>.Success(WorkspaceResponseMapper.ToDetail(config, ownership.Value!));
     }
 
+    // The organization a workspace is moved to must be one of its own tenant; leaving it out, or naming the one it is in, asks nothing (FDW-2338).
+    private async Task<IGenericResult> CheckOrganization(
+        UpdateWorkspaceRequest request, IWorkspaceImplementationConfiguration config, CancellationToken ct)
+    {
+        if (request.OrganizationId is not { } organizationId || organizationId == config.OrganizationId)
+            return GenericResult.Success();
+
+        return await WorkspaceOrganizationCheck.Check(
+            Resolve<IOrganizationProvider>(), request.Name, organizationId, config.TenantId, Logger, ct).ConfigureAwait(false);
+    }
+
     // The plain fields this PATCH carries. Left out means unchanged, as for every field this update carries.
     // The join policy, its auto-approve role and the stand-in seed stay in Update: the first two are validated
     // together against the policy the row will have, and a refusal there must leave the row as it was read.
@@ -163,6 +177,7 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
         }
 
         config.Purpose = request.Purpose ?? config.Purpose;
+        config.OrganizationId = request.OrganizationId ?? config.OrganizationId;
         config.Status = request.Status ?? config.Status;
         config.Visibility = request.Visibility ?? config.Visibility;
     }

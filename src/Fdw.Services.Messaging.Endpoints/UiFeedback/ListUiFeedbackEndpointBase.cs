@@ -54,7 +54,7 @@ public abstract class ListUiFeedbackEndpointBase : Endpoint<ListUiFeedbackEndpoi
 
         if (req.Sort is not null && !string.Equals(req.Sort, "urgency", StringComparison.OrdinalIgnoreCase))
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(GenericResult.Failure(MessagingEndpointLog.UiFeedbackSortUnknown(EndpointLogger, req.Sort)), HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(GenericResult.Failure(MessagingEndpointLog.UiFeedbackSortUnknown(EndpointLogger, req.Sort)), HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -73,7 +73,7 @@ public abstract class ListUiFeedbackEndpointBase : Endpoint<ListUiFeedbackEndpoi
 
         if (!listed.IsSuccess || listed.Value is not { } comments)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(listed, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(listed, HttpContext)).ConfigureAwait(false);
             return;
         }
 

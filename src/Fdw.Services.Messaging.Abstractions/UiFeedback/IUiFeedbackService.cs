@@ -54,15 +54,6 @@ public interface IUiFeedbackService
     Task<IGenericResult> Delete(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Acknowledges a comment as the caller, and marks the caller's alert about it read. A person acknowledges a comment once: acknowledging again changes nothing
-    /// and still succeeds.
-    /// </summary>
-    /// <param name="id">The comment's identifier.</param>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>The comment with <see cref="UiFeedbackPayload.AcknowledgedByMe"/> set; not found when it is out of the caller's reach.</returns>
-    Task<IGenericResult<UiFeedbackPayload>> Acknowledge(Guid id, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Agrees with a comment as the caller. A person agrees once: agreeing again changes nothing and still succeeds. The person who left the comment cannot agree
     /// with it.
     /// </summary>

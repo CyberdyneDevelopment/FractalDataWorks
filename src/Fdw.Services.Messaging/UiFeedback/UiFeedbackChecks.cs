@@ -34,7 +34,7 @@ internal static class UiFeedbackChecks
             ?? AreaProblem(logger, request.Area)
             ?? ViewportProblem(logger, request.Viewport)
             ?? ThemeProblem(logger, request.Theme)
-            ?? AnchorProblem(logger, request.AnchorJson)
+            ?? AnchorsProblem(logger, request.AnchorsJson)
             ?? UrgencyProblem(logger, request.Urgency)
             ?? TagsProblem(logger, request.Tags)
             ?? BodyProblem(logger, request.Body);
@@ -157,19 +157,46 @@ internal static class UiFeedbackChecks
             : null;
     }
 
-    private static IGenericMessage? AnchorProblem(ILogger logger, string? anchorJson)
+    // A comment names at least one component, each a JSON object, within the limits; the entries are kept as they are and never looked inside (FDW-2343).
+    private static IGenericMessage? AnchorsProblem(ILogger logger, IReadOnlyList<string>? anchors)
     {
-        if (anchorJson is null)
-            return null;
+        if (anchors is null)
+            return MessagingLog.UiFeedbackFieldMissing(logger, "anchors");
+
+        if (anchors.Count == 0)
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", "must name at least one component");
+
+        if (anchors.Count > UiFeedbackLimits.MaxAnchors)
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"may name at most {UiFeedbackLimits.MaxAnchors} components");
+
+        for (var i = 0; i < anchors.Count; i++)
+        {
+            var problem = AnchorProblem(logger, anchors[i], i);
+            if (problem is not null)
+                return problem;
+        }
+
+        return null;
+    }
+
+    private static IGenericMessage? AnchorProblem(ILogger logger, string? anchorJson, int position)
+    {
+        if (string.IsNullOrWhiteSpace(anchorJson))
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is empty");
+
+        if (anchorJson.Length > UiFeedbackLimits.MaxAnchorLength)
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is longer than {UiFeedbackLimits.MaxAnchorLength} characters");
 
         try
         {
             using var parsed = JsonDocument.Parse(anchorJson);
-            return null;
+            return parsed.RootElement.ValueKind == JsonValueKind.Object
+                ? null
+                : MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} must be a JSON object");
         }
         catch (JsonException)
         {
-            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchor", "is not valid JSON");
+            return MessagingLog.UiFeedbackFieldInvalid(logger, "anchors", $"entry {position + 1} is not valid JSON");
         }
     }
 

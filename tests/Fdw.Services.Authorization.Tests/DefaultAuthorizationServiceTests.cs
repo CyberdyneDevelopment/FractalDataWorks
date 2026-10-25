@@ -84,16 +84,15 @@ public sealed class DefaultAuthorizationServiceTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
-    public async Task Authorize_Denies_WhenOnlyTheEverythingWildcardIsHeld()
+    public async Task Authorize_Grants_WhenTheEverythingWildcardIsHeld()
     {
-        // FDW-1082: one rule for every check, and the endpoint pre-processor never honoured *:*. Nothing seeds it,
-        // so a super-grant that appears can only be a direct write to the catalogue -- not something to trust.
+        // One rule for every check: a held *:* covers every permission. Nothing seeds it.
         var context = CreateAuthenticatedContext("user-1", ["*:*"]);
 
         var result = await _sut.Authorize(context, "anything", "read", TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeFalse();
+        result.Value.ShouldBeTrue();
     }
 
     [Fact]

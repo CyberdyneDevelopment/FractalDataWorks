@@ -79,4 +79,10 @@ public sealed class TypeCollectionValueSummaryDto
     /// option that is not a component kind.
     /// </summary>
     public bool? HoldsComponents { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text a client puts between the stated settings that summarise a component kind (RUI-547), in the order the kind lists them;
+    /// null for a kind that has fewer than two such settings and for an option that is not a component kind.
+    /// </summary>
+    public string? SummarySeparator { get; set; }
 }

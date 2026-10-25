@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Execution;
+using Fdw.Services.Authentication.Abstractions.SignIns;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Flow;
 using Fdw.Services.Multitenancy.Abstractions;
@@ -151,4 +152,27 @@ internal sealed class InMemoryExecutions : IAuthenticationExecutionStore
         => Task.FromResult(_records.TryRemove(resumeToken, out var r)
             ? GenericResult<ExecutionRecord>.Success(r)
             : GenericResult<ExecutionRecord>.Failure(ServicesResultCodes.ByName("ConfigurationNotFound")));
+}
+
+/// <summary>Records the sign-ins the runner reports, and can be told to fail them.</summary>
+internal sealed class RecordingSignIns : ISignInLog
+{
+    public List<(Guid UserId, string? ServiceName, string FlowName, DateTimeOffset At)> Recorded { get; } = [];
+
+    public bool Fails { get; init; }
+
+    public Task<IGenericResult> Record(Guid userId, string? serviceName, string flowName, DateTimeOffset at, CancellationToken cancellationToken = default)
+    {
+        Recorded.Add((userId, serviceName, flowName, at));
+        return Task.FromResult(Fails
+            ? GenericResult.Failure(new Fdw.Messages.GenericMessage("the sign-in could not be recorded"))
+            : GenericResult.Success());
+    }
+
+    // The runner only records; reading the log is not part of a flow.
+    public Task<IGenericResult<IReadOnlyDictionary<Guid, DateTimeOffset>>> LastSignIns(IReadOnlyList<Guid> userIds, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("a flow does not read the sign-in log");
+
+    public Task<IGenericResult<IReadOnlyList<SignInRecord>>> SignIns(Guid userId, int skip, int take, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("a flow does not read the sign-in log");
 }

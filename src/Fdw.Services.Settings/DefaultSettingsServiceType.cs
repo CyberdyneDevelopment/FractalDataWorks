@@ -83,6 +83,20 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<IOrganizationSettingConfigurationProvider>(sp => sp.GetRequiredService<OrganizationSettingConfigurationProvider>());
 
 
+            builder.Services.AddSingleton<IHomePageImplementationConfigurationProvider, HomePageImplementationConfigurationProvider>(sp => new HomePageImplementationConfigurationProvider(sp.GetRequiredService<ILogger<HomePageImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "HomePageConfiguration"));
+            builder.Services.TryAddSingleton<HomePageConfigurationProvider>(sp =>
+            {
+                var domain = new HomePageConfigurationProvider(
+                    sp.GetRequiredService<ILogger<HomePageConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "HomePage");
+                domain.Register("HomePage", sp.GetRequiredService<IHomePageImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IHomePageConfigurationProvider>(sp => sp.GetRequiredService<HomePageConfigurationProvider>());
+            builder.Services.TryAddSingleton<IHomePages>(sp => new HomePages(
+                sp.GetRequiredService<IHomePageConfigurationProvider>(),
+                sp.GetService<ILogger<HomePages>>()));
+
             builder.Services.AddSingleton<IServerSettingImplementationConfigurationProvider, ServerSettingImplementationConfigurationProvider>(sp => new ServerSettingImplementationConfigurationProvider(sp.GetRequiredService<ILogger<ServerSettingImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), SettingsServiceTypes.ConfigurationConnection, "settings", "ServerSettingConfiguration"));
             // The domain is built with its one implementation registered into it, as RoleMapping is:
             // a domain provider with nothing registered answers every read with NoImplementationProvider.

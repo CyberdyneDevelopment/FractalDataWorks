@@ -20,12 +20,10 @@ namespace Fdw.Data.PostgreSql;
 /// Source generator creates static properties for each [TypeOption] translator:
 /// <list type="bullet">
 /// <item>PostgreSqlDataCommandTranslators.Query - SELECT statement translator</item>
-/// <item>PostgreSqlDataCommandTranslators.Insert - INSERT statement translator</item>
+/// <item>PostgreSqlDataCommandTranslators.Insert - multi-row INSERT statement translator (one row or many)</item>
 /// <item>PostgreSqlDataCommandTranslators.Update - UPDATE statement translator</item>
 /// <item>PostgreSqlDataCommandTranslators.Delete - DELETE statement translator</item>
 /// <item>PostgreSqlDataCommandTranslators.Find - LIKE/ILIKE search translator</item>
-/// <item>PostgreSqlDataCommandTranslators.BulkInsert - COPY FROM STDIN translator</item>
-/// <item>PostgreSqlDataCommandTranslators.BatchInsert - Multi-row VALUES translator</item>
 /// <item>PostgreSqlDataCommandTranslators.CompoundQuery - JOIN query translator</item>
 /// </list>
 /// </para>
@@ -37,7 +35,7 @@ public abstract partial class PostgreSqlDataCommandTranslators :
 {
     // Source generator creates:
     // - Static constructor
-    // - Static properties: Query, Insert, Update, Delete, Find, BulkInsert, BatchInsert, CompoundQuery
+    // - Static properties: Query, Insert, Update, Delete, Find, CompoundQuery
     // - public static IReadOnlyList<IDataCommandTranslator<NpgsqlCommand>> All()
     // - public static IDataCommandTranslator<NpgsqlCommand> ByName(string name)
     // - public static IDataCommandTranslator<NpgsqlCommand> ById(int id)

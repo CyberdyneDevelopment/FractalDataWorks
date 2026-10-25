@@ -1,3 +1,5 @@
+using System;
+
 namespace Fdw.Services.Workspaces.Endpoints;
 
 /// <summary>Modifies a workspace.</summary>
@@ -42,4 +44,7 @@ public class UpdateWorkspaceRequest
 
     /// <summary>Gets or sets a new stand-in seed, or null to leave it.</summary>
     public string? StandInSeed { get; set; }
+
+    /// <summary>Gets or sets the organization of the workspace's tenant to move it to, or null to leave it.</summary>
+    public Guid? OrganizationId { get; set; }
 }

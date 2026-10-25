@@ -25,8 +25,9 @@ public static class ExecutionListItemType
         refusal = null;
         if (!string.IsNullOrWhiteSpace(itemType))
         {
-            var named = ExecutionItemTypes.ByName(itemType);
-            if (named == ExecutionItemTypes.NotFound)
+            // Why the name is matched here and not by ByName: a collection's names are canonical and ByName is exact, while this is text a caller typed.
+            var named = ExecutionItemTypes.All().FirstOrDefault(type => string.Equals(type.Name, itemType, StringComparison.OrdinalIgnoreCase));
+            if (named is null)
             {
                 refusal = $"'{itemType}' is not an execution item type; the types are {string.Join(", ", ExecutionItemTypes.All().Select(type => type.Name))}";
                 return null;

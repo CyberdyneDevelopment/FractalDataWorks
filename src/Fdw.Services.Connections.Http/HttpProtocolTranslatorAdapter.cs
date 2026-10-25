@@ -57,6 +57,11 @@ public sealed class HttpProtocolTranslatorAdapter : IDataCommandTranslator<HttpR
     /// <inheritdoc/>
     public string DomainName => "Http";
 
+    /// <summary>Gets whether the wrapped protocol maps a data command of the given type.</summary>
+    /// <param name="commandType">The command type name.</param>
+    /// <returns>True when the protocol turns that command type into a request.</returns>
+    public bool Maps(string commandType) => _protocol.Maps(commandType);
+
     /// <inheritdoc/>
     public Task<IGenericResult<HttpRequestMessage>> Translate(
         IDataCommand command,

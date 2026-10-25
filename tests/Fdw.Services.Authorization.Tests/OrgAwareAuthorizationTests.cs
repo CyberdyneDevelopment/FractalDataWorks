@@ -202,12 +202,11 @@ public sealed class OrgAwareAuthorizationTests
             new() { UserId = User1Id.ToString(), RoleId = TenantRoleId, TenantId = TenantId },
         };
 
-        var roleProvider = ConfigurationCatalog.Roles(
-            new List<RoleImplementationConfiguration> { globalRole, tenantRole });
-        var permProvider = ConfigurationCatalog.Permissions(
-            new List<PermissionImplementationConfiguration> { globalPerm, tenantPerm });
-        var rolePermProvider = ConfigurationCatalog.RolePermissions(rolePermissions);
-        var userRoleProvider = ConfigurationCatalog.UserRoles(userRoleAssignments);
+        var grants = UserPermissionGrantsFake.Of(
+            new List<RoleImplementationConfiguration> { globalRole, tenantRole },
+            new List<PermissionImplementationConfiguration> { globalPerm, tenantPerm },
+            rolePermissions,
+            userRoleAssignments);
 
         var orgAccessMock = new Mock<IOrgAccessProvider>();
         orgAccessMock
@@ -215,10 +214,7 @@ public sealed class OrgAwareAuthorizationTests
             .ReturnsAsync(GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(orgGrants));
 
         return new UserPermissions(
-            roleProvider,
-            permProvider,
-            rolePermProvider,
-            userRoleProvider,
+            grants,
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<UserPermissions>.Instance,
             orgAccessMock.Object);

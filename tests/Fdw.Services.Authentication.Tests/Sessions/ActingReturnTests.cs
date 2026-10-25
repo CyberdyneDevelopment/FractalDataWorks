@@ -61,4 +61,24 @@ public sealed class ActingReturnTests
 
         refusal.ShouldNotBeNull();
     }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(31, true)]
+    [InlineData(32, false)]
+    [InlineData(33, false)]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void AChainMayBeExtendedOnlyWhileItStaysWithinTheLimit(int chainLength, bool extended)
+    {
+        ActingReturn.MayDeepen(chainLength).ShouldBe(extended);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public void TheLimitIsTheOneTheChainReaderEnforces()
+    {
+        ActingReturn.MaxDepth.ShouldBe(32);
+    }
 }

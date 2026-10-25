@@ -247,10 +247,15 @@ public class PasswordLifecycleEndpointTests
             admission.Setup(a => a.MayUse(It.IsAny<IReadOnlyCollection<string>>(), "pwd", It.IsAny<CancellationToken>()))
                 .Callback((IReadOnlyCollection<string> held, string _, CancellationToken _) => onAsked?.Invoke(held))
                 .ReturnsAsync(GenericResult<bool>.Success(admits));
+            // The grant rule has its own tests; these are about whether the roles admit a password, so it allows.
+            var grantRule = new Mock<Fdw.Services.Authorization.Abstractions.IGrantRule>();
+            grantRule.Setup(r => r.CanGive(It.IsAny<IReadOnlyList<string>>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(GenericResult.Success());
             ctx.AddTestServices(s =>
             {
                 s.AddSingleton(grants.Object);
                 s.AddSingleton(admission.Object);
+                s.AddSingleton(grantRule.Object);
             });
         };
 

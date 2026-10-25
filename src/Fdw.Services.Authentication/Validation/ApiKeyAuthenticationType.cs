@@ -4,7 +4,9 @@ using Fdw.Collections;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authentication.Abstractions.SignIns;
 using Fdw.Services.Authentication.Logging;
+using Fdw.Services.Authentication.SignIns;
 using Fdw.Services.Data.Abstractions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,6 +67,11 @@ public sealed class ApiKeyAuthenticationType : AuthenticationServiceTypeBase
             // Transient for the same reason the other handlers are: the handler holds the scheme and
             // the request it was initialised for in fields, so one instance per resolution.
             builder.Services.TryAddTransient<ApiKeyAuthenticationHandler>();
+
+            // The handler records a sign-in for every key request, so the host that takes this type holds the log it records in.
+            builder.Services.TryAddSingleton<ISignInLog, DatabaseSignInLog>();
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.TryAddSingleton<ISignInCaller, HttpSignInCaller>();
 
             builder.Services.AddSingleton<IApiKeyAuthenticationConfigurationProvider, ApiKeyAuthenticationConfigurationProvider>(sp => new ApiKeyAuthenticationConfigurationProvider(sp.GetRequiredService<ILogger<ApiKeyAuthenticationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), AuthenticationServiceTypes.ConfigurationConnection, PathName, Container));
             return GenericResult<IHostApplicationBuilder>.Success(builder);

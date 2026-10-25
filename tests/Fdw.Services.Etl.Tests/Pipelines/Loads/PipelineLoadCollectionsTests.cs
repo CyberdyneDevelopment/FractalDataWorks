@@ -10,15 +10,13 @@ namespace Fdw.Services.Etl.Tests.Pipelines.Loads;
 public sealed class PipelineLoadCollectionsTests
 {
     [Theory]
-    [InlineData("BulkInsert", false, false, true, false, false, false, false, true)]
-    [InlineData("BulkUpsert", true, true, true, true, true, false, false, true)]
-    [InlineData("Update", true, false, true, false, true, false, false, true)]
-    [InlineData("Delete", true, false, false, false, true, false, false, true)]
-    [InlineData("Truncate", false, false, false, false, false, false, false, false)]
-    [InlineData("InsertFromQuery", false, false, true, false, false, true, false, false)]
-    [InlineData("Execute", false, false, false, false, false, false, true, false)]
+    [InlineData("Insert", false, false, true, false, false, false, true)]
+    [InlineData("Upsert", true, true, true, true, true, false, true)]
+    [InlineData("Update", true, false, true, false, true, false, true)]
+    [InlineData("Delete", true, false, false, false, true, false, true)]
+    [InlineData("Truncate", false, false, false, false, false, false, false)]
     public void LoadStepKindStatesWhichOptionsItTakes(
-        string name, bool keys, bool compares, bool writes, bool versioning, bool softDelete, bool sourceDataSet, bool container, bool rows)
+        string name, bool keys, bool compares, bool writes, bool versioning, bool softDelete, bool sourceDataSet, bool rows)
     {
         // Act
         var kind = LoadStepKinds.ByName(name);
@@ -31,7 +29,6 @@ public sealed class PipelineLoadCollectionsTests
         kind.AllowsVersioning.ShouldBe(versioning);
         kind.AllowsSoftDelete.ShouldBe(softDelete);
         kind.UsesSourceDataSet.ShouldBe(sourceDataSet);
-        kind.UsesDestinationContainer.ShouldBe(container);
         kind.UsesRows.ShouldBe(rows);
     }
 
@@ -54,12 +51,12 @@ public sealed class PipelineLoadCollectionsTests
     }
 
     [Theory]
-    [InlineData("Column", true, false, true, false, false, false)]
-    [InlineData("NextSequenceValue", false, false, false, true, true, false)]
-    [InlineData("CurrentTimestamp", false, true, false, false, false, false)]
-    [InlineData("Constant", false, true, false, false, false, true)]
+    [InlineData("Column", true, true, false, false, false)]
+    [InlineData("NextSequenceValue", false, false, true, true, false)]
+    [InlineData("CurrentTimestamp", false, false, false, false, false)]
+    [InlineData("Constant", false, false, false, false, true)]
     public void ValueSourceKindStatesWhatItNeeds(
-        string name, bool mapsSourceColumn, bool allowedAsContainerParameter, bool sourceField, bool sequenceName, bool sequenceOrder, bool constant)
+        string name, bool mapsSourceColumn, bool sourceField, bool sequenceName, bool sequenceOrder, bool constant)
     {
         // Act
         var kind = ValueSourceKinds.ByName(name);
@@ -67,7 +64,6 @@ public sealed class PipelineLoadCollectionsTests
         // Assert
         ReferenceEquals(kind, ValueSourceKinds.NotFound).ShouldBeFalse();
         kind.MapsSourceColumn.ShouldBe(mapsSourceColumn);
-        kind.AllowedAsContainerParameter.ShouldBe(allowedAsContainerParameter);
         kind.RequiresSourceField.ShouldBe(sourceField);
         kind.RequiresSequenceName.ShouldBe(sequenceName);
         kind.RequiresSequenceOrder.ShouldBe(sequenceOrder);
@@ -118,13 +114,11 @@ public sealed class PipelineLoadCollectionsTests
     }
 
     [Theory]
-    [InlineData("BulkInsert", true)]
-    [InlineData("BulkUpsert", false)]
+    [InlineData("Insert", true)]
+    [InlineData("Upsert", false)]
     [InlineData("Update", false)]
     [InlineData("Delete", false)]
     [InlineData("Truncate", false)]
-    [InlineData("InsertFromQuery", false)]
-    [InlineData("Execute", false)]
     public void LoadStepKindStatesWhetherItCanWriteRejectedRecords(string name, bool accepts)
     {
         // Act

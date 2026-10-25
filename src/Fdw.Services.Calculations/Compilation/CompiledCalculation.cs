@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Results;
+using Fdw.Services.Calculations.Abstractions;
 using Fdw.Services.Calculations.Abstractions.Runtime;
 using Fdw.Services.Calculations.Abstractions.TreeResultCodes;
 
@@ -25,17 +26,22 @@ public sealed class CompiledCalculation : ICompiledCalculation
     internal CompiledCalculation(
         Action<IReadOnlyDictionary<string, object?>, CalculationRunState, decimal[]> evaluate,
         List<string> emittedNames,
+        List<ICalculationValueKind> emittedKinds,
         List<string> resultNames,
         List<string> nodeLabels)
     {
         _evaluate = evaluate;
         EmittedNames = emittedNames;
+        EmittedKinds = emittedKinds;
         _resultNames = resultNames;
         _nodeLabels = nodeLabels;
     }
 
     /// <summary>Gets the names of the results the run writes out, in the order they are written to the results array.</summary>
     public IReadOnlyList<string> EmittedNames { get; }
+
+    /// <summary>Gets the kind of value each emitted result carries, in the same order as <see cref="EmittedNames"/>.</summary>
+    public IReadOnlyList<ICalculationValueKind> EmittedKinds { get; }
 
     /// <summary>Evaluates one record.</summary>
     /// <param name="record">The record's fields.</param>

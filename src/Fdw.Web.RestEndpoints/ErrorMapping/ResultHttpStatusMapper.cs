@@ -22,6 +22,16 @@ namespace Fdw.Web.RestEndpoints.ErrorMapping;
 /// </remarks>
 public static class ResultHttpStatusMapper
 {
+    /// <summary>Writes a failed result as the answer to a request: its status code and the structured error body.</summary>
+    /// <param name="failure">The failed result.</param>
+    /// <param name="httpContext">The HTTP context for correlation ID extraction.</param>
+    /// <returns>The answer.</returns>
+    public static IResult Answer(IGenericResult failure, HttpContext httpContext)
+    {
+        var (statusCode, errorResponse) = Map(failure, httpContext);
+        return TypedResults.Json(errorResponse, statusCode: statusCode);
+    }
+
     /// <summary>
     /// Maps an IGenericResult to an HTTP status code and structured ErrorResponse.
     /// </summary>

@@ -12,11 +12,11 @@ namespace Fdw.Services.Authentication.Abstractions.Security;
 /// A permission is <c>{resource}:{action}</c>. A required permission is covered by:
 /// <list type="bullet">
 ///   <item><description>itself;</description></item>
-///   <item><description><c>{resource}:*</c>, every action on the resource.</description></item>
+///   <item><description><c>{resource}:*</c>, every action on the resource;</description></item>
+///   <item><description><c>*:*</c>, every action on every resource.</description></item>
 /// </list>
-/// There is no grant of everything: <c>*:*</c> covers nothing. No seed or endpoint creates it, and a token
-/// carries the permissions its roles name, so a super-grant could only arrive through a direct write to the
-/// catalogue -- exactly the row a check must not trust.
+/// Nothing seeds <c>*:*</c> and no endpoint creates it, so a token carries it only when the catalogue was written to
+/// directly. A held <c>*:*</c> is honoured at every check, because every check answers through this one rule.
 /// </para>
 /// <para>
 /// A per-resource permission names one resource by id: <c>{resource}/{id}:{action}</c>, where the
@@ -59,7 +59,7 @@ public static class PermissionCoverage
     {
         if (string.IsNullOrWhiteSpace(required)) throw new ArgumentException("A required permission is named.", nameof(required));
 
-        var accepted = new List<string> { required };
+        var accepted = new List<string> { required, "*:*" };
         var colon = required.LastIndexOf(':');
         if (colon <= 0 || colon == required.Length - 1)
             return accepted;

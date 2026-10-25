@@ -15,4 +15,19 @@ public sealed class AbsentFromSourceSoftDeleteMode : SoftDeleteModeBase
         : base("AbsentFromSource", "Flag the rows whose keys are absent from the source set", requiresMarker: false)
     {
     }
+
+    /// <inheritdoc />
+    public override bool NeedsSourceSet => true;
+
+    /// <inheritdoc />
+    public override string? Problem(SoftDeleteOptions options)
+    {
+        if (options.Marker is not null)
+            return "an absent-from-source soft delete takes no marker";
+        if (options.AbsentFromSource is null)
+            return "an absent-from-source soft delete names the source set";
+        return options.AbsentFromSource.KeyColumns.Count == 0
+            ? "the absent-key set names at least one key column"
+            : null;
+    }
 }

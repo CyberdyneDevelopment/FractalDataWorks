@@ -39,6 +39,7 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             builder.Services.Configure<List<QualityRuleImplementationConfiguration>>(builder.Configuration.GetSection("Quality:QualityRule"));
             builder.Services.Configure<List<DataSetAnnotationImplementationConfiguration>>(builder.Configuration.GetSection("Catalog:DataSetAnnotation"));
             builder.Services.Configure<List<GlossaryTermImplementationConfiguration>>(builder.Configuration.GetSection("Catalog:GlossaryTerm"));
+            builder.Services.Configure<List<GlossaryTermVersionImplementationConfiguration>>(builder.Configuration.GetSection("Catalog:GlossaryTermVersion"));
     
                     return GenericResult<IHostApplicationBuilder>.Success(builder);
 });
@@ -55,6 +56,17 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
                 return domain;
             });
             builder.Services.TryAddSingleton<IGlossaryTermConfigurationProvider>(sp => sp.GetRequiredService<GlossaryTermConfigurationProvider>());
+
+            builder.Services.AddSingleton<IGlossaryTermVersionImplementationConfigurationProvider, GlossaryTermVersionImplementationConfigurationProvider>(sp => new GlossaryTermVersionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<GlossaryTermVersionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "GlossaryTermVersionConfiguration"));
+            builder.Services.TryAddSingleton<GlossaryTermVersionConfigurationProvider>(sp =>
+            {
+                var domain = new GlossaryTermVersionConfigurationProvider(
+                    sp.GetRequiredService<ILogger<GlossaryTermVersionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "GlossaryTermVersion");
+                domain.Register("GlossaryTermVersion", sp.GetRequiredService<IGlossaryTermVersionImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<IGlossaryTermVersionConfigurationProvider>(sp => sp.GetRequiredService<GlossaryTermVersionConfigurationProvider>());
 
             builder.Services.AddSingleton<IDataSetAnnotationImplementationConfigurationProvider, DataSetAnnotationImplementationConfigurationProvider>(sp => new DataSetAnnotationImplementationConfigurationProvider(sp.GetRequiredService<ILogger<DataSetAnnotationImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "catalog", "DataSetAnnotationConfiguration"));
             builder.Services.TryAddSingleton<DataSetAnnotationConfigurationProvider>(sp =>

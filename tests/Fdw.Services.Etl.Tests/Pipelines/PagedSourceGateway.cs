@@ -54,7 +54,7 @@ internal sealed class PagedSourceGateway
             .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataSetTarget>(), It.IsAny<CancellationToken>()))
             .Returns((IDataCommand command, DataSetTarget target, CancellationToken cancellationToken) =>
             {
-                if (command is BulkInsertCommand<IDictionary<string, object?>> bulk)
+                if (command is InsertCommand<IDictionary<string, object?>> bulk)
                 {
                     var count = bulk.Data.Count();
                     events.Add($"load:{count}");

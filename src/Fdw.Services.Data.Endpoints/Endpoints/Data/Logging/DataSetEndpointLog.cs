@@ -12,6 +12,19 @@ namespace Fdw.Services.Data.Endpoints.Logging;
 [MessageLoggingTypeCode("DATAENDPOINTS")]
 public static partial class DataSetEndpointLog
 {
+    /// <summary>Refuses a view whose stored filter cannot be read, instead of reading its rows unfiltered.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="viewName">The view asked for.</param>
+    /// <param name="reason">Why the stored filter cannot be read.</param>
+    [MessageLogging(EventId = 21001, Level = LogLevel.Warning, Message = "The view '{viewName}' cannot be read: {reason}")]
+    public static partial IGenericMessage ViewFilterInvalid(ILogger logger, string viewName, string reason);
+
+    /// <summary>Refuses a lookup that asks for a kind of data set or variation this host does not register.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="kind">The kind asked for.</param>
+    [MessageLogging(EventId = 21002, Level = LogLevel.Warning, Message = "The data set lookup was asked for kind '{kind}', which is neither DataSet nor a kind of variation this host registers")]
+    public static partial IGenericMessage LookupKindUnknown(ILogger logger, string kind);
+
     // List (4400-4401)
 
     /// <summary>Logs querying data sets from a connection.</summary>

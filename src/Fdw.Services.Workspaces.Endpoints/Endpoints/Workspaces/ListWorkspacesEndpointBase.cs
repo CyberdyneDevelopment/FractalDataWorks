@@ -59,6 +59,9 @@ public abstract class ListWorkspacesEndpointBase : CrudPageEndpointBase<IWorkspa
     /// </remarks>
     protected override async ValueTask<IGenericResult<bool>> Admits(IWorkspaceImplementationConfiguration item, CancellationToken ct)
     {
+        var inOrganization = InOrganization(item);
+        if (inOrganization.IsFailure || !inOrganization.Value) return inOrganization;
+
         var views = await _access.MayView(item, ct).ConfigureAwait(false);
         return WorkspaceAccessRefusals.IsUndetermined(views)
             ? views.ToNewResult<bool>()
@@ -67,6 +70,19 @@ public abstract class ListWorkspacesEndpointBase : CrudPageEndpointBase<IWorkspa
 
     /// <inheritdoc />
     /// <remarks>Each item carries the tenant that owns it and the organization that names it as its default (FDW-1101).</remarks>
+    // ?organizationId= lists one organization's workspaces (FDW-2338); left out, every workspace the caller may view is listed.
+    private IGenericResult<bool> InOrganization(IWorkspaceImplementationConfiguration item)
+    {
+        var asked = HttpContext.Request.Query["organizationId"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(asked)) return GenericResult<bool>.Success(true);
+
+        return Guid.TryParse(asked, out var organizationId)
+            ? GenericResult<bool>.Success(item.OrganizationId == organizationId)
+            : GenericResult<bool>.Failure(
+                WorkspacesResultCodes.ByName("WorkspaceOrganizationInvalid"), Logger,
+                ResultDetails.Create("name", "(list)", "value", asked, "reason", "is not a Guid"));
+    }
+
     protected override async Task<IGenericResult<WorkspaceSummaryResponse>> ToSummary(IWorkspaceImplementationConfiguration item, CancellationToken ct)
     {
         var ownership = await WorkspaceOwnershipReader.Read(Resolve<IOrganizationProvider>(), item, Logger, ct).ConfigureAwait(false);

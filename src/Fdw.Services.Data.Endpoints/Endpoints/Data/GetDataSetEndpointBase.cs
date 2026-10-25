@@ -11,18 +11,18 @@ namespace Fdw.Services.Data.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for retrieving a specific data set by name.
-/// Delegates all reads to DataSetConfigurationProvider.
+/// Resolves the name to a data set or a variation of one (a saved view) and maps it.
 /// </summary>
 public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRequest, DataSetDetailResponse>
 {
-    private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetResolver _resolver;
     private readonly CategoryConfigurationProvider _categories;
 
     /// <inheritdoc />
     protected GetDataSetEndpointBase(
-        ILogger<GetDataSetEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, CategoryConfigurationProvider categories) : base(logger)
+        ILogger<GetDataSetEndpointBase> logger, IDataSetResolver resolver, CategoryConfigurationProvider categories) : base(logger)
     {
-        _dataSetProvider = dataSetProvider;
+        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         _categories = categories ?? throw new ArgumentNullException(nameof(categories));
     }
 
@@ -46,7 +46,8 @@ public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRe
     {
         DataSetEndpointLog.LoadingDataSet(Logger, name, string.Empty);
 
-        var result = await _dataSetProvider.Get(name, ct).ConfigureAwait(false);
+        // A name may be a data set or a variation of one, such as a saved view; both answer here (FDW-2390).
+        var result = await _resolver.Resolve(name, ct).ConfigureAwait(false);
         if (result.IsFailure) return result.ToNewResult<DataSetDetailResponse?>();
 
         if (result.Value is null)
@@ -58,7 +59,7 @@ public abstract class GetDataSetEndpointBase : CrudGetEndpointBase<DataSetNameRe
         var tree = await DataSetCategoryLinks.Tree(_categories, Logger, ct).ConfigureAwait(false);
         if (tree.IsFailure || tree.Value is null) return tree.ToNewResult<DataSetDetailResponse?>();
 
-        var described = DataSetCategoryLinks.Describe(DataSetQueryHelper.MapToDetail(result.Value), tree.Value, result.Value.CategoryId, Logger);
+        var described = DataSetCategoryLinks.Describe(DataSetQueryHelper.MapToDetail(result.Value), tree.Value, result.Value.DataSet.CategoryId, Logger);
         return described.IsFailure
             ? described.ToNewResult<DataSetDetailResponse?>()
             : GenericResult<DataSetDetailResponse?>.Success(described.Value);

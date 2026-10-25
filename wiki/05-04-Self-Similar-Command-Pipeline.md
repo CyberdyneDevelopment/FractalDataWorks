@@ -80,19 +80,17 @@ public abstract partial class DataCommands : TypeCollectionBase<DataCommandBase,
 | Option | Type | Shape |
 |---|---|---|
 | `Query` | `QueryCommand<T>` | `DataCommandBase<IEnumerable<T>>`, `IQueryCommand` |
-| `Insert` | `InsertCommand<T>` | `DataCommandBase<int, T>` |
+| `Insert` | `InsertCommand<T>` | `DataCommandBase<int, IEnumerable<T>>` (one row or many) |
 | `Update` | `UpdateCommand<T>` | `DataCommandBase<int, T>`, `IFilterableCommand` |
 | `Delete` | `DeleteCommand` | `DataCommandBase<int>`, `IFilterableCommand` |
-| `BulkInsert` | `BulkInsertCommand<T>` | `DataCommandBase<int, IEnumerable<T>>` |
-| `Truncate` | `TruncateCommand` | `DataCommandBase<int>` |
+| `Upsert` | `UpsertCommand<T>` | `DataCommandBase<int, IEnumerable<T>>`, `IUpsertCommand` |
 | `Find` | `FindCommand<T>` | `DataCommandBase<IEnumerable<FindResult<T>>>` |
 | `ConfigurationSave` | `ConfigurationSaveCommand<T>` | `DataCommandBase<int, T>`, `IConfigurationSaveCommand` |
 | `ConfigurationDelete` | `ConfigurationDeleteCommand` | `DataCommandBase<int, Guid>` |
-| `SoapRequest` | `SoapRequestCommand` | `DataCommandBase<XElement>` — contributed by **`Fdw.Services.Connections.Http.Abstractions`** |
 
-> **Look at the last row.** A *transport* package adds a verb to the *shared* command collection with
-> nothing but a `[TypeOption(typeof(DataCommands), "SoapRequest")]` attribute. There is no
-> "HTTP command registry" for it to live in instead. That is the self-similarity paying rent.
+> **All data connections use these same commands.** A SQL store, a file store and an HTTP site are
+> all asked `Query`, `Insert`, `Update` and `Delete`. A SOAP site is not given a command of its own:
+> the SOAP protocol builds the request from the standard command.
 
 ---
 
@@ -116,13 +114,11 @@ classDiagram
     class IConfigurationCommand
     class QueryCommand~T~
     class ConfigurationSaveCommand~T~
-    class SoapRequestCommand
 
     IGenericCommand <|-- IDataCommand
     IDataCommand <|-- IConfigurationCommand
     IDataCommand <|-- QueryCommand~T~
     IDataCommand <|-- ConfigurationSaveCommand~T~
-    IDataCommand <|-- SoapRequestCommand
 ```
 
 `IConfigurationCommand : IDataCommand` — that is the whole of it. There is no parallel hierarchy, no

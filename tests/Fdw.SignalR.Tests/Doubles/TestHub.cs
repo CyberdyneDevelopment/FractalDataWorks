@@ -13,6 +13,9 @@ public class TestHub : RealTimeHubBase<ITestHubClient>
     /// <summary>Overrides the result of <see cref="CanJoin"/> when set.</summary>
     public Func<string, bool>? CanJoinOverride { get; set; }
 
+    /// <summary>Overrides the result of <see cref="AuthorizeJoin"/> when set (FDW-2804).</summary>
+    public Func<string, Task<bool>>? AuthorizeJoinOverride { get; set; }
+
     /// <summary>Overrides the behavior of <see cref="OnJoin"/> when set.</summary>
     public Func<Task>? OnJoinOverride { get; set; }
 
@@ -40,11 +43,18 @@ public class TestHub : RealTimeHubBase<ITestHubClient>
     protected override bool CanJoin(string scopeKey)
         => CanJoinOverride?.Invoke(scopeKey) ?? base.CanJoin(scopeKey);
 
+    /// <inheritdoc/>
+    protected override Task<bool> AuthorizeJoin(string scopeKey, System.Threading.CancellationToken cancellationToken)
+        => AuthorizeJoinOverride is { } lookup ? lookup(scopeKey) : base.AuthorizeJoin(scopeKey, cancellationToken);
+
     /// <summary>Exposes <see cref="RealTimeHubBase{TClient}.JoinScope"/> for testing.</summary>
     public Task JoinScopePublic(string scopeKey) => JoinScope(scopeKey);
 
     /// <summary>Exposes <see cref="RealTimeHubBase{TClient}.JoinAuthenticatedUserScope"/> for testing.</summary>
     public Task JoinAuthenticatedUserScopePublic() => JoinAuthenticatedUserScope();
+
+    /// <summary>Exposes the caller's tenant for testing.</summary>
+    public string? CallerTenantIdPublic => CallerTenantId;
 
     /// <summary>Exposes <see cref="RealTimeHubBase{TClient}.AuthenticatedUserId"/> for testing.</summary>
     public string? AuthenticatedUserIdPublic => AuthenticatedUserId;

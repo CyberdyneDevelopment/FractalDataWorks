@@ -8,7 +8,7 @@ namespace Fdw.Services.Multitenancy.Logging;
 /// <summary>
 /// MessageLogging for retention policies, legal holds and the retention job (FDW-1575).
 /// EventId ranges: 13100-13105 (done), 23100-23101 (bad request, 400), 33100-33101 (not found, 404), 43100 (conflict, 409),
-/// 73100-73103 (store and document failures, 500).
+/// 73100-73103 (store and document failures, 500), 103100 (organization not reachable, 403).
 /// </summary>
 [MessageLoggingTypeCode("MULTITENANCY")]
 public static partial class RetentionLog
@@ -72,4 +72,11 @@ public static partial class RetentionLog
     /// <summary>Logs that the application could not end a document.</summary>
     [MessageLogging(EventId = 73103, Level = LogLevel.Warning, Message = "Document '{documentId}' of organization '{organizationId}' could not be ended with '{endAction}': {reason}")]
     public static partial IGenericMessage DocumentNotEnded(ILogger logger, string documentId, Guid organizationId, string endAction, string? reason);
+
+    /// <summary>Logs that a department is refused because it is missing or the caller may not reach it; the two are not told apart.</summary>
+    [MessageLogging(
+        EventId = 103100, Level = LogLevel.Warning,
+        Message = "Refused '{right}' for organization '{organizationId}': the organization is not one the caller may reach",
+        ClientMessage = "The organization is not one you may act for")]
+    public static partial IGenericMessage OrganizationNotReachable(ILogger logger, string right, Guid organizationId);
 }

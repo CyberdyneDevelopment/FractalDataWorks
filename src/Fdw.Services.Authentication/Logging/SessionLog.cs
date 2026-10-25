@@ -195,10 +195,9 @@ public static partial class SessionLog
         ClientMessage = "There is no role '{role}' to act with")]
     public static partial IGenericMessage ActingRoleUnknown(ILogger logger, string role);
 
-    /// <summary>Acting was refused because the role belongs to another tenant than the one the session acts in.</summary>
+    /// <summary>Acting was refused because the role belongs to another tenant than the one the session acts in. Written to the log only: the caller is told the role does not exist.</summary>
     [MessageLogging(EventId = 101502, Level = LogLevel.Warning,
-        Message = "Acting was refused: role '{role}' belongs to tenant '{roleTenantId}', not the session's tenant '{tenantId}'",
-        ClientMessage = "Role '{role}' is not a role of the company you act in")]
+        Message = "Acting was refused: role '{role}' belongs to tenant '{roleTenantId}', not the session's tenant '{tenantId}'")]
     public static partial IGenericMessage ActingRoleOtherTenant(ILogger logger, string role, string roleTenantId, string tenantId);
 
     /// <summary>Acting was refused because the caller does not hold everything the role carries.</summary>
@@ -222,4 +221,10 @@ public static partial class SessionLog
     [MessageLogging(EventId = 91503, Level = LogLevel.Error,
         Message = "The chain of sessions behind session {sessionId} is broken: it loops, runs too deep or ends at a missing session")]
     public static partial IGenericMessage ChainBroken(ILogger logger, Guid sessionId);
+
+    /// <summary>Acting was refused because the chain of acting sessions is already as long as it may be.</summary>
+    [MessageLogging(EventId = 41501, Level = LogLevel.Warning,
+        Message = "Acting was refused: the chain of acting sessions is already {limit} long",
+        ClientMessage = "You cannot act again: {limit} sessions in a row is the most. Return to an earlier step first")]
+    public static partial IGenericMessage ActingTooDeep(ILogger logger, int limit);
 }

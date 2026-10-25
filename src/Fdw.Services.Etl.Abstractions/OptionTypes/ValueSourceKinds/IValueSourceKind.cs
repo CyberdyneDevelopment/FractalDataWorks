@@ -10,9 +10,6 @@ public interface IValueSourceKind : ITypeOption<int, IValueSourceKind>
     /// <summary>Gets whether the kind maps a differently named source column onto the target column, which only a load that takes a source data set can do.</summary>
     bool MapsSourceColumn { get; }
 
-    /// <summary>Gets whether the kind can supply the parameter of an executable container, where there is no row and no sequence to draw from.</summary>
-    bool AllowedAsContainerParameter { get; }
-
     /// <summary>Gets whether the kind names the source field it reads.</summary>
     bool RequiresSourceField { get; }
 

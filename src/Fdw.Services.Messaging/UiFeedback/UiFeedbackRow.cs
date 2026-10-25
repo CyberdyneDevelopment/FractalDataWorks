@@ -48,9 +48,6 @@ public sealed class UiFeedbackRow
     /// <summary>Gets or sets the theme the screen was in, or <see langword="null"/> when none was stated.</summary>
     public string? Theme { get; set; }
 
-    /// <summary>Gets or sets the console's description of the nearest element, as the JSON text it sent; nothing here reads it.</summary>
-    public string? Anchor { get; set; }
-
     /// <summary>Gets or sets the note.</summary>
     public string Body { get; set; } = string.Empty;
 

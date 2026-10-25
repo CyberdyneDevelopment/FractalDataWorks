@@ -42,7 +42,7 @@ public static class ValueBindings
     }
 
     /// <summary>
-    /// Gives each binding the value it puts in the rows of a load that takes rows (BulkInsert, Update). A kind that needs
+    /// Gives each binding the value it puts in the rows of a load that takes rows (Insert, Update). A kind that needs
     /// the database to number or stamp the rows set-based cannot be given to rows, and is refused.
     /// </summary>
     /// <param name="bindings">The bindings.</param>

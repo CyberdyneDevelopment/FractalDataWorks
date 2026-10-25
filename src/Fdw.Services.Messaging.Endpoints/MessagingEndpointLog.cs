@@ -104,12 +104,6 @@ public static partial class MessagingEndpointLog
     public static partial IGenericMessage MessageDismissed(ILogger logger, string messageId);
 
     /// <summary>
-    /// Logged at Error level when dismissing a message fails.
-    /// </summary>
-    [MessageLogging(EventId = 71004, Level = LogLevel.Error, Message = "Failed to dismiss message '{messageId}': {reason}")]
-    public static partial IGenericMessage DismissFailed(ILogger logger, string messageId, string reason);
-
-    /// <summary>
     /// Logged at Trace level when archiving a message.
     /// </summary>
     [MessageLogging(EventId = 11010, Level = LogLevel.Trace, Message = "Archiving message '{messageId}'")]
@@ -287,4 +281,37 @@ public static partial class MessagingEndpointLog
     [MessageLogging(EventId = 21000, Level = LogLevel.Warning, Message = "Refused UI comment list sorted by '{sort}'; only 'urgency' is a sort",
         ClientMessage = "sort '{sort}' is not a sort; send urgency, or leave it out for newest first")]
     public static partial IGenericMessage UiFeedbackSortUnknown(ILogger logger, string sort);
+
+    /// <summary>
+    /// Logged at Trace level when an alert endpoint is entered.
+    /// </summary>
+    [MessageLogging(EventId = 11044, Level = LogLevel.Trace, Message = "Alert endpoint '{operation}'")]
+    public static partial IGenericMessage TraceAlertEndpoint(ILogger logger, string operation);
+
+    /// <summary>
+    /// Logged at Warning level when an alert is named in a way that is not <c>kind:id</c> with a GUID id. A validation refusal (category 2), answered with a client
+    /// error that says how to write it.
+    /// </summary>
+    [MessageLogging(EventId = 21020, Level = LogLevel.Warning, Message = "Refused alert '{alert}'; an alert is written kind:id with a GUID id",
+        ClientMessage = "alert '{alert}' is not written kind:id with a GUID id")]
+    public static partial IGenericMessage AlertWrittenWrong(ILogger logger, string alert);
+
+    /// <summary>
+    /// Logged at Error level when a list asked to answer its rows' alert fields is not a list with an items array. An internal failure (category 9).
+    /// </summary>
+    [MessageLogging(EventId = 91020, Level = LogLevel.Error, Message = "A list asked for the alert fields of kind {kind} is not an object with an items array")]
+    public static partial IGenericMessage AlertListNotAList(ILogger logger, string kind);
+
+    /// <summary>
+    /// Logged at Error level when a row of a list asked to answer its alert fields has no identifier. An internal failure (category 9).
+    /// </summary>
+    [MessageLogging(EventId = 91021, Level = LogLevel.Error, Message = "A row of a list asked for the alert fields of kind {kind} has no GUID identifier")]
+    public static partial IGenericMessage AlertListRowWithoutId(ILogger logger, string kind);
+
+    /// <summary>
+    /// Logged at Warning level when a question about alerts names none. A validation refusal (category 2).
+    /// </summary>
+    [MessageLogging(EventId = 21021, Level = LogLevel.Warning, Message = "Refused a question about alerts that names none",
+        ClientMessage = "alert must name at least one alert, written kind:id")]
+    public static partial IGenericMessage AlertNamesNone(ILogger logger);
 }

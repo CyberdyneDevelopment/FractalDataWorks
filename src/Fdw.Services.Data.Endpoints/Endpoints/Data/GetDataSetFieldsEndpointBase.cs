@@ -20,11 +20,13 @@ namespace Fdw.Services.Data.Endpoints;
 public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSetNameRequest, List<DataSetFieldPayload>>
 {
     private readonly DataSetConfigurationProvider _dataSetProvider;
+    private readonly IDataSetResolver _resolver;
 
     /// <inheritdoc />
-    protected GetDataSetFieldsEndpointBase(ILogger<GetDataSetFieldsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider) : base(logger)
+    protected GetDataSetFieldsEndpointBase(ILogger<GetDataSetFieldsEndpointBase> logger, DataSetConfigurationProvider dataSetProvider, IDataSetResolver resolver) : base(logger)
     {
         _dataSetProvider = dataSetProvider;
+        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
     }
 
     /// <summary>Gets the resource name used for route and policy generation.</summary>
@@ -57,21 +59,22 @@ public abstract class GetDataSetFieldsEndpointBase : CrudGetEndpointBase<DataSet
     {
         DataSetEndpointLog.LoadingFields(Logger, dataSetName);
 
-        var result = await _dataSetProvider.Get(dataSetName, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
-        if (result.IsFailure) return result.ToNewResult<List<DataSetFieldPayload>?>();
+        // A variation of a data set has the fields of the data set it varies (FDW-2390).
+        var resolved = await _resolver.Resolve(dataSetName, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        if (resolved.IsFailure) return resolved.ToNewResult<List<DataSetFieldPayload>?>();
 
-        if (result.Value is null)
+        if (resolved.Value is not { } named)
         {
             DataSetEndpointLog.DataSetNotFound(Logger, dataSetName);
             return GenericResult<List<DataSetFieldPayload>?>.Success((List<DataSetFieldPayload>?)null);
         }
 
-        var read = await _dataSetProvider.Get<DataSetFieldConfiguration>(dataSetName, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        var read = await _dataSetProvider.Get<DataSetFieldConfiguration>(named.DataSet.Name, ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
         if (read.IsFailure) return read.ToNewResult<List<DataSetFieldPayload>?>();
 
         var fields = read.Value!
             .OrderBy(f => f.Ordinal)
-            .Select(f => DataSetQueryHelper.MapToFieldDto(result.Value.Id, f))
+            .Select(f => DataSetQueryHelper.MapToFieldDto(named.DataSet.Id, f))
             .ToList();
 
         return GenericResult<List<DataSetFieldPayload>?>.Success((List<DataSetFieldPayload>?)fields);

@@ -34,14 +34,20 @@ namespace Fdw.Services.Data.Endpoints;
 public sealed class DataSetQuery
 {
     private readonly IDataGatewayProvider _dataGateways;
+    private readonly IFilterCalculations? _calculations;
     private readonly ILogger _logger;
 
     /// <summary>Initializes a new instance of the <see cref="DataSetQuery"/> class.</summary>
     /// <param name="dataGateways">Supplies the gateway the read is dispatched through.</param>
     /// <param name="logger">The logger refusals are written to.</param>
-    public DataSetQuery(IDataGatewayProvider dataGateways, ILogger? logger = null)
+    /// <param name="calculations">
+    /// Evaluates the calculations a filter names for its values; null for a host that has none, whose queries are refused when a
+    /// filter names one.
+    /// </param>
+    public DataSetQuery(IDataGatewayProvider dataGateways, ILogger? logger = null, IFilterCalculations? calculations = null)
     {
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
+        _calculations = calculations;
         _logger = logger ?? NullLogger.Instance;
     }
 
@@ -88,7 +94,13 @@ public sealed class DataSetQuery
         var scoped = await scope(cancellationToken).ConfigureAwait(false);
         if (scoped.IsFailure) return scoped.ToNewResult<DataQueryPage>();
 
-        request.Filter = DataQueryScope.Combine(scoped.Value, request.Filter);
+        // Why after the merge: a view's stored filter may name a calculation too, and the whole filter is resolved once, so the
+        // query that runs holds only literals. The tree the view stored is not changed; it keeps the calculation's name and inputs.
+        var resolved = await translator.Value!.ResolveCalculations(
+            DataQueryScope.Combine(scoped.Value, request.Filter), _calculations, cancellationToken).ConfigureAwait(false);
+        if (resolved.IsFailure) return resolved.ToNewResult<DataQueryPage>();
+
+        request.Filter = resolved.Value;
 
         var query = Command(translator.Value!, request, take, rowCap);
         if (query.IsFailure) return query.ToNewResult<DataQueryPage>();

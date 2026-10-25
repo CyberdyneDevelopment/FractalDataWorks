@@ -1,3 +1,4 @@
+using System;
 using Fdw.Data.Abstractions;
 
 namespace Fdw.Services.Workspaces.Endpoints;
@@ -45,4 +46,7 @@ public class CreateWorkspaceRequest
 
     /// <summary>Gets or sets the project-wide seed for generated stand-in values.</summary>
     public string? StandInSeed { get; set; }
+
+    /// <summary>Gets or sets the organization of the caller's tenant to put the workspace in; null for a workspace directly under its tenant.</summary>
+    public Guid? OrganizationId { get; set; }
 }

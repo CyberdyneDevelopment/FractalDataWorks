@@ -14,6 +14,14 @@ namespace Fdw.Services.Authentication.Sessions;
 /// </remarks>
 internal static class ActingReturn
 {
+    /// <summary>The most sessions a chain of acting may hold, the person's own session included.</summary>
+    internal const int MaxDepth = 32;
+
+    /// <summary>Whether a chain of this length may be extended by one more acting session.</summary>
+    /// <param name="chainLength">The sessions in the chain now, the one acting from included.</param>
+    /// <returns><see langword="true"/> when the extended chain stays within <see cref="MaxDepth"/>.</returns>
+    internal static bool MayDeepen(int chainLength) => chainLength < MaxDepth;
+
     /// <summary>What returning to a step does.</summary>
     /// <param name="Revoke">The sessions to end, top first.</param>
     /// <param name="Wake">The session to wake.</param>

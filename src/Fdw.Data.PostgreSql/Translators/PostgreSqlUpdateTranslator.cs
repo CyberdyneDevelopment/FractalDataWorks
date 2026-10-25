@@ -15,6 +15,7 @@ using Fdw.Services.Connections.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.PostgreSql;
 
@@ -87,6 +88,8 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
+            RefuseSoftDeleteOnUpdate(command, container);
+
             var dataObj = GetCommandData(command);
             if (dataObj == null)
             {
@@ -96,7 +99,7 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
                         ResultDetails.Create("CommandType", "UpdateCommand")));
             }
 
-            var npgsqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter);
+            var npgsqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter, ReturnedColumnsOf(command, container));
 
             return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
         }
@@ -124,7 +127,8 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
         IStorageContainer container,
         IDatabasePath dbPath,
         object data,
-        IFilterExpression? filter)
+        IFilterExpression? filter,
+        IReadOnlyList<string> returned)
     {
         var dialect = dbPath.Dialect;
 
@@ -198,6 +202,9 @@ public sealed class PostgreSqlUpdateTranslator : PostgreSqlDataCommandTranslator
                 command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {p}where_pk";
             }
         }
+
+        if (returned.Count > 0)
+            command.CommandText += $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
         return command;
     }

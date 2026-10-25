@@ -96,7 +96,7 @@ public sealed class PostgreSqlDeleteTranslatorTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataGateway")]
-    public async Task TranslateDeleteReturnsFailureWhenFilterIsNull()
+    public async Task TranslateDeleteWithNoFilterDeletesEveryRow()
     {
         var container = CreateContainer();
 
@@ -105,13 +105,15 @@ public sealed class PostgreSqlDeleteTranslatorTests
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeFalse();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldBe("DELETE FROM \"public\".\"customers\"");
+        result.Value.Parameters.Count.ShouldBe(0);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataGateway")]
-    public async Task TranslateDeleteReturnsFailureWhenFilterRootIsNull()
+    public async Task TranslateDeleteWithAnEmptyFilterDeletesEveryRow()
     {
         var container = CreateContainer();
         var filter = new FilterExpression { Root = null };
@@ -121,7 +123,8 @@ public sealed class PostgreSqlDeleteTranslatorTests
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeFalse();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldBe("DELETE FROM \"public\".\"customers\"");
     }
 
     [Fact]

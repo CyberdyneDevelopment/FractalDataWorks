@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Claims.Abstractions;
 using Fdw.Operations.Abstractions.Audit;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
@@ -18,22 +17,18 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 public abstract class LiftLegalHoldEndpointBase : Endpoint<LiftLegalHoldRequest, LegalHoldResponse>
 {
     private readonly ILegalHolds _holds;
-    private readonly IOrganizationProvider _organizations;
     private readonly IAdministrativeAudit _audit;
-    private readonly ISystemRoleConfiguration _systemRoles;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="LiftLegalHoldEndpointBase"/> class.</summary>
     protected LiftLegalHoldEndpointBase(
-        ILogger logger, ILegalHolds holds, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration systemRoles)
+        ILogger logger, ILegalHolds holds, IAdministrativeAudit audit)
     {
         EndpointLogger = logger;
         _holds = holds;
-        _organizations = organizations;
         _audit = audit;
-        _systemRoles = systemRoles;
     }
 
     /// <inheritdoc />
@@ -49,13 +44,6 @@ public abstract class LiftLegalHoldEndpointBase : Endpoint<LiftLegalHoldRequest,
     /// <inheritdoc />
     public override async Task HandleAsync(LiftLegalHoldRequest req, CancellationToken ct)
     {
-        var access = await RetentionAccess.TenantOf(_organizations, _systemRoles, HttpContext, req.OrganizationId, EndpointLogger, ct).ConfigureAwait(false);
-        if (access.Refusal is { } refusal)
-        {
-            await Send.ResultAsync(refusal).ConfigureAwait(false);
-            return;
-        }
-
         if (User.FindFirst(ClaimDefinitions.sub.Name)?.Value is not { } caller)
         {
             RetentionEndpointLog.CallerNotIdentified(EndpointLogger);
@@ -63,7 +51,7 @@ public abstract class LiftLegalHoldEndpointBase : Endpoint<LiftLegalHoldRequest,
             return;
         }
 
-        var lifted = await _holds.Lift(access.TenantId, req.OrganizationId, req.DocumentId, caller, ct).ConfigureAwait(false);
+        var lifted = await _holds.Lift(req.OrganizationId, req.DocumentId, caller, ct).ConfigureAwait(false);
         if (lifted.IsFailure || lifted.Value is null)
         {
             await Send.ResultAsync(TenantProblem.Of(lifted, HttpContext)).ConfigureAwait(false);

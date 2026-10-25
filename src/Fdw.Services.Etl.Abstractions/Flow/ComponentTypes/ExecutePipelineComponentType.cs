@@ -14,7 +14,7 @@ public sealed class ExecutePipelineComponentType : ComponentTypeBase
         "Control flow",
         false,
         [
-            new StageMember("pipeline", "Text", true, "The pipeline to start."),
+            new StageMember("pipeline", "Text", true, "The pipeline to start.", SummarisesComponent: true),
             new StageMember("parameters", "Parameters", false, "The values of its parameters, as text; a value may name a variable in double braces."),
             new StageMember("awaitCompletion", "Boolean", true, "Whether the component waits for the started pipeline to end."),
             new StageMember("resultVariable", "Variable", false, "A declared variable set to whether the started pipeline succeeded; needs awaitCompletion."),

@@ -20,6 +20,7 @@ public sealed class GrantRuleTests
 {
     private static readonly Guid Tenant = new("11111111-0000-0000-0000-000000000001");
     private static readonly Guid OtherTenant = new("11111111-0000-0000-0000-000000000002");
+    private static readonly Guid Item = new("0f0f0f0f-0000-0000-0000-000000000001");
 
     [Fact]
     [Trait("Priority", "P0")]
@@ -67,6 +68,44 @@ public sealed class GrantRuleTests
         var rule = Build(Caller([held, "pipelines:delegate"]), ["pipelines:read"]);
 
         var result = await rule.CanGive(["Viewer"], Tenant, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Theory]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    [InlineData("datasets")]
+    [InlineData("workspaces")]
+    public async Task CanGive_lets_the_resource_wide_rights_cover_a_per_resource_permission(string resource)
+    {
+        var rule = Build(Caller([$"{resource}:read", $"{resource}:delegate"]), [$"{resource}/{Item:D}:read"]);
+
+        var result = await rule.CanGive(["Reader"], Tenant, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task CanGive_does_not_let_one_item_right_cover_the_whole_resource()
+    {
+        var rule = Build(Caller([$"datasets/{Item:D}:read", $"datasets/{Item:D}:delegate"]), ["datasets:read"]);
+
+        var result = await rule.CanGive(["Reader"], Tenant, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task CanGive_lets_a_held_everything_wildcard_give_a_role_that_carries_it()
+    {
+        var rule = Build(Caller(["*:*"]), ["*:*"]);
+
+        var result = await rule.CanGive(["Admin"], Tenant, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
     }
@@ -292,7 +331,7 @@ public sealed class GrantRuleTests
         return caller.Object;
     }
 
-    private static IAuthenticationContextAccessor Accessor(IAuthenticationContext? caller)
+    private static AuthenticationContextAccessor Accessor(IAuthenticationContext? caller)
         => new AuthenticationContextAccessor { Current = caller };
 
     private static GrantRule Build(IAuthenticationContext? caller, IReadOnlyCollection<string> carried)

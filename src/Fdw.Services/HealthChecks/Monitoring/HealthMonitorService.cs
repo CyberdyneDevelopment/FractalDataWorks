@@ -144,14 +144,15 @@ public sealed class HealthMonitorService : IHealthMonitorService
     {
         HealthMonitorLog.GettingThroughput(_logger, serviceName, window.TotalSeconds);
 
-        if (!_throughputBuffers.TryGetValue(serviceName, out var buffer))
+        var recorded = RecordedItems(_throughputBuffers, serviceName);
+        if (recorded is null)
         {
             var message = HealthMonitorLog.ServiceNotFound(_logger, serviceName);
             return Task.FromResult(GenericResult<ThroughputData>.Failure(message));
         }
 
         var cutoff = DateTimeOffset.UtcNow - window;
-        var dataPoints = buffer.GetItems()
+        var dataPoints = recorded
             .Where(dp => dp.Timestamp >= cutoff)
             .OrderBy(dp => dp.Timestamp)
             .ToList();
@@ -199,14 +200,15 @@ public sealed class HealthMonitorService : IHealthMonitorService
     {
         HealthMonitorLog.GettingHealthHistory(_logger, serviceName, window.TotalSeconds);
 
-        if (!_historyBuffers.TryGetValue(serviceName, out var buffer))
+        var recorded = RecordedItems(_historyBuffers, serviceName);
+        if (recorded is null)
         {
             var message = HealthMonitorLog.ServiceNotFound(_logger, serviceName);
             return Task.FromResult(GenericResult<IReadOnlyList<HealthCheckPoint>>.Failure(message));
         }
 
         var cutoff = DateTimeOffset.UtcNow - window;
-        var history = buffer.GetItems()
+        var history = recorded
             .Where(cp => cp.Timestamp >= cutoff)
             .OrderBy(cp => cp.Timestamp)
             .ToList();
@@ -214,6 +216,19 @@ public sealed class HealthMonitorService : IHealthMonitorService
         HealthMonitorLog.HealthHistoryReturned(_logger, history.Count, serviceName);
 
         return Task.FromResult(GenericResult<IReadOnlyList<HealthCheckPoint>>.Success(history));
+    }
+
+    // Why the registered services decide whether a service exists and the buffers only say what was recorded: a service
+    // records into its buffers when a check runs, so a registered service that has not been checked yet has no buffer
+    // and an empty history is the true answer for it. Only a name no registered service carries is not found (null).
+    private List<T>? RecordedItems<T>(ConcurrentDictionary<string, CircularBuffer<T>> buffers, string serviceName)
+    {
+        if (buffers.TryGetValue(serviceName, out var buffer))
+            return buffer.GetItems();
+
+        return _healthCheckables.Any(c => string.Equals(c.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase))
+            ? new List<T>()
+            : null;
     }
 
     private async Task<ServiceHealthSnapshot> CheckService(IHealthCheckable checkable, CancellationToken cancellationToken)

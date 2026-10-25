@@ -189,16 +189,24 @@ public class QueryCommandBuilder<T>
 
         var completedGroup = _groupStack.Pop();
 
+        // A group that closes holding no conditions is no condition (FDW-2808): adding it would leave an empty group as a node, which
+        // renders as nothing and is still written as a WHERE with nothing after it. A parent that is left empty is dropped the same way
+        // when it closes.
+        if (completedGroup.Nodes.Count == 0)
+        {
+            return this;
+        }
+
         if (_groupStack.Count == 0)
         {
+            // The root is always an AND group and a group that closes at the top level is one of its nodes, so a condition written after an
+            // OR group is ANDed with it, not added to it as one more alternative (FDW-1307).
             if (_rootGroup == null)
             {
-                _rootGroup = completedGroup;
+                _rootGroup = new FilterGroupBuilder { Operator = LogicalOperator.And };
             }
-            else
-            {
-                _rootGroup.Nodes.Add(completedGroup.Build());
-            }
+
+            _rootGroup.Nodes.Add(completedGroup.Build());
         }
         else
         {

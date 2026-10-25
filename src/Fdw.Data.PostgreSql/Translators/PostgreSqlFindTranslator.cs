@@ -134,6 +134,22 @@ public sealed class PostgreSqlFindTranslator : PostgreSqlDataCommandTranslatorBa
         var dialect = dbPath.Dialect;
         var sql = new StringBuilder();
 
+        // Determine which columns to search
+        var searchColumns = ResolveSearchColumns(container, fieldNames);
+        foreach (var column in searchColumns)
+        {
+            if (!IsValidColumnName(column))
+            {
+                throw new ArgumentException(
+                    $"Invalid column name '{column}'. Only alphanumeric characters and underscores allowed.",
+                    nameof(fieldNames));
+            }
+        }
+
+        // PostgreSQL: ILIKE for case-insensitive, LIKE for case-sensitive
+        var likeOperator = caseSensitive ? "LIKE" : "ILIKE";
+        string Matches(string column) => $"{dialect.QuoteIdentifier(column)} {likeOperator} {dialect.ParameterPrefix}searchTerm";
+
         sql.Append("SELECT");
 
         // A search returns the detail columns: each field's datum type decides, and a search includes no
@@ -149,11 +165,16 @@ public sealed class PostgreSqlFindTranslator : PostgreSqlDataCommandTranslatorBa
             sql.Append(" *");
         }
 
+        // Why a column per searched field: which fields held the term is measured by the same predicate that chose the row,
+        // so the answer cannot disagree with the WHERE clause (FDW-1361).
+        foreach (var column in searchColumns)
+        {
+            sql.Append(CultureInfo.InvariantCulture,
+                $", CASE WHEN {Matches(column)} THEN 1 ELSE 0 END AS {dialect.QuoteIdentifier(FindMatchColumn.NameFor(column))}");
+        }
+
         // FROM clause
         sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
-
-        // Determine which columns to search
-        var searchColumns = ResolveSearchColumns(container, fieldNames);
 
         if (searchColumns.Count == 0)
         {
@@ -164,20 +185,10 @@ public sealed class PostgreSqlFindTranslator : PostgreSqlDataCommandTranslatorBa
         // Build WHERE clause with LIKE/ILIKE conditions
         var command = CreateCommand(sql.ToString());
 
-        // PostgreSQL: ILIKE for case-insensitive, LIKE for case-sensitive
-        var likeOperator = caseSensitive ? "LIKE" : "ILIKE";
-
         var likeConditions = new List<string>();
         foreach (var column in searchColumns)
         {
-            if (!IsValidColumnName(column))
-            {
-                throw new ArgumentException(
-                    $"Invalid column name '{column}'. Only alphanumeric characters and underscores allowed.",
-                    nameof(fieldNames));
-            }
-
-            likeConditions.Add($"{dialect.QuoteIdentifier(column)} {likeOperator} {dialect.ParameterPrefix}searchTerm");
+            likeConditions.Add(Matches(column));
         }
 
         command.CommandText += $" WHERE {string.Join(" OR ", likeConditions)}";

@@ -29,6 +29,11 @@ namespace Fdw.Services.Etl.Abstractions;
 /// Whether each field mapping of the setting may also state a type to convert to, a default, a required flag and a chain of named Transformations
 /// (FDW-2000): the mappings on a component input. A setting of kind <c>FieldMaps</c> that does not have it refuses those parts.
 /// </param>
+/// <param name="SummarisesComponent">
+/// Whether the setting is one a client shows to say what an action does (RUI-547): what a variable is set to, which pipeline is run, the first
+/// line of a script. A client shows the stated settings that have it, in the order the kind lists them, so a new action kind gets its summary by
+/// stating it here and not by an edit to the client.
+/// </param>
 public sealed record StageMember(
     string Name, string Kind, bool IsRequired, string HelpText, bool ShapesGraph = false, bool TakesParameterText = false, bool TakesPairList = false,
-    bool ReadsWhenStepRuns = false, bool TakesConversions = false);
+    bool ReadsWhenStepRuns = false, bool TakesConversions = false, bool SummarisesComponent = false);

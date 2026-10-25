@@ -58,10 +58,11 @@ public abstract class DataQueryEndpointBase<TRequest, TResponse> : Endpoint<TReq
     /// <summary>Initializes a new instance of the <see cref="DataQueryEndpointBase{TRequest, TResponse}"/> class.</summary>
     /// <param name="logger">The logger.</param>
     /// <param name="dataGateways">Supplies the gateway the query is dispatched through.</param>
-    protected DataQueryEndpointBase(ILogger logger, IDataGatewayProvider dataGateways)
+    /// <param name="calculations">Evaluates the calculations a filter names for its values; null when the host has none.</param>
+    protected DataQueryEndpointBase(ILogger logger, IDataGatewayProvider dataGateways, IFilterCalculations? calculations = null)
     {
         Logger = logger ?? NullLogger.Instance;
-        _query = new DataSetQuery(dataGateways ?? throw new ArgumentNullException(nameof(dataGateways)), Logger);
+        _query = new DataSetQuery(dataGateways ?? throw new ArgumentNullException(nameof(dataGateways)), Logger, calculations);
     }
 
     /// <summary>Gets the logger.</summary>

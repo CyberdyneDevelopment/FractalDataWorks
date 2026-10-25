@@ -585,7 +585,7 @@ public sealed class PocoMapperGenerator : IIncrementalGenerator
     /// byte[] which is one binary value that maps to SQL varbinary.
     /// Why: Collection types (List&lt;string&gt;, IList&lt;T&gt;, etc.) cannot be passed as SQL parameters
     /// and have no standard SQL type mapping. They are excluded from generated scalar mappers so that
-    /// MsSqlConfigurationSaveTranslator does not attempt to bind them as command parameters.
+    /// ConfigurationSaveCommand does not attempt to bind them as command parameters.
     /// </summary>
     private static bool IsCollectionType(ITypeSymbol type)
     {

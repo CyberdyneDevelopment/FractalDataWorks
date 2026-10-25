@@ -1,7 +1,9 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Services.Messaging.Hubs;
+using Fdw.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -14,7 +16,13 @@ namespace Fdw.Services.Messaging.Tests;
 /// </summary>
 public sealed class MessageHubTests
 {
-    private static (MessageHub Hub, Mock<IGroupManager> Groups) CreateHub(string connectionId = "conn-1")
+    private const string Caller = "8a1f0c1e-0000-0000-0000-000000000001";
+    private const string Other = "8a1f0c1e-0000-0000-0000-000000000002";
+
+    private static ClaimsPrincipal SignedInAs(string userId)
+        => new(new ClaimsIdentity([new Claim("sub", userId)], "test"));
+
+    private static (MessageHub Hub, Mock<IGroupManager> Groups) CreateHub(string connectionId = "conn-1", ClaimsPrincipal? user = null)
     {
         var groups = new Mock<IGroupManager>();
         groups
@@ -26,6 +34,7 @@ public sealed class MessageHubTests
 
         var context = new Mock<HubCallerContext>();
         context.SetupGet(c => c.ConnectionId).Returns(connectionId);
+        context.SetupGet(c => c.User).Returns(user);
 
         var hub = new MessageHub(NullLogger<MessageHub>.Instance)
         {
@@ -50,28 +59,74 @@ public sealed class MessageHubTests
     }
 
     [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Ui")]
-    public async Task JoinUserGroupAddsConnectionToGroupNamedByUserId()
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task JoinUserGroupAddsTheCallerToItsOwnUserScope()
+    {
+        var (hub, groups) = CreateHub("conn-1", SignedInAs(Caller));
+
+        await hub.JoinUserGroup(Caller);
+
+        groups.Verify(g => g.AddToGroupAsync("conn-1", HubScopes.User(Caller), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task JoinUserGroupRefusesAnotherPersonsIdAndJoinsNothing()
+    {
+        var (hub, groups) = CreateHub("conn-1", SignedInAs(Caller));
+
+        await hub.JoinUserGroup(Other);
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task JoinUserGroupRefusesAnIdThatIsNotAGuidUnlessItIsTheCallers()
+    {
+        var (hub, groups) = CreateHub("conn-1", SignedInAs(Caller));
+
+        await hub.JoinUserGroup("user-42");
+
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task JoinUserGroupRefusesAConnectionThatIsNotSignedInAsAnyone()
     {
         var (hub, groups) = CreateHub("conn-1");
-        var userId = "user-42";
 
-        await hub.JoinUserGroup(userId);
+        await hub.JoinUserGroup(Caller);
 
-        groups.Verify(g => g.AddToGroupAsync("conn-1", userId, It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task JoinUserGroupWritesAGuidInTheCanonicalFormMessagesArePublishedTo()
+    {
+        var (hub, groups) = CreateHub("conn-1", SignedInAs(Caller.ToUpperInvariant()));
+
+        await hub.JoinUserGroup(Caller.ToUpperInvariant());
+
+        groups.Verify(g => g.AddToGroupAsync("conn-1", HubScopes.User(Caller), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Ui")]
-    public async Task LeaveUserGroupRemovesConnectionFromGroupNamedByUserId()
+    public async Task LeaveUserGroupRemovesConnectionFromItsUserScope()
     {
-        var (hub, groups) = CreateHub("conn-1");
-        var userId = "user-42";
+        var (hub, groups) = CreateHub("conn-1", SignedInAs(Caller));
 
-        await hub.LeaveUserGroup(userId);
+        await hub.LeaveUserGroup(Caller);
 
-        groups.Verify(g => g.RemoveFromGroupAsync("conn-1", userId, It.IsAny<CancellationToken>()), Times.Once);
+        groups.Verify(g => g.RemoveFromGroupAsync("conn-1", HubScopes.User(Caller), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

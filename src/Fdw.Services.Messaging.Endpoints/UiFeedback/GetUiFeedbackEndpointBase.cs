@@ -52,7 +52,7 @@ public abstract class GetUiFeedbackEndpointBase : Endpoint<UiFeedbackIdRequest, 
         var read = await Feedback.Get(req.Id, ct).ConfigureAwait(false);
         if (!read.IsSuccess || read.Value is not { } comment)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(read, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(read, HttpContext)).ConfigureAwait(false);
             return;
         }
 

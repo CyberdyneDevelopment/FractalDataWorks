@@ -22,9 +22,7 @@ namespace Fdw.Services.Etl.Pipelines.Loads;
 /// </para>
 /// <para>
 /// Every option is <see langword="null"/> until someone states it; nothing here has a default, and the engine
-/// refuses a command whose required option is <see langword="null"/>. An Execute step names the executable container
-/// of its destination data store it runs (<see cref="DestinationDataStoreName"/>, <see cref="DestinationPathName"/> and <see cref="DestinationContainerName"/>);
-/// what that means is the destination connection type's alone.
+/// refuses a command whose required option is <see langword="null"/>.
 /// </para>
 /// </remarks>
 [ExcludeFromCodeCoverage]
@@ -70,29 +68,14 @@ public sealed class PipelineLoadStepConfiguration
     public string? DestinationDataSet { get; set; }
 
     /// <summary>
-    /// Gets or sets the data set an InsertFromQuery step reads from (same connection as the destination), or <see langword="null"/>.
+    /// Gets or sets the data set a step reads from (same connection as the destination), or <see langword="null"/>. No load step kind reads from a source data set.
     /// </summary>
     public string? SourceDataSet { get; set; }
 
     /// <summary>
-    /// Gets or sets the filter expression of an InsertFromQuery step, or <see langword="null"/>.
+    /// Gets or sets the filter expression a step reads its source rows with, or <see langword="null"/>. No load step kind reads from a source data set.
     /// </summary>
     public string? FilterExpression { get; set; }
-
-    /// <summary>
-    /// Gets or sets the data store, one of the destination data set's sources' stores, whose executable container an Execute step runs. Stated together with <see cref="DestinationPathName"/> and <see cref="DestinationContainerName"/>.
-    /// </summary>
-    public string? DestinationDataStoreName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the path of the executable container an Execute step runs, in the data store. Stated together with <see cref="DestinationDataStoreName"/> and <see cref="DestinationContainerName"/>.
-    /// </summary>
-    public string? DestinationPathName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the executable container an Execute step runs, in the data store. Stated together with <see cref="DestinationDataStoreName"/> and <see cref="DestinationPathName"/>.
-    /// </summary>
-    public string? DestinationContainerName { get; set; }
 
     /// <summary>
     /// Gets or sets the column that holds when a row version starts to be current (versioned upsert). Stated together with <see cref="EffectiveToColumn"/>.

@@ -16,6 +16,12 @@ public interface ICompiledCalculation
     /// <summary>Gets the names of the results the run writes out, in the order they are written to the results array.</summary>
     IReadOnlyList<string> EmittedNames { get; }
 
+    /// <summary>
+    /// Gets the kind of value each emitted result carries, in the same order as <see cref="EmittedNames"/>. A number is in the results
+    /// array as it is; another kind says how its value is carried and reads it back.
+    /// </summary>
+    IReadOnlyList<ICalculationValueKind> EmittedKinds { get; }
+
     /// <summary>Evaluates one record.</summary>
     /// <param name="record">The record's fields.</param>
     /// <param name="results">The array the emitted results are written to; it must hold at least <see cref="EmittedNames"/> entries.</param>

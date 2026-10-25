@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Logging;
 using Microsoft.Extensions.Logging;
@@ -16,37 +17,52 @@ namespace Fdw.Services.Multitenancy;
 /// <remarks>
 /// The keeper does not own any document: it asks <see cref="IRetainedDocuments"/> for them and for each ending. A document under a legal
 /// hold is never ended, however long past its deadline; a document without the date its policy counts from has no deadline and is left.
+/// Ending documents is a change, so a run needs <c>retention:write</c> for the organization (<see cref="RetentionScope"/>); it reads the
+/// policies and holds through their services, which also need <c>retention:read</c> and <c>legal-holds:read</c>. A run by the system context needs neither.
 /// </remarks>
 public sealed class RetentionKeeper : IRetentionKeeper
 {
     private readonly IRetentionPolicies _policies;
     private readonly ILegalHolds _holds;
     private readonly IRetainedDocuments _documents;
+    private readonly RetentionScope _scope;
     private readonly ILogger<RetentionKeeper> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RetentionKeeper"/> class.</summary>
     /// <param name="policies">The retention policies of organizations.</param>
     /// <param name="holds">The legal holds of documents.</param>
     /// <param name="documents">The application's documents.</param>
+    /// <param name="organizations">Reads an organization, which names its tenant.</param>
+    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
     /// <param name="logger">The logger.</param>
-    public RetentionKeeper(IRetentionPolicies policies, ILegalHolds holds, IRetainedDocuments documents, ILogger<RetentionKeeper>? logger)
+    public RetentionKeeper(
+        IRetentionPolicies policies, ILegalHolds holds, IRetainedDocuments documents, IOrganizationProvider organizations, IScopeAuthority authority,
+        ILogger<RetentionKeeper>? logger)
     {
         _policies = policies ?? throw new ArgumentNullException(nameof(policies));
         _holds = holds ?? throw new ArgumentNullException(nameof(holds));
         _documents = documents ?? throw new ArgumentNullException(nameof(documents));
         _logger = logger ?? NullLogger<RetentionKeeper>.Instance;
+        _scope = new RetentionScope(organizations, authority, _logger);
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<RetentionRunReport>> Run(Guid tenantId, Guid organizationId, DateTimeOffset now, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<RetentionRunReport>> Run(Guid organizationId, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
-        var policies = await _policies.List(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(RetentionScope.PolicyWriteRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<RetentionRunReport>();
+        }
+
+        var tenantId = tenant.Value;
+        var policies = await _policies.List(organizationId, cancellationToken).ConfigureAwait(false);
         if (policies.IsFailure || policies.Value is not { } found)
         {
             return policies.ToNewResult<RetentionRunReport>();
         }
 
-        var held = await _holds.HeldDocuments(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var held = await _holds.HeldDocuments(organizationId, cancellationToken).ConfigureAwait(false);
         if (held.IsFailure || held.Value is not { } heldDocuments)
         {
             return held.ToNewResult<RetentionRunReport>();

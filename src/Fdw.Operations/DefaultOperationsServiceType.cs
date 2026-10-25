@@ -75,7 +75,7 @@ public sealed class DefaultOperationsServiceType : OperationsServiceTypeBase
 
             builder.Services.TryAddScoped<IAdministrativeAudit>(sp => new AdministrativeAuditService(
                 sp.GetRequiredService<IDataGatewayProvider>(), sp.GetRequiredService<ILoggerFactory>(),
-                sp.GetRequiredService<IAuthenticationContextAccessor>(), OperationsServiceTypes.OperationalConnection));
+                sp.GetRequiredService<IAuthenticationContextAccessor>(), sp.GetRequiredService<IUserNames>(), OperationsServiceTypes.OperationalConnection));
 
             builder.Services.TryAddScoped<IEscalationService>(sp =>
             {

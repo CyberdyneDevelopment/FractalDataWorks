@@ -2,7 +2,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
@@ -11,24 +10,22 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 
 /// <summary>
 /// Generic base endpoint for switching a feature on or off for a tenant: <c>PUT /tenants/{TenantId}/features/{Feature}</c> (FDW-1580).
-/// Only a platform administrator may; the switch is recorded in the administrative audit at the platform level.
+/// Who may is decided by the feature service (FDW-2478); the switch is recorded in the administrative audit at the platform level.
 /// </summary>
 public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRequest, FeatureResponse>
 {
     private readonly IFeatureEnablement _features;
     private readonly IAdministrativeAudit _audit;
-    private readonly ISystemRoleConfiguration _systemRoles;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="SetTenantFeatureEndpointBase"/> class.</summary>
-    protected SetTenantFeatureEndpointBase(ILogger logger, IFeatureEnablement features, IAdministrativeAudit audit, ISystemRoleConfiguration systemRoles)
+    protected SetTenantFeatureEndpointBase(ILogger logger, IFeatureEnablement features, IAdministrativeAudit audit)
     {
         EndpointLogger = logger;
         _features = features;
         _audit = audit;
-        _systemRoles = systemRoles;
     }
 
     /// <inheritdoc />
@@ -44,13 +41,6 @@ public abstract class SetTenantFeatureEndpointBase : Endpoint<SetTenantFeatureRe
     /// <inheritdoc />
     public override async Task HandleAsync(SetTenantFeatureRequest req, CancellationToken ct)
     {
-        if (!_systemRoles.IsPlatformAdmin(User))
-        {
-            FeatureEndpointLog.PlatformAdministratorRequired(EndpointLogger, req.Feature, req.TenantId);
-            await Send.ForbiddenAsync(ct).ConfigureAwait(false);
-            return;
-        }
-
         var set = await _features.SetForTenant(req.TenantId, req.Feature, req.Enabled, ct).ConfigureAwait(false);
         if (set.IsFailure || set.Value is null)
         {

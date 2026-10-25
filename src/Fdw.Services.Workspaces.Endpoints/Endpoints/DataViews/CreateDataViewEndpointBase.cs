@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Workspaces.Charts;
 using Fdw.Services.Workspaces.Results;
@@ -33,14 +34,22 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
     private readonly IDataSetVariationConfigurationProvider _variations;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IAuthenticationContextAccessor _authContext;
+    private readonly IFilterCalculations? _calculations;
 
-    /// <inheritdoc />
+    /// <summary>Initializes a new instance of the <see cref="CreateDataViewEndpointBase"/> class.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="variations">Finds and saves the view.</param>
+    /// <param name="dataSets">Resolves the data set the view reads.</param>
+    /// <param name="authContext">Identifies the caller, who owns the view.</param>
+    /// <param name="calculations">Evaluates the calculations the view's filter names; null when the host has none.</param>
     protected CreateDataViewEndpointBase(
         ILogger<CreateDataViewEndpointBase> logger,
         IDataSetVariationConfigurationProvider variations,
         IDataSetConfigurationProvider dataSets,
-        IAuthenticationContextAccessor authContext) : base(logger)
+        IAuthenticationContextAccessor authContext,
+        IFilterCalculations? calculations = null) : base(logger)
     {
+        _calculations = calculations;
         _variations = variations ?? throw new ArgumentNullException(nameof(variations));
         _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
         _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
@@ -66,13 +75,20 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
     /// The name is letters, digits and dashes, which keeps it from ever meeting the <c>workspace/name</c> form a variation a
     /// workspace owns is keyed by.
     /// </remarks>
-    protected override Task<IGenericResult> ValidateCreate(CreateDataViewRequest request, CancellationToken ct)
+    protected override async Task<IGenericResult> ValidateCreate(CreateDataViewRequest request, CancellationToken ct)
     {
-        var matches = Regex.IsMatch(request.Name, NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
-        return Task.FromResult<IGenericResult>(matches
+        var refusals = new DataViewRefusals(request.Name, Logger, "DataViewSpecInvalid");
+        if (!Regex.IsMatch(request.Name, NamePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)))
+            return refusals.Invalid<bool>("the name is 2 to 63 letters, digits and dashes, starting with a letter or digit");
+
+        // A name that is a data set and a view cannot be resolved to one thing (FDW-2390), so a view never takes a data set's name.
+        var taken = await _dataSets.Get(request.Name, Fdw.Services.Abstractions.ConfigurationLevels.RecordOnly, ct).ConfigureAwait(false);
+        if (taken.IsFailure)
+            return taken;
+
+        return taken.Value is null
             ? GenericResult.Success()
-            : new DataViewRefusals(request.Name, Logger, "DataViewSpecInvalid")
-                .Invalid<bool>("the name is 2 to 63 letters, digits and dashes, starting with a letter or digit"));
+            : refusals.Invalid<bool>($"a data set already has the name '{request.Name}'");
     }
 
     /// <inheritdoc />
@@ -97,7 +113,7 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
         var based = await Based(request, refusals, ct).ConfigureAwait(false);
         if (based.IsFailure) return based.ToNewResult<DataViewResponse>();
 
-        var refused = Refusal(request, based.Value.Main, refusals);
+        var refused = await Refusal(request, based.Value.Main, refusals, ct).ConfigureAwait(false);
         if (refused is not null) return refused;
 
         var view = new DataViewDataSetVariationConfiguration
@@ -112,9 +128,9 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
             // The ROOT data set whatever the parent is, so every view of a data set lists with it and a view of a view runs it.
             BaseDataSetId = based.Value.Main.Id,
             ParentVariationId = based.Value.ParentId,
-            Encoding = request.Encoding,
+            Encoding = DataViewChart.Given(request.Encoding),
             Filters = request.Filters,
-            ChartType = request.ChartType,
+            ChartType = DataViewChart.Given(request.ChartType),
             // Why stamped here rather than left to the column DEFAULT: the insert writes every mapped column,
             // including ones nobody set, so the unset CLR default (0001-01-01) overwrites DEFAULT
             // (sysdatetimeoffset()) rather than deferring to it. (FDW-793)
@@ -173,14 +189,14 @@ public abstract class CreateDataViewEndpointBase : CrudCreateEndpointBase<Create
     /// Checked against the root data set as it is now: a field the data set later loses leaves the view saved and the chart
     /// refused when it is queried, by the data route, which names the field.
     /// </remarks>
-    private static IGenericResult<DataViewResponse>? Refusal(
-        CreateDataViewRequest request, IDataSetImplementationConfiguration main, DataViewRefusals refusals)
+    private async Task<IGenericResult<DataViewResponse>?> Refusal(
+        CreateDataViewRequest request, IDataSetImplementationConfiguration main, DataViewRefusals refusals, CancellationToken ct)
     {
         var fields = main.Fields.Where(f => f.IsCurrent && !f.IsDeleted).ToList();
-        var reason = ChartSpecificationCheck.Reason(request.ChartType, request.Encoding, fields);
+        var reason = DataViewChart.Reason(request.ChartType, request.Encoding, fields);
         if (reason is not null) return refusals.Invalid<DataViewResponse>(reason);
 
-        var filter = DataViewFilter.Translate(request.Filters, fields, refusals);
+        var filter = await DataViewFilter.Translate(request.Filters, fields, refusals, _calculations, ct).ConfigureAwait(false);
         return filter.IsFailure ? filter.ToNewResult<DataViewResponse>() : null;
     }
 }

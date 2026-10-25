@@ -49,8 +49,6 @@ public sealed class DatabaseSessionStore : ISessionStore
     private const string PathName = "auth";
     private const string Container = "Session";
 
-    // How many sessions deep a chain of acting may run before the rows are taken to be broken. A person steps down a few roles, not dozens.
-    private const int MaxChainDepth = 32;
 
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly IAuthenticationContextAccessor _authContextAccessor;
@@ -112,21 +110,18 @@ public sealed class DatabaseSessionStore : ISessionStore
 
         using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
 
-        var read = await _gateways.Execute<IEnumerable<SessionEntity>>(
-            AuthenticationStepTypes.StateConnection,
-            Query.From<SessionEntity>(AuthenticationStepTypes.StateConnection, PathName, Container)
-                .Where(r => r.Id).Equal(parentSessionId)
-                .Build(),
-            cancellationToken).ConfigureAwait(false);
-        if (read.IsFailure)
-            return read.ToNewResult<IssuedToken>();
+        // The chain is read first: its first row is the session acted from, and its length is what the limit measures.
+        var ancestry = await Ancestry(parentSessionId, cancellationToken).ConfigureAwait(false);
+        if (ancestry.IsFailure)
+            return ancestry.ToNewResult<IssuedToken>();
 
-        var parentRow = read.Value!.FirstOrDefault();
-        var refusal = parentRow is null ? "no session has this id" : NotLive(parentRow, parentRow.ServiceName, DateTimeOffset.UtcNow);
+        var parent = ancestry.Value![0];
+        var refusal = NotLive(parent, parent.ServiceName, DateTimeOffset.UtcNow);
         if (refusal is not null)
             return GenericResult<IssuedToken>.Failure(SessionLog.SessionNotLive(_logger, "(act)", refusal));
 
-        var parent = read.Value!.First();
+        if (!ActingReturn.MayDeepen(ancestry.Value.Count))
+            return GenericResult<IssuedToken>.Failure(SessionLog.ActingTooDeep(_logger, ActingReturn.MaxDepth));
 
         // The acting session never outlives the session it came from, and the claims it asserts carry that end.
         var capped = assertion with
@@ -213,7 +208,7 @@ public sealed class DatabaseSessionStore : ISessionStore
     }
 
     // The session and every session it was started from, current first, ending at the person's own. A parent that cannot be read, or a
-    // chain that loops or runs past MaxChainDepth, is a fault in the rows and is refused rather than cut short.
+    // chain that loops or runs past ActingReturn.MaxDepth, is a fault in the rows and is refused rather than cut short.
     private async Task<IGenericResult<IReadOnlyList<SessionEntity>>> Ancestry(Guid sessionId, CancellationToken cancellationToken)
     {
         using var scope = new SystemAuthenticationContextScope(_authContextAccessor);
@@ -223,7 +218,7 @@ public sealed class DatabaseSessionStore : ISessionStore
         Guid? next = sessionId;
         while (next is { } id)
         {
-            if (chain.Count >= MaxChainDepth || !seen.Add(id))
+            if (chain.Count >= ActingReturn.MaxDepth || !seen.Add(id))
                 return GenericResult<IReadOnlyList<SessionEntity>>.Failure(SessionLog.ChainBroken(_logger, sessionId));
 
             var read = await _gateways.Execute<IEnumerable<SessionEntity>>(

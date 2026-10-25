@@ -14,17 +14,18 @@ internal static class UiFeedbackMapping
     /// as it is now.
     /// </summary>
     /// <param name="caller">The author.</param>
+    /// <param name="authorName">The author's user name, read from their account.</param>
     /// <param name="request">What the tester sent.</param>
     /// <param name="hasScreenshot">Whether a picture is kept with it.</param>
     /// <returns>The row.</returns>
-    public static UiFeedbackRow NewRow(UiFeedbackCaller caller, CreateUiFeedbackRequest request, bool hasScreenshot)
+    public static UiFeedbackRow NewRow(UiFeedbackCaller caller, string authorName, CreateUiFeedbackRequest request, bool hasScreenshot)
     {
         return new UiFeedbackRow
         {
             Id = Guid.NewGuid(),
             TenantId = caller.TenantId,
             AuthorUserId = caller.UserId,
-            AuthorName = caller.Name,
+            AuthorName = authorName,
             Screen = request.Screen!,
             Route = request.Route!,
             AreaX = request.Area!.X,
@@ -34,7 +35,6 @@ internal static class UiFeedbackMapping
             ViewportW = request.Viewport!.W,
             ViewportH = request.Viewport.H,
             Theme = request.Theme,
-            Anchor = request.AnchorJson,
             Body = request.Body!,
             Urgency = UiFeedbackUrgencies.ByName(request.Urgency!).Name,
             State = "Open",
@@ -52,17 +52,27 @@ internal static class UiFeedbackMapping
         => request.Tags!.Select(tag => UiFeedbackTags.ByName(tag).Name).ToList();
 
     /// <summary>
+    /// Makes the rows that keep a comment's components, numbered from 0 in the order the request gave them.
+    /// </summary>
+    /// <param name="feedbackId">The comment.</param>
+    /// <param name="request">What the tester sent, already checked.</param>
+    /// <returns>The rows.</returns>
+    public static IReadOnlyList<UiFeedbackAnchorRow> AnchorRows(Guid feedbackId, CreateUiFeedbackRequest request)
+        => request.AnchorsJson!.Select((anchor, ordinal) => new UiFeedbackAnchorRow { FeedbackId = feedbackId, Ordinal = ordinal, Anchor = anchor }).ToList();
+
+    /// <summary>
     /// Makes what the API answers for a comment.
     /// </summary>
     /// <param name="row">The comment's row.</param>
     /// <param name="tags">The comment's tags.</param>
+    /// <param name="anchors">The comment's components, in the order they were given.</param>
     /// <param name="callerUserId">The person asking, whose own comments are marked as theirs.</param>
     /// <param name="acknowledgedByCaller">Whether the person asking has acknowledged the comment.</param>
     /// <param name="agreements">The agreements read for the comment's page.</param>
     /// <param name="comments">The comment counts read for the comment's page.</param>
     /// <returns>The payload.</returns>
     public static UiFeedbackPayload ToPayload(
-        UiFeedbackRow row, IEnumerable<string> tags, Guid callerUserId, bool acknowledgedByCaller, UiFeedbackAgreements agreements, UiFeedbackCommentCounts comments)
+        UiFeedbackRow row, IEnumerable<string> tags, IEnumerable<string> anchors, Guid callerUserId, bool acknowledgedByCaller, UiFeedbackAgreements agreements, UiFeedbackCommentCounts comments)
     {
         return new UiFeedbackPayload
         {
@@ -72,7 +82,7 @@ internal static class UiFeedbackMapping
             Area = new UiFeedbackArea { X = row.AreaX, Y = row.AreaY, W = row.AreaW, H = row.AreaH },
             Viewport = new UiFeedbackSize { W = row.ViewportW, H = row.ViewportH },
             Theme = row.Theme,
-            AnchorJson = row.Anchor,
+            AnchorsJson = anchors.ToList(),
             Body = row.Body,
             Urgency = row.Urgency,
             Tags = tags.OrderBy(tag => tag, StringComparer.Ordinal).ToList(),
@@ -92,20 +102,21 @@ internal static class UiFeedbackMapping
     }
 
     /// <summary>
-    /// Makes the row for a new comment on a note. It belongs to the note's company and carries the author's name as it is now.
+    /// Makes the row for a new comment on a note. It belongs to the note's company and carries the author's name as it is now, which the caller reads from the account.
     /// </summary>
     /// <param name="caller">The author.</param>
+    /// <param name="authorName">The author's user name, read from their account.</param>
     /// <param name="note">The note commented on.</param>
     /// <param name="body">The text, already checked.</param>
     /// <returns>The row.</returns>
-    public static UiFeedbackCommentRow NewComment(UiFeedbackCaller caller, UiFeedbackRow note, string body)
+    public static UiFeedbackCommentRow NewComment(UiFeedbackCaller caller, string authorName, UiFeedbackRow note, string body)
         => new()
         {
             Id = Guid.NewGuid(),
             FeedbackId = note.Id,
             TenantId = note.TenantId,
             AuthorUserId = caller.UserId,
-            AuthorName = caller.Name,
+            AuthorName = authorName,
             Body = body,
             CreatedAt = DateTimeOffset.UtcNow
         };

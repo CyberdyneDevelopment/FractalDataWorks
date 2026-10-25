@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Hubs;
+using Fdw.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -30,11 +32,35 @@ public sealed class MessageServiceTests
         public IDataGateway ByName(string name) => gateway;
     }
 
+    private sealed class StubAccessor : IAuthenticationContextAccessor
+    {
+        public IAuthenticationContext? Current { get; set; }
+    }
+
     private sealed record Fixture(
         MessageService Service,
         Mock<IDataGateway> Gateway,
         Mock<IMessageHubClient> Client,
-        List<string> TargetedGroups);
+        List<string> TargetedGroups,
+        StubAccessor Accessor,
+        List<AlertActionRow> Actions)
+    {
+        /// <summary>Signs in a person who holds the right to read messages, as the alert questions are asked.</summary>
+        public Fixture SignedInAs(Guid userId) => SignedIn(userId, ["messages:read"]);
+
+        /// <summary>Signs in a person who holds no right to read messages.</summary>
+        public Fixture SignedInWithoutRights(Guid userId) => SignedIn(userId, []);
+
+        private Fixture SignedIn(Guid userId, string[] permissions)
+        {
+            var context = new Mock<IAuthenticationContext>(MockBehavior.Loose);
+            context.SetupGet(c => c.IsAuthenticated).Returns(true);
+            context.SetupGet(c => c.UserId).Returns(userId.ToString("D"));
+            context.SetupGet(c => c.Permissions).Returns(permissions);
+            Accessor.Current = context.Object;
+            return this;
+        }
+    }
 
     private static Fixture CreateService()
     {
@@ -54,9 +80,16 @@ public sealed class MessageServiceTests
             .ReturnsAsync(GenericResult<IMessagingImplementationConfiguration>.Success(
                 new MessagingImplementationConfiguration { Name = "Messaging", DataStoreName = "OpsDb", PathName = "msg" }));
 
+        // What people did to alerts: a message read asks for the caller's Dismiss rows, and the tests that care seed them here.
+        var actions = new List<AlertActionRow>();
+        gateway
+            .Setup(g => g.Execute<IEnumerable<AlertActionRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => GenericResult<IEnumerable<AlertActionRow>>.Success(actions.ToList()));
+
+        var accessor = new StubAccessor();
         var service = new MessageService(
-            NullLogger<MessageService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, hubContext.Object);
-        return new Fixture(service, gateway, client, groups);
+            NullLogger<MessageService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, hubContext.Object, accessor);
+        return new Fixture(service, gateway, client, groups, accessor, actions);
     }
 
     private static CreateMessageRequest MakeRequest(Guid? recipientUserId = null)
@@ -136,7 +169,7 @@ public sealed class MessageServiceTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.RecipientUserId.ShouldBe(recipientId);
-        fixture.TargetedGroups.ShouldContain(recipientId.ToString("D"));
+        fixture.TargetedGroups.ShouldContain(HubScopes.User(recipientId.ToString("D")));
         fixture.Client.Verify(c => c.NewMessage(It.IsAny<MessagePayload>()), Times.Once);
         fixture.Client.Verify(c => c.UnreadCountChanged(), Times.Once);
     }
@@ -553,7 +586,7 @@ public sealed class MessageServiceTests
         var result = await fixture.Service.MarkRead(messageId, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
-        fixture.TargetedGroups.ShouldContain(recipientId.ToString("D"));
+        fixture.TargetedGroups.ShouldContain(HubScopes.User(recipientId.ToString("D")));
         fixture.Client.Verify(c => c.MessageRead(messageId), Times.Once);
         fixture.Client.Verify(c => c.UnreadCountChanged(), Times.Once);
     }
@@ -615,65 +648,6 @@ public sealed class MessageServiceTests
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         var result = await fixture.Service.MarkRead(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71002");
-    }
-
-    // ── Dismiss ─────────────────────────────────────────────────────────────
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Api")]
-    public async Task DismissWithSuccessfulUpdateReturnsSuccess()
-    {
-        var fixture = CreateService();
-        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Success(1));
-
-        var result = await fixture.Service.Dismiss(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsSuccess.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task DismissWhenUpdateFailsWithMessagesPropagatesFailure()
-    {
-        var fixture = CreateService();
-        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(new GenericMessage("boom")));
-
-        var result = await fixture.Service.Dismiss(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsFailure.ShouldBeTrue();
-        result.CurrentMessage.ShouldBe("boom");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task DismissWhenUpdateFailsWithoutMessagesReturnsMessageUpdateFailedCode()
-    {
-        var fixture = CreateService();
-        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Failure(Array.Empty<IGenericMessage>()));
-
-        var result = await fixture.Service.Dismiss(Guid.NewGuid(), TestContext.Current.CancellationToken);
-
-        result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71002");
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "DataIntegrity")]
-    public async Task DismissWhenGatewayThrowsReturnsMessageUpdateFailedCode()
-    {
-        var fixture = CreateService();
-        fixture.Gateway
-            .Setup(g => g.Execute<int>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("boom"));
-
-        var result = await fixture.Service.Dismiss(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-71002");
@@ -795,5 +769,233 @@ public sealed class MessageServiceTests
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-71001");
+    }
+
+    // ── Messages as alerts (FDW-2429) ───────────────────────────────────────
+
+    private static AlertActionRow Dismissed(Guid messageId, Guid userId, DateTimeOffset at)
+        => new() { TenantId = Guid.NewGuid(), Kind = "Message", AlertId = messageId, UserId = userId, Action = "Dismiss", UserName = "Ana", ActedAt = at };
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public void AMessageIsAnAlertOfKindMessageThatOffersEveryAction()
+    {
+        var fixture = CreateService();
+
+        fixture.Service.Kind.ShouldBe("Message");
+        fixture.Service.OfferedActions.ShouldBe(["Acknowledge", "Snooze", "Silence", "Dismiss", "Discard"]);
+        foreach (var name in fixture.Service.OfferedActions)
+            AlertActions.ByName(name).ShouldNotBeSameAs(AlertActions.NotFound);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task FindAnswersAMessageAddressedToTheCallerWithItsTenant()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        var message = MakeDto(Guid.NewGuid(), ana);
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([message]));
+
+        var found = await fixture.Service.Find(message.Id, TestContext.Current.CancellationToken);
+
+        found.IsSuccess.ShouldBeTrue();
+        found.Value!.Id.ShouldBe(message.Id);
+        found.Value.TenantId.ShouldBe(message.TenantId);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task FindAnswersNothingForAnotherPersonsMessageABroadcastOrAMissingOne()
+    {
+        var fixture = CreateService().SignedInAs(Guid.NewGuid());
+        var theirs = MakeDto(Guid.NewGuid(), Guid.NewGuid());
+        var broadcast = MakeDto(Guid.NewGuid(), null);
+
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([theirs]));
+        var other = await fixture.Service.Find(theirs.Id, TestContext.Current.CancellationToken);
+
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([broadcast]));
+        var everyone = await fixture.Service.Find(broadcast.Id, TestContext.Current.CancellationToken);
+
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([]));
+        var missing = await fixture.Service.Find(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        other.IsSuccess.ShouldBeTrue();
+        other.Value.ShouldBeNull();
+        everyone.IsSuccess.ShouldBeTrue();
+        everyone.Value.ShouldBeNull();
+        missing.IsSuccess.ShouldBeTrue();
+        missing.Value.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task FindAnswersNothingForAPersonWithoutTheRightToReadMessagesEvenForTheirOwnMessage()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInWithoutRights(ana);
+        var message = MakeDto(Guid.NewGuid(), ana);
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([message]));
+
+        var found = await fixture.Service.Find(message.Id, TestContext.Current.CancellationToken);
+
+        found.IsSuccess.ShouldBeTrue();
+        found.Value.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task FindNeedsASignedInCaller()
+    {
+        var fixture = CreateService();
+
+        var found = await fixture.Service.Find(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        found.IsFailure.ShouldBeTrue();
+        found.Messages.ShouldContain(m => m.Code == "MESSAGING-51010");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task FindReportsAStoreFailureAndDoesNotCallItNotFound()
+    {
+        var fixture = CreateService().SignedInAs(Guid.NewGuid());
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Failure(Array.Empty<IGenericMessage>()));
+
+        var found = await fixture.Service.Find(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        found.IsFailure.ShouldBeTrue();
+        found.Messages.ShouldContain(m => m.Code == "MESSAGING-71001");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task APersonalActionMarksAnUnreadMessageRead()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        var message = MakeDto(Guid.NewGuid(), ana);
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([message]));
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Success(1));
+
+        var acted = await fixture.Service.Acted(message.Id, AlertActions.ByName("Dismiss"), TestContext.Current.CancellationToken);
+
+        acted.IsSuccess.ShouldBeTrue();
+        fixture.Client.Verify(c => c.MessageRead(message.Id), Times.Once);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AMessageAlreadyReadKeepsItsReadTimeWhenActedOnAgain()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        var message = MakeDto(Guid.NewGuid(), ana);
+        message.ReadAt = DateTime.UtcNow.AddHours(-1);
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([message]));
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Success(1));
+
+        var acted = await fixture.Service.Acted(message.Id, AlertActions.ByName("Snooze"), TestContext.Current.CancellationToken);
+
+        acted.IsSuccess.ShouldBeTrue();
+        fixture.Client.Verify(c => c.MessageRead(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task AnActionForEveryoneLeavesTheMessageAsItIs()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        var message = MakeDto(Guid.NewGuid(), ana);
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([message]));
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Success(1));
+
+        var acted = await fixture.Service.Acted(message.Id, AlertActions.ByName("Discard"), TestContext.Current.CancellationToken);
+
+        acted.IsSuccess.ShouldBeTrue();
+        fixture.Client.Verify(c => c.MessageRead(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ActedOnAMessageThatIsGoneFailsWithNotFound()
+    {
+        var fixture = CreateService().SignedInAs(Guid.NewGuid());
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([]));
+
+        var acted = await fixture.Service.Acted(Guid.NewGuid(), AlertActions.ByName("Dismiss"), TestContext.Current.CancellationToken);
+
+        acted.IsFailure.ShouldBeTrue();
+        acted.Messages.ShouldContain(m => m.Code == "MESSAGING-31000");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task APageOfMessagesCarriesWhenTheCallerDismissedEachAndNothingForTheOthers()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        var dismissed = MakeDto(Guid.NewGuid(), ana);
+        var kept = MakeDto(Guid.NewGuid(), ana);
+        // A time left on the row by the old column is not the answer: the dismissal is the alert's.
+        kept.DismissedAt = DateTime.UtcNow.AddDays(-3);
+        var at = new DateTimeOffset(2026, 10, 22, 9, 30, 0, TimeSpan.Zero);
+        fixture.Actions.Add(Dismissed(dismissed.Id, ana, at));
+        fixture.Actions.Add(new AlertActionRow { Kind = "Message", AlertId = kept.Id, UserId = ana, Action = "Acknowledge", ActedAt = at });
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([dismissed, kept]));
+
+        var page = await fixture.Service.GetMessages(new MessageQuery { UserId = ana }, TestContext.Current.CancellationToken);
+
+        page.IsSuccess.ShouldBeTrue();
+        page.Value!.Single(m => m.Id == dismissed.Id).DismissedAt.ShouldBe(at.UtcDateTime);
+        page.Value.Single(m => m.Id == kept.Id).DismissedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task OneMessageCarriesWhenItsRecipientDismissedIt()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        var message = MakeDto(Guid.NewGuid(), ana);
+        var at = new DateTimeOffset(2026, 10, 22, 9, 30, 0, TimeSpan.Zero);
+        fixture.Actions.Add(Dismissed(message.Id, ana, at));
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([message]));
+
+        var opened = await fixture.Service.GetMessage(message.Id, TestContext.Current.CancellationToken);
+
+        opened.IsSuccess.ShouldBeTrue();
+        opened.Value!.DismissedAt.ShouldBe(at.UtcDateTime);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AFailureToReadTheDismissalsFailsTheReadAndIsNotHidden()
+    {
+        var ana = Guid.NewGuid();
+        var fixture = CreateService().SignedInAs(ana);
+        SetupExecuteMessages(fixture.Gateway, GenericResult<IEnumerable<MessagePayload>>.Success([MakeDto(Guid.NewGuid(), ana)]));
+        fixture.Gateway
+            .Setup(g => g.Execute<IEnumerable<AlertActionRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IEnumerable<AlertActionRow>>.Failure(new GenericMessage("the alert store is down")));
+
+        var page = await fixture.Service.GetMessages(new MessageQuery { UserId = ana }, TestContext.Current.CancellationToken);
+
+        page.IsFailure.ShouldBeTrue();
     }
 }

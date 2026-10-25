@@ -96,6 +96,24 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
         var dialect = dbPath.Dialect;
         var sql = new StringBuilder("SELECT");
 
+        var searchColumns = fieldNames != null && fieldNames.Count > 0
+            ? (IReadOnlyList<string>)fieldNames
+            : container.Schema.Fields
+                .Where(f => f.FieldType.ClrType == typeof(string))
+                .Select(f => f.Name)
+                .ToList();
+
+        foreach (var column in searchColumns)
+        {
+            if (!IsValidColumnName(column))
+                throw new ArgumentException($"Invalid column name '{column}'.", nameof(fieldNames));
+        }
+
+        // SQLite: GLOB for case-sensitive, LIKE for case-insensitive
+        string Matches(string column) => caseSensitive
+            ? $"{dialect.QuoteIdentifier(column)} GLOB {dialect.ParameterPrefix}searchTerm"
+            : $"{dialect.QuoteIdentifier(column)} LIKE {dialect.ParameterPrefix}searchTerm";
+
         // A search returns the detail columns: each field's datum type decides, and a search includes no
         // Metadata, Description or DbKey columns (FDW-988).
         var returnedFields = container.Schema.GetReturnedFields(includeMetadata: false, includeDescriptions: false, includeKeys: false);
@@ -109,14 +127,15 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
             sql.Append(" *");
         }
 
-        sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
+        // Why a column per searched field: which fields held the term is measured by the same predicate that chose the row,
+        // so the answer cannot disagree with the WHERE clause (FDW-1361).
+        foreach (var column in searchColumns)
+        {
+            sql.Append(CultureInfo.InvariantCulture,
+                $", CASE WHEN {Matches(column)} THEN 1 ELSE 0 END AS {dialect.QuoteIdentifier(FindMatchColumn.NameFor(column))}");
+        }
 
-        var searchColumns = fieldNames != null && fieldNames.Count > 0
-            ? (IReadOnlyList<string>)fieldNames
-            : container.Schema.Fields
-                .Where(f => f.FieldType.ClrType == typeof(string))
-                .Select(f => f.Name)
-                .ToList();
+        sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
 
         if (searchColumns.Count == 0)
         {
@@ -129,13 +148,7 @@ public sealed class SqliteFindTranslator : SqliteDataCommandTranslatorBase
         var likeConditions = new List<string>();
         foreach (var column in searchColumns)
         {
-            if (!IsValidColumnName(column))
-                throw new ArgumentException($"Invalid column name '{column}'.", nameof(fieldNames));
-
-            if (caseSensitive)
-                likeConditions.Add($"{dialect.QuoteIdentifier(column)} GLOB {dialect.ParameterPrefix}searchTerm");
-            else
-                likeConditions.Add($"{dialect.QuoteIdentifier(column)} LIKE {dialect.ParameterPrefix}searchTerm");
+            likeConditions.Add(Matches(column));
         }
 
         command.CommandText += $" WHERE {string.Join(" OR ", likeConditions)}";

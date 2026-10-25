@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
@@ -52,4 +54,20 @@ internal sealed class SqlTranslatorProxy : SqlDataCommandTranslatorBase<object>
 
     public static bool ExposeIsValidColumnName(string name)
         => IsValidColumnName(name);
+
+    public static string ExposeSoftDeleteUpdate(
+        string table,
+        ISqlDialect dialect,
+        SoftDeleteOptions options,
+        IStorageContainer container,
+        string now,
+        string? filterPredicate,
+        Action<string, object?> addParameter)
+        => BuildSoftDeleteUpdate(table, dialect, options, container, now, filterPredicate, addParameter);
+
+    public static void ExposeRefuseSoftDeleteOnUpdate(IDataCommand command, IStorageContainer container)
+        => RefuseSoftDeleteOnUpdate(command, container);
+
+    public static IReadOnlyList<string> ExposeReturnedColumns(IDataCommand command, IStorageContainer container)
+        => ReturnedColumnsOf(command, container);
 }

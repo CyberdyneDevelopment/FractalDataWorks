@@ -15,15 +15,6 @@ namespace Fdw.Commands.Data.Abstractions;
 /// </remarks>
 public sealed class ConfigurationWriteResult
 {
-    /// <summary>The column every OUTPUT row of a configuration write carries, saying which of the two it reports.</summary>
-    public const string KindColumn = "WriteKind";
-
-    /// <summary>The <see cref="KindColumn"/> value on a row a write retired.</summary>
-    public const string RetiredKind = "Retired";
-
-    /// <summary>The <see cref="KindColumn"/> value on the row a write inserted.</summary>
-    public const string WrittenKind = "Written";
-
     /// <summary>Initializes a new instance of the <see cref="ConfigurationWriteResult"/> class.</summary>
     /// <param name="retired">The key values of every row the write retired; empty when it retired none.</param>
     /// <param name="written">The key values of the row the write inserted; <see langword="null"/> for a retire.</param>

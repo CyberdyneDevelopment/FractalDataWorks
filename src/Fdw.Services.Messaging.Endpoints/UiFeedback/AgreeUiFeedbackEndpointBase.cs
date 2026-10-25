@@ -53,7 +53,7 @@ public abstract class AgreeUiFeedbackEndpointBase : Endpoint<UiFeedbackIdRequest
         var moved = await Feedback.Agree(req.Id, ct).ConfigureAwait(false);
         if (!moved.IsSuccess || moved.Value is not { } comment)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(moved, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(moved, HttpContext)).ConfigureAwait(false);
             return;
         }
 

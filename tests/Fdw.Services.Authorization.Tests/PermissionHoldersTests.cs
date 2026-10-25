@@ -233,7 +233,7 @@ public sealed class PermissionHoldersTests
             NullLogger<PermissionHolders>.Instance);
     }
 
-    private static IEnumerable<ITenant> Tenants(int globalTenants)
+    private static List<ITenant> Tenants(int globalTenants)
     {
         var all = new List<ITenant> { Tenant(TenantA, isGlobal: false), Tenant(TenantB, isGlobal: false) };
         all.AddRange(Enumerable.Range(0, globalTenants).Select(i => Tenant(i == 0 ? Global : Guid.NewGuid(), isGlobal: true)));

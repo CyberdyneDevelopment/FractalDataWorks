@@ -56,8 +56,6 @@ namespace Fdw.Services.Workspaces;
 /// </remarks>
 public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
 {
-    private const string DataSetGrantPermission = "datasets:grant";
-
     private readonly IAuthenticationContextAccessor _authContext;
     private readonly IRoleConfigurationProvider _roles;
     private readonly IDataSetConfigurationProvider _dataSets;
@@ -169,7 +167,7 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
         return GenericResult.Success();
     }
 
-    // A grant for the data set: the tenant-wide permission, the one for this set, or a wildcard. The
+    // A grant for the data set: the tenant-wide permission, the one for this set, or a wildcard, as PermissionCoverage decides. The
     // token's permissions are its tenant's, so datasets:grant is a grant over that tenant's data sets.
     private static bool HoldsGrant(IAuthenticationContext? caller, Guid dataSetId)
     {
@@ -177,11 +175,7 @@ public sealed class WorkspaceAccessPolicy : IWorkspaceAccessPolicy
             return false;
 
         var forThisSet = string.Create(CultureInfo.InvariantCulture, $"datasets/{dataSetId:D}:grant");
-        return caller.Permissions.Any(held =>
-            string.Equals(held, DataSetGrantPermission, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(held, forThisSet, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(held, "datasets:*", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(held, "*:*", StringComparison.OrdinalIgnoreCase));
+        return PermissionCoverage.Covers(caller.Permissions, forThisSet);
     }
 
     private async Task<IGenericResult> Answer(

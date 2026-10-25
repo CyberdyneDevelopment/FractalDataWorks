@@ -14,12 +14,14 @@ public sealed class SetVariableComponentType : ComponentTypeBase
         "Control flow",
         false,
         [
-            new StageMember("variable", "Variable", true, "The variable to set; it must be declared by the graph."),
+            new StageMember("variable", "Variable", true, "The variable to set; it must be declared by the graph.", SummarisesComponent: true),
             new StageMember("valueType", "Text", false, "The data type of the value; required without a transformation, and not given with one, because the transformation gives the type."),
-            new StageMember("value", "Text", false, "Without a transformation, the value as text; leave it out to set the variable to null. With one, the value to transform: a parameter or variable in double braces, which keeps its type, or text that may name variables in double braces."),
+            new StageMember("value", "Text", false, "Without a transformation, the value as text; leave it out to set the variable to null. With one, the value to transform: a parameter or variable in double braces, which keeps its type, or text that may name variables in double braces.", SummarisesComponent: true),
             new StageMember("transformation", "Text", false, "The name of the field transformation to apply to the value; leave it out to set the value as it is."),
             new StageMember("parameters", "Parameters", false, "The transformation's parameters, as text; a value may name a variable in double braces."),
         ])
     {
+        // Why " = ": the card says what the action does as "count = 5", the variable and what it is set to.
+        SummarySeparator = " = ";
     }
 }

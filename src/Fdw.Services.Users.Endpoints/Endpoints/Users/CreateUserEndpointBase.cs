@@ -233,7 +233,6 @@ public abstract class CreateUserEndpointBase<TRequest> : Endpoint<TRequest, User
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
             CreatedBy = HttpContext.User.Identity?.Name ?? "system",
-            LastLoginAt = user.LastLoginAt
         };
 
     /// <summary>

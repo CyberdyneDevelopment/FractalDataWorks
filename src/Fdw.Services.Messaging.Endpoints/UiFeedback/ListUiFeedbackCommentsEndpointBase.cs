@@ -53,7 +53,7 @@ public abstract class ListUiFeedbackCommentsEndpointBase : Endpoint<ListUiFeedba
         var listed = await Feedback.ListComments(req.Id, req.Skip, req.Take, ct).ConfigureAwait(false);
         if (!listed.IsSuccess || listed.Value is not { } comments)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(listed, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(listed, HttpContext)).ConfigureAwait(false);
             return;
         }
 

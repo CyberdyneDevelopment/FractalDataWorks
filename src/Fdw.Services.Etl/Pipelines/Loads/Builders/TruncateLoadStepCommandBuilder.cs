@@ -11,7 +11,7 @@ using Fdw.Services.Etl.Logging;
 
 namespace Fdw.Services.Etl.Pipelines.Loads.Builders;
 
-/// <summary>Empties the destination container.</summary>
+/// <summary>Empties the destination container with a Delete that has no filter and no soft delete.</summary>
 [TypeOption(typeof(LoadStepCommandBuilders), "Truncate")]
 public sealed class TruncateLoadStepCommandBuilder : LoadStepCommandBuilderBase
 {
@@ -21,7 +21,7 @@ public sealed class TruncateLoadStepCommandBuilder : LoadStepCommandBuilderBase
     }
 
     /// <inheritdoc/>
-    public override IGenericResult<IReadOnlyList<IDataCommand>> Build(LoadCommandInput input) => Built(new TruncateCommand());
+    public override IGenericResult<IReadOnlyList<IDataCommand>> Build(LoadCommandInput input) => Built(new DeleteCommand());
 
     /// <inheritdoc/>
     public override IReadOnlyList<string> RequiredCapabilities(PipelineLoadStepConfiguration row) => [];

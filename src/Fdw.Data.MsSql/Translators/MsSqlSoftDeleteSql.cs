@@ -36,7 +36,7 @@ internal static class MsSqlSoftDeleteSql
         if (problem is not null)
             return new MsSqlSoftDeleteFragments(problem);
 
-        var parameters = new List<SqlParameter> { new("@fdw_sd_flag", true) };
+        var parameters = new List<SqlParameter> { new("@fdw_sd_flag", options.FlagValue) };
         var marker = options.Marker is null ? null : dialect.QuoteIdentifier(options.Marker.Column);
         if (options.Marker is not null)
             parameters.Add(new SqlParameter("@fdw_sd_marker", options.Marker.Value));

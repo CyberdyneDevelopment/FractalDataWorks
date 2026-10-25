@@ -47,14 +47,17 @@ public sealed class UiFeedbackServiceTests
                 .Setup(g => g.Execute<IEnumerable<UiFeedbackRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackRow>>.Success(Rows.ToList()));
             gateway
+                .Setup(g => g.Execute<IEnumerable<UiFeedbackAnchorRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackAnchorRow>>.Success(Anchors.ToList()));
+            gateway
                 .Setup(g => g.Execute<IEnumerable<UiFeedbackTagRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackTagRow>>.Success(Tags.ToList()));
             gateway
                 .Setup(g => g.Execute<IEnumerable<UiFeedbackScreenshotRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackScreenshotRow>>.Success(Pictures.ToList()));
             gateway
-                .Setup(g => g.Execute<IEnumerable<UiFeedbackAcknowledgementRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackAcknowledgementRow>>.Success(Acks.ToList()));
+                .Setup(g => g.Execute<IEnumerable<AlertActionRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => GenericResult<IEnumerable<AlertActionRow>>.Success(Acks.ToList()));
             gateway
                 .Setup(g => g.Execute<IEnumerable<UiFeedbackAgreementRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IEnumerable<UiFeedbackAgreementRow>>.Success(Agreements.ToList()));
@@ -108,8 +111,16 @@ public sealed class UiFeedbackServiceTests
                     return GenericResult.Success();
                 });
 
+            // A person's name is read from their account (FDW-2199), so the account answers the name SignedInAs was given, and fails for a person it does not know.
+            var names = new Mock<IUserNames>(MockBehavior.Loose);
+            names
+                .Setup(n => n.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((Guid id, CancellationToken _) => AccountNames.TryGetValue(id, out var name)
+                    ? GenericResult<string>.Success(name)
+                    : GenericResult<string>.Failure(new GenericMessage("the signed-in person has no account")));
+
             Service = new UiFeedbackService(
-                NullLogger<UiFeedbackService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, holders.Object, messages.Object);
+                NullLogger<UiFeedbackService>.Instance, new StubGatewayProvider(gateway.Object), messaging.Object, Accessor, names.Object, holders.Object, messages.Object);
         }
 
         public UiFeedbackService Service { get; }
@@ -120,13 +131,19 @@ public sealed class UiFeedbackServiceTests
 
         public List<UiFeedbackTagRow> Tags { get; } = [];
 
+        public List<UiFeedbackAnchorRow> Anchors { get; } = [];
+
         public List<UiFeedbackScreenshotRow> Pictures { get; } = [];
 
-        public List<UiFeedbackAcknowledgementRow> Acks { get; } = [];
+        /// <summary>The actions people took on alerts; a test seeds the acknowledgements here.</summary>
+        public List<AlertActionRow> Acks { get; } = [];
 
         public List<UiFeedbackAgreementRow> Agreements { get; } = [];
 
         public List<UiFeedbackCommentRow> Comments { get; } = [];
+
+        /// <summary>The user name of each person's account; a person not here has no account.</summary>
+        public Dictionary<Guid, string> AccountNames { get; } = [];
 
         /// <summary>The people who hold the read permission in the comment's tenant.</summary>
         public List<Guid> TenantReaders { get; } = [];
@@ -164,6 +181,10 @@ public sealed class UiFeedbackServiceTests
         public Fixture SignedInAs(Guid userId, Guid tenantId, string name, bool globalTenant = false)
             => SignedIn(userId, tenantId, name, globalTenant, ["ui-feedback:read"]);
 
+        /// <summary>Signs in a person who holds neither right to see comments.</summary>
+        public Fixture SignedInWithoutRights(Guid userId, Guid tenantId, string name)
+            => SignedIn(userId, tenantId, name, false, []);
+
         /// <summary>Signs in a reviewer: someone who holds the write right and not the read right.</summary>
         public Fixture SignedInAsReviewer(Guid userId, Guid tenantId, string name)
             => SignedIn(userId, tenantId, name, false, ["ui-feedback:write"]);
@@ -173,7 +194,9 @@ public sealed class UiFeedbackServiceTests
             var context = new Mock<IAuthenticationContext>(MockBehavior.Loose);
             context.SetupGet(c => c.IsAuthenticated).Returns(true);
             context.SetupGet(c => c.UserId).Returns(userId.ToString("D"));
-            context.SetupGet(c => c.Username).Returns(name);
+            // The context's Username is the user id, as it is when the token carries no name claim: a service that took the name from it would record the id.
+            context.SetupGet(c => c.Username).Returns(userId.ToString("D"));
+            AccountNames[userId] = name;
             context.SetupGet(c => c.ActiveTenantId).Returns(tenantId);
             context.SetupGet(c => c.IsSystemContext).Returns(false);
             context.SetupGet(c => c.Permissions).Returns(permissions);
@@ -182,6 +205,13 @@ public sealed class UiFeedbackServiceTests
                 : new Dictionary<string, object>());
             Accessor.Current = context.Object;
             return this;
+        }
+
+        public AlertActionRow Acknowledged(Guid alertId, Guid userId)
+        {
+            var row = new AlertActionRow { TenantId = TenantA, Kind = UiFeedbackAlert.Kind, AlertId = alertId, UserId = userId, Action = UiFeedbackAlert.AcknowledgeAction, UserName = "Ben", ActedAt = DateTimeOffset.UtcNow };
+            Acks.Add(row);
+            return row;
         }
 
         public UiFeedbackRow Add(Guid tenantId, Guid authorId, string urgency = "Normal", string state = "Open", int minutesAgo = 0, bool hasScreenshot = false)
@@ -223,7 +253,7 @@ public sealed class UiFeedbackServiceTests
             Area = new UiFeedbackArea { X = 10, Y = 20, W = 30, H = 40 },
             Viewport = new UiFeedbackSize { W = 1280, H = 720 },
             Theme = "dark",
-            AnchorJson = "{\"role\":\"table\"}",
+            AnchorsJson = ["{\"role\":\"table\",\"name\":\"Totals\"}", "{\"role\":\"heading\",\"name\":\"Report\"}"],
             Urgency = "High",
             Tags = ["UsabilityIssue", "CalculationIssue"],
             Body = "The totals column is cut off"
@@ -252,7 +282,7 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.Create(request, Ct);
 
         result.IsSuccess.ShouldBeTrue();
-        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackTag", "UiFeedbackScreenshot"]);
+        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackTag", "UiFeedbackAnchor", "UiFeedbackAnchor", "UiFeedbackScreenshot"]);
         result.Value!.State.ShouldBe("Open");
         result.Value.AcknowledgedByMe.ShouldBeFalse();
         result.Value.IsMine.ShouldBeTrue();
@@ -260,7 +290,7 @@ public sealed class UiFeedbackServiceTests
         result.Value.Urgency.ShouldBe("High");
         result.Value.Tags.ShouldBe(["CalculationIssue", "UsabilityIssue"]);
         result.Value.HasScreenshot.ShouldBeTrue();
-        result.Value.AnchorJson.ShouldBe("{\"role\":\"table\"}");
+        result.Value.AnchorsJson.ShouldBe(["{\"role\":\"table\",\"name\":\"Totals\"}", "{\"role\":\"heading\",\"name\":\"Report\"}"]);
     }
 
     [Theory]
@@ -273,7 +303,13 @@ public sealed class UiFeedbackServiceTests
     [InlineData("viewport-missing", "viewport", "MESSAGING-21000")]
     [InlineData("viewport-zero", "viewport", "MESSAGING-21001")]
     [InlineData("theme-blank", "theme", "MESSAGING-21001")]
-    [InlineData("anchor-not-json", "anchor", "MESSAGING-21001")]
+    [InlineData("anchors-missing", "anchors", "MESSAGING-21000")]
+    [InlineData("anchors-empty", "anchors", "MESSAGING-21001")]
+    [InlineData("anchor-not-json", "anchors", "MESSAGING-21001")]
+    [InlineData("anchor-not-an-object", "anchors", "MESSAGING-21001")]
+    [InlineData("anchor-blank", "anchors", "MESSAGING-21001")]
+    [InlineData("anchors-too-many", "anchors", "MESSAGING-21001")]
+    [InlineData("anchor-too-long", "anchors", "MESSAGING-21001")]
     [InlineData("urgency-missing", "urgency", "MESSAGING-21000")]
     [InlineData("urgency-unknown", "urgency", "MESSAGING-21001")]
     [InlineData("tag-unknown", "tag", "MESSAGING-21001")]
@@ -297,7 +333,13 @@ public sealed class UiFeedbackServiceTests
             case "viewport-missing": request.Viewport = null; break;
             case "viewport-zero": request.Viewport = new UiFeedbackSize { W = 0, H = 700 }; break;
             case "theme-blank": request.Theme = "  "; break;
-            case "anchor-not-json": request.AnchorJson = "{not json"; break;
+            case "anchors-missing": request.AnchorsJson = null; break;
+            case "anchors-empty": request.AnchorsJson = []; break;
+            case "anchor-not-json": request.AnchorsJson = ["{not json"]; break;
+            case "anchor-not-an-object": request.AnchorsJson = ["{\"role\":\"table\"}", "[1,2]"]; break;
+            case "anchor-blank": request.AnchorsJson = [" "]; break;
+            case "anchors-too-many": request.AnchorsJson = [.. Enumerable.Repeat("{\"role\":\"table\"}", UiFeedbackLimits.MaxAnchors + 1)]; break;
+            case "anchor-too-long": request.AnchorsJson = ["{\"name\":\"" + new string('x', UiFeedbackLimits.MaxAnchorLength) + "\"}"]; break;
             case "urgency-missing": request.Urgency = null; break;
             case "urgency-unknown": request.Urgency = "Whenever"; break;
             case "tag-unknown": request.Tags = ["Annoying"]; break;
@@ -347,7 +389,7 @@ public sealed class UiFeedbackServiceTests
 
         result.IsFailure.ShouldBeTrue();
         result.Messages.ShouldContain(m => m.Code == "MESSAGING-71004");
-        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackComment", "UiFeedbackAgreement", "UiFeedbackAcknowledgement", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
+        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackAnchor", "UiFeedbackComment", "UiFeedbackAgreement", "AlertAction", "AlertEveryoneAction", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 
     // ── Telling the readers ─────────────────────────────────────────────────
@@ -443,53 +485,110 @@ public sealed class UiFeedbackServiceTests
         fixture.Told.Select(m => m.RecipientUserId).ShouldBe([Ben]);
     }
 
-    // ── Acknowledge ─────────────────────────────────────────────────────────
+    // ── The comment as an alert (FDW-2420) ──────────────────────────────────
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public async Task AcknowledgeKeepsWhoAndWhenAndMarksTheCallersAlertRead()
+    public void ACommentIsAnAlertOfKindUiFeedbackThatOffersEveryAction()
+    {
+        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
+
+        fixture.Service.Kind.ShouldBe("UiFeedback");
+        fixture.Service.OfferedActions.ShouldBe(["Acknowledge", "Snooze", "Silence", "Dismiss", "Discard"]);
+        foreach (var name in fixture.Service.OfferedActions)
+            AlertActions.ByName(name).ShouldNotBeSameAs(AlertActions.NotFound);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task FindAnswersTheCommentTheCallerReachesWithItsTenant()
+    {
+        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
+        var comment = fixture.Add(TenantA, Ana, "SecurityIssue");
+
+        var found = await fixture.Service.Find(comment.Id, Ct);
+
+        found.IsSuccess.ShouldBeTrue();
+        found.Value!.Id.ShouldBe(comment.Id);
+        found.Value.TenantId.ShouldBe(TenantA);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task FindAnswersNothingForACommentOutOfReachOrMissing()
+    {
+        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
+        var theirs = fixture.Add(TenantB, Cy);
+
+        var outOfReach = await fixture.Service.Find(theirs.Id, Ct);
+        var missing = await fixture.Service.Find(Guid.NewGuid(), Ct);
+
+        outOfReach.IsSuccess.ShouldBeTrue();
+        outOfReach.Value.ShouldBeNull();
+        missing.IsSuccess.ShouldBeTrue();
+        missing.Value.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task FindAnswersNothingForAPersonWhoHoldsNeitherRightToSeeComments()
+    {
+        var fixture = new Fixture().SignedInWithoutRights(Ben, TenantA, "Ben");
+        var comment = fixture.Add(TenantA, Ana);
+
+        var found = await fixture.Service.Find(comment.Id, Ct);
+
+        found.IsSuccess.ShouldBeTrue();
+        found.Value.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AReviewerCannotFindSomeoneElsesSecurityComment()
+    {
+        var fixture = new Fixture().SignedInAsReviewer(Ana, TenantA, "Ana");
+        var security = fixture.Add(TenantA, Ben, "SecurityIssue");
+
+        var found = await fixture.Service.Find(security.Id, Ct);
+
+        found.IsSuccess.ShouldBeTrue();
+        found.Value.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ActingOnTheAlertMarksTheCallersNoticeRead()
     {
         var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
         var comment = fixture.Add(TenantA, Ana, "SecurityIssue");
         var alert = new MessagePayload { Id = Guid.NewGuid(), MessageType = "UiFeedback", ReferenceId = comment.Id.ToString("D") };
         fixture.Alerts.Add(alert);
 
-        var result = await fixture.Service.Acknowledge(comment.Id, Ct);
+        var told = await fixture.Service.Acted(comment.Id, AlertActions.ByName("Dismiss"), Ct);
 
-        result.IsSuccess.ShouldBeTrue();
-        fixture.Writes.ShouldBe(["UiFeedbackAcknowledgement"]);
+        told.IsSuccess.ShouldBeTrue();
         fixture.MarkedRead.ShouldBe([alert.Id]);
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public async Task AcknowledgingAgainChangesNothing()
+    public async Task AnActionTakenForEveryoneDoesNotMarkTheCallersNoticeRead()
     {
         var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
         var comment = fixture.Add(TenantA, Ana, "SecurityIssue");
-        fixture.Acks.Add(new UiFeedbackAcknowledgementRow { FeedbackId = comment.Id, UserId = Ben, UserName = "Ben", AcknowledgedAt = DateTimeOffset.UtcNow });
+        fixture.Alerts.Add(new MessagePayload { Id = Guid.NewGuid(), MessageType = "UiFeedback", ReferenceId = comment.Id.ToString("D") });
 
-        var result = await fixture.Service.Acknowledge(comment.Id, Ct);
+        var told = await fixture.Service.Acted(comment.Id, AlertActions.ByName("Discard"), Ct);
 
-        result.IsSuccess.ShouldBeTrue();
-        result.Value!.AcknowledgedByMe.ShouldBeTrue();
-        fixture.Writes.ShouldBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public async Task ACommentOutOfReachCannotBeAcknowledged()
-    {
-        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
-        var theirs = fixture.Add(TenantB, Cy);
-
-        var result = await fixture.Service.Acknowledge(theirs.Id, Ct);
-
-        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31004");
-        fixture.Writes.ShouldBeEmpty();
+        told.IsSuccess.ShouldBeTrue();
+        fixture.MarkedRead.ShouldBeEmpty();
     }
 
     [Fact]
@@ -498,9 +597,10 @@ public sealed class UiFeedbackServiceTests
     public async Task EveryAnswerSaysWhetherTheCallerHasAcknowledged()
     {
         var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
-        var acknowledged = fixture.Add(TenantA, Ana, "SecurityIssue");
+        // Why pending first: the fake gateway answers a read of one comment with the first row it was seeded with, so opening it describes this one.
         var pending = fixture.Add(TenantA, Ana, "SecurityIssue");
-        fixture.Acks.Add(new UiFeedbackAcknowledgementRow { FeedbackId = acknowledged.Id, UserId = Ben, UserName = "Ben", AcknowledgedAt = DateTimeOffset.UtcNow });
+        var acknowledged = fixture.Add(TenantA, Ana, "SecurityIssue");
+        fixture.Acknowledged(acknowledged.Id, Ben);
 
         var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
         var opened = await fixture.Service.Get(pending.Id, Ct);
@@ -592,7 +692,7 @@ public sealed class UiFeedbackServiceTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Api")]
-    public async Task DeleteRemovesTheAcknowledgementsTagsAndPictureBeforeTheComment()
+    public async Task DeleteRemovesWhatWasDoneToTheAlertTheTagsAndThePictureBeforeTheComment()
     {
         var fixture = AnaInA();
         var mine = fixture.Add(TenantA, Ana, hasScreenshot: true);
@@ -600,7 +700,7 @@ public sealed class UiFeedbackServiceTests
         var result = await fixture.Service.Delete(mine.Id, Ct);
 
         result.IsSuccess.ShouldBeTrue();
-        fixture.Writes.ShouldBe(["UiFeedbackComment", "UiFeedbackAgreement", "UiFeedbackAcknowledgement", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
+        fixture.Writes.ShouldBe(["UiFeedbackAnchor", "UiFeedbackComment", "UiFeedbackAgreement", "AlertAction", "AlertEveryoneAction", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 
     // ── Resolve and reopen ──────────────────────────────────────────────────
@@ -642,16 +742,19 @@ public sealed class UiFeedbackServiceTests
     [Trait("Category", "DataIntegrity")]
     public async Task ACommentAlreadyInTheStateAskedForIsAConflict()
     {
-        var fixture = AnaInA();
-        var open = fixture.Add(TenantA, Ben);
-        var resolved = fixture.Add(TenantA, Ben, state: "Resolved");
+        // Why one comment per fixture: the fake gateway answers a read of one comment with the first row it was seeded with, whatever identifier is asked for.
+        var resolvedFixture = AnaInA();
+        var resolved = resolvedFixture.Add(TenantA, Ben, state: "Resolved");
+        var openFixture = AnaInA();
+        var open = openFixture.Add(TenantA, Ben);
 
-        var resolveOpenAgain = await fixture.Service.Resolve(resolved.Id, Ct);
-        var reopenOpen = await fixture.Service.Reopen(open.Id, Ct);
+        var resolveOpenAgain = await resolvedFixture.Service.Resolve(resolved.Id, Ct);
+        var reopenOpen = await openFixture.Service.Reopen(open.Id, Ct);
 
         resolveOpenAgain.Messages.ShouldContain(m => m.Code == "MESSAGING-41000");
         reopenOpen.Messages.ShouldContain(m => m.Code == "MESSAGING-41000");
-        fixture.Writes.ShouldBeEmpty();
+        resolvedFixture.Writes.ShouldBeEmpty();
+        openFixture.Writes.ShouldBeEmpty();
     }
 
     [Fact]
@@ -1240,5 +1343,166 @@ public sealed class UiFeedbackServiceTests
         listed.Value!.Single(c => c.Id == busy.Id).CommentCount.ShouldBe(2);
         listed.Value!.Single(c => c.Id == quiet.Id).CommentCount.ShouldBe(0);
         opened.Value!.CommentCount.ShouldBe(2);
+    }
+
+    // ── A person's name is read from their account (FDW-2199) ───────────────
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ACommentIsSavedUnderTheAccountsNameNotTheUserIdTheContextAnswers()
+    {
+        var fixture = AnaInA();
+
+        var result = await fixture.Service.Create(ValidRequest(), Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.AuthorName.ShouldBe("Ana");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ACommentIsRefusedWhenItsAuthorHasNoAccountToTakeANameFrom()
+    {
+        var fixture = AnaInA();
+        fixture.AccountNames.Clear();
+
+        var result = await fixture.Service.Create(ValidRequest(), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ResolvingRecordsTheResolversAccountName()
+    {
+        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
+        var note = fixture.Add(TenantA, Ana);
+
+        var result = await fixture.Service.Resolve(note.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.ResolvedByName.ShouldBe("Ben");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ResolvingIsRefusedWhenTheResolverHasNoAccountAndNothingIsWritten()
+    {
+        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
+        var note = fixture.Add(TenantA, Ana);
+        fixture.AccountNames.Clear();
+
+        var result = await fixture.Service.Resolve(note.Id, Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AReopenNeedsNoNameFromTheAccount()
+    {
+        var fixture = new Fixture().SignedInAs(Ben, TenantA, "Ben");
+        var note = fixture.Add(TenantA, Ana, state: "Resolved");
+        fixture.AccountNames.Clear();
+
+        var result = await fixture.Service.Reopen(note.Id, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.ResolvedByName.ShouldBeNull();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AgreeingAndCommentingRecordTheAccountName()
+    {
+        var fixture = new Fixture().SignedInAsReviewer(Ana, TenantA, "Ana");
+        var note = fixture.Add(TenantA, Ben);
+
+        var agreed = await fixture.Service.Agree(note.Id, Ct);
+        var commented = await fixture.Service.AddComment(note.Id, "Same here", Ct);
+
+        agreed.IsSuccess.ShouldBeTrue();
+        commented.IsSuccess.ShouldBeTrue();
+        commented.Value!.AuthorName.ShouldBe("Ana");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task AgreeingAndCommentingAreRefusedWhenThePersonHasNoAccount()
+    {
+        var fixture = new Fixture().SignedInAsReviewer(Ana, TenantA, "Ana");
+        var note = fixture.Add(TenantA, Ben);
+        fixture.AccountNames.Clear();
+
+        var agreed = await fixture.Service.Agree(note.Id, Ct);
+        var commented = await fixture.Service.AddComment(note.Id, "Same here", Ct);
+
+        agreed.IsFailure.ShouldBeTrue();
+        commented.IsFailure.ShouldBeTrue();
+        fixture.Writes.ShouldBeEmpty();
+    }
+
+    // ── A comment names several components (FDW-2343) ───────────────────────
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task ACommentIsReadBackWithEveryComponentInTheOrderTheyWereGiven()
+    {
+        var fixture = AnaInA();
+        var note = fixture.Add(TenantA, Ana);
+        // The store hands the rows back in any order; the position is what orders them.
+        fixture.Anchors.Add(new UiFeedbackAnchorRow { FeedbackId = note.Id, Ordinal = 2, Anchor = "{\"name\":\"third\"}" });
+        fixture.Anchors.Add(new UiFeedbackAnchorRow { FeedbackId = note.Id, Ordinal = 0, Anchor = "{\"name\":\"first\"}" });
+        fixture.Anchors.Add(new UiFeedbackAnchorRow { FeedbackId = note.Id, Ordinal = 1, Anchor = "{\"name\":\"second\"}" });
+
+        var opened = await fixture.Service.Get(note.Id, Ct);
+        var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        var expected = new[] { "{\"name\":\"first\"}", "{\"name\":\"second\"}", "{\"name\":\"third\"}" };
+        opened.Value!.AnchorsJson.ShouldBe(expected);
+        listed.Value!.Single().AnchorsJson.ShouldBe(expected);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public async Task EachCommentGetsOnlyItsOwnComponents()
+    {
+        var fixture = AnaInA();
+        var first = fixture.Add(TenantA, Ana);
+        var second = fixture.Add(TenantA, Ana, minutesAgo: 5);
+        fixture.Anchors.Add(new UiFeedbackAnchorRow { FeedbackId = first.Id, Ordinal = 0, Anchor = "{\"name\":\"mine\"}" });
+        fixture.Anchors.Add(new UiFeedbackAnchorRow { FeedbackId = second.Id, Ordinal = 0, Anchor = "{\"name\":\"theirs\"}" });
+
+        var listed = await fixture.Service.List(new UiFeedbackQuery(), Ct);
+
+        listed.Value!.Single(c => c.Id == first.Id).AnchorsJson.ShouldBe(["{\"name\":\"mine\"}"]);
+        listed.Value!.Single(c => c.Id == second.Id).AnchorsJson.ShouldBe(["{\"name\":\"theirs\"}"]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task ACommentWithAnAnchorThatFailsToBeKeptIsTakenBack()
+    {
+        var fixture = AnaInA();
+        // Writes: the note (1), its two tags (2, 3), then its first component (4).
+        fixture.FailWrite = 4;
+
+        var result = await fixture.Service.Create(ValidRequest(), Ct);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-71004");
+        fixture.Writes.ShouldBe(["UiFeedback", "UiFeedbackTag", "UiFeedbackTag", "UiFeedbackAnchor", "UiFeedbackAnchor", "UiFeedbackComment", "UiFeedbackAgreement", "AlertAction", "AlertEveryoneAction", "UiFeedbackTag", "UiFeedbackScreenshot", "UiFeedback"]);
     }
 }

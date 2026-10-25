@@ -12,4 +12,11 @@ public interface IComponentType : ITypeOption<int, IComponentType>, IFlowCompone
 
     /// <summary>Gets whether the kind is a loop, which runs the components that name it as their parent once for each round.</summary>
     bool HoldsComponents { get; }
+
+    /// <summary>
+    /// Gets the text a client puts between the stated settings that summarise the kind (see <see cref="StageMember.SummarisesComponent"/>), in the order
+    /// the kind lists them (RUI-547): <c> = </c> for a Set variable, which reads <c>count = 5</c>. A kind that flags two or more settings states one; a kind
+    /// that flags fewer has nothing to join and is null.
+    /// </summary>
+    string? SummarySeparator { get; }
 }

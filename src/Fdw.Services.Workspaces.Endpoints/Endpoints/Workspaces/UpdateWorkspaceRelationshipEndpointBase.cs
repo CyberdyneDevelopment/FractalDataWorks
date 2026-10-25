@@ -108,7 +108,7 @@ public abstract class UpdateWorkspaceRelationshipEndpointBase
 
         row.LeftFieldId = request.LeftFieldId;
         row.RightFieldId = request.RightFieldId;
-        // Why stamped here: MsSqlConfigurationSaveTranslator's INSERT half writes every mapped
+        // Why stamped here: ConfigurationSaveCommand's insert writes every mapped
         // column explicitly, same as the create/attach sites (FDW-793) -- CreateDate is left as the
         // value already on `row` (the original creation date, not this version's), and only
         // ModifyDate moves.

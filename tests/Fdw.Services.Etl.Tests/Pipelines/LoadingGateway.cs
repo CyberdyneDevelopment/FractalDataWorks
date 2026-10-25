@@ -48,7 +48,7 @@ internal sealed class LoadingGateway
             {
                 var (label, count) = command switch
                 {
-                    BulkInsertCommand<IDictionary<string, object?>> insert => ("insert", insert.Data.Count()),
+                    InsertCommand<IDictionary<string, object?>> insert => ("insert", insert.Data.Count()),
                     BulkUpsertCommand<IDictionary<string, object?>> upsert => ("upsert", upsert.Data.Count()),
                     _ => ("truncate", 0),
                 };
@@ -76,7 +76,7 @@ internal sealed class LoadingGateway
             {
                 var record = command switch
                 {
-                    InsertCommand<EtlPipelineWatermarkRecord> insert => insert.Data,
+                    InsertCommand<EtlPipelineWatermarkRecord> insert => insert.Data.Single(),
                     UpdateCommand<EtlPipelineWatermarkRecord> update => update.Data,
                     _ => throw new InvalidOperationException($"unexpected store command {command.GetType().Name}"),
                 };

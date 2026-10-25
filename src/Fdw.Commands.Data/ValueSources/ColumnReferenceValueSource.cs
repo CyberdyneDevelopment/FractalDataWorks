@@ -7,7 +7,7 @@ namespace Fdw.Commands.Data.ValueSources;
 /// source field, which need not be called the same.
 /// </summary>
 /// <remarks>
-/// It is meaningful where a command reads from a source query (<see cref="Fdw.Commands.Data.InsertFromQueryCommand"/>). A
+/// It is meaningful where a command reads from a source query. A
 /// command that is handed rows already keyed by destination column refuses it.
 /// </remarks>
 public sealed class ColumnReferenceValueSource : ColumnValueSource

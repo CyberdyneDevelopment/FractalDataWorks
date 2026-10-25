@@ -46,7 +46,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | Type | Kind | Purpose |
 |---|---|---|
 | `BrokenConnectionState` | class | The connection is in a broken or faulted state and cannot be used. |
-| `BulkInsertCapability` | class | Bulk insert capability — writes a large batch of records to a target container using the connection's… |
 | `BulkUpsertCapability` | class | Bulk upsert capability — writes a large batch of records to a target container using the connection's… |
 | `ClosedConnectionState` | class | The connection is closed. |
 | `ClosingConnectionState` | class | The connection is currently being closed. |

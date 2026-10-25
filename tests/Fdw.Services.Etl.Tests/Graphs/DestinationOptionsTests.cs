@@ -16,7 +16,7 @@ public sealed class DestinationOptionsTests
     {
         var destination = new PipelineComponentConfiguration
         {
-            Name = "load", ComponentType = "DataSetDestination", DataSetName = "Orders", LoadKind = "BulkUpsert", TruncateFirst = false,
+            Name = "load", ComponentType = "DataSetDestination", DataSetName = "Orders", LoadKind = "Upsert", TruncateFirst = false,
         };
         AddColumns(destination, "keyColumns", "Id");
         AddColumns(destination, "compareColumns", "Amount");
@@ -56,7 +56,7 @@ public sealed class DestinationOptionsTests
             Ordinal = 0, ColumnName = "Origin", SourceKind = "Constant", ConstantValue = "orders", ConstantDataType = "String",
         });
 
-        var row = DestinationOptions.Row(destination, LoadStepKinds.ByName("BulkUpsert"));
+        var row = DestinationOptions.Row(destination, LoadStepKinds.ByName("Upsert"));
 
         row.EffectiveFromColumn.ShouldBe("ValidFrom");
         row.EffectiveToColumn.ShouldBe("ValidTo");
@@ -105,7 +105,7 @@ public sealed class DestinationOptionsTests
     public void VersioningOnALoadKindThatDoesNotAllowItIsAProblemOnTheSetting()
     {
         var destination = Upsert();
-        destination.LoadKind = "BulkInsert";
+        destination.LoadKind = "Insert";
         destination.Columns.Clear();
         AddColumns(destination, "writeColumns", "Id", "Amount");
         destination.EffectiveFromColumn = "ValidFrom";

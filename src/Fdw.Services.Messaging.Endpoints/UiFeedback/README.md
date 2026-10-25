@@ -33,7 +33,7 @@ The author and tenant of a comment are the caller's, never stated by the request
 
 ### Save
 
-`screen`, `route`, `area` `{ x, y, w, h }`, `viewport` `{ w, h }`, `urgency`, `tags` (a list, empty for none) and `body` are required. `theme`, `anchor` (any JSON, kept as sent) and `screenshot` (a PNG data URL, at most 2 MB once decoded) are optional.
+`screen`, `route`, `area` `{ x, y, w, h }`, `viewport` `{ w, h }`, `urgency`, `tags` (a list, empty for none), `anchors` and `body` are required. `anchors` is the components the comment is about, in the order the reviewer chose them: at least one and at most 20, each a JSON object of at most 4000 characters, kept as sent and returned in the same order as `anchors` on every comment. `theme` and `screenshot` (a PNG data URL, at most 2 MB once decoded) are optional.
 Nothing is cut or defaulted: a missing or wrong field is a `400` that names the field, and a picture that is too large or is not a PNG is refused whole. `urgency` and every tag must be an option of the `UiFeedbackUrgencies` and `UiFeedbackTags` type collections (`GET /type-collections/{name}/values`).
 
 ### List
@@ -48,7 +48,7 @@ The two users must act in the same tenant, or the second cannot reach what the f
 1. Sign in as `testuser` (role UiReviewer, write) and `POST /ui-feedback` with a small PNG data URL as `screenshot`, `urgency` `High`, `tags` `["UsabilityIssue"]`. Expect `201`, `state` `Open`, `isMine` true, `hasScreenshot` true.
 2. Sign in as `afcuser` (role Developer, read and resolve). `GET /ui-feedback?state=Open&sort=urgency` lists it; `GET /ui-feedback/{id}` opens it; `GET /ui-feedback/{id}/screenshot` returns the PNG.
 3. As `afcuser`, `POST /ui-feedback/{id}/resolve`: expect `state` `Resolved`, `resolvedByName` set. Resolve again: expect `409`. `POST /ui-feedback/{id}/reopen` clears `resolvedByName` and `resolvedAt`.
-4. As `afcuser`, `PATCH` or `DELETE` the comment: expect `403`. As `testuser`, `PATCH` changes the note and sets `updatedAt`; `DELETE` removes the comment, its tags and its picture.
+4. As `afcuser`, `PATCH` or `DELETE` the comment: expect `403`. As `testuser`, `PATCH` changes the note and sets `updatedAt`; `DELETE` removes the comment, its tags, its anchors and its picture.
 5. A save with `urgency` left out answers `400` naming `urgency`.
 6. Save a comment as `testuser`. `GET /messages` as `afcuser` (and as an Admin) lists a `UiFeedback` message about it; as `testuser` it lists none. Save one with urgency `SecurityIssue`: its message has severity `Error`.
 7. As `afcuser`, `POST /ui-feedback/{id}/acknowledge`: `acknowledgedByMe` is true and the message is read. Do it again: the same answer, no second row.

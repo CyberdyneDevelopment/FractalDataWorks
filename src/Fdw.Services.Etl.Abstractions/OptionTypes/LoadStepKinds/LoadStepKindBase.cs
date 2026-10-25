@@ -18,10 +18,9 @@ public abstract class LoadStepKindBase : TypeOptionBase<LoadStepKindBase>, ILoad
     /// <param name="allowsVersioning">Whether the load can keep versioned history with effective-from and effective-to columns.</param>
     /// <param name="allowsSoftDelete">Whether the load can set a deleted flag instead of removing rows.</param>
     /// <param name="usesSourceDataSet">Whether the step reads its rows from a source data set of its own, with an optional filter expression.</param>
-    /// <param name="usesDestinationContainer">Whether the step runs a named executable container of its destination data store.</param>
     /// <param name="usesRows">Whether the step works on the pipeline's transformed output rows.</param>
     /// <param name="acceptsRejectedRecords">Whether the step can write the records a pipeline's stages rejected, with their reason and stage.</param>
-    protected LoadStepKindBase(string name, string description, bool usesKeyColumns, bool usesCompareColumns, bool usesWriteColumns, bool allowsVersioning, bool allowsSoftDelete, bool usesSourceDataSet, bool usesDestinationContainer, bool usesRows, bool acceptsRejectedRecords) : base(name, name, description, "LoadStepKinds")
+    protected LoadStepKindBase(string name, string description, bool usesKeyColumns, bool usesCompareColumns, bool usesWriteColumns, bool allowsVersioning, bool allowsSoftDelete, bool usesSourceDataSet, bool usesRows, bool acceptsRejectedRecords) : base(name, name, description, "LoadStepKinds")
     {
         UsesKeyColumns = usesKeyColumns;
         UsesCompareColumns = usesCompareColumns;
@@ -29,7 +28,6 @@ public abstract class LoadStepKindBase : TypeOptionBase<LoadStepKindBase>, ILoad
         AllowsVersioning = allowsVersioning;
         AllowsSoftDelete = allowsSoftDelete;
         UsesSourceDataSet = usesSourceDataSet;
-        UsesDestinationContainer = usesDestinationContainer;
         UsesRows = usesRows;
         AcceptsRejectedRecords = acceptsRejectedRecords;
     }
@@ -51,9 +49,6 @@ public abstract class LoadStepKindBase : TypeOptionBase<LoadStepKindBase>, ILoad
 
     /// <inheritdoc/>
     public bool UsesSourceDataSet { get; }
-
-    /// <inheritdoc/>
-    public bool UsesDestinationContainer { get; }
 
     /// <inheritdoc/>
     public bool UsesRows { get; }

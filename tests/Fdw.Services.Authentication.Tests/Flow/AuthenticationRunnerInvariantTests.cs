@@ -37,13 +37,13 @@ public sealed class AuthenticationRunnerInvariantTests
     };
 
     private static (AuthenticationRunner Runner, RecordingIssuer Issuer, InMemoryExecutions Store) Build(
-        NamedSteps steps, AuthenticationFlow? flowForResume = null)
+        NamedSteps steps, AuthenticationFlow? flowForResume = null, RecordingSignIns? signIns = null)
     {
         var issuer = new RecordingIssuer();
         var store = new InMemoryExecutions();
         var flows = new StaticFlowProvider(flowForResume ?? Flow());
         return (new AuthenticationRunner(
-                    new CountingAcrPolicy(), issuer, new Mock<ISessionStore>(MockBehavior.Strict).Object, store, flows, steps.Lookup, new Mock<ITenantProvider>().Object),
+                    new CountingAcrPolicy(), issuer, new Mock<ISessionStore>(MockBehavior.Strict).Object, store, flows, steps.Lookup, new Mock<ITenantProvider>().Object, signIns ?? new RecordingSignIns()),
                 issuer, store);
     }
 
@@ -255,5 +255,63 @@ public sealed class AuthenticationRunnerInvariantTests
         issuer.LastRequest!.AuthenticationMethods.ShouldBe(["pwd", "otp"]);
         issuer.LastRequest!.Acr.ShouldBe("strong");
         issuer.LastRequest!.Audience.ShouldBe("test-audience");
+    }
+
+    private static HostileStep SignsIn() => new()
+    {
+        Contributes = [ContextElements.Subject, ContextElements.Principal, ContextElements.Decision],
+        AuthenticationMethods = ["pwd"],
+        Behaviour = _ => new StepOutcome.Contributed(new ContextContribution
+        {
+            Subject = Proves().Subject,
+            Principal = Resolves().Principal,
+            Decision = Permits().Decision,
+        }),
+    };
+
+    /// <summary>FDW-2729 — a sign-in that is accepted and issued is recorded once, for the principal, where every flow ends.</summary>
+    [Fact]
+    public async Task AnAcceptedSignInIsRecordedOnceForThePrincipal()
+    {
+        var signIns = new RecordingSignIns();
+        var (runner, issuer, _) = Build(new NamedSteps().Add("signs-in", SignsIn()), signIns: signIns);
+        var before = DateTimeOffset.UtcNow;
+
+        var result = await runner.Run(Flow("signs-in"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage?.ToString());
+        issuer.IssueCount.ShouldBe(1);
+        var recorded = signIns.Recorded.ShouldHaveSingleItem();
+        recorded.UserId.ShouldBe(PrincipalId);
+        recorded.FlowName.ShouldBe(Flow("signs-in").Name);
+        recorded.At.ShouldBeGreaterThanOrEqualTo(before);
+    }
+
+    /// <summary>FDW-2729 — a sign-in the terminal check refuses is not a sign-in and is not recorded.</summary>
+    [Fact]
+    public async Task ARefusedSignInIsNotRecorded()
+    {
+        var signIns = new RecordingSignIns();
+        var (runner, issuer, _) = Build(new NamedSteps().Add("signs-in", SignsIn()), signIns: signIns);
+
+        var result = await runner.Run(Flow("signs-in") with { MinimumAcr = "strong" }, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        issuer.IssueCount.ShouldBe(0);
+        signIns.Recorded.ShouldBeEmpty();
+    }
+
+    /// <summary>FDW-2729 — recording is reported when it fails, and a correct sign-in is not undone by it.</summary>
+    [Fact]
+    public async Task AFailedRecordingDoesNotFailTheSignIn()
+    {
+        var signIns = new RecordingSignIns { Fails = true };
+        var (runner, issuer, _) = Build(new NamedSteps().Add("signs-in", SignsIn()), signIns: signIns);
+
+        var result = await runner.Run(Flow("signs-in"), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue(result.CurrentMessage?.ToString());
+        issuer.IssueCount.ShouldBe(1);
+        signIns.Recorded.ShouldHaveSingleItem();
     }
 }

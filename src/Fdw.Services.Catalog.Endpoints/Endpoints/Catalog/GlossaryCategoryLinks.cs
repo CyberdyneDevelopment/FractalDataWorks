@@ -38,10 +38,22 @@ internal static class GlossaryCategoryLinks
         return GenericResult<GlossaryTermResponse>.Success(response);
     }
 
-    /// <summary>The answer to a failed read or refused request.</summary>
-    internal static IResult Failure(IGenericResult failure, HttpContext context)
+    /// <summary>Writes a term, as the glossary terms domain table holds it, the way the API answers it: its category by name and path.</summary>
+    internal static IGenericResult<GlossaryTermResponse> Describe(
+        GlossaryTermDomainConfiguration term, CategoryTree tree, ILogger logger)
     {
-        var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(failure, context);
-        return TypedResults.Json(errorResponse, statusCode: statusCode);
+        var label = CategoryLinks.Label(tree, GlossaryCategoryConfiguration.ImplementationName, term.CategoryId, logger);
+        if (label.IsFailure || label.Value is null)
+        {
+            return label.ToNewResult<GlossaryTermResponse>();
+        }
+
+        var response = GlossaryTermMapper.ToDto(term);
+        response.Category = label.Value.Name;
+        response.CategoryPath = label.Value.Path;
+        return GenericResult<GlossaryTermResponse>.Success(response);
     }
+
+    /// <summary>The answer to a failed read or refused request.</summary>
+    internal static IResult Failure(IGenericResult failure, HttpContext context) => ResultHttpStatusMapper.Answer(failure, context);
 }

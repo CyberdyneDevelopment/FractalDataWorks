@@ -7,6 +7,7 @@ using Fdw.Commands.Data;
 using Fdw.Commands.Data.Extensions;
 using Fdw.Messages;
 using Fdw.Results;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Logging;
@@ -21,7 +22,9 @@ namespace Fdw.Services.Multitenancy;
 /// <remarks>
 /// A feature is on for a tenant while it has a row in the tenant table, and on for an organization while the tenant also has a row for it
 /// in the organization table. Switching off deletes the row, because the tenant provider reads every row of the tenant table as an
-/// enabled feature.
+/// enabled feature. Every call first asks whether the caller holds the right for what it names (<see cref="FeatureScope"/>): the organization
+/// calls <c>organizations:read</c> or <c>organizations:write</c> for the organization, the two tenant calls <c>tenants:read</c> or
+/// <c>tenants:write</c> for the whole company.
 /// </remarks>
 public sealed class FeatureEnablement : IFeatureEnablement
 {
@@ -30,21 +33,36 @@ public sealed class FeatureEnablement : IFeatureEnablement
 
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly FeatureTables _tables;
+    private readonly FeatureScope _scope;
     private readonly ILogger<FeatureEnablement> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="FeatureEnablement"/> class.</summary>
     /// <param name="gateways">Supplies the configuration gateway of the tables.</param>
     /// <param name="tables">Names the store, path and tables the switches are kept in.</param>
+    /// <param name="organizations">Reads an organization, which names its tenant.</param>
+    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
     /// <param name="logger">The logger.</param>
-    public FeatureEnablement(IConfigurationGatewayProvider gateways, FeatureTables tables, ILogger<FeatureEnablement>? logger)
+    public FeatureEnablement(
+        IConfigurationGatewayProvider gateways, FeatureTables tables, IOrganizationProvider organizations, IScopeAuthority authority,
+        ILogger<FeatureEnablement>? logger)
     {
         _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
         _tables = tables ?? throw new ArgumentNullException(nameof(tables));
         _logger = logger ?? NullLogger<FeatureEnablement>.Instance;
+        _scope = new FeatureScope(organizations, authority, _logger);
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<FeatureState>>> ForTenant(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        var may = await _scope.MayActForTenant(FeatureScope.TenantReadRight, tenantId, cancellationToken).ConfigureAwait(false);
+        return may.IsFailure
+            ? may.ToNewResult<IReadOnlyList<FeatureState>>()
+            : await TenantStates(tenantId, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The features of a tenant, with the check already made.
+    private async Task<IGenericResult<IReadOnlyList<FeatureState>>> TenantStates(Guid tenantId, CancellationToken cancellationToken)
     {
         var tenantRows = await TenantRows(tenantId, cancellationToken).ConfigureAwait(false);
         return tenantRows.IsFailure || tenantRows.Value is not { } rows
@@ -53,7 +71,16 @@ public sealed class FeatureEnablement : IFeatureEnablement
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<FeatureState>>> ForOrganization(Guid tenantId, Guid organizationId, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IReadOnlyList<FeatureState>>> ForOrganization(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        var tenant = await _scope.TenantOf(FeatureScope.ReadRight, organizationId, cancellationToken).ConfigureAwait(false);
+        return tenant.IsFailure
+            ? tenant.ToNewResult<IReadOnlyList<FeatureState>>()
+            : await StatesOf(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
+    }
+
+    // The features of an organization of a tenant, with the check already made.
+    private async Task<IGenericResult<IReadOnlyList<FeatureState>>> StatesOf(Guid tenantId, Guid organizationId, CancellationToken cancellationToken)
     {
         var tenantRows = await TenantRows(tenantId, cancellationToken).ConfigureAwait(false);
         if (tenantRows.IsFailure || tenantRows.Value is not { } tenant)
@@ -70,6 +97,12 @@ public sealed class FeatureEnablement : IFeatureEnablement
     /// <inheritdoc />
     public async Task<IGenericResult<FeatureState>> SetForTenant(Guid tenantId, string featureName, bool enabled, CancellationToken cancellationToken = default)
     {
+        var may = await _scope.MayActForTenant(FeatureScope.TenantWriteRight, tenantId, cancellationToken).ConfigureAwait(false);
+        if (may.IsFailure)
+        {
+            return may.ToNewResult<FeatureState>();
+        }
+
         var feature = Features.ByName(featureName);
         if (feature.IsEmpty)
         {
@@ -88,7 +121,7 @@ public sealed class FeatureEnablement : IFeatureEnablement
             return GenericResult<FeatureState>.Failure(refused);
         }
 
-        var after = await ForTenant(tenantId, cancellationToken).ConfigureAwait(false);
+        var after = await TenantStates(tenantId, cancellationToken).ConfigureAwait(false);
         return after.IsFailure || after.Value is not { } states
             ? after.ToNewResult<FeatureState>()
             : GenericResult<FeatureState>.Success(states.Single(state => Same(state.Name, feature.Name)));
@@ -96,8 +129,15 @@ public sealed class FeatureEnablement : IFeatureEnablement
 
     /// <inheritdoc />
     public async Task<IGenericResult<FeatureState>> SetForOrganization(
-        Guid tenantId, Guid organizationId, string featureName, bool enabled, CancellationToken cancellationToken = default)
+        Guid organizationId, string featureName, bool enabled, CancellationToken cancellationToken = default)
     {
+        var scoped = await _scope.TenantOf(FeatureScope.WriteRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (scoped.IsFailure)
+        {
+            return scoped.ToNewResult<FeatureState>();
+        }
+
+        var tenantId = scoped.Value;
         var feature = Features.ByName(featureName);
         if (feature.IsEmpty)
         {
@@ -127,7 +167,7 @@ public sealed class FeatureEnablement : IFeatureEnablement
             return GenericResult<FeatureState>.Failure(refused);
         }
 
-        var after = await ForOrganization(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var after = await StatesOf(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
         return after.IsFailure || after.Value is not { } states
             ? after.ToNewResult<FeatureState>()
             : GenericResult<FeatureState>.Success(states.Single(state => Same(state.Name, feature.Name)));

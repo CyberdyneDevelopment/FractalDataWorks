@@ -11,7 +11,7 @@ namespace Fdw.Commands.Data.Abstractions;
 /// <remarks>
 /// <para>
 /// This collection provides compile-time discovery of all data command types.
-/// Each command type (Query, Insert, Update, Delete, Upsert, BulkInsert) will have a static property.
+/// Each command type (Query, Insert, Update, Delete, Upsert) will have a static property.
 /// </para>
 /// <para>
 /// Example generated properties:

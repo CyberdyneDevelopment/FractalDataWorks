@@ -53,7 +53,7 @@ public abstract class AddUiFeedbackCommentEndpointBase : Endpoint<AddUiFeedbackC
         var added = await Feedback.AddComment(req.Id, req.Body, ct).ConfigureAwait(false);
         if (!added.IsSuccess || added.Value is not { } comment)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(added, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(added, HttpContext)).ConfigureAwait(false);
             return;
         }
 

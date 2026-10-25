@@ -1,3 +1,5 @@
+using System;
+
 namespace Fdw.Services.Calculations.Abstractions.Runtime;
 
 /// <summary>
@@ -27,6 +29,15 @@ public sealed class CalculationRunState
     /// <summary>Gets or sets the index of the result being computed now.</summary>
     public int Current { get; set; }
 
+    /// <summary>
+    /// Gets or sets the source of the current time, which a calculation that reads the time needs. It survives <see cref="Reset"/>:
+    /// a caller states it once for a state it reuses across records.
+    /// </summary>
+    public Func<DateTimeOffset>? Clock { get; set; }
+
+    /// <summary>Gets the moment this evaluation reads as now, or null before the first read of the time.</summary>
+    public DateTimeOffset? Moment { get; private set; }
+
     /// <summary>Gets a value indicating whether anything has failed.</summary>
     public bool Failed => Code != 0;
 
@@ -52,6 +63,32 @@ public sealed class CalculationRunState
         }
 
         return 0m;
+    }
+
+    /// <summary>
+    /// Gives the moment this evaluation reads as now, taking it from <see cref="Clock"/> the first time it is asked, so every read
+    /// in one evaluation agrees.
+    /// </summary>
+    /// <returns>The moment, or null when no clock was given.</returns>
+    public DateTimeOffset? TakeMoment()
+    {
+        if (Moment is null && Clock is not null)
+        {
+            Moment = Clock();
+        }
+
+        return Moment;
+    }
+
+    /// <summary>Records a failure with a reason unless one is already recorded.</summary>
+    /// <param name="code">The id of the result code.</param>
+    /// <param name="node">The index of the failing node.</param>
+    /// <param name="reason">The reason to show.</param>
+    /// <returns>The default moment, the placeholder the failed operation yields.</returns>
+    public DateTimeOffset FailMomentWith(int code, int node, string reason)
+    {
+        FailWith(code, node, reason);
+        return default;
     }
 
     /// <summary>Records a failure unless one is already recorded.</summary>
@@ -83,5 +120,6 @@ public sealed class CalculationRunState
         FailedResult = 0;
         Reason = string.Empty;
         Current = 0;
+        Moment = null;
     }
 }

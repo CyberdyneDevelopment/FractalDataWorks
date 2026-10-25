@@ -3,12 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data.Abstractions;
 using Fdw.Data.PostgreSql.Logging;
 using Fdw.Data.PostgreSql.Results;
 using Fdw.Data.PostgreSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
@@ -23,11 +25,14 @@ namespace Fdw.Data.PostgreSql;
 /// Builds PostgreSQL DELETE statements with:
 /// <list type="bullet">
 /// <item>DELETE FROM - container's physical name with double-quoted identifiers</item>
-/// <item>WHERE clause - from Filter expression (REQUIRED for safety)</item>
+/// <item>WHERE clause - from the Filter expression, when the command has one</item>
 /// </list>
 /// </para>
 /// <para>
-/// ALWAYS requires a WHERE clause to prevent accidental deletion of all records.
+/// A command with no filter has no condition, so it deletes every record: the container is emptied.
+/// </para>
+/// <para>
+/// A command that carries soft-delete options flags the rows instead (an UPDATE that sets the deleted-flag column).
 /// </para>
 /// </remarks>
 [TypeOption(typeof(PostgreSqlDataCommandTranslators), "Delete", RestrictToCurrentCompilation = true)]
@@ -86,16 +91,13 @@ public sealed class PostgreSqlDeleteTranslator : PostgreSqlDataCommandTranslator
                     GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
             }
 
-            var filter = command.Filter;
-            if (filter == null || filter.Root == null)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("MissingDeleteFilter")));
-            }
+            if (command is ISoftDeletableCommand { SoftDelete: { } soft })
+                return Task.FromResult(GenericResult<NpgsqlCommand>.Success(BuildSoftDeleteStatement(dbPath, container, soft, command.Filter)));
 
-            var npgsqlCommand = BuildDeleteStatement(dbPath, filter);
-
-            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
+            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(
+                command.Filter is { Root: not null } filter
+                    ? BuildDeleteStatement(dbPath, filter)
+                    : CreateCommand($"DELETE FROM {BuildQualifiedTableName(dbPath)}")));
         }
         catch (Exception ex)
         {
@@ -104,6 +106,27 @@ public sealed class PostgreSqlDeleteTranslator : PostgreSqlDataCommandTranslator
                     PostgreSqlDataResultCodes.ByName("DeleteTranslationFailed"),
                     ResultDetails.Create("ErrorMessage", ex.Message)));
         }
+    }
+
+    /// <summary>
+    /// Builds the UPDATE that flags the rows a soft delete selects instead of removing them.
+    /// </summary>
+    private static NpgsqlCommand BuildSoftDeleteStatement(
+        IDatabasePath dbPath,
+        IStorageContainer container,
+        SoftDeleteOptions soft,
+        IFilterExpression? filter)
+    {
+        var command = CreateCommand(string.Empty);
+        command.CommandText = BuildSoftDeleteUpdate(
+            BuildQualifiedTableName(dbPath),
+            dbPath.Dialect,
+            soft,
+            container,
+            "now()",
+            filter is { Root: not null } ? BuildWhereClause(filter, dbPath.Dialect, (n, v) => AddParameter(command, n, v)) : null,
+            (n, v) => AddParameter(command, n, v));
+        return command;
     }
 
     /// <summary>

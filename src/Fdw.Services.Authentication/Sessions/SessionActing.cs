@@ -73,9 +73,14 @@ public sealed class SessionActing : ISessionActing
         if (role.IsFailure || role.Value is null)
             return GenericResult.Failure(SessionLog.ActingRoleUnknown(_logger, roleName));
 
+        // Why the caller is told the role does not exist: a role of another company would otherwise be told apart from an unknown one,
+        // and a name could be probed for. The log line keeps both companies for the operator.
         if (role.Value.IsTenantScoped && role.Value.TenantId != current.Value!.TenantId)
-            return GenericResult.Failure(SessionLog.ActingRoleOtherTenant(
-                _logger, roleName, role.Value.TenantId?.ToString() ?? "(none)", current.Value.TenantId.ToString()));
+        {
+            SessionLog.ActingRoleOtherTenant(
+                _logger, roleName, role.Value.TenantId?.ToString() ?? "(none)", current.Value.TenantId.ToString());
+            return GenericResult.Failure(SessionLog.ActingRoleUnknown(_logger, roleName));
+        }
 
         var carried = await _grants.Get([role.Value.Name], cancellationToken).ConfigureAwait(false);
         if (carried.IsFailure)

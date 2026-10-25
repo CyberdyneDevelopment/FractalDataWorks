@@ -47,6 +47,9 @@ public interface IWorkspaceImplementationConfiguration : IImplementationConfigur
     /// <summary>Gets or sets the Workspace StandInSeed.</summary>
     string? StandInSeed { get; set; }
 
+    /// <summary>Gets or sets the organization of the workspace's tenant this workspace belongs to; null when it sits directly under its tenant (FDW-2338).</summary>
+    Guid? OrganizationId { get; set; }
+
     /// <summary>Gets or sets the Workspace TenantId.</summary>
     Guid? TenantId { get; set; }
 

@@ -52,7 +52,7 @@ public abstract class EditUiFeedbackEndpointBase : Endpoint<EditUiFeedbackEndpoi
         var edited = await Feedback.Edit(req.Id, req.Body, ct).ConfigureAwait(false);
         if (!edited.IsSuccess || edited.Value is not { } comment)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(edited, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(edited, HttpContext)).ConfigureAwait(false);
             return;
         }
 

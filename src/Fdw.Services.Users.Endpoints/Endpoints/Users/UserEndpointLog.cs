@@ -281,6 +281,21 @@ public static partial class UserEndpointLog
         string user,
         string reason);
 
+    /// <summary>Logs that a read of an account's sign-ins is refused (FDW-2729).</summary>
+    [MessageLogging(EventId = 50008, Level = LogLevel.Warning,
+        Message = "Refused a read of the sign-ins of '{user}': the caller is neither the account, its home-tenant administrator, nor a platform administrator")]
+    public static partial IGenericMessage SignInsNotPermitted(
+        ILogger logger,
+        string user);
+
+    /// <summary>Logs that a page of an account's sign-ins was read (FDW-2729).</summary>
+    [MessageLogging(EventId = 10010, Level = LogLevel.Debug,
+        Message = "Read a page of {count} sign-in(s) of user '{user}'")]
+    public static partial IGenericMessage SignInsListed(
+        ILogger logger,
+        string user,
+        int count);
+
     /// <summary>Logs that a setting a password link needs is not set (FDW-941).</summary>
     [MessageLogging(EventId = 60001, Level = LogLevel.Error,
         Message = "No password link can be created: the setting '{setting}' is not set or not valid")]

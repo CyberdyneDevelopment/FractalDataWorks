@@ -26,10 +26,6 @@ public static partial class MessagingLog
     [MessageLogging(EventId = 11003, Level = LogLevel.Debug, Message = "Message {messageId} marked as read")]
     public static partial IGenericMessage MessageRead(ILogger logger, string messageId);
 
-    /// <summary>Logs message dismissal.</summary>
-    [MessageLogging(EventId = 11004, Level = LogLevel.Debug, Message = "Message {messageId} dismissed")]
-    public static partial IGenericMessage MessageDismissed(ILogger logger, string messageId);
-
     /// <summary>Logs message archival.</summary>
     [MessageLogging(EventId = 11005, Level = LogLevel.Debug, Message = "Message {messageId} archived")]
     public static partial IGenericMessage MessageArchived(ILogger logger, string messageId);
@@ -98,10 +94,6 @@ public static partial class MessagingLog
     /// <summary>Trace entry for MarkDelivered.</summary>
     [MessageLogging(EventId = 11015, Level = LogLevel.Trace, Message = "Entering MarkDelivered")]
     public static partial IGenericMessage TraceMarkDeliveredEntry(ILogger logger);
-
-    /// <summary>Trace entry for Dismiss.</summary>
-    [MessageLogging(EventId = 11016, Level = LogLevel.Trace, Message = "Entering Dismiss")]
-    public static partial IGenericMessage TraceDismissEntry(ILogger logger);
 
     /// <summary>Trace entry for Archive.</summary>
     [MessageLogging(EventId = 11017, Level = LogLevel.Trace, Message = "Entering Archive")]
@@ -176,8 +168,8 @@ public static partial class MessagingLog
         ClientMessage = "The comment is already {state}")]
     public static partial IGenericMessage UiFeedbackWrongState(ILogger logger, string feedbackId, string state);
 
-    /// <summary>The caller has no signed-in user, name or tenant to act as. An authentication failure (category 5).</summary>
-    [MessageLogging(EventId = 51001, Level = LogLevel.Warning, Message = "UI comment {operation} needs a signed-in caller with a user, a name and a tenant")]
+    /// <summary>The caller has no signed-in user or tenant to act as. An authentication failure (category 5).</summary>
+    [MessageLogging(EventId = 51001, Level = LogLevel.Warning, Message = "UI comment {operation} needs a signed-in caller with a user and a tenant")]
     public static partial IGenericMessage UiFeedbackCallerRequired(ILogger logger, string operation);
 
     /// <summary>The comment is another person's, so the caller may not change or delete it. A forbidden refusal (category 10).</summary>
@@ -192,15 +184,6 @@ public static partial class MessagingLog
     /// <summary>A UI comment operation failed in a way nothing anticipated.</summary>
     [MessageLogging(EventId = 91001, Level = LogLevel.Error, Message = "UI comment {operation} failed unexpectedly: {error}")]
     public static partial IGenericMessage UiFeedbackUnexpected(ILogger logger, string operation, string? error);
-
-    /// <summary>Logs a UI comment acknowledged.</summary>
-    [MessageLogging(EventId = 11027, Level = LogLevel.Information, Message = "UI comment {feedbackId} acknowledged by {user}")]
-    public static partial IGenericMessage UiFeedbackAcknowledged(ILogger logger, string feedbackId, string user);
-
-    /// <summary>Logs a UI comment acknowledged again by someone who already had; nothing changed.</summary>
-    // Why Debug, not Information: a per-call outcome that changes nothing; Information is for what an operator would act on or audit.
-    [MessageLogging(EventId = 11028, Level = LogLevel.Debug, Message = "UI comment {feedbackId} was already acknowledged by {user}; nothing changed")]
-    public static partial IGenericMessage UiFeedbackAlreadyAcknowledged(ILogger logger, string feedbackId, string user);
 
     /// <summary>Logs the readers told about a new UI comment.</summary>
     // Why Debug, not Information: it fires on every save; the save itself is the Information record (UiFeedbackSaved).
@@ -236,4 +219,95 @@ public static partial class MessagingLog
     /// <summary>Logs a comment written on a UI note.</summary>
     [MessageLogging(EventId = 11033, Level = LogLevel.Information, Message = "UI comment {feedbackId} commented on by {user}")]
     public static partial IGenericMessage UiFeedbackCommented(ILogger logger, string feedbackId, string user);
+
+    // ── Alerts (FDW-2420) ────────────────────────────────────────────────────
+
+    /// <summary>Trace entry for an alert operation.</summary>
+    [MessageLogging(EventId = 11040, Level = LogLevel.Trace, Message = "Entering alert {operation}")]
+    public static partial IGenericMessage TraceAlertEntry(ILogger logger, string operation);
+
+    /// <summary>Logs an action taken on an alert.</summary>
+    [MessageLogging(EventId = 11041, Level = LogLevel.Information, Message = "Alert {kind} {alertId}: {user} took {action}")]
+    public static partial IGenericMessage AlertActionApplied(ILogger logger, string kind, string alertId, string user, string action);
+
+    /// <summary>Logs an action asked for again on an alert that already carries it; nothing changed.</summary>
+    // Why Debug, not Information: a per-call outcome that changes nothing; Information is for what an operator would act on or audit.
+    [MessageLogging(EventId = 11042, Level = LogLevel.Debug, Message = "Alert {kind} {alertId} already carried {action} from {user}; nothing changed")]
+    public static partial IGenericMessage AlertActionAlreadyTaken(ILogger logger, string kind, string alertId, string user, string action);
+
+    /// <summary>Logs a person taking back one of their own actions on an alert.</summary>
+    [MessageLogging(EventId = 11043, Level = LogLevel.Information, Message = "Alert {kind} {alertId}: {user} took back {action}")]
+    public static partial IGenericMessage AlertActionWithdrawn(ILogger logger, string kind, string alertId, string user, string action);
+
+    /// <summary>An alert question named a kind that no source answers for. A validation refusal (category 2).</summary>
+    [MessageLogging(EventId = 21010, Level = LogLevel.Warning, Message = "Alert refused: {kind} is not a kind of alert; the kinds are {kinds}",
+        ClientMessage = "kind {kind} is not a kind of alert; the kinds are {kinds}")]
+    public static partial IGenericMessage AlertKindUnknown(ILogger logger, string kind, string kinds);
+
+    /// <summary>An alert action named an action that is not an option of the alert actions. A validation refusal (category 2).</summary>
+    [MessageLogging(EventId = 21011, Level = LogLevel.Warning, Message = "Alert refused: {action} is not an alert action; the actions are {actions}",
+        ClientMessage = "action {action} is not an alert action; the actions are {actions}")]
+    public static partial IGenericMessage AlertActionUnknown(ILogger logger, string action, string actions);
+
+    /// <summary>An alert action was sent with a missing or wrong choice of length. A validation refusal (category 2).</summary>
+    [MessageLogging(EventId = 21012, Level = LogLevel.Warning, Message = "Alert refused: choice for {action} {reason}",
+        ClientMessage = "choice {reason}")]
+    public static partial IGenericMessage AlertChoiceInvalid(ILogger logger, string action, string reason);
+
+    /// <summary>A question about alerts was put wrong. A validation refusal (category 2).</summary>
+    [MessageLogging(EventId = 21013, Level = LogLevel.Warning, Message = "Alert refused: {field} {reason}",
+        ClientMessage = "{field} {reason}")]
+    public static partial IGenericMessage AlertAskedWrong(ILogger logger, string field, string reason);
+
+    /// <summary>An alert that does not exist, or is not in the caller's reach. A not-found refusal (category 3).</summary>
+    [MessageLogging(EventId = 31010, Level = LogLevel.Warning, Message = "Alert {kind} {alertId} not found")]
+    public static partial IGenericMessage AlertNotFound(ILogger logger, string kind, string alertId);
+
+    /// <summary>An action the kind of alert does not offer. A conflict (category 4).</summary>
+    [MessageLogging(EventId = 41010, Level = LogLevel.Warning, Message = "Alert {kind} {alertId} does not offer {action}",
+        ClientMessage = "This alert does not offer {action}")]
+    public static partial IGenericMessage AlertActionNotOffered(ILogger logger, string kind, string alertId, string action);
+
+    /// <summary>An action taken for everyone that cannot be taken back by one person. A conflict (category 4).</summary>
+    [MessageLogging(EventId = 41011, Level = LogLevel.Warning, Message = "Alert action {action} was taken for everyone and cannot be taken back by {user}",
+        ClientMessage = "{action} was taken for everyone and cannot be taken back here")]
+    public static partial IGenericMessage AlertActionNotYoursToTakeBack(ILogger logger, string action, string user);
+
+    /// <summary>The caller has no signed-in user to act as. An authentication failure (category 5).</summary>
+    [MessageLogging(EventId = 51010, Level = LogLevel.Warning, Message = "Alert {operation} needs a signed-in caller with a user")]
+    public static partial IGenericMessage AlertCallerRequired(ILogger logger, string operation);
+
+    /// <summary>The store failed an alert operation.</summary>
+    [MessageLogging(EventId = 71010, Level = LogLevel.Error, Message = "Alert {operation} failed in the store: {error}")]
+    public static partial IGenericMessage AlertStoreFailed(ILogger logger, string operation, string? error);
+
+    /// <summary>An action or an offer names an alert action that is not an option of the alert actions: something was removed that is still in use. An internal failure (category 9).</summary>
+    [MessageLogging(EventId = 91010, Level = LogLevel.Error, Message = "Alert action {action} is named by {source} but is not an option of the alert actions")]
+    public static partial IGenericMessage AlertActionNotDeclared(ILogger logger, string action, string source);
+
+    /// <summary>An alert operation failed in a way nothing anticipated.</summary>
+    [MessageLogging(EventId = 91011, Level = LogLevel.Error, Message = "Alert {operation} failed unexpectedly: {error}")]
+    public static partial IGenericMessage AlertUnexpected(ILogger logger, string operation, string? error);
+
+    /// <summary>The caller lacks the permission an alert action needs. A forbidden refusal (category 10).</summary>
+    [MessageLogging(EventId = 100001, Level = LogLevel.Warning, Message = "{user} may not {action} an alert without the permission {permission}",
+        ClientMessage = "You need the permission {permission} to {action} an alert")]
+    public static partial IGenericMessage AlertActionForbidden(ILogger logger, string user, string action, string permission);
+
+    /// <summary>Logs a company's choice of the actions a kind of alert offers.</summary>
+    [MessageLogging(EventId = 11050, Level = LogLevel.Information, Message = "Alert kind {kind}: {user} chose {actions} for tenant {tenantId}")]
+    public static partial IGenericMessage AlertKindActionsSet(ILogger logger, string kind, string user, string actions, string tenantId);
+
+    /// <summary>Logs a company going back to a kind of alert's own list of actions.</summary>
+    [MessageLogging(EventId = 11051, Level = LogLevel.Information, Message = "Alert kind {kind}: {user} went back to the kind's own actions for tenant {tenantId}")]
+    public static partial IGenericMessage AlertKindActionsReset(ILogger logger, string kind, string user, string tenantId);
+
+    /// <summary>The kind of alert a failed run is was asked for in a host that tracks no executions. A configuration failure (category 6).</summary>
+    [MessageLogging(EventId = 61052, Level = LogLevel.Error, Message = "An alert of a failed run was asked for in a host that registers no execution tracker")]
+    public static partial IGenericMessage ScheduleFailureNeedsExecutions(ILogger logger);
+
+    /// <summary>A list of actions that names one twice. A validation refusal (category 2).</summary>
+    [MessageLogging(EventId = 21014, Level = LogLevel.Warning, Message = "Alert refused: actions names {action} more than once",
+        ClientMessage = "actions names {action} more than once")]
+    public static partial IGenericMessage AlertActionRepeated(ILogger logger, string action);
 }

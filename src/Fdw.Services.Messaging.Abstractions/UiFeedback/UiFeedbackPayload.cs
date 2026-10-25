@@ -26,8 +26,8 @@ public sealed class UiFeedbackPayload
     /// <summary>Gets or sets the theme the screen was in, or <see langword="null"/> when none was stated.</summary>
     public string? Theme { get; set; }
 
-    /// <summary>Gets or sets the console's description of the element nearest the area, as the JSON text it was sent; nothing here reads it.</summary>
-    public string? AnchorJson { get; set; }
+    /// <summary>Gets or sets the console's description of each component the comment is about, as the JSON text it was sent, in the order it was sent; nothing here reads them.</summary>
+    public IReadOnlyList<string> AnchorsJson { get; set; } = [];
 
     /// <summary>Gets or sets the tester's note.</summary>
     public string Body { get; set; } = string.Empty;

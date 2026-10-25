@@ -93,6 +93,9 @@ public abstract class ComponentTypeBase : TypeOptionBase<ComponentTypeBase>, ICo
     public bool HoldsComponents { get; }
 
     /// <inheritdoc />
+    public string? SummarySeparator { get; protected set; }
+
+    /// <inheritdoc />
     public IReadOnlyList<FlowNodeSpec> Inputs { get; }
 
     /// <inheritdoc />

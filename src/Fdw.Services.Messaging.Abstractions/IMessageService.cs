@@ -60,14 +60,6 @@ public interface IMessageService
     Task<IGenericResult> MarkRead(Guid messageId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Dismisses a message.
-    /// </summary>
-    /// <param name="messageId">The message identifier.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The result of the operation.</returns>
-    Task<IGenericResult> Dismiss(Guid messageId, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Archives a message.
     /// </summary>
     /// <param name="messageId">The message identifier.</param>

@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
@@ -19,22 +18,18 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 public abstract class RunRetentionEndpointBase : Endpoint<OrganizationRetentionRequest, RetentionRunResponse>
 {
     private readonly IRetentionKeeper _keeper;
-    private readonly IOrganizationProvider _organizations;
     private readonly IAdministrativeAudit _audit;
-    private readonly ISystemRoleConfiguration _systemRoles;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="RunRetentionEndpointBase"/> class.</summary>
     protected RunRetentionEndpointBase(
-        ILogger logger, IRetentionKeeper keeper, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration systemRoles)
+        ILogger logger, IRetentionKeeper keeper, IAdministrativeAudit audit)
     {
         EndpointLogger = logger;
         _keeper = keeper;
-        _organizations = organizations;
         _audit = audit;
-        _systemRoles = systemRoles;
     }
 
     /// <inheritdoc />
@@ -50,14 +45,7 @@ public abstract class RunRetentionEndpointBase : Endpoint<OrganizationRetentionR
     /// <inheritdoc />
     public override async Task HandleAsync(OrganizationRetentionRequest req, CancellationToken ct)
     {
-        var access = await RetentionAccess.TenantOf(_organizations, _systemRoles, HttpContext, req.OrganizationId, EndpointLogger, ct).ConfigureAwait(false);
-        if (access.Refusal is { } refusal)
-        {
-            await Send.ResultAsync(refusal).ConfigureAwait(false);
-            return;
-        }
-
-        var ran = await _keeper.Run(access.TenantId, req.OrganizationId, DateTimeOffset.UtcNow, ct).ConfigureAwait(false);
+        var ran = await _keeper.Run(req.OrganizationId, DateTimeOffset.UtcNow, ct).ConfigureAwait(false);
         if (ran.IsFailure || ran.Value is not { } report)
         {
             await Send.ResultAsync(TenantProblem.Of(ran, HttpContext)).ConfigureAwait(false);

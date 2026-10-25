@@ -31,7 +31,10 @@ public interface IConnectionType : IServiceType
 {
 
     /// <summary>
-    /// Gets the command capabilities this connection supports.
+    /// Gets the capabilities this connection kind has beyond the data commands: modes (unit of work, soft
+    /// delete, compound query, streaming, vectorized reads) and what the kind is for (file read, HTTP request).
+    /// Every data connection answers every data command, natively where its translator collection has one and
+    /// by composing simpler commands where it has none, so no data command is listed here.
     /// The pipeline builder reads this list to populate the capability picker and then renders
     /// the selected capability's <see cref="ICommandCapabilityType.ConfigurationFields"/>
     /// (or its own editor when that list is empty).

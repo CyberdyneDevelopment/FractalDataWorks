@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
@@ -11,37 +10,27 @@ using Fdw.Data.PostgreSql.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
 using Npgsql;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.PostgreSql;
 
 /// <summary>
-/// Translates InsertCommand to PostgreSQL INSERT statement.
+/// Translates an <c>InsertCommand</c>, one row or many, into batched multi-row INSERT statements for PostgreSQL.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Builds PostgreSQL INSERT statements with:
-/// <list type="bullet">
-/// <item>INSERT INTO - container's physical name with double-quoted identifiers</item>
-/// <item>Column list - from container schema (excludes identity columns)</item>
-/// <item>VALUES clause - parameterized values from command data</item>
-/// <item>RETURNING - returns generated identity/serial value (instead of SCOPE_IDENTITY)</item>
-/// </list>
-/// </para>
+/// The statements are what a connection runs serially, up to its configured <c>MaxSerialInsert</c> rows. Above that the connection
+/// streams the rows through a binary COPY, which <see cref="Plan"/> prepares from the same rows and the same columns.
 /// </remarks>
 [TypeOption(typeof(PostgreSqlDataCommandTranslators), "Insert", RestrictToCurrentCompilation = true)]
-public sealed class PostgreSqlInsertTranslator : PostgreSqlDataCommandTranslatorBase
+public sealed partial class PostgreSqlInsertTranslator : PostgreSqlDataCommandTranslatorBase
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PostgreSqlInsertTranslator"/> class.
-    /// </summary>
+    /// <summary>Initializes a new instance of the <see cref="PostgreSqlInsertTranslator"/> class.</summary>
     public PostgreSqlInsertTranslator()
         : base("Insert")
     {
     }
 
-    /// <summary>
-    /// Translates an InsertCommand to a PostgreSQL INSERT statement.
-    /// </summary>
+    /// <inheritdoc/>
     public override Task<IGenericResult<NpgsqlCommand>> Translate(
         IDataCommand command,
         IStorageContainer container,
@@ -49,30 +38,13 @@ public sealed class PostgreSqlInsertTranslator : PostgreSqlDataCommandTranslator
     {
         try
         {
-            if (container == null)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("ContainerNull")));
-            }
+            var source = Source(command, container);
+            if (source.IsFailure)
+                return Task.FromResult(source.ToNewResult<NpgsqlCommand>());
 
-            if (container.Path is not IDatabasePath dbPath)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath")));
-            }
-
-            var dataObj = GetCommandData(command);
-            if (dataObj == null)
-            {
-                return Task.FromResult(
-                    GenericResult<NpgsqlCommand>.Failure(
-                        PostgreSqlDataResultCodes.ByName("MissingInputData"),
-                        ResultDetails.Create("CommandType", "InsertCommand")));
-            }
-
-            var npgsqlCommand = BuildInsertStatement(container, dbPath, dataObj);
-
-            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(npgsqlCommand));
+            var (dbPath, rows) = source.Value!;
+            return Task.FromResult(GenericResult<NpgsqlCommand>.Success(
+                BuildBatchedInsertStatements(container, dbPath, rows, ReturnedColumnsOf(command, container))));
         }
         catch (Exception ex)
         {
@@ -83,56 +55,28 @@ public sealed class PostgreSqlInsertTranslator : PostgreSqlDataCommandTranslator
         }
     }
 
-    /// <summary>
-    /// Builds a complete PostgreSQL INSERT statement with RETURNING clause.
-    /// </summary>
-    private static NpgsqlCommand BuildInsertStatement(
-        IStorageContainer container,
-        IDatabasePath dbPath,
-        object data)
+    private static IGenericResult<InsertSource> Source(IDataCommand command, IStorageContainer? container)
     {
-        var dialect = dbPath.Dialect;
+        if (container == null)
+            return GenericResult<InsertSource>.Failure(PostgreSqlDataResultCodes.ByName("ContainerNull"));
 
-        // Get columns from schema (exclude identity and computed columns)
-        var fields = container.Schema.Fields
-            .Where(f => !f.IsIdentity && !f.IsComputed)
-            .ToList();
+        if (container.Path is not IDatabasePath dbPath)
+            return GenericResult<InsertSource>.Failure(PostgreSqlDataResultCodes.ByName("InvalidContainerPath"));
 
-        if (fields.Count == 0)
+        var dataObj = GetCommandData(command);
+        if (dataObj == null)
         {
-            throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
+            return GenericResult<InsertSource>.Failure(
+                PostgreSqlDataResultCodes.ByName("MissingInputData"),
+                ResultDetails.Create("CommandType", "InsertCommand"));
         }
 
-        var allFieldNames = fields.Select(f => f.Name).ToList();
-
-        // Only include fields that have matching properties on the data object
-        var dataType = data.GetType();
-        var fieldNames = allFieldNames.Where(f => dataType.GetProperty(f) != null).ToList();
-
-        if (fieldNames.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"Data object has no properties matching insertable fields for container {container.Name}");
-        }
-
-        // Build column list with dialect-quoted identifiers
-        var columnList = string.Join(", ", fieldNames.Select(f => dialect.QuoteIdentifier(f)));
-
-        // Build parameter list
-        var p = dialect.ParameterPrefix;
-        var paramList = string.Join(", ", fieldNames.Select(f => $"{p}{f}"));
-
-        // Build INSERT statement with RETURNING clause for generated identity
-        var identityField = container.Schema.Fields.FirstOrDefault(f => f.IsIdentity);
-        var returningClause = identityField != null
-            ? $" RETURNING {dialect.QuoteIdentifier(identityField.Name)}"
-            : string.Empty;
-
-        var sql = $"INSERT INTO {BuildQualifiedTableName(dbPath)} ({columnList}) VALUES ({paramList}){returningClause};";
-
-        var command = CreateCommand(sql);
-        AddParametersFromObject(data, fieldNames, (n, v) => AddParameter(command, n, v));
-
-        return command;
+        return dataObj is IEnumerable rows
+            ? GenericResult<InsertSource>.Success(new InsertSource(dbPath, rows))
+            : GenericResult<InsertSource>.Failure(
+                PostgreSqlDataResultCodes.ByName("InvalidDataType"),
+                ResultDetails.Create("TranslatorName", "PostgreSqlInsertTranslator", "ActualType", dataObj.GetType().Name));
     }
+
+    private sealed record InsertSource(IDatabasePath Path, IEnumerable Rows);
 }

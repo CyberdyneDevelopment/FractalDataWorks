@@ -64,7 +64,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { Id = 1, FullName = "Test" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
@@ -90,7 +90,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { Name = "TestUser", Age = 30 };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
@@ -98,8 +98,8 @@ public sealed class MsSqlInsertTranslatorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value!.Parameters.Count.ShouldBe(2);
-        result.Value.Parameters["@Name"].Value.ShouldBe("TestUser");
-        result.Value.Parameters["@Age"].Value.ShouldBe(30);
+        result.Value.Parameters["@p0"].Value.ShouldBe("TestUser");
+        result.Value.Parameters["@p1"].Value.ShouldBe(30);
     }
 
     [Fact]
@@ -118,14 +118,14 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { Name = "Test", Description = (string?)null };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Parameters["@Description"].Value.ShouldBe(DBNull.Value);
+        result.Value!.Parameters["@p1"].Value.ShouldBe(DBNull.Value);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { ProductName = "Widget" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
@@ -176,7 +176,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { FirstName = "John", LastName = "Doe", Email = "john@test.com", Phone = "555-1234" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
@@ -184,7 +184,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("[FirstName], [LastName], [Email], [Phone]");
-        result.Value.CommandText.ShouldContain("@FirstName, @LastName, @Email, @Phone");
+        result.Value.CommandText.ShouldContain("@p0, @p1, @p2, @p3");
         result.Value.Parameters.Count.ShouldBe(4);
     }
 
@@ -204,7 +204,7 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { Name = "Test" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
@@ -231,14 +231,14 @@ public sealed class MsSqlInsertTranslatorGapTests
         var entity = new { Name = "Test", TokenHash = (byte[]?)null };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         // Act
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
         // Assert
         result.IsSuccess.ShouldBeTrue();
-        result.Value!.Parameters["@TokenHash"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarBinary);
-        result.Value.Parameters["@TokenHash"].Value.ShouldBe(DBNull.Value);
+        result.Value!.Parameters["@p1"].SqlDbType.ShouldBe(System.Data.SqlDbType.VarBinary);
+        result.Value.Parameters["@p1"].Value.ShouldBe(DBNull.Value);
     }
 }

@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class ColumnValueSourceKind : ValueSourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="ColumnValueSourceKind"/> class.</summary>
-    public ColumnValueSourceKind() : base("Column", mapsSourceColumn: true, allowedAsContainerParameter: false, requiresSourceField: true, requiresSequenceName: false, requiresSequenceOrder: false, requiresConstant: false)
+    public ColumnValueSourceKind() : base("Column", mapsSourceColumn: true, requiresSourceField: true, requiresSequenceName: false, requiresSequenceOrder: false, requiresConstant: false)
     {
     }
 }

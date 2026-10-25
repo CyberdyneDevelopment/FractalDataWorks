@@ -52,7 +52,7 @@ public abstract class DeleteUiFeedbackEndpointBase : Endpoint<UiFeedbackIdReques
         var deleted = await Feedback.Delete(req.Id, ct).ConfigureAwait(false);
         if (!deleted.IsSuccess)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(deleted, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(deleted, HttpContext)).ConfigureAwait(false);
             return;
         }
 

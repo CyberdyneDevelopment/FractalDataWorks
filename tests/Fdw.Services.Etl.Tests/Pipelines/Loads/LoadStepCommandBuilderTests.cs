@@ -68,7 +68,7 @@ public sealed class LoadStepCommandBuilderTests
 
     private static IEnumerable<IDictionary<string, object?>> Data(IDataCommand command) => command switch
     {
-        BulkInsertCommand<IDictionary<string, object?>> insert => insert.Data,
+        InsertCommand<IDictionary<string, object?>> insert => insert.Data,
         BulkUpsertCommand<IDictionary<string, object?>> upsert => upsert.Data,
         _ => throw new InvalidOperationException($"{command.GetType().Name} carries no rows"),
     };
@@ -87,13 +87,11 @@ public sealed class LoadStepCommandBuilderTests
     }
 
     [Theory]
-    [InlineData("BulkInsert", new[] { "BulkInsert" })]
-    [InlineData("BulkUpsert", new[] { "BulkUpsert" })]
-    [InlineData("Update", new[] { "Update" })]
+    [InlineData("Insert", new string[0])]
+    [InlineData("Upsert", new string[0])]
+    [InlineData("Update", new string[0])]
     [InlineData("Delete", new string[0])]
     [InlineData("Truncate", new string[0])]
-    [InlineData("InsertFromQuery", new[] { "InsertFromQuery" })]
-    [InlineData("Execute", new[] { "Execute" })]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
     public void EachKindNamesTheCapabilitiesAConnectionTypeMustList(string kind, string[] expected)
@@ -102,11 +100,11 @@ public sealed class LoadStepCommandBuilderTests
     }
 
     [Theory]
-    [InlineData("BulkUpsert", "BulkUpsert")]
-    [InlineData("Update", "Update")]
+    [InlineData("Upsert")]
+    [InlineData("Update")]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void ASoftDeleteAddsTheSoftDeleteCapability(string kind, string own)
+    public void ASoftDeleteAddsTheSoftDeleteCapability(string kind)
     {
         // Arrange
         var row = Row();
@@ -116,7 +114,7 @@ public sealed class LoadStepCommandBuilderTests
         var names = LoadStepCommandBuilders.ByName(kind).RequiredCapabilities(row);
 
         // Assert
-        names.ShouldBe(new[] { own, "SoftDelete" });
+        names.ShouldBe(new[] { "SoftDelete" });
     }
 
     [Fact]
@@ -132,22 +130,22 @@ public sealed class LoadStepCommandBuilderTests
         LoadStepCommandBuilders.ByName("Delete").RequiredCapabilities(soft).ShouldBe(new[] { "SoftDelete" });
     }
 
-    // ---- BulkInsert
+    // ---- Insert
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void BulkInsertOfAnOwnLoadWithNoColumnsInsertsTheRowsAsTheyAre()
+    public void InsertOfAnOwnLoadWithNoColumnsInsertsTheRowsAsTheyAre()
     {
         // Arrange
         var rows = Rows(3);
 
         // Act
-        var commands = Built("BulkInsert", Input(Row(), rows));
+        var commands = Built("Insert", Input(Row(), rows));
 
         // Assert
         commands.Count.ShouldBe(1);
-        commands[0].ShouldBeOfType<BulkInsertCommand<IDictionary<string, object?>>>();
+        commands[0].ShouldBeOfType<InsertCommand<IDictionary<string, object?>>>();
         Data(commands[0]).Count().ShouldBe(3);
         Data(commands[0]).First().Keys.OrderBy(k => k, StringComparer.Ordinal).ShouldBe(new[] { "Extra", "Id", "Name", "Status" });
     }
@@ -155,14 +153,14 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void BulkInsertRestrictsTheRowsToTheWriteColumnsAndAddsValueSourceColumns()
+    public void InsertRestrictsTheRowsToTheWriteColumnsAndAddsValueSourceColumns()
     {
         // Arrange
         var row = Row(Column("Write", "Id"), Column("Write", "Name"));
         row.ValueSources = [Constant("Batch", "7", "Int64"), Stamp("LoadedAt")];
 
         // Act
-        var commands = Built("BulkInsert", Input(row));
+        var commands = Built("Insert", Input(row));
 
         // Assert
         var first = Data(commands[0]).First();
@@ -174,57 +172,57 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void BulkInsertRefusesASequenceValueSourceBecauseTheDatabaseMustNumberTheBatch()
+    public void InsertRefusesASequenceValueSourceBecauseTheDatabaseMustNumberTheBatch()
     {
         // Arrange
         var row = Row(Column("Write", "Id"));
         row.ValueSources = [Sequence("Number")];
 
         // Act / Assert
-        Refused("BulkInsert", Input(row), "PIPELINERUN-20213", "BulkInsert");
+        Refused("Insert", Input(row), "PIPELINERUN-20213", "Insert");
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void BulkInsertRefusesAColumnTheRowsAndAValueSourceBothSupply()
+    public void InsertRefusesAColumnTheRowsAndAValueSourceBothSupply()
     {
         // Arrange
         var row = Row(Column("Write", "Id"), Column("Write", "Name"));
         row.ValueSources = [Constant("Name", "z", "String")];
 
         // Act / Assert
-        Refused("BulkInsert", Input(row), "PIPELINERUN-20215");
+        Refused("Insert", Input(row), "PIPELINERUN-20215");
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void BulkInsertRefusesAWriteColumnTheRowsLack()
+    public void InsertRefusesAWriteColumnTheRowsLack()
     {
-        Refused("BulkInsert", Input(Row(Column("Write", "Missing"))), "PIPELINERUN-20214", "Missing");
+        Refused("Insert", Input(Row(Column("Write", "Missing"))), "PIPELINERUN-20214", "Missing");
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void BulkInsertOfNoRowsBuildsNothing()
+    public void InsertOfNoRowsBuildsNothing()
     {
-        Built("BulkInsert", Input(Row(), [])).ShouldBeEmpty();
+        Built("Insert", Input(Row(), [])).ShouldBeEmpty();
     }
 
-    // ---- BulkUpsert
+    // ---- Upsert
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void BulkUpsertCarriesKeyCompareAndWriteColumnsAndOnlyTheWriteColumnsOfTheRows()
+    public void UpsertCarriesKeyCompareAndWriteColumnsAndOnlyTheWriteColumnsOfTheRows()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Compare", "Name"), Column("Write", "Id"), Column("Write", "Name", 1));
 
         // Act
-        var commands = Built("BulkUpsert", Input(row));
+        var commands = Built("Upsert", Input(row));
 
         // Assert
         commands.Count.ShouldBe(1);
@@ -240,7 +238,7 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void BulkUpsertCarriesVersioningWithItsInsertOnlyRule()
+    public void UpsertCarriesVersioningWithItsInsertOnlyRule()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Compare", "Name"), Column("Write", "Id"), Column("Write", "Name", 1));
@@ -251,7 +249,7 @@ public sealed class LoadStepCommandBuilderTests
         row.InsertOnlyRuleValue = "manual";
 
         // Act
-        var command = Built("BulkUpsert", Input(row))[0].ShouldBeOfType<BulkUpsertCommand<IDictionary<string, object?>>>();
+        var command = Built("Upsert", Input(row))[0].ShouldBeOfType<BulkUpsertCommand<IDictionary<string, object?>>>();
 
         // Assert
         var versioning = command.Options.Versioning.ShouldNotBeNull();
@@ -265,14 +263,14 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void BulkUpsertPassesValueSourcesToTheCommandSoTheDatabaseSuppliesThem()
+    public void UpsertPassesValueSourcesToTheCommandSoTheDatabaseSuppliesThem()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
         row.ValueSources = [Sequence("Number"), Stamp("LoadedAt")];
 
         // Act
-        var command = Built("BulkUpsert", Input(row))[0].ShouldBeOfType<BulkUpsertCommand<IDictionary<string, object?>>>();
+        var command = Built("Upsert", Input(row))[0].ShouldBeOfType<BulkUpsertCommand<IDictionary<string, object?>>>();
 
         // Assert
         command.Options.ValueSources!.Select(b => b.Column).ShouldBe(new[] { "Number", "LoadedAt" });
@@ -282,19 +280,19 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void BulkUpsertRefusesWhatTheCommandLayerRefusesWithItsReason()
+    public void UpsertRefusesWhatTheCommandLayerRefusesWithItsReason()
     {
         // Arrange: the key is not among the write columns
         var row = Row(Column("Key", "Id"), Column("Write", "Name"));
 
         // Act / Assert
-        Refused("BulkUpsert", Input(row), "PIPELINERUN-20224", "key and compare column 'Id' is not in the write columns");
+        Refused("Upsert", Input(row), "PIPELINERUN-20224", "key and compare column 'Id' is not in the write columns");
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void BulkUpsertWithAnAbsentFromSourceSoftDeleteFollowsTheUpsertWithAFlaggingDelete()
+    public void UpsertWithAnAbsentFromSourceSoftDeleteFollowsTheUpsertWithAFlaggingDelete()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
@@ -303,7 +301,7 @@ public sealed class LoadStepCommandBuilderTests
         row.DeletedAtColumn = "DeletedAt";
 
         // Act
-        var commands = Built("BulkUpsert", Input(row, Rows(3)));
+        var commands = Built("Upsert", Input(row, Rows(3)));
 
         // Assert
         commands.Count.ShouldBe(2);
@@ -321,7 +319,7 @@ public sealed class LoadStepCommandBuilderTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void BulkUpsertRefusesAMarkerSoftDeleteBecauseItTakesASourceSetToCompare()
+    public void UpsertRefusesAMarkerSoftDeleteBecauseItTakesASourceSetToCompare()
     {
         // Arrange
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
@@ -331,13 +329,13 @@ public sealed class LoadStepCommandBuilderTests
         row.SoftDeleteMarkerValue = "closed";
 
         // Act / Assert
-        Refused("BulkUpsert", Input(row), "PIPELINERUN-20223", "MarkerMatches");
+        Refused("Upsert", Input(row), "PIPELINERUN-20223", "MarkerMatches");
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void BulkUpsertRefusesAnAbsentSetSoftDeleteWhenTheSourceProducedNoRows()
+    public void UpsertRefusesAnAbsentSetSoftDeleteWhenTheSourceProducedNoRows()
     {
         // Arrange: flagging every key absent from an empty source would flag the whole destination
         var row = Row(Column("Key", "Id"), Column("Write", "Id"), Column("Write", "Name", 1));
@@ -345,17 +343,17 @@ public sealed class LoadStepCommandBuilderTests
         row.DeletedFlagColumn = "IsDeleted";
 
         // Act / Assert
-        Refused("BulkUpsert", Input(row, []), "PIPELINERUN-20228");
+        Refused("Upsert", Input(row, []), "PIPELINERUN-20228");
     }
 
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Etl")]
-    public void BulkUpsertOfNoRowsBuildsNothing()
+    public void UpsertOfNoRowsBuildsNothing()
     {
         var row = Row(Column("Key", "Id"), Column("Write", "Id"));
 
-        Built("BulkUpsert", Input(row, [])).ShouldBeEmpty();
+        Built("Upsert", Input(row, [])).ShouldBeEmpty();
     }
 
     // ---- Update
@@ -545,79 +543,16 @@ public sealed class LoadStepCommandBuilderTests
         Built("Delete", Input(Row(Column("Key", "Id")), [])).ShouldBeEmpty();
     }
 
-    // ---- Truncate, InsertFromQuery, Execute
+    // ---- Truncate
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Etl")]
-    public void TruncateBuildsOneTruncateCommandWhateverTheRows()
+    public void TruncateBuildsOneUnrestrictedDeleteWhateverTheRows()
     {
-        Built("Truncate", Input(Row(), [])).Single().ShouldBeOfType<TruncateCommand>();
-    }
+        var command = Built("Truncate", Input(Row(), [])).Single().ShouldBeOfType<DeleteCommand>();
 
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public void InsertFromQueryCarriesTheWriteColumnsTheSourceAndTheValueSources()
-    {
-        // Arrange
-        var row = Row(Column("Write", "Name"), Column("Write", "Status", 1));
-        row.ValueSources = [Sequence("Number"), new PipelineLoadValueSourceConfiguration { Name = "Region", ColumnName = "Region", SourceKind = "Column", SourceField = "SourceRegion" }];
-        var source = new QuerySource("Staging", "dbo");
-
-        // Act
-        var command = Built("InsertFromQuery", Input(row, [], source)).Single().ShouldBeOfType<InsertFromQueryCommand>();
-
-        // Assert
-        command.Options.WriteColumns.ShouldBe(new[] { "Name", "Status" });
-        command.Options.Source.ShouldBeSameAs(source);
-        command.Options.ValueSources!.Select(b => b.Column).ShouldBe(new[] { "Number", "Region" });
-        command.Options.TargetColumns.ShouldBe(new[] { "Name", "Status", "Number", "Region" });
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void InsertFromQueryRefusesToBuildWithoutAResolvedSource()
-    {
-        Refused("InsertFromQuery", Input(Row(Column("Write", "Name"))), "PIPELINERUN-20224", "no source data set");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "DataIntegrity")]
-    public void InsertFromQueryRefusesWhatTheCommandLayerRefusesWithItsReason()
-    {
-        // Arrange: a column listed twice
-        var row = Row(Column("Write", "Name"), Column("Write", "Name", 1));
-
-        // Act / Assert
-        Refused("InsertFromQuery", Input(row, [], new QuerySource("Staging")), "PIPELINERUN-20224", "listed twice");
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public void ExecuteBuildsAnExecuteCommandWithOneParameterPerValueSource()
-    {
-        // Arrange
-        var row = Row();
-        row.ValueSources = [Constant("RunLabel", "nightly", "String"), Stamp("RunAt")];
-
-        // Act
-        var command = Built("Execute", Input(row, [])).Single().ShouldBeOfType<ExecuteCommand>();
-
-        // Assert
-        command.Options.Parameters.Select(p => p.Name).ShouldBe(new[] { "RunLabel", "RunAt" });
-        command.Options.Parameters[0].Source.ShouldBeOfType<ConstantValueSource>().Value.ShouldBe("nightly");
-        command.Options.Parameters[1].Source.ShouldBeOfType<CurrentTimestampValueSource>();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Etl")]
-    public void ExecuteWithNoParametersIsAValidCommand()
-    {
-        Built("Execute", Input(Row(), [])).Single().ShouldBeOfType<ExecuteCommand>().Options.Parameters.ShouldBeEmpty();
+        command.Filter.ShouldBeNull();
+        command.SoftDelete.ShouldBeNull();
     }
 }

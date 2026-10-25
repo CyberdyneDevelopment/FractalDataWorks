@@ -108,8 +108,10 @@ public abstract class ServiceTypeCollectionBase<TBase, TInterface>
     protected static bool NativeMembersUnused { get; set; }
 
     /// <summary>
-    /// Adds an option to this collection. Called from the generated <c>[ModuleInitializer]</c> as the
-    /// option's assembly loads — a package reference IS the registration.
+    /// Adds an option to this collection. Called from a generated <c>[ModuleInitializer]</c> before <c>Main</c>:
+    /// by the collection's own assembly for the options declared beside it, and by the HOST's generated
+    /// initializer for options in the assemblies the host references. The host's initializer exists only when the
+    /// host references <c>Fdw.Registration.SourceGenerators</c>; without it a referenced package registers nothing.
     /// </summary>
     /// <param name="option">The option to register.</param>
     public static void RegisterMember(IServiceTypeRegistration option)

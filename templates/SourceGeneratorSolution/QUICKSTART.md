@@ -40,6 +40,9 @@ dotnet sln add src/MyFeature/MyFeature.Abstractions/MyFeature.Abstractions.cspro
 
 ## Build & Test
 
+The template ships a `Directory.Packages.props` that pins the generator project's packages, so the
+first build restores with no versions to add. See "Package versions" in README.md.
+
 ```bash
 # Build generator (creates merged DLL with ILRepack)
 dotnet build src/MyFeature/MyFeature.SourceGenerators

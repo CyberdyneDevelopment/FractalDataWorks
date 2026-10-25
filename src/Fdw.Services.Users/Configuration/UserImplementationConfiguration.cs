@@ -91,9 +91,6 @@ public partial class UserImplementationConfiguration
     /// <summary>Gets or sets when the user record was created.</summary>
     public DateTimeOffset CreatedAt { get; set; }
 
-    /// <summary>Gets or sets when the user last logged in.</summary>
-    public DateTimeOffset? LastLoginAt { get; set; }
-
     /// <summary>Gets or sets the audit creation timestamp.</summary>
     public DateTimeOffset CreateDate { get; set; }
 

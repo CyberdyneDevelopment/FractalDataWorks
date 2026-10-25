@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Authorization.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -36,46 +37,25 @@ public sealed class PreAuthenticationPermissionContextTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ResolveReadsCatalogAsSystemAndOnlyGrantsAssignedPermissions(bool hasCaller)
+    public async Task ResolveReadsGrantsAsSystemAndOnlyGrantsAssignedPermissions(bool hasCaller)
     {
         var previous = hasCaller ? Mock.Of<IAuthenticationContext>() : null;
         var accessor = new AuthenticationContextAccessor { Current = previous };
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
         var roleId = Guid.NewGuid();
-        var permissionId = Guid.NewGuid();
-        var roles = new Mock<IRoleConfigurationProvider>();
-        roles.Setup(p => p.Get(It.IsAny<CancellationToken>())).Returns(async (CancellationToken _) =>
-        {
-            await Task.Yield();
-            accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
-            return GenericResult<IReadOnlyList<IRoleImplementationConfiguration>>.Success(
-                [new RoleImplementationConfiguration { Id = roleId, Name = "Admin", IsTenantScoped = false, TenantId = tenantId }]);
-        });
-        var permissions = new Mock<IPermissionConfigurationProvider>();
-        permissions.Setup(p => p.Get(It.IsAny<CancellationToken>())).Returns(() =>
-        {
-            accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
-            return Task.FromResult(GenericResult<IReadOnlyList<IPermissionImplementationConfiguration>>.Success(
-                [new PermissionImplementationConfiguration { Id = permissionId, Name = "connections:write" }]));
-        });
-        var grants = new Mock<IRolePermissionConfigurationProvider>();
-        grants.Setup(p => p.Get(It.IsAny<CancellationToken>())).Returns(() =>
-        {
-            accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
-            return Task.FromResult(GenericResult<IReadOnlyList<IRolePermissionImplementationConfiguration>>.Success(
-                [new RolePermissionImplementationConfiguration { RoleId = roleId, PermissionId = permissionId, TenantId = tenantId }]));
-        });
-        var assignments = new Mock<IUserRoleConfigurationProvider>();
-        assignments.Setup(p => p.Find(It.IsAny<Func<UserRoleImplementationConfiguration, bool>>(), It.IsAny<CancellationToken>()))
-            .Returns((Func<UserRoleImplementationConfiguration, bool> predicate, CancellationToken _) =>
+        var grants = new Mock<IUserPermissionGrants>();
+        grants.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Guid asked, CancellationToken _) =>
             {
+                await Task.Yield();
                 accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
-                var rows = new[] { new UserRoleImplementationConfiguration { UserId = userId.ToString(), RoleId = roleId, TenantId = tenantId } };
-                return Task.FromResult(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success(rows.Where(predicate).ToArray()));
+                IReadOnlyList<UserPermissionGrant> rows = asked == userId
+                    ? [new UserPermissionGrant(tenantId, null, roleId, "Admin", false, tenantId, "connections:write")]
+                    : [];
+                return GenericResult<IReadOnlyList<UserPermissionGrant>>.Success(rows);
             });
-        var userPermissions = new UserPermissions(roles.Object, permissions.Object, grants.Object,
-            assignments.Object, accessor, NullLogger<UserPermissions>.Instance);
+        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance);
 
         var assigned = await userPermissions.Get(userId.ToString(), tenantId, null, TestContext.Current.CancellationToken);
         var stranger = await userPermissions.Get(Guid.NewGuid().ToString(), tenantId, null, TestContext.Current.CancellationToken);
@@ -88,20 +68,18 @@ public sealed class PreAuthenticationPermissionContextTests
     }
 
     [Fact]
-    public async Task ResolveRestoresCallerWhenCatalogReadIsCancelled()
+    public async Task ResolveRestoresCallerWhenGrantReadIsCancelled()
     {
         var previous = Mock.Of<IAuthenticationContext>();
         var accessor = new AuthenticationContextAccessor { Current = previous };
-        var roles = new Mock<IRoleConfigurationProvider>();
-        roles.Setup(p => p.Get(It.IsAny<CancellationToken>())).Returns(async (CancellationToken _) =>
+        var grants = new Mock<IUserPermissionGrants>();
+        grants.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).Returns(async (Guid _, CancellationToken _) =>
         {
             await Task.Yield();
             accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
             throw new OperationCanceledException();
         });
-        var userPermissions = new UserPermissions(roles.Object, Mock.Of<IPermissionConfigurationProvider>(),
-            Mock.Of<IRolePermissionConfigurationProvider>(), Mock.Of<IUserRoleConfigurationProvider>(),
-            accessor, NullLogger<UserPermissions>.Instance);
+        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance);
 
         await Should.ThrowAsync<OperationCanceledException>(() => userPermissions.Get(Guid.NewGuid().ToString(), null,
             null, TestContext.Current.CancellationToken));
@@ -113,25 +91,15 @@ public sealed class PreAuthenticationPermissionContextTests
     [InlineData(true)]
     public async Task OrgGrantReadFailureDoesNotReturnSuccessfulPermissions(bool nullRows)
     {
-        var roles = new Mock<IRoleConfigurationProvider>();
-        roles.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<IRoleImplementationConfiguration>>.Success([]));
-        var permissions = new Mock<IPermissionConfigurationProvider>();
-        permissions.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<IPermissionImplementationConfiguration>>.Success([]));
-        var grants = new Mock<IRolePermissionConfigurationProvider>();
-        grants.Setup(p => p.Get(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<IRolePermissionImplementationConfiguration>>.Success([]));
-        var assignments = new Mock<IUserRoleConfigurationProvider>();
-        assignments.Setup(p => p.Find(It.IsAny<Func<UserRoleImplementationConfiguration, bool>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<UserRoleImplementationConfiguration>>.Success([]));
+        var grants = new Mock<IUserPermissionGrants>();
+        grants.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<UserPermissionGrant>>.Success([]));
         var orgAccess = new Mock<IOrgAccessProvider>();
         orgAccess.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(nullRows ? GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Success(null!)
                 : GenericResult<IReadOnlyList<TenantOrgAccessConfiguration>>.Failure(Mock.Of<Fdw.Messages.IGenericMessage>()));
         var accessor = new AuthenticationContextAccessor();
-        var userPermissions = new UserPermissions(roles.Object, permissions.Object, grants.Object,
-            assignments.Object, accessor, NullLogger<UserPermissions>.Instance, orgAccess.Object);
+        var userPermissions = new UserPermissions(grants.Object, accessor, NullLogger<UserPermissions>.Instance, orgAccess.Object);
 
         var result = await userPermissions.Get(Guid.NewGuid().ToString(), Guid.NewGuid(), Guid.NewGuid(),
             TestContext.Current.CancellationToken);
