@@ -83,7 +83,7 @@ public sealed class FlowGraphValidatorTests
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
     public void AnInputNothingFeedsIsRefused() =>
-        Refused(Graph([Src(), Dst()], []), "is not linked to any output");
+        Refused(Graph([Src(), Dst()], [], new FlowDroppedOutput("src", "output")), "is not linked to any output");
 
     [Fact]
     [Trait("Priority", "P0")]

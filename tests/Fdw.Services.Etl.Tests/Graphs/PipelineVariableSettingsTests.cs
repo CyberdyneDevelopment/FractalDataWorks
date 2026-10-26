@@ -48,7 +48,7 @@ public sealed class PipelineVariableSettingsTests
 
         var reason = Reasons(graph, "Folder").ShouldHaveSingleItem();
 
-        reason.ShouldContain("a step sets 'Folder'");
+        reason.ShouldContain("a component sets 'Folder' while the run goes");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public sealed class PipelineVariableSettingsTests
     [Trait("Category", "Etl")]
     public void TheValueOfAScriptParameterMayNameAVariableButNotAnUndeclaredName()
     {
-        var script = new PipelineComponentConfiguration { Name = "query", ComponentType = "SqlSource" };
+        var script = new PipelineComponentConfiguration { Name = "query", ComponentType = "SqlSource", MaxRows = 10 };
         script.Fields.Add(new PipelineComponentFieldConfiguration { SettingName = "parameters", TargetField = "Limit", ConstantType = "Int32", ConstantText = "{{Rows}}" });
         script.Fields.Add(new PipelineComponentFieldConfiguration { SettingName = "parameters", Ordinal = 1, TargetField = "Day", ConstantType = "String", ConstantText = "{{Gone}}" });
         var graph = Steps(DataFlow("flow", [script], [], []));

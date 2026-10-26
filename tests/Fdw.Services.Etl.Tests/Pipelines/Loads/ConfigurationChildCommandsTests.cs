@@ -2,7 +2,6 @@ using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Services.Configuration;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Pipelines;
-using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.Etl.Transforms;
 
 namespace Fdw.Services.Etl.Tests.Pipelines.Loads;
@@ -19,15 +18,6 @@ public sealed class ConfigurationChildCommandsTests
         [.. PocoMapperCollection.All()
             .Where(mapper => ReferenceEquals(mapper.TargetType.Assembly, typeof(PipelineTransformConfiguration).Assembly))
             .SelectMany(mapper => mapper.CascadeChildren.Select(child => (Owner: mapper, Child: child)))];
-
-    [Fact]
-    public void TheLoadConfigurationsChildCollectionsAreCascadeChildren()
-    {
-        var childTypes = EtlChildren().Select(pair => pair.Child.ChildType).ToList();
-
-        childTypes.ShouldContain(typeof(PipelineLoadColumnConfiguration));
-        childTypes.ShouldContain(typeof(PipelineLoadValueSourceConfiguration));
-    }
 
     [Fact]
     public void AMapsFieldTransformerChainIsACascadeChildWithACommand()

@@ -29,7 +29,7 @@ public sealed class SettingBindingCatalogueTests
 
         kinds.ShouldAllBe(kind => kind.Category == "Source" || kind.Category == "Destination");
         kinds.SelectMany(kind => kind.Settings).Where(setting => setting.TakesParameterText).Select(setting => setting.Name).Distinct().Order()
-            .ShouldBe(["container", "dataSet", "dataStore", "path"]);
+            .ShouldBe(["container", "dataSet", "dataStore", "path", "physicalName", "physicalPath"]);
     }
 
     [Fact]

@@ -61,11 +61,11 @@ public sealed class SettingBindingTests
     public void ASettingThatShapesTheGraphCannotBeChosenByARun()
     {
         var component = new PipelineComponentConfiguration { Name = "split", ComponentType = "ConditionalSplit" };
-        component.SettingBindings = [Bind("errorOutput", "Out"), Bind("noSuchSetting", "Out")];
+        component.SettingBindings = [Bind("unmatchedOutput", "Out"), Bind("noSuchSetting", "Out")];
 
         var reasons = Reasons(Graph(component, Parameter("Out", "String")));
 
-        reasons.ShouldContain(reason => reason.Contains("'errorOutput'") && reason.Contains("shapes the graph"));
+        reasons.ShouldContain(reason => reason.Contains("'unmatchedOutput'") && reason.Contains("shapes the graph"));
         reasons.ShouldContain(reason => reason.Contains("'noSuchSetting'") && reason.Contains("not a single-value setting"));
     }
 

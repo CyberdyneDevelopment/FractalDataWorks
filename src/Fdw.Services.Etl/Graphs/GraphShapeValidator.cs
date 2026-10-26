@@ -40,6 +40,7 @@ public static class GraphShapeValidator
             problems.Add(new GraphProblem(["linkCapacity"], $"graph pipeline '{graph.Name}' does not state how many batches a link buffers ({graph.LinkCapacity} is not at least one)"));
         }
 
+        problems.AddRange(LinkEndProblems(graph));
         var broken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         problems.AddRange(GraphComponentValidator.Problems(graph, broken, logger));
         foreach (var level in Levels(graph))
@@ -48,6 +49,27 @@ public static class GraphShapeValidator
         }
 
         return problems;
+    }
+
+    // A line whose end names a component the graph does not have. No level can judge it: a level takes the lines with an end among its own
+    // components, and a line to a component that is nowhere is not a line between two components of one place.
+    private static IEnumerable<GraphProblem> LinkEndProblems(GraphPipelineConfiguration graph)
+    {
+        var names = new HashSet<string>(graph.Components.Select(component => component.Name), StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < graph.Links.Count; index++)
+        {
+            var link = graph.Links[index];
+            string[] path = ["links", index.ToString(CultureInfo.InvariantCulture)];
+            if (!names.Contains(link.FromComponent))
+            {
+                yield return new GraphProblem(path, $"the line to '{link.ToComponent}' starts at '{link.FromComponent}', which does not exist in graph pipeline '{graph.Name}'");
+            }
+
+            if (!names.Contains(link.ToComponent))
+            {
+                yield return new GraphProblem(path, $"the line from '{link.FromComponent}' ends at '{link.ToComponent}', which does not exist in graph pipeline '{graph.Name}'");
+            }
+        }
     }
 
     // The top level and the body of each loop: the components that share a parent. A loop that is itself broken is not looked into twice.
