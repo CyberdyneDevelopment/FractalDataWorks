@@ -14,7 +14,9 @@ using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authentication.Abstractions.Execution;
 using Fdw.Services.Authentication.Execution;
 using Fdw.Services.Authentication.Abstractions.Sessions;
+using Fdw.Services.Authentication.Abstractions.SignIns;
 using Fdw.Services.Authentication.Sessions;
+using Fdw.Services.Authentication.SignIns;
 using Fdw.Services.Authentication.Steps;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
@@ -22,6 +24,7 @@ using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Security.Encryption;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.TokenManagers.Abstractions;
+using Fdw.Services.Users.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -122,6 +125,8 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                     sp.GetService<ILogger<AesGcmEncryptionCommandExecutor>>()));
 
             builder.Services.TryAddSingleton<IAuthenticationExecutionStore, DatabaseExecutionStore>();
+            builder.Services.TryAddSingleton<ISignInLog, DatabaseSignInLog>();
+            builder.Services.TryAddSingleton<ISignInCaller, HttpSignInCaller>();
             builder.Services.TryAddSingleton<IAuthorizationCodeStore, DatabaseAuthorizationCodeStore>();
             // How far a session's stored idle expiry may fall behind its last request before it is written
             // again (FDW-983): stated here, where the store is registered. The same value is stated where the
@@ -133,6 +138,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
             // deny-list it consults is; the Session authentication type states the same registration.
             builder.Services.TryAddScoped<ISessionAuthenticator, SessionAuthenticator>();
             builder.Services.TryAddSingleton<ISessionCookieDelivery, SessionCookieDelivery>();
+            builder.Services.TryAddScoped<ISessionActing, SessionActing>();
 
             builder.Services.TryAddSingleton<IAuthorizationRequestStore>(sp =>
                 new InMemoryAuthorizationRequestStore(
@@ -214,6 +220,7 @@ public partial class AuthenticationStepTypes : ServiceTypeCollectionBase<
                 // The collection IS the registry: a name resolves to the option that declared it.
                 name => AuthenticationStepTypes.ByName(name) as IAuthenticationStep,
                 sp.GetRequiredService<ITenantProvider>(),
+                sp.GetRequiredService<ISignInLog>(),
                 sp.GetService<ILogger<AuthenticationRunner>>()));
 
             return GenericResult<IHostApplicationBuilder>.Success(builder);

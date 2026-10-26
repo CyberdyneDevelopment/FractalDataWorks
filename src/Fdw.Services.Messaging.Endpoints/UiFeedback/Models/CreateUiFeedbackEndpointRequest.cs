@@ -23,8 +23,11 @@ public class CreateUiFeedbackEndpointRequest
     /// <summary>Gets or sets the theme the screen was in; optional.</summary>
     public string? Theme { get; set; }
 
-    /// <summary>Gets or sets the console's description of the element nearest the area, any JSON; optional, and kept as it is.</summary>
-    public JsonElement? Anchor { get; set; }
+    /// <summary>
+    /// Gets or sets the components the comment is about, in the order the reviewer chose them; required, at least one and at most 20. Each is the console's description
+    /// of one element, a JSON object, kept as it is.
+    /// </summary>
+    public IReadOnlyList<JsonElement>? Anchors { get; set; }
 
     /// <summary>Gets or sets the picture of the screen as a PNG data URL; optional.</summary>
     public string? Screenshot { get; set; }

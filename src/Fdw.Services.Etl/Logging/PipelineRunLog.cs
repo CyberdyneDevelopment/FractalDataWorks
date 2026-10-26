@@ -163,11 +163,6 @@ public static partial class PipelineRunLog
         Message = "In {owner}: the connection type of '{target}' does not list the {capability} capability, so it cannot run this load")]
     public static partial IGenericMessage ConnectionLacksCapability(ILogger logger, string owner, string target, string capability);
 
-    /// <summary>Logs an execute step whose container the connection type cannot execute.</summary>
-    [MessageLogging(EventId = 20239, Level = LogLevel.Warning,
-        Message = "In {owner}: container '{containerName}' is a {containerType}, and its connection type executes only these container types: {executableTypes}")]
-    public static partial IGenericMessage ContainerNotExecutable(ILogger logger, string owner, string containerName, string containerType, string executableTypes);
-
     /// <summary>Logs that the store holding the watermark is not named.</summary>
     [MessageLogging(EventId = 20231, Level = LogLevel.Error,
         Message = "The operational store that holds the pipeline watermark is not named by the host")]

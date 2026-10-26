@@ -20,7 +20,7 @@ public sealed class GraphTestRunTests
 
     private static PipelineComponentConfiguration Sink() => new()
     {
-        Name = "keep", ComponentType = "DataSetDestination", DataSetName = "Out", LoadKind = "BulkInsert", TruncateFirst = true,
+        Name = "keep", ComponentType = "DataSetDestination", DataSetName = "Out", LoadKind = "Insert", TruncateFirst = true,
     };
 
     private static async Task<(FlowRunTally Tally, List<string> Events)> Run(GraphPipelineConfiguration graph, int rows, GraphTestRun? test)

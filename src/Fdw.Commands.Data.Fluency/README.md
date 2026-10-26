@@ -1,4 +1,4 @@
-# Fdw.Commands.Data.Extensions
+# Fdw.Commands.Data.Fluency
 
 The fluent builder surface over data commands — `Query.From<T>(…).Where(…).Build()` and its `Where*` operators.
 
@@ -8,7 +8,6 @@ This package declares 10 service/provider type(s).
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BulkInsertBuilder<T>` | class | Builder for bulk insert commands. The terminal method returns a that bundles the address-free command… |
 | `DataStoreBuilder` | class | Intermediate builder for selecting a path within a data store. |
 | `DataStorePathBuilder` | class | Intermediate builder for selecting a container within a DataStore path. |
 | `DeleteCommandBuilder` | class | Builder for delete commands with fluent filter construction. The terminal method returns a that bundles… |
@@ -16,10 +15,11 @@ This package declares 10 service/provider type(s).
 | `FindCommandBuilder<T>` | class | Fluent builder for to eliminate boilerplate and provide a clean API for constructing cross-field search… |
 | `InsertBatchBuilder<T>` | class | Builder for batch insert commands. The terminal method returns a that bundles the address-free command… |
 | `InsertSingleBuilder<T>` | class | Builder for single-entity insert commands. The terminal method returns a that bundles the address-free… |
+| `NearestCommandBuilder<T>` | class | Builds a nearest-neighbour search command and its target. Every part is required, and Build names the one that is missing. |
 | `QueryCommandBuilder<T>` | class | Fluent builder for QueryCommand to eliminate boilerplate and provide clean API. Allows building complex… |
 | `UpdateCommandBuilder<T>` | class | Builder for update commands with fluent filter construction. The terminal method returns a that bundles… |
 
-## Types (8)
+## Types (9)
 
 | Type | Kind | Purpose |
 |---|---|---|
@@ -31,11 +31,12 @@ This package declares 10 service/provider type(s).
 | `Insert` | class | Fluent builder for insert commands. |
 | `Query` | class | Alias for DataQuery for shorter syntax. |
 | `Update` | class | Fluent builder for update commands. |
+| `Vectorized` | class | Entry point for the vectorized builders: a search only a store that holds vectors can answer. |
 
 ## Installation
 
 ```bash
-dotnet add package Fdw.Commands.Data.Extensions --prerelease
+dotnet add package Fdw.Commands.Data.Fluency --prerelease
 ```
 
 ## Dependencies
@@ -48,4 +49,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- tables checked against source at adf451066 on 2026-10-25 -->

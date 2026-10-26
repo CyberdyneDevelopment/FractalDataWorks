@@ -11,7 +11,6 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Connections.Http.Abstractions;
-using Fdw.Services.Connections.Http.Abstractions.Commands;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes;
 using Fdw.Services.Connections.Http.Abstractions.OptionTypes.HttpProtocolOptions;
 using Fdw.Services.Connections.Http.Abstractions.Results;
@@ -57,6 +56,10 @@ public abstract class SoapProtocolBase : HttpProtocolBase
     /// Gets the SOAP version for this protocol.
     /// </summary>
     public abstract SoapVersion Version { get; }
+
+    /// <inheritdoc/>
+    /// <remarks>A SOAP request names its operation after the command type (or carries a pre-built body), so it maps any command.</remarks>
+    public override bool Maps(string commandType) => true;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SoapProtocolBase"/> class.
@@ -198,11 +201,6 @@ public abstract class SoapProtocolBase : HttpProtocolBase
         HttpProtocolContext context,
         CancellationToken cancellationToken)
     {
-        // Short-circuit: SoapRequestCommand carries a pre-built body
-        if (command is SoapRequestCommand soapCmd)
-            return Task.FromResult<IGenericResult<XElement>>(
-                GenericResult<XElement>.Success(soapCmd.Body));
-
         // Default: create a simple element from the command
         var operationName = command.Metadata.GetValueOrDefault("Operation") as string
             ?? command.CommandType;
@@ -213,7 +211,7 @@ public abstract class SoapProtocolBase : HttpProtocolBase
         {
             // Serialize input data as child elements
             // This is a simplified implementation - real usage would need proper XML serialization
-            body.Add(new XElement("Data", commandWithInput.InputData.ToString()));
+            body.Add(new XElement("Data", RequestInput(command, commandWithInput)!.ToString()));
         }
 
         return Task.FromResult(GenericResult<XElement>.Success(body));
@@ -231,12 +229,7 @@ public abstract class SoapProtocolBase : HttpProtocolBase
         IStorageContainer container,
         HttpProtocolContext context)
     {
-        // Prefer explicit SOAPAction from SoapRequestCommand
-        if (command is SoapRequestCommand soapCmd &&
-            !string.IsNullOrEmpty(soapCmd.SoapAction))
-            return soapCmd.SoapAction;
-
-        // Default: use configured pattern or operation name
+        // Use the configured pattern or the operation name
         var pattern = (context.Configuration as HttpConnectionConfigurationBase)?.Soap?.SoapActionPattern;
         if (!string.IsNullOrEmpty(pattern))
         {

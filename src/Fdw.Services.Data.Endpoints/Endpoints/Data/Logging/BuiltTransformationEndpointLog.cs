@@ -16,6 +16,11 @@ namespace Fdw.Services.Data.Endpoints.Logging;
 [MessageLoggingTypeCode("BUILTTRANSFORM")]
 public static partial class BuiltTransformationEndpointLog
 {
+    /// <summary>Logs a Built transformation whose results cannot be typed, so a list shows them without a value type.</summary>
+    [MessageLogging(EventId = 21576, Level = LogLevel.Warning,
+        Message = "The results of Built transformation '{transformationName}' cannot be typed because the calculation engine refuses its definition; they are shown without a value type")]
+    public static partial IGenericMessage ValueTypesUnknown(ILogger logger, string transformationName);
+
     /// <summary>Logs an input with a blank name.</summary>
     [MessageLogging(EventId = 21550, Level = LogLevel.Warning, Message = "A Built transformation input has a blank name")]
     public static partial IGenericMessage InputBlank(ILogger logger);

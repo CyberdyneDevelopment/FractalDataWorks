@@ -20,13 +20,13 @@ public class TypeCollectionRejectShapesTests
     [Fact]
     public void AKindThatWritesRejectedRecordsSaysSo()
     {
-        TypeCollectionResolver.ToSummary(new BulkInsertLoadStepKind()).AcceptsRejectedRecords.ShouldBe(true);
+        TypeCollectionResolver.ToSummary(new InsertLoadStepKind()).AcceptsRejectedRecords.ShouldBe(true);
     }
 
     [Fact]
     public void AKindThatDoesNotWriteRejectedRecordsSaysSo()
     {
-        TypeCollectionResolver.ToSummary(new BulkUpsertLoadStepKind()).AcceptsRejectedRecords.ShouldBe(false);
+        TypeCollectionResolver.ToSummary(new UpsertLoadStepKind()).AcceptsRejectedRecords.ShouldBe(false);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class TypeCollectionRejectShapesTests
     [Fact]
     public void TheFactsAreListedByTheirNamesInTheJson()
     {
-        var kind = JsonSerializer.Serialize(TypeCollectionResolver.ToSummary(new BulkInsertLoadStepKind()), Web);
+        var kind = JsonSerializer.Serialize(TypeCollectionResolver.ToSummary(new InsertLoadStepKind()), Web);
         var phase = JsonSerializer.Serialize(TypeCollectionResolver.ToSummary(new RejectLoadPhase()), Web);
 
         kind.ShouldContain("\"acceptsRejectedRecords\":true");

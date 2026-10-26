@@ -8,7 +8,6 @@ using Fdw.Claims.Abstractions;
 using Fdw.Messages;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Results;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -26,23 +25,22 @@ namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 public sealed class FeatureEndpointTests
 {
     private static readonly Guid Tenant = new("aaaaaaaa-0000-0000-0000-000000000001");
-    private static readonly Guid OtherTenant = new("aaaaaaaa-0000-0000-0000-000000000002");
     private static readonly Guid Finance = new("44444444-0000-0000-0000-000000000001");
 
-    private sealed class SetTenant(IFeatureEnablement features, IAdministrativeAudit audit, ISystemRoleConfiguration roles)
-        : SetTenantFeatureEndpointBase(NullLogger.Instance, features, audit, roles)
+    private sealed class SetTenant(IFeatureEnablement features, IAdministrativeAudit audit)
+        : SetTenantFeatureEndpointBase(NullLogger.Instance, features, audit)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
 
-    private sealed class SetOrganization(IFeatureEnablement features, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration roles)
-        : SetOrganizationFeatureEndpointBase(NullLogger.Instance, features, organizations, audit, roles)
+    private sealed class SetOrganization(IFeatureEnablement features, IAdministrativeAudit audit)
+        : SetOrganizationFeatureEndpointBase(NullLogger.Instance, features, audit)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
 
-    private sealed class ListTenant(IFeatureEnablement features, ISystemRoleConfiguration roles)
-        : ListTenantFeaturesEndpointBase(NullLogger.Instance, features, roles)
+    private sealed class ListTenant(IFeatureEnablement features)
+        : ListTenantFeaturesEndpointBase(NullLogger.Instance, features)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
@@ -54,13 +52,6 @@ public sealed class FeatureEndpointTests
 
     private static Action<DefaultHttpContext> ActingIn(Guid tenantId)
         => ctx => ctx.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimDefinitions.tenantId.Name, tenantId.ToString())], "test"));
-
-    private static ISystemRoleConfiguration Roles(bool platformAdmin)
-    {
-        var roles = new Mock<ISystemRoleConfiguration>();
-        roles.Setup(r => r.IsPlatformAdmin(It.IsAny<ClaimsPrincipal>())).Returns(platformAdmin);
-        return roles.Object;
-    }
 
     private static Mock<IAdministrativeAudit> Audit(List<AdministrativeChangeEntry>? recorded = null, bool succeeds = true)
     {
@@ -79,28 +70,18 @@ public sealed class FeatureEndpointTests
             ? GenericResult<FeatureState>.Failure(new GenericMessage("the platform has not switched the feature on for the tenant"))
             : GenericResult<FeatureState>.Success(on);
         features.Setup(f => f.SetForTenant(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
-        features.Setup(f => f.SetForOrganization(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
+        features.Setup(f => f.SetForOrganization(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
         features.Setup(f => f.ForTenant(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IReadOnlyList<FeatureState>>.Success([on]));
         return features;
     }
 
-    private static Mock<IOrganizationProvider> Organizations()
-    {
-        var organizations = new Mock<IOrganizationProvider>();
-        organizations.Setup(o => o.Get(Finance, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(new OrganizationConfiguration { TenantId = Tenant }));
-        organizations.Setup(o => o.Get(It.Is<Guid>(id => id != Finance), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Failure(new GenericMessage("no such organization")));
-        return organizations;
-    }
-
     [Fact]
     [Trait("Priority", "P0")]
-    public async Task ThePlatformSwitchesAFeatureOnForATenantAndItIsRecordedAtThePlatformLevel()
+    public async Task ASwitchOfAFeatureForATenantIsRecordedAtThePlatformLevelNamingTheTenant()
     {
         var recorded = new List<AdministrativeChangeEntry>();
-        var endpoint = Factory.Create<SetTenant>(ActingIn(OtherTenant), Features().Object, Audit(recorded).Object, Roles(true));
+        var endpoint = Factory.Create<SetTenant>(ActingIn(Tenant), Features().Object, Audit(recorded).Object);
 
         await endpoint.HandleAsync(new SetTenantFeatureRequest { TenantId = Tenant, Feature = "Documents", Enabled = true }, CancellationToken.None);
 
@@ -114,23 +95,10 @@ public sealed class FeatureEndpointTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    public async Task OnlyAPlatformAdministratorSwitchesAFeatureForATenant()
-    {
-        var features = Features();
-        var endpoint = Factory.Create<SetTenant>(ActingIn(Tenant), features.Object, Audit().Object, Roles(false));
-
-        await endpoint.HandleAsync(new SetTenantFeatureRequest { TenantId = Tenant, Feature = "Documents", Enabled = true }, CancellationToken.None);
-
-        endpoint.HttpContext.Response.StatusCode.ShouldBe(403);
-        features.Verify(f => f.SetForTenant(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     public async Task ASwitchTheServiceRefusesIsAnsweredFromItsFailureAndRecordsNothing()
     {
         var recorded = new List<AdministrativeChangeEntry>();
-        var endpoint = Factory.Create<SetTenant>(ActingIn(Tenant), Features(fails: true).Object, Audit(recorded).Object, Roles(true));
+        var endpoint = Factory.Create<SetTenant>(ActingIn(Tenant), Features(fails: true).Object, Audit(recorded).Object);
 
         await endpoint.HandleAsync(new SetTenantFeatureRequest { TenantId = Tenant, Feature = "Documents", Enabled = true }, CancellationToken.None);
 
@@ -142,7 +110,7 @@ public sealed class FeatureEndpointTests
     [Trait("Priority", "P0")]
     public async Task ASwitchMadeButNotRecordedIsAnswered500()
     {
-        var endpoint = Factory.Create<SetTenant>(ActingIn(Tenant), Features().Object, Audit(succeeds: false).Object, Roles(true));
+        var endpoint = Factory.Create<SetTenant>(ActingIn(Tenant), Features().Object, Audit(succeeds: false).Object);
 
         await endpoint.HandleAsync(new SetTenantFeatureRequest { TenantId = Tenant, Feature = "Documents", Enabled = true }, CancellationToken.None);
 
@@ -154,7 +122,7 @@ public sealed class FeatureEndpointTests
     public async Task ATenantSwitchesAFeatureOnForItsOrganizationAndItIsRecordedAtTheOrganizationLevelNamingTheOrganization()
     {
         var recorded = new List<AdministrativeChangeEntry>();
-        var endpoint = Factory.Create<SetOrganization>(ActingIn(Tenant), Features().Object, Organizations().Object, Audit(recorded).Object, Roles(false));
+        var endpoint = Factory.Create<SetOrganization>(ActingIn(Tenant), Features().Object, Audit(recorded).Object);
 
         await endpoint.HandleAsync(new SetOrganizationFeatureRequest { OrganizationId = Finance, Feature = "Documents", Enabled = true }, CancellationToken.None);
 
@@ -167,44 +135,16 @@ public sealed class FeatureEndpointTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    public async Task AnotherTenantsCallerCannotSwitchAFeatureForTheOrganization()
+    public async Task ATenantsFeaturesAreListedFromTheService()
     {
         var features = Features();
-        var endpoint = Factory.Create<SetOrganization>(ActingIn(OtherTenant), features.Object, Organizations().Object, Audit().Object, Roles(false));
+        var endpoint = Factory.Create<ListTenant>(ActingIn(Tenant), features.Object);
 
-        await endpoint.HandleAsync(new SetOrganizationFeatureRequest { OrganizationId = Finance, Feature = "Documents", Enabled = true }, CancellationToken.None);
+        await endpoint.HandleAsync(new TenantFeaturesRequest { TenantId = Tenant }, CancellationToken.None);
 
-        endpoint.HttpContext.Response.StatusCode.ShouldBe(403);
-        features.Verify(f => f.SetForOrganization(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    public async Task AnOrganizationThatDoesNotExistIsRefusedBeforeAnythingIsSwitched()
-    {
-        var features = Features();
-        var endpoint = Factory.Create<SetOrganization>(ActingIn(Tenant), features.Object, Organizations().Object, Audit().Object, Roles(true));
-
-        await endpoint.HandleAsync(new SetOrganizationFeatureRequest { OrganizationId = Guid.NewGuid(), Feature = "Documents", Enabled = true }, CancellationToken.None);
-
-        endpoint.HttpContext.Response.StatusCode.ShouldBeGreaterThanOrEqualTo(400);
-        features.Verify(f => f.SetForOrganization(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    public async Task ATenantReadsItsOwnFeaturesButNotAnotherTenants()
-    {
-        var features = Features();
-        var own = Factory.Create<ListTenant>(ActingIn(Tenant), features.Object, Roles(false));
-        var other = Factory.Create<ListTenant>(ActingIn(OtherTenant), features.Object, Roles(false));
-
-        await own.HandleAsync(new TenantFeaturesRequest { TenantId = Tenant }, CancellationToken.None);
-        await other.HandleAsync(new TenantFeaturesRequest { TenantId = Tenant }, CancellationToken.None);
-
-        own.HttpContext.Response.StatusCode.ShouldBe(200);
-        own.Response.Features.ShouldHaveSingleItem().Name.ShouldBe("Documents");
-        other.HttpContext.Response.StatusCode.ShouldBe(403);
+        endpoint.HttpContext.Response.StatusCode.ShouldBe(200);
+        endpoint.Response.Features.ShouldHaveSingleItem().Name.ShouldBe("Documents");
+        features.Verify(f => f.ForTenant(Tenant, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

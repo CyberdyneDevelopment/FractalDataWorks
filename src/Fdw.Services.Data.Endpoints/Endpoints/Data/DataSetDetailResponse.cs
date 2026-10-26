@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Fdw.Data.DataSets.Abstractions;
 using Fdw.Web.Endpoints.Contracts;
 using Fdw.Services.Data.Clients.Models;
 
@@ -10,6 +11,12 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 public class DataSetDetailResponse : ResourceDetail
 {
+    /// <summary>Gets or sets what the name is: <c>DataSet</c>, or the kind of variation (<c>DataView</c> for a saved view).</summary>
+    public string Kind { get; set; } = ResolvedDataSet.DataSetKind;
+
+    /// <summary>Gets or sets the name of the thing it varies directly (the parent view, else the data set); null for a data set.</summary>
+    public string? ParentName { get; set; }
+
     /// <summary>Gets or sets the human-facing display name. Falls back to Name when null.</summary>
     public string? DisplayName { get; set; }
 

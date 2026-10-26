@@ -5,6 +5,8 @@ using Fdw.Collections.Attributes;
 using Fdw.Data.Transformations;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Messages;
+using Fdw.Services.Calculations.Abstractions;
+using Fdw.Services.Calculations.Abstractions.Trees;
 using Fdw.Results;
 using Fdw.Services.Data.Clients.Models;
 using Fdw.Services.Data.Endpoints.Logging;
@@ -99,10 +101,42 @@ public sealed class BuiltTransformationKind : TransformationKindBase
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// A record calculation's results are typed by the calculation engine from the stored formulas. A definition the engine refuses
+    /// leaves its results untyped and is logged, so one bad definition does not fail a list of many. A set's outputs are tables and
+    /// have no value type.
+    /// </remarks>
+    public override void AddValueTypes(
+        ITransformationImplementationConfiguration transformation, TransformationPayload payload, TransformationKindContext context)
+    {
+        if (transformation is not BuiltTransformationConfiguration { TableOutputs.Count: 0 } built)
+        {
+            return;
+        }
+
+        var kinds = StoredResultKinds(built, context);
+        if (kinds.IsFailure)
+        {
+            BuiltTransformationEndpointLog.ValueTypesUnknown(context.Logger, built.Name);
+            return;
+        }
+
+        foreach (var output in payload.Outputs)
+        {
+            if (kinds.Value!.TryGetValue(output.Name, out var kind))
+            {
+                output.ValueType = kind.Name;
+                output.DataType = kind.DataTypeName;
+            }
+        }
+    }
+
+    /// <inheritdoc />
     public override IGenericResult Detail(
         ITransformationImplementationConfiguration transformation, TransformationPayload payload, TransformationKindContext context)
     {
         Describe(transformation, payload);
+        AddValueTypes(transformation, payload, context);
         if (transformation is not BuiltTransformationConfiguration built)
         {
             return GenericResult.Failure(BuiltTransformationEndpointLog.NotBuilt(context.Logger, transformation.Name, transformation.Implementation));
@@ -255,6 +289,21 @@ public sealed class BuiltTransformationKind : TransformationKindBase
             ? array.ToNewResult<IList<BuiltResultPayload>>()
             : GenericResult<IList<BuiltResultPayload>>.Success(
                 [.. array.Value!.Results.Select(result => new BuiltResultPayload { Name = result.Name, IsKept = result.Emit, Formula = BuiltFormulaReader.ToPayload(result.Expression) })]);
+    }
+
+    private static IGenericResult<IReadOnlyDictionary<string, ICalculationValueKind>> StoredResultKinds(
+        BuiltTransformationConfiguration stored, TransformationKindContext context)
+    {
+        var limits = CalculationLimitSettings.Read(context.Settings, context.Logger);
+        if (limits.IsFailure)
+        {
+            return limits.ToNewResult<IReadOnlyDictionary<string, ICalculationValueKind>>();
+        }
+
+        var array = BuiltTransformationConverter.ToArray(stored, limits.Value!);
+        return array.IsFailure
+            ? array.ToNewResult<IReadOnlyDictionary<string, ICalculationValueKind>>()
+            : CalculationArrayValidator.ResultKinds(array.Value!, limits.Value!);
     }
 
     private static IGenericResult<ITransformationImplementationConfiguration> Refused(IGenericMessage message) =>

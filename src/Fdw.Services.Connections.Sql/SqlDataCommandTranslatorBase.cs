@@ -31,7 +31,7 @@ namespace Fdw.Services.Connections.Sql;
 /// The dialect is always derived from the path — never defaulted.
 /// </para>
 /// </remarks>
-public abstract class SqlDataCommandTranslatorBase<TCommand> : DataCommandTranslatorBase<TCommand>, IQueryCapability
+public abstract partial class SqlDataCommandTranslatorBase<TCommand> : DataCommandTranslatorBase<TCommand>, IQueryCapability
 {
     /// <summary>
     /// Initializes a new instance of <see cref="SqlDataCommandTranslatorBase{TCommand}"/>.

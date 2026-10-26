@@ -9,6 +9,7 @@ using Fdw.Services.Authentication.Abstractions.Context;
 using Fdw.Services.Authentication.Abstractions.Execution;
 using Fdw.Services.Authentication.Abstractions.Results;
 using Fdw.Services.Authentication.Abstractions.Sessions;
+using Fdw.Services.Authentication.Abstractions.SignIns;
 using Fdw.Services.Authentication.Abstractions.Steps;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Multitenancy.Abstractions;
@@ -35,6 +36,7 @@ public sealed class AuthenticationRunner
     private readonly IAuthenticationExecutionStore _executions;
     private readonly IAuthenticationFlowProvider _flows;
     private readonly ITenantProvider _tenants;
+    private readonly ISignInLog _signIns;
     private readonly ILogger<AuthenticationRunner> _logger;
 
     // How a name becomes a step. Defaults to the collection, which is the registry — a delegate
@@ -65,6 +67,7 @@ public sealed class AuthenticationRunner
     /// This request's tenant provider -- Scoped, same as this runner, so holding it here is safe.
     /// Handed down to every step's <see cref="IAuthenticationStep.Execute"/> call.
     /// </param>
+    /// <param name="signIns">Records that a person signed in, once, where every flow ends (FDW-2729).</param>
     /// <param name="logger">The logger.</param>
     public AuthenticationRunner(
         IAcrPolicy acrPolicy,
@@ -74,6 +77,7 @@ public sealed class AuthenticationRunner
         IAuthenticationFlowProvider flows,
         Func<string, IAuthenticationStep?> step,
         ITenantProvider tenants,
+        ISignInLog signIns,
         ILogger<AuthenticationRunner>? logger = null)
     {
         _acrPolicy = acrPolicy;
@@ -83,6 +87,7 @@ public sealed class AuthenticationRunner
         _flows = flows;
         _step = step ?? throw new ArgumentNullException(nameof(step));
         _tenants = tenants;
+        _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
         _logger = logger ?? NullLogger<AuthenticationRunner>.Instance;
     }
 
@@ -354,6 +359,12 @@ public sealed class AuthenticationRunner
             RunnerLog.IssuanceFailed(_logger, flow.Name, flow.SessionServiceName is null ? "token" : "session");
             return GenericResult<FlowResult>.Chain(AuthenticationResultCodes.ByName("IssuanceFailed"), issued);
         }
+
+        // The one place every sign-in passes: past the terminal check and issued, so a refused or suspended flow, or one that
+        // failed to issue, is not recorded. A failure to record is reported and does not undo a sign-in that was correct (FDW-2729).
+        var recorded = await _signIns.Record(context.Principal.Id, flow.SessionServiceName, flow.Name, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (recorded.IsFailure)
+            RunnerLog.SignInNotRecorded(_logger, flow.Name, context.Principal.Id.ToString("D"));
 
         RunnerLog.FlowCompleted(_logger, flow.Name,
             string.Join(", ", context.AchievedMethods), context.AchievedAcr ?? "none");

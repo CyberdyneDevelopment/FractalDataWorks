@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Query;
 
 namespace Fdw.Services.Workspaces.Endpoints;
@@ -25,9 +28,20 @@ internal static class DataViewFilter
     /// <param name="filters">The stored filter text, or null.</param>
     /// <param name="fields">The subject data set's current fields.</param>
     /// <param name="refusals">Builds the refusal a filter that does not resolve is answered with.</param>
+    /// <param name="calculations">Evaluates the calculations the filter names; null for a host that has none.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>The filter (null when there is none), or the refusal.</returns>
-    public static IGenericResult<IFilterExpression?> Translate(
-        string? filters, IReadOnlyList<DataSetFieldConfiguration> fields, IQueryRefusals refusals)
+    /// <remarks>
+    /// A calculation the filter names is evaluated here, so a name that does not resolve, an input without a value or a result of
+    /// the wrong type for its field refuses the save, as it would refuse the query. The stored text is not changed: the view keeps
+    /// the calculation's name and inputs and is evaluated again each time it is queried.
+    /// </remarks>
+    public static async Task<IGenericResult<IFilterExpression?>> Translate(
+        string? filters,
+        IReadOnlyList<DataSetFieldConfiguration> fields,
+        IQueryRefusals refusals,
+        IFilterCalculations? calculations,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(filters)) return GenericResult<IFilterExpression?>.Success(null);
 
@@ -38,9 +52,12 @@ internal static class DataViewFilter
             fields.Select(f => new QueryableField(f.Name, f.Name, DataSetFieldTypes.Resolve(f.TypeName), f.IsCalculated)),
             "the subject data set",
             refusals);
-        return translator.IsFailure
-            ? translator.ToNewResult<IFilterExpression?>()
-            : translator.Value!.Filter(node.Value);
+        if (translator.IsFailure) return translator.ToNewResult<IFilterExpression?>();
+
+        var resolved = await translator.Value!.ResolveCalculations(node.Value, calculations, cancellationToken).ConfigureAwait(false);
+        return resolved.IsFailure
+            ? resolved.ToNewResult<IFilterExpression?>()
+            : translator.Value!.Filter(resolved.Value);
     }
 
     private static IGenericResult<QueryFilterNode> Read(string filters, IQueryRefusals refusals)

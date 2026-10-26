@@ -104,6 +104,14 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
         var classification = DataClassificationValidator.Validate(request.ClassificationId, Logger);
         if (classification.IsFailure) return classification.ToNewResult<WorkspaceDetailResponse>();
 
+        // The workspace is written in the caller's active tenant, so that is the tenant its organization must be one of.
+        if (request.OrganizationId is { } organizationId)
+        {
+            var inTenant = await WorkspaceOrganizationCheck.Check(
+                Resolve<IOrganizationProvider>(), request.Name, organizationId, caller.ActiveTenantId, Logger, ct).ConfigureAwait(false);
+            if (inTenant.IsFailure) return inTenant.ToNewResult<WorkspaceDetailResponse>();
+        }
+
         var config = new WorkspaceImplementationConfiguration
         {
             Id = Guid.CreateVersion7(),
@@ -126,6 +134,7 @@ public abstract class CreateWorkspaceEndpointBase : CrudCreateEndpointBase<Creat
             JoinPolicy = request.JoinPolicy,
             AutoApproveRole = request.AutoApproveRole,
             StandInSeed = request.StandInSeed,
+            OrganizationId = request.OrganizationId,
         };
 
         // Resolved before anything is written, so a host that has not registered it refuses cleanly

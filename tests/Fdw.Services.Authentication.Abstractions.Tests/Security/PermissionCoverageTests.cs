@@ -41,15 +41,15 @@ public sealed class PermissionCoverageTests
         PermissionCoverage.Covers(["datasets:*"], required).ShouldBeTrue();
     }
 
-    // There is no grant of everything: nothing creates one, so a check must not honour one that appears.
+    // A held *:* covers every permission, a per-resource one included: every check answers through this one rule.
     [Theory]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]
     [InlineData("datasets:read")]
     [InlineData("settings/role:write")]
     [InlineData("datasets/0f0f0f0f-0000-0000-0000-000000000001:grant")]
-    public void TheEverythingWildcardCoversNothing(string required)
-        => PermissionCoverage.Covers(["*:*"], required).ShouldBeFalse();
+    public void TheEverythingWildcardCoversEverything(string required)
+        => PermissionCoverage.Covers(["*:*"], required).ShouldBeTrue();
 
     [Fact]
     [Trait("Priority", "P0")]

@@ -40,7 +40,7 @@ public sealed class LegalHoldsTests
             .ReturnsAsync(GenericResult<int>.Success(1));
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
-        return (new LegalHolds(gateways.Object, Tables, NullLogger<LegalHolds>.Instance), gateway);
+        return (new LegalHolds(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<LegalHolds>.Instance), gateway);
     }
 
     private static void Writes(Mock<IConfigurationGateway> gateway, Times times)
@@ -52,7 +52,7 @@ public sealed class LegalHoldsTests
     {
         var (service, gateway) = Create();
 
-        var placed = await service.Place(Tenant, Finance, "contracts/acme.pdf", "Litigation", "user-1", TestContext.Current.CancellationToken);
+        var placed = await service.Place(Finance, "contracts/acme.pdf", "Litigation", "user-1", TestContext.Current.CancellationToken);
 
         placed.IsSuccess.ShouldBeTrue();
         placed.Value!.IsHeld.ShouldBeTrue();
@@ -66,7 +66,7 @@ public sealed class LegalHoldsTests
     {
         var (service, gateway) = Create(Row("contracts/acme.pdf", lifted: false));
 
-        var placed = await service.Place(Tenant, Finance, "contracts/acme.pdf", "Litigation", "user-1", TestContext.Current.CancellationToken);
+        var placed = await service.Place(Finance, "contracts/acme.pdf", "Litigation", "user-1", TestContext.Current.CancellationToken);
 
         placed.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -78,7 +78,7 @@ public sealed class LegalHoldsTests
     {
         var (service, gateway) = Create(Row("contracts/acme.pdf", lifted: true));
 
-        var placed = await service.Place(Tenant, Finance, "contracts/acme.pdf", "New claim", "user-1", TestContext.Current.CancellationToken);
+        var placed = await service.Place(Finance, "contracts/acme.pdf", "New claim", "user-1", TestContext.Current.CancellationToken);
 
         placed.IsSuccess.ShouldBeTrue();
         Writes(gateway, Times.Once());
@@ -93,7 +93,7 @@ public sealed class LegalHoldsTests
     {
         var (service, gateway) = Create();
 
-        var placed = await service.Place(Tenant, Finance, documentId, reason, placedBy, TestContext.Current.CancellationToken);
+        var placed = await service.Place(Finance, documentId, reason, placedBy, TestContext.Current.CancellationToken);
 
         placed.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -105,7 +105,7 @@ public sealed class LegalHoldsTests
     {
         var (service, gateway) = Create(Row("contracts/acme.pdf", lifted: false));
 
-        var lifted = await service.Lift(Tenant, Finance, "contracts/acme.pdf", "user-2", TestContext.Current.CancellationToken);
+        var lifted = await service.Lift(Finance, "contracts/acme.pdf", "user-2", TestContext.Current.CancellationToken);
 
         lifted.IsSuccess.ShouldBeTrue();
         lifted.Value!.IsHeld.ShouldBeFalse();
@@ -119,7 +119,7 @@ public sealed class LegalHoldsTests
     {
         var (service, gateway) = Create(Row("contracts/acme.pdf", lifted: true));
 
-        var lifted = await service.Lift(Tenant, Finance, "contracts/acme.pdf", "user-2", TestContext.Current.CancellationToken);
+        var lifted = await service.Lift(Finance, "contracts/acme.pdf", "user-2", TestContext.Current.CancellationToken);
 
         lifted.IsFailure.ShouldBeTrue();
         Writes(gateway, Times.Never());
@@ -131,7 +131,7 @@ public sealed class LegalHoldsTests
     {
         var (service, _) = Create(Row("a.pdf", lifted: false), Row("b.pdf", lifted: true));
 
-        var held = await service.HeldDocuments(Tenant, Finance, TestContext.Current.CancellationToken);
+        var held = await service.HeldDocuments(Finance, TestContext.Current.CancellationToken);
 
         held.Value!.ShouldBe(["a.pdf"], ignoreOrder: true);
     }
@@ -142,8 +142,8 @@ public sealed class LegalHoldsTests
     {
         var (service, _) = Create(Row("a.pdf", lifted: false), Row("b.pdf", lifted: true));
 
-        var heldOnly = await service.List(Tenant, Finance, true, TestContext.Current.CancellationToken);
-        var all = await service.List(Tenant, Finance, false, TestContext.Current.CancellationToken);
+        var heldOnly = await service.List(Finance, true, TestContext.Current.CancellationToken);
+        var all = await service.List(Finance, false, TestContext.Current.CancellationToken);
 
         heldOnly.Value!.Select(hold => hold.DocumentId).ShouldBe(["a.pdf"]);
         all.Value!.Count.ShouldBe(2);

@@ -190,6 +190,7 @@ namespace Test
         ddl.ShouldContain("Name = \"UX_Test_Id_Current\"");
         ddl.ShouldContain("Name = \"UX_Test_Name_Current\"");
         ddl.ShouldContain("FilterPredicate = \"IsCurrent = 1\"");
+        ddl.ShouldContain("FilterPredicate = \"IsCurrent = 1 AND IsDeleted = 0\"");
         ddl.ShouldContain("IsUnique = true");
     }
 

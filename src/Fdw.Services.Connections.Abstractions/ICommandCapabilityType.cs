@@ -19,8 +19,7 @@ public interface ICommandCapabilityType : ITypeOption<int, CommandCapabilityType
     /// <summary>
     /// Gets the field descriptors that drive the properties-panel input form in the pipeline
     /// builder when this capability is selected.
-    /// An empty list means the capability has no configuration fields at the builder level
-    /// (e.g., <c>QueryCapability</c>, whose structured shape the client edits with its own editor).
+    /// An empty list means the capability has no configuration fields at the builder level.
     /// </summary>
     IReadOnlyList<ConfigurationFieldDescriptor> ConfigurationFields { get; }
 

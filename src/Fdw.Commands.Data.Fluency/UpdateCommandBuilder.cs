@@ -18,6 +18,7 @@ public class UpdateCommandBuilder<T>
     private readonly string _containerName;
     private string? _dataStoreName;
     private string? _pathName;
+    private string[]? _returnColumns;
     private readonly Stack<FilterGroupBuilder> _groupStack = new();
     private FilterGroupBuilder? _rootGroup;
 
@@ -122,22 +123,42 @@ public class UpdateCommandBuilder<T>
 
         var completedGroup = _groupStack.Pop();
 
+        // A group that closes holding no conditions is no condition (FDW-2808): adding it would leave an empty group as a node, which
+        // renders as nothing and is still written as a WHERE with nothing after it. A parent that is left empty is dropped the same way
+        // when it closes.
+        if (completedGroup.Nodes.Count == 0)
+        {
+            return this;
+        }
+
         if (_groupStack.Count == 0)
         {
+            // The root is always an AND group and a group that closes at the top level is one of its nodes, so a condition written after an
+            // OR group is ANDed with it, not added to it as one more alternative (FDW-1307).
             if (_rootGroup == null)
             {
-                _rootGroup = completedGroup;
+                _rootGroup = new FilterGroupBuilder { Operator = LogicalOperator.And };
             }
-            else
-            {
-                _rootGroup.Nodes.Add(completedGroup.Build());
-            }
+
+            _rootGroup.Nodes.Add(completedGroup.Build());
         }
         else
         {
             _groupStack.Peek().Nodes.Add(completedGroup.Build());
         }
 
+        return this;
+    }
+
+    /// <summary>
+    /// Names the columns to return for each row written (a generated key, a column default). The call then answers
+    /// <c>IReadOnlyList&lt;IReadOnlyDictionary&lt;string, object?&gt;&gt;</c>, one dictionary for each row, instead of a row count.
+    /// </summary>
+    /// <param name="columns">The column names; each must be declared by the container.</param>
+    /// <returns>This builder.</returns>
+    public UpdateCommandBuilder<T> Returning(params string[] columns)
+    {
+        _returnColumns = columns ?? throw new ArgumentNullException(nameof(columns));
         return this;
     }
 
@@ -179,7 +200,7 @@ public class UpdateCommandBuilder<T>
             }
         }
 
-        var command = new UpdateCommand<T>(entity) { Filter = filter };
+        var command = new UpdateCommand<T>(entity) { Filter = filter, ReturnColumns = _returnColumns };
         return new DataGatewayCall(command, new DataStoreTarget(_dataStoreName, _pathName, _containerName));
     }
 

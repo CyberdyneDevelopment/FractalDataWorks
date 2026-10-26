@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Workspaces.Abstractions;
 
 namespace Fdw.Services.Workspaces;
@@ -22,16 +23,13 @@ public sealed record WorkspaceStanding(
     IWorkspaceVisibility Visibility)
 {
     /// <summary>
-    /// Whether the caller holds <paramref name="permission"/>: the exact permission, the resource's
-    /// wildcard, or the all-resources wildcard -- the same test the platform's own gate applies
-    /// (<c>DefaultAuthorizationService</c>).
+    /// Whether the caller holds <paramref name="permission"/>, as <see cref="PermissionCoverage"/> decides: the exact permission, the
+    /// resource's wildcard, or the all-resources wildcard -- the test the platform's own gate applies.
     /// </summary>
     /// <param name="permission">A platform permission, e.g. <c>workspaces:read</c>.</param>
     /// <returns><c>true</c> when the caller holds it.</returns>
     public bool Holds(string permission)
-        => Permissions.Contains(permission, StringComparer.OrdinalIgnoreCase)
-           || Permissions.Contains("workspaces:*", StringComparer.OrdinalIgnoreCase)
-           || Permissions.Contains("*:*", StringComparer.OrdinalIgnoreCase);
+        => PermissionCoverage.Covers(Permissions, permission);
 
     /// <summary>
     /// Whether the caller holds the permission for this one workspace: <c>workspaces/{id}:{action}</c>,

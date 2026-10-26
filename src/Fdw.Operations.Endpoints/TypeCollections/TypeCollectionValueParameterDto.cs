@@ -39,4 +39,10 @@ public sealed class TypeCollectionValueParameterDto
     /// the data set, data store, path and container of a source or destination. False for every other kind of parameter.
     /// </summary>
     public bool AcceptsParameterText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a client shows the setting to say what an action does (RUI-547): what a variable is set to, which
+    /// pipeline is run, the first line of a script. False for every other kind of parameter.
+    /// </summary>
+    public bool SummarisesComponent { get; set; }
 }

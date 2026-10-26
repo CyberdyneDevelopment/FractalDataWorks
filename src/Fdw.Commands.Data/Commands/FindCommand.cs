@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
@@ -40,7 +41,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Find", RestrictToCurrentCompilation = true)]
-public sealed class FindCommand<T> : DataCommandBase<IEnumerable<FindResult<T>>>
+public sealed class FindCommand<T> : DataCommandBase<IEnumerable<FindResult<T>>>, IFindCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FindCommand{T}"/> class.
@@ -73,4 +74,17 @@ public sealed class FindCommand<T> : DataCommandBase<IEnumerable<FindResult<T>>>
     /// When null, the system default limit is applied.
     /// </summary>
     public int? MaxResults { get; init; }
+
+    /// <inheritdoc/>
+    public Type RowType => typeof(T);
+
+    /// <inheritdoc/>
+    public object Results(IReadOnlyList<object> rows, IReadOnlyList<IReadOnlyList<string>> matchedFields)
+    {
+        var results = new List<FindResult<T>>(rows.Count);
+        for (var i = 0; i < rows.Count; i++)
+            results.Add(new FindResult<T> { Record = (T)rows[i], MatchedFields = matchedFields[i] });
+
+        return results;
+    }
 }

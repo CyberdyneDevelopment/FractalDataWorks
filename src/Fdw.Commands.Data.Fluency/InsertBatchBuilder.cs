@@ -15,6 +15,7 @@ public class InsertBatchBuilder<T>
     private readonly string _containerName;
     private string? _dataStoreName;
     private string? _pathName;
+    private string[]? _returnColumns;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InsertBatchBuilder{T}"/> class.
@@ -48,6 +49,18 @@ public class InsertBatchBuilder<T>
     }
 
     /// <summary>
+    /// Names the columns to return for each row written (a generated key, a column default). The call then answers
+    /// <c>IReadOnlyList&lt;IReadOnlyDictionary&lt;string, object?&gt;&gt;</c>, one dictionary for each row, instead of a row count.
+    /// </summary>
+    /// <param name="columns">The column names; each must be declared by the container.</param>
+    /// <returns>This builder.</returns>
+    public InsertBatchBuilder<T> Returning(params string[] columns)
+    {
+        _returnColumns = columns ?? throw new ArgumentNullException(nameof(columns));
+        return this;
+    }
+
+    /// <summary>
     /// Builds and returns a <see cref="DataGatewayCall"/> containing the batch insert command
     /// and its <see cref="DataStoreTarget"/> address.
     /// Uses batched multi-row INSERT statements (ACID-compliant).
@@ -62,7 +75,7 @@ public class InsertBatchBuilder<T>
             throw new InvalidOperationException("Path must be specified. Call Path() before Values().");
 
         return new DataGatewayCall(
-            new InsertCommand<IEnumerable<T>>(entities),
+            new InsertCommand<T>(entities) { ReturnColumns = _returnColumns },
             new DataStoreTarget(_dataStoreName, _pathName, _containerName));
     }
 }

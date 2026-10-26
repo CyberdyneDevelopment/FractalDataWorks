@@ -44,6 +44,21 @@ public interface IHttpProtocol : ITypeOption<int, HttpProtocolBase>
     string DefaultContentType { get; }
 
     /// <summary>
+    /// Gets whether this protocol turns a data command of the given type into a request. A connection reports a command
+    /// type the protocol does not map as having no translator, so a command that expands into simpler ones (Upsert,
+    /// BulkUpsert, BulkUpdate) runs those, and any other fails with a named result instead of being sent as something else.
+    /// </summary>
+    /// <param name="commandType">The command type name.</param>
+    /// <returns>True when <see cref="Translate"/> maps that command type.</returns>
+    bool Maps(string commandType);
+
+    /// <summary>
+    /// Gets how many insert rows this protocol sends in one request. 1 means one request for each row, with the row as the request's body;
+    /// more than 1 means a list of up to that many rows as the body. An insert of more rows than this runs as several requests.
+    /// </summary>
+    int InsertRowsPerRequest { get; }
+
+    /// <summary>
     /// Translates a data command into an HTTP request message.
     /// </summary>
     /// <param name="command">The data command to translate.</param>

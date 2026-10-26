@@ -46,7 +46,6 @@ Implementations live in the sibling packages; this one holds the interfaces, bas
 | Type | Kind | Purpose |
 |---|---|---|
 | `BrokenConnectionState` | class | The connection is in a broken or faulted state and cannot be used. |
-| `BulkInsertCapability` | class | Bulk insert capability — writes a large batch of records to a target container using the connection's… |
 | `BulkUpsertCapability` | class | Bulk upsert capability — writes a large batch of records to a target container using the connection's… |
 | `ClosedConnectionState` | class | The connection is closed. |
 | `ClosingConnectionState` | class | The connection is currently being closed. |
@@ -66,7 +65,7 @@ dotnet add package Fdw.Services.Connections.Abstractions --prerelease
 
 ## Dependencies
 
-`Fdw.Collections` · `Fdw.Commands.Abstractions` · `Fdw.Commands.Data.Abstractions` · `Fdw.Data.Abstractions` · `Fdw.Data.RowSources.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Processors.Abstractions` · `Fdw.Results` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.SecretManagers.Abstractions`
+`Fdw.Collections` · `Fdw.Commands.Abstractions` · `Fdw.Commands.Data.Abstractions` · `Fdw.Data.Abstractions` · `Fdw.Data.RowSources.Abstractions` · `Fdw.Documents.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Processors.Abstractions` · `Fdw.Results` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.SecretManagers.Abstractions`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 
@@ -74,4 +73,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->

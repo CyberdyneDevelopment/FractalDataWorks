@@ -29,6 +29,10 @@
     <ProjectReference Include="..\Fdw.Validation.FastEndpoints\Fdw.Validation.FastEndpoints.csproj" />
     <ProjectReference Include="..\Fdw.Web.Calculations.Clients.Abstractions\Fdw.Web.Calculations.Clients.Abstractions.csproj" />
     <ProjectReference Include="..\Fdw.Services.Calculations\Fdw.Services.Calculations.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Workspaces\Fdw.Services.Workspaces.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Multitenancy.Abstractions\Fdw.Services.Multitenancy.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authorization.Abstractions\Fdw.Services.Authorization.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Services.Authentication.Abstractions\Fdw.Services.Authentication.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

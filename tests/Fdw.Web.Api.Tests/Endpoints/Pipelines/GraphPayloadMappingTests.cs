@@ -408,7 +408,7 @@ public sealed class GraphPayloadMappingTests
         source.Settings["batchSize"] = Json("500");
         var load = new GraphComponentPayload { Name = "load", Kind = "DataSetDestination" };
         load.Settings["dataSet"] = Json("\"OrdersHistory\"");
-        load.Settings["loadKind"] = Json("\"BulkUpsert\"");
+        load.Settings["loadKind"] = Json("\"Upsert\"");
         load.Settings["truncateFirst"] = Json("false");
         load.Settings["keyColumns"] = Json("[\"Id\"]");
         load.Settings["writeColumns"] = Json("[\"Id\",\"Amount\"]");

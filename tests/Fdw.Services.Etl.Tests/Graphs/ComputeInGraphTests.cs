@@ -143,15 +143,16 @@ public sealed class ComputeInGraphTests
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "DataIntegrity")]
-    public void AComputeThatHoldsEveryRowNeedsABatchSize()
+    public async Task AComputeThatHoldsEveryRowNeedsABatchSize()
     {
         var tool = ComputeTool("Reject", null);
         tool.BatchSize = null;
         var graph = Graph([DataSetSource("src"), tool], [Link("src", "ratio")], Dropped("ratio"));
 
-        var built = GraphFlowBuilder.Build(graph, Context(graph, new PagedSourceGateway([], [])));
+        // The compiled transformation is what says the tool works on whole tables; without one the tool works a row at a time and needs no batch size.
+        var built = GraphFlowBuilder.Build(graph, ContextWith(graph, await Compiled(tool)));
 
-        // No transformation is compiled here, so the adapter is never reached for the set check; the tool alone states its needs.
         built.IsFailure.ShouldBeTrue();
+        built.CurrentMessage.ShouldNotBeNull().ShouldContain("batchSize");
     }
 }

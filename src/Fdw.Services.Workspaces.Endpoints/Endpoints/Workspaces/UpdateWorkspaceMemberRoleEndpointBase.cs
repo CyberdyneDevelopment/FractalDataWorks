@@ -106,10 +106,10 @@ public abstract class UpdateWorkspaceMemberRoleEndpointBase
         if (permitted.IsFailure) return permitted.ToNewResult<WorkspaceMemberDto>();
 
         row.MemberRole = request.MemberRole;
-        // Why stamped here: MsSqlConfigurationSaveTranslator's INSERT half writes every mapped
+        // Why stamped here: ConfigurationSaveCommand's insert writes every mapped
         // column explicitly, same as the create/attach sites (FDW-793) -- CreateDate is left as the
         // value already on `row`, though FDW-798 means that value is dropped regardless of what it
-        // is (the translator excludes it from the INSERT unconditionally), not just here.
+        // is (the save excludes it from the insert unconditionally), not just here.
         row.ModifyDate = DateTimeOffset.UtcNow;
 
         // row is the instance inside the aggregate's Members, so the aggregate already carries the change.

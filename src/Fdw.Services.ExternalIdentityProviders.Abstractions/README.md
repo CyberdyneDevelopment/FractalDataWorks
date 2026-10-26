@@ -46,4 +46,4 @@ Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalData
 <!-- hand-patched on 2026-09-14 (FDW-797) to drop the dangling Chained example reference deleted in 91126c961 -->
 
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; edit by hand, nothing regenerates it -->

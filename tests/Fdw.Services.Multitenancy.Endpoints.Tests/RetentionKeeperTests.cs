@@ -31,10 +31,10 @@ public sealed class RetentionKeeperTests
         RetainedDocument[] documents, string[] held, string[]? failToEnd = null, bool listingFails = false)
     {
         var policies = new Mock<IRetentionPolicies>();
-        policies.Setup(p => p.List(Tenant, Finance, It.IsAny<CancellationToken>())).ReturnsAsync(
+        policies.Setup(p => p.List(Finance, It.IsAny<CancellationToken>())).ReturnsAsync(
             GenericResult<IReadOnlyList<RetentionPolicy>>.Success([new RetentionPolicy(Guid.NewGuid(), Finance, "Contract", 7, 0, 0, "SignedDate", "Delete")]));
         var holds = new Mock<ILegalHolds>();
-        holds.Setup(h => h.HeldDocuments(Tenant, Finance, It.IsAny<CancellationToken>()))
+        holds.Setup(h => h.HeldDocuments(Finance, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<ISet<string>>.Success(new HashSet<string>(held, StringComparer.Ordinal)));
         var retained = new Mock<IRetainedDocuments>();
         retained.Setup(d => d.List(Tenant, Finance, "Contract", It.IsAny<CancellationToken>())).ReturnsAsync(listingFails
@@ -45,7 +45,7 @@ public sealed class RetentionKeeperTests
                 failToEnd is not null && failToEnd.Contains(document.DocumentId, StringComparer.Ordinal)
                     ? GenericResult.Failure(new GenericMessage("the file is locked"))
                     : GenericResult.Success());
-        return (new RetentionKeeper(policies.Object, holds.Object, retained.Object, NullLogger<RetentionKeeper>.Instance), retained);
+        return (new RetentionKeeper(policies.Object, holds.Object, retained.Object, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<RetentionKeeper>.Instance), retained);
     }
 
     private static void EndedNever(Mock<IRetainedDocuments> documents, string id)
@@ -57,7 +57,7 @@ public sealed class RetentionKeeperTests
     {
         var (keeper, _) = Create([Document("old.pdf", new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero))], []);
 
-        var report = await keeper.Run(Tenant, Finance, Now, TestContext.Current.CancellationToken);
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.IsSuccess.ShouldBeTrue();
         report.Value!.Ended.Select(outcome => outcome.DocumentId).ShouldBe(["old.pdf"]);
@@ -70,7 +70,7 @@ public sealed class RetentionKeeperTests
     {
         var (keeper, documents) = Create([Document("held.pdf", new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero))], ["held.pdf"]);
 
-        var report = await keeper.Run(Tenant, Finance, Now, TestContext.Current.CancellationToken);
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.Value!.Ended.ShouldBeEmpty();
         report.Value.Held.ShouldBe(1);
@@ -83,7 +83,7 @@ public sealed class RetentionKeeperTests
     {
         var (keeper, documents) = Create([Document("new.pdf", new DateTimeOffset(2028, 1, 1, 0, 0, 0, TimeSpan.Zero))], []);
 
-        var report = await keeper.Run(Tenant, Finance, Now, TestContext.Current.CancellationToken);
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.Value!.Considered.ShouldBe(1);
         report.Value.Ended.ShouldBeEmpty();
@@ -96,7 +96,7 @@ public sealed class RetentionKeeperTests
     {
         var (keeper, documents) = Create([Document("undated.pdf", null)], []);
 
-        var report = await keeper.Run(Tenant, Finance, Now, TestContext.Current.CancellationToken);
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.Value!.Undated.ShouldBe(1);
         report.Value.Ended.ShouldBeEmpty();
@@ -110,7 +110,7 @@ public sealed class RetentionKeeperTests
         var old = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var (keeper, _) = Create([Document("locked.pdf", old), Document("free.pdf", old)], [], failToEnd: ["locked.pdf"]);
 
-        var report = await keeper.Run(Tenant, Finance, Now, TestContext.Current.CancellationToken);
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.Value!.Failed.Select(outcome => outcome.DocumentId).ShouldBe(["locked.pdf"]);
         report.Value.Failed[0].Reason.ShouldNotBeNull();
@@ -123,7 +123,7 @@ public sealed class RetentionKeeperTests
     {
         var (keeper, _) = Create([], [], listingFails: true);
 
-        var report = await keeper.Run(Tenant, Finance, Now, TestContext.Current.CancellationToken);
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.IsFailure.ShouldBeTrue();
     }

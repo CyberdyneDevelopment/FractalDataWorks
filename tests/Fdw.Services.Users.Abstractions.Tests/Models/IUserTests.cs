@@ -88,22 +88,6 @@ public sealed class IUserTests
         property.CanRead.ShouldBeTrue();
     }
 
-    [Fact]
-    [Trait("Priority", "P1")]
-    [Trait("Category", "Security")]
-    public void LastLoginAtPropertyExists()
-    {
-        // Arrange
-        var type = typeof(IUser);
-
-        // Act
-        var property = type.GetProperty("LastLoginAt");
-
-        // Assert
-        property.ShouldNotBeNull();
-        property.PropertyType.ShouldBe(typeof(DateTimeOffset?));
-        property.CanRead.ShouldBeTrue();
-    }
 
     [Fact]
     [Trait("Priority", "P1")]

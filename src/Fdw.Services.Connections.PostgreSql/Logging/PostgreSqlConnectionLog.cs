@@ -272,7 +272,7 @@ public static partial class PostgreSqlConnectionLog
     public static partial IGenericMessage ProbeSucceeded(ILogger logger, string connectionName);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Bulk COPY Events (the BulkInsert bulk route, FDW-1152)
+    // Bulk COPY Events (the Insert bulk route, FDW-1152)
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// <summary>
@@ -286,4 +286,44 @@ public static partial class PostgreSqlConnectionLog
     /// </summary>
     [MessageLogging(EventId = 71008, Level = LogLevel.Error, Message = "PostgreSQL bulk COPY failed for '{connectionName}'")]
     public static partial IGenericMessage BulkCopyFailed(ILogger logger, Exception ex, string connectionName);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Unit of work
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Logs when a PostgreSQL unit of work begins.
+    /// </summary>
+    [MessageLogging(EventId = 11021, Level = LogLevel.Information, Message = "PostgreSQL unit of work began on '{connectionName}'")]
+    public static partial IGenericMessage UnitOfWorkBegan(ILogger logger, string connectionName);
+
+    /// <summary>
+    /// Logs when a PostgreSQL unit of work commits.
+    /// </summary>
+    [MessageLogging(EventId = 11022, Level = LogLevel.Information, Message = "PostgreSQL unit of work committed on '{connectionName}'")]
+    public static partial IGenericMessage UnitOfWorkCommitted(ILogger logger, string connectionName);
+
+    /// <summary>
+    /// Logs when a PostgreSQL unit of work rolls back.
+    /// </summary>
+    [MessageLogging(EventId = 11023, Level = LogLevel.Information, Message = "PostgreSQL unit of work rolled back on '{connectionName}'")]
+    public static partial IGenericMessage UnitOfWorkRolledBack(ILogger logger, string connectionName);
+
+    /// <summary>
+    /// Logs when a command is run on a PostgreSQL unit of work that had already committed or rolled back.
+    /// </summary>
+    [MessageLogging(EventId = 40000, Level = LogLevel.Error, Message = "A command was run on a unit of work on '{connectionName}' that had already been committed or rolled back")]
+    public static partial IGenericMessage UnitOfWorkNoLongerActive(ILogger logger, string connectionName);
+
+    /// <summary>
+    /// Logs when a PostgreSQL unit of work could not begin, commit or roll back.
+    /// </summary>
+    [MessageLogging(EventId = 71009, Level = LogLevel.Error, Message = "PostgreSQL unit of work could not {step} on '{connectionName}'")]
+    public static partial IGenericMessage UnitOfWorkFailed(ILogger logger, Exception ex, string step, string connectionName);
+
+    /// <summary>
+    /// Logs when disposing a PostgreSQL unit of work could not roll it back.
+    /// </summary>
+    [MessageLogging(EventId = 71010, Level = LogLevel.Warning, Message = "PostgreSQL unit of work on '{connectionName}' could not be rolled back when it was disposed")]
+    public static partial IGenericMessage UnitOfWorkDisposeRollbackFailed(ILogger logger, Exception ex, string connectionName);
 }

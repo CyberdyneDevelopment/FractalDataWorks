@@ -26,14 +26,14 @@ public class DataViewResponse : ResourceSummary
     /// <summary>Gets or sets the data set this view reads.</summary>
     public Guid SubjectDataSetId { get; set; }
 
-    /// <summary>Gets or sets the visualiser's own encoding, round-tripped opaquely.</summary>
-    public string Encoding { get; set; } = string.Empty;
+    /// <summary>Gets or sets the visualiser's own encoding, round-tripped opaquely; null for a view that draws no chart.</summary>
+    public string? Encoding { get; set; }
 
     /// <summary>Gets or sets the stored filter state, round-tripped opaquely.</summary>
     public string? Filters { get; set; }
 
-    /// <summary>Gets or sets the chart kind.</summary>
-    public string ChartType { get; set; } = string.Empty;
+    /// <summary>Gets or sets the chart kind; null for a view that draws no chart.</summary>
+    public string? ChartType { get; set; }
 
     /// <summary>Gets or sets the owning user.</summary>
     public Guid? OwnerUserId { get; set; }

@@ -42,6 +42,34 @@ public sealed class MsSqlSoftDeleteTranslatorTests
     }
 
     [Fact]
+    public async Task FilterMatchesFlagsWithoutAMarkerOrAStagedSet()
+    {
+        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { DeletedAtColumn = "DeletedAt" };
+
+        var result = await Run(options);
+
+        result.IsSuccess.ShouldBeTrue();
+        var sql = result.Value!.CommandText;
+        sql.ShouldNotContain("DELETE FROM");
+        sql.ShouldContain("UPDATE t SET t.[IsDeleted] = @fdw_sd_flag, t.[DeletedAt] = SYSDATETIMEOFFSET()");
+        sql.ShouldNotContain("@fdw_sd_marker");
+        sql.ShouldNotContain("OPENJSON");
+        sql.ShouldContain("(t.[IsDeleted] IS NULL OR t.[IsDeleted] <> @fdw_sd_flag)");
+    }
+
+    [Fact]
+    public async Task AFalseFlagValueClosesTheRowsInsteadOfFlaggingThem()
+    {
+        var options = new SoftDeleteOptions("IsDeleted", SoftDeleteModes.FilterMatches) { FlagValue = false };
+
+        var result = await Run(options);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Parameters["@fdw_sd_flag"].Value.ShouldBe(false);
+        result.Value.CommandText.ShouldContain("(t.[IsDeleted] IS NULL OR t.[IsDeleted] <> @fdw_sd_flag)");
+    }
+
+    [Fact]
     public async Task AbsentFromSourceStagesTheKeysAndFlagsTheOthers()
     {
         var keys = new List<IReadOnlyDictionary<string, object?>>
@@ -92,12 +120,14 @@ public sealed class MsSqlSoftDeleteTranslatorTests
     }
 
     [Fact]
-    public async Task DeleteWithoutSoftDeleteStillRequiresAFilter()
+    public async Task DeleteWithoutSoftDeleteOrFilterDeletesEveryRow()
     {
         var container = TestContainers.Table("Customers", Columns);
 
         var result = await _sut.Translate(new DeleteCommand(), container.Object, TestContext.Current.CancellationToken);
 
-        result.IsSuccess.ShouldBeFalse();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldStartWith("DELETE FROM");
+        result.Value.CommandText.ShouldNotContain("WHERE");
     }
 }

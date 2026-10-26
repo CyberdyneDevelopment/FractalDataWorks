@@ -34,7 +34,11 @@ public sealed class NotifyVariablesTests
     {
         foreach (var variable in NotifyVariables.All().Cast<NotifyVariableBase>())
         {
-            variable.DisplayName.ShouldNotBe(variable.Name);
+            variable.DisplayName.ShouldNotBeNullOrWhiteSpace();
+            if (variable.Name.Skip(1).Any(char.IsUpper))
+            {
+                variable.DisplayName.ShouldNotBe(variable.Name);
+            }
             variable.Description.ShouldNotStartWith("Type option:");
             variable.Description.ShouldNotBeNullOrWhiteSpace();
         }

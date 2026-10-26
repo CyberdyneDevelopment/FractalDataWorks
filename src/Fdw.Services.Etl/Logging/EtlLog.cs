@@ -440,7 +440,7 @@ public static partial class EtlLog
 
     /// <summary>
     /// Logs when the destination connection does not support any known write capability (neither
-    /// BulkInsert nor HTTP record writer), so the pipeline cannot load records.
+    /// Insert nor HTTP record writer), so the pipeline cannot load records.
     /// </summary>
     [MessageLogging(
         EventId = 61002,

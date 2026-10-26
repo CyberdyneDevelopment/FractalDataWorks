@@ -25,10 +25,7 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 public sealed class UserPermissions : IUserPermissions
 {
-    private readonly IRoleConfigurationProvider _roleProvider;
-    private readonly IPermissionConfigurationProvider _permissionProvider;
-    private readonly IRolePermissionConfigurationProvider _rolePermissionProvider;
-    private readonly IUserRoleConfigurationProvider _userRoleProvider;
+    private readonly IUserPermissionGrants _grants;
     private readonly IAuthenticationContextAccessor _authContextAccessor;
     private readonly IOrgAccessProvider _orgAccessProvider;
     private readonly ILogger<UserPermissions> _logger;
@@ -37,18 +34,12 @@ public sealed class UserPermissions : IUserPermissions
     /// Initializes a new instance of <see cref="UserPermissions"/>.
     /// </summary>
     public UserPermissions(
-        IRoleConfigurationProvider roleProvider,
-        IPermissionConfigurationProvider permissionProvider,
-        IRolePermissionConfigurationProvider rolePermissionProvider,
-        IUserRoleConfigurationProvider userRoleProvider,
+        IUserPermissionGrants grants,
         IAuthenticationContextAccessor authContextAccessor,
         ILogger<UserPermissions>? logger,
         IOrgAccessProvider? orgAccessProvider = null)
     {
-        _roleProvider = roleProvider ?? throw new ArgumentNullException(nameof(roleProvider));
-        _permissionProvider = permissionProvider ?? throw new ArgumentNullException(nameof(permissionProvider));
-        _rolePermissionProvider = rolePermissionProvider ?? throw new ArgumentNullException(nameof(rolePermissionProvider));
-        _userRoleProvider = userRoleProvider ?? throw new ArgumentNullException(nameof(userRoleProvider));
+        _grants = grants ?? throw new ArgumentNullException(nameof(grants));
         _authContextAccessor = authContextAccessor ?? throw new ArgumentNullException(nameof(authContextAccessor));
         _logger = logger ?? NullLogger<UserPermissions>.Instance;
         _orgAccessProvider = orgAccessProvider ?? NullOrgAccessProvider.Instance;
@@ -63,35 +54,28 @@ public sealed class UserPermissions : IUserPermissions
     {
         using var systemScope = new SystemAuthenticationContextScope(_authContextAccessor);
 
-        var catalogResult = await LoadCatalog(cancellationToken).ConfigureAwait(false);
-        if (catalogResult is null)
-            return GenericResult<EffectiveAuthorization>.Failure(AuthorizationLog.RoleProviderQueryFailed(_logger));
-
-        var (allRoles, allPermissions, allRolePermissions) = catalogResult.Value;
-
         // A Guid stored as VARCHAR: compared as text the match depends on how each side spelled
-        // it, so both are compared as the Guids they are (FDW-532) -- in UserRoleAssignments, the one
+        // it, so both are compared as the Guids they are (FDW-532) -- in UserPermissionGrants, the one
         // place that says which rows are a user's. An unparseable subject matches nothing, which is
         // what it should do.
         _ = Guid.TryParse(userId, out var subjectId);
-        var userRoleAssignmentsResult = await _userRoleProvider.Find<UserRoleImplementationConfiguration>(
-                UserRoleAssignments.HeldBy(subjectId), cancellationToken).ConfigureAwait(false);
-        if (!userRoleAssignmentsResult.IsSuccess || userRoleAssignmentsResult.Value is null)
+        var grantsResult = await _grants.Get(subjectId, cancellationToken).ConfigureAwait(false);
+        if (!grantsResult.IsSuccess || grantsResult.Value is null)
             return GenericResult<EffectiveAuthorization>.Failure(
                 AuthorizationLog.UserRoleAssignmentLoadFailed(_logger, userId));
 
-        var userRoleAssignments = userRoleAssignmentsResult.Value;
-        AuthorizationLog.UserRoleAssignmentsLoaded(_logger, userRoleAssignments.Count, userId);
+        var grants = grantsResult.Value;
+        var assignedRoles = grants.Select(g => g.RoleId).Distinct().Count();
+        AuthorizationLog.UserRoleAssignmentsLoaded(_logger, assignedRoles, userId);
 
         var permissions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var roleNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var roleNameToId = allRoles.ToDictionary(r => r.Name, r => r.Id, StringComparer.OrdinalIgnoreCase);
 
         var globalCount = 0;
         var tenantCount = 0;
         DateTimeOffset? validUntil = null;
 
-        if (userRoleAssignments.Count == 0)
+        if (assignedRoles == 0)
         {
             AuthorizationLog.UserHasNoRoleAssignments(_logger, userId);
         }
@@ -107,19 +91,16 @@ public sealed class UserPermissions : IUserPermissions
             // framework guarantee, not a front-end one: FDW is consumed by callers other than our own
             // console, so an expiry the schema offers must be honored here rather than left for a
             // caller to enforce or not.
-            var counted = userRoleAssignments
-                .Where(ur => tenantId.HasValue && ur.TenantId == tenantId.Value
-                             && (ur.ExpiresAt is null || ur.ExpiresAt > DateTimeOffset.UtcNow))
+            var counted = grants
+                .Where(g => tenantId.HasValue && g.AssignmentTenantId == tenantId.Value
+                            && (g.ExpiresAt is null || g.ExpiresAt > DateTimeOffset.UtcNow))
                 .ToList();
-            var assignedRoleIds = new HashSet<Guid>(counted.Select(ur => ur.RoleId));
 
             // What counted now stops counting at its expiry, so the result is true only until the
             // earliest one (FDW-862). Min over nullable values skips the assignments that never expire.
-            validUntil = counted.Min(ur => ur.ExpiresAt);
+            validUntil = counted.Min(g => g.ExpiresAt);
 
-            (globalCount, tenantCount) = ApplyRoleTiers(
-                userId, allRoles, allPermissions, allRolePermissions, roleNameToId,
-                tenantId, assignedRoleIds, permissions, roleNames);
+            (globalCount, tenantCount) = ApplyRoleTiers(counted, tenantId, permissions, roleNames);
         }
 
         var orgResult = await ApplyOrgTier(
@@ -133,82 +114,34 @@ public sealed class UserPermissions : IUserPermissions
         return GenericResult<EffectiveAuthorization>.Success(new EffectiveAuthorization(permissions, roleNames, validUntil));
     }
 
-    private async Task<(IReadOnlyList<IRoleImplementationConfiguration>, IReadOnlyList<IPermissionImplementationConfiguration>, IReadOnlyList<IRolePermissionImplementationConfiguration>)?> LoadCatalog(
-        CancellationToken cancellationToken)
-    {
-        var allRolesResult = await _roleProvider.Get(cancellationToken).ConfigureAwait(false);
-        if (!allRolesResult.IsSuccess || allRolesResult.Value is null)
-        {
-            AuthorizationLog.RoleProviderQueryFailed(_logger);
-            return null;
-        }
-
-        var allPermissionsResult = await _permissionProvider.Get(cancellationToken).ConfigureAwait(false);
-        if (!allPermissionsResult.IsSuccess || allPermissionsResult.Value is null)
-        {
-            AuthorizationLog.PermissionProviderQueryFailed(_logger);
-            return null;
-        }
-
-        var allRolePermissionsResult = await _rolePermissionProvider.Get(cancellationToken).ConfigureAwait(false);
-        if (!allRolePermissionsResult.IsSuccess || allRolePermissionsResult.Value is null)
-        {
-            AuthorizationLog.RolePermissionProviderQueryFailed(_logger);
-            return null;
-        }
-
-        return (allRolesResult.Value, allPermissionsResult.Value, allRolePermissionsResult.Value);
-    }
-
-    private (int GlobalCount, int TenantCount) ApplyRoleTiers(
-        string userId,
-        IReadOnlyList<IRoleImplementationConfiguration> allRoles,
-        IReadOnlyList<IPermissionImplementationConfiguration> allPermissions,
-        IReadOnlyList<IRolePermissionImplementationConfiguration> allRolePermissions,
-        Dictionary<string, Guid> roleNameToId,
+    private static (int GlobalCount, int TenantCount) ApplyRoleTiers(
+        IReadOnlyList<UserPermissionGrant> counted,
         Guid? currentTenantId,
-        HashSet<Guid> assignedRoleIds,
         HashSet<string> permissions,
         HashSet<string> roleNames)
     {
         var globalPermCount = 0;
         var tenantPermCount = 0;
 
-        AuthorizationLog.UserRolesSelected(_logger, assignedRoleIds.Count, userId, allRoles.Count);
-
-        foreach (var role in allRoles)
+        foreach (var role in counted.GroupBy(g => g.RoleId))
         {
-            if (!assignedRoleIds.Contains(role.Id))
-                continue;
+            var first = role.First();
 
             // A platform role (not tenant-scoped) can be assigned in any tenant. A tenant-scoped role
-            // is one tenant's own definition and contributes only in that tenant.
-            var roleIsGlobal = !role.IsTenantScoped;
-            if (!roleIsGlobal && !RoleContributesToTenant(role, currentTenantId))
+            // is one tenant's own definition and contributes only in that tenant. What a role grants
+            // is what its owning tenant wrote: the view counts no grant any other tenant owns.
+            var roleIsGlobal = !first.IsTenantScoped;
+            if (!roleIsGlobal && !(currentTenantId.HasValue && first.RoleTenantId == currentTenantId.Value))
                 continue;
 
-            roleNames.Add(role.Name);
+            roleNames.Add(first.RoleName);
 
-            var rolePerms = RoleOwnedGrants.Of(role, allRolePermissions, _logger);
-            AuthorizationLog.RolePermissionsMatched(_logger, role.Name, role.Id.ToString(), rolePerms.Count);
-
-            var loggedMismatch = false;
-            for (var i = 0; i < rolePerms.Count; i++)
+            foreach (var grant in role)
             {
-                var permConfig = FindPermission(allPermissions, rolePerms[i].PermissionId);
-                if (permConfig is not null)
+                if (grant.PermissionName is { } permission && permissions.Add(permission))
                 {
-                    if (permissions.Add(permConfig.Name))
-                    {
-                        if (roleIsGlobal) globalPermCount++;
-                        else tenantPermCount++;
-                    }
-                }
-                else if (!loggedMismatch)
-                {
-                    var sampleId = allPermissions.Count > 0 ? allPermissions[0].Id.ToString() : "(none)";
-                    AuthorizationLog.PermissionIdUnresolved(_logger, rolePerms[i].PermissionId.ToString(), sampleId);
-                    loggedMismatch = true;
+                    if (roleIsGlobal) globalPermCount++;
+                    else tenantPermCount++;
                 }
             }
         }
@@ -268,19 +201,4 @@ public sealed class UserPermissions : IUserPermissions
         => !string.IsNullOrEmpty(grant.PermissionName) && permissions.Add(grant.PermissionName)
             ? 1
             : 0;
-
-    private static bool RoleContributesToTenant(IRoleImplementationConfiguration? roleDef, Guid? currentTenantId)
-        => roleDef is not null && roleDef.IsTenantScoped
-           && currentTenantId.HasValue
-           && roleDef.TenantId == currentTenantId.Value;
-
-    private static IPermissionImplementationConfiguration? FindPermission(IReadOnlyList<IPermissionImplementationConfiguration> permissions, Guid permissionId)
-    {
-        for (var i = 0; i < permissions.Count; i++)
-        {
-            if (permissions[i].Id == permissionId)
-                return permissions[i];
-        }
-        return null;
-    }
 }

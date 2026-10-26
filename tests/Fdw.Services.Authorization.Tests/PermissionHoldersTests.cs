@@ -30,6 +30,10 @@ public sealed class PermissionHoldersTests
     private static readonly Guid ViewerA = new("77777777-0000-0000-0000-00000000000b");
     private static readonly Guid DeveloperB = new("77777777-0000-0000-0000-00000000000c");
     private static readonly Guid AdminGlobal = new("77777777-0000-0000-0000-00000000000d");
+    private static readonly Guid WildcardRole = new("77777777-0000-0000-0000-00000000000e");
+    private static readonly Guid OtherWildcardRole = new("77777777-0000-0000-0000-00000000000f");
+    private static readonly Guid WildcardPermissionId = new("55555555-0000-0000-0000-000000000003");
+    private static readonly Guid OtherWildcardPermissionId = new("55555555-0000-0000-0000-000000000004");
     private static readonly Guid Ana = new("22222222-0000-0000-0000-000000000001");
     private static readonly Guid Ben = new("22222222-0000-0000-0000-000000000002");
     private static readonly Guid Cy = new("22222222-0000-0000-0000-000000000003");
@@ -47,6 +51,18 @@ public sealed class PermissionHoldersTests
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe([Ana]);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task ARoleThatCarriesTheResourceWildcardCountsBecauseEnforcementAcceptsIt()
+    {
+        var holders = Build([Held(Cy, WildcardRole, TenantA), Held(Ben, OtherWildcardRole, TenantA)]);
+
+        var result = await holders.Get(Permission, TenantA, Ct);
+
+        result.Value.ShouldBe([Cy]);
     }
 
     [Fact]
@@ -181,6 +197,8 @@ public sealed class PermissionHoldersTests
             new RoleImplementationConfiguration { Id = ViewerA, Name = "Viewer", TenantId = TenantA },
             new RoleImplementationConfiguration { Id = DeveloperB, Name = "Developer", TenantId = TenantB },
             new RoleImplementationConfiguration { Id = AdminGlobal, Name = "Admin", TenantId = Global },
+            new RoleImplementationConfiguration { Id = WildcardRole, Name = "UiFeedbackAll", TenantId = TenantA },
+            new RoleImplementationConfiguration { Id = OtherWildcardRole, Name = "ProjectsAll", TenantId = TenantA },
         };
         var grants = new List<IRolePermissionImplementationConfiguration>
         {
@@ -188,11 +206,15 @@ public sealed class PermissionHoldersTests
             new RolePermissionImplementationConfiguration { RoleId = ViewerA, PermissionId = OtherPermissionId, TenantId = TenantA },
             new RolePermissionImplementationConfiguration { RoleId = DeveloperB, PermissionId = ReadPermissionId, TenantId = TenantB },
             new RolePermissionImplementationConfiguration { RoleId = AdminGlobal, PermissionId = ReadPermissionId, TenantId = Global },
+            new RolePermissionImplementationConfiguration { RoleId = WildcardRole, PermissionId = WildcardPermissionId, TenantId = TenantA },
+            new RolePermissionImplementationConfiguration { RoleId = OtherWildcardRole, PermissionId = OtherWildcardPermissionId, TenantId = TenantA },
         };
         var permissions = new List<IPermissionImplementationConfiguration>
         {
             new PermissionImplementationConfiguration { Id = ReadPermissionId, Name = Permission },
             new PermissionImplementationConfiguration { Id = OtherPermissionId, Name = "ui-feedback:write" },
+            new PermissionImplementationConfiguration { Id = WildcardPermissionId, Name = "ui-feedback:*" },
+            new PermissionImplementationConfiguration { Id = OtherWildcardPermissionId, Name = "projects:*" },
         };
 
         var tenants = new Mock<ITenantProvider>();
@@ -211,7 +233,7 @@ public sealed class PermissionHoldersTests
             NullLogger<PermissionHolders>.Instance);
     }
 
-    private static IEnumerable<ITenant> Tenants(int globalTenants)
+    private static List<ITenant> Tenants(int globalTenants)
     {
         var all = new List<ITenant> { Tenant(TenantA, isGlobal: false), Tenant(TenantB, isGlobal: false) };
         all.AddRange(Enumerable.Range(0, globalTenants).Select(i => Tenant(i == 0 ? Global : Guid.NewGuid(), isGlobal: true)));

@@ -61,15 +61,15 @@ public sealed class MsSqlInsertTranslatorTests
         var entity = new { Name = "Acme", Email = "info@acme.com" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("INSERT INTO [dbo].[Customers]");
         result.Value.CommandText.ShouldContain("([Name], [Email])");
-        result.Value.CommandText.ShouldContain("VALUES (@Name, @Email)");
-        result.Value.CommandText.ShouldContain("SCOPE_IDENTITY()");
+        result.Value.CommandText.ShouldContain("VALUES (@p0, @p1)");
+        result.Value.CommandText.ShouldContain("SELECT @@ROWCOUNT");
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class MsSqlInsertTranslatorTests
         var entity = new { Name = "Test" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
@@ -111,7 +111,7 @@ public sealed class MsSqlInsertTranslatorTests
         var entity = new { Name = "Test" };
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(entity);
+        command.Setup(c => c.InputData).Returns(new[] { entity });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
@@ -126,7 +126,7 @@ public sealed class MsSqlInsertTranslatorTests
     {
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(new { Name = "Test" });
+        command.Setup(c => c.InputData).Returns(new[] { new { Name = "Test" } });
 
         var result = await _sut.Translate(command.Object, null!, TestContext.Current.CancellationToken);
 
@@ -149,7 +149,7 @@ public sealed class MsSqlInsertTranslatorTests
 
         var command = new Mock<IDataCommandWithInput>();
         command.As<IDataCommand>();
-        command.Setup(c => c.InputData).Returns(new { Name = "Test" });
+        command.Setup(c => c.InputData).Returns(new[] { new { Name = "Test" } });
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 
@@ -166,6 +166,102 @@ public sealed class MsSqlInsertTranslatorTests
 
         // IDataCommand without IDataCommandWithInput
         var command = new Mock<IDataCommand>();
+
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateInsertLeavesOutAColumnTheRowLacksSoTheDatabaseDefaultApplies()
+    {
+        var fields = new[]
+        {
+            CreateField("Name").Object,
+            CreateField("CreatedAt").Object
+        };
+        var container = CreateContainer(fields: fields);
+
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(new[] { new { Name = "Acme" } });
+
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("([Name])");
+        result.Value.CommandText.ShouldNotContain("[CreatedAt]");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateInsertOfManyRowsWritesOneStatementWithARowPerValuesClause()
+    {
+        var fields = new[]
+        {
+            CreateField("Name").Object,
+            CreateField("Email").Object
+        };
+        var container = CreateContainer(fields: fields);
+
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(new[]
+        {
+            new { Name = "One", Email = "one@x.com" },
+            new { Name = "Two", Email = "two@x.com" },
+            new { Name = "Three", Email = "three@x.com" }
+        });
+
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("VALUES (@p0, @p1), (@p2, @p3), (@p4, @p5)");
+        result.Value.Parameters.Count.ShouldBe(6);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateInsertBindsNullForAColumnOnlySomeRowsSupply()
+    {
+        var fields = new[]
+        {
+            CreateField("Name").Object,
+            CreateField("Email").Object
+        };
+        var container = CreateContainer(fields: fields);
+
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(new List<object>
+        {
+            new Dictionary<string, object?> { ["Name"] = "One", ["Email"] = "one@x.com" },
+            new Dictionary<string, object?> { ["Name"] = "Two" }
+        });
+
+        var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("([Name], [Email])");
+        result.Value.Parameters.Count.ShouldBe(4);
+        result.Value.Parameters[3].Value.ShouldBe(DBNull.Value);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateInsertRefusesInputThatIsNotRows()
+    {
+        var fields = new[] { CreateField("Name").Object };
+        var container = CreateContainer(fields: fields);
+
+        var command = new Mock<IDataCommandWithInput>();
+        command.As<IDataCommand>();
+        command.Setup(c => c.InputData).Returns(42);
 
         var result = await _sut.Translate(command.Object, container.Object, TestContext.Current.CancellationToken);
 

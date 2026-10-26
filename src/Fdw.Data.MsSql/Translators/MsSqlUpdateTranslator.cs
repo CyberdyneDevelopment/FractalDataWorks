@@ -15,6 +15,7 @@ using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Data.MsSql;
 
@@ -109,7 +110,7 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
                 return Task.FromResult(MsSqlSoftDeleteSql.Refusal(soft));
 
             // Build UPDATE statement with strongly-typed Filter property (no reflection!)
-            var sqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter, soft);
+            var sqlCommand = BuildUpdateStatement(container, dbPath, dataObj, command.Filter, soft, ReturnedColumnsOf(command, container));
 
             return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
         }
@@ -155,7 +156,8 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         IDatabasePath dbPath,
         object data,
         IFilterExpression? filter,
-        MsSqlSoftDeleteFragments soft)
+        MsSqlSoftDeleteFragments soft,
+        IReadOnlyList<string> returned)
     {
         var dialect = dbPath.Dialect;
 
@@ -199,7 +201,8 @@ public sealed class MsSqlUpdateTranslator : MsSqlDataCommandTranslatorBase
         var setClause = string.Join(", ", fieldNames.Select(f => $"{dialect.QuoteIdentifier(f)} = {prefix}set_{f}").Concat(auditStamps).Concat(soft.SetClauses(null, onlyWhenMarked: true)));
 
         // Build initial UPDATE statement
-        var sql = $"UPDATE {BuildQualifiedTableName(dbPath)} SET {setClause}";
+        var sql = $"UPDATE {BuildQualifiedTableName(dbPath)} SET {setClause}"
+            + (returned.Count == 0 ? string.Empty : $" OUTPUT {string.Join(", ", returned.Select(c => $"inserted.{dialect.QuoteIdentifier(c)}"))}");
 
         // Get SqlCommand
         var command = CreateCommand(sql);

@@ -38,12 +38,12 @@ internal static class LoadSoftDeletes
         if (absentMode && !absentAllowed)
             return Refused(input, mode.Name, loadKind, "this kind of load has no source set to compare against");
         if (!absentMode && !markerAllowed)
-            return Refused(input, mode.Name, loadKind, "this kind of load takes a source set to compare against, and a marker would ignore it");
+            return Refused(input, mode.Name, loadKind, "this kind of load takes a source set to compare against, and a mode that does not use it would ignore it");
 
         var options = new SoftDeleteOptions(row.DeletedFlagColumn!, mode)
         {
             DeletedAtColumn = row.DeletedAtColumn,
-            Marker = absentMode ? null : new SoftDeleteMarker(row.SoftDeleteMarkerColumn!, row.SoftDeleteMarkerValue!),
+            Marker = mode.RequiresMarker ? new SoftDeleteMarker(row.SoftDeleteMarkerColumn!, row.SoftDeleteMarkerValue!) : null,
             AbsentFromSource = absentMode ? absent : null,
         };
         var problem = options.FirstProblem();

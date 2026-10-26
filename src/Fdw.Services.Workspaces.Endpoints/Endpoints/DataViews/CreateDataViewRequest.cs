@@ -20,12 +20,12 @@ public class CreateDataViewRequest
     /// <summary>Gets or sets the name of the view this one is a view of, whose filters it adds to; null for a view of the data set itself.</summary>
     public string? ParentName { get; set; }
 
-    /// <summary>Gets or sets the visualiser's own encoding, round-tripped opaquely.</summary>
-    public string Encoding { get; set; } = string.Empty;
+    /// <summary>Gets or sets the visualiser's own encoding, round-tripped opaquely; given with <see cref="ChartType"/> or not at all.</summary>
+    public string? Encoding { get; set; }
 
     /// <summary>Gets or sets the stored filter state, round-tripped opaquely.</summary>
     public string? Filters { get; set; }
 
-    /// <summary>Gets or sets the chart kind.</summary>
-    public string ChartType { get; set; } = string.Empty;
+    /// <summary>Gets or sets the chart kind; given with <see cref="Encoding"/> or not at all, a view with neither draws no chart.</summary>
+    public string? ChartType { get; set; }
 }

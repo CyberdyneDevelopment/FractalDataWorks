@@ -43,14 +43,7 @@ public sealed class LoadUnit
     {
         var kind = LoadStepKinds.ByName(step.Kind!);
         var owner = string.Concat("load step '", step.Name, "'");
-        return kind.UsesDestinationContainer
-            ? new LoadUnit(owner, kind, step)
-            {
-                DataStore = step.DestinationDataStoreName,
-                Path = step.DestinationPathName,
-                Container = step.DestinationContainerName,
-            }
-            : new LoadUnit(owner, kind, step) { DataSet = step.DestinationDataSet };
+        return new LoadUnit(owner, kind, step) { DataSet = step.DestinationDataSet };
     }
 
     /// <summary>Makes the unit of a graph destination that loads a data set.</summary>

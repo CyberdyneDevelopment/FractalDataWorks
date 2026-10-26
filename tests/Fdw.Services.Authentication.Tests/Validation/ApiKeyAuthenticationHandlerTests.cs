@@ -12,6 +12,8 @@ using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Methods;
 using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authentication.Abstractions.SignIns;
+using Fdw.Services.Authentication.Tests.Flow;
 using Fdw.Services.Authentication.Validation;
 using Fdw.Services.Authorization.Abstractions;
 using Microsoft.AspNetCore.Authentication;
@@ -277,6 +279,115 @@ public class ApiKeyAuthenticationHandlerTests
         result.Succeeded.ShouldBeFalse();
     }
 
+    // Mike, 2026-10-25 (ask 4f445b8c): an API key or personal access token request is a sign-in, recorded in the log of sign-ins.
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AnAgentKeyRequestRecordsASignInForItsOwner()
+    {
+        var userId = Guid.NewGuid();
+        var signIns = new RecordingSignIns();
+
+        var result = await Authenticate($"Bearer {AgentKey}", agentKey: Valid(userId, "agent", 1), permissions: ["connections:read"], signIns: signIns);
+
+        result.Succeeded.ShouldBeTrue();
+        var recorded = signIns.Recorded.ShouldHaveSingleItem();
+        recorded.UserId.ShouldBe(userId);
+        recorded.ServiceName.ShouldBe("ApiKey");
+        recorded.FlowName.ShouldBe("agent key");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task APersonalAccessTokenRequestRecordsASignInForItsOwner()
+    {
+        var userId = Guid.NewGuid();
+        var signIns = new RecordingSignIns();
+
+        var result = await Authenticate($"Bearer {PersonalToken}", personalToken: ValidPat(userId), permissions: ["connections:read"], signIns: signIns);
+
+        result.Succeeded.ShouldBeTrue();
+        var recorded = signIns.Recorded.ShouldHaveSingleItem();
+        recorded.UserId.ShouldBe(userId);
+        recorded.ServiceName.ShouldBe("ApiKey");
+        recorded.FlowName.ShouldBe("personal access token");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task ACredentialThatIsNotValidRecordsNoSignIn()
+    {
+        var signIns = new RecordingSignIns();
+
+        var result = await Authenticate(
+            $"Bearer {AgentKey}",
+            agentKey: GenericResult<AgentKeyValidationResult>.Success(new AgentKeyValidationResult { IsValid = false }),
+            signIns: signIns);
+
+        result.Succeeded.ShouldBeFalse();
+        signIns.Recorded.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AKeyWhoseOwnerIsRefusedByTheServiceRecordsNoSignIn()
+    {
+        var signIns = new RecordingSignIns();
+
+        var result = await Authenticate(
+            $"Bearer {AgentKey}",
+            agentKey: Valid(Guid.NewGuid(), "vendor ingest", 7),
+            permissions: ["datasets:read"],
+            service: Service(user: null, agent: "signin:api-key"),
+            signIns: signIns);
+
+        result.Succeeded.ShouldBeFalse();
+        signIns.Recorded.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AKeyWhosePermissionsCannotBeResolvedRecordsNoSignIn()
+    {
+        var signIns = new RecordingSignIns();
+
+        var result = await Authenticate($"Bearer {AgentKey}", agentKey: Valid(Guid.NewGuid(), "agent", 1), permissions: null, signIns: signIns);
+
+        result.Succeeded.ShouldBeFalse();
+        signIns.Recorded.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AuthenticatingTwiceInOneRequestRecordsOneSignIn()
+    {
+        var signIns = new RecordingSignIns();
+
+        var result = await Authenticate(
+            $"Bearer {AgentKey}", agentKey: Valid(Guid.NewGuid(), "agent", 1), permissions: ["connections:read"], signIns: signIns, authenticateTimes: 2);
+
+        result.Succeeded.ShouldBeTrue();
+        signIns.Recorded.ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Security")]
+    public async Task AFailureToRecordTheSignInDoesNotRefuseTheRequest()
+    {
+        var signIns = new RecordingSignIns { Fails = true };
+
+        var result = await Authenticate($"Bearer {AgentKey}", agentKey: Valid(Guid.NewGuid(), "agent", 1), permissions: ["connections:read"], signIns: signIns);
+
+        result.Succeeded.ShouldBeTrue();
+        signIns.Recorded.ShouldHaveSingleItem();
+    }
+
     private static IGenericResult<IAuthenticationServiceImplementationConfiguration> Service(string? user, string? agent)
         => GenericResult<IAuthenticationServiceImplementationConfiguration>.Success(new ApiKeyAuthenticationConfiguration
         {
@@ -304,9 +415,16 @@ public class ApiKeyAuthenticationHandlerTests
         Mock<IPersonalAccessTokenService>? personalTokenMock = null,
         IGenericResult<IAuthenticationServiceImplementationConfiguration>? service = null,
         string? agentKeyFormat = AgentKeyFormat,
-        IReadOnlyCollection<string>? roles = null)
+        IReadOnlyCollection<string>? roles = null,
+        ISignInLog? signIns = null,
+        int authenticateTimes = 1)
     {
         var services = new ServiceCollection();
+
+        if (signIns is not null)
+        {
+            services.AddSingleton(signIns);
+        }
 
         // Always registered: it is what says which kind a credential is. A null format stands for a
         // service that cannot read its configuration.
@@ -367,6 +485,12 @@ public class ApiKeyAuthenticationHandlerTests
         await handler.InitializeAsync(
             new AuthenticationScheme("Fdw.ApiKey.ApiKey", null, typeof(ApiKeyAuthenticationHandler)), context);
 
-        return await handler.AuthenticateAsync();
+        var result = await handler.AuthenticateAsync();
+        for (var again = 1; again < authenticateTimes; again++)
+        {
+            result = await handler.AuthenticateAsync();
+        }
+
+        return result;
     }
 }

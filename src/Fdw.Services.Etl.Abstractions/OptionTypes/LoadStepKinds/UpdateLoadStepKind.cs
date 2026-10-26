@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class UpdateLoadStepKind : LoadStepKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="UpdateLoadStepKind"/> class.</summary>
-    public UpdateLoadStepKind() : base("Update", "The output rows update the rows with matching keys.", usesKeyColumns: true, usesCompareColumns: false, usesWriteColumns: true, allowsVersioning: false, allowsSoftDelete: true, usesSourceDataSet: false, usesDestinationContainer: false, usesRows: true, acceptsRejectedRecords: false)
+    public UpdateLoadStepKind() : base("Update", "The output rows update the rows with matching keys.", usesKeyColumns: true, usesCompareColumns: false, usesWriteColumns: true, allowsVersioning: false, allowsSoftDelete: true, usesSourceDataSet: false, usesRows: true, acceptsRejectedRecords: false)
     {
     }
 }

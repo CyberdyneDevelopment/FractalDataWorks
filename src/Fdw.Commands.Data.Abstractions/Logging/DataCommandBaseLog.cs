@@ -7,7 +7,7 @@ namespace Fdw.Commands.Data.Abstractions.Logging;
 
 /// <summary>
 /// MessageLogging for <see cref="DataCommandBase"/> construction — the shared base every data
-/// command (Query, Insert, Update, Delete, BulkInsert, ...) passes through.
+/// command (Query, Insert, Update, Delete, ...) passes through.
 /// </summary>
 [MessageLoggingTypeCode("DATAABSTRACTIONS")]
 public static partial class DataCommandBaseLog

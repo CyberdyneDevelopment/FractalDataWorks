@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Extensions;
 using Fdw.Results;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Logging;
@@ -19,26 +20,40 @@ namespace Fdw.Services.Multitenancy;
 /// </summary>
 /// <remarks>
 /// A document has at most one standing hold. Lifting a hold writes who lifted it and when, and keeps the row as the record of the hold.
+/// Every method first asks whether the caller holds the right for the organization (<see cref="RetentionScope"/>): reading needs
+/// <c>legal-holds:read</c>, placing and lifting need <c>legal-holds:write</c>.
 /// </remarks>
 public sealed class LegalHolds : ILegalHolds
 {
     private readonly RetentionStore _store;
+    private readonly RetentionScope _scope;
     private readonly ILogger<LegalHolds> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="LegalHolds"/> class.</summary>
     /// <param name="gateways">Supplies the configuration gateway of the tables.</param>
     /// <param name="tables">Names the store, path and tables retention is kept in.</param>
+    /// <param name="organizations">Reads an organization, which names its tenant.</param>
+    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
     /// <param name="logger">The logger.</param>
-    public LegalHolds(IConfigurationGatewayProvider gateways, RetentionTables tables, ILogger<LegalHolds>? logger)
+    public LegalHolds(
+        IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationProvider organizations, IScopeAuthority authority,
+        ILogger<LegalHolds>? logger)
     {
         _logger = logger ?? NullLogger<LegalHolds>.Instance;
         _store = new RetentionStore(gateways, tables, _logger);
+        _scope = new RetentionScope(organizations, authority, _logger);
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<LegalHold>>> List(Guid tenantId, Guid organizationId, bool heldOnly, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IReadOnlyList<LegalHold>>> List(Guid organizationId, bool heldOnly, CancellationToken cancellationToken = default)
     {
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(RetentionScope.HoldReadRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<IReadOnlyList<LegalHold>>();
+        }
+
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         return rows.IsFailure || rows.Value is not { } found
             ? rows.ToNewResult<IReadOnlyList<LegalHold>>()
             : GenericResult<IReadOnlyList<LegalHold>>.Success(
@@ -47,14 +62,20 @@ public sealed class LegalHolds : ILegalHolds
 
     /// <inheritdoc />
     public async Task<IGenericResult<LegalHold>> Place(
-        Guid tenantId, Guid organizationId, string documentId, string reason, string placedBy, CancellationToken cancellationToken = default)
+        Guid organizationId, string documentId, string reason, string placedBy, CancellationToken cancellationToken = default)
     {
+        var tenant = await _scope.TenantOf(RetentionScope.HoldWriteRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<LegalHold>();
+        }
+
         if (string.IsNullOrWhiteSpace(documentId) || string.IsNullOrWhiteSpace(reason) || string.IsNullOrWhiteSpace(placedBy))
         {
             return GenericResult<LegalHold>.Failure(RetentionLog.HoldInvalid(_logger, "The document, the reason and who places the hold are all required"));
         }
 
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure || rows.Value is not { } found)
         {
             return rows.ToNewResult<LegalHold>();
@@ -73,7 +94,7 @@ public sealed class LegalHolds : ILegalHolds
 
         var row = new LegalHoldRow
         {
-            Id = Guid.CreateVersion7(), TenantId = tenantId, OrganizationId = organizationId, DocumentId = documentId, Reason = reason,
+            Id = Guid.CreateVersion7(), TenantId = tenant.Value, OrganizationId = organizationId, DocumentId = documentId, Reason = reason,
             PlacedBy = placedBy, PlacedAt = DateTimeOffset.UtcNow,
         };
         var written = await resolved.Execute<int>(
@@ -90,14 +111,20 @@ public sealed class LegalHolds : ILegalHolds
 
     /// <inheritdoc />
     public async Task<IGenericResult<LegalHold>> Lift(
-        Guid tenantId, Guid organizationId, string documentId, string liftedBy, CancellationToken cancellationToken = default)
+        Guid organizationId, string documentId, string liftedBy, CancellationToken cancellationToken = default)
     {
+        var tenant = await _scope.TenantOf(RetentionScope.HoldWriteRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<LegalHold>();
+        }
+
         if (string.IsNullOrWhiteSpace(liftedBy))
         {
             return GenericResult<LegalHold>.Failure(RetentionLog.HoldInvalid(_logger, "Who lifts the hold is required"));
         }
 
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure || rows.Value is not { } found)
         {
             return rows.ToNewResult<LegalHold>();
@@ -130,9 +157,15 @@ public sealed class LegalHolds : ILegalHolds
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<ISet<string>>> HeldDocuments(Guid tenantId, Guid organizationId, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<ISet<string>>> HeldDocuments(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(RetentionScope.HoldReadRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<ISet<string>>();
+        }
+
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         return rows.IsFailure || rows.Value is not { } found
             ? rows.ToNewResult<ISet<string>>()
             : GenericResult<ISet<string>>.Success(new HashSet<string>(found.Where(row => row.LiftedAt is null).Select(row => row.DocumentId), StringComparer.Ordinal));

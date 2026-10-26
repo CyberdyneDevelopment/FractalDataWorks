@@ -13,6 +13,7 @@ namespace Fdw.Services.Calculations.Abstractions.Trees;
 internal sealed class CalculationValidationContext : ICalculationScope
 {
     private readonly HashSet<string> _defined = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Type> _types = new(StringComparer.Ordinal);
     private readonly HashSet<string> _fields = new(StringComparer.OrdinalIgnoreCase);
     private readonly CalculationLimits _limits;
     private int _nodes;
@@ -30,7 +31,13 @@ internal sealed class CalculationValidationContext : ICalculationScope
 
     public void Reads(string field) => _fields.Add(field);
 
-    public bool Define(string result) => _defined.Add(result);
+    public Type? TypeOf(string result) => _types.TryGetValue(result, out var type) ? type : null;
+
+    public bool Define(string result, Type type)
+    {
+        _types[result] = type;
+        return _defined.Add(result);
+    }
 
     // Counts a node and refuses the array when the node count or the nesting depth passes a stated limit.
     public IGenericResult Enter(CalculationNode node, int depth)

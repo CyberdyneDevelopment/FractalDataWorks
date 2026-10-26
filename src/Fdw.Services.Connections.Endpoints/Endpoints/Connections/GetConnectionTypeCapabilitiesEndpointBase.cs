@@ -90,10 +90,6 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
             ? containerCapable.SupportedContainerTypes
             : (IReadOnlyList<string>)[];
 
-        var executableContainerTypes = connectionType is ISupportsExecutableContainerTypes executeCapable
-            ? executeCapable.ExecutableContainerTypes
-            : (IReadOnlyList<string>)[];
-
         var fieldTypes = connectionType is ISupportsFieldTypes fieldCapable
             ? fieldCapable.SupportedFieldTypes.Select(f => new FieldTypeInfo(f.Name, f.DbTypeName, f.DisplayName)).ToList()
             : (IReadOnlyList<FieldTypeInfo>)[];
@@ -117,7 +113,6 @@ public abstract class GetConnectionTypeCapabilitiesEndpointBase
         var response = new ConnectionTypeCapabilitiesResponse
         {
             ContainerTypes = containerTypes,
-            ExecutableContainerTypes = executableContainerTypes,
             FieldTypes = fieldTypes,
             WriteModes = writeModes,
             PathFormats = pathFormats,

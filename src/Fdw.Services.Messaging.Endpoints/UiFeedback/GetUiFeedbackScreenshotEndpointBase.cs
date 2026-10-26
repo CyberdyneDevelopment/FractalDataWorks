@@ -33,7 +33,7 @@ public abstract class GetUiFeedbackScreenshotEndpointBase : Endpoint<UiFeedbackI
     public override void Configure()
     {
         Get("/ui-feedback/{Id}/screenshot");
-        Policies("ui-feedback:read");
+        Policies("ui-feedback:read|ui-feedback:write");
         Summary(s => s.Summary = "Read the picture of a UI comment");
         ConfigureEndpoint();
     }
@@ -53,7 +53,7 @@ public abstract class GetUiFeedbackScreenshotEndpointBase : Endpoint<UiFeedbackI
         var read = await Feedback.GetPicture(req.Id, ct).ConfigureAwait(false);
         if (!read.IsSuccess || read.Value is not { } picture)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(read, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(read, HttpContext)).ConfigureAwait(false);
             return;
         }
 

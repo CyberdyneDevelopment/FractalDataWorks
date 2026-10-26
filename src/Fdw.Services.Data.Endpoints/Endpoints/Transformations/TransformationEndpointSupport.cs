@@ -38,6 +38,18 @@ internal static class TransformationEndpointSupport
         return payload;
     }
 
+    /// <summary>Describes a stored transformation as the summary a list shows, with the value type of each result its kind can name.</summary>
+    internal static TransformationPayload ToSummary(ITransformationImplementationConfiguration transformation, TransformationKindContext context)
+    {
+        var payload = ToPayload(transformation);
+        if (KindOf(transformation.Implementation) is { } kind)
+        {
+            kind.AddValueTypes(transformation, payload, context);
+        }
+
+        return payload;
+    }
+
     /// <summary>Describes a stored transformation as the read of one shows it, formulas included.</summary>
     internal static IGenericResult<TransformationPayload> ToDetail(
         ITransformationImplementationConfiguration transformation, TransformationKindContext context)

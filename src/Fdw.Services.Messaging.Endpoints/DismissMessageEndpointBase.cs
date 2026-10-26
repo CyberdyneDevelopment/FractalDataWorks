@@ -8,30 +8,31 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Abstract base class for dismissing a message (PUT /messages/{Id}/dismiss).
+/// Abstract base class for dismissing a message (POST /messages/{Id}/dismiss). It is the Dismiss action of the message's alert (FDW-2429), the same as
+/// POST /alerts/Message/{Id}/actions/Dismiss; a message that is not the caller's is not found.
 /// </summary>
 public abstract class DismissMessageEndpointBase : Endpoint<MessageIdRequest>
 {
-    private readonly IMessageService _messageService;
+    private readonly IAlertActionService _alerts;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DismissMessageEndpointBase"/> class.
     /// </summary>
-    /// <param name="messageService">The message service.</param>
+    /// <param name="alerts">The alert action service, which records the dismissal.</param>
     /// <param name="logger">The logger.</param>
     protected DismissMessageEndpointBase(
-        IMessageService messageService,
+        IAlertActionService alerts,
         ILogger logger)
     {
-        _messageService = messageService;
+        _alerts = alerts;
         _logger = logger;
     }
 
     /// <summary>
-    /// Gets the message service.
+    /// Gets the alert action service.
     /// </summary>
-    protected IMessageService MessageService => _messageService;
+    protected IAlertActionService Alerts => _alerts;
 
     /// <summary>
     /// Gets the logger.
@@ -61,13 +62,11 @@ public abstract class DismissMessageEndpointBase : Endpoint<MessageIdRequest>
 
         try
         {
-            var result = await _messageService.Dismiss(req.Id, ct).ConfigureAwait(false);
+            var result = await _alerts.Apply(MessageAlert.Kind, req.Id, MessageAlert.DismissAction, null, ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
-                MessagingEndpointLog.DismissFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                AddError("Failed to dismiss message");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(MessagingFailures.Of(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

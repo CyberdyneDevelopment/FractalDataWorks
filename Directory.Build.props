@@ -209,7 +209,7 @@
        (1.0.0.0) because assembly identity is always 4-part and cannot carry a prerelease tag;
        NuGet normalizes the trailing zero revision away, so the PACKAGE is 1.0.0-rc.1. -->
   <PropertyGroup>
-    <VersionPrefix>1.4.0</VersionPrefix>
+    <VersionPrefix>1.4.2</VersionPrefix>
     <VersionSuffix></VersionSuffix>
     <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
     <FileVersion>$(VersionPrefix).0</FileVersion>

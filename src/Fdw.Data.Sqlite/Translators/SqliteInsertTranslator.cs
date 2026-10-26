@@ -1,29 +1,36 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Collections.Attributes;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Data.Abstractions;
+using Fdw.Data.Abstractions.Rows;
 using Fdw.Data.Sqlite.Logging;
 using Fdw.Data.Sqlite.Results;
 using Fdw.Data.Sqlite.Translators;
 using Fdw.Results;
 using Fdw.Services.Connections.Abstractions;
+using Fdw.Services.Connections.Sql;
 using Microsoft.Data.Sqlite;
 
 namespace Fdw.Services.Connections.Sqlite;
 
 /// <summary>
-/// Translates InsertCommand to a SQLite INSERT statement.
-/// Returns the last inserted row ID via <c>SELECT last_insert_rowid()</c>.
+/// Translates an <c>InsertCommand</c>, one row or many, into batched multi-row INSERT statements for SQLite.
 /// </summary>
+/// <remarks>
+/// SQLite has no bulk path, so every insert runs serially, however many rows it carries; each statement holds as many rows as
+/// SQLite's parameter limit allows.
+/// </remarks>
 [TypeOption(typeof(SqliteDataCommandTranslators), "Insert", RestrictToCurrentCompilation = true)]
 public sealed class SqliteInsertTranslator : SqliteDataCommandTranslatorBase
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SqliteInsertTranslator"/> class.
-    /// </summary>
+    private const int MaxParametersPerStatement = 999;
+
+    /// <summary>Initializes a new instance of the <see cref="SqliteInsertTranslator"/> class.</summary>
     public SqliteInsertTranslator()
         : base("Insert")
     {
@@ -50,7 +57,13 @@ public sealed class SqliteInsertTranslator : SqliteDataCommandTranslatorBase
                         SqliteDataResultCodes.ByName("MissingInputData"),
                         ResultDetails.Create("CommandType", "InsertCommand")));
 
-            return Task.FromResult(GenericResult<SqliteCommand>.Success(BuildInsertStatement(container, dbPath, dataObj)));
+            if (dataObj is not IEnumerable rows)
+                return Task.FromResult(
+                    GenericResult<SqliteCommand>.Failure(
+                        SqliteDataResultCodes.ByName("InvalidDataType"),
+                        ResultDetails.Create("ActualType", dataObj.GetType().Name)));
+
+            return Task.FromResult(GenericResult<SqliteCommand>.Success(BuildBatchedInsertStatements(container, dbPath, rows, ReturnedColumnsOf(command, container))));
         }
         catch (Exception ex)
         {
@@ -62,34 +75,72 @@ public sealed class SqliteInsertTranslator : SqliteDataCommandTranslatorBase
         }
     }
 
-    private static SqliteCommand BuildInsertStatement(
+    private static SqliteCommand BuildBatchedInsertStatements(
         IStorageContainer container,
         IDatabasePath dbPath,
-        object data)
+        IEnumerable collection,
+        IReadOnlyList<string> returned)
     {
-        var fields = container.Schema.Fields
+        var dialect = dbPath.Dialect;
+
+        var insertable = container.Schema.Fields
             .Where(f => !f.IsIdentity && !f.IsComputed && !f.IsSystemProvided)
             .ToList();
-
-        if (fields.Count == 0)
+        if (insertable.Count == 0)
             throw new InvalidOperationException($"Container {container.Name} has no insertable fields");
 
-        var allFieldNames = fields.Select(f => f.Name).ToList();
-        var dataType = data.GetType();
-        var fieldNames = allFieldNames.Where(f => dataType.GetProperty(f) != null).ToList();
+        var entities = collection.Cast<object>().ToList();
+        if (entities.Count == 0)
+            throw new InvalidOperationException("Cannot insert empty collection");
 
-        if (fieldNames.Count == 0)
-            throw new InvalidOperationException($"Data object has no properties matching insertable fields for container {container.Name}");
+        // The columns the rows supply: a column no row supplies is left out so its database default applies.
+        var fields = InsertColumns.Supplied(insertable, entities);
+        if (fields.Count == 0)
+            throw new InvalidOperationException($"The rows have no properties matching insertable fields for container {container.Name}");
 
-        var dialect = dbPath.Dialect;
+        var fieldNames = fields.Select(f => f.Name).ToList();
         var columnList = string.Join(", ", fieldNames.Select(f => dialect.QuoteIdentifier(f)));
-        var prefix = dialect.ParameterPrefix;
-        var paramList = string.Join(", ", fieldNames.Select(f => $"{prefix}{f}"));
+        var p = dialect.ParameterPrefix;
+        var returning = returned.Count == 0
+            ? string.Empty
+            : $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
-        var sql = $"INSERT INTO {BuildQualifiedTableName(dbPath)} ({columnList}) VALUES ({paramList}); SELECT last_insert_rowid();";
+        var columnsPerRow = fieldNames.Count;
+        var maxRowsPerBatch = Math.Max(1, MaxParametersPerStatement / columnsPerRow);
 
-        var command = CreateCommand(sql);
-        AddParametersFromObject(data, fieldNames, (n, v) => AddParameter(command, n, v));
+        var sqlBatches = new List<string>();
+        var allParameters = new List<SqliteParameter>();
+        var parameterIndex = 0;
+
+        for (var i = 0; i < entities.Count; i += maxRowsPerBatch)
+        {
+            var batch = entities.Skip(i).Take(maxRowsPerBatch).ToList();
+            var valuesClauses = new List<string>();
+
+            foreach (var entity in batch)
+            {
+                var paramNames = new List<string>();
+                foreach (var fieldName in fieldNames)
+                {
+                    var paramName = $"{p}p{parameterIndex++}";
+                    paramNames.Add(paramName);
+
+                    // The row is read the one way every route reads it (RowValues), so a dictionary row binds as an entity row does.
+                    RowValues.TryRead(entity, fieldName, out var value, out _);
+                    allParameters.Add(new SqliteParameter(paramName, value ?? DBNull.Value));
+                }
+
+                valuesClauses.Add($"({string.Join(", ", paramNames)})");
+            }
+
+            sqlBatches.Add($"INSERT INTO {BuildQualifiedTableName(dbPath)} ({columnList}) VALUES {string.Join(", ", valuesClauses)}{returning};");
+        }
+
+        var fullSql = string.Join("\n", sqlBatches) + (returned.Count == 0 ? "\nSELECT changes();" : string.Empty);
+        var command = CreateCommand(fullSql);
+        foreach (var param in allParameters)
+            command.Parameters.Add(param);
+
         return command;
     }
 }

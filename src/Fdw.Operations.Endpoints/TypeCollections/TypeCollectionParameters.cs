@@ -59,12 +59,6 @@ internal static class TypeCollectionParameters
             parameters.Add(Parameter("sourceDataSet", "DataSet", true, "Data set the rows are copied from, on the destination's connection"));
             parameters.Add(Parameter("filterExpression", "Expression", false, "Filter on the source; may reference {{run parameters}}"));
         }
-
-        if (kind.UsesDestinationContainer)
-        {
-            parameters.Add(Parameter("destinationContainer", "Container", true, "Executable container of one of the destination data set's data stores"));
-            parameters.Add(Parameter("parameters", "ExecuteParameters", false, "Values passed to the container's parameters: constants or the current timestamp"));
-        }
     }
 
     // A transform kind lists the members of a pipeline stage body it owns, so the console builds a stage's form from them.
@@ -84,6 +78,7 @@ internal static class TypeCollectionParameters
             listed.Bindable = listed.BindsTo is not null;
             listed.BindsToList = listed.Bindable && SettingBindingRules.IsListKind(SettingBindingRules.BoundKind(setting));
             listed.AcceptsParameterText = setting.TakesParameterText;
+            listed.SummarisesComponent = setting.SummarisesComponent;
             parameters.Add(listed);
         }
     }

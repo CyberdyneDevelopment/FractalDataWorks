@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace Fdw.Services.Messaging.Endpoints.Models;
@@ -27,8 +28,8 @@ public class UiFeedbackResponse
     /// <summary>Gets or sets the theme, or <see langword="null"/> when none was stated.</summary>
     public string? Theme { get; set; }
 
-    /// <summary>Gets or sets the console's description of the nearest element, exactly as it was sent.</summary>
-    public JsonElement? Anchor { get; set; }
+    /// <summary>Gets or sets the console's description of each component the comment is about, exactly as it was sent, in the order it was sent.</summary>
+    public IReadOnlyList<JsonElement> Anchors { get; set; } = [];
 
     /// <summary>Gets or sets the note.</summary>
     public string Body { get; set; } = string.Empty;
@@ -66,6 +67,15 @@ public class UiFeedbackResponse
     /// <summary>Gets or sets whether the person asking has acknowledged the comment.</summary>
     public bool AcknowledgedByMe { get; set; }
 
+    /// <summary>Gets or sets how many people agree with the comment; the person who left it is not counted.</summary>
+    public int AgreeCount { get; set; }
+
+    /// <summary>Gets or sets whether the person asking agrees with the comment.</summary>
+    public bool AgreedByMe { get; set; }
+
+    /// <summary>Gets or sets how many comments the note has.</summary>
+    public int CommentCount { get; set; }
+
     /// <summary>
     /// Makes the answer for a comment.
     /// </summary>
@@ -81,7 +91,7 @@ public class UiFeedbackResponse
             Area = payload.Area,
             Viewport = payload.Viewport,
             Theme = payload.Theme,
-            Anchor = AnchorOf(payload.AnchorJson),
+            Anchors = [.. payload.AnchorsJson.Select(AnchorOf)],
             Body = payload.Body,
             Urgency = payload.Urgency,
             Tags = payload.Tags,
@@ -93,15 +103,15 @@ public class UiFeedbackResponse
             ResolvedByName = payload.ResolvedByName,
             ResolvedAt = payload.ResolvedAt,
             HasScreenshot = payload.HasScreenshot,
-            AcknowledgedByMe = payload.AcknowledgedByMe
+            AcknowledgedByMe = payload.AcknowledgedByMe,
+            AgreeCount = payload.AgreeCount,
+            AgreedByMe = payload.AgreedByMe,
+            CommentCount = payload.CommentCount
         };
     }
 
-    private static JsonElement? AnchorOf(string? anchorJson)
+    private static JsonElement AnchorOf(string anchorJson)
     {
-        if (anchorJson is null)
-            return null;
-
         using var document = JsonDocument.Parse(anchorJson);
         return document.RootElement.Clone();
     }

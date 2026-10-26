@@ -35,11 +35,16 @@ public sealed class RefNode : CalculationNodeBase
             return Invalid(node, "a Ref needs the name of an earlier result");
         }
 
-        return scope.IsDefined(node.Name)
-            ? GenericResult.Success()
-            : GenericResult.Failure(
+        if (!scope.IsDefined(node.Name))
+        {
+            return GenericResult.Failure(
                 CalculationTreeResultCodes.ByName("ForwardReference"),
                 ResultDetails.Create("node", node.Describe(), "reason", $"'{node.Name}' is not a result defined before this one"));
+        }
+
+        return scope.TypeOf(node.Name) == typeof(decimal)
+            ? GenericResult.Success()
+            : Invalid(node, $"a Ref reads a number, and result '{node.Name}' is a date-time");
     }
 
     /// <inheritdoc />

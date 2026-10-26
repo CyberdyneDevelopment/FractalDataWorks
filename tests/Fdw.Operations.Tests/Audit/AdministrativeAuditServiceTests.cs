@@ -61,14 +61,20 @@ public sealed class AdministrativeAuditServiceTests
             .ReturnsAsync(GenericResult<int>.Failure(OperationsLog.OperationalConnectionNotSet(NullLogger.Instance)));
     }
 
-    private AdministrativeAuditService Audit(IAuthenticationContext? caller, string? store = "OpsDb")
+    // The actor's name is read from the person's account, never from the context (FDW-2199): the account here answers accountName, or fails when it is null.
+    private AdministrativeAuditService Audit(IAuthenticationContext? caller, string? store = "OpsDb", string? accountName = "Jo")
     {
         var accessor = new Mock<IAuthenticationContextAccessor>();
         accessor.SetupGet(a => a.Current).Returns(caller);
-        return new AdministrativeAuditService(new StubGatewayProvider(_gateway.Object), NullLoggerFactory.Instance, accessor.Object, store);
+        var names = new Mock<IUserNames>();
+        names.Setup(n => n.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(
+            accountName is null
+                ? GenericResult<string>.Failure(new Fdw.Messages.GenericMessage("the signed-in person has no account"))
+                : GenericResult<string>.Success(accountName));
+        return new AdministrativeAuditService(new StubGatewayProvider(_gateway.Object), NullLoggerFactory.Instance, accessor.Object, names.Object, store);
     }
 
-    private static IAuthenticationContext Signed(Guid? tenantId, bool global = false, string userId = "0c000000-0000-0000-0000-00000000000c", string name = "Jo")
+    private static IAuthenticationContext Signed(Guid? tenantId, bool global = false, string userId = "0c000000-0000-0000-0000-00000000000c", string name = "Jo", string? actingRole = null)
     {
         var caller = new Mock<IAuthenticationContext>();
         caller.SetupGet(c => c.IsAuthenticated).Returns(true);
@@ -76,9 +82,12 @@ public sealed class AdministrativeAuditServiceTests
         caller.SetupGet(c => c.Username).Returns(name);
         caller.SetupGet(c => c.ActiveTenantId).Returns(tenantId);
         caller.SetupGet(c => c.IsSystemContext).Returns(false);
-        caller.SetupGet(c => c.Claims).Returns(global
+        var claims = global
             ? new Dictionary<string, object>(StringComparer.Ordinal) { ["globalTenant"] = "true" }
-            : new Dictionary<string, object>(StringComparer.Ordinal));
+            : new Dictionary<string, object>(StringComparer.Ordinal);
+        if (actingRole is not null)
+            claims["actingRole"] = actingRole;
+        caller.SetupGet(c => c.Claims).Returns(claims);
         return caller.Object;
     }
 
@@ -89,7 +98,7 @@ public sealed class AdministrativeAuditServiceTests
         => new(1, 25, null, tenantId, null, null, null);
 
     private AdministrativeChange? Written()
-        => _writes.OfType<InsertCommand<AdministrativeChange>>().Select(c => c.Data).SingleOrDefault();
+        => _writes.OfType<InsertCommand<AdministrativeChange>>().SelectMany(c => c.Data).SingleOrDefault();
 
     private static IEnumerable<FilterCondition> Conditions(IFilterNode? node) => node switch
     {
@@ -117,6 +126,54 @@ public sealed class AdministrativeAuditServiceTests
         row.ChangeKind.ShouldBe("RoleAssigned");
         row.NewValue.ShouldBe("Admin");
         row.Reason.ShouldBe("new hire");
+    }
+
+    [Fact]
+    public async Task RecordTakesTheActorsNameFromTheirAccountAndNotFromTheContext()
+    {
+        Stores();
+
+        // The context's Username is the user id, which is what it answers when the token carries no name claim.
+        var result = await Audit(Signed(TenantA, name: "0c000000-0000-0000-0000-00000000000c"), accountName: "Jo").Record(Entry(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        Written().ShouldNotBeNull().ActorName.ShouldBe("Jo");
+    }
+
+    [Fact]
+    public async Task RecordRefusesWhenTheActorHasNoAccountToTakeANameFrom()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA), accountName: null).Record(Entry(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        Written().ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task RecordNamesTheRoleActedWithAndStillTheRealPerson()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA, actingRole: "Viewer")).Record(Entry(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        var row = Written().ShouldNotBeNull();
+        row.ActingRole.ShouldBe("Viewer");
+        row.ActorUserId.ShouldBe(Person);
+        row.ActorName.ShouldBe("Jo");
+    }
+
+    [Fact]
+    public async Task RecordLeavesTheActingRoleEmptyForAChangeMadeInThePersonsOwnSession()
+    {
+        Stores();
+
+        var result = await Audit(Signed(TenantA)).Record(Entry(), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        Written().ShouldNotBeNull().ActingRole.ShouldBeNull();
     }
 
     [Fact]

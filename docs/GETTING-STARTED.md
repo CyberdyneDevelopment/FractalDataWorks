@@ -308,7 +308,7 @@ throws for an expected failure.
 
 `QueryCommandBuilder<T>` (what `DataQuery.From<T>` returns) also supports `Join`, type-safe
 `Where(x => x.Property)` with comparison operators, `Paging(skip, take)`, and `WithCaching(...)` —
-see `Fdw.Commands.Data.Extensions/QueryCommandBuilder.cs` for the full fluent surface. `InsertCommand`,
+see `Fdw.Commands.Data.Fluency/QueryCommandBuilder.cs` for the full fluent surface. `InsertCommand`,
 `UpdateCommand`, and `DeleteCommand` exist alongside `QueryCommand` in `Fdw.Commands.Data` and are
 executed through the same `IDataGateway.Execute` — see the `data-commands` skill for the full set.
 

@@ -38,6 +38,18 @@ internal static class GlossaryTermMapper
             IsApproved = config.IsApproved
         };
 
+    /// <summary>Maps a glossary term, as the glossary terms domain table holds it, to its response DTO.</summary>
+    internal static GlossaryTermResponse ToDto(GlossaryTermDomainConfiguration record)
+        => new()
+        {
+            Id = record.Id,
+            Name = record.Name,
+            Definition = record.Definition,
+            Owner = record.Owner,
+            StandsFor = record.StandsFor,
+            IsApproved = record.IsApproved
+        };
+
     /// <summary>
     /// Merges an <see cref="UpdateGlossaryTermRequest"/> onto an already-loaded configuration in
     /// place — an omitted (null) request property leaves the existing value untouched. Never touches

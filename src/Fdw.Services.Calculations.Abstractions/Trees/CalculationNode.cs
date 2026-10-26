@@ -79,6 +79,15 @@ public sealed class CalculationNode
     public static CalculationNode Named(string op, string name) =>
         new(op, name, null, null, null, null, NoOperands);
 
+    /// <summary>Creates a node that works with a moment in time: a time zone in <c>name</c> and an anchor or unit in <c>mode</c>.</summary>
+    /// <param name="op">The operator, Now or AddTime.</param>
+    /// <param name="timeZone">The IANA id of the time zone.</param>
+    /// <param name="mode">The anchor of a Now node or the unit of an AddTime node; null for a Now node cut to no anchor.</param>
+    /// <param name="operands">The operands, in order.</param>
+    /// <returns>The node.</returns>
+    public static CalculationNode Zoned(string op, string timeZone, string? mode, params CalculationNode[] operands) =>
+        new(op, timeZone, null, null, null, mode, operands);
+
     /// <summary>Creates a numeric Constant.</summary>
     /// <param name="value">The literal.</param>
     /// <returns>The node.</returns>

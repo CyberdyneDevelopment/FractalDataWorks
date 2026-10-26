@@ -46,7 +46,7 @@ dotnet add package Fdw.Data.DataSets --prerelease
 
 ## Dependencies
 
-`Fdw.Collections` · `Fdw.Configuration` · `Fdw.Data.Abstractions` · `Fdw.Data.DataSets.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Messages` · `Fdw.Results` · `Fdw.Schema.Abstractions` · `Fdw.Services.Calculations.Abstractions` · `Fdw.Services.Data.Abstractions`
+`Fdw.Collections` · `Fdw.Configuration` · `Fdw.Data.Abstractions` · `Fdw.Data.DataSets.Abstractions` · `Fdw.Data.Transformations` · `Fdw.Data.Transformations.Boolean` · `Fdw.Data.Transformations.Conditional` · `Fdw.Data.Transformations.DateTime` · `Fdw.Data.Transformations.Injection` · `Fdw.Data.Transformations.Numeric` · `Fdw.Data.Transformations.Text` · `Fdw.MessageLogging.Abstractions` · `Fdw.Messages` · `Fdw.Results` · `Fdw.Schema.Abstractions` · `Fdw.Services.Abstractions` · `Fdw.Services.Calculations.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Workspaces.Abstractions`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Configuration.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 
@@ -54,4 +54,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->

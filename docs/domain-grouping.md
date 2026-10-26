@@ -136,7 +136,7 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Commands.Abstractions` | Core framework: CommandTypes, CommandCategories, TranslatorTypes, clauses, cost estimation |
 | `Fdw.Commands.Data` | Data commands: QueryCommand, InsertCommand, UpdateCommand, DeleteCommand |
 | `Fdw.Commands.Data.Abstractions` | Data command interfaces, IDataGateway |
-| `Fdw.Commands.Data.Extensions` | Fluent data command builder extensions |
+| `Fdw.Commands.Data.Fluency` | Fluent data command builders (namespace `Fdw.Commands.Data.Extensions`) |
 | `Fdw.Commands.Development.Abstractions` | Development commands: 9 categories (Analysis, CodeSearch, Compilation, Formatting, Generation, Navigation, Project, Refactoring, Workspace) |
 
 ### 6. Services.Core

@@ -218,7 +218,7 @@ public class HttpProtocolBaseTests
         // Arrange
         var mockCommandWithInput = new Mock<IDataCommandWithInput>();
         mockCommandWithInput.Setup(c => c.CommandType).Returns("Insert");
-        mockCommandWithInput.Setup(c => c.InputData).Returns(new { Name = "Test", Value = 123 });
+        mockCommandWithInput.Setup(c => c.InputData).Returns(new[] { new { Name = "Test", Value = 123 } });
 
         // Act
         var result = await _protocol.BuildRequestBody(
@@ -237,6 +237,30 @@ public class HttpProtocolBaseTests
         content.ShouldContain("Test");
         content.ShouldContain("value");
         content.ShouldContain("123");
+        content.ShouldStartWith("{");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task TranslateRefusesAnInsertOfSeveralRows()
+    {
+        // Arrange
+        var mockCommandWithInput = new Mock<IDataCommandWithInput>();
+        mockCommandWithInput.Setup(c => c.CommandType).Returns("Insert");
+        mockCommandWithInput.Setup(c => c.InputData).Returns(new[] { new { Name = "A" }, new { Name = "B" } });
+        _mockContainer.Setup(c => c.Path).Returns((IPath)null!);
+        _mockContainer.Setup(c => c.Name).Returns("test");
+
+        // Act
+        var result = await _protocol.Translate(
+            mockCommandWithInput.Object,
+            _mockContainer.Object,
+            _context,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeFalse();
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,7 +59,7 @@ public abstract class CreateUiFeedbackEndpointBase : Endpoint<CreateUiFeedbackEn
                 Area = req.Area,
                 Viewport = req.Viewport,
                 Theme = req.Theme,
-                AnchorJson = req.Anchor is { ValueKind: not (JsonValueKind.Null or JsonValueKind.Undefined) } anchor ? anchor.GetRawText() : null,
+                AnchorsJson = req.Anchors?.Select(anchor => anchor.GetRawText()).ToList(),
                 Screenshot = req.Screenshot,
                 Urgency = req.Urgency,
                 Tags = req.Tags,
@@ -68,7 +69,7 @@ public abstract class CreateUiFeedbackEndpointBase : Endpoint<CreateUiFeedbackEn
 
         if (!saved.IsSuccess || saved.Value is not { } comment)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(saved, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(saved, HttpContext)).ConfigureAwait(false);
             return;
         }
 

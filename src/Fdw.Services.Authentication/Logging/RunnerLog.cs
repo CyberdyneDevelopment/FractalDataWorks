@@ -211,4 +211,13 @@ internal static partial class RunnerLog
         Message = "Flow '{flowName}' accepted the sign-in but its {product} could not be issued")]
     internal static partial IGenericMessage IssuanceFailed(
         ILogger<AuthenticationRunner> logger, string flowName, string product);
+
+    /// <summary>A person's sign-in was accepted and issued, and recording that they signed in failed.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="flowName">The flow.</param>
+    /// <param name="principalId">The person's id.</param>
+    [MessageLogging(EventId = 91125, Level = LogLevel.Error,
+        Message = "Flow '{flowName}' signed in principal '{principalId}', and recording the sign-in failed; the sign-in stands")]
+    internal static partial IGenericMessage SignInNotRecorded(
+        ILogger<AuthenticationRunner> logger, string flowName, string principalId);
 }

@@ -6,13 +6,14 @@ using Fdw.Services.Calculations.Abstractions.Runtime;
 namespace Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
 
 /// <summary>
-/// The conversions between the three types a calculation expression has: decimal, a possibly empty decimal, and a
-/// condition.
+/// The conversions between the types a calculation expression has: decimal, a possibly empty decimal, a condition, and a
+/// date-time.
 /// </summary>
 /// <remarks>
-/// Why only these three: every value in a tree is an exact number, a number that may be empty, or a true/false condition. A
+/// Why only these: every value in a tree is an exact number, a number that may be empty, a true/false condition, or a date-time. A
 /// number converts to a possibly empty number for free; a possibly empty number converts to a number only by failing with
 /// EmptyOperand when it is empty, so an empty value is never silently read as zero. A condition never converts to a number.
+/// A date-time is its own type: it converts to nothing and nothing converts to it, so a date-time is never read as a number.
 /// </remarks>
 public static class CalculationCoercion
 {
@@ -23,6 +24,11 @@ public static class CalculationCoercion
     /// <param name="type">The type.</param>
     /// <returns>True for decimal and decimal?.</returns>
     public static bool IsNumber(Type type) => type == typeof(decimal) || type == typeof(decimal?);
+
+    /// <summary>Gets a value indicating whether the type is a date-time.</summary>
+    /// <param name="type">The type.</param>
+    /// <returns>True for DateTimeOffset.</returns>
+    public static bool IsDateTime(Type type) => type == typeof(DateTimeOffset);
 
     /// <summary>Gets a value indicating whether a value of one type can be used where another is required.</summary>
     /// <param name="actual">The type the value has.</param>

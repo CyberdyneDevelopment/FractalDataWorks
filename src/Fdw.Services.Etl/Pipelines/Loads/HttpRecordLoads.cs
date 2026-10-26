@@ -103,7 +103,7 @@ internal sealed class HttpRecordLoads
     // The load as an HTTP load, or none when it is not a load of rows into a container reached over an HTTP record writer.
     private async Task<IGenericResult<HttpRecordLoad?>> Find(LoadUnit unit, CancellationToken cancellationToken)
     {
-        if (_connections is null || !unit.Kind.UsesRows || unit.Kind.UsesSourceDataSet || unit.Kind.UsesDestinationContainer)
+        if (_connections is null || !unit.Kind.UsesRows || unit.Kind.UsesSourceDataSet)
         {
             return GenericResult<HttpRecordLoad?>.Success(null);
         }

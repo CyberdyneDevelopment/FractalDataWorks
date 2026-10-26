@@ -23,7 +23,18 @@ public static class CalculationArrayValidator
     /// <param name="array">The array.</param>
     /// <param name="limits">The stated limits.</param>
     /// <returns>Success, or the first refusal.</returns>
-    public static IGenericResult Validate(CalculationArrayDefinition array, CalculationLimits limits)
+    public static IGenericResult Validate(CalculationArrayDefinition array, CalculationLimits limits) =>
+        Validate(array, limits, allowDateTimeResults: false);
+
+    /// <summary>Validates an array against stated limits, saying whether a result may be a date-time.</summary>
+    /// <param name="array">The array.</param>
+    /// <param name="limits">The stated limits.</param>
+    /// <param name="allowDateTimeResults">
+    /// True when the caller reads a date-time result back through the result's value kind. A caller written before date-times existed
+    /// reads every result as a number, so it passes false and a tree whose result is a date-time is refused.
+    /// </param>
+    /// <returns>Success, or the first refusal.</returns>
+    public static IGenericResult Validate(CalculationArrayDefinition array, CalculationLimits limits, bool allowDateTimeResults)
     {
         var shape = CheckShape(array, limits);
         if (shape.IsFailure)
@@ -34,7 +45,7 @@ public static class CalculationArrayValidator
         var context = new CalculationValidationContext(limits);
         foreach (var result in array.Results)
         {
-            var outcome = CheckResult(result, context);
+            var outcome = CheckResult(result, context, allowDateTimeResults);
             if (outcome.IsFailure)
             {
                 return outcome;
@@ -42,6 +53,42 @@ public static class CalculationArrayValidator
         }
 
         return CheckShadowing(context);
+    }
+
+    /// <summary>Validates an array that may have date-time results and says what kind of value each of its results is.</summary>
+    /// <param name="array">The array.</param>
+    /// <param name="limits">The stated limits.</param>
+    /// <returns>The kind of every result by name, kept or not, or the first refusal.</returns>
+    /// <remarks>
+    /// Why it validates and does not compile: a caller that lists many calculations needs only what each yields, and the validator
+    /// already knows the type of every result as it checks the tree.
+    /// </remarks>
+    public static IGenericResult<IReadOnlyDictionary<string, ICalculationValueKind>> ResultKinds(
+        CalculationArrayDefinition array, CalculationLimits limits)
+    {
+        var shape = CheckShape(array, limits);
+        if (shape.IsFailure)
+        {
+            return shape.ToNewResult<IReadOnlyDictionary<string, ICalculationValueKind>>();
+        }
+
+        var context = new CalculationValidationContext(limits);
+        var kinds = new Dictionary<string, ICalculationValueKind>(StringComparer.Ordinal);
+        foreach (var result in array.Results)
+        {
+            var outcome = CheckResult(result, context, allowDateTimeResults: true);
+            if (outcome.IsFailure)
+            {
+                return outcome.ToNewResult<IReadOnlyDictionary<string, ICalculationValueKind>>();
+            }
+
+            kinds[result.Name] = CalculationValueKinds.OfClrType(context.TypeOf(result.Name)!);
+        }
+
+        var shadowing = CheckShadowing(context);
+        return shadowing.IsFailure
+            ? shadowing.ToNewResult<IReadOnlyDictionary<string, ICalculationValueKind>>()
+            : GenericResult<IReadOnlyDictionary<string, ICalculationValueKind>>.Success(kinds);
     }
 
     private static IGenericResult CheckShape(CalculationArrayDefinition array, CalculationLimits limits)
@@ -87,7 +134,7 @@ public static class CalculationArrayValidator
         return GenericResult.Success();
     }
 
-    private static IGenericResult CheckResult(CalculationResultDefinition result, CalculationValidationContext context)
+    private static IGenericResult CheckResult(CalculationResultDefinition result, CalculationValidationContext context, bool allowDateTimeResults)
     {
         var type = CheckNode(result.Expression, typeof(decimal), 1, context);
         if (type.IsFailure)
@@ -95,12 +142,15 @@ public static class CalculationArrayValidator
             return type;
         }
 
-        if (!CalculationCoercion.IsNumber(type.Value!))
+        var actual = type.Value!;
+        var date = CalculationCoercion.IsDateTime(actual);
+        if (!CalculationCoercion.IsNumber(actual) && !(date && allowDateTimeResults))
         {
-            return Mismatch(result.Expression, $"result '{result.Name}' must be a number, not a condition");
+            var allowed = allowDateTimeResults ? "a number or a date-time" : "a number";
+            return Mismatch(result.Expression, $"result '{result.Name}' must be {allowed}, not {(date ? "a date-time" : "a condition")}");
         }
 
-        context.Define(result.Name);
+        context.Define(result.Name, date ? typeof(DateTimeOffset) : typeof(decimal));
         return GenericResult.Success();
     }
 

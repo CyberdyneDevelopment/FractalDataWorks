@@ -484,7 +484,7 @@ public abstract class RestProtocolBase : HttpProtocolBase
 
         try
         {
-            var json = JsonSerializer.Serialize(commandWithInput.InputData, DefaultJsonOptions);
+            var json = JsonSerializer.Serialize(RequestInput(command, commandWithInput), DefaultJsonOptions);
             var content = new StringContent(json, Encoding.UTF8, DefaultContentType);
             return Task.FromResult(GenericResult<HttpContent?>.Success((HttpContent?)content));
         }

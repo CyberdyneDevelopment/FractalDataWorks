@@ -67,7 +67,7 @@ public sealed class DiscoveredSchemaMergeTypeTests
     {
         var store = StoreWith(new DataContainerFieldConfiguration
         {
-            Name = "Shipped", DataType = "datetime2", FrameworkDataType = "Date", Ordinal = 1,
+            Name = "Shipped", DataType = "datetime2", FrameworkDataType = "Date", Ordinal = 1, IsNullable = true,
         });
 
         var result = DiscoveredSchemaMerge.Merge(store, [Source(DiscoveredField("Shipped", "datetime2", "DateTime"))], refresh: true);

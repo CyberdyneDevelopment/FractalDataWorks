@@ -53,11 +53,13 @@ public abstract class QueryWorkspaceDataSetEndpointBase
     /// <param name="logger">The logger.</param>
     /// <param name="workspaces">Decides which data set a name reaches through a workspace the caller may read.</param>
     /// <param name="dataGateways">Supplies the gateway the query is dispatched through.</param>
+    /// <param name="calculations">Evaluates the calculations a filter names for its values; null when the host has none.</param>
     protected QueryWorkspaceDataSetEndpointBase(
         ILogger<QueryWorkspaceDataSetEndpointBase> logger,
         IWorkspaceReadService workspaces,
-        IDataGatewayProvider dataGateways)
-        : base(logger ?? NullLogger<QueryWorkspaceDataSetEndpointBase>.Instance, dataGateways)
+        IDataGatewayProvider dataGateways,
+        IFilterCalculations? calculations = null)
+        : base(logger ?? NullLogger<QueryWorkspaceDataSetEndpointBase>.Instance, dataGateways, calculations)
     {
         _workspaces = workspaces ?? throw new ArgumentNullException(nameof(workspaces));
     }

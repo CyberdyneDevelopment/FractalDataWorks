@@ -131,6 +131,22 @@ public sealed class MsSqlFindTranslator : MsSqlDataCommandTranslatorBase
         var dialect = dbPath.Dialect;
         var sql = new StringBuilder();
 
+        // Determine which columns to search
+        var searchColumns = ResolveSearchColumns(container, fieldNames);
+        foreach (var column in searchColumns)
+        {
+            if (!IsValidColumnName(column))
+            {
+                throw new ArgumentException(
+                    $"Invalid column name '{column}'. Only alphanumeric characters and underscores allowed.",
+                    nameof(fieldNames));
+            }
+        }
+
+        var collateClause = caseSensitive
+            ? " COLLATE Latin1_General_CS_AS"
+            : string.Empty;
+
         // SELECT clause
         if (maxResults.HasValue)
         {
@@ -154,11 +170,16 @@ public sealed class MsSqlFindTranslator : MsSqlDataCommandTranslatorBase
             sql.Append(" *");
         }
 
+        // Why a column per searched field: which fields held the term is measured by the same predicate, and the same
+        // collation, that chose the row, so the answer cannot disagree with the WHERE clause (FDW-1361).
+        foreach (var column in searchColumns)
+        {
+            sql.Append(CultureInfo.InvariantCulture,
+                $", CASE WHEN {dialect.QuoteIdentifier(column)}{collateClause} LIKE {dialect.ParameterPrefix}searchTerm THEN 1 ELSE 0 END AS {dialect.QuoteIdentifier(FindMatchColumn.NameFor(column))}");
+        }
+
         // FROM clause
         sql.Append(CultureInfo.InvariantCulture, $" FROM {BuildQualifiedTableName(dbPath)}");
-
-        // Determine which columns to search
-        var searchColumns = ResolveSearchColumns(container, fieldNames);
 
         if (searchColumns.Count == 0)
         {
@@ -170,20 +191,9 @@ public sealed class MsSqlFindTranslator : MsSqlDataCommandTranslatorBase
         // Build WHERE clause with LIKE conditions
         var command = CreateCommand(sql.ToString());
 
-        var collateClause = caseSensitive
-            ? " COLLATE Latin1_General_CS_AS"
-            : string.Empty;
-
         var likeConditions = new List<string>();
         foreach (var column in searchColumns)
         {
-            if (!IsValidColumnName(column))
-            {
-                throw new ArgumentException(
-                    $"Invalid column name '{column}'. Only alphanumeric characters and underscores allowed.",
-                    nameof(fieldNames));
-            }
-
             likeConditions.Add($"{dialect.QuoteIdentifier(column)}{collateClause} LIKE {dialect.ParameterPrefix}searchTerm");
         }
 

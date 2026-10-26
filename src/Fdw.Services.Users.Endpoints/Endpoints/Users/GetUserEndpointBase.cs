@@ -5,6 +5,8 @@ using FastEndpoints;
 using Fdw.Configuration;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.SignIns;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Configuration;
@@ -28,6 +30,7 @@ namespace Fdw.Services.Users.Endpoints;
 public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResponse>
 {
     private readonly UserConfigurationProvider _userProvider;
+    private readonly ISignInLog _signIns;
 
     /// <summary>
     /// Gets the logger instance.
@@ -35,10 +38,11 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="GetUserEndpointBase"/> class.</summary>
-    protected GetUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider)
+    protected GetUserEndpointBase(ILogger logger, UserConfigurationProvider userProvider, ISignInLog signIns)
     {
         EndpointLogger = logger;
         _userProvider = userProvider;
+        _signIns = signIns ?? throw new ArgumentNullException(nameof(signIns));
     }
 
     /// <summary>
@@ -93,7 +97,19 @@ public abstract class GetUserEndpointBase : Endpoint<UserScopedRequest, UserResp
 
         await foreach (var user in page.Value!.Items.WithCancellation(ct).ConfigureAwait(false))
         {
-            await Send.OkAsync(MapToResponse(user), ct).ConfigureAwait(false);
+            var signedIn = await _signIns.LastSignIns([user.Id], ct).ConfigureAwait(false);
+            if (signedIn.IsFailure)
+            {
+                var (signInStatus, signInProblem) = ResultHttpStatusMapper.Map(signedIn, HttpContext);
+                await Send.ResultAsync(TypedResults.Json(signInProblem, statusCode: signInStatus)).ConfigureAwait(false);
+                return;
+            }
+
+            var response = MapToResponse(user);
+
+            // Absent from the log is "never signed in": the response carries no time, which a screen reads as never.
+            response.LastLoginAt = signedIn.Value!.TryGetValue(user.Id, out var at) ? at : null;
+            await Send.OkAsync(response, ct).ConfigureAwait(false);
             return;
         }
 

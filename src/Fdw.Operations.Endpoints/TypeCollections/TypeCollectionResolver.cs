@@ -200,7 +200,8 @@ internal static class TypeCollectionResolver
             Rank = typeOption is IRankShape ranked ? ranked.Rank : null,
             NeedsAcknowledgement = typeOption is IAcknowledgementShape acknowledged ? acknowledged.NeedsAcknowledgement : null,
             IsAction = typeOption is IComponentType action ? action.IsAction : null,
-            HoldsComponents = typeOption is IComponentType holder ? holder.HoldsComponents : null
+            HoldsComponents = typeOption is IComponentType holder ? holder.HoldsComponents : null,
+            SummarySeparator = typeOption is IComponentType joined ? joined.SummarySeparator : null
         };
     }
 

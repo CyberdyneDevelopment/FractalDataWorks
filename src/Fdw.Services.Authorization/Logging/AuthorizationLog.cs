@@ -89,23 +89,11 @@ public static partial class AuthorizationLog
         int rolePermissionCount,
         int roleCount);
 
-    /// <summary>Logs role-permission match count during effective permission resolution.</summary>
-    [MessageLogging(EventId = 11002, Level = LogLevel.Debug,
-        Message = "Role '{roleName}' (id={roleId}) matched {count} role-permission assignments")]
-    public static partial IGenericMessage RolePermissionsMatched(
-        ILogger logger, string roleName, string roleId, int count);
-
     /// <summary>Logs when a user's JWT role claim has no matching role definition.</summary>
     [MessageLogging(EventId = 31000, Level = LogLevel.Warning,
         Message = "Role '{roleName}' not found in loaded roles. Available: [{availableRoles}]")]
     public static partial IGenericMessage RoleNotFoundInLoadedRoles(
         ILogger logger, string roleName, string availableRoles);
-
-    /// <summary>Logs when a RolePermission references a PermissionId that doesn't resolve.</summary>
-    [MessageLogging(EventId = 31001, Level = LogLevel.Warning,
-        Message = "RolePermission references unknown PermissionId '{permissionId}' (sample Permission.Id='{sampleId}')")]
-    public static partial IGenericMessage PermissionIdUnresolved(
-        ILogger logger, string permissionId, string sampleId);
 
     /// <summary>Logs effective permission count resolved for a user.</summary>
     [MessageLogging(EventId = 11003, Level = LogLevel.Debug,
@@ -183,11 +171,6 @@ public static partial class AuthorizationLog
     [MessageLogging(EventId = 11010, Level = LogLevel.Debug,
         Message = "User '{userId}' has no role assignments — zero permissions granted")]
     public static partial IGenericMessage UserHasNoRoleAssignments(ILogger logger, string userId);
-
-    /// <summary>Logs count of roles selected after filtering by user assignments.</summary>
-    [MessageLogging(EventId = 11011, Level = LogLevel.Trace,
-        Message = "Selected {count} roles for user '{userId}' from {total} in catalog after assignment filter")]
-    public static partial IGenericMessage UserRolesSelected(ILogger logger, int count, string userId, int total);
 
     /// <summary>Logs when role expansion was asked for with no role names.</summary>
     [MessageLogging(EventId = 71005, Level = LogLevel.Error,

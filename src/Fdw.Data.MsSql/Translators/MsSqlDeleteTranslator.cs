@@ -25,12 +25,11 @@ namespace Fdw.Data.MsSql;
 /// Builds T-SQL DELETE statements with:
 /// <list type="bullet">
 /// <item>DELETE FROM - container's physical name</item>
-/// <item>WHERE clause - from Filter expression (REQUIRED for safety)</item>
+/// <item>WHERE clause - from the Filter expression, when the command has one</item>
 /// </list>
 /// </para>
 /// <para>
-/// ALWAYS requires a WHERE clause to prevent accidental deletion of all records.
-/// Use Filter expression to specify which records to delete.
+/// A command with no filter and no soft delete has no condition, so it deletes every record: the container is emptied.
 /// </para>
 /// </remarks>
 [TypeOption(typeof(MsSqlDataCommandTranslators), "Delete", RestrictToCurrentCompilation = true)]
@@ -98,18 +97,11 @@ public sealed class MsSqlDeleteTranslator : MsSqlDataCommandTranslatorBase
                 return Task.FromResult(SoftDelete(command, dbPath, soft));
             }
 
-            // Get filter from strongly-typed interface (no reflection!)
-            var filter = command.Filter;
-            if (filter == null || filter.Root == null)
-            {
-                return Task.FromResult(
-                    GenericResult<SqlCommand>.Failure(MsSqlDataResultCodes.ByName("MissingDeleteFilter")));
-            }
-
-            // Build DELETE statement
-            var sqlCommand = BuildDeleteStatement(dbPath, filter);
-
-            return Task.FromResult(GenericResult<SqlCommand>.Success(sqlCommand));
+            // A command with no filter has no condition, so it deletes every row
+            return Task.FromResult(GenericResult<SqlCommand>.Success(
+                command.Filter is { Root: not null } filter
+                    ? BuildDeleteStatement(dbPath, filter)
+                    : CreateCommand($"DELETE FROM {BuildQualifiedTableName(dbPath)}")));
         }
         catch (Exception ex)
         {

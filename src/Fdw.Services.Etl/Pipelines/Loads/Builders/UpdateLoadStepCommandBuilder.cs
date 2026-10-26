@@ -6,7 +6,6 @@ using Fdw.Collections.Attributes;
 using Fdw.Commands.Data;
 using Fdw.Commands.Data.Abstractions;
 using Fdw.Results;
-using Fdw.Services.Connections.Abstractions;
 using Fdw.Services.Etl.Logging;
 
 namespace Fdw.Services.Etl.Pipelines.Loads.Builders;
@@ -68,5 +67,5 @@ public sealed class UpdateLoadStepCommandBuilder : LoadStepCommandBuilderBase
     }
 
     /// <inheritdoc/>
-    public override IReadOnlyList<string> RequiredCapabilities(PipelineLoadStepConfiguration row) => WithSoftDelete(row, CommandCapabilityTypes.Update.Name);
+    public override IReadOnlyList<string> RequiredCapabilities(PipelineLoadStepConfiguration row) => WithSoftDelete(row);
 }

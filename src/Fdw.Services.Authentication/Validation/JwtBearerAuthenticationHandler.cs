@@ -101,6 +101,8 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
             return AuthenticateResult.Fail(Text(AuthenticationValidationLog.TokenRejected(
                 _log, ServiceName, validated.Exception?.Message ?? "no reason given")));
 
+        RemoveForeignPlatformClaims(validated.ClaimsIdentity);
+
         // The token proves who called; it says nothing about what they may do here, because it
         // carries the issuer's claims and not this host's. The roles the entry declares are what
         // confer that, and they expand to permissions through the same role catalogue a signed-in user's
@@ -114,6 +116,20 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
 
         return AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(validated.ClaimsIdentity), _scheme.Name));
+    }
+
+    /// <summary>Removes the platform's authority claims the foreign token carried, and reports it when it carried any.</summary>
+    /// <param name="identity">The identity the validated foreign token produced.</param>
+    /// <remarks>
+    /// Nothing the foreign token says about authority here is kept: its platform claims are removed before the entry's declared roles are
+    /// conferred, so only what this platform states reaches the principal (FDW-2363).
+    /// </remarks>
+    private void RemoveForeignPlatformClaims(ClaimsIdentity identity)
+    {
+        var removed = ForeignClaims.WithoutPlatformClaims(identity);
+        if (removed.Count > 0)
+            AuthenticationValidationLog.ForeignPlatformClaimsRemoved(
+                _log, ServiceName, identity.FindFirst(ClaimDefinitions.sub.Name)?.Value ?? "(no sub)", string.Join(", ", removed));
     }
 
     /// <summary>Builds what this scheme checks a token against, from the entry it was taken for.</summary>

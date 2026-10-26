@@ -129,9 +129,14 @@ public sealed class PermissionHolders : IPermissionHolders
         if (!grants.IsSuccess || grants.Value is null)
             return GenericResult<HashSet<Guid>>.Failure(PermissionHoldersLog.ReadFailed(_logger, permissionName, "what the roles carry", grants.CurrentMessage));
 
+        // Why PermissionCoverage and not the permission's id: enforcement asks PermissionCoverage.Covers over the names a token carries, so a role
+        // that carries `resource:*` passes the endpoint's check for `resource:read`. The lookup must agree with it.
+        var namesById = permissions.Value.ToLookup(candidate => candidate.Id, candidate => candidate.Name);
         var carrying = roles.Value
             .Where(role => !role.IsTenantScoped || role.TenantId == tenantId)
-            .Where(role => RoleOwnedGrants.Of(role, grants.Value, _logger).Any(grant => grant.PermissionId == permission.Id))
+            .Where(role => PermissionCoverage.Covers(
+                RoleOwnedGrants.Of(role, grants.Value, _logger).SelectMany(grant => namesById[grant.PermissionId]),
+                permissionName))
             .Select(role => role.Id)
             .ToHashSet();
         return GenericResult<HashSet<Guid>>.Success(carrying);

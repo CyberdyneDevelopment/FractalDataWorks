@@ -5,9 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Quality;
 
-/// <summary>Supplies the GlossaryTerm configuration.</summary>
+/// <summary>Supplies the GlossaryTerm configuration: a term whole, and a page of terms from the domain table alone.</summary>
 public sealed class GlossaryTermConfigurationProvider
-    : DomainConfigurationProviderBase<IGlossaryTermImplementationConfiguration>,
+    : DomainConfigurationProviderBase<IGlossaryTermImplementationConfiguration, GlossaryTermDomainConfiguration>,
       IGlossaryTermConfigurationProvider
 {
     /// <summary>Initializes a new instance of the <see cref="GlossaryTermConfigurationProvider"/> class.</summary>

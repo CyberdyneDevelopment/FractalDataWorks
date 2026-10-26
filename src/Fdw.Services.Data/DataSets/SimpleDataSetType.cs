@@ -20,7 +20,7 @@ namespace Fdw.Services.Data;
 
 /// <summary>
 /// Single-source dataset strategy: a direct pull from one source (with field rename and calculated
-/// fields), and the writable sink path (Insert/BulkInsert/Update/Delete/Truncate forwarded verbatim to
+/// fields), and the writable sink path (Insert/Update/Delete forwarded verbatim to
 /// the one source's container).
 /// </summary>
 /// <remarks>
@@ -65,7 +65,7 @@ public sealed class SimpleDataSetType : DataSetTypeBase
         if (sources is null || sources.Count == 0)
             return GenericResult<T>.Failure(DataGatewayLogger.DataSetNoSources(ctx.Logger, ctx.Config.Name));
 
-        var isWrite = command is IDataCommandWithInput or DeleteCommand or TruncateCommand;
+        var isWrite = command is IDataCommandWithInput or DeleteCommand;
 
         if (sources.Count != 1)
         {

@@ -202,4 +202,40 @@ public sealed class QueryCommandBuilderAdditionalTests
         query.Ordering!.OrderedFields.Count.ShouldBe(2);
         query.Paging.ShouldNotBeNull();
     }
+
+    /// <summary>FDW-1307 — a condition written after an OR group is ANDed with the group, not added to it as one more alternative.</summary>
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void AnOrGroupClosedFirstIsAndedWithAConditionWrittenAfterIt()
+    {
+        var root = ((QueryCommand<TestEntity>)(new QueryCommandBuilder<TestEntity>(TestDataStore, TestPath, TestContainer)
+            .BeginOrGroup().Where("Name", "A").Where("Name", "B").EndGroup()
+            .Where("Active", true)
+            .Build()).Command).Filter!.Root.ShouldBeOfType<FilterGroup>();
+
+        root.Operator.ShouldBe(LogicalOperator.And);
+        root.Nodes.Count.ShouldBe(2);
+        var alternatives = root.Nodes[0].ShouldBeOfType<FilterGroup>();
+        alternatives.Operator.ShouldBe(LogicalOperator.Or);
+        alternatives.Nodes.Count.ShouldBe(2);
+        root.Nodes[1].ShouldBeOfType<FilterCondition>().PropertyName.ShouldBe("Active");
+    }
+
+    /// <summary>FDW-1307 — two groups written one after the other are ANDed.</summary>
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void TwoGroupsWrittenInARowAreAnded()
+    {
+        var root = ((QueryCommand<TestEntity>)(new QueryCommandBuilder<TestEntity>(TestDataStore, TestPath, TestContainer)
+            .BeginOrGroup().Where("Name", "A").Where("Name", "B").EndGroup()
+            .BeginOrGroup().Where("Status", "C").Where("Status", "D").EndGroup()
+            .Build()).Command).Filter!.Root.ShouldBeOfType<FilterGroup>();
+
+        root.Operator.ShouldBe(LogicalOperator.And);
+        root.Nodes.Count.ShouldBe(2);
+        root.Nodes[0].ShouldBeOfType<FilterGroup>().Operator.ShouldBe(LogicalOperator.Or);
+        root.Nodes[1].ShouldBeOfType<FilterGroup>().Operator.ShouldBe(LogicalOperator.Or);
+    }
 }

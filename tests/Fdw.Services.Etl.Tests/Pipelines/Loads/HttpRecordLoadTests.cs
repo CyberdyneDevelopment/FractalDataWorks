@@ -66,7 +66,7 @@ public sealed class HttpRecordLoadTests
     {
         var (executor, writer) = Executor(answers: 3);
 
-        var result = await Run(executor, Step("BulkInsert"), 3);
+        var result = await Run(executor, Step("Insert"), 3);
 
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         result.Value.ShouldBe(3);
@@ -82,7 +82,7 @@ public sealed class HttpRecordLoadTests
     {
         var (executor, writer) = Executor(answers: 3);
 
-        var result = await Run(executor, Step("BulkUpsert", "Name"), 3);
+        var result = await Run(executor, Step("Upsert", "Name"), 3);
 
         result.IsFailure.ShouldBeTrue();
         result.Messages[^1].Code.ShouldBe("PIPELINERUN-20226");

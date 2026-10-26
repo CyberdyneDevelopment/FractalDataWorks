@@ -39,7 +39,7 @@ public class TypeCollectionComponentShapeTests
     [Fact]
     public void AnOptionThatIsNotAComponentListsNoNodes()
     {
-        var summary = TypeCollectionResolver.ToSummary(new BulkInsertLoadStepKind());
+        var summary = TypeCollectionResolver.ToSummary(new InsertLoadStepKind());
 
         summary.Inputs.ShouldBeNull();
         summary.Outputs.ShouldBeNull();
@@ -88,7 +88,7 @@ public class TypeCollectionComponentShapeTests
             // The members of the stage-backed tools (Filter, Calculate, Sort, Aggregate, Distinct, Latest by, Validate).
             "SortFieldList", "Calculation", "Aggregation", "Distinct", "LatestBy", "CheckList", "ValidateFailAction", "ComputeSpec", "FieldMappings",
         ];
-        string[] collections = ["LoadStepKinds", "JoinKinds", "SplitRoutings", "SoftDeleteModes"];
+        string[] collections = ["LoadStepKinds", "JoinKinds", "SplitRoutings", "SoftDeleteModes", "RunPoints"];
 
         var unknown = ComponentTypes.All().SelectMany(k => k.Settings).Select(s => s.Kind)
             .Where(kind => !rendered.Contains(kind) && !collections.Contains(kind)).Distinct().ToList();

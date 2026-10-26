@@ -34,6 +34,16 @@ public static partial class SessionLog
         Message = "Session {sessionId} revoked")]
     public static partial IGenericMessage SessionRevoked(ILogger logger, Guid sessionId);
 
+    /// <summary>A session was put to sleep because a session above it is in use.</summary>
+    [MessageLogging(EventId = 11513, Level = LogLevel.Information,
+        Message = "Session {sessionId} put to sleep")]
+    public static partial IGenericMessage SessionSlept(ILogger logger, Guid sessionId);
+
+    /// <summary>A session was woken and given a new id.</summary>
+    [MessageLogging(EventId = 11514, Level = LogLevel.Information,
+        Message = "Session {sessionId} woken with a new id; idle end moved to {idleExpiresAt}")]
+    public static partial IGenericMessage SessionWoken(ILogger logger, Guid sessionId, DateTimeOffset idleExpiresAt);
+
     /// <summary>A CSRF token was issued for a session.</summary>
     [MessageLogging(EventId = 11504, Level = LogLevel.Debug,
         Message = "CSRF token issued for session {sessionId}")]
@@ -173,4 +183,48 @@ public static partial class SessionLog
     [MessageLogging(EventId = 91502, Level = LogLevel.Error,
         Message = "A session identity cannot be read back as an assertion: {reason}")]
     public static partial IGenericMessage SessionPrincipalUnreadable(ILogger logger, string reason);
+
+    /// <summary>A session started a session of its own by acting with a role.</summary>
+    [MessageLogging(EventId = 11515, Level = LogLevel.Information,
+        Message = "Principal {principalId} acts with role '{role}' from session {parentSessionId}")]
+    public static partial IGenericMessage ActingStarted(ILogger logger, Guid principalId, string role, Guid parentSessionId);
+
+    /// <summary>Acting was refused because the role is not one the caller may act with: it does not exist.</summary>
+    [MessageLogging(EventId = 101501, Level = LogLevel.Warning,
+        Message = "Acting was refused: there is no role '{role}'",
+        ClientMessage = "There is no role '{role}' to act with")]
+    public static partial IGenericMessage ActingRoleUnknown(ILogger logger, string role);
+
+    /// <summary>Acting was refused because the role belongs to another tenant than the one the session acts in. Written to the log only: the caller is told the role does not exist.</summary>
+    [MessageLogging(EventId = 101502, Level = LogLevel.Warning,
+        Message = "Acting was refused: role '{role}' belongs to tenant '{roleTenantId}', not the session's tenant '{tenantId}'")]
+    public static partial IGenericMessage ActingRoleOtherTenant(ILogger logger, string role, string roleTenantId, string tenantId);
+
+    /// <summary>Acting was refused because the caller does not hold everything the role carries.</summary>
+    [MessageLogging(EventId = 101503, Level = LogLevel.Warning,
+        Message = "Acting was refused: the session does not hold {permissions}, which role '{role}' carries",
+        ClientMessage = "You cannot act with role '{role}': it carries {permissions}, which you do not hold")]
+    public static partial IGenericMessage ActingRightsNotHeld(ILogger logger, string role, string permissions);
+
+    /// <summary>A person returned from acting: the sessions above a step ended and the step woke.</summary>
+    [MessageLogging(EventId = 11516, Level = LogLevel.Information,
+        Message = "Returned to session {sessionId}; {ended} acting session(s) ended")]
+    public static partial IGenericMessage ActingReturned(ILogger logger, Guid sessionId, int ended);
+
+    /// <summary>A return from acting was refused: the session is not acting, or the step is not one below it.</summary>
+    [MessageLogging(EventId = 21504, Level = LogLevel.Warning,
+        Message = "A return from acting was refused: {reason}",
+        ClientMessage = "You cannot return: {reason}")]
+    public static partial IGenericMessage ReturnRefused(ILogger logger, string reason);
+
+    /// <summary>The chain of sessions a session was started through loops, ends at a missing row or is too deep.</summary>
+    [MessageLogging(EventId = 91503, Level = LogLevel.Error,
+        Message = "The chain of sessions behind session {sessionId} is broken: it loops, runs too deep or ends at a missing session")]
+    public static partial IGenericMessage ChainBroken(ILogger logger, Guid sessionId);
+
+    /// <summary>Acting was refused because the chain of acting sessions is already as long as it may be.</summary>
+    [MessageLogging(EventId = 41501, Level = LogLevel.Warning,
+        Message = "Acting was refused: the chain of acting sessions is already {limit} long",
+        ClientMessage = "You cannot act again: {limit} sessions in a row is the most. Return to an earlier step first")]
+    public static partial IGenericMessage ActingTooDeep(ILogger logger, int limit);
 }

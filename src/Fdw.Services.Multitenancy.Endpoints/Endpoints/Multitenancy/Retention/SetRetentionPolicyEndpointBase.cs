@@ -2,7 +2,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Operations.Abstractions.Audit;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
@@ -17,22 +16,18 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 public abstract class SetRetentionPolicyEndpointBase : Endpoint<SetRetentionPolicyRequest, RetentionPolicyResponse>
 {
     private readonly IRetentionPolicies _policies;
-    private readonly IOrganizationProvider _organizations;
     private readonly IAdministrativeAudit _audit;
-    private readonly ISystemRoleConfiguration _systemRoles;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="SetRetentionPolicyEndpointBase"/> class.</summary>
     protected SetRetentionPolicyEndpointBase(
-        ILogger logger, IRetentionPolicies policies, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration systemRoles)
+        ILogger logger, IRetentionPolicies policies, IAdministrativeAudit audit)
     {
         EndpointLogger = logger;
         _policies = policies;
-        _organizations = organizations;
         _audit = audit;
-        _systemRoles = systemRoles;
     }
 
     /// <inheritdoc />
@@ -48,15 +43,8 @@ public abstract class SetRetentionPolicyEndpointBase : Endpoint<SetRetentionPoli
     /// <inheritdoc />
     public override async Task HandleAsync(SetRetentionPolicyRequest req, CancellationToken ct)
     {
-        var access = await RetentionAccess.TenantOf(_organizations, _systemRoles, HttpContext, req.OrganizationId, EndpointLogger, ct).ConfigureAwait(false);
-        if (access.Refusal is { } refusal)
-        {
-            await Send.ResultAsync(refusal).ConfigureAwait(false);
-            return;
-        }
-
         var set = await _policies.Set(
-            access.TenantId, req.OrganizationId, new NewRetentionPolicy(req.DocumentType, req.Years, req.Months, req.Days, req.StartField, req.EndAction), ct)
+            req.OrganizationId, new NewRetentionPolicy(req.DocumentType, req.Years, req.Months, req.Days, req.StartField, req.EndAction), ct)
             .ConfigureAwait(false);
         if (set.IsFailure || set.Value is null)
         {

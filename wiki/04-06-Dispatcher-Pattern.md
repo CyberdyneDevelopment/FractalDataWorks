@@ -332,7 +332,7 @@ public abstract partial class MsSqlDataCommandTranslators :
 {
     // Source generator creates:
     // - Static constructor
-    // - Static properties: Query, Insert, Update, Delete, BulkInsert, BatchInsert, CompoundQuery
+    // - Static properties: Query, Insert, Update, Delete, Find, Upsert, CompoundQuery
     // - public static IReadOnlyList<IDataCommandTranslator> All()
     // - public static IDataCommandTranslator ByName(string name)
     // - public static IDataCommandTranslator ById(int id)

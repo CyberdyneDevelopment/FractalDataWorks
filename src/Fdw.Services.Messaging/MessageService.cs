@@ -6,10 +6,12 @@ using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Messaging.Abstractions;
 using Fdw.Services.Messaging.Hubs;
 using Fdw.Services.Messaging.Logging;
+using Fdw.SignalR;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,7 +23,11 @@ namespace Fdw.Services.Messaging;
 /// Default implementation of <see cref="IMessageService"/> using <see cref="IDataGateway"/>
 /// for database-backed message persistence and SignalR for real-time delivery.
 /// </summary>
-public sealed class MessageService : IMessageService
+/// <remarks>
+/// It is also the source of the <c>Message</c> kind of alert (FDW-2429): a message addressed to a person is an alert they can acknowledge, snooze, silence,
+/// dismiss or discard. What a person did to a message is kept by the alert action service, and a message read carries the time the caller dismissed it.
+/// </remarks>
+public sealed class MessageService : IMessageService, IAlertSource
 {
     // The row's own name, not a store choice: this deployment has exactly one configured
     // messaging service, and every method resolves its store/path from that row rather than
@@ -29,6 +35,7 @@ public sealed class MessageService : IMessageService
     private const string MessagingServiceName = "Messaging";
     private const string MessageContainer = "Message";
     private const string RecipientContainer = "MessageRecipient";
+    private const string MessagesReadPermission = "messages:read";
 
     private readonly ILogger<MessageService> _logger;
     private readonly IDataGatewayProvider _dataGateways;
@@ -38,6 +45,8 @@ public sealed class MessageService : IMessageService
     private IDataGateway Gateway => _dataGateways.ByName("Main");
     private readonly IMessagingConfigurationProvider _messaging;
     private readonly IHubContext<MessageHub, IMessageHubClient> _hubContext;
+    private readonly IAuthenticationContextAccessor _authContext;
+    private readonly AlertStore _alerts;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MessageService"/> class.
@@ -46,16 +55,20 @@ public sealed class MessageService : IMessageService
     /// <param name="dataGateways">The data gateway for message data access.</param>
     /// <param name="messaging">Resolves where this deployment keeps its messages.</param>
     /// <param name="hubContext">The strongly-typed SignalR hub context for real-time message push.</param>
+    /// <param name="authContext">Supplies the caller, who is the person a message must be addressed to for its alert to be theirs.</param>
     public MessageService(
         ILogger<MessageService> logger,
         IDataGatewayProvider dataGateways,
         IMessagingConfigurationProvider messaging,
-        IHubContext<MessageHub, IMessageHubClient> hubContext)
+        IHubContext<MessageHub, IMessageHubClient> hubContext,
+        IAuthenticationContextAccessor authContext)
     {
         _logger = logger ?? NullLogger<MessageService>.Instance;
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _messaging = messaging ?? throw new ArgumentNullException(nameof(messaging));
         _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+        _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _alerts = new AlertStore(_logger, dataGateways, messaging);
     }
 
     /// <summary>Resolves the store and path this deployment keeps its messages in.</summary>
@@ -204,6 +217,10 @@ public sealed class MessageService : IMessageService
                 ? (IReadOnlyList<MessagePayload>)[.. result.Value.Reverse()]
                 : [.. result.Value];
 
+            var dismissed = await ApplyDismissals(items, cancellationToken).ConfigureAwait(false);
+            if (!dismissed.IsSuccess)
+                return dismissed.ToNewResult<IReadOnlyList<MessagePayload>>();
+
             var userId = query.UserId.ToString("D");
             MessagingLog.MessagesQueried(_logger, userId, items.Count);
 
@@ -225,31 +242,19 @@ public sealed class MessageService : IMessageService
 
         try
         {
-            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
-            if (!location.IsSuccess)
-                return location.ToNewResult<MessagePayload>();
+            var found = await FindMessage(messageId, cancellationToken).ConfigureAwait(false);
+            if (!found.IsSuccess)
+                return found.ToNewResult<MessagePayload>();
 
-            var command = Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer)
-                .Where(m => m.Id).Equal(messageId)
-                .Build();
-
-            var result = await Gateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!result.IsSuccess)
-            {
-                return result.Messages.Any()
-                    ? result.ToNewResult<MessagePayload>()
-                    : GenericResult<MessagePayload>.Failure(
-                        MessagingLog.MessageQueryFailed(_logger, "Query command failed"));
-            }
-
-            var message = result.Value?.FirstOrDefault();
-            if (message is null)
+            if (found.Value is not { } message)
             {
                 return GenericResult<MessagePayload>.Failure(
                     MessagingLog.MessageNotFound(_logger, messageId.ToString("D")));
             }
+
+            var dismissed = await ApplyDismissals([message], cancellationToken).ConfigureAwait(false);
+            if (!dismissed.IsSuccess)
+                return dismissed.ToNewResult<MessagePayload>();
 
             return GenericResult<MessagePayload>.Success(message);
         }
@@ -258,6 +263,55 @@ public sealed class MessageService : IMessageService
             return GenericResult<MessagePayload>.Failure(
                 MessagingLog.MessageQueryFailed(_logger, ex.Message));
         }
+    }
+
+    // One message by its identifier, or success with no value when there is none: the question GetMessage answers with a failure and Find with "not found".
+    private async Task<IGenericResult<MessagePayload?>> FindMessage(Guid messageId, CancellationToken cancellationToken)
+    {
+        var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+        if (!location.IsSuccess)
+            return location.ToNewResult<MessagePayload?>();
+
+        var command = Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer)
+            .Where(m => m.Id).Equal(messageId)
+            .Build();
+
+        var result = await Gateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!result.IsSuccess)
+        {
+            return result.Messages.Any()
+                ? result.ToNewResult<MessagePayload?>()
+                : GenericResult<MessagePayload?>.Failure(
+                    MessagingLog.MessageQueryFailed(_logger, "Query command failed"));
+        }
+
+        return GenericResult<MessagePayload?>.Success(result.Value?.FirstOrDefault());
+    }
+
+    // The time each person dismissed their messages is the Dismiss action of the message's alert, not a column of the message: the page is given the time of
+    // the Dismiss row of its recipient, and none for a message that person has not dismissed.
+    private async Task<IGenericResult> ApplyDismissals(IReadOnlyList<MessagePayload> messages, CancellationToken cancellationToken)
+    {
+        foreach (var message in messages)
+            message.DismissedAt = null;
+
+        foreach (var person in messages.Where(m => m.RecipientUserId.HasValue).GroupBy(m => m.RecipientUserId!.Value))
+        {
+            var actions = await _alerts.FindActions(MessageAlert.Kind, [.. person.Select(m => m.Id)], person.Key, cancellationToken).ConfigureAwait(false);
+            if (!actions.IsSuccess)
+                return (IGenericResult)actions;
+
+            foreach (var action in actions.Value!.Where(a => string.Equals(a.Action, MessageAlert.DismissAction, StringComparison.OrdinalIgnoreCase)))
+            {
+                var dismissed = person.FirstOrDefault(m => m.Id == action.AlertId);
+                if (dismissed is not null)
+                    dismissed.DismissedAt = action.ActedAt.UtcDateTime;
+            }
+        }
+
+        return GenericResult.Success();
     }
 
     /// <inheritdoc />
@@ -393,51 +447,6 @@ public sealed class MessageService : IMessageService
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult> Dismiss(
-        Guid messageId,
-        CancellationToken cancellationToken = default)
-    {
-        MessagingLog.TraceDismissEntry(_logger);
-
-        try
-        {
-            var messageIdStr = messageId.ToString("D");
-
-            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
-            if (!location.IsSuccess)
-                return (IGenericResult)location;
-
-            var command = CmdBuilders.Update.In<MessageDismissedUpdate>(MessageContainer)
-                .DataStore(location.Value.DataStoreName).Path(location.Value.PathName)
-                .Where(nameof(MessagePayload.Id), messageId)
-                .Value(new MessageDismissedUpdate
-                {
-                    Status = "Dismissed",
-                    DismissedAt = DateTime.UtcNow,
-                    ModifiedAt = DateTime.UtcNow
-                });
-
-            var result = await Gateway.Execute<int>(command, cancellationToken).ConfigureAwait(false);
-
-            if (!result.IsSuccess)
-            {
-                return result.Messages.Any()
-                    ? (IGenericResult)result
-                    : GenericResult.Failure(
-                        MessagingLog.MessageUpdateFailed(_logger, messageIdStr, "Update command failed"));
-            }
-
-            MessagingLog.MessageDismissed(_logger, messageIdStr);
-            return GenericResult.Success();
-        }
-        catch (Exception ex)
-        {
-            return GenericResult.Failure(
-                MessagingLog.MessageUpdateFailed(_logger, messageId.ToString("D"), ex.Message));
-        }
-    }
-
-    /// <inheritdoc />
     public async Task<IGenericResult> Archive(
         Guid messageId,
         CancellationToken cancellationToken = default)
@@ -526,6 +535,70 @@ public sealed class MessageService : IMessageService
         {
             return GenericResult.Failure(
                 MessagingLog.MessageQueryFailed(_logger, ex.Message));
+        }
+    }
+
+    /// <inheritdoc />
+    public string Kind => MessageAlert.Kind;
+
+    /// <inheritdoc />
+    // Why every action for every message: the reference default; a company's own choice of the set is read elsewhere (FDW-2430).
+    public IReadOnlyList<string> OfferedActions { get; } = ["Acknowledge", "Snooze", "Silence", "Dismiss", "Discard"];
+
+    /// <inheritdoc />
+    // Why only the recipient's: an alert is shown to one person, so a message addressed to someone else, or to nobody, does not exist for the caller.
+    public async Task<IGenericResult<AlertSubject?>> Find(Guid id, CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceAlertEntry(_logger, "Find an alert of a message");
+
+        try
+        {
+            if (_authContext.Current is not { IsAuthenticated: true } context || !Guid.TryParse(context.UserId, out var userId))
+                return GenericResult<AlertSubject?>.Failure(MessagingLog.AlertCallerRequired(_logger, "find an alert of a message"));
+
+            // Why a right: the alert routes ask only for a signed-in person, and the message routes need messages:read.
+            if (!PermissionCoverage.Covers(context.Permissions, MessagesReadPermission))
+                return GenericResult<AlertSubject?>.Success(null);
+
+            var found = await FindMessage(id, cancellationToken).ConfigureAwait(false);
+            if (!found.IsSuccess)
+                return found.ToNewResult<AlertSubject?>();
+
+            return GenericResult<AlertSubject?>.Success(
+                found.Value is { } message && message.RecipientUserId == userId ? new AlertSubject(message.Id, message.TenantId) : null);
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<AlertSubject?>.Failure(MessagingLog.MessageQueryFailed(_logger, ex.Message));
+        }
+    }
+
+    /// <inheritdoc />
+    // Why read after a personal action: a person who acknowledges, snoozes, silences or dismisses a message has dealt with it, so it is marked read; a message
+    // already read keeps the time it was read. An action taken for everyone is not the recipient's own and leaves the message as it is.
+    public async Task<IGenericResult> Acted(Guid id, IAlertAction action, CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceAlertEntry(_logger, "Act on an alert of a message");
+
+        try
+        {
+            if (action.ForEveryone)
+                return GenericResult.Success();
+
+            var found = await FindMessage(id, cancellationToken).ConfigureAwait(false);
+            if (!found.IsSuccess)
+                return (IGenericResult)found;
+
+            if (found.Value is not { } message)
+                return GenericResult.Failure(MessagingLog.MessageNotFound(_logger, id.ToString("D")));
+
+            return message.ReadAt is null
+                ? await MarkRead(id, cancellationToken).ConfigureAwait(false)
+                : GenericResult.Success();
+        }
+        catch (Exception ex)
+        {
+            return GenericResult.Failure(MessagingLog.MessageUpdateFailed(_logger, id.ToString("D"), ex.Message));
         }
     }
 
@@ -718,8 +791,8 @@ public sealed class MessageService : IMessageService
         }
 
         var recipientId = payload.RecipientUserId.Value.ToString("D");
-        await _hubContext.Clients.Group(recipientId).NewMessage(payload).ConfigureAwait(false);
-        await _hubContext.Clients.Group(recipientId).UnreadCountChanged().ConfigureAwait(false);
+        await _hubContext.Clients.Group(HubScopes.User(recipientId)).NewMessage(payload).ConfigureAwait(false);
+        await _hubContext.Clients.Group(HubScopes.User(recipientId)).UnreadCountChanged().ConfigureAwait(false);
     }
 
     private async Task NotifyMessageReadViaSignalR(
@@ -733,8 +806,8 @@ public sealed class MessageService : IMessageService
         }
 
         var recipientId = recipientUserId.ToString("D");
-        await _hubContext.Clients.Group(recipientId).MessageRead(messageId).ConfigureAwait(false);
-        await _hubContext.Clients.Group(recipientId).UnreadCountChanged().ConfigureAwait(false);
+        await _hubContext.Clients.Group(HubScopes.User(recipientId)).MessageRead(messageId).ConfigureAwait(false);
+        await _hubContext.Clients.Group(HubScopes.User(recipientId)).UnreadCountChanged().ConfigureAwait(false);
     }
 
     /// <summary>
@@ -786,14 +859,6 @@ public sealed class MessageService : IMessageService
     {
         public string? Status { get; set; }
         public DateTime? ReadAt { get; set; }
-        public DateTime? ModifiedAt { get; set; }
-    }
-
-    /// <summary>Update record for the Dismissed transition (Status + DismissedAt only).</summary>
-    private sealed class MessageDismissedUpdate
-    {
-        public string? Status { get; set; }
-        public DateTime? DismissedAt { get; set; }
         public DateTime? ModifiedAt { get; set; }
     }
 

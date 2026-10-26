@@ -7,7 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Messaging.Endpoints;
 
 /// <summary>
-/// Acknowledges a UI comment as the caller (POST /ui-feedback/{Id}/acknowledge), answering the comment with acknowledgedByMe set. Acknowledging again changes nothing.
+/// Acknowledges a UI comment as the caller (POST /ui-feedback/{Id}/acknowledge), answering the comment with acknowledgedByMe set. It is the Acknowledge action of the
+/// comment's alert (FDW-2420), the same as POST /alerts/UiFeedback/{Id}/actions/Acknowledge. Acknowledging again changes nothing.
 /// </summary>
 public abstract class AcknowledgeUiFeedbackEndpointBase : Endpoint<UiFeedbackIdRequest, UiFeedbackResponse>
 {
@@ -15,15 +16,20 @@ public abstract class AcknowledgeUiFeedbackEndpointBase : Endpoint<UiFeedbackIdR
     /// Initializes a new instance of the <see cref="AcknowledgeUiFeedbackEndpointBase"/> class.
     /// </summary>
     /// <param name="feedback">The UI comment service.</param>
+    /// <param name="alerts">The alert action service, which records the acknowledgement.</param>
     /// <param name="logger">The logger of the concrete endpoint.</param>
-    protected AcknowledgeUiFeedbackEndpointBase(IUiFeedbackService feedback, ILogger logger)
+    protected AcknowledgeUiFeedbackEndpointBase(IUiFeedbackService feedback, IAlertActionService alerts, ILogger logger)
     {
         Feedback = feedback;
+        Alerts = alerts;
         EndpointLogger = logger;
     }
 
     /// <summary>Gets the UI comment service.</summary>
     protected IUiFeedbackService Feedback { get; }
+
+    /// <summary>Gets the alert action service.</summary>
+    protected IAlertActionService Alerts { get; }
 
     /// <summary>Gets the logger of the concrete endpoint.</summary>
     protected ILogger EndpointLogger { get; }
@@ -49,10 +55,17 @@ public abstract class AcknowledgeUiFeedbackEndpointBase : Endpoint<UiFeedbackIdR
     {
         MessagingEndpointLog.TraceUiFeedbackEndpoint(EndpointLogger, "acknowledge");
 
-        var moved = await Feedback.Acknowledge(req.Id, ct).ConfigureAwait(false);
-        if (!moved.IsSuccess || moved.Value is not { } comment)
+        var acknowledged = await Alerts.Apply(UiFeedbackAlert.Kind, req.Id, UiFeedbackAlert.AcknowledgeAction, null, ct).ConfigureAwait(false);
+        if (!acknowledged.IsSuccess)
         {
-            await Send.ResultAsync(UiFeedbackFailures.Of(moved, HttpContext)).ConfigureAwait(false);
+            await Send.ResultAsync(MessagingFailures.Of(acknowledged, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var opened = await Feedback.Get(req.Id, ct).ConfigureAwait(false);
+        if (!opened.IsSuccess || opened.Value is not { } comment)
+        {
+            await Send.ResultAsync(MessagingFailures.Of(opened, HttpContext)).ConfigureAwait(false);
             return;
         }
 

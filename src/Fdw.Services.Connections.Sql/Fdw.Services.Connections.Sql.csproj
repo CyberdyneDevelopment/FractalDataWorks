@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Fdw.Data\Fdw.Data.csproj" />
     <!-- Why: provides ISqlDialect and IDatabasePath — the dialect carrier seam -->
     <ProjectReference Include="..\Fdw.Services.Connections.Abstractions\Fdw.Services.Connections.Abstractions.csproj" />
+    <ProjectReference Include="..\Fdw.Commands.Data\Fdw.Commands.Data.csproj" />
   </ItemGroup>
 
 </Project>

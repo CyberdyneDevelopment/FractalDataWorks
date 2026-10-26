@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fdw.Collections;
 
 namespace Fdw.Commands.Data.SoftDeletes;
@@ -29,4 +30,13 @@ public abstract class SoftDeleteModeBase : TypeOptionBase<SoftDeleteModeBase>, I
 
     /// <inheritdoc />
     public bool RequiresMarker { get; }
+
+    /// <inheritdoc />
+    public virtual bool NeedsSourceSet => false;
+
+    /// <inheritdoc />
+    public virtual string? Problem(SoftDeleteOptions options) => $"'{Name}' is not a soft-delete mode";
+
+    /// <inheritdoc />
+    public virtual IReadOnlyList<SoftDeleteMarker> Conditions(SoftDeleteOptions options) => [];
 }

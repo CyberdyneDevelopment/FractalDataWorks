@@ -83,58 +83,13 @@ public static partial class PipelineEndpointLog
         Message = "In {owner}: source data set '{sourceDataSet}' shares no connection with destination data set '{destinationDataSet}'; a set-based copy runs on one connection")]
     public static partial IGenericMessage LoadSourceNotOnDestinationConnection(ILogger logger, string owner, string sourceDataSet, string destinationDataSet);
 
-    /// <summary>Logs an Execute step whose data store is not one the destination data set sits on.</summary>
-    [MessageLogging(EventId = 22007, Level = LogLevel.Warning,
-        Message = "In {owner}: data store '{dataStore}' is not one of data set '{dataSet}' sources' stores; it uses {dataStores}")]
-    public static partial IGenericMessage ExecuteStoreNotOnDataSet(ILogger logger, string owner, string dataStore, string dataSet, string dataStores);
-
-    /// <summary>Logs an Execute step on a connection type that does not declare the Execute capability.</summary>
-    [MessageLogging(EventId = 22008, Level = LogLevel.Warning,
-        Message = "In {owner}: connection type '{connectionType}' does not declare the Execute capability; it supports {supportedCommands}")]
-    public static partial IGenericMessage ExecuteNotSupported(ILogger logger, string owner, string connectionType, string supportedCommands);
-
-    /// <summary>Logs an Execute step whose container the data store does not know.</summary>
-    [MessageLogging(EventId = 22009, Level = LogLevel.Warning,
-        Message = "In {owner}: data store '{dataStore}' has no container '{containerName}' under path '{pathName}'")]
-    public static partial IGenericMessage ExecuteContainerUnknown(ILogger logger, string owner, string dataStore, string containerName, string pathName);
-
-    /// <summary>Logs an Execute step whose container is of a type the connection type does not execute.</summary>
-    [MessageLogging(EventId = 22010, Level = LogLevel.Warning,
-        Message = "In {owner}: container '{containerName}' has type '{containerType}', which connection type '{connectionType}' does not execute; it executes {executableTypes}")]
-    public static partial IGenericMessage ExecuteContainerNotExecutable(ILogger logger, string owner, string containerName, string containerType, string connectionType, string executableTypes);
-
-    /// <summary>Logs an Execute parameter that is not a field of the container.</summary>
-    [MessageLogging(EventId = 22011, Level = LogLevel.Warning,
-        Message = "In {owner}: '{parameter}' is not a field of container '{containerName}'")]
-    public static partial IGenericMessage ExecuteParameterNotField(ILogger logger, string owner, string parameter, string containerName);
-
-    /// <summary>Logs a required container field an Execute step supplies no parameter for.</summary>
-    [MessageLogging(EventId = 22012, Level = LogLevel.Warning,
-        Message = "In {owner}: container '{containerName}' needs parameter '{parameter}', and none is supplied")]
-    public static partial IGenericMessage ExecuteParameterMissing(ILogger logger, string owner, string containerName, string parameter);
-
     /// <summary>Logs an expression that references a run parameter the pipeline does not declare.</summary>
     [MessageLogging(EventId = 22013, Level = LogLevel.Warning,
         Message = "In {owner}: the expression references run parameter '{parameter}', which the pipeline does not declare")]
     public static partial IGenericMessage ParameterReferenceUndeclared(ILogger logger, string owner, string parameter);
 
-    /// <summary>Logs an Execute step whose connection configuration could not be read.</summary>
-    [MessageLogging(EventId = 22017, Level = LogLevel.Warning,
-        Message = "In {owner}: connection '{connection}' could not be read: {reason}")]
-    public static partial IGenericMessage ExecuteConnectionUnreadable(ILogger logger, string owner, string connection, string reason);
-
-    /// <summary>Logs an Execute step whose connection has a connection type that is not registered.</summary>
-    [MessageLogging(EventId = 22018, Level = LogLevel.Warning,
-        Message = "In {owner}: connection '{connection}' has connection type '{connectionType}', which is not registered")]
-    public static partial IGenericMessage ExecuteConnectionTypeUnregistered(ILogger logger, string owner, string connection, string connectionType);
-
     /// <summary>Logs a data set a load reads or writes that the engine could not resolve to one container.</summary>
     [MessageLogging(EventId = 22019, Level = LogLevel.Warning,
         Message = "In {owner}: data set '{dataSet}' cannot be loaded or read by a load: {reason}")]
     public static partial IGenericMessage LoadDataSetUnusable(ILogger logger, string owner, string dataSet, string reason);
-
-    /// <summary>Logs an Execute step whose data store could not be read.</summary>
-    [MessageLogging(EventId = 22015, Level = LogLevel.Warning,
-        Message = "In {owner}: data store '{dataStore}' could not be read: {reason}")]
-    public static partial IGenericMessage ExecuteStoreUnreadable(ILogger logger, string owner, string dataStore, string reason);
 }

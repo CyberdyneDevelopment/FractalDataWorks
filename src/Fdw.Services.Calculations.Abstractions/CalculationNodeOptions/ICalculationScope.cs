@@ -1,3 +1,5 @@
+using System;
+
 namespace Fdw.Services.Calculations.Abstractions.CalculationNodeOptions;
 
 /// <summary>
@@ -10,6 +12,11 @@ public interface ICalculationScope
     /// <param name="result">The result name.</param>
     /// <returns>True when a Ref to it is allowed.</returns>
     bool IsDefined(string result);
+
+    /// <summary>Gets the type a result defined before the node being checked yields.</summary>
+    /// <param name="result">The result name.</param>
+    /// <returns>The type, decimal for a number or DateTimeOffset for a date-time; null when no such result is defined.</returns>
+    Type? TypeOf(string result);
 
     /// <summary>Notes that the array reads an input field.</summary>
     /// <param name="field">The field name.</param>

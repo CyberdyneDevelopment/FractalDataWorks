@@ -8,7 +8,6 @@ using Fdw.Claims.Abstractions;
 using Fdw.Messages;
 using Fdw.Operations.Abstractions.Audit;
 using Fdw.Results;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,29 +19,28 @@ namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 
 /// <summary>
 /// Tests for the endpoints over retention (FDW-1575): each policy, hold, release and document ended is recorded in the audit at the
-/// organization level naming the organization, another tenant's caller is refused, and a change that cannot be recorded answers 500.
+/// organization level naming the organization, and a change that cannot be recorded answers 500. Who may act is the services' to decide (FDW-2215).
 /// </summary>
 [Trait("Category", "Security")]
 public sealed class RetentionEndpointTests
 {
     private static readonly Guid Tenant = new("aaaaaaaa-0000-0000-0000-000000000001");
-    private static readonly Guid OtherTenant = new("aaaaaaaa-0000-0000-0000-000000000002");
     private static readonly Guid Finance = new("44444444-0000-0000-0000-000000000001");
 
-    private sealed class Place(ILegalHolds holds, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration roles)
-        : PlaceLegalHoldEndpointBase(NullLogger.Instance, holds, organizations, audit, roles)
+    private sealed class Place(ILegalHolds holds, IAdministrativeAudit audit)
+        : PlaceLegalHoldEndpointBase(NullLogger.Instance, holds, audit)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
 
-    private sealed class SetPolicy(IRetentionPolicies policies, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration roles)
-        : SetRetentionPolicyEndpointBase(NullLogger.Instance, policies, organizations, audit, roles)
+    private sealed class SetPolicy(IRetentionPolicies policies, IAdministrativeAudit audit)
+        : SetRetentionPolicyEndpointBase(NullLogger.Instance, policies, audit)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
 
-    private sealed class Run(IRetentionKeeper keeper, IOrganizationProvider organizations, IAdministrativeAudit audit, ISystemRoleConfiguration roles)
-        : RunRetentionEndpointBase(NullLogger.Instance, keeper, organizations, audit, roles)
+    private sealed class Run(IRetentionKeeper keeper, IAdministrativeAudit audit)
+        : RunRetentionEndpointBase(NullLogger.Instance, keeper, audit)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
@@ -50,13 +48,6 @@ public sealed class RetentionEndpointTests
     private static Action<DefaultHttpContext> ActingIn(Guid tenantId)
         => ctx => ctx.User = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim(ClaimDefinitions.tenantId.Name, tenantId.ToString()), new Claim(ClaimDefinitions.sub.Name, "user-1")], "test"));
-
-    private static ISystemRoleConfiguration Roles(bool platformAdmin)
-    {
-        var roles = new Mock<ISystemRoleConfiguration>();
-        roles.Setup(r => r.IsPlatformAdmin(It.IsAny<ClaimsPrincipal>())).Returns(platformAdmin);
-        return roles.Object;
-    }
 
     private static Mock<IAdministrativeAudit> Audit(List<AdministrativeChangeEntry>? recorded = null, bool succeeds = true)
     {
@@ -67,18 +58,10 @@ public sealed class RetentionEndpointTests
         return audit;
     }
 
-    private static Mock<IOrganizationProvider> Organizations()
-    {
-        var organizations = new Mock<IOrganizationProvider>();
-        organizations.Setup(o => o.Get(Finance, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(new OrganizationConfiguration { TenantId = Tenant }));
-        return organizations;
-    }
-
     private static Mock<ILegalHolds> Holds()
     {
         var holds = new Mock<ILegalHolds>();
-        holds.Setup(h => h.Place(It.IsAny<Guid>(), Finance, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        holds.Setup(h => h.Place(Finance, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<LegalHold>.Success(new LegalHold(Guid.NewGuid(), Finance, "contracts/acme.pdf", "Litigation", "user-1", DateTimeOffset.UtcNow, null, null)));
         return holds;
     }
@@ -89,12 +72,12 @@ public sealed class RetentionEndpointTests
     {
         var recorded = new List<AdministrativeChangeEntry>();
         var holds = Holds();
-        var endpoint = Factory.Create<Place>(ActingIn(Tenant), holds.Object, Organizations().Object, Audit(recorded).Object, Roles(false));
+        var endpoint = Factory.Create<Place>(ActingIn(Tenant), holds.Object, Audit(recorded).Object);
 
         await endpoint.HandleAsync(new PlaceLegalHoldRequest { OrganizationId = Finance, DocumentId = "contracts/acme.pdf", Reason = "Litigation" }, CancellationToken.None);
 
         endpoint.HttpContext.Response.StatusCode.ShouldBe(200);
-        holds.Verify(h => h.Place(Tenant, Finance, "contracts/acme.pdf", "Litigation", "user-1", It.IsAny<CancellationToken>()), Times.Once);
+        holds.Verify(h => h.Place(Finance, "contracts/acme.pdf", "Litigation", "user-1", It.IsAny<CancellationToken>()), Times.Once);
         var entry = recorded.ShouldHaveSingleItem();
         entry.ChangeKind.ShouldBe("LegalHoldPlaced");
         entry.Level.Name.ShouldBe("Organization");
@@ -104,22 +87,9 @@ public sealed class RetentionEndpointTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    public async Task AnotherTenantsCallerCannotPlaceAHoldOnTheOrganization()
-    {
-        var holds = Holds();
-        var endpoint = Factory.Create<Place>(ActingIn(OtherTenant), holds.Object, Organizations().Object, Audit().Object, Roles(false));
-
-        await endpoint.HandleAsync(new PlaceLegalHoldRequest { OrganizationId = Finance, DocumentId = "a.pdf", Reason = "Litigation" }, CancellationToken.None);
-
-        endpoint.HttpContext.Response.StatusCode.ShouldBe(403);
-        holds.Verify(h => h.Place(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
     public async Task AHoldPlacedButNotRecordedIsAnswered500()
     {
-        var endpoint = Factory.Create<Place>(ActingIn(Tenant), Holds().Object, Organizations().Object, Audit(succeeds: false).Object, Roles(false));
+        var endpoint = Factory.Create<Place>(ActingIn(Tenant), Holds().Object, Audit(succeeds: false).Object);
 
         await endpoint.HandleAsync(new PlaceLegalHoldRequest { OrganizationId = Finance, DocumentId = "a.pdf", Reason = "Litigation" }, CancellationToken.None);
 
@@ -132,9 +102,9 @@ public sealed class RetentionEndpointTests
     {
         var recorded = new List<AdministrativeChangeEntry>();
         var policies = new Mock<IRetentionPolicies>();
-        policies.Setup(p => p.Set(Tenant, Finance, It.IsAny<NewRetentionPolicy>(), It.IsAny<CancellationToken>()))
+        policies.Setup(p => p.Set(Finance, It.IsAny<NewRetentionPolicy>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<RetentionPolicy>.Success(new RetentionPolicy(Guid.NewGuid(), Finance, "Contract", 7, 0, 0, "SignedDate", "Delete")));
-        var endpoint = Factory.Create<SetPolicy>(ActingIn(Tenant), policies.Object, Organizations().Object, Audit(recorded).Object, Roles(false));
+        var endpoint = Factory.Create<SetPolicy>(ActingIn(Tenant), policies.Object, Audit(recorded).Object);
 
         await endpoint.HandleAsync(
             new SetRetentionPolicyRequest { OrganizationId = Finance, DocumentType = "Contract", Years = 7, StartField = "SignedDate", EndAction = "Delete" },
@@ -153,11 +123,11 @@ public sealed class RetentionEndpointTests
     {
         var recorded = new List<AdministrativeChangeEntry>();
         var keeper = new Mock<IRetentionKeeper>();
-        keeper.Setup(k => k.Run(Tenant, Finance, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>())).ReturnsAsync(
+        keeper.Setup(k => k.Run(Finance, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>())).ReturnsAsync(
             GenericResult<RetentionRunReport>.Success(new RetentionRunReport(
                 DateTimeOffset.UtcNow, 3, 1, 0,
                 [new RetentionOutcome("a.pdf", "Contract", "Delete", null), new RetentionOutcome("b.pdf", "Contract", "Delete", null)], [])));
-        var endpoint = Factory.Create<Run>(ActingIn(Tenant), keeper.Object, Organizations().Object, Audit(recorded).Object, Roles(false));
+        var endpoint = Factory.Create<Run>(ActingIn(Tenant), keeper.Object, Audit(recorded).Object);
 
         await endpoint.HandleAsync(new OrganizationRetentionRequest { OrganizationId = Finance }, CancellationToken.None);
 
@@ -172,10 +142,10 @@ public sealed class RetentionEndpointTests
     public async Task ARunWhoseEndedDocumentsCannotBeRecordedIsAnswered500()
     {
         var keeper = new Mock<IRetentionKeeper>();
-        keeper.Setup(k => k.Run(Tenant, Finance, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>())).ReturnsAsync(
+        keeper.Setup(k => k.Run(Finance, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>())).ReturnsAsync(
             GenericResult<RetentionRunReport>.Success(new RetentionRunReport(
                 DateTimeOffset.UtcNow, 1, 0, 0, [new RetentionOutcome("a.pdf", "Contract", "Delete", null)], [])));
-        var endpoint = Factory.Create<Run>(ActingIn(Tenant), keeper.Object, Organizations().Object, Audit(succeeds: false).Object, Roles(false));
+        var endpoint = Factory.Create<Run>(ActingIn(Tenant), keeper.Object, Audit(succeeds: false).Object);
 
         await endpoint.HandleAsync(new OrganizationRetentionRequest { OrganizationId = Finance }, CancellationToken.None);
 

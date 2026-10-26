@@ -349,4 +349,113 @@ public sealed class MsSqlFindTranslatorTests
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("[sales].[Orders]");
     }
+
+    private static string SelectList(string sql)
+        => sql.Substring(0, sql.IndexOf(" FROM ", StringComparison.Ordinal));
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateSelectsAMatchColumnForEachSearchedField()
+    {
+        // Arrange
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("Name", typeof(string)),
+            CreateMockField("Age", typeof(int)),
+            CreateMockField("Email", typeof(string))
+        });
+        var command = new FindCommand<object>
+        {
+            SearchTerm = "test"
+        };
+
+        // Act
+        var result = await _translator.Translate(command, container, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        var select = SelectList(result.Value!.CommandText);
+        select.ShouldContain("CASE WHEN [Name] LIKE @searchTerm THEN 1 ELSE 0 END AS [__fdw_match_Name]");
+        select.ShouldContain("CASE WHEN [Email] LIKE @searchTerm THEN 1 ELSE 0 END AS [__fdw_match_Email]");
+        select.ShouldNotContain("__fdw_match_Age");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateSelectsMatchColumnsOnlyForSpecifiedFields()
+    {
+        // Arrange
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("Name", typeof(string)),
+            CreateMockField("Email", typeof(string)),
+            CreateMockField("Phone", typeof(string))
+        });
+        var command = new FindCommand<object>
+        {
+            SearchTerm = "test",
+            FieldNames = new[] { "Name", "Email" }
+        };
+
+        // Act
+        var result = await _translator.Translate(command, container, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        var select = SelectList(result.Value!.CommandText);
+        select.ShouldContain("__fdw_match_Name");
+        select.ShouldContain("__fdw_match_Email");
+        select.ShouldNotContain("__fdw_match_Phone");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateMeasuresAMatchWithTheSameCollationAsTheWhereClause()
+    {
+        // Arrange
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("Name", typeof(string))
+        });
+        var command = new FindCommand<object>
+        {
+            SearchTerm = "Acme",
+            CaseSensitive = true
+        };
+
+        // Act
+        var result = await _translator.Translate(command, container, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        var sql = result.Value!.CommandText;
+        SelectList(sql).ShouldContain("CASE WHEN [Name] COLLATE Latin1_General_CS_AS LIKE @searchTerm THEN 1 ELSE 0 END AS [__fdw_match_Name]");
+        sql.ShouldContain("WHERE [Name] COLLATE Latin1_General_CS_AS LIKE @searchTerm");
+    }
+
+    [Fact]
+    [Trait("Priority", "P2")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateSelectsNoMatchColumnsWhenNoSearchableColumns()
+    {
+        // Arrange
+        var container = CreateMockContainer(fields: new[]
+        {
+            CreateMockField("Id", typeof(int))
+        });
+        var command = new FindCommand<object>
+        {
+            SearchTerm = "test"
+        };
+
+        // Act
+        var result = await _translator.Translate(command, container, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldNotContain("__fdw_match_");
+    }
 }

@@ -97,18 +97,17 @@ internal static class LoadTestDoubles
         return provider;
     }
 
-    /// <summary>A connection type that lists the named command capabilities and executes the named container types.</summary>
-    internal static IConnectionType ConnectionType(string[] capabilities, string[] executableContainerTypes)
+    /// <summary>A connection type that lists the named command capabilities.</summary>
+    internal static IConnectionType ConnectionType(string[] capabilities)
     {
         var type = new Mock<IConnectionType>();
         type.SetupGet(t => t.SupportedCommands).Returns(capabilities.Select(name => (ICommandCapabilityType)CommandCapabilityTypes.ByName(name)).ToList());
-        type.As<ISupportsExecutableContainerTypes>().SetupGet(t => t.ExecutableContainerTypes).Returns(executableContainerTypes);
         return type.Object;
     }
 
-    /// <summary>The capabilities a full SQL-like connection type lists.</summary>
+    /// <summary>The capabilities a full SQL-like connection type lists: its modes, not its data commands.</summary>
     internal static readonly string[] AllCapabilities =
-        ["Query", "Execute", "Insert", "Update", "Upsert", "BulkInsert", "BulkUpsert", "InsertFromQuery", "SoftDelete", "UnitOfWork"];
+        ["SoftDelete", "UnitOfWork"];
 
     /// <summary>A connection type resolver that answers per connection id.</summary>
     internal sealed class TypeResolver(Dictionary<Guid, IConnectionType> types) : IConnectionTypeResolver

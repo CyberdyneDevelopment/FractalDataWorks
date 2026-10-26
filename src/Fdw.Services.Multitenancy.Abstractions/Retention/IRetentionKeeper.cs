@@ -16,10 +16,9 @@ namespace Fdw.Services.Multitenancy.Abstractions;
 public interface IRetentionKeeper
 {
     /// <summary>Runs the policies of an organization.</summary>
-    /// <param name="tenantId">The tenant the organization belongs to.</param>
     /// <param name="organizationId">The organization.</param>
     /// <param name="now">The moment every deadline is judged against.</param>
     /// <param name="cancellationToken">Cancels the run.</param>
     /// <returns>What the run found and did, or a failure when the policies, the holds or a document listing could not be read.</returns>
-    Task<IGenericResult<RetentionRunReport>> Run(Guid tenantId, Guid organizationId, DateTimeOffset now, CancellationToken cancellationToken = default);
+    Task<IGenericResult<RetentionRunReport>> Run(Guid organizationId, DateTimeOffset now, CancellationToken cancellationToken = default);
 }

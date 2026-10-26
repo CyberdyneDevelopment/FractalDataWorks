@@ -15,6 +15,12 @@ public static class UiFeedbackLimits
     /// <summary>The most a picture of the screen weighs, in bytes, once decoded.</summary>
     public const int MaxPictureBytes = 2 * 1024 * 1024;
 
+    /// <summary>The most components a comment is about (FDW-2343).</summary>
+    public const int MaxAnchors = 20;
+
+    /// <summary>The most characters one component's description holds (FDW-2343).</summary>
+    public const int MaxAnchorLength = 4000;
+
     /// <summary>The most comments a list returns at once.</summary>
     public const int MaxPageSize = 200;
 }

@@ -197,13 +197,12 @@ public static class PipelineLoadValidator
         string owner,
         PipelineLoadStepConfiguration row,
         bool hasSourceDataSet,
-        bool forContainer,
         ILogger logger)
     {
         var columnsSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var source in row.ValueSources)
         {
-            var result = ValidateValueSource(owner, source, hasSourceDataSet, forContainer, logger);
+            var result = ValidateValueSource(owner, source, hasSourceDataSet, logger);
             if (result.IsFailure)
                 return result;
             if (!columnsSeen.Add(source.ColumnName))
@@ -217,7 +216,6 @@ public static class PipelineLoadValidator
         string owner,
         PipelineLoadValueSourceConfiguration source,
         bool hasSourceDataSet,
-        bool forContainer,
         ILogger logger)
     {
         if (string.IsNullOrWhiteSpace(source.ColumnName))
@@ -228,8 +226,6 @@ public static class PipelineLoadValidator
             return GenericResult.Failure(PipelineLoadLog.ValueSourceKindUnknown(logger, owner, source.ColumnName, source.SourceKind));
         if (kind.MapsSourceColumn && !hasSourceDataSet)
             return GenericResult.Failure(PipelineLoadLog.ValueSourceNeedsSourceDataSet(logger, owner, source.ColumnName, kind.Name));
-        if (forContainer && !kind.AllowedAsContainerParameter)
-            return GenericResult.Failure(PipelineLoadLog.ValueSourceNotForContainer(logger, owner, source.ColumnName, kind.Name));
 
         var field = CheckValueSourceOption(owner, source, "a source field", Has(source.SourceField), kind.RequiresSourceField, kind.RequiresSourceField, kind, logger);
         if (field.IsFailure)

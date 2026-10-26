@@ -18,8 +18,8 @@ namespace Fdw.Services.Authorization;
 /// </summary>
 /// <remarks>
 /// What a role carries is read through <see cref="IRoleGrants"/>. What the caller holds is the permissions of their own
-/// authentication context. A held <c>resource:*</c> or <c>*:*</c> counts for every permission it covers, as the permission
-/// checker treats them. The right to modify a permission is the permission <c>resource:delegate</c> for its resource (FDW-1867): a caller
+/// authentication context. What a held permission covers is decided by <see cref="PermissionCoverage"/>, the one rule every check
+/// answers through. The right to modify a permission is the permission <c>resource:delegate</c> for its resource (FDW-1867): a caller
 /// needs it as well as the permission, held through any role that carries it. A carried <c>*:*</c> needs <c>*:*</c> held. The system
 /// context passes: it acts for the platform and holds no user's permissions.
 /// </remarks>
@@ -96,12 +96,12 @@ public sealed class GrantRule : IGrantRule
     {
         var held = caller.Permissions.ToList();
         var carriedList = carried.ToList();
-        var missing = carriedList.Where(permission => !Holds(held, permission)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var missing = carriedList.Where(permission => !PermissionCoverage.Covers(held, permission)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (missing.Count > 0)
             return GenericResult.Failure(GrantRuleLog.RightsNotHeld(_logger, string.Join(", ", missing)));
 
         // Holding what a role carries is not enough: the caller also needs the right to modify it, a role that carries resource:delegate (FDW-1867).
-        var unmodifiable = carriedList.Select(ModifyRight).Distinct(StringComparer.OrdinalIgnoreCase).Where(right => !Holds(held, right)).ToList();
+        var unmodifiable = carriedList.Select(ModifyRight).Distinct(StringComparer.OrdinalIgnoreCase).Where(right => !PermissionCoverage.Covers(held, right)).ToList();
         if (unmodifiable.Count > 0)
             return GenericResult.Failure(GrantRuleLog.ModifyRightNotHeld(_logger, string.Join(", ", unmodifiable)));
 
@@ -116,11 +116,4 @@ public sealed class GrantRule : IGrantRule
         var resource = colon < 0 ? permission : permission[..colon];
         return string.Equals(resource, "*", StringComparison.Ordinal) ? "*:*" : resource + ":delegate";
     }
-
-    // A held permission covers a permission when it is the same, or is resource:* for its resource, or is *:*.
-    private static bool Holds(IReadOnlyList<string> held, string permission)
-        => held.Any(have => string.Equals(have, permission, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(have, "*:*", StringComparison.Ordinal)
-            || (have.EndsWith(":*", StringComparison.Ordinal)
-                && permission.StartsWith(have[..^1], StringComparison.OrdinalIgnoreCase)));
 }

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.HealthChecks.Monitoring;
 
 using Fdw.Services.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Operations.Endpoints.Health;
 
@@ -80,8 +81,7 @@ public abstract class GetServiceThroughputEndpointBase : Endpoint<ServiceThrough
             if (!result.IsSuccess)
             {
                 OperationsEndpointLog.GetThroughputFailed(_logger, req.Name, result.CurrentMessage ?? "Unknown error");
-                AddError("Failed to retrieve throughput data");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

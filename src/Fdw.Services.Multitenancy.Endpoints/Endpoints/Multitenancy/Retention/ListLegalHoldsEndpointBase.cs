@@ -1,7 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
-using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -14,19 +13,15 @@ namespace Fdw.Services.Multitenancy.Endpoints;
 public abstract class ListLegalHoldsEndpointBase : Endpoint<ListLegalHoldsRequest, LegalHoldsResponse>
 {
     private readonly ILegalHolds _holds;
-    private readonly IOrganizationProvider _organizations;
-    private readonly ISystemRoleConfiguration _systemRoles;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="ListLegalHoldsEndpointBase"/> class.</summary>
-    protected ListLegalHoldsEndpointBase(ILogger logger, ILegalHolds holds, IOrganizationProvider organizations, ISystemRoleConfiguration systemRoles)
+    protected ListLegalHoldsEndpointBase(ILogger logger, ILegalHolds holds)
     {
         EndpointLogger = logger;
         _holds = holds;
-        _organizations = organizations;
-        _systemRoles = systemRoles;
     }
 
     /// <inheritdoc />
@@ -42,14 +37,7 @@ public abstract class ListLegalHoldsEndpointBase : Endpoint<ListLegalHoldsReques
     /// <inheritdoc />
     public override async Task HandleAsync(ListLegalHoldsRequest req, CancellationToken ct)
     {
-        var access = await RetentionAccess.TenantOf(_organizations, _systemRoles, HttpContext, req.OrganizationId, EndpointLogger, ct).ConfigureAwait(false);
-        if (access.Refusal is { } refusal)
-        {
-            await Send.ResultAsync(refusal).ConfigureAwait(false);
-            return;
-        }
-
-        var listed = await _holds.List(access.TenantId, req.OrganizationId, req.HeldOnly, ct).ConfigureAwait(false);
+        var listed = await _holds.List(req.OrganizationId, req.HeldOnly, ct).ConfigureAwait(false);
         if (listed.IsFailure || listed.Value is null)
         {
             await Send.ResultAsync(TenantProblem.Of(listed, HttpContext)).ConfigureAwait(false);

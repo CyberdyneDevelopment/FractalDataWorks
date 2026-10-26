@@ -51,11 +51,18 @@ public sealed class ListSearch
     /// <param name="nameProperty">The member of the record the text is compared with, such as its name.</param>
     /// <param name="idProperty">The member of the record that holds its identifier.</param>
     /// <returns>The filter -- the text and the identifiers together when both were given -- or nothing when the search keeps every member.</returns>
-    public IFilterExpression? Filter(string nameProperty, string idProperty)
+    public IFilterExpression? Filter(string nameProperty, string idProperty) => Filter([nameProperty], idProperty);
+
+    /// <summary>Builds the filter that selects the members the search keeps, finding the text in any of several properties.</summary>
+    /// <param name="textProperties">The members of the record the text is compared with; a member is kept when the text is found in any of them.</param>
+    /// <param name="idProperty">The member of the record that holds its identifier.</param>
+    /// <returns>The filter -- the text and the identifiers together when both were given -- or nothing when the search keeps every member.</returns>
+    /// <remarks>Each property is compared in the way <c>?match=</c> names, so a list that searches a name and a definition matches both alike.</remarks>
+    public IFilterExpression? Filter(IReadOnlyList<string> textProperties, string idProperty)
     {
         var nodes = new List<IFilterNode>();
         if (Text is not null)
-            nodes.Add(new FilterCondition { PropertyName = nameProperty, Operator = Match.Operator, Value = Text });
+            nodes.Add(TextMatch(textProperties));
 
         if (Ids.Count > 0)
             nodes.Add(new FilterCondition
@@ -71,6 +78,17 @@ public sealed class ListSearch
             1 => new FilterExpression { Root = nodes[0] },
             _ => new FilterExpression { Root = new FilterGroup { Operator = LogicalOperator.And, Nodes = nodes } },
         };
+    }
+
+    // One property is a condition; several are a group of which any member may hold the text.
+    private IFilterNode TextMatch(IReadOnlyList<string> properties)
+    {
+        var conditions = properties
+            .Select(property => (IFilterNode)new FilterCondition { PropertyName = property, Operator = Match.Operator, Value = Text })
+            .ToList();
+        return conditions.Count == 1
+            ? conditions[0]
+            : new FilterGroup { Operator = LogicalOperator.Or, Nodes = conditions };
     }
 
     /// <summary>Reads the search a list request asks for.</summary>

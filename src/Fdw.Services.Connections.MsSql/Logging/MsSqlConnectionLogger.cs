@@ -125,6 +125,8 @@ public static partial class MsSqlConnectionLogger
     [MessageLogging(EventId = 71004, Level = LogLevel.Warning, Message = "Disconnection failed for {connectionType}: {errorMessage}")]
     public static partial IGenericMessage DisconnectionFailed(ILogger logger, string connectionType, string errorMessage);
 
+    // Why the internal band: a type with no mapper is a wiring defect, not a missing resource, and a 3xxxx number answers
+    // the caller with a 404.
     /// <summary>
     /// Logs when no POCO mapper is found for a type.
     /// </summary>
@@ -133,7 +135,7 @@ public static partial class MsSqlConnectionLogger
     /// <param name="typeFullName">The full type name.</param>
     /// <returns>A generic message containing the error information.</returns>
     [MessageLogging(
-        EventId = 31002,
+        EventId = 90003,
         Level = LogLevel.Error,
         Message = "No POCO mapper found for type '{typeName}' (full name: '{typeFullName}'). Add [GenerateMapper] attribute to the type or create a manual PocoMapperBase implementation.")]
     public static partial IGenericMessage NoMapperFound(ILogger logger, string typeName, string typeFullName);

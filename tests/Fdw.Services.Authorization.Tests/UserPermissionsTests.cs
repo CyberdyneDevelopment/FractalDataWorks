@@ -92,10 +92,9 @@ public sealed class UserPermissionsTests
             .Append(new RolePermissionImplementationConfiguration { RoleId = ViewerRoleId, PermissionId = AdminOnlyPermId, TenantId = tenantB })
             .ToArray();
         UserPermissions For(Guid tenant) => new(
-            ConfigurationCatalog.Roles(AllRoles),
-            ConfigurationCatalog.Permissions(AllPermissions),
-            ConfigurationCatalog.RolePermissions(grants),
-            ConfigurationCatalog.UserRoles([new UserRoleImplementationConfiguration { UserId = User1IdStr, RoleId = ViewerRoleId, TenantId = tenant }]),
+            UserPermissionGrantsFake.Of(
+                AllRoles, AllPermissions, grants,
+                [new UserRoleImplementationConfiguration { UserId = User1IdStr, RoleId = ViewerRoleId, TenantId = tenant }]),
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<UserPermissions>.Instance);
 
@@ -118,11 +117,6 @@ public sealed class UserPermissionsTests
         IReadOnlyList<TenantOrgAccessConfiguration>? orgGrants = null,
         IOrgAccessProvider? orgAccessProvider = null)
     {
-        var roleProvider     = ConfigurationCatalog.Roles(AllRoles);
-        var permProvider     = ConfigurationCatalog.Permissions(AllPermissions);
-        var rolePermProvider = ConfigurationCatalog.RolePermissions(AllRolePermissions);
-        var userRoleProvider = ConfigurationCatalog.UserRoles(userAssignments);
-
         if (orgAccessProvider is null && orgGrants is not null)
         {
             var orgMock = new Mock<IOrgAccessProvider>();
@@ -133,10 +127,7 @@ public sealed class UserPermissionsTests
         }
 
         return new UserPermissions(
-            roleProvider,
-            permProvider,
-            rolePermProvider,
-            userRoleProvider,
+            UserPermissionGrantsFake.Of(AllRoles, AllPermissions, AllRolePermissions, userAssignments),
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<UserPermissions>.Instance,
             orgAccessProvider);
@@ -264,26 +255,6 @@ public sealed class UserPermissionsTests
         result.Value.Permissions.ShouldNotContain("org:read");
     }
 
-    [Fact]
-    [Trait("Category", "Authorization")]
-    public async Task Resolve_RoleProviderFails_ReturnsFailure()
-    {
-        // Arrange: role provider returns failure — fail-closed
-        var sut = new UserPermissions(
-            ConfigurationCatalog.UnreadableRoles("Role query failed"),
-            ConfigurationCatalog.Permissions(new[] { new PermissionImplementationConfiguration() }),
-            ConfigurationCatalog.RolePermissions(Array.Empty<RolePermissionImplementationConfiguration>()),
-            ConfigurationCatalog.UserRoles([]),
-            new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
-            NullLogger<UserPermissions>.Instance);
-
-        // Act
-        var result = await sut.Get("00000000-0000-0000-0000-000000000002", TenantId, orgId: null, TestContext.Current.CancellationToken);
-
-        // Assert — fail-closed: provider failure returns failure result
-        result.IsSuccess.ShouldBeFalse();
-    }
-
     // ----- Adversarial tests (FDW-532) -----
 
     [Fact]
@@ -383,17 +354,14 @@ public sealed class UserPermissionsTests
 
     [Fact]
     [Trait("Category", "Authorization.FDW532")]
-    public async Task Resolve_UserRoleProviderFails_ReturnsFailure_NotFullCatalog()
+    public async Task Resolve_GrantReadFails_ReturnsFailure_NotFullCatalog()
     {
         // Arrange: the user-role provider fails (e.g. DB unavailable).
         // Before FDW-532 fix (the bug): there was no user-role provider call at all;
         // UserPermissions would bake all perms regardless.
         // After fix: failure MUST return Failure (fail-closed). No token issued.
         var sut = new UserPermissions(
-            ConfigurationCatalog.Roles(AllRoles),
-            ConfigurationCatalog.Permissions(AllPermissions),
-            ConfigurationCatalog.RolePermissions(AllRolePermissions),
-            ConfigurationCatalog.UnreadableUserRoles("DB unavailable"),
+            UserPermissionGrantsFake.Unreadable("DB unavailable"),
             new Fdw.Services.Authentication.Abstractions.Security.AuthenticationContextAccessor(),
             NullLogger<UserPermissions>.Instance);
 

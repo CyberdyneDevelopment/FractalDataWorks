@@ -29,5 +29,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Shared\GatewayWriteTransaction.cs" Link="TestSupport\GatewayWriteTransaction.cs" />
+    <Compile Include="..\Fdw.Services.Data.Tests\Search\InMemoryConfigurationStore.cs" Link="TestSupport\InMemoryConfigurationStore.cs" />
   </ItemGroup>
 </Project>

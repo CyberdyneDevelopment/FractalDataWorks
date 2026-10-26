@@ -74,6 +74,7 @@ dotnet build MyFeature/MyFeature.Abstractions
 
 ```
 MyFeature/
+├── Directory.Packages.props     # Package versions the three projects restore with
 ├── MyFeature.Runtime/           # Runtime types
 │   ├── Attributes/
 │   │   └── MyFeatureOptionAttribute.cs
@@ -90,6 +91,23 @@ MyFeature/
     ├── IMyFeature.cs
     └── MyFeature.Abstractions.csproj
 ```
+
+### Package versions
+
+The generator project references `Microsoft.CodeAnalysis.CSharp`, `Microsoft.CodeAnalysis.Analyzers`
+and `ILRepack.Lib.MSBuild.Task` without a version, so the template ships a `Directory.Packages.props`
+that pins them (central package management). It is the nearest one to the generated projects, so
+the solution restores whether or not the repo around it manages versions centrally.
+
+The generator's sources use the shared FractalDataWorks helpers (`Fdw.SourceGenerators`,
+`Fdw.CodeBuilder.CSharp`, `Fdw.CodeBuilder.Abstractions`). Inside an FDW source tree they are referenced
+as projects from `src\`. Anywhere else they come from the published packages, at the version in
+`FdwVersion` in `Directory.Packages.props` (a floating version, `1.4.1-rc*` at the time of writing, so the
+newest published match is used). A project gets each helper once, from source or from the package, never both.
+
+If you generate with `UseExistingRuntime=true`, the existing runtime package is referenced without a
+version as well. Add a `PackageVersion` line for it to `Directory.Packages.props`; the template does
+not pick a version for a package it does not know.
 
 ## How It Works
 

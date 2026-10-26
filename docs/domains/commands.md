@@ -13,7 +13,7 @@ Commands define **what** to do. Translators handle **how** to do it for each imp
 | `Commands.Abstractions` | Core framework: `CommandTypes`, `CommandCategories`, `TranslatorTypes`, `IGenericCommandTranslator`, clauses |
 | `Commands.Data` | Data commands: `QueryCommand<T>`, `InsertCommand<T>`, `UpdateCommand<T>`, `DeleteCommand` |
 | `Commands.Data.Abstractions` | Data command interfaces, `IDataGateway` |
-| `Commands.Data.Extensions` | Fluent builder extensions for data command construction |
+| `Commands.Data.Fluency` | Fluent builders for data command construction (namespace `Fdw.Commands.Data.Extensions`) |
 | `Commands.Development.Abstractions` | Development commands: 9 categories (Analysis, CodeSearch, Compilation, Formatting, Generation, Navigation, Project, Refactoring, Workspace) that work across any language toolchain |
 
 ## Key Types
@@ -68,7 +68,7 @@ Adding support for a new database or a new language means adding a translator. T
 
 ### Data Command Builder (Fluent API)
 
-Entry points live in `Fdw.Commands.Data.Extensions`
+Entry points live in the `Fdw.Commands.Data.Fluency` project, namespace `Fdw.Commands.Data.Extensions`
 (`Query`, `Insert`, `Update`, `Delete`, `DataQuery`, `Find`):
 
 ```csharp
@@ -83,7 +83,7 @@ var result = await dataGateway.Execute(command, cancellationToken);
 
 `Query.From<T>(dataStoreName, pathName, containerName)` returns a
 `QueryCommandBuilder<T>` (see
-`public/src/Fdw.Commands.Data.Extensions/Query.cs`).
+`public/src/Fdw.Commands.Data.Fluency/Query.cs`).
 
 ### DataGateway-Only Data Access
 

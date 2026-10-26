@@ -77,11 +77,6 @@ public static partial class PipelineLoadLog
         Message = "In {owner}: value source '{valueSource}' is a {kind} value source, which maps a source column and only a load that takes a source data set has one")]
     public static partial IGenericMessage ValueSourceNeedsSourceDataSet(ILogger logger, string owner, string valueSource, string kind);
 
-    /// <summary>Logs a refused load configuration: In owner: value source 'valueSource' is a kind value source, which cannot supply the parameter of an executable container.</summary>
-    [MessageLogging(EventId = 20028, Level = LogLevel.Warning,
-        Message = "In {owner}: value source '{valueSource}' is a {kind} value source, which cannot supply the parameter of an executable container")]
-    public static partial IGenericMessage ValueSourceNotForContainer(ILogger logger, string owner, string valueSource, string kind);
-
     /// <summary>Logs a refused load configuration: In owner: value source 'valueSource' reads its constant as type 'parameterType', which is not a data type.</summary>
     [MessageLogging(EventId = 20030, Level = LogLevel.Warning,
         Message = "In {owner}: value source '{valueSource}' reads its constant as type '{parameterType}', which is not a data type")]

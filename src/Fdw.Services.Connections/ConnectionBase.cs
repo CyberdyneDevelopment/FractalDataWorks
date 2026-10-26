@@ -129,10 +129,7 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
         var translator = GetTranslator(command.CommandType);
 
         if (string.Equals(translator.Name, "NotFound", StringComparison.Ordinal))
-        {
-            var message = ConnectionLogger.TranslatorNotFound(Logger, command.CommandType);
-            return GenericResult<T>.Failure(message);
-        }
+            return await ExecuteWithoutTranslator<T>(command, container, cancellationToken).ConfigureAwait(false);
 
         var translationResult = await translator.Translate(command, container, cancellationToken).ConfigureAwait(false);
         if (!translationResult.IsSuccess || translationResult.Value == null)
@@ -142,9 +139,95 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
                 : GenericResult<T>.Failure(ConnectionLogger.TranslationFailed(Logger));
         }
 
+        // A command that names columns to return answers the rows it wrote, and a result of rows asks for the rows a command
+        // reads: the native command is run for rows, not for a count.
+        if (command is IReturningCommand { ReturnColumns.Count: > 0 } || typeof(T) == typeof(global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>))
+            return await ExecuteReturning<T>(command, translationResult.Value, container, cancellationToken).ConfigureAwait(false);
+
         // Execute the native command type (SqlCommand, HttpRequestMessage, etc.)
         return await Execute<T>(translationResult.Value, container, cancellationToken).ConfigureAwait(false);
     }
+
+    // The columns come back as one dictionary for each row written, through the kind's own row reader (ExecuteRowsByType).
+    private async Task<IGenericResult<T>> ExecuteReturning<T>(IDataCommand command, TCommand native, IStorageContainer container, CancellationToken cancellationToken)
+    {
+        if (typeof(T) != typeof(global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>))
+            return GenericResult<T>.Failure(ConnectionLogger.ReturnedColumnsResultNotRows(Logger, command.CommandType, typeof(T).Name));
+
+        var rows = await ExecuteRowsByType(native, container, typeof(global::System.Collections.Generic.Dictionary<string, object?>), cancellationToken).ConfigureAwait(false);
+        if (rows.IsFailure)
+            return rows.ToNewResult<T>();
+
+        return GenericResult<T>.Success((T)(object)rows.Value!
+            .Cast<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>()
+            .ToList());
+    }
+
+    // A kind with no translator for a command runs the simpler commands it expands into (and, for a command that assembles
+    // its own result, answers that result); a command that cannot expand fails by name.
+    private async Task<IGenericResult<T>> ExecuteWithoutTranslator<T>(IDataCommand command, IDataContainer container, CancellationToken cancellationToken)
+    {
+        if (command is IAssembledExpandableDataCommand<T> assembled)
+            return await ExecuteAssembledExpansion(assembled, container, cancellationToken).ConfigureAwait(false);
+
+        return command is IExpandableDataCommand expandable
+            ? await ExecuteExpansion<T>(expandable, container, cancellationToken).ConfigureAwait(false)
+            : GenericResult<T>.Failure(ConnectionLogger.TranslatorNotFound(Logger, command.CommandType));
+    }
+
+    // A command that assembles its own result runs its steps in one transaction when this connection can open one, so
+    // either every step is done or none is; a connection that cannot, or that already runs inside a unit of work whose
+    // transaction the steps belong to, runs them in order.
+    private async Task<IGenericResult<T>> ExecuteAssembledExpansion<T>(IAssembledExpandableDataCommand<T> command, IDataContainer container, CancellationToken cancellationToken)
+    {
+        if (InUnitOfWork || this is not ITransactionalDataConnection transactional)
+        {
+            ConnectionLogger.TraceExpansionTransaction(Logger, command.CommandType, false);
+            return await CommandExpansion.RunAssembled(
+                command,
+                container,
+                (step, token) => Execute<int>(step, container, token),
+                (step, token) => Execute<global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>>(step, container, token),
+                Logger,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var begun = await BeginAssembledUnit(transactional, cancellationToken).ConfigureAwait(false);
+        if (begun.IsFailure)
+            return begun.ToNewResult<T>();
+
+        ConnectionLogger.TraceExpansionTransaction(Logger, command.CommandType, true);
+        var scope = begun.Value!;
+        await using (scope.ConfigureAwait(false))
+        {
+            var result = await CommandExpansion.RunAssembled(
+                command,
+                container,
+                (step, token) => scope.Execute<int>(step, container, token),
+                (step, token) => scope.Execute<global::System.Collections.Generic.IReadOnlyList<global::System.Collections.Generic.IReadOnlyDictionary<string, object?>>>(step, container, token),
+                Logger,
+                cancellationToken).ConfigureAwait(false);
+            if (result.IsFailure)
+            {
+                await scope.Rollback(cancellationToken).ConfigureAwait(false);
+                return result;
+            }
+
+            var committed = await scope.Commit(cancellationToken).ConfigureAwait(false);
+            return committed.IsFailure ? committed.ToNewResult<T>() : result;
+        }
+    }
+
+    // A kind with no translator for a command that declares an expansion runs the simpler commands it expands into,
+    // each through the full lookup (so one may expand again). CommandExpansion holds the loop; a unit of work uses it too.
+    private Task<IGenericResult<T>> ExecuteExpansion<T>(IExpandableDataCommand command, IDataContainer container, CancellationToken cancellationToken)
+        => CommandExpansion.Run<T>(
+            command,
+            container,
+            (step, token) => Execute<int>(step, container, token),
+            Logger,
+            Configuration is IDatabaseConnectionConfiguration database ? database.MaxSerialInsert : null,
+            cancellationToken);
 
     /// <summary>
     /// Executes a data command against the unified container.
@@ -216,6 +299,25 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     protected virtual Task<IGenericResult<global::System.Collections.Generic.IEnumerable<object>>> ExecuteRowsByType(
         TCommand command, IStorageContainer container, global::System.Type elementType, CancellationToken cancellationToken)
         => Task.FromResult(GenericResult<global::System.Collections.Generic.IEnumerable<object>>.Failure(ConnectionLogger.ExecutionFailed(Logger)));
+
+    /// <summary>
+    /// Opens the unit of work an assembled command runs its steps in. A connection whose units cannot overlap overrides it to
+    /// wait its turn; the default opens one at once.
+    /// </summary>
+    /// <param name="transactional">This connection, as the one that opens units of work.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The unit; or why it could not be opened.</returns>
+    protected virtual Task<IGenericResult<IDataConnectionTransaction>> BeginAssembledUnit(
+        ITransactionalDataConnection transactional, CancellationToken cancellationToken)
+        => transactional.BeginTransaction(cancellationToken);
+
+    /// <summary>
+    /// Gets a value indicating whether this connection already runs inside a unit of work, so every command it runs
+    /// belongs to that unit's transaction. A command that assembles its own result then runs its steps on this
+    /// connection as they are, and does not open a transaction of its own that would commit apart from the unit's.
+    /// A connection that is created for a unit of work overrides it; the default is <see langword="false"/>.
+    /// </summary>
+    protected virtual bool InUnitOfWork => false;
 
     /// <summary>
     /// Executes a native command (SqlCommand, HttpRequestMessage, etc.).

@@ -46,7 +46,10 @@ public sealed class DataSetCategoryLinksTests
     public void NoNameMeansNoCategoryAndAnUnknownNameIsRefused()
     {
         DataSetCategoryLinks.Resolve(Tree(), null, NullLogger.Instance).Value.ShouldBeNull();
-        DataSetCategoryLinks.Resolve(Tree(), "  ", NullLogger.Instance).Value.ShouldBeNull();
+        DataSetCategoryLinks.Resolve(Tree(), string.Empty, NullLogger.Instance).Value.ShouldBeNull();
+
+        // Whitespace is a name like any other, so no category has it and it is refused.
+        DataSetCategoryLinks.Resolve(Tree(), "  ", NullLogger.Instance).IsFailure.ShouldBeTrue();
 
         var refused = DataSetCategoryLinks.Resolve(Tree(), "weather", NullLogger.Instance);
 

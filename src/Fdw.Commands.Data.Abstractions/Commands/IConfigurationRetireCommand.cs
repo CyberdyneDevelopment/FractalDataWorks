@@ -4,8 +4,9 @@ using Fdw.Data.Abstractions;
 namespace Fdw.Commands.Data.Abstractions;
 
 /// <summary>
-/// Retires the current configuration rows that match: sets them non-current, and deleted when
-/// <see cref="MarkDeleted"/> is set, and returns the key values of every row it retired.
+/// Retires the current configuration rows that match and returns the key values of every row it retired.
+/// When <see cref="MarkDeleted"/> is set the rows are marked deleted and stay current; otherwise they
+/// are set non-current.
 /// </summary>
 /// <remarks>
 /// The rows are matched either on field values -- the Foreign key fields an owner's key values fill --
@@ -23,6 +24,6 @@ public interface IConfigurationRetireCommand : IDataCommand, IDataCommandWithInp
     /// <summary>Gets the values of <see cref="KeyType"/>'s fields, in key-field order.</summary>
     IReadOnlyList<object?> KeyValues { get; }
 
-    /// <summary>Gets whether the retired rows are marked deleted as well as non-current.</summary>
+    /// <summary>Gets whether the retired rows are marked deleted and left current, instead of set non-current.</summary>
     bool MarkDeleted { get; }
 }

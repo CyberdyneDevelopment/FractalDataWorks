@@ -99,7 +99,7 @@ public abstract class DataCommandBase<TResult> : DataCommandBase, IDataCommand<T
 /// <typeparam name="TInput">The type of input data this command requires.</typeparam>
 /// <remarks>
 /// Use this base class for commands that require input data and return a specific type.
-/// Examples: InsertCommand&lt;T&gt;, UpdateCommand&lt;T&gt;, BulkInsertCommand&lt;T&gt;.
+/// Examples: InsertCommand&lt;T&gt;, UpdateCommand&lt;T&gt;.
 /// </remarks>
 public abstract class DataCommandBase<TResult, TInput> : DataCommandBase<TResult>, IDataCommand<TResult, TInput>
 {

@@ -11,12 +11,6 @@ public sealed class ConnectionTypeCapabilitiesResponse
     /// <summary>Gets or sets the container kinds supported (e.g. "Table", "View").</summary>
     public IReadOnlyList<string> ContainerTypes { get; set; } = [];
 
-    /// <summary>
-    /// Gets or sets the container kinds the Execute command can run against; empty when the connection type does not
-    /// support Execute.
-    /// </summary>
-    public IReadOnlyList<string> ExecutableContainerTypes { get; set; } = [];
-
     /// <summary>Gets or sets the field type descriptors supported by this connection type.</summary>
     public IReadOnlyList<FieldTypeInfo> FieldTypes { get; set; } = [];
 

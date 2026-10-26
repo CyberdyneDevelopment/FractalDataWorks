@@ -67,10 +67,10 @@ public sealed partial class DataViewDataSetVariationConfiguration : IDataViewDat
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <inheritdoc/>
-    public string Encoding { get; set; } = string.Empty;
+    public string? Encoding { get; set; }
 
     /// <inheritdoc/>
-    public string ChartType { get; set; } = string.Empty;
+    public string? ChartType { get; set; }
 
     /// <inheritdoc/>
     /// <remarks>Stamped by the provider from the domain row; the DataView table no longer holds it (FDW-1032).</remarks>

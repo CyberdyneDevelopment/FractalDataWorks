@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -28,6 +29,7 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
     /// <param name="calculations">Supplies the calculations.</param>
     /// <param name="transformations">Supplies the transformations.</param>
     /// <param name="terms">Supplies the glossary terms.</param>
+    /// <param name="fieldSearches">The searches of the fields of data sets and of containers, which are found at the store.</param>
     protected SearchCatalogEndpointBase(
         ILogger logger,
         IDataSetConfigurationProvider dataSets,
@@ -35,10 +37,12 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
         IPipelineConfigurationProvider pipelines,
         ICalculationConfigurationProvider calculations,
         ITransformationConfigurationProvider transformations,
-        IGlossaryTermConfigurationProvider terms)
+        IGlossaryTermConfigurationProvider terms,
+        IEnumerable<IRankedSearch> fieldSearches)
     {
         Logger = logger;
-        _search = new CatalogSearch(dataSets, dataStores, pipelines, calculations, transformations, terms, logger);
+        _search = new CatalogSearch(
+            dataSets, dataStores, pipelines, calculations, transformations, [.. fieldSearches, new GlossaryTermSearch(terms, logger)], logger);
     }
 
     /// <summary>Gets the authorization policy required for read operations.</summary>
@@ -63,7 +67,7 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
                 "pipelines and glossary terms whose name or description contains q (ignoring case), the closest names first. entityTypes " +
                 "narrows the kinds (repeat it per kind); left out, every kind is searched, and q left out lists everything. skip and take page " +
                 "the matches (take is " + CatalogSearchLimits.DefaultTake + " when left out and at most " + CatalogSearchLimits.MaxTake +
-                "). Each entry carries its kind, name, description and where it sits. A thing the caller may not see is absent. total counts " +
+                ", and skip plus take at most " + CatalogSearchLimits.MaxWindow + "). Each entry carries its kind, name, description and where it sits. A thing the caller may not see is absent. total counts " +
                 "every match before paging.";
         });
     }
@@ -84,6 +88,14 @@ public abstract class SearchCatalogEndpointBase : Endpoint<CatalogSearchRequest,
         if (skip < 0 || take < 1 || take > CatalogSearchLimits.MaxTake)
         {
             AddError(r => r.Take, $"skip must be 0 or more and take between 1 and {CatalogSearchLimits.MaxTake}");
+            await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
+            return;
+        }
+
+        // Why: the page is chosen from the closest matches each source returns, and a source reads no more than the window.
+        if ((long)skip + take > CatalogSearchLimits.MaxWindow)
+        {
+            AddError(r => r.Skip, $"skip plus take must be at most {CatalogSearchLimits.MaxWindow}; narrow the search with q or entityTypes to reach further");
             await Send.ErrorsAsync(400, ct).ConfigureAwait(false);
             return;
         }

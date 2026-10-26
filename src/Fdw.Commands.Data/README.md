@@ -20,11 +20,12 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BulkInsertCommand<T>` | class | Bulk insert command for high-performance batch inserts using database-specific bulk mechanisms. Returns… |
+| `BulkUpdateCommand<T>` | class | Bulk update command: each source row updates the row its key column values select. A connection with no bulk mechanism runs an update for each row. |
+| `BulkUpsertCommand<T>` | class | Bulk upsert command: the upsert for large loads. A connection with no bulk mechanism runs an upsert for each row. |
 | `ConfigurationDeleteCommand` | class | Configuration delete command for soft-delete via version-on-write pattern. Marks the current row as… |
 | `ConfigurationSaveCommand<T>` | class | Configuration save command for version-on-write upsert operations. Marks the current row as non-current… |
 | `CrossJoinExecutor` | class | Executes a cross join (Cartesian product) between two record sets. Returns all possible combinations of… |
-| `DeleteCommand` | class | Delete command for removing records (DELETE operation). Returns the number of affected rows. |
+| `DeleteCommand` | class | Delete command for removing records (DELETE operation); with no filter it removes every record. Returns the number of affected rows. |
 | `FederationStrategies` | class | Collection of federation strategies for data operations. |
 | `FindCommand<T>` | class | Find command for cross-field text search across a container's string fields. Returns matched records… |
 | `FullJoinExecutor` | class | Executes a full outer join between two record sets. Returns all rows from both sources, with defaults… |
@@ -37,7 +38,6 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `QueryCommand<T>` | class | Query command for retrieving data (SELECT operation). Returns an enumerable collection of typed results… |
 | `RightJoinExecutor` | class | Executes a right outer join between two record sets. Returns all rows from the right source, with… |
 | `SequentialStrategy` | class | Sequential federation strategy - executes source queries one at a time. |
-| `TruncateCommand` | class | Truncate command for emptying a container (removes ALL records). Returns the number of affected rows. |
 
 ## Installation
 
@@ -47,12 +47,12 @@ dotnet add package Fdw.Commands.Data --prerelease
 
 ## Dependencies
 
-`Fdw.Collections` · `Fdw.Commands.Data.Abstractions` · `Fdw.Data.Abstractions` · `Fdw.Messages` · `Fdw.Results`
+`Fdw.Collections` · `Fdw.Commands.Data.Abstractions` · `Fdw.Data` · `Fdw.Data.Abstractions` · `Fdw.Messages` · `Fdw.Results`
 
-Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators`
+Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 
 ---
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->

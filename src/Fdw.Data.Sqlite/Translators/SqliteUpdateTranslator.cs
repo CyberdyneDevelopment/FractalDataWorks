@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ using Fdw.Services.Connections.Abstractions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Services.Connections.Sql;
 
 namespace Fdw.Services.Connections.Sqlite;
 
@@ -61,6 +63,8 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
             if (container.Path is not IDatabasePath dbPath)
                 return Task.FromResult(GenericResult<SqliteCommand>.Failure(SqliteDataResultCodes.ByName("InvalidContainerPath")));
 
+            RefuseSoftDeleteOnUpdate(command, container);
+
             var dataObj = GetCommandData(command);
             if (dataObj == null)
                 return Task.FromResult(
@@ -68,7 +72,7 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
                         SqliteDataResultCodes.ByName("MissingInputData"),
                         ResultDetails.Create("CommandType", "UpdateCommand")));
 
-            return Task.FromResult(BuildUpdateStatement(container, dbPath, dataObj, command.Filter));
+            return Task.FromResult(BuildUpdateStatement(container, dbPath, dataObj, command.Filter, ReturnedColumnsOf(command, container)));
         }
         catch (Exception ex)
         {
@@ -85,7 +89,8 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
         IStorageContainer container,
         IDatabasePath dbPath,
         object data,
-        IFilterExpression? filter)
+        IFilterExpression? filter,
+        IReadOnlyList<string> returned)
     {
         var dialect = dbPath.Dialect;
         var pkFieldName = container.GetPrimaryKeyFieldName();
@@ -147,6 +152,9 @@ public sealed class SqliteUpdateTranslator : SqliteDataCommandTranslatorBase
                 command.CommandText += $" WHERE {dialect.QuoteIdentifier(pkField.Name)} = {prefix}where_pk";
             }
         }
+
+        if (returned.Count > 0)
+            command.CommandText += $" RETURNING {string.Join(", ", returned.Select(c => dialect.QuoteIdentifier(c)))}";
 
         return GenericResult<SqliteCommand>.Success(command);
     }

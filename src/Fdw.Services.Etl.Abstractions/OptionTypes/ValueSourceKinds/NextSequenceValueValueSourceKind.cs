@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class NextSequenceValueValueSourceKind : ValueSourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="NextSequenceValueValueSourceKind"/> class.</summary>
-    public NextSequenceValueValueSourceKind() : base("NextSequenceValue", mapsSourceColumn: false, allowedAsContainerParameter: false, requiresSourceField: false, requiresSequenceName: true, requiresSequenceOrder: true, requiresConstant: false)
+    public NextSequenceValueValueSourceKind() : base("NextSequenceValue", mapsSourceColumn: false, requiresSourceField: false, requiresSequenceName: true, requiresSequenceOrder: true, requiresConstant: false)
     {
     }
 }

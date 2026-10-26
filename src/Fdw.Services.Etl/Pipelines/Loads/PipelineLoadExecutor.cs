@@ -139,7 +139,7 @@ public sealed class PipelineLoadExecutor
             : GenericResult<List<PlannedStep>>.Success(commands.Value!
                 .Select(command => new PlannedStep(
                     command, target.Value!.Container, target.Value.ConnectionId, target.Value.Description, unit.Owner,
-                    builder.RequiredCapabilities(unit.Row), unit.Kind.UsesDestinationContainer))
+                    builder.RequiredCapabilities(unit.Row)))
                 .ToList());
     }
 
@@ -240,7 +240,7 @@ public sealed class PipelineLoadExecutor
     }
 
     // Before a transaction opens: the connection's type must list every capability the group's loads need, and the unit of
-    // work itself, and may only execute the container types it declares. Nothing runs against a connection that cannot.
+    // work itself. Nothing runs against a connection that cannot.
     private async Task<IGenericResult> CheckConnectionType(Guid connectionId, List<PlannedStep> steps, CancellationToken cancellationToken)
     {
         if (_connectionTypes is null)
@@ -258,19 +258,6 @@ public sealed class PipelineLoadExecutor
                 return GenericResult.Failure(PipelineRunLog.ConnectionLacksCapability(_logger, step.Owner, step.Description, missing));
         }
 
-        return CheckExecutableContainers(type.Value, steps);
-    }
-
-    private IGenericResult CheckExecutableContainers(IConnectionType type, List<PlannedStep> steps)
-    {
-        IReadOnlyList<string> executable = type is ISupportsExecutableContainerTypes supports ? supports.ExecutableContainerTypes : [];
-        foreach (var step in steps.Where(step => step.Executable))
-        {
-            if (!executable.Contains(step.Container.ContainerType.Name, StringComparer.OrdinalIgnoreCase))
-                return GenericResult.Failure(PipelineRunLog.ContainerNotExecutable(
-                    _logger, step.Owner, step.Container.Name, step.Container.ContainerType.Name, string.Join(", ", executable)));
-        }
-
         return GenericResult.Success();
     }
 
@@ -280,6 +267,5 @@ public sealed class PipelineLoadExecutor
         Guid ConnectionId,
         string Description,
         string Owner,
-        IReadOnlyList<string> Capabilities,
-        bool Executable);
+        IReadOnlyList<string> Capabilities);
 }

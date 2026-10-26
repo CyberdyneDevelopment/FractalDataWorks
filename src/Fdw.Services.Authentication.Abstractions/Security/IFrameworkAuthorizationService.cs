@@ -184,8 +184,8 @@ public interface IFrameworkAuthorizationService
     /// </para>
     /// <para>
     /// A held permission covers <paramref name="permission"/> by the rule in
-    /// <see cref="PermissionCoverage"/>: the exact name, <c>{resource}:*</c>, and for a per-resource
-    /// permission the resource-wide forms. <c>*:*</c> covers nothing.
+    /// <see cref="PermissionCoverage"/>: the exact name, <c>{resource}:*</c>, <c>*:*</c>, and for a per-resource
+    /// permission the resource-wide forms.
     /// </para>
     /// </remarks>
     /// <exception cref="System.ArgumentNullException">

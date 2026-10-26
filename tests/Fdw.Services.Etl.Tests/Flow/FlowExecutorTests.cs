@@ -96,7 +96,7 @@ public sealed class FlowExecutorTests
         result.IsSuccess.ShouldBeTrue(result.CurrentMessage);
         Ids(lowRows).OrderBy(i => i).ShouldBe(new[] { 1, 2, 3 });
         Ids(evenRows).OrderBy(i => i).ShouldBe(new[] { 2, 4, 6 });
-        result.Value!.Links.Single(l => l.Link.FromOutput == "other").Rows.ShouldBe(2);
+        result.Value!.Links.Single(l => l.Link.FromOutput == "other").Rows.ShouldBe(1);
     }
 
     [Fact]

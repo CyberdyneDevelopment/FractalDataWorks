@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Fdw.Services.Connections.Commands;
 using Microsoft.Extensions.Logging.Abstractions;
 using Fdw.Services.Data.Commands;
+using Fdw.Services.Data.Search;
 using Fdw.Data.Transformations.Configuration;
 using Fdw.Services.Data.Transformations;
 
@@ -152,6 +153,13 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
             builder.Services.TryAddSingleton<IDomainConfigurationProvider<IDataSetVariationImplementationConfiguration>>(
                 sp => sp.GetRequiredService<IDataSetVariationConfigurationProvider>());
 
+            // A name that is a data set or a variation of one, resolved in one place for every route that only reads (FDW-2390).
+            builder.Services.TryAddSingleton<IDataSetResolver>(sp =>
+                new DataSetResolver(
+                    sp.GetRequiredService<IDataSetConfigurationProvider>(),
+                    sp.GetRequiredService<IDataSetVariationConfigurationProvider>(),
+                    sp.GetService<ILogger<DataSetResolver>>()));
+
             // A category is one node of a category tree (FDW-1270, FDW-1465): its own domain whose implementation is its
             // type, DataSet, Glossary or Custom. Each type's table holds only the key; the fields of a node live on the domain row, so
             // the whole tree reads in one query.
@@ -252,6 +260,20 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
             });
             builder.Services.TryAddSingleton<ITransformationConfigurationProvider>(
                 sp => sp.GetRequiredService<TransformationConfigurationProvider>());
+
+            // The searches for the fields of data sets and of containers: one service of the interface per kind, taken together as the
+            // sources a catalog search asks (FDW-2444).
+            builder.Services.AddSingleton<IRankedSearch>(sp => new DataSetFieldSearch(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), DataStoreTypes.ConfigurationConnection, "data",
+                sp.GetRequiredService<ILogger<DataSetFieldSearch>>()));
+            builder.Services.AddSingleton<IRankedSearch>(sp => new ContainerFieldSearch(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), DataStoreTypes.ConfigurationConnection, "data",
+                sp.GetRequiredService<ILogger<ContainerFieldSearch>>()));
+
+            // The containers of all stores, one page at a time, with the names of their paths and stores (FDW-2311).
+            builder.Services.AddSingleton<IDataStoreContainerPages>(sp => new DataStoreContainerPages(
+                sp.GetRequiredService<IConfigurationGatewayProvider>(), DataStoreTypes.ConfigurationConnection, "data",
+                sp.GetRequiredService<ILogger<DataStoreContainerPages>>()));
 
             // What makes an attached transformation apply on a data-set read (FDW-877).
             builder.Services.TryAddSingleton<FieldMappingTransformationResolver>();

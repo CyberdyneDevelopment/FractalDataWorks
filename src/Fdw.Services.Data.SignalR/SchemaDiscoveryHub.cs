@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
@@ -31,6 +32,14 @@ public class SchemaDiscoveryHub : RealTimeHubBase<ISchemaDiscoveryHubClient>
     /// <inheritdoc/>
     /// <remarks>Joins the connection to its per-user group; skips (logged) when unauthenticated.</remarks>
     protected override Task OnJoin() => JoinAuthenticatedUserScope();
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// A <c>discovery:{id}</c> group is refused for everyone: no owner of a discovery is stored, so there is nothing to compare the caller's tenant
+    /// to (FDW-2804). Nothing publishes into it on this hub today. When a discovery's owner can be read, the check is added here.
+    /// </remarks>
+    protected override bool CanJoin(string scopeKey)
+        => base.CanJoin(scopeKey) && !scopeKey.StartsWith("discovery:", StringComparison.Ordinal);
 
     /// <summary>
     /// Subscribes the connection to updates for a specific discovery operation.

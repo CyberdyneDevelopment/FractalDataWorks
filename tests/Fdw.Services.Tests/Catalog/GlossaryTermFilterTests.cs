@@ -1,76 +1,123 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Fdw.Results;
+using Fdw.Data;
+using Fdw.Data.Abstractions;
 using Fdw.Services.Catalog.Endpoints;
-using Fdw.Services.Quality;
 using Fdw.Services.Quality.Configuration;
+using Fdw.Web.RestEndpoints.Pagination;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using Shouldly;
 using Xunit;
 
 namespace Fdw.Services.Tests.Catalog;
 
-/// <summary>FDW-1682: the glossary list is narrowed by the search text, by acronym and by approved state.</summary>
+/// <summary>
+/// FDW-1682, FDW-2336: the glossary list is narrowed by the search text, by acronym, by approved state and by category, as a filter on
+/// the fields of the term's domain row, so the store does the narrowing.
+/// </summary>
 [Collection(nameof(ServicesTestCollection))]
 public class GlossaryTermFilterTests
 {
-    private static IGlossaryTermImplementationConfiguration Term(string name, string definition, string? standsFor = null, bool? approved = null)
+    private static ListSearch Search(string query = "")
     {
-        var term = new Mock<IGlossaryTermImplementationConfiguration>();
-        term.SetupGet(t => t.Name).Returns(name);
-        term.SetupGet(t => t.Definition).Returns(definition);
-        term.SetupGet(t => t.StandsFor).Returns(standsFor);
-        term.SetupGet(t => t.IsApproved).Returns(approved);
-        return term.Object;
+        var context = new DefaultHttpContext();
+        context.Request.QueryString = new QueryString(query);
+        return ListSearch.Parse(context, NullLogger.Instance).Value!;
     }
 
-    private static readonly IGlossaryTermImplementationConfiguration[] Terms =
-    [
-        Term("MTD", "Revenue so far this month", "Month to date", true),
-        Term("YTD", "Revenue so far this year", "Year to date", false),
-        Term("Churn", "Customers lost in a period"),
-    ];
-
-    private static string[] Names(string? query = null, string? acronym = null, string? approved = null) =>
-        [.. GlossaryTermFilter.Apply(Terms, query, acronym, approved, NullLogger.Instance).Value!.Select(term => term.Name)];
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    [Trait("Category", "Api")]
-    public void NoFilterListsEveryTerm()
+    private static IFilterNode? Root(string search = "", string? acronym = null, string? approved = null, IReadOnlyCollection<Guid>? categories = null)
     {
-        Names().ShouldBe(["MTD", "YTD", "Churn"]);
+        var built = GlossaryTermFilter.Build(Search(search), acronym, approved, categories, "Finance", NullLogger.Instance);
+        built.IsSuccess.ShouldBeTrue();
+        return built.Value?.Root;
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Api")]
-    public void TheAcronymFilterListsTheAcronymsOrTheTermsThatAreNot()
+    public void NoFilterNarrowsNothing()
     {
-        Names(acronym: "true").ShouldBe(["MTD", "YTD"]);
-        Names(acronym: "false").ShouldBe(["Churn"]);
+        Root().ShouldBeNull();
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Api")]
-    public void TheApprovedFilterListsOnlyAcronymsInThatState()
+    public void TheAcronymFilterIsAConditionOnWhatTheTermStandsFor()
     {
-        Names(approved: "true").ShouldBe(["MTD"]);
-        Names(approved: "false").ShouldBe(["YTD"]);
+        var acronyms = Root(acronym: "true").ShouldBeOfType<FilterCondition>();
+        var others = Root(acronym: "false").ShouldBeOfType<FilterCondition>();
+
+        acronyms.PropertyName.ShouldBe("StandsFor");
+        acronyms.Operator.Name.ShouldBe("IsNotNull");
+        others.PropertyName.ShouldBe("StandsFor");
+        others.Operator.Name.ShouldBe("IsNull");
+    }
+
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("false", false)]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void TheApprovedFilterIsAnAcronymInThatState(string approved, bool expected)
+    {
+        var group = Root(approved: approved).ShouldBeOfType<FilterGroup>();
+
+        group.Operator.Name.ShouldBe("And");
+        var conditions = group.Nodes.Cast<FilterCondition>().ToList();
+        conditions.Select(condition => (condition.PropertyName, condition.Operator.Name))
+            .ShouldBe([("StandsFor", "IsNotNull"), ("IsApproved", "Equal")]);
+        conditions[1].Value.ShouldBe(expected);
     }
 
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Api")]
-    public void TheSearchTextMatchesWhatAnAcronymStandsForIgnoringCase()
+    public void TheSearchTextIsFoundInTheNameTheDefinitionAndWhatAnAcronymStandsFor()
     {
-        Names(query: "MONTH TO").ShouldBe(["MTD"]);
-        Names(query: "customers").ShouldBe(["Churn"]);
+        var group = Root(search: "?q=month").ShouldBeOfType<FilterGroup>();
+
+        group.Operator.Name.ShouldBe("Or");
+        var conditions = group.Nodes.Cast<FilterCondition>().ToList();
+        conditions.Select(condition => condition.PropertyName).ShouldBe(["Name", "Definition", "StandsFor"]);
+        conditions.ShouldAllBe(condition => condition.Operator.Name == "Contains" && (string?)condition.Value == "month");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void TheMatchTheRequestNamesAppliesToEveryProperty()
+    {
+        var group = Root(search: "?q=mtd&match=startsWith").ShouldBeOfType<FilterGroup>();
+
+        group.Nodes.Cast<FilterCondition>().ShouldAllBe(condition => condition.Operator.Name == "StartsWith");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void ACategoryIsAConditionOnTheSetOfCategoriesUnderIt()
+    {
+        var under = new[] { Guid.NewGuid(), Guid.NewGuid() };
+
+        var condition = Root(categories: under).ShouldBeOfType<FilterCondition>();
+
+        condition.PropertyName.ShouldBe("CategoryId");
+        condition.Operator.Name.ShouldBe("In");
+        ((IEnumerable<object?>)condition.Value!).ShouldBe(under.Cast<object?>());
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void SeveralFiltersAreAnAnd()
+    {
+        var group = Root(search: "?q=month", acronym: "true", categories: [Guid.NewGuid()]).ShouldBeOfType<FilterGroup>();
+
+        group.Operator.Name.ShouldBe("And");
+        group.Nodes.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -78,9 +125,24 @@ public class GlossaryTermFilterTests
     [Trait("Category", "Api")]
     public void AFilterThatIsNotTrueOrFalseIsRefusedNotIgnored()
     {
-        var refused = GlossaryTermFilter.Apply(Terms, null, "yes", null, NullLogger.Instance);
+        var refused = GlossaryTermFilter.Build(Search(), "yes", null, null, null, NullLogger.Instance);
+        var refusedApproved = GlossaryTermFilter.Build(Search(), null, "1", null, null, NullLogger.Instance);
 
         refused.IsFailure.ShouldBeTrue();
         refused.CurrentMessage.ShouldNotBeNull();
+        refusedApproved.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Api")]
+    public void ACategoryWithMoreCategoriesUnderItThanAListCarriesIsRefusedNamingIt()
+    {
+        var tooMany = Enumerable.Range(0, GlossaryTermFilter.MaxCategories + 1).Select(_ => Guid.NewGuid()).ToList();
+
+        var refused = GlossaryTermFilter.Build(Search(), null, null, tooMany, "Finance", NullLogger.Instance);
+
+        refused.IsFailure.ShouldBeTrue();
+        refused.CurrentMessage.ShouldNotBeNull().ShouldContain("Finance");
     }
 }

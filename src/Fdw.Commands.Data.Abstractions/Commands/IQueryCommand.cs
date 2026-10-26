@@ -44,6 +44,13 @@ public interface IQueryCommand : IDataCommand
     IReadOnlyList<IJoinExpression> Joins { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the rows are read to be written over (the current rows a configuration save closes), so a
+    /// container that has nothing stored yet holds no rows. A read for any other purpose of a container with nothing stored is
+    /// refused by a kind that stores nothing until the first write, such as a file.
+    /// </summary>
+    bool ReadsForWrite { get; }
+
+    /// <summary>
     /// Gets whether a query that names no columns also returns the container's Metadata columns (who
     /// created or changed a row and when, its tenant). Off by default: a read returns the detail (FDW-988).
     /// </summary>

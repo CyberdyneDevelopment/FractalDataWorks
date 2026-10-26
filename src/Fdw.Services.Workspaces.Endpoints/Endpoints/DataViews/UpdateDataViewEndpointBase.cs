@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Security;
-using Fdw.Services.Workspaces.Charts;
 using Fdw.Services.Workspaces.Results;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -23,14 +23,17 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
     private readonly IDataSetVariationConfigurationProvider _variations;
     private readonly IDataSetConfigurationProvider _dataSets;
     private readonly IAuthenticationContextAccessor _authContext;
+    private readonly IFilterCalculations? _calculations;
 
     /// <inheritdoc />
     protected UpdateDataViewEndpointBase(
         ILogger<UpdateDataViewEndpointBase> logger,
         IDataSetVariationConfigurationProvider variations,
         IDataSetConfigurationProvider dataSets,
-        IAuthenticationContextAccessor authContext) : base(logger)
+        IAuthenticationContextAccessor authContext,
+        IFilterCalculations? calculations = null) : base(logger)
     {
+        _calculations = calculations;
         _variations = variations ?? throw new ArgumentNullException(nameof(variations));
         _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
         _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
@@ -68,7 +71,7 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
                 ResultDetails.Create("name", request.Name));
         }
 
-        var owned = DataViewStore.OwnedByCaller(_authContext, view, Logger);
+        var owned = await MayChange(view, ct).ConfigureAwait(false);
         if (owned.IsFailure) return owned.ToNewResult<DataViewResponse>();
 
         var refused = await Refusal(request, view, ct).ConfigureAwait(false);
@@ -83,6 +86,17 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
         return GenericResult<DataViewResponse>.Success(DataViewResponseMapper.ToResponse(view, existing.ParentName));
     }
 
+    /// <summary>Says whether the caller may change the view (FDW-2328).</summary>
+    /// <param name="view">The view a change is asked of.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Success when the caller may; otherwise the refusal.</returns>
+    /// <remarks>
+    /// The framework's answer is the person who saved the view. Who else may is policy, so it is a rule a developer replaces by overriding
+    /// this: the reference API also lets a holder of the right at the view's scope or above change it, through <c>IScopeAuthority</c>.
+    /// </remarks>
+    protected virtual Task<IGenericResult> MayChange(IDataViewDataSetVariationConfiguration view, CancellationToken cancellationToken)
+        => Task.FromResult(DataViewStore.OwnedByCaller(_authContext, view, Logger));
+
     /// <summary>The refusal a change that would leave the chart undrawable or the filter unresolvable is answered with, or null.</summary>
     private async Task<IGenericResult<DataViewResponse>?> Refusal(
         UpdateDataViewRequest request, IDataViewDataSetVariationConfiguration view, CancellationToken ct)
@@ -94,13 +108,13 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
             return refusals.Invalid<DataViewResponse>($"the data set {view.BaseDataSetId} this view reads no longer exists");
 
         var fields = dataSet.Fields.Where(f => f.IsCurrent && !f.IsDeleted).ToList();
-        var reason = ChartSpecificationCheck.Reason(
+        var reason = DataViewChart.Reason(
             request.ChartType is null ? view.ChartType : request.ChartType,
             request.Encoding is null ? view.Encoding : request.Encoding,
             fields);
         if (reason is not null) return refusals.Invalid<DataViewResponse>(reason);
 
-        var filter = DataViewFilter.Translate(Filters(request, view), fields, refusals);
+        var filter = await DataViewFilter.Translate(Filters(request, view), fields, refusals, _calculations, ct).ConfigureAwait(false);
         return filter.IsFailure ? filter.ToNewResult<DataViewResponse>() : null;
     }
 
@@ -116,8 +130,8 @@ public abstract class UpdateDataViewEndpointBase : CrudUpdateEndpointBase<Update
     {
         if (request.DisplayName is { } displayName) view.DisplayName = Cleared(displayName);
         if (request.Description is { } description) view.Description = Cleared(description);
-        if (request.Encoding is { } encoding) view.Encoding = encoding;
-        if (request.ChartType is { } chartType) view.ChartType = chartType;
+        if (request.Encoding is { } encoding) view.Encoding = DataViewChart.Given(encoding);
+        if (request.ChartType is { } chartType) view.ChartType = DataViewChart.Given(chartType);
         view.Filters = Filters(request, view);
     }
 }

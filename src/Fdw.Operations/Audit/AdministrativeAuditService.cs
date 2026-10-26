@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Abstractions;
+using Fdw.Claims.Abstractions;
 using Fdw.Commands.Data;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
@@ -40,6 +41,7 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
 
     private readonly IDataGatewayProvider _dataGateways;
     private readonly IAuthenticationContextAccessor _authContext;
+    private readonly IUserNames _userNames;
     private readonly ILogger _logger;
     private readonly string? _dataStoreName;
 
@@ -49,17 +51,20 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
     /// <param name="dataGateways">Resolves the data gateway when a call is made (the gateway is scoped and this service is not).</param>
     /// <param name="loggerFactory">Creates the service's logger.</param>
     /// <param name="authContext">Supplies the caller, whose identity and tenant every record carries and whose tenant scopes every read.</param>
+    /// <param name="userNames">Reads the caller's user name, which every record carries as the actor (FDW-2199).</param>
     /// <param name="dataStoreName">The name of the operational data store, or null when the host has none.</param>
     public AdministrativeAuditService(
         IDataGatewayProvider dataGateways,
         ILoggerFactory loggerFactory,
         IAuthenticationContextAccessor authContext,
+        IUserNames userNames,
         string? dataStoreName)
     {
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _logger = loggerFactory?.CreateLogger<AdministrativeAuditService>()
             ?? throw new ArgumentNullException(nameof(loggerFactory));
         _authContext = authContext ?? throw new ArgumentNullException(nameof(authContext));
+        _userNames = userNames ?? throw new ArgumentNullException(nameof(userNames));
         _dataStoreName = dataStoreName;
     }
 
@@ -85,17 +90,22 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
             return GenericResult.Failure(problem);
 
         if (_authContext.Current is not { IsAuthenticated: true } caller
-            || !Guid.TryParse(caller.UserId, out var actorUserId)
-            || string.IsNullOrWhiteSpace(caller.Username))
+            || !Guid.TryParse(caller.UserId, out var actorUserId))
             return GenericResult.Failure(AdministrativeAuditLog.ActorRequired(_logger, entry.ChangeKind));
 
         if (caller.ActiveTenantId is not { } tenantId)
             return GenericResult.Failure(AdministrativeAuditLog.TenantRequired(_logger, entry.ChangeKind));
 
+        // Why asked of the account and not read from the context: the token carries the user id, and the context's Username falls back to it when no name claim is
+        // there, which recorded an id as the actor's name (FDW-2199). A person with no account, or no name, is a failure here, not a record with a stand-in.
+        var actorName = await _userNames.Get(actorUserId, cancellationToken).ConfigureAwait(false);
+        if (!actorName.IsSuccess)
+            return (IGenericResult)actorName;
+
         var row = new AdministrativeChange
         {
             ActorUserId = actorUserId,
-            ActorName = caller.Username,
+            ActorName = actorName.Value!,
             ChangeKind = entry.ChangeKind,
             ItemKind = entry.ItemKind,
             ItemId = entry.ItemId,
@@ -104,7 +114,9 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
             OrganizationId = entry.OrganizationId,
             OldValue = entry.OldValue,
             NewValue = entry.NewValue,
-            Reason = entry.Reason
+            Reason = entry.Reason,
+            // The person is the actor above; the role is the one their session acts with, read from the same context, never stated by the caller.
+            ActingRole = caller.Claims.TryGetValue(ClaimDefinitions.actingRole.Name, out var acting) ? acting as string : null
         };
 
         var inserted = await Gateway.Execute<int>(new InsertCommand<AdministrativeChange>(row), target, cancellationToken).ConfigureAwait(false);
@@ -209,7 +221,7 @@ public sealed class AdministrativeAuditService : IAdministrativeAudit
 
     private static AdministrativeChangeRecord ToRecord(AdministrativeChange row)
         => new(row.Id, row.OccurredAt, row.ActorUserId, row.ActorName, row.ChangeKind, row.ItemKind, row.ItemId, row.Level,
-            row.TenantId, row.OrganizationId, row.OldValue, row.NewValue, row.Reason);
+            row.TenantId, row.OrganizationId, row.OldValue, row.NewValue, row.Reason, row.ActingRole);
 
     private static PagedResponse<AdministrativeChangeRecord> EmptyPage(AdministrativeChangeFilter filter)
         => new(new List<AdministrativeChangeRecord>(), filter.Page, filter.PageSize, 0);

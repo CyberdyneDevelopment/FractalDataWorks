@@ -23,6 +23,7 @@ public sealed class AdministrativeChangeRecord
     /// <param name="oldValue">The value before.</param>
     /// <param name="newValue">The value after.</param>
     /// <param name="reason">Why, when a reason was given.</param>
+    /// <param name="actingRole">The role they were acting with, or null when they made the change in their own session.</param>
     public AdministrativeChangeRecord(
         Guid id,
         DateTimeOffset occurredAt,
@@ -36,7 +37,8 @@ public sealed class AdministrativeChangeRecord
         Guid? organizationId,
         string? oldValue,
         string? newValue,
-        string? reason)
+        string? reason,
+        string? actingRole)
     {
         Id = id;
         OccurredAt = occurredAt;
@@ -51,6 +53,7 @@ public sealed class AdministrativeChangeRecord
         OldValue = oldValue;
         NewValue = newValue;
         Reason = reason;
+        ActingRole = actingRole;
     }
 
     /// <summary>Gets the record's identity.</summary>
@@ -91,4 +94,7 @@ public sealed class AdministrativeChangeRecord
 
     /// <summary>Gets why, when a reason was given.</summary>
     public string? Reason { get; }
+
+    /// <summary>Gets the role the actor was acting with when the change was made, or null when they made it in their own session.</summary>
+    public string? ActingRole { get; }
 }

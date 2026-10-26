@@ -91,6 +91,28 @@ public sealed class SessionCookieDelivery : ISessionCookieDelivery
     }
 
     /// <inheritdoc />
+    public async Task<IGenericResult> Set(HttpContext context, IssuedToken session, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (SessionOf(context.User) is not { } current)
+            return GenericResult.Failure(SessionLog.NotASessionRequest(_logger, context.Request.Path, "point the cookie of"));
+
+        var service = await Service(current.ServiceName, "(set cookie)", cancellationToken).ConfigureAwait(false);
+        if (service.IsFailure)
+            return service;
+
+        var sameSite = SessionAuthenticationType.SameSiteOf(service.Value!, _logger);
+        if (sameSite.IsFailure)
+            return sameSite;
+
+        context.Response.Cookies.Append(service.Value!.CookieName, session.AccessToken, Cookie(sameSite.Value, session.ExpiresAt));
+        SessionLog.SessionCookieSet(_logger, service.Value.CookieName, current.ServiceName, session.ExpiresAt);
+        return GenericResult.Success();
+    }
+
+    /// <inheritdoc />
     public async Task<IGenericResult> End(HttpContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);

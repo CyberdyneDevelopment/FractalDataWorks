@@ -44,10 +44,21 @@ public sealed class CalculationCompiler
     /// <param name="array">The array.</param>
     /// <param name="limits">The stated limits.</param>
     /// <returns>The compiled calculation, or the coded refusal.</returns>
-    public IGenericResult<CompiledCalculation> Compile(CalculationArrayDefinition array, CalculationLimits limits)
+    public IGenericResult<CompiledCalculation> Compile(CalculationArrayDefinition array, CalculationLimits limits) =>
+        Compile(array, limits, allowDateTimeResults: false);
+
+    /// <summary>Compiles an array, saying whether a result may be a date-time.</summary>
+    /// <param name="array">The array.</param>
+    /// <param name="limits">The stated limits.</param>
+    /// <param name="allowDateTimeResults">
+    /// True when the caller reads a date-time result back through <see cref="CompiledCalculation.EmittedKinds"/>; false for a caller
+    /// that reads every result as a number, which is then refused a tree whose result is a date-time.
+    /// </param>
+    /// <returns>The compiled calculation, or the coded refusal.</returns>
+    public IGenericResult<CompiledCalculation> Compile(CalculationArrayDefinition array, CalculationLimits limits, bool allowDateTimeResults)
     {
         CalculationCompilerLog.CompileStarted(_logger, array.Name, array.Results.Count);
-        var validation = CalculationArrayValidator.Validate(array, limits);
+        var validation = CalculationArrayValidator.Validate(array, limits, allowDateTimeResults);
         if (validation.IsFailure)
         {
             CalculationCompilerLog.CompileRefused(_logger, array.Name, validation.Code?.Name);
@@ -83,7 +94,7 @@ public sealed class CalculationCompiler
             }
         }
 
-        var compiled = new CompiledCalculation(unit.Compile(statements), emitted, names, unit.Labels);
+        var compiled = new CompiledCalculation(unit.Compile(statements), emitted, unit.EmittedKinds, names, unit.Labels);
         CalculationCompilerLog.CompileCompleted(_logger, array.Name, names.Count, emitted.Count, unit.Labels.Count);
         return compiled;
     }

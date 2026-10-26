@@ -7,7 +7,7 @@ namespace Fdw.Services.Etl.Abstractions.OptionTypes;
 public sealed class CurrentTimestampValueSourceKind : ValueSourceKindBase
 {
     /// <summary>Initializes a new instance of the <see cref="CurrentTimestampValueSourceKind"/> class.</summary>
-    public CurrentTimestampValueSourceKind() : base("CurrentTimestamp", mapsSourceColumn: false, allowedAsContainerParameter: true, requiresSourceField: false, requiresSequenceName: false, requiresSequenceOrder: false, requiresConstant: false)
+    public CurrentTimestampValueSourceKind() : base("CurrentTimestamp", mapsSourceColumn: false, requiresSourceField: false, requiresSequenceName: false, requiresSequenceOrder: false, requiresConstant: false)
     {
     }
 }

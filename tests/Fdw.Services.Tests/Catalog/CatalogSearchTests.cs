@@ -30,13 +30,12 @@ namespace Fdw.Services.Tests.Catalog;
 [Collection(nameof(ServicesTestCollection))]
 public class CatalogSearchTests
 {
-    private static IDataSetImplementationConfiguration DataSet(string name, string description, params string[] fields)
+    private static IDataSetImplementationConfiguration DataSet(string name, string description)
     {
         var set = new Mock<IDataSetImplementationConfiguration>();
         set.SetupGet(s => s.Name).Returns(name);
         set.SetupGet(s => s.Description).Returns(description);
         set.SetupGet(s => s.DisplayName).Returns((string?)null);
-        set.SetupGet(s => s.Fields).Returns(fields.Select(f => new DataSetFieldConfiguration { Name = f, Description = f + " of " + name }).ToList());
         return set.Object;
     }
 
@@ -94,35 +93,20 @@ public class CatalogSearchTests
         return provider;
     }
 
-    private static Mock<IGlossaryTermConfigurationProvider> Terms(params (string Name, string Definition)[] items)
-    {
-        var provider = new Mock<IGlossaryTermConfigurationProvider>();
-        var terms = items.Select(item =>
-        {
-            var term = new Mock<IGlossaryTermImplementationConfiguration>();
-            term.SetupGet(t => t.Name).Returns(item.Name);
-            term.SetupGet(t => t.Definition).Returns(item.Definition);
-            term.SetupGet(t => t.Owner).Returns("Finance");
-            return term.Object;
-        }).ToList();
-        provider.Setup(p => p.Get(It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<IReadOnlyList<IGlossaryTermImplementationConfiguration>>.Success(terms));
-        return provider;
-    }
-
     private static CatalogSearch Search(
         Mock<IDataSetConfigurationProvider>? dataSets = null,
         Mock<IDataStoreProvider>? stores = null,
         Mock<IPipelineConfigurationProvider>? pipelines = null,
         Mock<ICalculationConfigurationProvider>? calculations = null,
-        Mock<IGlossaryTermConfigurationProvider>? terms = null)
+        InMemoryTerms? terms = null,
+        params IRankedSearch[] fields)
         => new(
             (dataSets ?? DataSets()).Object,
             (stores ?? Stores()).Object,
             (pipelines ?? Pipelines()).Object,
             (calculations ?? Calculations()).Object,
             Transformations().Object,
-            (terms ?? Terms()).Object,
+            [.. fields, new GlossaryTermSearch((terms ?? new InMemoryTerms([])).Provider.Object, NullLogger.Instance)],
             NullLogger.Instance);
 
     private static CatalogKindSet Kinds(params string[] names) => CatalogKindSet.Of(names).Kinds!;
@@ -168,11 +152,13 @@ public class CatalogSearchTests
             dataSets: DataSets(DataSet("B", "b"), DataSet("A", "a")),
             pipelines: Pipelines(("P", "p")),
             calculations: Calculations(("C", "c")),
-            terms: Terms(("T", "a term")));
+            terms: new InMemoryTerms([InMemoryTerms.Term("T", "a term")]),
+            fields: [new FakeRankedSearch("DataSetField", 1000, FakeRankedSearch.Hit("F", 1, 0)).Under(1, "A"), new FakeRankedSearch("ContainerField")]);
 
         var found = await search.Run(Kinds(), string.Empty, 0, 50, TestContext.Current.CancellationToken);
 
-        found.Value!.Items.Select(entry => $"{entry.EntityType}:{entry.Name}").ShouldBe(["DataSet:A", "DataSet:B", "Calculation:C", "Pipeline:P", "GlossaryTerm:T"]);
+        found.Value!.Items.Select(entry => $"{entry.EntityType}:{entry.Name}").ShouldBe(
+            ["DataSet:A", "DataSet:B", "DataSetField:F", "Calculation:C", "Pipeline:P", "GlossaryTerm:T"]);
     }
 
     [Fact]
@@ -191,11 +177,11 @@ public class CatalogSearchTests
     }
 
     [Fact]
-    public async Task ADataSetFieldIsFoundByItsDescriptionAndSaysWhichDataSetItIsIn()
+    public async Task ADataSetFieldSaysWhichDataSetItIsIn()
     {
-        var dataSets = DataSets(DataSet("Orders", "Every order", "Amount", "Placed"));
+        var fields = new FakeRankedSearch("DataSetField", 1000, FakeRankedSearch.Hit("Amount", 7, 0, "Amount of Orders")).Under(7, "Orders");
 
-        var found = await Search(dataSets).Run(Kinds("DataSetField"), "amount", 0, 10, TestContext.Current.CancellationToken);
+        var found = await Search(fields: fields).Run(Kinds("DataSetField"), "amount", 0, 10, TestContext.Current.CancellationToken);
 
         var entry = found.Value!.Items.ShouldHaveSingleItem();
         entry.EntityType.ShouldBe("DataSetField");
@@ -206,15 +192,132 @@ public class CatalogSearchTests
     }
 
     [Fact]
-    public async Task FieldsAreReadOnlyWhenTheyWereAskedFor()
+    public async Task AContainerFieldIsPlacedUnderItsStorePathAndContainer()
     {
-        var dataSets = DataSets(DataSet("Orders", "Every order", "Amount"));
+        var fields = new FakeRankedSearch("ContainerField", 1000, FakeRankedSearch.Hit("Revenue", 9, 0)).Under(9, "SalesDb", "dbo", "Orders");
 
-        await Search(dataSets).Run(Kinds("DataSet"), "orders", 0, 10, TestContext.Current.CancellationToken);
-        await Search(dataSets).Run(Kinds("DataSetField"), "orders", 0, 10, TestContext.Current.CancellationToken);
+        var found = await Search(fields: fields).Run(Kinds("ContainerField"), "revenue", 0, 10, TestContext.Current.CancellationToken);
 
+        var entry = found.Value!.Items.ShouldHaveSingleItem();
+        entry.Location.ShouldBe("SalesDb / dbo / Orders");
+        entry.Parents.ShouldBe(["SalesDb", "dbo", "Orders"]);
+    }
+
+    [Fact]
+    public async Task DataSetsAreReadWithoutTheirFieldsAndAFieldSearchIsOnlyAskedWhenFieldsAreWanted()
+    {
+        var dataSets = DataSets(DataSet("Orders", "Every order"));
+        var fields = new FakeRankedSearch("DataSetField", 1000, FakeRankedSearch.Hit("Amount", 7, 0)).Under(7, "Orders");
+
+        await Search(dataSets, fields: fields).Run(Kinds("DataSet"), "orders", 0, 10, TestContext.Current.CancellationToken);
+        fields.Windows.ShouldBeEmpty();
+
+        await Search(dataSets, fields: fields).Run(Kinds("DataSetField"), "amount", 0, 10, TestContext.Current.CancellationToken);
+
+        fields.Windows.ShouldBe([10]);
         dataSets.Verify(p => p.Get(ConfigurationLevels.RecordOnly, It.IsAny<CancellationToken>()), Times.Once());
-        dataSets.Verify(p => p.Get(ConfigurationLevels.Children, It.IsAny<CancellationToken>()), Times.Once());
+        dataSets.Verify(p => p.Get(ConfigurationLevels.Children, It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Fact]
+    public async Task EachSourceIsAskedForSkipPlusTakeAndNoMore()
+    {
+        var fields = new FakeRankedSearch("DataSetField", 1000, Enumerable.Range(1, 500).Select(i => FakeRankedSearch.Hit($"field{i:000}", i, 1)).ToArray());
+        var containerFields = new FakeRankedSearch("ContainerField");
+
+        await Search(fields: [fields, containerFields]).Run(Kinds("DataSetField", "ContainerField"), "field", 40, 25, TestContext.Current.CancellationToken);
+
+        fields.Windows.ShouldBe([65]);
+        containerFields.Windows.ShouldBe([65]);
+    }
+
+    [Fact]
+    public async Task OnlyTheHitsOfThePageAreAskedWhereTheySit()
+    {
+        var hits = Enumerable.Range(1, 500).Select(i => FakeRankedSearch.Hit($"field{i:000}", i, 1)).ToArray();
+        var fields = new FakeRankedSearch("DataSetField", 1000, hits);
+        foreach (var hit in hits)
+        {
+            fields.Under(hit.Key, "Orders");
+        }
+
+        var found = await Search(fields: fields).Run(Kinds("DataSetField"), "field", 10, 5, TestContext.Current.CancellationToken);
+
+        found.Value!.Items.Select(entry => entry.Name).ShouldBe(["field011", "field012", "field013", "field014", "field015"]);
+        fields.Placed.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task MatchesOfTheKindsAreMergedByClosenessThenKindThenName()
+    {
+        var search = Search(
+            dataSets: DataSets(DataSet("Amount", "the amount"), DataSet("Totals", "the amount of it")),
+            calculations: Calculations(("AmountDue", null)),
+            terms: new InMemoryTerms([InMemoryTerms.Term("Amount", "How much")]),
+            fields: [new FakeRankedSearch("DataSetField", 1000, FakeRankedSearch.Hit("Amount", 1, 0), FakeRankedSearch.Hit("Net", 2, 3, "the amount")).Under(1, "Orders").Under(2, "Orders"), new FakeRankedSearch("ContainerField")]);
+
+        var found = await search.Run(Kinds(), "amount", 0, 10, TestContext.Current.CancellationToken);
+
+        found.Value!.Items.Select(entry => $"{entry.EntityType}:{entry.Name}").ShouldBe(
+            ["DataSet:Amount", "DataSetField:Amount", "GlossaryTerm:Amount", "Calculation:AmountDue", "DataSet:Totals", "DataSetField:Net"]);
+        found.Value.Total.ShouldBe(6);
+    }
+
+    [Fact]
+    public async Task TheTotalAddsWhatEverySourceCountsNotWhatItReturned()
+    {
+        var hits = Enumerable.Range(1, 300).Select(i => FakeRankedSearch.Hit($"field{i:000}", i, 1)).ToArray();
+        var fields = new FakeRankedSearch("DataSetField", 1000, hits);
+        foreach (var hit in hits)
+        {
+            fields.Under(hit.Key, "Orders");
+        }
+
+        var terms = new InMemoryTerms(Enumerable.Range(1, 50).Select(i => InMemoryTerms.Term($"field term {i:00}", "d")));
+        var search = Search(dataSets: DataSets(DataSet("field set", "d")), terms: terms, fields: fields);
+
+        var found = await search.Run(Kinds("DataSet", "DataSetField", "GlossaryTerm"), "field", 0, 25, TestContext.Current.CancellationToken);
+
+        found.Value!.Total.ShouldBe(1 + 300 + 50);
+        found.Value.HasMore.ShouldBeTrue();
+        found.Value.Items.Count.ShouldBe(25);
+    }
+
+    [Fact]
+    public async Task AKindWithNoSourceFailsTheSearchRatherThanLeavingTheKindOut()
+    {
+        var search = Search();
+
+        var found = await search.Run(Kinds("ContainerField"), "x", 0, 10, TestContext.Current.CancellationToken);
+
+        found.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task ASourceThatReadsLessThanThePageNeedsFailsTheSearch()
+    {
+        var narrow = new FakeRankedSearch("DataSetField", 50);
+
+        var found = await Search(fields: narrow).Run(Kinds("DataSetField"), "x", 40, 25, TestContext.Current.CancellationToken);
+
+        found.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void TwoSourcesOfOneKindOrASourceOfNoKindAreRefusedWhenTheSearchIsMade()
+    {
+        Should.Throw<ArgumentException>(() => { Search(fields: [new FakeRankedSearch("DataSetField"), new FakeRankedSearch("DataSetField")]); });
+        Should.Throw<ArgumentException>(() => { Search(fields: new FakeRankedSearch("Pipeline")); });
+    }
+
+    [Fact]
+    public async Task AFieldWhoseParentCannotBeReadIsLeftOutOfThePage()
+    {
+        var fields = new FakeRankedSearch("DataSetField", 1000, FakeRankedSearch.Hit("seen", 1, 1), FakeRankedSearch.Hit("hidden", 2, 1)).Under(1, "Orders");
+
+        var found = await Search(fields: fields).Run(Kinds("DataSetField"), string.Empty, 0, 10, TestContext.Current.CancellationToken);
+
+        found.Value!.Items.Select(entry => entry.Name).ShouldBe(["seen"]);
     }
 
     [Fact]
@@ -229,16 +332,12 @@ public class CatalogSearchTests
     }
 
     [Fact]
-    public async Task AStoreIsWalkedToItsPathsContainersAndFields()
+    public async Task AStoreIsWalkedToItsPathsAndContainers()
     {
-        var field = new Mock<Fdw.Data.Abstractions.IDataField>();
-        field.SetupGet(f => f.Name).Returns("Revenue");
-        field.SetupGet(f => f.Description).Returns("Net revenue in dollars");
         var container = new Mock<IDataContainer>();
         container.SetupGet(c => c.Name).Returns("Orders");
         container.As<IDataNode>().SetupGet(c => c.Name).Returns("Orders");
         container.As<IDataNode>().SetupGet(c => c.Description).Returns("Every order");
-        container.As<IDataNode>().SetupGet(c => c.Nodes).Returns([field.Object]);
         var path = new Mock<IDataNodePath>();
         path.SetupGet(p => p.Name).Returns("dbo");
         path.SetupGet(p => p.Description).Returns((string?)null);
@@ -249,11 +348,11 @@ public class CatalogSearchTests
         store.SetupGet(s => s.Paths).Returns([path.Object]);
 
         var found = await Search(stores: Stores(store.Object))
-            .Run(Kinds("DataStore", "DataPath", "Container", "ContainerField"), string.Empty, 0, 50, TestContext.Current.CancellationToken);
+            .Run(Kinds("DataStore", "DataPath", "Container"), string.Empty, 0, 50, TestContext.Current.CancellationToken);
 
         found.Value!.Items.Select(entry => $"{entry.EntityType}:{entry.Name}:{entry.Location}").ShouldBe(
-            ["DataStore:SalesDb:", "DataPath:dbo:SalesDb", "Container:Orders:SalesDb / dbo", "ContainerField:Revenue:SalesDb / dbo / Orders"]);
-        found.Value!.Items.Select(entry => string.Join("|", entry.Parents)).ShouldBe(["", "SalesDb", "SalesDb|dbo", "SalesDb|dbo|Orders"]);
+            ["DataStore:SalesDb:", "DataPath:dbo:SalesDb", "Container:Orders:SalesDb / dbo"]);
+        found.Value!.Items.Select(entry => string.Join("|", entry.Parents)).ShouldBe(["", "SalesDb", "SalesDb|dbo"]);
     }
 
     [Fact]
@@ -261,7 +360,7 @@ public class CatalogSearchTests
     {
         var search = Search(
             calculations: Calculations(("GrossMargin", "Revenue less cost of sales")),
-            terms: Terms(("Turnover", "Revenue over a period")));
+            terms: new InMemoryTerms([InMemoryTerms.Term("Turnover", "Revenue over a period")]));
 
         var found = await search.Run(Kinds("Calculation", "GlossaryTerm"), "revenue", 0, 10, TestContext.Current.CancellationToken);
 

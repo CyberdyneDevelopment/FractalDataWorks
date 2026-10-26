@@ -1,9 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Schema;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Web.RestEndpoints.Query;
 using Microsoft.Extensions.Logging;
 
@@ -105,6 +108,15 @@ internal sealed class DataQueryTranslator
     /// <param name="filter">The caller's own filter, before any route-added filter is merged into it.</param>
     /// <returns>Success, or <c>DataQueryInvalid</c> naming the field.</returns>
     public IGenericResult RequireFilterable(QueryFilterNode? filter) => _translator.RequireFilterable(filter);
+
+    /// <summary>Replaces the calculations a filter names with the values they yield, checked against the fields they are compared with.</summary>
+    /// <param name="filter">The whole filter, the route's scope and the caller's.</param>
+    /// <param name="calculations">Evaluates the calculations; null for a host that has none.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>The filter with literals in place of the calculations, or <c>DataQueryInvalid</c> naming the field and the calculation.</returns>
+    public Task<IGenericResult<QueryFilterNode?>> ResolveCalculations(
+        QueryFilterNode? filter, IFilterCalculations? calculations, CancellationToken cancellationToken = default)
+        => _translator.ResolveCalculations(filter, calculations, cancellationToken);
 
     /// <summary>Builds the query command, reading one row past the page so a following page can be reported.</summary>
     /// <param name="request">The request body.</param>

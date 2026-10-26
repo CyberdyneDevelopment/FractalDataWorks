@@ -1,0 +1,66 @@
+using System.Threading;
+using System.Threading.Tasks;
+using FastEndpoints;
+using Fdw.Services.Authentication.Abstractions.Security;
+using Fdw.Services.Authorization.Abstractions;
+using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Quality;
+
+namespace Fdw.Services.Catalog.Endpoints;
+
+/// <summary>
+/// Endpoint that saves the version of a glossary term held at an organization or a workspace (FDW-2331). The place must be one of the caller's tenant and
+/// the caller must hold the write right there; the tenant's version is the term itself.
+/// </summary>
+public abstract class SaveGlossaryTermVersionEndpointBase : Endpoint<SaveGlossaryTermVersionRequest, SavedGlossaryTermVersionResponse>
+{
+    private readonly GlossaryTermVersionServices _services;
+    private readonly IAuthenticationContextAccessor _authContext;
+
+    /// <summary>Initializes a new instance of the <see cref="SaveGlossaryTermVersionEndpointBase"/> class.</summary>
+    /// <param name="terms">Reads the glossary terms.</param>
+    /// <param name="versions">Reads and writes the versions of terms held at places.</param>
+    /// <param name="ancestry">Says which places are at or above a place.</param>
+    /// <param name="authority">Says whether the caller holds a right at a place.</param>
+    /// <param name="authContext">Says who is signed in and the place they act in.</param>
+    protected SaveGlossaryTermVersionEndpointBase(
+        IGlossaryTermConfigurationProvider terms,
+        IGlossaryTermVersionConfigurationProvider versions,
+        IPlaceAncestry ancestry,
+        IScopeAuthority authority,
+        IAuthenticationContextAccessor authContext)
+    {
+        _services = new GlossaryTermVersionServices(terms, versions, ancestry, authority);
+        _authContext = authContext;
+    }
+
+    /// <summary>Gets the authorization policy and scope right required for write operations.</summary>
+    protected virtual string WritePolicy => "datastores:write";
+
+    /// <summary>Configures the endpoint route, policies, and OpenAPI metadata.</summary>
+    public override void Configure()
+    {
+        Put("/catalog/glossary/{Id}/versions/{PlaceKind}/{PlaceId}");
+        Policies(WritePolicy);
+        Summary(s => s.Summary = "Save a version of a glossary term at an organization or workspace");
+    }
+
+    /// <summary>Saves the version, or answers why it cannot be saved.</summary>
+    public override async Task HandleAsync(SaveGlossaryTermVersionRequest req, CancellationToken ct)
+    {
+        if (_authContext.Current is not { IsAuthenticated: true, ActiveTenantId: { } tenantId })
+        {
+            await Send.UnauthorizedAsync(ct).ConfigureAwait(false);
+            return;
+        }
+
+        var saved = await GlossaryTermVersionWrite.Save(_services, req, tenantId, WritePolicy, Logger, ct).ConfigureAwait(false);
+        if (saved.IsFailure || saved.Value is not { } response)
+        {
+            await Send.ResultAsync(GlossaryCategoryLinks.Failure(saved, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(response, ct).ConfigureAwait(false);
+    }
+}

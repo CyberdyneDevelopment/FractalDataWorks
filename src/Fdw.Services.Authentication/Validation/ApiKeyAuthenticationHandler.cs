@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Fdw.Claims.Abstractions;
 using Fdw.Services.Authentication.Abstractions;
 using Fdw.Services.Authentication.Abstractions.Methods;
+using Fdw.Services.Authentication.Abstractions.SignIns;
 using Fdw.Services.Authentication.Logging;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
@@ -38,6 +39,7 @@ namespace Fdw.Services.Authentication.Validation;
 internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
 {
     private const string BearerPrefix = "Bearer ";
+    private const string SignInRecordedKey = "Fdw.SignInRecorded";
 
     private readonly IUserPermissions _permissions;
     private readonly IAuthenticationServiceConfigurationProvider _configuration;
@@ -151,6 +153,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
         AuthenticationValidationLog.AgentKeyAccepted(
             _log, validation.Label, validation.UserId.ToString(), acting.Value.Permissions.Count);
 
+        await RecordSignIn(validation.UserId, "agent key").ConfigureAwait(false);
         return Success(claims);
     }
 
@@ -196,6 +199,7 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
 
         AuthenticationValidationLog.PersonalAccessTokenAccepted(_log, validation.UserId.ToString(), acting.Value.Permissions.Count);
 
+        await RecordSignIn(validation.UserId, "personal access token").ConfigureAwait(false);
         return Success(claims);
     }
 
@@ -305,6 +309,33 @@ internal sealed class ApiKeyAuthenticationHandler : IAuthenticationHandler
 
         AuthenticationValidationLog.ApiKeyNotPermitted(_log, kind, userId.ToString(), permission);
         return AuthenticateResult.Fail("The owner of this credential may not use it.");
+    }
+
+    // Why a key request is a sign-in (Mike, 2026-10-25, ask 4f445b8c: "key request too"): the log of sign-ins holds every sign-in, whether
+    // a login flow issued a session or a token or a key was presented. Recorded only here, once the credential is valid, its owner's
+    // permissions are resolved and the service's requirement is met, so a refused key records nothing. Once per request: the scheme can
+    // be asked to authenticate more than once for one request, and that is one sign-in. A request already authenticated is not undone by
+    // a failure to record it, as for a login (FDW-2729); the failure is reported.
+    private async Task RecordSignIn(Guid userId, string credential)
+    {
+        if (!_context!.Items.TryAdd(SignInRecordedKey, true))
+        {
+            return;
+        }
+
+        var signIns = _context.RequestServices.GetService<ISignInLog>();
+        if (signIns is null)
+        {
+            AuthenticationValidationLog.CredentialServiceNotRegistered(_log, nameof(ISignInLog), credential);
+            return;
+        }
+
+        var serviceName = _scheme!.Name[ApiKeyAuthenticationType.SchemePrefix.Length..];
+        var recorded = await signIns.Record(userId, serviceName, credential, DateTimeOffset.UtcNow, _context.RequestAborted).ConfigureAwait(false);
+        if (recorded.IsFailure)
+        {
+            AuthenticationValidationLog.KeySignInNotRecorded(_log, credential, userId.ToString());
+        }
     }
 
     private AuthenticateResult Success(IEnumerable<Claim> claims)

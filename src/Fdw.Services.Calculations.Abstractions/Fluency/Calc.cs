@@ -8,7 +8,7 @@ namespace Fdw.Services.Calculations.Abstractions.Fluency;
 /// </summary>
 /// <remarks>
 /// A whole number or decimal literal converts to a Constant, so <c>Divide(60, Field("m"))</c> reads as written. Nothing here
-/// checks a tree: <see cref="CalculationArrayBuilder.Build"/> and the compiler do, and answer with a coded failure.
+/// checks a tree: <see cref="CalculationArrayBuilder.Build(CalculationLimits)"/> and the compiler do, and answer with a coded failure.
 /// </remarks>
 public static class Calc
 {
@@ -147,6 +147,21 @@ public static class Calc
     /// <param name="operands">The numbers.</param>
     /// <returns>The node.</returns>
     public static CalculationNode Min(params CalculationNode[] operands) => CalculationNode.Of("Min", operands);
+
+    /// <summary>The current date-time, optionally cut back to the start of a calendar period in the stated time zone.</summary>
+    /// <param name="timeZone">The IANA id of the time zone, for example America/Chicago.</param>
+    /// <param name="anchor">StartOfDay, StartOfWeek, StartOfMonth or StartOfYear; null for the moment as it is.</param>
+    /// <returns>The node.</returns>
+    public static CalculationNode Now(string timeZone, string? anchor = null) => CalculationNode.Zoned("Now", timeZone, anchor);
+
+    /// <summary>A date-time plus a signed whole amount of a unit.</summary>
+    /// <param name="time">The date-time.</param>
+    /// <param name="amount">The number of units; negative counts back.</param>
+    /// <param name="timeZone">The IANA id of the time zone the calendar units are counted in.</param>
+    /// <param name="unit">Seconds, Minutes, Hours, Days, Weeks, Months or Years.</param>
+    /// <returns>The node.</returns>
+    public static CalculationNode AddTime(CalculationNode time, CalculationNode amount, string timeZone, string unit) =>
+        CalculationNode.Zoned("AddTime", timeZone, unit, time, amount);
 
     /// <summary>The number rounded to a stated number of places in a stated midpoint mode.</summary>
     /// <param name="operand">The number.</param>

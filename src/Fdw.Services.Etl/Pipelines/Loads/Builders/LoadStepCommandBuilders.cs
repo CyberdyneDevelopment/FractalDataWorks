@@ -5,8 +5,8 @@ using Fdw.Collections.Attributes;
 namespace Fdw.Services.Etl.Pipelines.Loads.Builders;
 
 /// <summary>
-/// Builds the data commands for each <c>LoadStepKinds</c> kind: BulkInsert, BulkUpsert, InsertFromQuery, Update, Delete,
-/// Truncate and Execute (FDW-1109).
+/// Builds the data commands for each <c>LoadStepKinds</c> kind: Insert, Upsert, Update, Delete,
+/// and Truncate (FDW-1109).
 /// </summary>
 [ExcludeFromCodeCoverage]
 [TypeCollection(typeof(LoadStepCommandBuilderBase), typeof(ILoadStepCommandBuilder), typeof(LoadStepCommandBuilders))]

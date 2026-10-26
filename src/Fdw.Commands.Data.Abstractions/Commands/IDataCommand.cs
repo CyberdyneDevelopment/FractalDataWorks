@@ -41,7 +41,7 @@ public interface IDataCommand : IGenericCommand
 /// <list type="bullet">
 /// <item>InsertCommand&lt;Customer&gt; accepts Customer, returns int (identity)</item>
 /// <item>UpdateCommand&lt;Customer&gt; accepts Customer, returns int (affected rows)</item>
-/// <item>BulkInsertCommand&lt;Customer&gt; accepts IEnumerable&lt;Customer&gt;, returns BulkInsertResult</item>
+/// <item>InsertCommand&lt;Customer&gt; accepts a Customer or an IEnumerable&lt;Customer&gt;, returns the rows affected</item>
 /// </list>
 /// </para>
 /// </remarks>

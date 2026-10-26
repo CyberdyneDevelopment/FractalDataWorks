@@ -63,6 +63,17 @@ public sealed class DefaultCalculationServiceType : CalculationServiceTypeBase
 
             builder.Services.AddSingleton<ICalculationConfigurationProvider, CalculationConfigurationProvider>(sp => new CalculationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationEntity"));
 
+            builder.Services.AddSingleton<ICalculationVersionImplementationConfigurationProvider, CalculationVersionImplementationConfigurationProvider>(sp => new CalculationVersionImplementationConfigurationProvider(sp.GetRequiredService<ILogger<CalculationVersionImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationVersionConfiguration"));
+            builder.Services.TryAddSingleton<CalculationVersionConfigurationProvider>(sp =>
+            {
+                var domain = new CalculationVersionConfigurationProvider(
+                    sp.GetRequiredService<ILogger<CalculationVersionConfigurationProvider>>(),
+                    sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "CalculationVersion");
+                domain.Register("CalculationVersion", sp.GetRequiredService<ICalculationVersionImplementationConfigurationProvider>());
+                return domain;
+            });
+            builder.Services.TryAddSingleton<ICalculationVersionConfigurationProvider>(sp => sp.GetRequiredService<CalculationVersionConfigurationProvider>());
+
             builder.Services.AddSingleton<IFormulaCalculationConfigurationProvider, FormulaCalculationConfigurationProvider>(sp => new FormulaCalculationConfigurationProvider(sp.GetRequiredService<ILogger<FormulaCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "FormulaCalculationConfiguration"));
             builder.Services.AddSingleton<IWindowedCalculationConfigurationProvider, WindowedCalculationConfigurationProvider>(sp => new WindowedCalculationConfigurationProvider(sp.GetRequiredService<ILogger<WindowedCalculationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), CalculationServiceTypes.ConfigurationConnection, "calc", "WindowedCalculationConfiguration"));
             return GenericResult<IHostApplicationBuilder>.Success(builder);

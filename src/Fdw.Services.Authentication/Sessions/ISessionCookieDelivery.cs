@@ -40,6 +40,16 @@ public interface ISessionCookieDelivery
         HttpContext context, AuthenticationFlow flow, IssuedToken session, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Points the cookie at another session of the Session service that authenticated this request, without ending the current one
+    /// (acting with a role, or returning to the session below it).
+    /// </summary>
+    /// <param name="context">The request, authenticated by a session.</param>
+    /// <param name="session">The session the cookie is to name: <see cref="IssuedToken.AccessToken"/> is its id.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    /// <returns>Success, or a failure when the request was not authenticated by a session or its service is not declared.</returns>
+    Task<IGenericResult> Set(HttpContext context, IssuedToken session, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Ends the session that authenticated this request, and clears its cookie.
     /// </summary>
     /// <param name="context">The request, authenticated by a session.</param>

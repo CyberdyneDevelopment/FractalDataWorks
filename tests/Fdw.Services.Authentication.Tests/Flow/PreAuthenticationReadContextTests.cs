@@ -15,6 +15,7 @@ using Fdw.Services.Authentication.Binding;
 using Fdw.Services.Authentication.Steps;
 using Fdw.Services.ExternalIdentityProviders.Binding;
 using Fdw.Services.Users;
+using Fdw.Services.Users.Abstractions;
 using Fdw.Services.Users.Configuration;
 using Moq;
 using Shouldly;
@@ -71,21 +72,15 @@ public sealed class PreAuthenticationReadContextTests
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
         var accessor = new AuthenticationContextAccessor();
-        var memberships = new Mock<IUserTenantConfigurationProvider>();
-        memberships.Setup(p => p.Find(It.IsAny<Func<IUserTenantImplementationConfiguration, bool>>(), It.IsAny<CancellationToken>()))
-            .Returns((Func<IUserTenantImplementationConfiguration, bool> predicate, CancellationToken _) =>
+        var memberships = new Mock<IUserTenantsHeld>();
+        memberships.Setup(p => p.Get(userId, It.IsAny<CancellationToken>()))
+            .Returns((Guid _, CancellationToken _) =>
             {
                 accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();
 
                 // The login lands in the DEFAULT membership, not the first one or the home tenant.
-                IUserTenantImplementationConfiguration[] rows =
-                [
-                    new UserTenantImplementationConfiguration { UserId = userId, TenantId = Guid.NewGuid(), IsDefault = false },
-                    new UserTenantImplementationConfiguration { UserId = userId, TenantId = tenantId, IsDefault = true },
-                    new UserTenantImplementationConfiguration { UserId = Guid.NewGuid(), TenantId = Guid.NewGuid(), IsDefault = true },
-                ];
-                return Task.FromResult(GenericResult<IReadOnlyList<IUserTenantImplementationConfiguration>>.Success(
-                    rows.Where(predicate).ToArray()));
+                IReadOnlyList<HeldTenant> rows = [new HeldTenant(Guid.NewGuid(), false), new HeldTenant(tenantId, true)];
+                return Task.FromResult(GenericResult<IReadOnlyList<HeldTenant>>.Success(rows));
             });
 
         var result = await new UserTenantResolver(memberships.Object, accessor).TenantFor(userId, TestContext.Current.CancellationToken);
@@ -147,9 +142,9 @@ public sealed class PreAuthenticationReadContextTests
     {
         var previous = Mock.Of<IAuthenticationContext>();
         var accessor = new AuthenticationContextAccessor { Current = previous };
-        var memberships = new Mock<IUserTenantConfigurationProvider>();
-        memberships.Setup(p => p.Find(It.IsAny<Func<IUserTenantImplementationConfiguration, bool>>(), It.IsAny<CancellationToken>()))
-            .Returns(async (Func<IUserTenantImplementationConfiguration, bool> _, CancellationToken _) =>
+        var memberships = new Mock<IUserTenantsHeld>();
+        memberships.Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Guid _, CancellationToken _) =>
             {
                 await Task.Yield();
                 accessor.Current.ShouldNotBeNull().IsSystemContext.ShouldBeTrue();

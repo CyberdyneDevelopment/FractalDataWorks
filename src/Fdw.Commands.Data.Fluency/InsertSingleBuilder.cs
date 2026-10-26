@@ -14,6 +14,7 @@ public class InsertSingleBuilder<T>
     private readonly string _containerName;
     private string? _dataStoreName;
     private string? _pathName;
+    private string[]? _returnColumns;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InsertSingleBuilder{T}"/> class.
@@ -47,6 +48,18 @@ public class InsertSingleBuilder<T>
     }
 
     /// <summary>
+    /// Names the columns to return for each row written (a generated key, a column default). The call then answers
+    /// <c>IReadOnlyList&lt;IReadOnlyDictionary&lt;string, object?&gt;&gt;</c>, one dictionary for each row, instead of a row count.
+    /// </summary>
+    /// <param name="columns">The column names; each must be declared by the container.</param>
+    /// <returns>This builder.</returns>
+    public InsertSingleBuilder<T> Returning(params string[] columns)
+    {
+        _returnColumns = columns ?? throw new ArgumentNullException(nameof(columns));
+        return this;
+    }
+
+    /// <summary>
     /// Builds and returns a <see cref="DataGatewayCall"/> containing the insert command
     /// and its <see cref="DataStoreTarget"/> address.
     /// </summary>
@@ -60,7 +73,7 @@ public class InsertSingleBuilder<T>
             throw new InvalidOperationException("Path must be specified. Call Path() before Value().");
 
         return new DataGatewayCall(
-            new InsertCommand<T>(entity),
+            new InsertCommand<T>(entity) { ReturnColumns = _returnColumns },
             new DataStoreTarget(_dataStoreName, _pathName, _containerName));
     }
 }

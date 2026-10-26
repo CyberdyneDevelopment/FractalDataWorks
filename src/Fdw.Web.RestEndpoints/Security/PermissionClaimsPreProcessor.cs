@@ -1,11 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Authentication.Abstractions.Security;
-using Fdw.Web.RestEndpoints.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,13 +17,13 @@ namespace Fdw.Web.RestEndpoints.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// When an endpoint carries a <c>Policies("resource:action")</c> declaration, this processor:
+/// When an endpoint carries a <c>Policies("resource:action")</c> declaration (or several joined by a bar, any one of which is enough), this processor:
 /// <list type="bullet">
 ///   <item><description>Reads the required permission from the policy name.</description></item>
 ///   <item><description>
 ///     Checks the token's <c>perm</c> claims by the rule in <see cref="PermissionCoverage"/>.
 ///   </description></item>
-///   <item><description>Returns 403 if the required permission is absent.</description></item>
+///   <item><description>Returns 403 if the required permission is absent, as the problem body every refusal sends, with the request's referenceId and the permission needed.</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -45,30 +44,31 @@ public sealed class PermissionClaimsPreProcessor : IGlobalPreProcessor
         if (string.IsNullOrEmpty(policyName))
             return Task.CompletedTask;
 
-        if (!TryParsePermission(policyName, out var resource, out var action))
+        if (!TryParsePermissions(policyName, out var permissions))
             return Task.CompletedTask;
 
         var permClaims = context.HttpContext.User.FindAll("perm").ToList();
         if (permClaims.Count == 0)
             return Task.CompletedTask;
 
-        var requiredPermission = $"{resource}:{action}";
+        var requiredPermission = string.Join(PermissionPolicyName.Alternative, permissions.Select(p => $"{p.Resource}:{p.Action}"));
 
         // The same rule every other check uses, so no grant is refused here and admitted by the policy handler,
-        // or the other way round.
-        var hasPermission = PermissionCoverage.Covers(permClaims.Select(c => c.Value), requiredPermission);
+        // or the other way round. A policy that lists several permissions is met by any one of them.
+        var held = permClaims.Select(c => c.Value).ToList();
+        var hasPermission = permissions.Any(p => PermissionCoverage.Covers(held, $"{p.Resource}:{p.Action}"));
 
         if (!hasPermission)
         {
-            var userId = context.HttpContext.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
-                      ?? context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                      ?? "(unknown)";
             var logger = context.HttpContext.RequestServices.GetService(typeof(ILogger<PermissionClaimsPreProcessor>)) as ILogger
                       ?? NullLogger.Instance;
-            EndpointLogger.PermissionDeniedByPreProcessor(logger, userId, requiredPermission);
+            // Why the refusal is built in PermissionRefusal: the authorization middleware refuses a policy before this runs, and answers through the same
+            // builder (ProblemAuthorizationResultHandler), so a refusal reads the same wherever it is made: the status from the message's number
+            // (101000 is band 10, a 403), the request's referenceId, the permission needed, and a journal line carrying the same referenceId.
+            var (statusCode, problem) = PermissionRefusal.Of(context.HttpContext, logger, requiredPermission);
             // Through FastEndpoints' sender: that is what marks the response as sent, and a
             // pre-processor's sent response is what stops the handler from running at all.
-            return context.HttpContext.Response.SendForbiddenAsync(ct);
+            return context.HttpContext.Response.SendResultAsync(TypedResults.Json(problem, statusCode: statusCode));
         }
 
         return Task.CompletedTask;
@@ -87,10 +87,9 @@ public sealed class PermissionClaimsPreProcessor : IGlobalPreProcessor
         return authorizeData?.Policy;
     }
 
-    private static bool TryParsePermission(string policyName, out string resource, out string action)
+    private static bool TryParsePermissions(string policyName, out IReadOnlyList<(string Resource, string Action)> permissions)
     {
-        resource = string.Empty;
-        action = string.Empty;
+        permissions = [];
 
         if (policyName.StartsWith("epPolicy:", StringComparison.OrdinalIgnoreCase))
             return false;
@@ -101,12 +100,6 @@ public sealed class PermissionClaimsPreProcessor : IGlobalPreProcessor
         if (string.Equals(policyName, AuthConstants.PlatformAdminPolicy, StringComparison.Ordinal))
             return false;
 
-        var colonIdx = policyName.IndexOf(':', StringComparison.Ordinal);
-        if (colonIdx <= 0 || colonIdx == policyName.Length - 1)
-            return false;
-
-        resource = policyName[..colonIdx];
-        action = policyName[(colonIdx + 1)..];
-        return true;
+        return PermissionPolicyName.TryParse(policyName, out permissions);
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Fdw.Services.Calculations.Abstractions.RelativeTime;
 using Fdw.Services.Calculations.Abstractions.TreeResultCodes;
 
 namespace Fdw.Services.Calculations.Abstractions.Runtime;
@@ -20,6 +21,13 @@ public static class CalculationRuntime
     private static readonly int RequiredValueEmptyId = CalculationTreeResultCodes.ByName("RequiredValueEmpty").Id;
     private static readonly int FieldNotNumericId = CalculationTreeResultCodes.ByName("FieldNotNumeric").Id;
     private static readonly int FieldNotFlagId = CalculationTreeResultCodes.ByName("FieldNotFlag").Id;
+    private static readonly int ClockMissingId = CalculationTreeResultCodes.ByName("ClockMissing").Id;
+    private static readonly int AmountNotWholeId = CalculationTreeResultCodes.ByName("AmountNotWhole").Id;
+    private static readonly int TimeOutOfRangeId = CalculationTreeResultCodes.ByName("TimeOutOfRange").Id;
+
+    // Why a bound on an amount of time: no unit can add an amount this large and stay inside the range of a date-time, so an amount past it is
+    // refused here with a reason instead of overflowing a conversion further on.
+    private const decimal LargestAmount = 1_000_000_000_000m;
 
     private static readonly HashSet<Type> IntegerTypes = new()
     {
@@ -99,6 +107,78 @@ public static class CalculationRuntime
     /// <returns>The quotient, or zero when the divisor was zero.</returns>
     public static decimal Divide(decimal left, decimal right, CalculationRunState state, int node) =>
         right == 0m ? state.Fail(DivisionByZeroId, node) : left / right;
+
+    /// <summary>Gives the moment this evaluation reads as now; an evaluation given no clock fails with ClockMissing.</summary>
+    /// <param name="state">The run state, which holds the clock.</param>
+    /// <param name="node">The index of the Now node.</param>
+    /// <returns>The moment, or the default moment when there is no clock.</returns>
+    public static DateTimeOffset Now(CalculationRunState state, int node)
+    {
+        var moment = state.TakeMoment();
+        return moment.HasValue
+            ? moment.GetValueOrDefault()
+            : state.FailMomentWith(ClockMissingId, node, "give the evaluation a clock (CalculationRunState.Clock) before it reads the time");
+    }
+
+    /// <summary>Cuts a moment back to an anchor in a time zone.</summary>
+    /// <param name="anchor">The anchor.</param>
+    /// <param name="moment">The moment.</param>
+    /// <param name="zone">The time zone the calendar is read in.</param>
+    /// <param name="state">The run state a failure is recorded in.</param>
+    /// <param name="node">The index of the node.</param>
+    /// <returns>The anchored moment, or the default moment when the result is out of range.</returns>
+    public static DateTimeOffset Anchor(ITimeAnchor anchor, DateTimeOffset moment, TimeZoneInfo zone, CalculationRunState state, int node)
+    {
+        try
+        {
+            return anchor.Apply(moment, zone);
+        }
+        catch (Exception exception) when (exception is ArgumentOutOfRangeException or OverflowException)
+        {
+            return state.FailMomentWith(TimeOutOfRangeId, node, exception.Message);
+        }
+    }
+
+    /// <summary>Turns an amount of time into a whole number of units; a fraction, or an amount too large to add, fails with AmountNotWhole.</summary>
+    /// <param name="amount">The amount.</param>
+    /// <param name="state">The run state a failure is recorded in.</param>
+    /// <param name="node">The index of the AddTime node.</param>
+    /// <returns>The whole amount, or zero when it was refused.</returns>
+    public static long WholeAmount(decimal amount, CalculationRunState state, int node)
+    {
+        if (amount != decimal.Truncate(amount) || amount > LargestAmount || amount < -LargestAmount)
+        {
+            state.FailWith(AmountNotWholeId, node, $"the amount {amount.ToString(CultureInfo.InvariantCulture)} is not a whole number within {LargestAmount.ToString(CultureInfo.InvariantCulture)}");
+            return 0L;
+        }
+
+        return decimal.ToInt64(amount);
+    }
+
+    /// <summary>Adds a whole amount of a unit to a moment in a time zone.</summary>
+    /// <param name="unit">The unit.</param>
+    /// <param name="moment">The moment.</param>
+    /// <param name="amount">The whole amount; negative counts back.</param>
+    /// <param name="zone">The time zone the calendar units are counted in.</param>
+    /// <param name="state">The run state a failure is recorded in.</param>
+    /// <param name="node">The index of the AddTime node.</param>
+    /// <returns>The moved moment, or the default moment when the result is out of range.</returns>
+    public static DateTimeOffset AddTime(ITimeUnit unit, DateTimeOffset moment, long amount, TimeZoneInfo zone, CalculationRunState state, int node)
+    {
+        try
+        {
+            return unit.Add(moment, amount, zone);
+        }
+        catch (Exception exception) when (exception is ArgumentOutOfRangeException or OverflowException)
+        {
+            return state.FailMomentWith(TimeOutOfRangeId, node, exception.Message);
+        }
+    }
+
+    /// <summary>Carries a moment in the decimal results array as its UTC ticks, which a decimal holds exactly.</summary>
+    /// <param name="moment">The moment.</param>
+    /// <returns>The ticks.</returns>
+    public static decimal Carry(DateTimeOffset moment) => moment.UtcTicks;
 
     /// <summary>Tests equality; false when either operand is empty.</summary>
     /// <param name="left">The left operand.</param>

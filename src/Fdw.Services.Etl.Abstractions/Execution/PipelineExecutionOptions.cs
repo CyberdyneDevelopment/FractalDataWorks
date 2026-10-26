@@ -25,7 +25,7 @@ public sealed record PipelineExecutionOptions
     /// <summary>
     /// Gets whether destination writes are skipped in test mode.
     /// When true, load steps log "would write N rows" via <c>EtlLog.TestModeWriteSkipped</c>
-    /// instead of executing the <c>BulkInsertCommand</c>.
+    /// instead of executing the <c>InsertCommand</c>.
     /// </summary>
     public bool SkipDestinationWrites { get; init; } = true;
 

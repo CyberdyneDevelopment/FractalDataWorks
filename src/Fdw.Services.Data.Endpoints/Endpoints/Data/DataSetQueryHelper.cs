@@ -83,6 +83,26 @@ internal static class DataSetQueryHelper
         }
     };
 
+    /// <summary>Maps what a name resolved to: the data set's detail, under the name and id of the variation when the name is one (FDW-2390).</summary>
+    /// <param name="resolved">What the name names.</param>
+    /// <returns>The detail, marked with its kind and the name of what it varies directly.</returns>
+    internal static DataSetDetailResponse MapToDetail(ResolvedDataSet resolved)
+    {
+        var detail = MapToDetail(resolved.DataSet);
+        detail.Id = resolved.Id;
+        detail.Name = resolved.Name;
+        detail.Kind = resolved.Kind;
+        detail.ParentName = resolved.ParentName;
+        if (resolved.Variation is { } view)
+        {
+            detail.DisplayName = view.DisplayName;
+            detail.Description = view.Description;
+            detail.ClassificationId = view.ClassificationId;
+        }
+
+        return detail;
+    }
+
     internal static DataSetDetailResponse MapToDetail(IDataSetImplementationConfiguration config) => new()
     {
         Id = config.Id,

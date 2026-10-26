@@ -125,7 +125,9 @@ internal static class BuiltTransformationSupport
         }
 
         var array = new CalculationArrayDefinition(name, definitions);
-        var checkedArray = CalculationArrayValidator.Validate(array, limits);
+        // Why a date-time result is accepted here: a definition saves when the engine can run it. What a result may be is the reader's
+        // rule: a query filter reads a date-time, and a Compute stage reads numbers and refuses a date-time when the run starts.
+        var checkedArray = CalculationArrayValidator.Validate(array, limits, allowDateTimeResults: true);
         return checkedArray.IsFailure
             ? checkedArray.ToNewResult<CalculationArrayDefinition>()
             : GenericResult<CalculationArrayDefinition>.Success(array);

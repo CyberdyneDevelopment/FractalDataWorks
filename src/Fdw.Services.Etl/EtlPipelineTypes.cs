@@ -21,6 +21,7 @@ using Microsoft.Extensions.Hosting;
 using Fdw.Services.Configuration;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Etl.Commands;
+using Fdw.Services.Etl.Transforms;
 using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 
@@ -90,6 +91,11 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     {
         services.TryAddSingleton<IPipelineExecutionInspector, PipelineExecutionInspector>();
         services.TryAddSingleton<IPipelineTestController, PipelineTestController>();
+
+        // The calculations a query filter names for its values (FDW-2333). The data query endpoints take it by interface; a host
+        // that registers the pipeline types has the Transformation provider and the settings it reads.
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IFilterCalculations, BuiltFilterCalculations>();
     }
 
     /// <summary>

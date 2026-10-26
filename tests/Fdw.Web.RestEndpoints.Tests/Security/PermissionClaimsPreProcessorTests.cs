@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
@@ -103,7 +104,7 @@ public sealed class PermissionClaimsPreProcessorTests
 
     [Fact]
     [Trait("Category", "Authorization")]
-    public async Task PreProcessAsync_GlobalWildcard_DoesNotGrantAccess_Returns403()
+    public async Task PreProcessAsync_GlobalWildcard_GrantsAccess()
     {
         // Arrange: token has the *:* super-grant
         var context = BuildContext(
@@ -118,9 +119,8 @@ public sealed class PermissionClaimsPreProcessorTests
         // Act
         await sut.PreProcessAsync(context, CancellationToken.None);
 
-        // Assert — the *:* super-grant was deliberately removed; only resource:action and
-        // resource:* are accepted. OpenIddict tokens carry explicit perms; no wildcard bypass.
-        context.HttpContext.Response.StatusCode.ShouldBe(403);
+        // Assert — a held *:* covers every permission, as it does at every other check (PermissionCoverage).
+        context.HttpContext.Response.StatusCode.ShouldNotBe(403);
     }
 
     [Fact]
@@ -143,6 +143,32 @@ public sealed class PermissionClaimsPreProcessorTests
 
         // Assert — 403 because required permission not in baked perm claims
         context.HttpContext.Response.StatusCode.ShouldBe(403);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Authorization")]
+    public async Task PreProcessAsyncMissingPermClaimAnswersWithTheRequestReferenceAndThePermissionNeeded()
+    {
+        // Arrange: token has perm claims, but not the required one
+        var context = BuildContext(
+            policyName: "connections:delete",
+            userClaims:
+            [
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, "42"),
+                new Claim("perm", "users:read")
+            ]);
+        var sut = new PermissionClaimsPreProcessor();
+
+        // Act
+        await sut.PreProcessAsync(context, CancellationToken.None);
+
+        // Assert: the refusal is the problem body every refusal sends, so the caller can quote the reference and the journal line carries the same one
+        context.HttpContext.Response.StatusCode.ShouldBe(403);
+        context.HttpContext.Response.Body.Position = 0;
+        using var body = await JsonDocument.ParseAsync(context.HttpContext.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+        body.RootElement.GetProperty("referenceId").GetString().ShouldBe(context.HttpContext.TraceIdentifier);
+        body.RootElement.GetProperty("detail").GetString().ShouldContain("connections:delete");
     }
 
     [Fact]
@@ -218,6 +244,62 @@ public sealed class PermissionClaimsPreProcessorTests
             [
                 new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, "42"),
                 new Claim("perm", "users:read")
+            ]);
+
+        await new PermissionClaimsPreProcessor().PreProcessAsync(context, CancellationToken.None);
+
+        context.HttpContext.Response.StatusCode.ShouldNotBe(403);
+    }
+
+    // ── A policy that lists several permissions, any one of which is enough (FDW-2246) ──
+
+    [Theory]
+    [Trait("Category", "Authorization")]
+    [InlineData("ui-feedback:read")]
+    [InlineData("ui-feedback:write")]
+    [InlineData("ui-feedback:*")]
+    public async Task PreProcessAsync_AnyOneOfSeveralPermissionsGrantsAccess_DoesNotSet403(string held)
+    {
+        var context = BuildContext(
+            policyName: "ui-feedback:read|ui-feedback:write",
+            userClaims:
+            [
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, "42"),
+                new Claim("perm", held)
+            ]);
+
+        await new PermissionClaimsPreProcessor().PreProcessAsync(context, CancellationToken.None);
+
+        context.HttpContext.Response.StatusCode.ShouldNotBe(403);
+    }
+
+    [Fact]
+    [Trait("Category", "Authorization")]
+    public async Task PreProcessAsync_NoneOfSeveralPermissionsHeld_Returns403()
+    {
+        var context = BuildContext(
+            policyName: "ui-feedback:read|ui-feedback:write",
+            userClaims:
+            [
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, "42"),
+                new Claim("perm", "ui-feedback:resolve")
+            ]);
+
+        await new PermissionClaimsPreProcessor().PreProcessAsync(context, CancellationToken.None);
+
+        context.HttpContext.Response.StatusCode.ShouldBe(403);
+    }
+
+    [Fact]
+    [Trait("Category", "Authorization")]
+    public async Task PreProcessAsync_AMalformedListOfPermissionsIsLeftToThePolicyProvider_DoesNotSet403()
+    {
+        var context = BuildContext(
+            policyName: "ui-feedback:read|write",
+            userClaims:
+            [
+                new Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, "42"),
+                new Claim("perm", "connections:read")
             ]);
 
         await new PermissionClaimsPreProcessor().PreProcessAsync(context, CancellationToken.None);

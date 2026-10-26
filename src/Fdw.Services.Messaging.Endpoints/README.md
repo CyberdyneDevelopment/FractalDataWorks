@@ -15,7 +15,7 @@ An endpoint is an HTTP orchestrator. It does not open a gateway, and it does not
 | `CreateAccessRequestEndpointBase` | class | Abstract base class for creating an access request (POST /access-requests). |
 | `DeleteMessageEndpointBase` | class | Abstract base class for deleting a message (DELETE /messages/{Id}). Why: Messaging service has no… |
 | `DenyAccessRequestEndpointBase` | class | Abstract base class for denying an access request (PUT /access-requests/{Id}/deny). |
-| `DismissMessageEndpointBase` | class | Abstract base class for dismissing a message (PUT /messages/{Id}/dismiss). |
+| `DismissMessageEndpointBase` | class | Abstract base class for dismissing a message (POST /messages/{Id}/dismiss, the Dismiss action of its alert). |
 | `GetMessageEndpointBase` | class | Abstract base class for getting a single message by ID (GET /messages/{Id}). |
 | `GetUnreadCountEndpointBase` | class | Abstract base class for getting unread message count (GET /messages/unread-count). |
 | `ListAccessRequestsEndpointBase` | class | Abstract base class for listing access requests (GET /access-requests). Admins see all pending requests;… |
@@ -52,4 +52,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Messa
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; edit by hand, nothing regenerates it -->

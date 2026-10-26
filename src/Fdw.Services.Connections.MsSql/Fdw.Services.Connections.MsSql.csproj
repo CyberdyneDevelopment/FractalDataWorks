@@ -39,13 +39,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Fdw.Services.Connections.MsSql.Tests" />
     <!-- Why: Fdw.Data.MsSql.Tests was merged here when Data.MsSql was folded into Connections.MsSql. -->
     <InternalsVisibleTo Include="Fdw.Data.MsSql.Tests" />
     <!-- Why: the MsSql vault opens its OWN pooled connection via the internal connection-string
-         factory (CreatePooledConnection) — the shared GetOpenSqlConnection seam was removed.
-         DataVault.MsSql source was folded into Services.Credentials.Sql, so both are listed. -->
-    <InternalsVisibleTo Include="Fdw.Services.DataVault.MsSql" />
+         factory (CreatePooledConnection) — the shared GetOpenSqlConnection seam was removed. -->
     <InternalsVisibleTo Include="Fdw.Services.Credentials.Sql" />
     <!-- Why: the RLS acceptance test composes CreatePooledConnection + SetUserSessionContext (the
          production session-context path) directly, replacing the removed GetOpenSqlConnection seam. -->

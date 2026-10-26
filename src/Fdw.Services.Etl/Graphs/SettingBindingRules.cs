@@ -123,7 +123,14 @@ public static class SettingBindingRules
     public static IReadOnlyList<GraphProblem> Problems(GraphPipelineConfiguration graph)
     {
         ArgumentNullException.ThrowIfNull(graph);
-        var parameters = graph.Parameters.ToDictionary(parameter => parameter.Name, parameter => (Type: parameter.ParameterType, parameter.IsList), StringComparer.OrdinalIgnoreCase);
+        var parameters = new Dictionary<string, (string Type, bool IsList)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in graph.Parameters.Where(parameter => !string.IsNullOrWhiteSpace(parameter.Name)))
+        {
+            // Two parameters with one name are reported once, by GraphComponentValidator; here the first stands for the name so a binding is
+            // judged against something instead of this check throwing on the duplicate.
+            parameters.TryAdd(parameter.Name, (parameter.ParameterType, parameter.IsList));
+        }
+
         var problems = new List<GraphProblem>();
         foreach (var component in graph.Components)
         {

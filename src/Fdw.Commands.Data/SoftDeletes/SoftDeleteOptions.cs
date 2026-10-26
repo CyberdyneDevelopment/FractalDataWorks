@@ -2,12 +2,13 @@ namespace Fdw.Commands.Data.SoftDeletes;
 
 /// <summary>
 /// Soft-delete options: instead of removing a row, set a configured deleted-flag column (and optionally a
-/// deleted-at column). <see cref="Mode"/> picks the rows: those whose marker column equals the marker value, or
-/// those whose keys are absent from a source set.
+/// deleted-at column). <see cref="Mode"/> picks the rows: those whose marker column equals the marker value, those whose keys are
+/// absent from a source set, or those the command's own filter matches.
 /// </summary>
 /// <remarks>
-/// The flag is set to true and the deleted-at column, when named, to the database's current timestamp. Rows that are
-/// already flagged are left alone.
+/// The flag is set to <see cref="FlagValue"/> (true unless stated) and the deleted-at column, when named, to the
+/// database's current timestamp. Rows already holding that value are left alone. A flag column that marks the live
+/// version of a row (IsCurrent) is closed by setting it to false.
 /// </remarks>
 public sealed class SoftDeleteOptions
 {
@@ -28,6 +29,12 @@ public sealed class SoftDeleteOptions
     /// <summary>Gets which rows are flagged.</summary>
     public ISoftDeleteMode Mode { get; }
 
+    /// <summary>
+    /// Gets the value the flag column is set to: true for a deleted flag, false to clear a flag that marks the live
+    /// version of a row.
+    /// </summary>
+    public bool FlagValue { get; init; } = true;
+
     /// <summary>Gets the optional column that records when a row was flagged, or <see langword="null"/> for none.</summary>
     public string? DeletedAtColumn { get; init; }
 
@@ -38,7 +45,7 @@ public sealed class SoftDeleteOptions
     public AbsentKeySet? AbsentFromSource { get; init; }
 
     /// <summary>Gets a value indicating whether the options flag rows by absence from a source set.</summary>
-    public bool HasAbsentSet => ReferenceEquals(Mode, SoftDeleteModes.AbsentFromSource);
+    public bool HasAbsentSet => Mode.NeedsSourceSet;
 
     /// <summary>
     /// Describes the first thing wrong with these options, or returns <see langword="null"/> when they are
@@ -51,28 +58,6 @@ public sealed class SoftDeleteOptions
             return "a soft delete names the deleted-flag column";
         if (DeletedAtColumn is not null && string.IsNullOrWhiteSpace(DeletedAtColumn))
             return "a soft delete's deleted-at column is named or left out, not blank";
-        if (ReferenceEquals(Mode, SoftDeleteModes.MarkerMatches))
-            return MarkerProblem();
-        return HasAbsentSet ? AbsentProblem() : $"'{Mode.Name}' is not a soft-delete mode";
-    }
-
-    private string? MarkerProblem()
-    {
-        if (AbsentFromSource is not null)
-            return "a marker-matches soft delete takes no source set";
-        return Marker is null || string.IsNullOrWhiteSpace(Marker.Column) || Marker.Value is null
-            ? "a marker-matches soft delete names a marker column and a marker value"
-            : null;
-    }
-
-    private string? AbsentProblem()
-    {
-        if (Marker is not null)
-            return "an absent-from-source soft delete takes no marker";
-        if (AbsentFromSource is null)
-            return "an absent-from-source soft delete names the source set";
-        return AbsentFromSource.KeyColumns.Count == 0
-            ? "the absent-key set names at least one key column"
-            : null;
+        return Mode.Problem(this);
     }
 }

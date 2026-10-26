@@ -31,7 +31,7 @@ public sealed class StageToolComponentTypeTests
     {
         foreach (var name in Tools)
         {
-            var tool = ComponentTypes.ByName(name).ShouldBeOfType<StageToolComponentTypeBase>(name);
+            var tool = ComponentTypes.ByName(name).ShouldBeAssignableTo<StageToolComponentTypeBase>(name);
             var stage = TransformTypes.ByName(name).ShouldBeAssignableTo<TransformTypeBase>(name);
 
             tool.StageKind.ShouldBe(name);
@@ -48,7 +48,7 @@ public sealed class StageToolComponentTypeTests
     [Trait("Category", "CoreFramework")]
     public void TheComputeToolDeclaresAnOptionalBatchSizeForATransformationThatWorksOnWholeTables()
     {
-        var compute = ComponentTypes.ByName("Compute").ShouldBeOfType<StageToolComponentTypeBase>();
+        var compute = ComponentTypes.ByName("Compute").ShouldBeAssignableTo<StageToolComponentTypeBase>();
 
         compute.MemberNames.ShouldContain("compute");
         compute.Settings.Single(setting => setting.Name == "batchSize").IsRequired.ShouldBeFalse();

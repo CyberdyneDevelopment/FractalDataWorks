@@ -7,8 +7,8 @@ using Fdw.Services.Data.Abstractions;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
-/// <summary>Lists the data stores, their paths, containers and container fields as catalog entries (FDW-1681).</summary>
-/// <remarks>The data store provider answers each store as one tree, so a single read serves all four kinds.</remarks>
+/// <summary>Lists the data stores, their paths and their containers as catalog entries (FDW-1681). Container fields are a ranked source of their own (FDW-2312).</summary>
+/// <remarks>The data store provider answers each store as one tree, so a single read serves all three kinds.</remarks>
 internal static class DataStoreEntries
 {
     /// <summary>Walks every data store and lists the nodes of the kinds asked for.</summary>
@@ -34,21 +34,12 @@ internal static class DataStoreEntries
                 Add(entries, kinds, CatalogKinds.DataPath, path, [store.Name]);
                 foreach (var container in path.Containers)
                 {
-                    AddContainer(entries, kinds, container, [store.Name, path.Name]);
+                    Add(entries, kinds, CatalogKinds.Container, container, [store.Name, path.Name]);
                 }
             }
         }
 
         return GenericResult<List<CatalogEntryDto>>.Success(entries);
-    }
-
-    private static void AddContainer(List<CatalogEntryDto> entries, CatalogKindSet kinds, IDataContainer container, string[] parents)
-    {
-        Add(entries, kinds, CatalogKinds.Container, container, parents);
-        foreach (var field in container.Nodes)
-        {
-            Add(entries, kinds, CatalogKinds.ContainerField, field, [.. parents, container.Name]);
-        }
     }
 
     // Why both: the parents are for a screen that opens the entity, the location is the same names as one line for a person to read.

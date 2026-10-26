@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections;
 using Fdw.Collections.Attributes;
@@ -38,7 +39,7 @@ namespace Fdw.Commands.Data;
 /// </remarks>
 [ExcludeFromCodeCoverage]
 [TypeOption(typeof(DataCommands), "Update", RestrictToCurrentCompilation = true)]
-public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableCommand, ISoftDeletableCommand
+public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableCommand, ISoftDeletableCommand, IReturningCommand
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateCommand{T}"/> class.
@@ -61,4 +62,7 @@ public sealed class UpdateCommand<T> : DataCommandBase<int, T>, IFilterableComma
     /// configured flag column, and optionally a deleted-at column) in the same statement.
     /// </summary>
     public SoftDeleteOptions? SoftDelete { get; init; }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string>? ReturnColumns { get; init; }
 }

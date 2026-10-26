@@ -15,14 +15,11 @@ namespace Fdw.Services.Authorization.Tests;
 /// cascade.
 /// </summary>
 /// <remarks>
-/// The provider no longer owns this comparison. <c>GetByUser</c> was a specialized verb and is gone;
-/// a caller now states its own predicate through <c>Find</c>. So the guarantee these tests exist for
-/// has MOVED to the call sites, and it only holds if each of them compares with
-/// <see cref="StringComparison.OrdinalIgnoreCase"/> -- a predicate written as <c>ur.UserId == userId</c>
-/// is an Ordinal compare and reintroduces FDW-532 exactly. That is what these tests now pin: the
-/// predicate a caller must write, exercised against the REAL provider over a faked store.
-/// Since FDW-991 the production callers no longer each write it: they take
-/// <see cref="UserRoleAssignments.HeldBy"/>, which <c>UserRoleAssignmentsTests</c> pins.
+/// The provider does not own this comparison: a caller of <c>Find</c> states its own predicate, and it only holds if the
+/// comparison is not an Ordinal text compare -- a predicate written as <c>ur.UserId == userId</c> reintroduces FDW-532 exactly.
+/// These tests pin the predicate such a caller must write, exercised against the REAL provider over a faked store. The production
+/// reads of a person's roles ask the database for that person's rows and compare them as Guids (<c>UserRolesHeld</c>,
+/// <c>UserPermissionGrants</c>).
 /// </remarks>
 public class UserRoleConfigurationProviderGetByUserTests
 {

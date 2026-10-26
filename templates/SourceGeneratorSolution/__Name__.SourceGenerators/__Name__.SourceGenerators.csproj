@@ -35,16 +35,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Shared generator helpers (optional - comment out if not using Fdw) -->
-    <!-- If packaging these, use PackageReference instead: -->
-    <!--
-    <PackageReference Include="Fdw.SourceGenerators" />
-    <PackageReference Include="Fdw.CodeBuilder.CSharp" />
-    -->
-    <!-- For local development with Fdw: -->
+    <!-- Shared generator helpers. Inside an FDW source tree (src\ two folders up) they are referenced as projects; anywhere else they
+         come from the published packages. Each condition is the opposite of the other, so a project gets each helper once. The
+         packages' version is FdwVersion in Directory.Packages.props. -->
     <ProjectReference Include="..\..\src\Fdw.SourceGenerators\Fdw.SourceGenerators.csproj" Condition="Exists('..\..\src\Fdw.SourceGenerators\Fdw.SourceGenerators.csproj')" />
     <ProjectReference Include="..\..\src\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj" Condition="Exists('..\..\src\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj')" />
     <ProjectReference Include="..\..\src\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj" Condition="Exists('..\..\src\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj')" />
+    <PackageReference Include="Fdw.SourceGenerators" Condition="!Exists('..\..\src\Fdw.SourceGenerators\Fdw.SourceGenerators.csproj')" />
+    <PackageReference Include="Fdw.CodeBuilder.Abstractions" Condition="!Exists('..\..\src\Fdw.CodeBuilder.Abstractions\Fdw.CodeBuilder.Abstractions.csproj')" />
+    <PackageReference Include="Fdw.CodeBuilder.CSharp" Condition="!Exists('..\..\src\Fdw.CodeBuilder.CSharp\Fdw.CodeBuilder.CSharp.csproj')" />
 
     <!-- Reference Runtime for attribute discovery -->
 <!--#if (CreateRuntime) -->
@@ -85,16 +84,14 @@
       OutputFile="$(AnalyzerDll)"
       InputAssemblies="@(MergeAssemblies)"
       Internalize="true"
-      InternalizeExcludePattern="^System\.Index$|^System\.Range$"
+      InternalizeExclude="^System\.Index$|^System\.Range$"
       LogFile="$(OutputPath)\ILRepack.log"
-      WorkingDirectory="$(OutputPath)" />
+      LibraryPath="$(OutputPath)" />
 
     <Message Importance="high" Text="ILRepack: Successfully merged source generator dependencies" />
   </Target>
 
-  <!-- Empty ILRepack.targets to disable default behavior -->
-  <Import Project="ILRepack.targets" Condition="Exists('ILRepack.targets')" />
-
+  <!-- ILRepack.Lib.MSBuild.Task imports ILRepack.targets from this folder itself (a second Import here is MSB4011); the file is empty to turn off its default merge. -->
 </Project>
 
 <!--#if (!EmbedGenerator) -->

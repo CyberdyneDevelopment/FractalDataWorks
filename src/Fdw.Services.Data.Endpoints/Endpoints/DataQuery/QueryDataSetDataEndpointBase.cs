@@ -5,6 +5,7 @@ using Fdw.Data.DataSets.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Data.Results;
+using Fdw.Web.RestEndpoints.Query;
 using Fdw.Web.Http.Abstractions.EndPoints;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
@@ -17,8 +18,10 @@ namespace Fdw.Services.Data.Endpoints;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The data set as it is, unspecialized: the <c>datasets:read</c> permission lets a caller ask, and
-/// the data store's row-level security under the caller's session decides which rows they get. A
+/// The data set as it is: the <c>datasets:read</c> permission lets a caller ask, and
+/// the data store's row-level security under the caller's session decides which rows they get. When the
+/// name is a view of a data set, the rows are the data set's, kept to the rows the stored filter of the view
+/// and of every view above it keeps (FDW-2391). A
 /// workspace is a layer over the same data set that answers a different view of it
 /// (<c>POST /{WorkspaceName}/{DataSetName}</c>); both share the query in
 /// <see cref="DataQueryEndpointBase{TRequest, TResponse}"/> (FDW-975).
@@ -29,19 +32,21 @@ namespace Fdw.Services.Data.Endpoints;
 /// </remarks>
 public abstract class QueryDataSetDataEndpointBase : DataQueryEndpointBase<DataQueryRequest, DataQueryResponse>
 {
-    private readonly IDataSetConfigurationProvider _dataSets;
+    private readonly IDataSetResolver _resolver;
 
     /// <summary>Initializes a new instance of the <see cref="QueryDataSetDataEndpointBase"/> class.</summary>
     /// <param name="logger">The logger.</param>
-    /// <param name="dataSets">Resolves the data set and its fields.</param>
+    /// <param name="resolver">Resolves the name to a data set, or to a view of one and the stored filters of its chain.</param>
     /// <param name="dataGateways">Supplies the gateway the query is dispatched through.</param>
+    /// <param name="calculations">Evaluates the calculations a filter names for its values; null when the host has none.</param>
     protected QueryDataSetDataEndpointBase(
         ILogger<QueryDataSetDataEndpointBase> logger,
-        IDataSetConfigurationProvider dataSets,
-        IDataGatewayProvider dataGateways)
-        : base(logger ?? NullLogger<QueryDataSetDataEndpointBase>.Instance, dataGateways)
+        IDataSetResolver resolver,
+        IDataGatewayProvider dataGateways,
+        IFilterCalculations? calculations = null)
+        : base(logger ?? NullLogger<QueryDataSetDataEndpointBase>.Instance, dataGateways, calculations)
     {
-        _dataSets = dataSets ?? throw new ArgumentNullException(nameof(dataSets));
+        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
     }
 
     /// <inheritdoc />
@@ -69,13 +74,30 @@ public abstract class QueryDataSetDataEndpointBase : DataQueryEndpointBase<DataQ
     protected override async Task<IGenericResult<IDataSetImplementationConfiguration>> ResolveDataSet(
         DataQueryRequest req, CancellationToken ct)
     {
-        var dataSet = await _dataSets.Get(req.DataSetName, ct).ConfigureAwait(false);
-        if (dataSet.IsFailure) return dataSet;
+        // The name may be a data set or a view of one; a view reads the rows of the data set it varies (FDW-2391).
+        var resolved = await _resolver.Resolve(req.DataSetName, ct).ConfigureAwait(false);
+        if (resolved.IsFailure) return resolved.ToNewResult<IDataSetImplementationConfiguration>();
 
-        return dataSet.Value is null
-            ? GenericResult<IDataSetImplementationConfiguration>.Failure(
-                DataServiceResultCodes.ByName("DataSetNotFound"), Logger,
-                ResultDetails.Create("DataSetName", req.DataSetName))
-            : dataSet;
+        return resolved.Value is { } named
+            ? GenericResult<IDataSetImplementationConfiguration>.Success(named.DataSet)
+            : NotFound<IDataSetImplementationConfiguration>(req.DataSetName);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// When the name is a view, the stored filter of every view in its chain, parent first, ANDed with the caller's own. A data set
+    /// has none. The name was resolved a moment ago for this same request, so this repeats what the first found, from the providers' cache.
+    /// </remarks>
+    protected override async Task<IGenericResult<QueryFilterNode?>> ScopeFilter(DataQueryRequest req, CancellationToken ct)
+    {
+        var resolved = await _resolver.Resolve(req.DataSetName, ct).ConfigureAwait(false);
+        if (resolved.IsFailure) return resolved.ToNewResult<QueryFilterNode?>();
+
+        return resolved.Value is { } named
+            ? StoredViewFilters.Of(named.ViewFilters, named.Name, Logger)
+            : NotFound<QueryFilterNode?>(req.DataSetName);
+    }
+
+    private IGenericResult<T> NotFound<T>(string dataSetName)
+        => GenericResult<T>.Failure(DataServiceResultCodes.ByName("DataSetNotFound"), Logger, ResultDetails.Create("DataSetName", dataSetName));
 }

@@ -17,7 +17,7 @@ public sealed class InvalidDataTypeCode : SqliteDataResultCodeBase
     public InvalidDataTypeCode()
         : base(21008, "InvalidDataType",
             ResultSeverities.ByName("Error"),
-            "Command data is not an IEnumerable — use an InsertCommand with a collection for BatchInsert",
+            "Insert command data is not an IEnumerable of rows",
             isRetryable: false)
     {
     }

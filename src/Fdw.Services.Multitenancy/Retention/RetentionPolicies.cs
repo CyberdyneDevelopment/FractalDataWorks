@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Extensions;
 using Fdw.Results;
+using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Multitenancy.Abstractions;
 using Fdw.Services.Multitenancy.Logging;
@@ -19,27 +20,41 @@ namespace Fdw.Services.Multitenancy;
 /// Reads and writes the retention policies of organizations, over the table named by <see cref="RetentionTables"/> (FDW-1575).
 /// </summary>
 /// <remarks>
-/// An organization has at most one policy per document type; setting the policy of a type that has one changes it in place.
+/// An organization has at most one policy per document type; setting the policy of a type that has one changes it in place. Every method
+/// first asks whether the caller holds the right for the organization (<see cref="RetentionScope"/>): reading needs <c>retention:read</c>,
+/// changing needs <c>retention:write</c>.
 /// </remarks>
 public sealed class RetentionPolicies : IRetentionPolicies
 {
     private readonly RetentionStore _store;
+    private readonly RetentionScope _scope;
     private readonly ILogger<RetentionPolicies> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RetentionPolicies"/> class.</summary>
     /// <param name="gateways">Supplies the configuration gateway of the tables.</param>
     /// <param name="tables">Names the store, path and tables retention is kept in.</param>
+    /// <param name="organizations">Reads an organization, which names its tenant.</param>
+    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
     /// <param name="logger">The logger.</param>
-    public RetentionPolicies(IConfigurationGatewayProvider gateways, RetentionTables tables, ILogger<RetentionPolicies>? logger)
+    public RetentionPolicies(
+        IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationProvider organizations, IScopeAuthority authority,
+        ILogger<RetentionPolicies>? logger)
     {
         _logger = logger ?? NullLogger<RetentionPolicies>.Instance;
         _store = new RetentionStore(gateways, tables, _logger);
+        _scope = new RetentionScope(organizations, authority, _logger);
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult<IReadOnlyList<RetentionPolicy>>> List(Guid tenantId, Guid organizationId, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult<IReadOnlyList<RetentionPolicy>>> List(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(RetentionScope.PolicyReadRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<IReadOnlyList<RetentionPolicy>>();
+        }
+
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         return rows.IsFailure || rows.Value is not { } found
             ? rows.ToNewResult<IReadOnlyList<RetentionPolicy>>()
             : GenericResult<IReadOnlyList<RetentionPolicy>>.Success([.. found.Select(Policy)]);
@@ -47,11 +62,17 @@ public sealed class RetentionPolicies : IRetentionPolicies
 
     /// <inheritdoc />
     public async Task<IGenericResult<RetentionPolicy>> Set(
-        Guid tenantId, Guid organizationId, NewRetentionPolicy policy, CancellationToken cancellationToken = default)
+        Guid organizationId, NewRetentionPolicy policy, CancellationToken cancellationToken = default)
     {
         if (policy is null)
         {
             throw new ArgumentNullException(nameof(policy));
+        }
+
+        var tenant = await _scope.TenantOf(RetentionScope.PolicyWriteRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant.ToNewResult<RetentionPolicy>();
         }
 
         if (Refusal(policy) is { } refusal)
@@ -59,7 +80,7 @@ public sealed class RetentionPolicies : IRetentionPolicies
             return GenericResult<RetentionPolicy>.Failure(RetentionLog.PolicyInvalid(_logger, refusal));
         }
 
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure || rows.Value is not { } found)
         {
             return rows.ToNewResult<RetentionPolicy>();
@@ -73,7 +94,7 @@ public sealed class RetentionPolicies : IRetentionPolicies
         }
 
         var id = existing is null ? Guid.CreateVersion7() : existing.Id;
-        var written = await Save(resolved, tenantId, organizationId, id, existing is null, policy, cancellationToken).ConfigureAwait(false);
+        var written = await Save(resolved, tenant.Value, organizationId, id, existing is null, policy, cancellationToken).ConfigureAwait(false);
         if (written.IsFailure)
         {
             return GenericResult<RetentionPolicy>.Failure(RetentionLog.WriteFailed(_logger, What(policy.DocumentType, organizationId), written.CurrentMessage));
@@ -85,9 +106,15 @@ public sealed class RetentionPolicies : IRetentionPolicies
     }
 
     /// <inheritdoc />
-    public async Task<IGenericResult> Remove(Guid tenantId, Guid organizationId, string documentType, CancellationToken cancellationToken = default)
+    public async Task<IGenericResult> Remove(Guid organizationId, string documentType, CancellationToken cancellationToken = default)
     {
-        var rows = await Rows(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(RetentionScope.PolicyWriteRight, organizationId, cancellationToken).ConfigureAwait(false);
+        if (tenant.IsFailure)
+        {
+            return tenant;
+        }
+
+        var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
         if (rows.IsFailure || rows.Value is not { } found)
         {
             return rows;
