@@ -15,13 +15,11 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `PostgreSqlDataResultCodes` | class | TypeCollection for PostgreSQL Data command translator result codes. EventId range: 5500-5599 (within… |
 | `PostgreSqlNativeTypes` | class | TypeCollection of all PostgreSQL native data types, each mapping to an abstract for portable DataSet… |
 
-## Options (74 declared)
+## Options (69 declared)
 
 | Type | Kind | Purpose |
 |---|---|---|
-| `BatchInsertTranslationFailedCode` | class | Batch insert translation failed with exception. |
 | `BoolType` | class | PostgreSQL native type bool — maps to abstract type . |
-| `BulkInsertTranslationFailedCode` | class | Bulk insert (COPY) translation failed with exception. |
 | `ByteaType` | class | PostgreSQL native type bytea — maps to abstract type . |
 | `CharType` | class | PostgreSQL native type char — maps to abstract type . |
 | `CompoundQueryTranslationFailedCode` | class | Compound query translation failed with exception. |
@@ -37,6 +35,8 @@ A module initializer collects every `[TypeOption]` in every referenced assembly 
 | `Int8Type` | class | PostgreSQL native type int8 — maps to abstract type . |
 | `InvalidContainerPathCode` | class | Container path is not a PostgreSQL database path. |
 | `InvalidDataTypeCode` | class | Input data is not the expected type. |
+| `JsonType` | class | PostgreSQL native type json. |
+| `JsonbType` | class | PostgreSQL native type jsonb. |
 
 ## Installation
 
@@ -54,4 +54,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- tables checked against source at adf451066 on 2026-10-25 -->

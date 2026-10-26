@@ -78,7 +78,7 @@ dotnet add package Fdw.Collections
 # Data access
 dotnet add package Fdw.Services.Data.Abstractions
 dotnet add package Fdw.Commands.Data
-dotnet add package Fdw.Commands.Data.Extensions
+dotnet add package Fdw.Commands.Data.Fluency
 
 # Service infrastructure
 dotnet add package Fdw.Services.Abstractions

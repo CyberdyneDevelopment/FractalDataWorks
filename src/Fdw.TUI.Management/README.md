@@ -41,7 +41,7 @@ dotnet add package Fdw.TUI.Management --prerelease
 
 ## Dependencies
 
-`Fdw.Collections` · `Fdw.Configuration.Abstractions` · `Fdw.Services.Authorization.Clients` · `Fdw.Services.Connections.Clients` · `Fdw.Services.Data.Clients` · `Fdw.Services.Etl.Projects.Clients` · `Fdw.Services.Multitenancy.Clients` · `Fdw.Services.Notifications.Clients` · `Fdw.Services.Pipelines.Clients` · `Fdw.Services.Quality.Clients` · `Fdw.Services.Registration` · `Fdw.Services.Scheduling.Clients` · `Fdw.Services.SecretManagers.Clients` · `Fdw.Services.Settings.Clients` · `Fdw.Services.Users.Clients` · `Fdw.UI.Components` · `Fdw.UI.Rendering.Spectre` · `Fdw.UI.Themes` · `Fdw.Web.Clients` · `Fdw.Web.Http.Authentication`
+`Fdw.Collections` · `Fdw.Configuration.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Messages` · `Fdw.Results` · `Fdw.Services.Authorization.Clients` · `Fdw.Services.Connections.Clients` · `Fdw.Services.Data.Clients` · `Fdw.Services.Etl.Projects.Clients` · `Fdw.Services.Multitenancy.Clients` · `Fdw.Services.Notifications.Clients` · `Fdw.Services.Pipelines.Clients` · `Fdw.Services.Quality.Clients` · `Fdw.Services.Registration` · `Fdw.Services.Scheduling.Clients` · `Fdw.Services.SecretManagers.Clients` · `Fdw.Services.Settings.Clients` · `Fdw.Services.Users.Clients` · `Fdw.UI.Components` · `Fdw.UI.Rendering.Spectre` · `Fdw.UI.Themes` · `Fdw.Web.Clients` · `Fdw.Web.Http.Authentication`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators` · `Fdw.Registration.SourceGenerators` · `Fdw.Services.Registration.SourceGenerators`
 
@@ -49,4 +49,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->

@@ -29,12 +29,12 @@ dotnet add package Fdw.Services.Data --prerelease
 
 ## Dependencies
 
-`Fdw.Abstractions` · `Fdw.Aegis.Configuration` · `Fdw.Collections` · `Fdw.Commands.Data` · `Fdw.Commands.Data.Abstractions` · `Fdw.Configuration` · `Fdw.Data.Abstractions` · `Fdw.Data.DataNodes` · `Fdw.Data.DataSets` · `Fdw.Data.DataSets.Abstractions` · `Fdw.Data.Files` · `Fdw.Data.JsonSchema` · `Fdw.MessageLogging.Abstractions` · `Fdw.Results` · `Fdw.Results.Abstractions` · `Fdw.Services` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.Connections` · `Fdw.Services.Connections.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.SecretManagers`
+`Fdw.Abstractions` · `Fdw.Aegis.Configuration` · `Fdw.Collections` · `Fdw.Commands.Data` · `Fdw.Commands.Data.Abstractions` · `Fdw.Configuration` · `Fdw.Data.Abstractions` · `Fdw.Data.DataNodes` · `Fdw.Data.DataSets` · `Fdw.Data.DataSets.Abstractions` · `Fdw.Data.Files` · `Fdw.Data.JsonSchema` · `Fdw.Hosting.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Results` · `Fdw.Results.Abstractions` · `Fdw.Services` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.Connections` · `Fdw.Services.Connections.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.SecretManagers` · `Fdw.Services.Workspaces.Abstractions`
 
-Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
+Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Configuration.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 
 ---
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->

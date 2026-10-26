@@ -40,7 +40,7 @@ dotnet add package Fdw.Services.Etl --prerelease
 
 ## Dependencies
 
-`Fdw.Commands.Data` · `Fdw.Commands.Data.Extensions` · `Fdw.Configuration` · `Fdw.Data` · `Fdw.Data.Abstractions` · `Fdw.Operations.Abstractions` · `Fdw.Services` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.Connections.Abstractions` · `Fdw.Services.Connections.Http.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Etl.Abstractions` · `Fdw.Services.Pipelines` · `Fdw.Validation`
+`Fdw.Commands.Data` · `Fdw.Commands.Data.Fluency` · `Fdw.Configuration` · `Fdw.Data` · `Fdw.Data.Abstractions` · `Fdw.Data.DataSets` · `Fdw.Operations.Abstractions` · `Fdw.Services` · `Fdw.Services.Abstractions` · `Fdw.Services.Authentication.Abstractions` · `Fdw.Services.Authorization.Abstractions` · `Fdw.Services.Calculations` · `Fdw.Services.Connections` · `Fdw.Services.Connections.Abstractions` · `Fdw.Services.Connections.Http.Abstractions` · `Fdw.Services.Data.Abstractions` · `Fdw.Services.Etl.Abstractions` · `Fdw.Services.EtlGateway` · `Fdw.Services.Notifications.Abstractions` · `Fdw.Services.Pipelines` · `Fdw.Services.Settings` · `Fdw.Validation`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.Configuration.SourceGenerators` · `Fdw.Data.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 
@@ -48,4 +48,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->

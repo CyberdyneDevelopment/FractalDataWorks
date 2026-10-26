@@ -268,13 +268,13 @@ public static class DdlGenerator
             sb.AppendLine("                    },");
             hasIndexes = true;
 
-            // Filtered unique index on Name WHERE IsCurrent=1
+            // Filtered unique index on Name WHERE IsCurrent=1 AND IsDeleted=0: a deleted row stays current, and its name is free to reuse
             sb.AppendLine("                    new IndexDefinition");
             sb.AppendLine("                    {");
             sb.AppendLine($"                        Name = \"UX_{tableName}_Name_Current\",");
             sb.AppendLine("                        Columns = new[] { \"Name\" },");
             sb.AppendLine("                        IsUnique = true,");
-            sb.AppendLine("                        FilterPredicate = \"IsCurrent = 1\"");
+            sb.AppendLine("                        FilterPredicate = \"IsCurrent = 1 AND IsDeleted = 0\"");
             sb.AppendLine("                    },");
 
             // Regular index on Id for all versions

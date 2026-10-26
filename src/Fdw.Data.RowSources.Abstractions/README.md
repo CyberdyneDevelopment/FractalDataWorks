@@ -64,7 +64,7 @@ dotnet add package Fdw.Data.RowSources.Abstractions --prerelease
 
 ## Dependencies
 
-`Fdw.Abstractions` · `Fdw.Collections` · `Fdw.Data.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Results` · `Fdw.Results.Abstractions`
+`Fdw.Abstractions` · `Fdw.Collections` · `Fdw.Data.Abstractions` · `Fdw.Data.DataContainers.Abstractions` · `Fdw.MessageLogging.Abstractions` · `Fdw.Results` · `Fdw.Results.Abstractions`
 
 Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Collections.SourceGenerators` · `Fdw.MessageLogging.SourceGenerators`
 
@@ -72,4 +72,4 @@ Build-time only (generators and analyzers, not runtime dependencies): `Fdw.Colle
 
 Part of **[FractalDataWorks](https://github.com/CyberdyneDevelopment/FractalDataWorks)** `1.0.0-rc.1`. Licensed under Apache-2.0.
 
-<!-- generated from source at 4d75c3fab on 2026-08-04; regenerate rather than hand-edit -->
+<!-- generated from source at 4d75c3fab on 2026-08-04 by a script that is not kept; Dependencies checked against the csproj on 2026-10-25 -->
