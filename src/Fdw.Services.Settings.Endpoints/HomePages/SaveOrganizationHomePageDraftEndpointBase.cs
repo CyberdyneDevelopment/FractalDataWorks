@@ -14,18 +14,16 @@ public abstract class SaveOrganizationHomePageDraftEndpointBase : Endpoint<SaveO
 {
     private readonly IHomePages _pages;
     private readonly IOrganizationScope _organizations;
-    private readonly IScopeAuthority _authority;
     private readonly IAdministrativeAudit _audit;
 
     /// <summary>Gets the logger instance.</summary>
     protected ILogger EndpointLogger { get; }
 
     /// <summary>Initializes a new instance of the <see cref="SaveOrganizationHomePageDraftEndpointBase"/> class.</summary>
-    protected SaveOrganizationHomePageDraftEndpointBase(IHomePages pages, IOrganizationScope organizations, IScopeAuthority authority, IAdministrativeAudit audit, ILogger logger)
+    protected SaveOrganizationHomePageDraftEndpointBase(IHomePages pages, IOrganizationScope organizations, IAdministrativeAudit audit, ILogger logger)
     {
         _pages = pages;
         _organizations = organizations;
-        _authority = authority;
         _audit = audit;
         EndpointLogger = logger;
     }
@@ -43,7 +41,7 @@ public abstract class SaveOrganizationHomePageDraftEndpointBase : Endpoint<SaveO
     /// <inheritdoc />
     public override async Task HandleAsync(SaveOrganizationHomePageDraftRequest req, CancellationToken ct)
     {
-        var scope = await OrganizationHomePageAccess.Check(_organizations, _authority, req.OrganizationId, OrganizationHomePageAccess.Write, ct).ConfigureAwait(false);
+        var scope = await OrganizationHomePageAccess.Check(_organizations, req.OrganizationId, OrganizationHomePageAccess.Write, ct).ConfigureAwait(false);
         if (scope.IsFailure || scope.Value is not { } held)
         {
             await Send.ResultAsync(InheritedSettingProblem.Of(scope, HttpContext)).ConfigureAwait(false);

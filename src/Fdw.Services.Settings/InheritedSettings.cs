@@ -33,7 +33,7 @@ public sealed class InheritedSettings : IInheritedSettings
     /// <param name="server">Reads and writes the platform's settings.</param>
     /// <param name="tenants">Reads and writes the tenants' values.</param>
     /// <param name="organizations">Reads and writes the organizations' values.</param>
-    /// <param name="scope">Finds an organization's tenant, for the caller acting in the organization.</param>
+    /// <param name="scope">Finds an organization's tenant, and checks the caller's right at the organization's scope.</param>
     /// <param name="logger">The logger.</param>
     public InheritedSettings(
         IServerSettingConfigurationProvider server,
@@ -60,7 +60,7 @@ public sealed class InheritedSettings : IInheritedSettings
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<EffectiveSetting>>> List(SettingScope scope, CancellationToken cancellationToken = default)
     {
-        var loaded = await Load(scope, cancellationToken).ConfigureAwait(false);
+        var loaded = await Load(scope, OrganizationRights.Read, cancellationToken).ConfigureAwait(false);
         return loaded.IsFailure || loaded.Value is not { } layers
             ? loaded.ToNewResult<IReadOnlyList<EffectiveSetting>>()
             : GenericResult<IReadOnlyList<EffectiveSetting>>.Success(
@@ -70,7 +70,7 @@ public sealed class InheritedSettings : IInheritedSettings
     /// <inheritdoc />
     public async Task<IGenericResult<EffectiveSetting>> Get(SettingScope scope, string settingName, CancellationToken cancellationToken = default)
     {
-        var loaded = await Load(scope, cancellationToken).ConfigureAwait(false);
+        var loaded = await Load(scope, OrganizationRights.Read, cancellationToken).ConfigureAwait(false);
         return loaded.IsFailure || loaded.Value is not { } layers
             ? loaded.ToNewResult<EffectiveSetting>()
             : ViewOf(layers, settingName);
@@ -80,7 +80,7 @@ public sealed class InheritedSettings : IInheritedSettings
     public async Task<IGenericResult<EffectiveSetting>> Set(
         SettingScope scope, string settingName, string value, bool locked, CancellationToken cancellationToken = default)
     {
-        var loaded = await Load(scope, cancellationToken).ConfigureAwait(false);
+        var loaded = await Load(scope, OrganizationRights.Write, cancellationToken).ConfigureAwait(false);
         if (loaded.IsFailure || loaded.Value is not { } layers)
         {
             return loaded.ToNewResult<EffectiveSetting>();
@@ -105,7 +105,7 @@ public sealed class InheritedSettings : IInheritedSettings
     /// <inheritdoc />
     public async Task<IGenericResult<EffectiveSetting>> Lift(SettingScope scope, string settingName, CancellationToken cancellationToken = default)
     {
-        var loaded = await Load(scope, cancellationToken).ConfigureAwait(false);
+        var loaded = await Load(scope, OrganizationRights.Write, cancellationToken).ConfigureAwait(false);
         if (loaded.IsFailure || loaded.Value is not { } layers)
         {
             return loaded.ToNewResult<EffectiveSetting>();
@@ -198,12 +198,12 @@ public sealed class InheritedSettings : IInheritedSettings
             : null;
     }
 
-    private async Task<IGenericResult<Layers>> Load(SettingScope scope, CancellationToken cancellationToken)
+    private async Task<IGenericResult<Layers>> Load(SettingScope scope, string organizationRight, CancellationToken cancellationToken)
     {
         var tenantId = scope.TenantId;
         if (scope.OrganizationId is { } organizationId)
         {
-            var found = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+            var found = await _scope.TenantOf(organizationRight, organizationId, cancellationToken).ConfigureAwait(false);
             if (found.IsFailure)
             {
                 return found.ToNewResult<Layers>();

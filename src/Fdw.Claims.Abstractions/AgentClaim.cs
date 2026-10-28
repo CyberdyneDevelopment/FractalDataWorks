@@ -16,5 +16,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class AgentClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="AgentClaim"/> class.</summary>
-    public AgentClaim() : base(name: "agent", isArray: false, TokenDestinations.AccessToken) { }
+    public AgentClaim() : base(name: "agent", isArray: false, isSessionBound: true, TokenDestinations.AccessToken) { }
 }

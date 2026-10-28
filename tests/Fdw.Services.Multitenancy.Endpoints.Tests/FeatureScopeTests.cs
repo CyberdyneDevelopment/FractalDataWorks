@@ -13,9 +13,9 @@ using Xunit;
 namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 
 /// <summary>
-/// Tests that the feature service decides who may act for features inside the service (FDW-2474, FDW-2478): each organization call asks the
-/// scope authority for its right at the organization's own scope and each company call at the company's, before it touches the store; an
-/// organization the store does not hold is refused in the forbidden category; and a refused caller reads and writes nothing.
+/// Tests that the feature service decides who may act for features inside the service (FDW-2474, FDW-2478, FDW-2887): each organization call
+/// asks the organization scope for its right and each company call asks the scope authority at the company's scope, before it touches the
+/// store; and a refused caller reads and writes nothing. What makes the organization scope refuse is OrganizationScopeTests' question.
 /// </summary>
 [Trait("Category", "Security")]
 public sealed class FeatureScopeTests
@@ -29,15 +29,17 @@ public sealed class FeatureScopeTests
     {
         internal Mock<IConfigurationGatewayProvider> Gateways { get; } = new();
 
+        internal Mock<IOrganizationScope> Scope { get; } = RetentionTestScope.Scope(allows);
+
         internal Mock<IScopeAuthority> Authority { get; } = RetentionTestScope.Authority(allows);
 
         internal FeatureEnablement Service => new(
-            Gateways.Object, Tables, RetentionTestScope.Organizations().Object, Authority.Object, NullLogger<FeatureEnablement>.Instance);
+            Gateways.Object, Tables, Scope.Object, Authority.Object, NullLogger<FeatureEnablement>.Instance);
 
         internal void NothingRead() => Gateways.Verify(g => g.Get(It.IsAny<string>()), Times.Never);
 
         internal void Asked(string right, int times = 1)
-            => Authority.Verify(a => a.May(right, new ThingScope(Tenant, Finance), It.IsAny<CancellationToken>()), Times.Exactly(times));
+            => Scope.Verify(s => s.TenantOf(right, Finance, It.IsAny<CancellationToken>()), Times.Exactly(times));
     }
 
     [Fact]
@@ -63,23 +65,6 @@ public sealed class FeatureScopeTests
 
         set.IsFailure.ShouldBeTrue();
         rig.Asked("organizations:write");
-        rig.NothingRead();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    public async Task AnOrganizationTheStoreDoesNotHoldIsRefusedInTheForbiddenCategoryWithoutAskingTheAuthority()
-    {
-        var rig = new Rig(true);
-
-        var listed = await rig.Service.ForOrganization(Unknown, TestContext.Current.CancellationToken);
-        var set = await rig.Service.SetForOrganization(Unknown, "Documents", true, TestContext.Current.CancellationToken);
-
-        listed.IsFailure.ShouldBeTrue();
-        set.IsFailure.ShouldBeTrue();
-        FailureCategory.Of(listed).ShouldBe(ResultCategories.ByName("Forbidden"));
-        FailureCategory.Of(set).ShouldBe(ResultCategories.ByName("Forbidden"));
-        rig.Authority.Verify(a => a.May(It.IsAny<string>(), It.IsAny<ThingScope>(), It.IsAny<CancellationToken>()), Times.Never);
         rig.NothingRead();
     }
 

@@ -36,6 +36,11 @@ public sealed class NullTenantProvider : ITenantProvider
             GenericResult<IEnumerable<ITenant>>.Failure(TenantTypesLog.TenantLookupUnavailable(NullLogger.Instance)));
 
     /// <inheritdoc />
+    public Task<IGenericResult<IEnumerable<ITenant>>> GetDeletedTenants(CancellationToken ct = default)
+        => Task.FromResult<IGenericResult<IEnumerable<ITenant>>>(
+            GenericResult<IEnumerable<ITenant>>.Failure(TenantTypesLog.TenantLookupUnavailable(NullLogger.Instance)));
+
+    /// <inheritdoc />
     public Task<IGenericResult<bool>> ValidateTenantAccess(
         Guid tenantId,
         string userId,

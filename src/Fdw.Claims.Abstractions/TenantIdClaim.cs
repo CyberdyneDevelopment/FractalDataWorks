@@ -8,5 +8,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class TenantIdClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="TenantIdClaim"/> class.</summary>
-    public TenantIdClaim() : base(name: "tenantId", isArray: false, TokenDestinations.AccessToken) { }
+    public TenantIdClaim() : base(name: "tenantId", isArray: false, isSessionBound: false, TokenDestinations.AccessToken) { }
 }

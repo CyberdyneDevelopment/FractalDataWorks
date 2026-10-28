@@ -14,5 +14,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class AgentKeyIdClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="AgentKeyIdClaim"/> class.</summary>
-    public AgentKeyIdClaim() : base(name: "agentKeyId", isArray: false, TokenDestinations.AccessToken) { }
+    public AgentKeyIdClaim() : base(name: "agentKeyId", isArray: false, isSessionBound: true, TokenDestinations.AccessToken) { }
 }

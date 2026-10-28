@@ -2,28 +2,22 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.UI.Themes;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.UI.Themes.Endpoints;
 
 /// <summary>
-/// Base endpoint to delete a UI theme. Delegates deletion to <see cref="ThemeConfigurationProvider"/>.
-/// Subclasses may override <see cref="CanDelete"/> to add validation (e.g., reject deletion of the
-/// default theme or built-in themes).
+/// Base endpoint to delete a UI theme. Delegates deletion to <see cref="ThemeConfigurationProvider.Remove"/>,
+/// which refuses the default theme and a built-in theme.
 /// </summary>
 public abstract class DeleteThemeEndpointBase : Endpoint<DeleteThemeRequest>
 {
     private readonly ThemeConfigurationProvider _provider;
-    private readonly ILogger _logger;
 
     /// <inheritdoc />
-    protected DeleteThemeEndpointBase(
-        ThemeConfigurationProvider provider,
-        ILogger<DeleteThemeEndpointBase>? logger = null)
+    protected DeleteThemeEndpointBase(ThemeConfigurationProvider provider)
     {
         _provider = provider;
-        _logger = logger ?? NullLogger<DeleteThemeEndpointBase>.Instance;
     }
 
     /// <summary>Gets the resource name used for routing and policies.</summary>
@@ -48,34 +42,16 @@ public abstract class DeleteThemeEndpointBase : Endpoint<DeleteThemeRequest>
         });
     }
 
-    /// <summary>Deletes the theme via the provider; 204 on success, 404 if missing, 400 if disallowed.</summary>
+    /// <summary>Deletes the theme via the provider; 204 on success, otherwise the status of the refusal (404 missing, 409 default or built in).</summary>
     public override async Task HandleAsync(DeleteThemeRequest req, CancellationToken ct)
     {
-        if (!CanDelete(req.Name, out var reason))
+        var removed = await _provider.Remove(req.Name, ct).ConfigureAwait(false);
+        if (removed.IsFailure)
         {
-            if (string.Equals(reason, "not-found", System.StringComparison.Ordinal))
-            {
-                await Send.NotFoundAsync(ct).ConfigureAwait(false);
-                return;
-            }
-            ThrowError(reason ?? "Cannot delete this theme", 400);
-            return;
-        }
-
-        var result = await _provider.Delete(req.Name, ct).ConfigureAwait(false);
-        if (!result.IsSuccess)
-        {
-            ThrowError($"Theme delete failed: {string.Join("; ", result.Messages)}", 500);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(removed, HttpContext)).ConfigureAwait(false);
             return;
         }
 
         await Send.NoContentAsync(ct).ConfigureAwait(false);
-    }
-
-    /// <summary>Validation hook for subclasses (e.g., block deletion of built-in themes).</summary>
-    protected virtual bool CanDelete(string name, out string? reason)
-    {
-        reason = null;
-        return true;
     }
 }

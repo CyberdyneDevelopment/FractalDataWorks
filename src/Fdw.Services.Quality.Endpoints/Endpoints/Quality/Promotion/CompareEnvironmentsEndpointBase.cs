@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -59,8 +60,7 @@ public abstract class CompareEnvironmentsEndpointBase : Endpoint<CompareEnvironm
             if (!result.IsSuccess)
             {
                 PromotionEndpointLog.CompareEnvironmentsFailed(_logger, req.SourceEnvironment, req.TargetEnvironment, result.CurrentMessage!);
-                AddError("Failed to compare environments");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

@@ -58,4 +58,9 @@ public sealed class ThemeSummaryPayload
     /// Gets or sets a value indicating whether this is the default theme.
     /// </summary>
     public bool IsDefault { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this is a built-in theme, which cannot be removed.
+    /// </summary>
+    public bool IsBuiltIn { get; set; }
 }

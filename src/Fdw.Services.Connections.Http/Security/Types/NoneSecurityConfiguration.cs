@@ -35,6 +35,9 @@ public sealed class NoneSecurityConfiguration : HttpAuthenticationConfiguration
     /// <remarks>Carries no stored credential.</remarks>
     public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [];
 
+    /// <inheritdoc />
+    public override HttpSecretNames SecretNames => HttpSecretNames.None;
+
     /// <inheritdoc/>
     /// <remarks>No security presents no identity at all; the request is anonymous.</remarks>
     public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;

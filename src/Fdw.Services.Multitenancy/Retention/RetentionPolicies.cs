@@ -27,22 +27,24 @@ namespace Fdw.Services.Multitenancy;
 public sealed class RetentionPolicies : IRetentionPolicies
 {
     private readonly RetentionStore _store;
-    private readonly RetentionScope _scope;
+    private readonly IOrganizationScope _scope;
+    private readonly IRetainedDocuments _documents;
     private readonly ILogger<RetentionPolicies> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RetentionPolicies"/> class.</summary>
     /// <param name="gateways">Supplies the configuration gateway of the tables.</param>
     /// <param name="tables">Names the store, path and tables retention is kept in.</param>
-    /// <param name="organizations">Reads an organization, which names its tenant.</param>
-    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
+    /// <param name="organizations">Says whether the caller holds a right for an organization, and which tenant it is in.</param>
+    /// <param name="documents">The application's documents, which say which start fields and end actions a policy may name.</param>
     /// <param name="logger">The logger.</param>
     public RetentionPolicies(
-        IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationProvider organizations, IScopeAuthority authority,
-        ILogger<RetentionPolicies>? logger)
+        IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationScope organizations,
+        IRetainedDocuments documents, ILogger<RetentionPolicies>? logger)
     {
+        _documents = documents ?? throw new ArgumentNullException(nameof(documents));
         _logger = logger ?? NullLogger<RetentionPolicies>.Instance;
         _store = new RetentionStore(gateways, tables, _logger);
-        _scope = new RetentionScope(organizations, authority, _logger);
+        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
     }
 
     /// <inheritdoc />
@@ -75,9 +77,9 @@ public sealed class RetentionPolicies : IRetentionPolicies
             return tenant.ToNewResult<RetentionPolicy>();
         }
 
-        if (Refusal(policy) is { } refusal)
+        if (await Refused(tenant.Value, organizationId, policy, cancellationToken).ConfigureAwait(false) is { } refused)
         {
-            return GenericResult<RetentionPolicy>.Failure(RetentionLog.PolicyInvalid(_logger, refusal));
+            return refused;
         }
 
         var rows = await Rows(tenant.Value, organizationId, cancellationToken).ConfigureAwait(false);
@@ -180,6 +182,43 @@ public sealed class RetentionPolicies : IRetentionPolicies
 
         return PeriodRefusal(policy);
     }
+
+    // The failure that says why a policy cannot be kept, or null when it can: it is stated badly, or it names a start field or end action the
+    // application does not offer (or the application cannot say what it offers).
+    private async Task<IGenericResult<RetentionPolicy>?> Refused(
+        Guid tenantId, Guid organizationId, NewRetentionPolicy policy, CancellationToken cancellationToken)
+    {
+        if (Refusal(policy) is { } refusal)
+        {
+            return GenericResult<RetentionPolicy>.Failure(RetentionLog.PolicyInvalid(_logger, refusal));
+        }
+
+        var offered = await _documents.Offers(tenantId, organizationId, cancellationToken).ConfigureAwait(false);
+        if (offered.IsFailure || offered.Value is not { } offer)
+        {
+            return offered.ToNewResult<RetentionPolicy>();
+        }
+
+        return NotOffered(policy, offer) is { } notOffered
+            ? GenericResult<RetentionPolicy>.Failure(RetentionLog.PolicyInvalid(_logger, notOffered))
+            : null;
+    }
+
+    // Why a policy names something the application does not offer, or null when it names only what is offered. A value the application
+    // does not know is found here instead of when retention runs (a wrong end action) or never (a wrong start field leaves every document undated).
+    private static string? NotOffered(NewRetentionPolicy policy, RetentionOffer offer)
+    {
+        if (!offer.StartFields.Contains(policy.StartField, StringComparer.OrdinalIgnoreCase))
+        {
+            return $"The start field '{policy.StartField}' is not offered; the choices are {Listed(offer.StartFields)}";
+        }
+
+        return offer.EndActions.Contains(policy.EndAction, StringComparer.OrdinalIgnoreCase)
+            ? null
+            : $"The end action '{policy.EndAction}' is not offered; the choices are {Listed(offer.EndActions)}";
+    }
+
+    private static string Listed(IReadOnlyList<string> offered) => string.Join(", ", offered.Select(value => $"'{value}'"));
 
     private static string? PeriodRefusal(NewRetentionPolicy policy)
     {

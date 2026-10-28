@@ -8,5 +8,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class PermClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="PermClaim"/> class.</summary>
-    public PermClaim() : base(name: "perm", isArray: false, TokenDestinations.AccessToken) { }
+    public PermClaim() : base(name: "perm", isArray: false, isSessionBound: false, TokenDestinations.AccessToken) { }
 }

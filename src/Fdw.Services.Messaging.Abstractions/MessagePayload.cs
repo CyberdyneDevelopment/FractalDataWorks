@@ -9,6 +9,12 @@ namespace Fdw.Services.Messaging;
 [GenerateMapper]
 public sealed class MessagePayload
 {
+    private DateTime? _deliveredAt;
+    private DateTime? _readAt;
+    private DateTime? _dismissedAt;
+    private DateTime? _archivedAt;
+    private DateTime _createdAt;
+
     /// <summary>Gets or sets the message identifier.</summary>
     public Guid Id { get; set; }
 
@@ -52,19 +58,39 @@ public sealed class MessagePayload
     public string Status { get; set; } = string.Empty;
 
     /// <summary>Gets or sets when the message was delivered.</summary>
-    public DateTime? DeliveredAt { get; set; }
+    public DateTime? DeliveredAt
+    {
+        get => _deliveredAt;
+        set => _deliveredAt = AsUtc(value);
+    }
 
     /// <summary>Gets or sets when the message was read.</summary>
-    public DateTime? ReadAt { get; set; }
+    public DateTime? ReadAt
+    {
+        get => _readAt;
+        set => _readAt = AsUtc(value);
+    }
 
     /// <summary>Gets or sets when the message was dismissed.</summary>
-    public DateTime? DismissedAt { get; set; }
+    public DateTime? DismissedAt
+    {
+        get => _dismissedAt;
+        set => _dismissedAt = AsUtc(value);
+    }
 
     /// <summary>Gets or sets when the message was archived.</summary>
-    public DateTime? ArchivedAt { get; set; }
+    public DateTime? ArchivedAt
+    {
+        get => _archivedAt;
+        set => _archivedAt = AsUtc(value);
+    }
 
     /// <summary>Gets or sets when the message was created.</summary>
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedAt
+    {
+        get => _createdAt;
+        set => _createdAt = AsUtc(value);
+    }
 
     /// <summary>
     /// Gets a value indicating whether an agent sent this message rather than a person.
@@ -79,4 +105,16 @@ public sealed class MessagePayload
     /// Get-only on purpose: it is not a column, and the mappers only bind settable properties.
     /// </remarks>
     public bool IsAgent => string.Equals(MessageType, "AgentMessage", System.StringComparison.Ordinal);
+
+    private static DateTime? AsUtc(DateTime? value) => value is { } time ? AsUtc(time) : null;
+
+    // Why: every message time is written as UTC (DateTime.UtcNow) into a datetime2 column, which a reader returns with no Kind; a time with no Kind
+    // is serialised with no zone and a browser reads it as the viewer's local time. The Kind is restored here, where every path that fills the
+    // payload passes, so no reader has to remember it. A time that does carry a Kind is converted, never reinterpreted.
+    private static DateTime AsUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => value,
+    };
 }

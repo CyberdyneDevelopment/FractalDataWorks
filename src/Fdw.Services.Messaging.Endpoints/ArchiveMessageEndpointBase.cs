@@ -66,8 +66,7 @@ public abstract class ArchiveMessageEndpointBase : Endpoint<MessageIdRequest>
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.ArchiveFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
-                AddError("Failed to archive message");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(MessagingFailures.Of(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

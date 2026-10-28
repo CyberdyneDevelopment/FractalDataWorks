@@ -41,6 +41,7 @@ public static class ThemeConfigurationMapper
             BorderRadius = managed.BorderRadius,
             IsDarkMode = managed.IsDarkMode,
             IsDefault = managed.IsDefault,
+            IsBuiltIn = managed.IsBuiltIn,
             LogoUrl = managed.LogoUrl,
             AppName = managed.AppName,
             FaviconUrl = managed.FaviconUrl,
@@ -81,6 +82,7 @@ public static class ThemeConfigurationMapper
             BorderRadius = dto.BorderRadius,
             IsDarkMode = dto.IsDarkMode,
             IsDefault = dto.IsDefault,
+            IsBuiltIn = dto.IsBuiltIn,
             LogoUrl = dto.LogoUrl,
             AppName = dto.AppName,
             FaviconUrl = dto.FaviconUrl
@@ -103,7 +105,8 @@ public static class ThemeConfigurationMapper
             SecondaryColor = managed.SecondaryColor,
             BackgroundColor = managed.BackgroundColor,
             IsDarkMode = managed.IsDarkMode,
-            IsDefault = managed.IsDefault
+            IsDefault = managed.IsDefault,
+            IsBuiltIn = managed.IsBuiltIn
         };
     }
 }

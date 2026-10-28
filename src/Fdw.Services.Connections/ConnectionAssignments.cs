@@ -52,7 +52,7 @@ public sealed class ConnectionAssignments : IConnectionAssignments
     public async Task<IGenericResult<ConnectionAssignmentView>> Assign(
         Guid organizationId, string purpose, Guid grantId, string? baseFolder, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Write, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<ConnectionAssignmentView>();
@@ -103,7 +103,7 @@ public sealed class ConnectionAssignments : IConnectionAssignments
     /// <inheritdoc />
     public async Task<IGenericResult<ConnectionAssignmentView>> Unassign(Guid organizationId, string purpose, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Write, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<ConnectionAssignmentView>();
@@ -130,7 +130,7 @@ public sealed class ConnectionAssignments : IConnectionAssignments
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<ConnectionAssignmentView>>> List(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Read, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<IReadOnlyList<ConnectionAssignmentView>>();

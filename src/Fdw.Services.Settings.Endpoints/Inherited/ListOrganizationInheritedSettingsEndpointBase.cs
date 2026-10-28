@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Settings.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing the settings as they stand for an organization (FDW-1579). The caller must act in the organization.
+/// Generic base endpoint for listing the settings as they stand for an organization (FDW-1579). The caller must hold the right at the organization's scope.
 /// </summary>
 public abstract class ListOrganizationInheritedSettingsEndpointBase : Endpoint<OrganizationInheritedSettingsRequest, InheritedSettingsResponse>
 {

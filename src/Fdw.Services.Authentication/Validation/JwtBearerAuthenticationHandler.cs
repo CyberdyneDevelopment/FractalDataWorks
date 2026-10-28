@@ -58,6 +58,9 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
     // token is checked against; this handler is transient, one per resolution, like _scheme.
     private IReadOnlyList<string> _declaredRoles = [];
 
+    // The platform claims the entry accepts from this issuer's tokens (FDW-2933), read at the same time and for the same reason.
+    private IReadOnlyList<string> _acceptedClaims = [];
+
     /// <summary>Initializes a new instance of the <see cref="JwtBearerAuthenticationHandler"/> class.</summary>
     /// <param name="configuration">Reads the declared service and dispatches to its implementation.</param>
     /// <param name="roleGrants">Expands the declared roles to the permissions they grant.</param>
@@ -121,15 +124,15 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
     /// <summary>Removes the platform's authority claims the foreign token carried, and reports it when it carried any.</summary>
     /// <param name="identity">The identity the validated foreign token produced.</param>
     /// <remarks>
-    /// Nothing the foreign token says about authority here is kept: its platform claims are removed before the entry's declared roles are
-    /// conferred, so only what this platform states reaches the principal (FDW-2363).
+    /// The platform claims the foreign token carries are removed before the entry's declared roles are conferred, except those the entry
+    /// accepts from this issuer: that choice is the deployer's, stated on the entry (FDW-2363, FDW-2933).
     /// </remarks>
     private void RemoveForeignPlatformClaims(ClaimsIdentity identity)
     {
-        var removed = ForeignClaims.WithoutPlatformClaims(identity);
+        var removed = ForeignClaims.WithoutPlatformClaims(identity, _acceptedClaims);
         if (removed.Count > 0)
             AuthenticationValidationLog.ForeignPlatformClaimsRemoved(
-                _log, ServiceName, identity.FindFirst(ClaimDefinitions.sub.Name)?.Value ?? "(no sub)", string.Join(", ", removed));
+                _log, ServiceName, identity.FindFirst(ClaimDefinitions.sub.Name)?.Value, string.Join(", ", removed));
     }
 
     /// <summary>Builds what this scheme checks a token against, from the entry it was taken for.</summary>
@@ -166,27 +169,9 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
                 AuthenticationValidationLog.JwtBearerEntryUnreadable(_log, ServiceName));
         }
 
-        // Checked rather than assumed present. The column is nullable and the generated mapper turns
-        // DBNull into string.Empty, so an unset audience arrives as "" and a null test would let it
-        // through - and ValidateAudience with ValidAudience "" rejects every token for a reason the
-        // log never names. Worse here than for LocalKey: without an audience the roles below would be
-        // conferred on every token this issuer mints, for any client.
-        if (string.IsNullOrWhiteSpace(body.Audience))
-        {
-            return GenericResult<TokenValidationParameters>.Failure(
-                AuthenticationValidationLog.JwtBearerMissingAudience(_log, ServiceName));
-        }
-
-        if (string.IsNullOrWhiteSpace(body.Roles))
-        {
-            return GenericResult<TokenValidationParameters>.Failure(
-                AuthenticationValidationLog.JwtBearerMissingRoles(_log, ServiceName));
-        }
-
-        // Split where it is read, so the delimited column is one column's shape rather than a
-        // convention every consumer has to know.
-        _declaredRoles = body.Roles
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var declared = ReadDeclarations(body);
+        if (declared.IsFailure)
+            return declared.ToNewResult<TokenValidationParameters>();
 
         var keys = await Keys(issuer.Value, cancellationToken).ConfigureAwait(false);
         if (!keys.IsSuccess || keys.Value is null)
@@ -216,6 +201,33 @@ internal sealed class JwtBearerAuthenticationHandler : IAuthenticationHandler
             // algorithm can choose one this key trivially satisfies.
             ValidAlgorithms = [SecurityAlgorithms.RsaSha256],
         });
+    }
+
+    /// <summary>Reads what the entry declares about the caller its tokens stand for, refusing an entry that leaves any of it out.</summary>
+    /// <param name="body">The entry's implementation row.</param>
+    private IGenericResult ReadDeclarations(IJwtBearerAuthenticationConfiguration body)
+    {
+        // Checked rather than assumed present. The column is nullable and the generated mapper turns
+        // DBNull into string.Empty, so an unset audience arrives as "" and a null test would let it
+        // through - and ValidateAudience with ValidAudience "" rejects every token for a reason the
+        // log never names. Worse here than for LocalKey: without an audience the roles below would be
+        // conferred on every token this issuer mints, for any client.
+        if (string.IsNullOrWhiteSpace(body.Audience))
+            return GenericResult.Failure(AuthenticationValidationLog.JwtBearerMissingAudience(_log, ServiceName));
+
+        if (string.IsNullOrWhiteSpace(body.Roles))
+            return GenericResult.Failure(AuthenticationValidationLog.JwtBearerMissingRoles(_log, ServiceName));
+
+        var accepted = AcceptedClaims.Read(body.AcceptedClaims, ServiceName, _log);
+        if (accepted.IsFailure || accepted.Value is null)
+            return accepted;
+
+        // Split where it is read, so the delimited column is one column's shape rather than a
+        // convention every consumer has to know.
+        _declaredRoles = body.Roles
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        _acceptedClaims = accepted.Value;
+        return GenericResult.Success();
     }
 
     /// <summary>Adds the roles this entry declares, and the permissions they expand to.</summary>

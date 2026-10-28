@@ -111,7 +111,7 @@ public sealed class DefaultSettingsServiceType : SettingsServiceTypeBase
             builder.Services.TryAddSingleton<IServerSettingConfigurationProvider>(sp => sp.GetRequiredService<ServerSettingConfigurationProvider>());
 
             builder.Services.TryAddSingleton<IEffectiveSettingsProvider, DefaultEffectiveSettingsProvider>();
-            // Scoped: it finds an organization's tenant through the organization scope of the caller acting in it (FDW-1579).
+            // Scoped: it finds an organization's tenant through the organization scope, which also checks the caller's right at the organization (FDW-1579, FDW-2840).
             builder.Services.TryAddScoped<IInheritedSettings>(sp => new InheritedSettings(
                 sp.GetRequiredService<IServerSettingConfigurationProvider>(),
                 sp.GetRequiredService<ITenantSettingConfigurationProvider>(),

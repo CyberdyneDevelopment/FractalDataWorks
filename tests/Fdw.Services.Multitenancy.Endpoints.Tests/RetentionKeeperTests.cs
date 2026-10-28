@@ -45,7 +45,7 @@ public sealed class RetentionKeeperTests
                 failToEnd is not null && failToEnd.Contains(document.DocumentId, StringComparer.Ordinal)
                     ? GenericResult.Failure(new GenericMessage("the file is locked"))
                     : GenericResult.Success());
-        return (new RetentionKeeper(policies.Object, holds.Object, retained.Object, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<RetentionKeeper>.Instance), retained);
+        return (new RetentionKeeper(policies.Object, holds.Object, retained.Object, RetentionTestScope.Scope(true).Object, NullLogger<RetentionKeeper>.Instance), retained);
     }
 
     private static void EndedNever(Mock<IRetainedDocuments> documents, string id)
@@ -126,5 +126,16 @@ public sealed class RetentionKeeperTests
         var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
 
         report.IsFailure.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task ARunThatCannotListADocumentTypeAnswersTheFailureTheApplicationGaveNotOneOfItsOwn()
+    {
+        var (keeper, _) = Create([], [], listingFails: true);
+
+        var report = await keeper.Run(Finance, Now, TestContext.Current.CancellationToken);
+
+        report.CurrentMessage.ShouldBe("the store is down");
     }
 }

@@ -15,6 +15,18 @@ internal static class RetentionMap
         StartField = policy.StartField, EndAction = policy.EndAction,
     };
 
+    internal static RetentionChoicesResponse Of(RetentionChoices choices) => new()
+    {
+        StartFields = choices.StartFields, EndActions = choices.EndActions, DocumentTypes = choices.DocumentTypes,
+    };
+
+    internal static RetentionDocumentResponse Of(RetainedDocument document) => new()
+    {
+        DocumentId = document.DocumentId, DocumentType = document.DocumentType, Dates = document.Dates,
+    };
+
+    internal static RetentionDocumentsResponse Of(IReadOnlyList<RetainedDocument> documents) => new() { Documents = [.. documents.Select(document => Of(document))] };
+
     internal static RetentionPoliciesResponse Of(IReadOnlyList<RetentionPolicy> policies) => new() { Policies = [.. policies.Select(policy => Of(policy))] };
 
     internal static LegalHoldResponse Of(LegalHold hold) => new()

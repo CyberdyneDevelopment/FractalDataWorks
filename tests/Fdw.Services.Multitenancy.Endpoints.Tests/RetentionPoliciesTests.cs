@@ -26,7 +26,8 @@ public sealed class RetentionPoliciesTests
     private static readonly Guid Finance = new("44444444-0000-0000-0000-000000000001");
     private static readonly RetentionTables Tables = new("PlatformConfiguration", "tenant", "RetentionPolicy", "LegalHold");
 
-    private static (RetentionPolicies Service, Mock<IConfigurationGateway> Gateway) Create(params string[] existingTypes)
+    private static (RetentionPolicies Service, Mock<IConfigurationGateway> Gateway) Create(
+        IGenericResult<RetentionOffer>? offers = null, params string[] existingTypes)
     {
         var gateway = new Mock<IConfigurationGateway>();
         gateway.Setup(g => g.Execute<IEnumerable<RetentionPolicyRow>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
@@ -39,7 +40,13 @@ public sealed class RetentionPoliciesTests
             .ReturnsAsync(GenericResult<int>.Success(1));
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
-        return (new RetentionPolicies(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<RetentionPolicies>.Instance), gateway);
+        var documents = RetentionTestScope.Documents();
+        if (offers is not null)
+        {
+            documents.Setup(d => d.Offers(Tenant, Finance, It.IsAny<CancellationToken>())).ReturnsAsync(offers);
+        }
+
+        return (new RetentionPolicies(gateways.Object, Tables, RetentionTestScope.Scope(true).Object, documents.Object, NullLogger<RetentionPolicies>.Instance), gateway);
     }
 
     private static void Writes(Mock<IConfigurationGateway> gateway, Times times)
@@ -63,7 +70,7 @@ public sealed class RetentionPoliciesTests
     [Trait("Priority", "P0")]
     public async Task SettingAgainTheTypeThatHasAPolicyKeepsItsId()
     {
-        var (service, gateway) = Create("Contract");
+        var (service, gateway) = Create(existingTypes: "Contract");
         var before = await service.List(Finance, TestContext.Current.CancellationToken);
 
         var set = await service.Set(Finance, new NewRetentionPolicy("contract", 5, 0, 0, "SignedDate", "Archive"), TestContext.Current.CancellationToken);
@@ -95,7 +102,7 @@ public sealed class RetentionPoliciesTests
     [Trait("Priority", "P0")]
     public async Task RemovingAPolicyTheOrganizationDoesNotHaveIsAFailureAndWritesNothing()
     {
-        var (service, gateway) = Create("Contract");
+        var (service, gateway) = Create(existingTypes: "Contract");
 
         var removed = await service.Remove(Finance, "Invoice", TestContext.Current.CancellationToken);
 
@@ -107,7 +114,7 @@ public sealed class RetentionPoliciesTests
     [Trait("Priority", "P0")]
     public async Task RemovingAPolicyTheOrganizationHasWritesOnce()
     {
-        var (service, gateway) = Create("Contract");
+        var (service, gateway) = Create(existingTypes: "Contract");
 
         var removed = await service.Remove(Finance, "Contract", TestContext.Current.CancellationToken);
 
@@ -121,10 +128,50 @@ public sealed class RetentionPoliciesTests
     {
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(GenericResult<IConfigurationGateway>.Failure(new GenericMessage("the configuration gateway is down")));
-        var service = new RetentionPolicies(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<RetentionPolicies>.Instance);
+        var service = new RetentionPolicies(gateways.Object, Tables, RetentionTestScope.Scope(true).Object, RetentionTestScope.Documents().Object, NullLogger<RetentionPolicies>.Instance);
 
         var set = await service.Set(Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "SignedDate", "Delete"), TestContext.Current.CancellationToken);
 
         set.IsFailure.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("ModifiedDate", "Delete", "start field 'ModifiedDate'")]
+    [InlineData("SignedDate", "Shred", "end action 'Shred'")]
+    [Trait("Priority", "P0")]
+    public async Task APolicyThatNamesAStartFieldOrEndActionTheApplicationDoesNotOfferIsRefusedNamingItAndNothingIsWritten(
+        string startField, string endAction, string named)
+    {
+        var (service, gateway) = Create();
+
+        var set = await service.Set(Finance, new NewRetentionPolicy("Contract", 7, 0, 0, startField, endAction), TestContext.Current.CancellationToken);
+
+        set.IsFailure.ShouldBeTrue();
+        set.CurrentMessage.ShouldNotBeNull().ShouldContain(named);
+        Writes(gateway, Times.Never());
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task AStartFieldAndEndActionAreMatchedWithoutRegardToCase()
+    {
+        var (service, gateway) = Create();
+
+        var set = await service.Set(Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "signeddate", "archive"), TestContext.Current.CancellationToken);
+
+        set.IsSuccess.ShouldBeTrue();
+        Writes(gateway, Times.Once());
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task AnApplicationThatCannotSayWhatItOffersFailsTheSetLoudAndWritesNothing()
+    {
+        var (service, gateway) = Create(offers: GenericResult<RetentionOffer>.Failure(new GenericMessage("the store is down")));
+
+        var set = await service.Set(Finance, new NewRetentionPolicy("Contract", 7, 0, 0, "SignedDate", "Delete"), TestContext.Current.CancellationToken);
+
+        set.IsFailure.ShouldBeTrue();
+        Writes(gateway, Times.Never());
     }
 }

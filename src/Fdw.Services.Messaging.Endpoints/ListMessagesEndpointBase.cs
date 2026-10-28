@@ -4,7 +4,9 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
 using Fdw.Services.Messaging.Endpoints.Models;
+using Fdw.Web.RestEndpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +15,7 @@ namespace Fdw.Services.Messaging.Endpoints;
 /// <summary>
 /// Abstract base class for listing messages for the current user (GET /messages).
 /// </summary>
-public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, IReadOnlyList<MessagePayload>>
+public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, PaginatedResponse<MessagePayload>>
 {
     private readonly IMessageService _messageService;
     private readonly ILogger _logger;
@@ -57,6 +59,17 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, I
     {
     }
 
+    // The order of an offset window; absent keeps the oldest-first order the list has always had, anything else but the two names is refused.
+    private IGenericResult<bool> NewestFirst(string? order)
+    {
+        if (string.IsNullOrEmpty(order) || string.Equals(order, "oldest", StringComparison.OrdinalIgnoreCase))
+            return GenericResult<bool>.Success(false);
+
+        return string.Equals(order, "newest", StringComparison.OrdinalIgnoreCase)
+            ? GenericResult<bool>.Success(true)
+            : GenericResult<bool>.Failure(MessagingEndpointLog.OrderUnknown(_logger, order));
+    }
+
     /// <inheritdoc/>
     public override async Task HandleAsync(ListMessagesRequest req, CancellationToken ct)
     {
@@ -71,33 +84,51 @@ public abstract class ListMessagesEndpointBase : Endpoint<ListMessagesRequest, I
 
         MessagingEndpointLog.ListingMessages(_logger, userId.ToString());
 
+        var order = NewestFirst(req.Order);
+        if (!order.IsSuccess)
+        {
+            await Send.ResultAsync(MessagingFailures.Of(order, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        var query = new MessageQuery
+        {
+            UserId = userId,
+            MessageType = req.MessageType,
+            Severity = req.Severity,
+            Status = req.Status,
+            ReferenceId = req.ReferenceId,
+            After = req.After,
+            Before = req.Before,
+            Skip = req.Skip,
+            Take = req.Take > 0 ? req.Take : 50,
+            NewestFirst = order.Value
+        };
+
+        await SendPage(query, ct).ConfigureAwait(false);
+    }
+
+    // The window the query asks for with the count of everything the filters match, as the page envelope; a refusal answers its own status.
+    private async Task SendPage(MessageQuery query, CancellationToken ct)
+    {
+        var userId = query.UserId.ToString();
         try
         {
-            var query = new MessageQuery
-            {
-                UserId = userId,
-                MessageType = req.MessageType,
-                Severity = req.Severity,
-                Status = req.Status,
-                ReferenceId = req.ReferenceId,
-                After = req.After,
-                Before = req.Before,
-                Skip = req.Skip,
-                Take = req.Take > 0 ? req.Take : 50
-            };
-
             var result = await _messageService.GetMessages(query, ct).ConfigureAwait(false);
+            var counted = result.IsSuccess
+                ? await _messageService.CountMessages(query, ct).ConfigureAwait(false)
+                : result.ToNewResult<int>();
 
-            if (!result.IsSuccess)
+            if (!result.IsSuccess || !counted.IsSuccess || result.Value is not { } page)
             {
-                MessagingEndpointLog.MessageListFailed(_logger, userId.ToString(), result.CurrentMessage!);
-                AddError("Failed to list messages");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                IGenericResult failed = result.IsSuccess ? counted : result;
+                MessagingEndpointLog.MessageListFailed(_logger, userId, failed.CurrentMessage);
+                await Send.ResultAsync(MessagingFailures.Of(failed, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
-            MessagingEndpointLog.MessagesListed(_logger, result.Value!.Count, userId.ToString());
-            await Send.OkAsync(result.Value!, ct).ConfigureAwait(false);
+            MessagingEndpointLog.MessagesListed(_logger, page.Count, userId);
+            await Send.OkAsync(PaginatedResponse<MessagePayload>.Create(page, query.Skip, query.Take, counted.Value), ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

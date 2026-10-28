@@ -11,8 +11,9 @@ namespace Fdw.Services.Authorization.Abstractions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The ordinary role and member services judge an organization by the caller acting in it, which a person making the organization has
-/// never done. This acts for the tenant instead: whoever calls it has already been shown to act in the tenant that owns the organization.
+/// The ordinary role and member services judge an organization by the caller's right at its scope, which a person making the organization
+/// does not yet hold in it. This acts for the tenant instead: whoever calls it has already been shown to act in the tenant that owns the
+/// organization.
 /// The rule that a caller may give only what they hold still applies to every role copied and every role given.
 /// </para>
 /// </remarks>

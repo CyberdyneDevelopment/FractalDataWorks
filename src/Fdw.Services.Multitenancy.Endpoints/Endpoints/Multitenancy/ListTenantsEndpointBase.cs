@@ -8,6 +8,7 @@ using FastEndpoints;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Multitenancy.Abstractions;
+using Fdw.Services.Multitenancy.Endpoints.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Multitenancy.Endpoints;
@@ -55,20 +56,25 @@ public abstract class ListTenantsEndpointBase : Endpoint<ListTenantsRequest, Lis
     /// <inheritdoc />
     public override async Task HandleAsync(ListTenantsRequest req, CancellationToken ct)
     {
-        
         var isAdmin = _systemRoleConfiguration.IsPlatformAdmin(User);
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
+        if (req.IncludeDeleted && !isAdmin)
+        {
+            await Send.ResultAsync(TenantProblem.Of(
+                GenericResult.Failure(TenantEndpointLog.DeletedTenantsRequirePlatformAdministrator(EndpointLogger)), HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
         var tenantsResult = await GetTenants(userId, isAdmin, req.IncludeInactive, ct).ConfigureAwait(false);
 
-        // Why 500 and not an empty list: "no tenants exist", "you belong to none" and "the read
+        // Why a failure and not an empty list: "no tenants exist", "you belong to none" and "the read
         // failed" are three different facts, and only the first two are answerable with [].
         // Returning [] here fabricates an absence out of a failure, and the caller cannot tell
         // which it got -- a console draws "you have no tenants" over a database that has five.
         if (!tenantsResult.IsSuccess || tenantsResult.Value is null)
         {
-            AddError(tenantsResult.CurrentMessage ?? "Failed to retrieve tenants");
-            await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+            await Send.ResultAsync(TenantProblem.Of(tenantsResult, HttpContext)).ConfigureAwait(false);
             return;
         }
 
@@ -80,7 +86,33 @@ public abstract class ListTenantsEndpointBase : Endpoint<ListTenantsRequest, Lis
             .Select(t => MapTenant(t, isAdmin, defaultTenantId))
             .ToList();
 
+        if (req.IncludeDeleted)
+        {
+            var appended = await AppendDeleted(tenants, isAdmin, ct).ConfigureAwait(false);
+            if (!appended.IsSuccess)
+            {
+                await Send.ResultAsync(TenantProblem.Of(appended, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+        }
+
         await Send.OkAsync(tenants, ct).ConfigureAwait(false);
+    }
+
+    private async Task<IGenericResult<IEnumerable<ITenant>>> AppendDeleted(List<TenantDto> tenants, bool isAdmin, CancellationToken ct)
+    {
+        var deleted = await _tenantProvider.GetDeletedTenants(ct).ConfigureAwait(false);
+        if (deleted.IsSuccess && deleted.Value is { } found)
+        {
+            tenants.AddRange(found.Select(t =>
+            {
+                var dto = MapTenant(t, isAdmin);
+                dto.IsDeleted = true;
+                return dto;
+            }));
+        }
+
+        return deleted;
     }
 
     /// <summary>

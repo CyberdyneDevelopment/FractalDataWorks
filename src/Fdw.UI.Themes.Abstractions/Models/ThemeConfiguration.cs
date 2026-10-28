@@ -148,6 +148,11 @@ public sealed class ThemeConfiguration
     public bool IsDefault { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this is a built-in theme, which cannot be removed.
+    /// </summary>
+    public bool IsBuiltIn { get; set; }
+
+    /// <summary>
     /// Gets or sets the URL of the logo image.
     /// </summary>
     public string? LogoUrl { get; set; }
@@ -175,7 +180,7 @@ public sealed class ThemeConfiguration
         TextPrimary = TextPrimary, TextSecondary = TextSecondary, TextDisabled = TextDisabled,
         TextOnPrimary = TextOnPrimary, TextOnSecondary = TextOnSecondary,
         FontFamily = FontFamily, FontFamilyMono = FontFamilyMono, FontSizeBase = FontSizeBase, BorderRadius = BorderRadius,
-        IsDarkMode = IsDarkMode, IsDefault = IsDefault, LogoUrl = LogoUrl, AppName = AppName, FaviconUrl = FaviconUrl
+        IsDarkMode = IsDarkMode, IsDefault = IsDefault, IsBuiltIn = IsBuiltIn, LogoUrl = LogoUrl, AppName = AppName, FaviconUrl = FaviconUrl
     };
 
     /// <summary>

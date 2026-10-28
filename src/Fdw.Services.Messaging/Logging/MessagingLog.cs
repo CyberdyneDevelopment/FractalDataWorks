@@ -130,7 +130,13 @@ public static partial class MessagingLog
     [MessageLogging(EventId = 31003, Level = LogLevel.Warning, Message = "After and Before cannot both be supplied")]
     public static partial IGenericMessage PagingCursorsConflict(ILogger logger);
 
-    [MessageLogging(EventId = 31000, Level = LogLevel.Warning, Message = "Message {messageId} not found")]
+    /// <summary>A list asked for newest-first order together with a cursor. A validation refusal (category 2): a cursor already names its direction.</summary>
+    [MessageLogging(EventId = 21003, Level = LogLevel.Warning, Message = "Message list refused: an order cannot be combined with after or before",
+        ClientMessage = "An order cannot be combined with after or before: a cursor already names its direction")]
+    public static partial IGenericMessage PagingOrderWithCursor(ILogger logger);
+
+    [MessageLogging(EventId = 31000, Level = LogLevel.Warning, Message = "Message {messageId} not found",
+        ClientMessage = "Message {messageId} was not found")]
     public static partial IGenericMessage MessageNotFound(ILogger logger, string messageId);
 
     /// <summary>Logs access request not found.</summary>

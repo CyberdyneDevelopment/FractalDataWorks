@@ -66,8 +66,8 @@ public sealed class HomePageScopeEndpointTests
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
 
-    private sealed class SaveOrganization(IHomePages pages, IOrganizationScope organizations, IScopeAuthority authority, IAdministrativeAudit audit)
-        : SaveOrganizationHomePageDraftEndpointBase(pages, organizations, authority, audit, NullLogger.Instance)
+    private sealed class SaveOrganization(IHomePages pages, IOrganizationScope organizations, IAdministrativeAudit audit)
+        : SaveOrganizationHomePageDraftEndpointBase(pages, organizations, audit, NullLogger.Instance)
     {
         protected override void ConfigureEndpoint() => AllowAnonymous();
     }
@@ -113,7 +113,7 @@ public sealed class HomePageScopeEndpointTests
     private static Mock<IOrganizationScope> Organizations()
     {
         var organizations = new Mock<IOrganizationScope>();
-        organizations.Setup(o => o.TenantOf(Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
+        organizations.Setup(o => o.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
         return organizations;
     }
 
@@ -214,7 +214,7 @@ public sealed class HomePageScopeEndpointTests
     public async Task AnOrganizationDraftIsRecordedAtTheOrganizationLevelNamingTheOrganization()
     {
         var recorded = new List<AdministrativeChangeEntry>();
-        var endpoint = Factory.Create<SaveOrganization>(Pages().Object, Organizations().Object, Authority(may: true).Object, Audit(recorded).Object);
+        var endpoint = Factory.Create<SaveOrganization>(Pages().Object, Organizations().Object, Audit(recorded).Object);
         using var document = JsonDocument.Parse(Page);
 
         await endpoint.HandleAsync(new SaveOrganizationHomePageDraftRequest { OrganizationId = Finance, Page = document.RootElement }, CancellationToken.None);

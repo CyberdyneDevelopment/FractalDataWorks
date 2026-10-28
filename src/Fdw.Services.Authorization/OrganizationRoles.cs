@@ -116,7 +116,7 @@ public sealed class OrganizationRoles : IOrganizationRoles
     /// <inheritdoc />
     public async Task<IGenericResult> Delete(Guid organizationId, string roleName, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Write, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant;
@@ -157,7 +157,7 @@ public sealed class OrganizationRoles : IOrganizationRoles
     /// <inheritdoc />
     public async Task<IGenericResult<OrganizationRoleView>> Get(Guid organizationId, string roleName, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Read, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<OrganizationRoleView>();
@@ -177,7 +177,7 @@ public sealed class OrganizationRoles : IOrganizationRoles
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<OrganizationRoleView>>> List(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Read, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<IReadOnlyList<OrganizationRoleView>>();
@@ -198,7 +198,7 @@ public sealed class OrganizationRoles : IOrganizationRoles
     // a name, at least one permission, and the caller holding every permission the role carries.
     private async Task<IGenericResult<Judged>> Judge(Guid organizationId, string roleName, IReadOnlyList<string> permissions, CancellationToken cancellationToken)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Write, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<Judged>();

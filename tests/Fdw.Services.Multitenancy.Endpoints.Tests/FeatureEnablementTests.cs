@@ -42,7 +42,7 @@ public sealed class FeatureEnablementTests
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(gatewayFails
             ? GenericResult<IConfigurationGateway>.Failure(new GenericMessage("the configuration gateway is down"))
             : GenericResult<IConfigurationGateway>.Success(gateway.Object));
-        return (new FeatureEnablement(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<FeatureEnablement>.Instance), gateway);
+        return (new FeatureEnablement(gateways.Object, Tables, RetentionTestScope.Scope(true).Object, RetentionTestScope.Authority(true).Object, NullLogger<FeatureEnablement>.Instance), gateway);
     }
 
     private static void Writes(Mock<IConfigurationGateway> gateway, Times times)

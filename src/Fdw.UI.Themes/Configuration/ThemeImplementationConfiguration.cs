@@ -162,6 +162,11 @@ public partial class ThemeImplementationConfiguration
     public bool IsDefault { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this theme is one the system ships, which cannot be removed.
+    /// </summary>
+    public bool IsBuiltIn { get; set; }
+
+    /// <summary>
     /// Gets or sets the URL of the logo image.
     /// </summary>
     public string? LogoUrl { get; set; }

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -54,8 +55,7 @@ public abstract class ExecutePromotionEndpointBase : Endpoint<ExecutePromotionRe
             if (!result.IsSuccess)
             {
                 PromotionEndpointLog.ExecutePromotionFailed(_logger, req.Id, result.CurrentMessage!);
-                AddError("Failed to execute promotion");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

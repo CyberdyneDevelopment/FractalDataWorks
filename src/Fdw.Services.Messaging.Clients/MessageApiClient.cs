@@ -73,8 +73,8 @@ public class MessageApiClient
             query += $"&before={before.Value:D}";
         }
 
-        var result = await _httpClient.GetFromJsonAsync<IReadOnlyList<ClientModels.MessagePayload>>(query, cancellationToken).ConfigureAwait(false);
-        return result ?? [];
+        var page = await _httpClient.GetFromJsonAsync<MessagePage>(query, cancellationToken).ConfigureAwait(false);
+        return page is { } found ? found.Items : throw new InvalidOperationException("The message list answered no body");
     }
 
     /// <summary>Sends a message into a conversation thread.</summary>
@@ -171,6 +171,12 @@ public class MessageApiClient
     /// <summary>Denies an access request, optionally with reviewer notes.</summary>
     public virtual Task DenyAccessRequest(Guid id, string? notes = null, CancellationToken cancellationToken = default)
         => _httpClient.PostAsJsonAsync($"access-requests/{id}/deny", new { Notes = notes }, cancellationToken);
+
+    // The page envelope GET /messages answers: the messages, with the totals the client does not use here.
+    private sealed class MessagePage
+    {
+        public IReadOnlyList<ClientModels.MessagePayload> Items { get; set; } = [];
+    }
 
     private sealed class UnreadCountResponse
     {

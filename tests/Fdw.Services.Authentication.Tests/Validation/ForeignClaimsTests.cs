@@ -9,10 +9,13 @@ using Xunit;
 namespace Fdw.Services.Authentication.Tests.Validation;
 
 /// <summary>
-/// FDW-2363: a token from another issuer carries none of the platform's authority claims, so only what this platform states reaches the principal.
+/// FDW-2363, FDW-2933: a token from another issuer keeps the platform claims its entry accepts and none of the others, so only what the deployer
+/// has chosen to trust reaches the principal.
 /// </summary>
 public sealed class ForeignClaimsTests
 {
+    private static readonly string[] AcceptsNothing = [];
+
     private static ClaimsIdentity Identity(params (string Type, string Value)[] claims)
         => new(claims.Select(claim => new Claim(claim.Type, claim.Value)), "foreign");
 
@@ -24,7 +27,7 @@ public sealed class ForeignClaimsTests
             .ToList();
         var identity = Identity([("sub", "person"), .. authority.Select(name => (name, "forged"))]);
 
-        var removed = ForeignClaims.WithoutPlatformClaims(identity);
+        var removed = ForeignClaims.WithoutPlatformClaims(identity, AcceptsNothing);
 
         removed.OrderBy(type => type, StringComparer.Ordinal).ToArray().ShouldBe(authority.OrderBy(type => type, StringComparer.Ordinal).ToArray());
         identity.Claims.Select(claim => claim.Type).ToArray().ShouldBe(new[] { "sub" });
@@ -40,7 +43,7 @@ public sealed class ForeignClaimsTests
             (ClaimDefinitions.actingRole.Name, "Admin"),
             (ClaimDefinitions.actor.Name, "someone"));
 
-        ForeignClaims.WithoutPlatformClaims(identity).Count.ShouldBe(5);
+        ForeignClaims.WithoutPlatformClaims(identity, AcceptsNothing).Count.ShouldBe(5);
 
         identity.Claims.ShouldBeEmpty();
     }
@@ -50,7 +53,7 @@ public sealed class ForeignClaimsTests
     {
         var identity = Identity((ClaimDefinitions.sub.Name, "person"), (ClaimDefinitions.jti.Name, "token-1"));
 
-        ForeignClaims.WithoutPlatformClaims(identity).ShouldBeEmpty();
+        ForeignClaims.WithoutPlatformClaims(identity, AcceptsNothing).ShouldBeEmpty();
 
         identity.FindFirst(ClaimDefinitions.sub.Name)?.Value.ShouldBe("person");
         identity.FindFirst(ClaimDefinitions.jti.Name)?.Value.ShouldBe("token-1");
@@ -61,7 +64,7 @@ public sealed class ForeignClaimsTests
     {
         var identity = Identity(("name", "Jo"), ("email", "jo@example.test"), ("iss", "https://issuer.test"), (ClaimDefinitions.perm.Name, "forged"));
 
-        var removed = ForeignClaims.WithoutPlatformClaims(identity);
+        var removed = ForeignClaims.WithoutPlatformClaims(identity, AcceptsNothing);
 
         removed.ShouldBe(new[] { ClaimDefinitions.perm.Name });
         identity.Claims.Select(claim => claim.Type).ToArray().ShouldBe(new[] { "name", "email", "iss" });
@@ -72,8 +75,29 @@ public sealed class ForeignClaimsTests
     {
         var identity = Identity((ClaimDefinitions.perm.Name, "a"), (ClaimDefinitions.perm.Name, "b"), (ClaimDefinitions.perm.Name, "c"));
 
-        ForeignClaims.WithoutPlatformClaims(identity).Count.ShouldBe(3);
+        ForeignClaims.WithoutPlatformClaims(identity, AcceptsNothing).Count.ShouldBe(3);
 
         identity.Claims.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void AClaimTheEntryAcceptsStaysAndTheOtherPlatformClaimsAreRemoved()
+    {
+        var identity = Identity((ClaimDefinitions.roles.Name, "Operator"), (ClaimDefinitions.perm.Name, "forged"), (ClaimDefinitions.tenantId.Name, "t"));
+
+        var removed = ForeignClaims.WithoutPlatformClaims(identity, [ClaimDefinitions.roles.Name]);
+
+        removed.OrderBy(type => type, StringComparer.Ordinal).ToArray().ShouldBe(new[] { ClaimDefinitions.perm.Name, ClaimDefinitions.tenantId.Name });
+        identity.Claims.Select(claim => claim.Type).ToArray().ShouldBe(new[] { ClaimDefinitions.roles.Name });
+    }
+
+    [Fact]
+    public void EveryValueOfAnAcceptedClaimStays()
+    {
+        var identity = Identity((ClaimDefinitions.roles.Name, "A"), (ClaimDefinitions.roles.Name, "B"));
+
+        ForeignClaims.WithoutPlatformClaims(identity, [ClaimDefinitions.roles.Name]).ShouldBeEmpty();
+
+        identity.FindAll(ClaimDefinitions.roles.Name).Select(claim => claim.Value).ToArray().ShouldBe(new[] { "A", "B" });
     }
 }

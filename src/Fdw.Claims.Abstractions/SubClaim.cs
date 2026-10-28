@@ -8,5 +8,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class SubClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="SubClaim"/> class.</summary>
-    public SubClaim() : base(name: "sub", isArray: false, TokenDestinations.AccessToken) { }
+    public SubClaim() : base(name: "sub", isArray: false, isSessionBound: false, TokenDestinations.AccessToken) { }
 }

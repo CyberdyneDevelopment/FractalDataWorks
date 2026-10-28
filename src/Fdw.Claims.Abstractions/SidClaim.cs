@@ -13,5 +13,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class SidClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="SidClaim"/> class.</summary>
-    public SidClaim() : base(name: "sid", isArray: false, TokenDestinations.AccessToken) { }
+    public SidClaim() : base(name: "sid", isArray: false, isSessionBound: true, TokenDestinations.AccessToken) { }
 }

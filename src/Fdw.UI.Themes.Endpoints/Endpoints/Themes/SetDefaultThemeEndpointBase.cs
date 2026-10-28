@@ -1,6 +1,8 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.UI.Themes.Endpoints;
@@ -41,23 +43,22 @@ public abstract class SetDefaultThemeEndpointBase : Endpoint<SetDefaultThemeRequ
         });
     }
 
-    /// <summary>Sets the specified theme as the system default, returning 204 on success or 404 if not found.</summary>
+    /// <summary>Sets the specified theme as the system default, returning 204 on success or the status of the refusal.</summary>
     public override async Task HandleAsync(SetDefaultThemeRequest req, CancellationToken ct)
     {
-        
-        if (!ThemeExists(req.Name))
+        var set = await SetDefault(req.Name, ct).ConfigureAwait(false);
+        if (set.IsFailure)
         {
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(set, HttpContext)).ConfigureAwait(false);
             return;
         }
 
-        ApplyDefault(req.Name);
         await Send.NoContentAsync(ct).ConfigureAwait(false);
     }
 
-    /// <summary>Checks whether a theme with the given name exists.</summary>
-    protected virtual bool ThemeExists(string name) => false;
-
-    /// <summary>Applies the theme as the system default. Override to implement the logic.</summary>
-    protected virtual void ApplyDefault(string name) { }
+    /// <summary>Makes the named theme the system default. Implemented by subclasses.</summary>
+    /// <param name="name">The theme to make the default.</param>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>Success; a not-found failure when no theme carries the name; or the failure to write it.</returns>
+    protected abstract Task<IGenericResult> SetDefault(string name, CancellationToken ct);
 }

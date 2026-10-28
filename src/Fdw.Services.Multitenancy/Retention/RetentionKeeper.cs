@@ -25,25 +25,24 @@ public sealed class RetentionKeeper : IRetentionKeeper
     private readonly IRetentionPolicies _policies;
     private readonly ILegalHolds _holds;
     private readonly IRetainedDocuments _documents;
-    private readonly RetentionScope _scope;
+    private readonly IOrganizationScope _scope;
     private readonly ILogger<RetentionKeeper> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="RetentionKeeper"/> class.</summary>
     /// <param name="policies">The retention policies of organizations.</param>
     /// <param name="holds">The legal holds of documents.</param>
     /// <param name="documents">The application's documents.</param>
-    /// <param name="organizations">Reads an organization, which names its tenant.</param>
-    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
+    /// <param name="organizations">Says whether the caller holds a right for an organization, and which tenant it is in.</param>
     /// <param name="logger">The logger.</param>
     public RetentionKeeper(
-        IRetentionPolicies policies, ILegalHolds holds, IRetainedDocuments documents, IOrganizationProvider organizations, IScopeAuthority authority,
+        IRetentionPolicies policies, ILegalHolds holds, IRetainedDocuments documents, IOrganizationScope organizations,
         ILogger<RetentionKeeper>? logger)
     {
         _policies = policies ?? throw new ArgumentNullException(nameof(policies));
         _holds = holds ?? throw new ArgumentNullException(nameof(holds));
         _documents = documents ?? throw new ArgumentNullException(nameof(documents));
         _logger = logger ?? NullLogger<RetentionKeeper>.Instance;
-        _scope = new RetentionScope(organizations, authority, _logger);
+        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
     }
 
     /// <inheritdoc />
@@ -74,7 +73,10 @@ public sealed class RetentionKeeper : IRetentionKeeper
             var listed = await _documents.List(tenantId, organizationId, policy.DocumentType, cancellationToken).ConfigureAwait(false);
             if (listed.IsFailure || listed.Value is not { } documents)
             {
-                return GenericResult<RetentionRunReport>.Failure(RetentionLog.DocumentsNotListed(_logger, policy.DocumentType, organizationId, listed.CurrentMessage));
+                // Why the application's failure is returned and not a failure of the keeper's own: the cause carries its own status and text (nothing
+                // assigned to the organization is a refusal the caller can act on, not a bad gateway), and the log keeps what the run was doing.
+                RetentionLog.DocumentsNotListed(_logger, policy.DocumentType, organizationId, listed.CurrentMessage);
+                return listed.ToNewResult<RetentionRunReport>();
             }
 
             foreach (var document in documents)

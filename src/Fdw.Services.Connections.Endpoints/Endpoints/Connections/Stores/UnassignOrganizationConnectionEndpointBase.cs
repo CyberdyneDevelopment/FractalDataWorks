@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for taking the connection of a purpose away from an organization (FDW-1581). The caller must act in the organization.
+/// Generic base endpoint for taking the connection of a purpose away from an organization (FDW-1581). The caller must hold the right at the organization's scope.
 /// </summary>
 public abstract class UnassignOrganizationConnectionEndpointBase : Endpoint<OrganizationConnectionKeyRequest>
 {

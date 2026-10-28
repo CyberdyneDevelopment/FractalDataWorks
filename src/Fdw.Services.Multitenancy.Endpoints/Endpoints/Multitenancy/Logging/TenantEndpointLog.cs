@@ -28,4 +28,10 @@ public static partial class TenantEndpointLog
     /// <summary>Logs that a tenant change was refused because the caller is not a platform administrator.</summary>
     [MessageLogging(EventId = 102740, Level = LogLevel.Warning, Message = "A tenant change was refused: the caller is not a platform administrator")]
     public static partial IGenericMessage PlatformAdministratorRequired(ILogger logger);
+
+    /// <summary>Logs that a list of deleted tenants was refused because the caller is not a platform administrator.</summary>
+    [MessageLogging(EventId = 102741, Level = LogLevel.Warning,
+        Message = "A list of deleted tenants was refused: the caller is not a platform administrator",
+        ClientMessage = "Only a platform administrator can list deleted companies")]
+    public static partial IGenericMessage DeletedTenantsRequirePlatformAdministrator(ILogger logger);
 }

@@ -8,5 +8,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class OrgIdClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="OrgIdClaim"/> class.</summary>
-    public OrgIdClaim() : base(name: "orgId", isArray: false, TokenDestinations.AccessToken) { }
+    public OrgIdClaim() : base(name: "orgId", isArray: false, isSessionBound: false, TokenDestinations.AccessToken) { }
 }

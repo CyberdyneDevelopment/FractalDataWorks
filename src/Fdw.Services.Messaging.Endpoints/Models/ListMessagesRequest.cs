@@ -57,4 +57,8 @@ public class ListMessagesRequest
     /// </summary>
     [QueryParam]
     public int Take { get; set; } = 50;
+
+    /// <summary>Gets or sets the order of an offset window: <c>newest</c> or <c>oldest</c>. Absent means oldest, the order the list has always had.</summary>
+    [QueryParam]
+    public string? Order { get; set; }
 }

@@ -37,18 +37,6 @@ public static partial class StatSetServiceLog
         double durationMs);
 
     /// <summary>
-    /// Logs when statistics computation fails.
-    /// </summary>
-    [MessageLogging(
-        EventId = 91024,
-        Level = LogLevel.Error,
-        Message = "Statistics computation failed for '{containerName}': {error}")]
-    public static partial IGenericMessage StatSetComputationFailed(
-        ILogger logger,
-        string containerName,
-        string? error);
-
-    /// <summary>
     /// Logs when computing grouped statistics.
     /// </summary>
     [MessageLogging(

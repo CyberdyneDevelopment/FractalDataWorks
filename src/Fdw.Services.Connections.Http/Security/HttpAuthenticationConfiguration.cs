@@ -80,6 +80,16 @@ public abstract class HttpAuthenticationConfiguration
     public abstract HttpAuthenticationConfiguration CreateInstance();
 
     /// <summary>
+    /// Gets the names of the secrets this method reads, by the slot of the protocol context each travels in.
+    /// <see cref="HttpSecretNames.None"/> for a method that reads none.
+    /// </summary>
+    /// <remarks>
+    /// Abstract so every method states it. The connection factory asks the bound instance and keeps no list of methods, so a method that
+    /// reads a secret and did not say so would be built with no credential, and the server's 401 would be the first sign (FDW-2844).
+    /// </remarks>
+    public abstract HttpSecretNames SecretNames { get; }
+
+    /// <summary>
     /// Binds this instance's settable properties from an IConfigurationSection.
     /// Base implementation is a no-op — there are no common properties across all security types.
     /// Each concrete type overrides to bind its own properties.

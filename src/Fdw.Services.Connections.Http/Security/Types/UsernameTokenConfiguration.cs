@@ -64,6 +64,9 @@ public sealed class UsernameTokenConfiguration : HttpAuthenticationConfiguration
     /// <inheritdoc />
     public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("UsernameSecretName", "User name", secret: false), new("PasswordSecretName", "Password", secret: true)];
 
+    /// <inheritdoc />
+    public override HttpSecretNames SecretNames => new(null, PasswordSecretName, null);
+
     /// <inheritdoc/>
     /// <remarks>The connection carries its own user name token.</remarks>
     public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;

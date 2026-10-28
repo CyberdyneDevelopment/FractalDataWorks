@@ -53,7 +53,7 @@ public sealed class InheritedSettingsTests
         _organizationProvider.Setup(p => p.Save(It.IsAny<IOrganizationSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback((IOrganizationSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_organizations, row))
             .ReturnsAsync(GenericResult.Success());
-        _scope.Setup(s => s.TenantOf(Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
+        _scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
     }
 
     // A save stores the row it was given, replacing the one of the same name, as the store would.
@@ -263,10 +263,10 @@ public sealed class InheritedSettingsTests
 
     [Fact]
     [Trait("Priority", "P0")]
-    public async Task AnOrganizationTheCallerDoesNotActInIsRefusedBeforeAnythingIsRead()
+    public async Task AnOrganizationTheCallerMayNotAdministerIsRefusedBeforeAnythingIsRead()
     {
         var other = Guid.NewGuid();
-        _scope.Setup(s => s.TenantOf(other, It.IsAny<CancellationToken>()))
+        _scope.Setup(s => s.TenantOf(It.IsAny<string>(), other, It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<Guid>.Failure(new GenericMessage("the caller does not act in the organization")));
 
         var listed = await Create().List(SettingScope.ForOrganization(other));
@@ -307,5 +307,24 @@ public sealed class InheritedSettingsTests
         var provider = new DefaultEffectiveSettingsProvider(server.Object, tenant.Object, role.Object, NullLogger<DefaultEffectiveSettingsProvider>.Instance);
 
         provider.GetEffectiveValue<int>("MaxRows", Tenant).ShouldBe(500);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    public async Task EachSettingRouteAsksForTheRightItNeedsAtTheOrganizationsScope()
+    {
+        var other = Guid.NewGuid();
+        _scope.Setup(s => s.TenantOf(It.IsAny<string>(), other, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<Guid>.Failure(new GenericMessage("the caller may not administer the organization")));
+        var settings = Create();
+        var organization = SettingScope.ForOrganization(other);
+
+        await settings.List(organization);
+        await settings.Get(organization, "MaxRows");
+        await settings.Set(organization, "MaxRows", "1", false);
+        await settings.Lift(organization, "MaxRows");
+
+        _scope.Verify(s => s.TenantOf(OrganizationRights.Read, other, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _scope.Verify(s => s.TenantOf(OrganizationRights.Write, other, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

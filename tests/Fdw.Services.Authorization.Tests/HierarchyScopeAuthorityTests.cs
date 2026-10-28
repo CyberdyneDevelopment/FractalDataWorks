@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Fdw.Claims.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
@@ -126,7 +127,7 @@ public sealed class HierarchyScopeAuthorityTests
         system.SetupGet(c => c.IsSystemContext).Returns(true);
         var permissions = new Mock<IUserPermissions>(MockBehavior.Strict);
 
-        var rule = new HierarchyScopeAuthority(Accessor(system.Object), permissions.Object, NullLogger<HierarchyScopeAuthority>.Instance);
+        var rule = new HierarchyScopeAuthority(Accessor(system.Object), permissions.Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
 
         (await rule.May(Right, new ThingScope(Tenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
     }
@@ -138,7 +139,7 @@ public sealed class HierarchyScopeAuthorityTests
         permissions
             .Setup(p => p.Get(It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<EffectiveAuthorization>.Failure(new GenericMessage("roles unavailable")));
-        var rule = new HierarchyScopeAuthority(Accessor(Session([Right])), permissions.Object, NullLogger<HierarchyScopeAuthority>.Instance);
+        var rule = new HierarchyScopeAuthority(Accessor(Session([Right])), permissions.Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
 
         var result = await rule.May(Right, new ThingScope(Tenant, null), TestContext.Current.CancellationToken);
 
@@ -155,7 +156,106 @@ public sealed class HierarchyScopeAuthorityTests
         caller.SetupGet(c => c.UserId).Returns("33333333-0000-0000-0000-000000000001");
         caller.SetupGet(c => c.ActiveTenantId).Returns(Tenant);
         caller.SetupGet(c => c.Permissions).Returns(permissions);
+        caller.SetupGet(c => c.Roles).Returns(Array.Empty<string>());
+        caller.SetupGet(c => c.Claims).Returns(new Dictionary<string, object>());
         return caller.Object;
+    }
+
+    private const string AdminRole = "admin";
+
+    private static readonly Guid GlobalTenant = new("11111111-0000-0000-0000-0000000000ff");
+
+    private static ISystemRoleConfiguration SystemRoles()
+    {
+        var roles = new Mock<ISystemRoleConfiguration>();
+        roles.SetupGet(r => r.AdminRoleName).Returns(AdminRole);
+        return roles.Object;
+    }
+
+    // A caller with the given roles, acting in a tenant; globalClaim is the globalTenant claim a token for the global tenant carries.
+    private static IAuthenticationContext Acting(Guid tenant, IReadOnlyList<string> permissions, IReadOnlyList<string> roles, bool globalClaim)
+    {
+        var caller = new Mock<IAuthenticationContext>();
+        caller.SetupGet(c => c.IsAuthenticated).Returns(true);
+        caller.SetupGet(c => c.IsSystemContext).Returns(false);
+        caller.SetupGet(c => c.UserId).Returns("33333333-0000-0000-0000-000000000001");
+        caller.SetupGet(c => c.ActiveTenantId).Returns(tenant);
+        caller.SetupGet(c => c.Permissions).Returns(permissions);
+        caller.SetupGet(c => c.Roles).Returns(roles);
+        caller.SetupGet(c => c.Claims).Returns(globalClaim
+            ? new Dictionary<string, object> { [ClaimDefinitions.globalTenant.Name] = "true" }
+            : new Dictionary<string, object>());
+        return caller.Object;
+    }
+
+    // Rights are never read for a platform administrator, so a strict mock fails the test if they are.
+    private static HierarchyScopeAuthority BuildStrict(IAuthenticationContext caller)
+        => new(Accessor(caller), new Mock<IUserPermissions>(MockBehavior.Strict).Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task A_platform_administrator_acting_in_the_global_tenant_passes_for_a_thing_in_another_tenant_without_a_role_there()
+    {
+        var rule = BuildStrict(Acting(GlobalTenant, [Right], [AdminRole], globalClaim: true));
+
+        (await rule.May(Right, new ThingScope(Tenant, OrganizationA), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+        (await rule.May(Right, new ThingScope(OtherTenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task A_platform_administrator_whose_session_does_not_hold_the_right_is_refused()
+    {
+        var rule = BuildStrict(Acting(GlobalTenant, ["data-views:read"], [AdminRole], globalClaim: true));
+
+        var result = await rule.May(Right, new ThingScope(Tenant, null), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("session");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task An_administrator_acting_as_a_narrower_role_is_not_a_platform_administrator()
+    {
+        // Acting as a role makes that role the session's Roles (FDW-2282): the admin role is gone, so nothing is widened.
+        var permissions = new Mock<IUserPermissions>();
+        permissions.Setup(p => p.Get(It.IsAny<string>(), Tenant, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<EffectiveAuthorization>.Success(new EffectiveAuthorization([], [], null)));
+        var rule = new HierarchyScopeAuthority(Accessor(Acting(Tenant, [Right], ["viewer"], globalClaim: true)), permissions.Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
+
+        (await rule.May(Right, new ThingScope(Tenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeFalse();
+        (await rule.May(Right, new ThingScope(OtherTenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task An_administrator_who_switched_into_a_tenant_is_judged_by_the_roles_they_hold_in_it()
+    {
+        // The token for a tenant other than the global one carries the roles held there and no globalTenant claim (FDW-825).
+        var permissions = new Mock<IUserPermissions>();
+        permissions.Setup(p => p.Get(It.IsAny<string>(), Tenant, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<EffectiveAuthorization>.Success(new EffectiveAuthorization([], [], null)));
+        var switched = Acting(Tenant, [Right], [AdminRole], globalClaim: false);
+        var rule = new HierarchyScopeAuthority(Accessor(switched), permissions.Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
+
+        (await rule.May(Right, new ThingScope(Tenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeFalse();
+        (await rule.May(Right, new ThingScope(OtherTenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task The_global_tenant_claim_without_the_admin_role_is_not_a_platform_administrator()
+    {
+        var permissions = new Mock<IUserPermissions>();
+        var rule = new HierarchyScopeAuthority(Accessor(Acting(GlobalTenant, [Right], ["operator"], globalClaim: true)), permissions.Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
+
+        (await rule.May(Right, new ThingScope(Tenant, null), TestContext.Current.CancellationToken)).IsSuccess.ShouldBeFalse();
     }
 
     private static AuthenticationContextAccessor Accessor(IAuthenticationContext? caller)
@@ -172,6 +272,6 @@ public sealed class HierarchyScopeAuthorityTests
                 .ReturnsAsync(GenericResult<EffectiveAuthorization>.Success(new EffectiveAuthorization(rights, [], null)));
         }
 
-        return new HierarchyScopeAuthority(Accessor(caller), permissions.Object, NullLogger<HierarchyScopeAuthority>.Instance);
+        return new HierarchyScopeAuthority(Accessor(caller), permissions.Object, SystemRoles(), NullLogger<HierarchyScopeAuthority>.Instance);
     }
 }

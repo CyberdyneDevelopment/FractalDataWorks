@@ -10,8 +10,9 @@ namespace Fdw.Services.Settings.Endpoints;
 /// Says whether the caller may use an organization's home page, and which scope holds it (FDW-2325).
 /// </summary>
 /// <remarks>
-/// The caller must act in the organization, which also names its tenant (an organization that does not exist and one the caller does not
-/// act in are refused alike), and must hold the right at that organization's scope.
+/// <see cref="IOrganizationScope"/> answers both questions at once: the organization must exist, and the caller must hold the right at its
+/// scope; acting in the organization is not required (FDW-2840). An organization of another company and one that does not exist are
+/// refused in the same way (FDW-2887).
 /// </remarks>
 internal static class OrganizationHomePageAccess
 {
@@ -20,17 +21,11 @@ internal static class OrganizationHomePageAccess
     internal const string Write = "home-page:write";
 
     internal static async Task<IGenericResult<HomePageScope>> Check(
-        IOrganizationScope organizations, IScopeAuthority authority, Guid organizationId, string right, CancellationToken cancellationToken)
+        IOrganizationScope organizations, Guid organizationId, string right, CancellationToken cancellationToken)
     {
-        var tenant = await organizations.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
-        if (tenant.IsFailure)
-        {
-            return tenant.ToNewResult<HomePageScope>();
-        }
-
-        var may = await authority.May(right, new ThingScope(tenant.Value, organizationId), cancellationToken).ConfigureAwait(false);
-        return may.IsFailure
-            ? may.ToNewResult<HomePageScope>()
+        var tenant = await organizations.TenantOf(right, organizationId, cancellationToken).ConfigureAwait(false);
+        return tenant.IsFailure
+            ? tenant.ToNewResult<HomePageScope>()
             : GenericResult<HomePageScope>.Success(new HomePageScope(HomePageKinds.Organization, organizationId, tenant.Value));
     }
 }

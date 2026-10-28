@@ -9,8 +9,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for assigning an organization one of its tenant's grants for a purpose (FDW-1581). The caller must act in the
-/// organization; the grant must be the organization's tenant's.
+/// Generic base endpoint for assigning an organization one of its tenant's grants for a purpose (FDW-1581). The caller must hold the right
+/// at the organization's scope; the grant must be the organization's tenant's.
 /// </summary>
 public abstract class AssignOrganizationConnectionEndpointBase : Endpoint<OrganizationConnectionRequest, OrganizationConnectionResponse>
 {
