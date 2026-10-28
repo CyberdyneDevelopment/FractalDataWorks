@@ -35,11 +35,4 @@ public static partial class FeatureEnablementLog
     /// <summary>Logs that a write to the store failed.</summary>
     [MessageLogging(EventId = 72911, Level = LogLevel.Error, Message = "{what} could not be written: {reason}")]
     public static partial IGenericMessage WriteFailed(ILogger logger, string what, string? reason);
-
-    /// <summary>Logs that an organization is refused because it is missing or the caller may not reach it; the two are not told apart.</summary>
-    [MessageLogging(
-        EventId = 102920, Level = LogLevel.Warning,
-        Message = "Refused '{right}' for the features of organization '{organizationId}': the organization is not one the caller may reach",
-        ClientMessage = "The organization is not one you may act for")]
-    public static partial IGenericMessage OrganizationNotReachable(ILogger logger, string right, Guid organizationId);
 }

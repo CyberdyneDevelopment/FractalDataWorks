@@ -40,7 +40,7 @@ public sealed class ConnectionGrantsAndAssignmentsTests
 
         public Rig()
         {
-            Scope.Setup(s => s.TenantOf(Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Rayburn));
+            Scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Rayburn));
             Grants.Setup(g => g.Get(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IReadOnlyList<IConnectionGrantImplementationConfiguration>>.Success([.. Granted]));
             Grants.Setup(g => g.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -211,7 +211,7 @@ public sealed class ConnectionGrantsAndAssignmentsTests
     {
         var rig = new Rig().GrantHeld(Rayburn, "Images");
         var legal = new Guid("44444444-0000-0000-0000-000000000002");
-        rig.Scope.Setup(s => s.TenantOf(legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("not acting in Legal")));
+        rig.Scope.Setup(s => s.TenantOf(It.IsAny<string>(), legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("not acting in Legal")));
 
         var purpose = await rig.AssignmentsService().Assign(Finance, "Documents", GrantId, null, TestContext.Current.CancellationToken);
         var unknown = await rig.AssignmentsService().Assign(Finance, "Images", Guid.NewGuid(), null, TestContext.Current.CancellationToken);
@@ -251,5 +251,23 @@ public sealed class ConnectionGrantsAndAssignmentsTests
         removed.IsSuccess.ShouldBeTrue();
         removed.Value!.BaseFolder.ShouldBe("finance");
         missing.IsSuccess.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task EachAssignmentRouteAsksForTheRightItNeedsAtTheOrganizationsScope()
+    {
+        var rig = new Rig();
+        var legal = new Guid("44444444-0000-0000-0000-000000000002");
+        rig.Scope.Setup(s => s.TenantOf(It.IsAny<string>(), legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("refused for Legal")));
+        var service = rig.AssignmentsService();
+
+        await service.Assign(legal, "Images", GrantId, null, TestContext.Current.CancellationToken);
+        await service.Unassign(legal, "Images", TestContext.Current.CancellationToken);
+        await service.List(legal, TestContext.Current.CancellationToken);
+
+        rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Write, legal, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Read, legal, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -32,6 +32,12 @@ public interface ITenantProvider
     Task<IGenericResult<IEnumerable<ITenant>>> GetAllTenants(CancellationToken ct = default);
 
     /// <summary>
+    /// Gets the tenants that have been deleted. Every other read leaves them out; this is the one read that lists them, so a deleted
+    /// tenant can be found to restore (FDW-2891).
+    /// </summary>
+    Task<IGenericResult<IEnumerable<ITenant>>> GetDeletedTenants(CancellationToken ct = default);
+
+    /// <summary>
     /// Validates that a user has access to a tenant.
     /// </summary>
     Task<IGenericResult<bool>> ValidateTenantAccess(

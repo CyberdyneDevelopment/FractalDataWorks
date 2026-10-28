@@ -84,7 +84,7 @@ public class TypeCollectionComponentShapeTests
         string[] rendered =
         [
             "Text", "Number", "Boolean", "Expression", "ColumnList", "FieldMaps", "InputMappings", "SplitOutputs", "ValueSources", "DataSet", "DataStore",
-            "Container", "Pipeline", "Variable", "Parameters", "Steps", "SqlText",
+            "DataStorePath", "Container", "Pipeline", "Variable", "Parameters", "Steps", "SqlText",
             // The members of the stage-backed tools (Filter, Calculate, Sort, Aggregate, Distinct, Latest by, Validate).
             "SortFieldList", "Calculation", "Aggregation", "Distinct", "LatestBy", "CheckList", "ValidateFailAction", "ComputeSpec", "FieldMappings",
         ];
@@ -141,6 +141,27 @@ public class TypeCollectionComponentShapeTests
         var batch = source.Single(p => p.Name == "batchSize");
         batch.Bindable.ShouldBeTrue();
         batch.AcceptsParameterText.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void ThePathOfAContainerSourceAndOfAContainerDestinationIsAPathOfTheStoreAndStillTakesAParameter()
+    {
+        foreach (var parameters in new[]
+        {
+            TypeCollectionResolver.ToSummary(new ContainerSourceComponentType()).Parameters,
+            TypeCollectionResolver.ToSummary(new ContainerDestinationComponentType()).Parameters,
+        })
+        {
+            var path = parameters.Single(p => p.Name == "path");
+
+            path.Kind.ShouldBe("DataStorePath");
+            path.IsRequired.ShouldBeFalse();
+            path.Bindable.ShouldBeTrue();
+            path.BindsTo.ShouldBe("String");
+            path.AcceptsParameterText.ShouldBeTrue();
+            parameters.Single(p => p.Name == "dataStore").Kind.ShouldBe("DataStore");
+            parameters.Single(p => p.Name == "container").Kind.ShouldBe("Container");
+        }
     }
 
     [Fact]

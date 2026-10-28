@@ -670,6 +670,35 @@ public sealed class MessageServiceTests
 
     [Fact]
     [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ArchiveOfAMessageThatDoesNotExistReturnsMessageNotFoundCode()
+    {
+        var fixture = CreateService();
+        SetupExecuteInt(fixture.Gateway, GenericResult<int>.Success(0));
+
+        var result = await fixture.Service.Archive(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-31000");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Api")]
+    public async Task ANewestFirstListWithACursorIsRefusedAndNothingIsRead()
+    {
+        var fixture = CreateService();
+
+        var result = await fixture.Service.GetMessages(
+            new MessageQuery { UserId = Guid.NewGuid(), NewestFirst = true, Before = Guid.NewGuid() }, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages.ShouldContain(m => m.Code == "MESSAGING-21003");
+        fixture.Gateway.Verify(g => g.Execute<IEnumerable<MessagePayload>>(It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
     public async Task ArchiveWhenUpdateFailsWithMessagesPropagatesFailure()
     {

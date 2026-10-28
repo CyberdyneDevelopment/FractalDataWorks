@@ -26,22 +26,21 @@ namespace Fdw.Services.Multitenancy;
 public sealed class LegalHolds : ILegalHolds
 {
     private readonly RetentionStore _store;
-    private readonly RetentionScope _scope;
+    private readonly IOrganizationScope _scope;
     private readonly ILogger<LegalHolds> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="LegalHolds"/> class.</summary>
     /// <param name="gateways">Supplies the configuration gateway of the tables.</param>
     /// <param name="tables">Names the store, path and tables retention is kept in.</param>
-    /// <param name="organizations">Reads an organization, which names its tenant.</param>
-    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
+    /// <param name="organizations">Says whether the caller holds a right for an organization, and which tenant it is in.</param>
     /// <param name="logger">The logger.</param>
     public LegalHolds(
-        IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationProvider organizations, IScopeAuthority authority,
+        IConfigurationGatewayProvider gateways, RetentionTables tables, IOrganizationScope organizations,
         ILogger<LegalHolds>? logger)
     {
         _logger = logger ?? NullLogger<LegalHolds>.Instance;
         _store = new RetentionStore(gateways, tables, _logger);
-        _scope = new RetentionScope(organizations, authority, _logger);
+        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
     }
 
     /// <inheritdoc />

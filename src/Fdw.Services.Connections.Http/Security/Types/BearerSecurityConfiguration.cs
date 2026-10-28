@@ -61,6 +61,9 @@ public sealed class BearerSecurityConfiguration : HttpAuthenticationConfiguratio
     /// <inheritdoc />
     public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("TokenSecretName", "Bearer token", secret: true)];
 
+    /// <inheritdoc />
+    public override HttpSecretNames SecretNames => new(null, null, TokenSecretName);
+
     /// <inheritdoc/>
     /// <remarks>The connection carries its own token.</remarks>
     public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;

@@ -49,7 +49,7 @@ public sealed class OrganizationMembers : IOrganizationMembers
     /// <inheritdoc />
     public async Task<IGenericResult<OrganizationMemberChange>> Give(Guid organizationId, Guid userId, string roleName, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Write, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<OrganizationMemberChange>();
@@ -88,7 +88,7 @@ public sealed class OrganizationMembers : IOrganizationMembers
     /// <inheritdoc />
     public async Task<IGenericResult<string>> Remove(Guid organizationId, Guid userId, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Write, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<string>();
@@ -118,7 +118,7 @@ public sealed class OrganizationMembers : IOrganizationMembers
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<OrganizationMember>>> List(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        var tenant = await _scope.TenantOf(organizationId, cancellationToken).ConfigureAwait(false);
+        var tenant = await _scope.TenantOf(OrganizationRights.Read, organizationId, cancellationToken).ConfigureAwait(false);
         if (tenant.IsFailure)
         {
             return tenant.ToNewResult<IReadOnlyList<OrganizationMember>>();

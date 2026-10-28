@@ -56,8 +56,7 @@ public sealed class StatSetService : IStatSetService
 
         if (!queryResult.IsSuccess)
         {
-            return GenericResult<StatSetResponse>.Failure(
-                StatSetServiceLog.StatSetComputationFailed(_logger, request.ContainerName, queryResult.CurrentMessage));
+            return queryResult.ToNewResult<StatSetResponse>();
         }
 
         if (queryResult.Value == null)
@@ -108,8 +107,7 @@ public sealed class StatSetService : IStatSetService
 
         if (!queryResult.IsSuccess)
         {
-            return GenericResult<GroupedStatSetResponse>.Failure(
-                StatSetServiceLog.StatSetComputationFailed(_logger, request.ContainerName, queryResult.CurrentMessage));
+            return queryResult.ToNewResult<GroupedStatSetResponse>();
         }
 
         if (queryResult.Value == null)

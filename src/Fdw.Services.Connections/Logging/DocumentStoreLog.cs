@@ -26,7 +26,8 @@ public static partial class DocumentStoreLog
     public static partial IGenericMessage FolderInvalid(ILogger logger, string what, string? folder, Guid organizationId, string? reason);
 
     /// <summary>Logs that the organization has no assignment for the purpose.</summary>
-    [MessageLogging(EventId = 32800, Level = LogLevel.Warning, Message = "Organization '{organizationId}' has no connection assigned for '{purpose}'")]
+    [MessageLogging(EventId = 32800, Level = LogLevel.Warning, Message = "Organization '{organizationId}' has no connection assigned for '{purpose}'",
+        ClientMessage = "The organization has no connection assigned for '{purpose}'. Assign one to the organization first")]
     public static partial IGenericMessage NothingAssigned(ILogger logger, Guid organizationId, string purpose);
 
     /// <summary>Logs that an assignment names a grant that does not exist.</summary>

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data;
 using Fdw.Data;
+using Fdw.Messages;
 using Fdw.Results;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Data.Abstractions;
@@ -157,10 +158,9 @@ public sealed class MessageService : IMessageService, IAlertSource
     {
         MessagingLog.TraceGetMessagesEntry(_logger);
 
-        if (query.After.HasValue && query.Before.HasValue)
+        if (WindowRefusal(query) is { } refusal)
         {
-            return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
-                MessagingLog.PagingCursorsConflict(_logger));
+            return GenericResult<IReadOnlyList<MessagePayload>>.Failure(refusal);
         }
 
         try
@@ -229,6 +229,54 @@ public sealed class MessageService : IMessageService, IAlertSource
         catch (Exception ex)
         {
             return GenericResult<IReadOnlyList<MessagePayload>>.Failure(
+                MessagingLog.MessageQueryFailed(_logger, ex.Message));
+        }
+    }
+
+    // Why a query's window cannot be read, or null when it can: both cursors name a direction, and an order would name a second one.
+    private IGenericMessage? WindowRefusal(MessageQuery query)
+    {
+        if (query.After.HasValue && query.Before.HasValue)
+            return MessagingLog.PagingCursorsConflict(_logger);
+
+        return query.NewestFirst && (query.After.HasValue || query.Before.HasValue)
+            ? MessagingLog.PagingOrderWithCursor(_logger)
+            : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<IGenericResult<int>> CountMessages(
+        MessageQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        MessagingLog.TraceGetMessagesEntry(_logger);
+
+        try
+        {
+            var location = await ResolveLocation(cancellationToken).ConfigureAwait(false);
+            if (!location.IsSuccess)
+                return location.ToNewResult<int>();
+
+            var command = ApplyFilters(
+                Query.From<MessagePayload>(location.Value.DataStoreName, location.Value.PathName, MessageContainer),
+                query).Build();
+
+            var result = await Gateway.Execute<IEnumerable<MessagePayload>>(command, cancellationToken).ConfigureAwait(false);
+
+            if (!result.IsSuccess)
+            {
+                return result.Messages.Any()
+                    ? result.ToNewResult<int>()
+                    : GenericResult<int>.Failure(MessagingLog.MessageQueryFailed(_logger, "Message count query failed"));
+            }
+
+            return result.Value is null
+                ? GenericResult<int>.Failure(MessagingLog.MessageQueryFailed(_logger, "Message count query returned null value"))
+                : GenericResult<int>.Success(result.Value.Count());
+        }
+        catch (Exception ex)
+        {
+            return GenericResult<int>.Failure(
                 MessagingLog.MessageQueryFailed(_logger, ex.Message));
         }
     }
@@ -479,6 +527,11 @@ public sealed class MessageService : IMessageService, IAlertSource
                     ? (IGenericResult)result
                     : GenericResult.Failure(
                         MessagingLog.MessageUpdateFailed(_logger, messageIdStr, "Update command failed"));
+            }
+
+            if (result.Value == 0)
+            {
+                return GenericResult.Failure(MessagingLog.MessageNotFound(_logger, messageIdStr));
             }
 
             MessagingLog.MessageArchived(_logger, messageIdStr);
@@ -754,9 +807,9 @@ public sealed class MessageService : IMessageService, IAlertSource
     {
         if (cursor is null)
         {
-            return builder
-                .OrderBy(m => m.CreatedAt)
-                .OrderBy(m => m.Id)
+            return (query.NewestFirst
+                    ? builder.OrderByDescending(m => m.CreatedAt).OrderByDescending(m => m.Id)
+                    : builder.OrderBy(m => m.CreatedAt).OrderBy(m => m.Id))
                 .Paging(query.Skip, query.Take)
                 .Build();
         }

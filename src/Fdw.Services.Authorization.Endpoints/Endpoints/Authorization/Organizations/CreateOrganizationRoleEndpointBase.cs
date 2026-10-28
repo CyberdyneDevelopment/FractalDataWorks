@@ -13,7 +13,7 @@ namespace Fdw.Services.Authorization.Endpoints;
 /// Generic base endpoint for defining a role in an organization (FDW-1593).
 /// </summary>
 /// <remarks>
-/// The role is checked and saved by <see cref="IOrganizationRoles"/>: the caller must act in the organization, the role carries at least
+/// The role is checked and saved by <see cref="IOrganizationRoles"/>: the caller must hold the right at the organization's scope, the role carries at least
 /// one permission and only permissions the caller holds. The change is then recorded in the audit.
 /// </remarks>
 public abstract class CreateOrganizationRoleEndpointBase : Endpoint<OrganizationRoleRequest, OrganizationRoleResponse>

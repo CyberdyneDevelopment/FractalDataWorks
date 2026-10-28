@@ -8,7 +8,7 @@ namespace Fdw.Services.Authorization.Logging;
 /// <summary>
 /// MessageLogging for the roles and members of an organization (FDW-1593).
 /// EventId ranges: 12750-12754 (done), 22750-22751 (refused as invalid, 400), 32750-32752 (not found, 404), 42750-42752 (conflict, 409),
-/// 52750 (not signed in, 401), 72750-72752 (store failures, 500), 102750-102751 (signed in but not allowed here, 403).
+/// 52750 (not signed in, 401), 72750-72752 (store failures, 500).
 /// </summary>
 [MessageLoggingTypeCode("AUTHORIZATION")]
 public static partial class OrganizationAccessLog
@@ -81,11 +81,4 @@ public static partial class OrganizationAccessLog
     [MessageLogging(EventId = 72752, Level = LogLevel.Critical, Message = "Role '{roleName}' of organization '{organizationId}' was changed but the access of user '{userId}' could not be refreshed: {reason}")]
     public static partial IGenericMessage HolderNotRefreshed(ILogger logger, string roleName, Guid organizationId, Guid userId, string? reason);
 
-    /// <summary>Logs that the caller does not act in the organization.</summary>
-    [MessageLogging(EventId = 102750, Level = LogLevel.Warning, Message = "An organization change was refused: it is for organization '{organizationId}', which the caller does not act in")]
-    public static partial IGenericMessage NotActingInOrganization(ILogger logger, Guid organizationId);
-
-    /// <summary>Logs that the organization belongs to a tenant the caller does not act in.</summary>
-    [MessageLogging(EventId = 102751, Level = LogLevel.Warning, Message = "An organization change was refused: organization '{organizationId}' belongs to tenant '{tenantId}', which the caller does not act in")]
-    public static partial IGenericMessage OtherTenant(ILogger logger, Guid organizationId, Guid tenantId);
 }

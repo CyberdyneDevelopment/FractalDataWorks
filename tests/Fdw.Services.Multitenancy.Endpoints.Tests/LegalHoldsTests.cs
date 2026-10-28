@@ -40,7 +40,7 @@ public sealed class LegalHoldsTests
             .ReturnsAsync(GenericResult<int>.Success(1));
         var gateways = new Mock<IConfigurationGatewayProvider>();
         gateways.Setup(g => g.Get("PlatformConfiguration")).Returns(GenericResult<IConfigurationGateway>.Success(gateway.Object));
-        return (new LegalHolds(gateways.Object, Tables, RetentionTestScope.Organizations().Object, RetentionTestScope.Authority(true).Object, NullLogger<LegalHolds>.Instance), gateway);
+        return (new LegalHolds(gateways.Object, Tables, RetentionTestScope.Scope(true).Object, NullLogger<LegalHolds>.Instance), gateway);
     }
 
     private static void Writes(Mock<IConfigurationGateway> gateway, Times times)

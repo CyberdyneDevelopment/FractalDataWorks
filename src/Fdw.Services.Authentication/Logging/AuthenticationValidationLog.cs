@@ -103,8 +103,23 @@ public static partial class AuthenticationValidationLog
 
     /// <summary>Logs the platform claims a validated external token carried and had removed.</summary>
     [MessageLogging(EventId = 31103, Level = LogLevel.Warning,
-        Message = "A token accepted by authentication service '{serviceName}' for subject '{subject}' carried platform claims it has no standing to make; removed: [{claimTypes}]")]
-    public static partial IGenericMessage ForeignPlatformClaimsRemoved(ILogger logger, string serviceName, string subject, string claimTypes);
+        Message = "A token accepted by authentication service '{serviceName}' for subject '{subject}' carried platform claims its entry does not accept; removed: [{claimTypes}]")]
+    public static partial IGenericMessage ForeignPlatformClaimsRemoved(ILogger logger, string serviceName, string? subject, string claimTypes);
+
+    /// <summary>Logs a JwtBearer entry that does not say which platform claims it accepts.</summary>
+    [MessageLogging(EventId = 71129, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' declares no AcceptedClaims. Set AcceptedClaims to the platform claims this issuer's tokens may carry onto the caller, separated by commas (for example 'roles'), or to 'none' for an issuer trusted for none of them. Nothing is assumed in either direction.")]
+    public static partial IGenericMessage JwtBearerMissingAcceptedClaims(ILogger logger, string serviceName);
+
+    /// <summary>Logs a JwtBearer entry that accepts a claim the platform does not define.</summary>
+    [MessageLogging(EventId = 71130, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' accepts claim '{claim}', which is not a platform claim. Known claims: {known}. Use one of them, or 'none'.")]
+    public static partial IGenericMessage JwtBearerAcceptedClaimUnknown(ILogger logger, string serviceName, string claim, string known);
+
+    /// <summary>Logs a JwtBearer entry that accepts a claim only the platform may state about a session.</summary>
+    [MessageLogging(EventId = 71131, Level = LogLevel.Error,
+        Message = "JwtBearer authentication service '{serviceName}' accepts claim '{claim}', which is the platform's statement about a session it created. A token from another issuer cannot carry it; remove it from AcceptedClaims.")]
+    public static partial IGenericMessage JwtBearerAcceptedClaimSessionBound(ILogger logger, string serviceName, string claim);
 
     /// <summary>Logs a bearer token whose payload segment could not be read.</summary>
     [MessageLogging(EventId = 11103, Level = LogLevel.Debug,

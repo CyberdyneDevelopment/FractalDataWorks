@@ -40,8 +40,8 @@ public sealed class OrganizationRolesTests
 
         public Rig()
         {
-            Scope.Setup(s => s.TenantOf(Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
-            Scope.Setup(s => s.TenantOf(Legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("not acting in Legal")));
+            Scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
+            Scope.Setup(s => s.TenantOf(It.IsAny<string>(), Legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("not acting in Legal")));
             GrantRule.Setup(g => g.CanDefine(It.IsAny<IReadOnlyList<string>>(), Tenant)).Returns(GenericResult.Success());
             Roles.Setup(r => r.Get(ConfigurationLevels.Children, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => GenericResult<IReadOnlyList<IOrganizationRoleImplementationConfiguration>>.Success([.. Stored]));
@@ -262,5 +262,23 @@ public sealed class OrganizationRolesTests
 
         result.Value!.Select(r => r.Name).ShouldBe(["Clerk", "Member"]);
         result.Value!.Single(r => r.Name == "Member").IsBuiltIn.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task EachRoleRouteAsksForTheRightItNeedsAtTheOrganizationsScope()
+    {
+        var rig = new Rig();
+        var service = rig.Service();
+
+        await service.Define(Legal, "Clerk", null, ["datasets:read"], TestContext.Current.CancellationToken);
+        await service.Redefine(Legal, "Clerk", null, ["datasets:read"], TestContext.Current.CancellationToken);
+        await service.Delete(Legal, "Clerk", TestContext.Current.CancellationToken);
+        await service.Get(Legal, "Clerk", TestContext.Current.CancellationToken);
+        await service.List(Legal, TestContext.Current.CancellationToken);
+
+        rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Write, Legal, It.IsAny<CancellationToken>()), Times.Exactly(3));
+        rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Read, Legal, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 }

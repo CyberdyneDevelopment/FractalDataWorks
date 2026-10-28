@@ -8,5 +8,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class ActorClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="ActorClaim"/> class.</summary>
-    public ActorClaim() : base(name: "actor", isArray: false, TokenDestinations.AccessToken) { }
+    public ActorClaim() : base(name: "actor", isArray: false, isSessionBound: true, TokenDestinations.AccessToken) { }
 }

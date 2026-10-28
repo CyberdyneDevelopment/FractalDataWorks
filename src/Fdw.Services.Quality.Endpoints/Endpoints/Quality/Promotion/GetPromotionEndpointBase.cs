@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Quality.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -54,8 +55,14 @@ public abstract class GetPromotionEndpointBase : Endpoint<PromotionIdRequest, Pr
 
             var msg = result.CurrentMessage ?? string.Empty;
 
-            if ((!result.IsSuccess && msg.Contains("not found", System.StringComparison.OrdinalIgnoreCase))
-                || (result.IsSuccess && result.Value is null))
+            if (!result.IsSuccess)
+            {
+                PromotionEndpointLog.GetPromotionFailed(_logger, req.Id, msg);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (result.Value is null)
             {
                 PromotionEndpointLog.PromotionNotFound(_logger, req.Id);
                 await Send.ResultAsync(TypedResults.Json(new
@@ -63,14 +70,6 @@ public abstract class GetPromotionEndpointBase : Endpoint<PromotionIdRequest, Pr
                     errorCode = "NotFound",
                     messages = new[] { $"Promotion '{req.Id}' was not found." }
                 }, statusCode: 404)).ConfigureAwait(false);
-                return;
-            }
-
-            if (!result.IsSuccess)
-            {
-                PromotionEndpointLog.GetPromotionFailed(_logger, req.Id, msg);
-                AddError("Failed to get promotion");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
                 return;
             }
 

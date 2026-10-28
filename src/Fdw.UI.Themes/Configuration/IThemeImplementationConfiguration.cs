@@ -78,6 +78,9 @@ public interface IThemeImplementationConfiguration : IImplementationConfiguratio
     /// <summary>Gets or sets the Theme IsDefault.</summary>
     bool IsDefault { get; set; }
 
+    /// <summary>Gets or sets whether the Theme is one the system ships, which cannot be removed.</summary>
+    bool IsBuiltIn { get; set; }
+
     /// <summary>Gets or sets the Theme LogoUrl.</summary>
     string? LogoUrl { get; set; }
 

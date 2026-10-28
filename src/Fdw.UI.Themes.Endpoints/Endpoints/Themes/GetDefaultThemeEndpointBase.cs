@@ -1,13 +1,16 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.UI.Themes.Endpoints;
 
 /// <summary>
 /// Base endpoint to retrieve the current default theme configuration.
-/// Subclasses must implement <see cref="LoadDefaultTheme"/> to provide the theme data.
+/// Subclasses must implement <see cref="LoadDefaultTheme"/> to provide the theme data. A failed result is answered
+/// with the status its message carries, so no default being set answers 404 and a failed read answers its own status.
 /// </summary>
 /// <typeparam name="TDetail">The theme detail DTO type.</typeparam>
 public abstract class GetDefaultThemeEndpointBase<TDetail> : EndpointWithoutRequest<TDetail>
@@ -44,14 +47,21 @@ public abstract class GetDefaultThemeEndpointBase<TDetail> : EndpointWithoutRequ
         });
     }
 
-    /// <summary>Returns the current default theme configuration.</summary>
-    public override Task HandleAsync(CancellationToken ct)
+    /// <summary>Returns the current default theme configuration, or the status of the failure to find it.</summary>
+    public override async Task HandleAsync(CancellationToken ct)
     {
-        
-        var theme = LoadDefaultTheme();
-        return Send.OkAsync(theme, ct);
+        var theme = await LoadDefaultTheme(ct).ConfigureAwait(false);
+        if (!theme.IsSuccess || theme.Value is not { } found)
+        {
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(theme, HttpContext)).ConfigureAwait(false);
+            return;
+        }
+
+        await Send.OkAsync(found, ct).ConfigureAwait(false);
     }
 
-    /// <summary>Loads the default theme. Override in subclasses to provide theme data.</summary>
-    protected virtual TDetail LoadDefaultTheme() => default!;
+    /// <summary>Loads the default theme. Implemented by subclasses to provide theme data.</summary>
+    /// <param name="ct">A token to cancel the operation.</param>
+    /// <returns>The stored default theme; a failure when none is set or the read fails.</returns>
+    protected abstract Task<IGenericResult<TDetail>> LoadDefaultTheme(CancellationToken ct);
 }

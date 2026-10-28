@@ -66,6 +66,9 @@ public sealed class ApiKeySecurityConfiguration : HttpAuthenticationConfiguratio
     /// <inheritdoc />
     public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("ApiKeySecretName", "API key", secret: true)];
 
+    /// <inheritdoc />
+    public override HttpSecretNames SecretNames => new(null, null, ApiKeySecretName);
+
     /// <inheritdoc/>
     /// <remarks>The connection carries its own API key.</remarks>
     public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;

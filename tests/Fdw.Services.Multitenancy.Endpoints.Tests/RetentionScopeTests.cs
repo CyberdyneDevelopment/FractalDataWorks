@@ -13,9 +13,9 @@ using Xunit;
 namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 
 /// <summary>
-/// Tests that the retention services decide who may act inside the service (FDW-2215): each method asks the scope authority for its right at
-/// the organization's own scope before it touches the store, an organization the store does not hold is refused in the forbidden category,
-/// and a refused caller reads and writes nothing.
+/// Tests that the retention services decide who may act inside the service (FDW-2215, FDW-2887): each method asks the organization scope for its
+/// right for the organization before it touches the store, and a refused caller reads and writes nothing. What makes the scope refuse, and
+/// that it refuses another company's organization as it refuses a missing one, is OrganizationScopeTests' question.
 /// </summary>
 [Trait("Category", "Security")]
 public sealed class RetentionScopeTests
@@ -29,19 +29,19 @@ public sealed class RetentionScopeTests
     {
         internal Mock<IConfigurationGatewayProvider> Gateways { get; } = new();
 
-        internal Mock<IScopeAuthority> Authority { get; } = RetentionTestScope.Authority(allows);
+        internal Mock<IOrganizationScope> Scope { get; } = RetentionTestScope.Scope(allows);
 
-        internal RetentionPolicies Policies => new(Gateways.Object, Tables, RetentionTestScope.Organizations().Object, Authority.Object, NullLogger<RetentionPolicies>.Instance);
+        internal RetentionPolicies Policies => new(Gateways.Object, Tables, Scope.Object, RetentionTestScope.Documents().Object, NullLogger<RetentionPolicies>.Instance);
 
-        internal LegalHolds Holds => new(Gateways.Object, Tables, RetentionTestScope.Organizations().Object, Authority.Object, NullLogger<LegalHolds>.Instance);
+        internal LegalHolds Holds => new(Gateways.Object, Tables, Scope.Object, NullLogger<LegalHolds>.Instance);
 
         internal RetentionKeeper Keeper => new(
-            Policies, Holds, new Mock<IRetainedDocuments>().Object, RetentionTestScope.Organizations().Object, Authority.Object,
+            Policies, Holds, new Mock<IRetainedDocuments>().Object, Scope.Object,
             NullLogger<RetentionKeeper>.Instance);
 
         internal void NothingRead() => Gateways.Verify(g => g.Get(It.IsAny<string>()), Times.Never);
 
-        internal void Asked(string right) => Authority.Verify(a => a.May(right, new ThingScope(Tenant, Finance), It.IsAny<CancellationToken>()), Times.Once);
+        internal void Asked(string right) => Scope.Verify(s => s.TenantOf(right, Finance, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static readonly NewRetentionPolicy Policy = new("Contract", 7, 0, 0, "SignedDate", "Delete");
@@ -70,7 +70,7 @@ public sealed class RetentionScopeTests
 
         set.IsFailure.ShouldBeTrue();
         removed.IsFailure.ShouldBeTrue();
-        rig.Authority.Verify(a => a.May("retention:write", new ThingScope(Tenant, Finance), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        rig.Scope.Verify(s => s.TenantOf("retention:write", Finance, It.IsAny<CancellationToken>()), Times.Exactly(2));
         rig.NothingRead();
     }
 
@@ -86,8 +86,8 @@ public sealed class RetentionScopeTests
         var held = await rig.Holds.HeldDocuments(Finance, TestContext.Current.CancellationToken);
 
         new IGenericResult[] { placed, lifted, listed, held }.ShouldAllBe(result => result.IsFailure);
-        rig.Authority.Verify(a => a.May("legal-holds:write", new ThingScope(Tenant, Finance), It.IsAny<CancellationToken>()), Times.Exactly(2));
-        rig.Authority.Verify(a => a.May("legal-holds:read", new ThingScope(Tenant, Finance), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        rig.Scope.Verify(s => s.TenantOf("legal-holds:write", Finance, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        rig.Scope.Verify(s => s.TenantOf("legal-holds:read", Finance, It.IsAny<CancellationToken>()), Times.Exactly(2));
         rig.NothingRead();
     }
 
@@ -101,20 +101,6 @@ public sealed class RetentionScopeTests
 
         report.IsFailure.ShouldBeTrue();
         rig.Asked("retention:write");
-        rig.NothingRead();
-    }
-
-    [Fact]
-    [Trait("Priority", "P0")]
-    public async Task AnOrganizationTheStoreDoesNotHoldIsRefusedInTheForbiddenCategoryWithoutAskingTheAuthority()
-    {
-        var rig = new Rig(true);
-
-        var listed = await rig.Policies.List(Unknown, TestContext.Current.CancellationToken);
-
-        listed.IsFailure.ShouldBeTrue();
-        FailureCategory.Of(listed).ShouldBe(ResultCategories.ByName("Forbidden"));
-        rig.Authority.Verify(a => a.May(It.IsAny<string>(), It.IsAny<ThingScope>(), It.IsAny<CancellationToken>()), Times.Never);
         rig.NothingRead();
     }
 }

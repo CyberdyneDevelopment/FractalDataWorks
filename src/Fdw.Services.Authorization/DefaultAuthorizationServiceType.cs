@@ -83,6 +83,7 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
                 new HierarchyScopeAuthority(
                     sp.GetRequiredService<IAuthenticationContextAccessor>(),
                     sp.GetRequiredService<IUserPermissions>(),
+                    sp.GetRequiredService<ISystemRoleConfiguration>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<HierarchyScopeAuthority>()));
 
             builder.Services.TryAddSingleton<IUserRoleAssignment>(sp =>
@@ -179,8 +180,8 @@ public sealed class DefaultAuthorizationServiceType : AuthorizationTypeBase<IGen
             builder.Services.TryAddScoped<IOrganizationScope>(sp =>
                 new OrganizationScope(
                     sp.GetRequiredService<IAuthenticationContextAccessor>(),
-                    sp.GetRequiredService<IOrgContext>(),
                     sp.GetRequiredService<IOrganizationProvider>(),
+                    sp.GetRequiredService<IScopeAuthority>(),
                     sp.GetService<ILoggerFactory>()?.CreateLogger<OrganizationScope>()));
             builder.Services.TryAddScoped<IOrganizationRoles>(sp =>
                 new OrganizationRoles(

@@ -8,5 +8,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class RolesClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="RolesClaim"/> class.</summary>
-    public RolesClaim() : base(name: "roles", isArray: true, TokenDestinations.AccessToken) { }
+    public RolesClaim() : base(name: "roles", isArray: true, isSessionBound: false, TokenDestinations.AccessToken) { }
 }

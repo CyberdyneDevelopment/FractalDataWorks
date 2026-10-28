@@ -7,7 +7,7 @@ namespace Fdw.Services.Multitenancy.Logging;
 
 /// <summary>
 /// MessageLogging for retention policies, legal holds and the retention job (FDW-1575).
-/// EventId ranges: 13100-13105 (done), 23100-23101 (bad request, 400), 33100-33101 (not found, 404), 43100 (conflict, 409),
+/// EventId ranges: 13100-13105 (done), 23100-23102 (bad request, 400), 33100-33101 (not found, 404), 43100 (conflict, 409),
 /// 73100-73103 (store and document failures, 500), 103100 (organization not reachable, 403).
 /// </summary>
 [MessageLoggingTypeCode("MULTITENANCY")]
@@ -38,12 +38,16 @@ public static partial class RetentionLog
     public static partial IGenericMessage RunFinished(ILogger logger, Guid organizationId, int considered, int ended, int held, int undated, int failed);
 
     /// <summary>Logs that a retention policy was refused as stated.</summary>
-    [MessageLogging(EventId = 23100, Level = LogLevel.Warning, Message = "The retention policy was refused: {reason}")]
+    [MessageLogging(EventId = 23100, Level = LogLevel.Warning, Message = "The retention policy was refused: {reason}", ClientMessage = "The retention policy was refused: {reason}")]
     public static partial IGenericMessage PolicyInvalid(ILogger logger, string reason);
 
     /// <summary>Logs that a legal hold was refused as stated.</summary>
     [MessageLogging(EventId = 23101, Level = LogLevel.Warning, Message = "The legal hold was refused: {reason}")]
     public static partial IGenericMessage HoldInvalid(ILogger logger, string reason);
+
+    /// <summary>Logs that documents were asked for without saying which type.</summary>
+    [MessageLogging(EventId = 23102, Level = LogLevel.Warning, Message = "Documents were asked for organization '{organizationId}' without a document type", ClientMessage = "A document type is required to list documents")]
+    public static partial IGenericMessage DocumentTypeRequired(ILogger logger, Guid organizationId);
 
     /// <summary>Logs that an organization has no retention policy for a document type.</summary>
     [MessageLogging(EventId = 33100, Level = LogLevel.Warning, Message = "Organization '{organizationId}' has no retention policy for '{documentType}'")]
@@ -72,11 +76,4 @@ public static partial class RetentionLog
     /// <summary>Logs that the application could not end a document.</summary>
     [MessageLogging(EventId = 73103, Level = LogLevel.Warning, Message = "Document '{documentId}' of organization '{organizationId}' could not be ended with '{endAction}': {reason}")]
     public static partial IGenericMessage DocumentNotEnded(ILogger logger, string documentId, Guid organizationId, string endAction, string? reason);
-
-    /// <summary>Logs that a department is refused because it is missing or the caller may not reach it; the two are not told apart.</summary>
-    [MessageLogging(
-        EventId = 103100, Level = LogLevel.Warning,
-        Message = "Refused '{right}' for organization '{organizationId}': the organization is not one the caller may reach",
-        ClientMessage = "The organization is not one you may act for")]
-    public static partial IGenericMessage OrganizationNotReachable(ILogger logger, string right, Guid organizationId);
 }

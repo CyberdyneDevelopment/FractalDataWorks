@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -55,8 +56,7 @@ public abstract class ListEnvironmentsEndpointBase : EndpointWithoutRequest<IRea
             if (!result.IsSuccess)
             {
                 PromotionEndpointLog.ListEnvironmentsFailed(_logger, result.CurrentMessage!);
-                AddError("Failed to list environments");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

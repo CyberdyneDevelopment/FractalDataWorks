@@ -12,7 +12,7 @@ namespace Fdw.Services.Settings;
 /// The platform defines each setting and holds its default. A tenant, and an organization of a tenant, may set their own value unless a
 /// level above locked the setting. The value in force is the nearest one set; a locked level's value governs every level below it, and
 /// values set below a lock are ignored (not deleted) while it stands. Who may act at a level is settled by the caller; the organization
-/// scope is checked here, because an organization is only reached by someone acting in it.
+/// scope is checked here: an organization is reached by someone who holds the right at its scope, reading or writing, whether or not they act in it.
 /// </remarks>
 public interface IInheritedSettings
 {

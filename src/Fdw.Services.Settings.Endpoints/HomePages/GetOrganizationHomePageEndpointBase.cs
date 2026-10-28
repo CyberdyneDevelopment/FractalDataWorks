@@ -12,14 +12,12 @@ public abstract class GetOrganizationHomePageEndpointBase : Endpoint<Organizatio
 {
     private readonly IHomePages _pages;
     private readonly IOrganizationScope _organizations;
-    private readonly IScopeAuthority _authority;
 
     /// <summary>Initializes a new instance of the <see cref="GetOrganizationHomePageEndpointBase"/> class.</summary>
-    protected GetOrganizationHomePageEndpointBase(IHomePages pages, IOrganizationScope organizations, IScopeAuthority authority)
+    protected GetOrganizationHomePageEndpointBase(IHomePages pages, IOrganizationScope organizations)
     {
         _pages = pages;
         _organizations = organizations;
-        _authority = authority;
     }
 
     /// <inheritdoc />
@@ -35,7 +33,7 @@ public abstract class GetOrganizationHomePageEndpointBase : Endpoint<Organizatio
     /// <inheritdoc />
     public override async Task HandleAsync(OrganizationHomePageRequest req, CancellationToken ct)
     {
-        var scope = await OrganizationHomePageAccess.Check(_organizations, _authority, req.OrganizationId, OrganizationHomePageAccess.Read, ct).ConfigureAwait(false);
+        var scope = await OrganizationHomePageAccess.Check(_organizations, req.OrganizationId, OrganizationHomePageAccess.Read, ct).ConfigureAwait(false);
         if (scope.IsFailure || scope.Value is not { } held)
         {
             await Send.ResultAsync(InheritedSettingProblem.Of(scope, HttpContext)).ConfigureAwait(false);

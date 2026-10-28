@@ -15,5 +15,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class JtiClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="JtiClaim"/> class.</summary>
-    public JtiClaim() : base(name: "jti", isArray: false, TokenDestinations.AccessToken) { }
+    public JtiClaim() : base(name: "jti", isArray: false, isSessionBound: false, TokenDestinations.AccessToken) { }
 }

@@ -72,6 +72,9 @@ public sealed class WsSecurityConfiguration : HttpAuthenticationConfiguration
     /// <inheritdoc />
     public override IReadOnlyList<ConnectionCredentialField> Credentials { get; } = [new("CertificateSecretName", "Client certificate", secret: true)];
 
+    /// <inheritdoc />
+    public override HttpSecretNames SecretNames => new(CertificateSecretName, null, null);
+
     /// <inheritdoc/>
     /// <remarks>The connection carries its own WS-Security credential.</remarks>
     public override bool UsesHostIdentity(IReadOnlyDictionary<string, string?> values) => false;

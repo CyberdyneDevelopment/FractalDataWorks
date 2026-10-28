@@ -13,7 +13,6 @@ An endpoint is an HTTP orchestrator. It does not open a gateway, and it does not
 | `ApproveAccessRequestEndpointBase` | class | Abstract base class for approving an access request (PUT /access-requests/{Id}/approve). |
 | `ArchiveMessageEndpointBase` | class | Abstract base class for archiving a message (PUT /messages/{Id}/archive). |
 | `CreateAccessRequestEndpointBase` | class | Abstract base class for creating an access request (POST /access-requests). |
-| `DeleteMessageEndpointBase` | class | Abstract base class for deleting a message (DELETE /messages/{Id}). Why: Messaging service has no… |
 | `DenyAccessRequestEndpointBase` | class | Abstract base class for denying an access request (PUT /access-requests/{Id}/deny). |
 | `DismissMessageEndpointBase` | class | Abstract base class for dismissing a message (POST /messages/{Id}/dismiss, the Dismiss action of its alert). |
 | `GetMessageEndpointBase` | class | Abstract base class for getting a single message by ID (GET /messages/{Id}). |

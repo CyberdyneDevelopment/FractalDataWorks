@@ -42,7 +42,7 @@ public sealed class ComponentSettingBindingsTests
         foreach (var (kind, setting) in scalars)
         {
             var binding = ComponentSettingBindings.Find(setting.Name).ShouldNotBeNull($"{kind}: {setting.Name}");
-            var expected = setting.Kind is "Text" or "SqlText" or "DataSet" or "DataStore" or "Container" or "LoadStepKinds" or "SoftDeleteModes" or "JoinKinds" or "SplitRoutings" or "RunPoints" or "Variable"
+            var expected = setting.Kind is "Text" or "SqlText" or "DataSet" or "DataStore" or "DataStorePath" or "Container" or "LoadStepKinds" or "SoftDeleteModes" or "JoinKinds" or "SplitRoutings" or "RunPoints" or "Variable"
                 ? "Text"
                 : setting.Kind;
             binding.Kind.ShouldBe(expected, $"{kind}: {setting.Name}");

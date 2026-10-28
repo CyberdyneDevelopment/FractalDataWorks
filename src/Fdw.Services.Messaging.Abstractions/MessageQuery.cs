@@ -52,6 +52,12 @@ public sealed class MessageQuery
     /// <summary>Gets or sets the number of records to skip.</summary>
     public int Skip { get; set; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the offset window is read newest first, so the first page is the person's latest messages.
+    /// Only offset paging has an order of its own: a cursor already names its direction, so a query that sets both is refused.
+    /// </summary>
+    public bool NewestFirst { get; set; }
+
     /// <summary>Gets or sets the number of records to take. Defaults to 50.</summary>
     public int Take { get; set; } = 50;
 }

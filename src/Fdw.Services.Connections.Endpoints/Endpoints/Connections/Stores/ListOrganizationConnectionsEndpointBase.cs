@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Connections.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for listing the connections assigned to an organization (FDW-1581). The caller must act in the organization.
+/// Generic base endpoint for listing the connections assigned to an organization (FDW-1581). The caller must hold the right at the organization's scope.
 /// </summary>
 public abstract class ListOrganizationConnectionsEndpointBase : Endpoint<OrganizationConnectionsRequest, OrganizationConnectionsResponse>
 {

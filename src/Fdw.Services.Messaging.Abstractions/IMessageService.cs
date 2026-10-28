@@ -28,6 +28,14 @@ public interface IMessageService
     Task<IGenericResult<IReadOnlyList<MessagePayload>>> GetMessages(MessageQuery query, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Counts the messages that match a query's filters, ignoring its window (cursors, offset and page size).
+    /// </summary>
+    /// <param name="query">The query whose filters are counted.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The number of matching messages.</returns>
+    Task<IGenericResult<int>> CountMessages(MessageQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a single message by its identifier.
     /// </summary>
     /// <param name="messageId">The message identifier.</param>

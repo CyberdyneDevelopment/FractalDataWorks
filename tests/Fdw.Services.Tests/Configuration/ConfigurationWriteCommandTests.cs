@@ -7,7 +7,6 @@ using Fdw.Commands.Data.Abstractions;
 using Fdw.Commands.Data.SoftDeletes;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
-using Fdw.Data.Abstractions.Mappers.PocoMappers;
 using Fdw.Results;
 using Moq;
 using Shouldly;
@@ -19,12 +18,11 @@ namespace Fdw.Services.Tests.Configuration;
 /// What a configuration save and retire do: the steps each expands into for a container, the rows each step reads or
 /// flags, and the result assembled from what the steps answer.
 /// </summary>
+[Collection(nameof(ServicesTestCollection))]
 public sealed class ConfigurationWriteCommandTests
 {
     private static readonly Guid RowId = Guid.Parse("11111111-0000-0000-0000-000000000001");
     private static readonly Guid OwnerId = Guid.Parse("22222222-0000-0000-0000-000000000002");
-
-    static ConfigurationWriteCommandTests() => PocoMapperCollection.RegisterMember(new SettingRowPocoMapper());
 
     [GenerateMapper]
     public sealed class SettingRow

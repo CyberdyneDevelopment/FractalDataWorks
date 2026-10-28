@@ -18,7 +18,7 @@ public sealed class ContainerDestinationComponentType : ComponentTypeBase
         [],
         [
             new StageMember("dataStore", "DataStore", true, "The data store to load.", TakesParameterText: true),
-            new StageMember("path", "Text", false, "The path in the data store; none when the store states none.", TakesParameterText: true),
+            new StageMember("path", "DataStorePath", false, "The path in the data store; none when the store states none.", TakesParameterText: true),
             new StageMember("container", "Container", true, "The container to load.", TakesParameterText: true),
             new StageMember("loadKind", "LoadStepKinds", true, "How a batch is written: insert, upsert and the others a load step can be."),
             new StageMember("truncateFirst", "Boolean", true, "Whether the target is emptied once, before the first batch is written."),

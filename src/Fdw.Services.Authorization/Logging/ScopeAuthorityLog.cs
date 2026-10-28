@@ -6,7 +6,7 @@ namespace Fdw.Services.Authorization.Logging;
 
 /// <summary>
 /// MessageLogging for the scope check.
-/// EventId ranges: 12780 (allowed), 22780 (no scope named, 400), 52780 (not signed in, 401), 102780-102782 (signed in but not allowed, 403).
+/// EventId ranges: 12780-12781 (allowed), 22780 (no scope named, 400), 52780 (not signed in, 401), 102780-102782 (signed in but not allowed, 403).
 /// </summary>
 [MessageLoggingTypeCode("AUTHORIZATION")]
 public static partial class ScopeAuthorityLog
@@ -14,6 +14,10 @@ public static partial class ScopeAuthorityLog
     /// <summary>Logs that a caller was allowed to act at a scope.</summary>
     [MessageLogging(EventId = 12780, Level = LogLevel.Information, Message = "Allowed: the caller holds '{right}' at {scope} or above")]
     public static partial IGenericMessage Allowed(ILogger logger, string right, string scope);
+
+    /// <summary>Logs that a platform administrator was allowed to act at a scope without holding a role there (FDW-2852).</summary>
+    [MessageLogging(EventId = 12781, Level = LogLevel.Information, Message = "Allowed: the caller administers the platform, so '{right}' holds at {scope}")]
+    public static partial IGenericMessage AllowedPlatformAdministrator(ILogger logger, string right, string scope);
 
     /// <summary>Logs that a check was refused because the thing named no tenant.</summary>
     [MessageLogging(EventId = 22780, Level = LogLevel.Warning, Message = "Refused '{right}': the thing names no tenant, so there is no scope to judge it at")]

@@ -31,7 +31,7 @@ public static partial class MessagingEndpointLog
     /// Logged at Error level when listing messages fails.
     /// </summary>
     [MessageLogging(EventId = 71000, Level = LogLevel.Error, Message = "Failed to list messages for user '{userId}': {reason}")]
-    public static partial IGenericMessage MessageListFailed(ILogger logger, string userId, string reason);
+    public static partial IGenericMessage MessageListFailed(ILogger logger, string userId, string? reason);
 
     /// <summary>
     /// Logged at Trace level when fetching a message by ID.
@@ -314,4 +314,11 @@ public static partial class MessagingEndpointLog
     [MessageLogging(EventId = 21021, Level = LogLevel.Warning, Message = "Refused a question about alerts that names none",
         ClientMessage = "alert must name at least one alert, written kind:id")]
     public static partial IGenericMessage AlertNamesNone(ILogger logger);
+
+    /// <summary>
+    /// Refused a message list that asked for an order that is not newest or oldest. A validation refusal (category 2).
+    /// </summary>
+    [MessageLogging(EventId = 21022, Level = LogLevel.Warning, Message = "Refused a message list with the order '{order}'",
+        ClientMessage = "The order '{order}' is not one of newest, oldest")]
+    public static partial IGenericMessage OrderUnknown(ILogger logger, string order);
 }

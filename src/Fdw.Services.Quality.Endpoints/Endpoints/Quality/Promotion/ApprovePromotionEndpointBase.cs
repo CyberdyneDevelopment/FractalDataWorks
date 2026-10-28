@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -49,7 +50,13 @@ public abstract class ApprovePromotionEndpointBase : Endpoint<PromotionActionReq
         try
         {
             var existing = await _promotionService.GetRequest(req.Id, ct).ConfigureAwait(false);
-            if (!existing.IsSuccess || existing.Value is null)
+            if (!existing.IsSuccess)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(existing, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            if (existing.Value is null)
             {
                 await Send.NotFoundAsync(ct).ConfigureAwait(false);
                 return;
@@ -60,8 +67,7 @@ public abstract class ApprovePromotionEndpointBase : Endpoint<PromotionActionReq
             if (!result.IsSuccess)
             {
                 PromotionEndpointLog.ApprovePromotionFailed(_logger, req.Id, result.CurrentMessage!);
-                AddError("Failed to approve promotion");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

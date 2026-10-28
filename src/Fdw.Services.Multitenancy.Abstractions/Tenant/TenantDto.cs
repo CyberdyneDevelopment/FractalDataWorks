@@ -20,6 +20,9 @@ public sealed class TenantDto
     /// <summary>Gets or sets whether the tenant is active.</summary>
     public bool IsActive { get; set; }
 
+    /// <summary>Gets or sets whether the tenant is deleted. Only a list asked to include deleted tenants returns any.</summary>
+    public bool IsDeleted { get; set; }
+
     /// <summary>Gets or sets the connection name for tenant-specific database.</summary>
     public string? ConnectionName { get; set; }
 

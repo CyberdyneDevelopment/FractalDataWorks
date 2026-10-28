@@ -41,8 +41,8 @@ public sealed class OrganizationMembersTests
 
         public Rig()
         {
-            Scope.Setup(s => s.TenantOf(Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
-            Scope.Setup(s => s.TenantOf(Legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("not acting in Legal")));
+            Scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));
+            Scope.Setup(s => s.TenantOf(It.IsAny<string>(), Legal, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Failure(Fail("not acting in Legal")));
             Roles.Setup(r => r.Get(Finance, "Clerk", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(GenericResult<OrganizationRoleView>.Success(new OrganizationRoleView("Clerk", null, false, ["datasets:read", "datasets:write"])));
             Roles.Setup(r => r.Get(Finance, "Nobody", It.IsAny<CancellationToken>()))
@@ -184,5 +184,21 @@ public sealed class OrganizationMembersTests
 
         finance.Value.ShouldBe("Administrator");
         rig.Access.Verify(a => a.Clear(Jo, Tenant, Legal, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task EachMemberRouteAsksForTheRightItNeedsAtTheOrganizationsScope()
+    {
+        var rig = new Rig();
+        var service = rig.Service();
+
+        await service.Give(Legal, Jo, "Clerk", TestContext.Current.CancellationToken);
+        await service.Remove(Legal, Jo, TestContext.Current.CancellationToken);
+        await service.List(Legal, TestContext.Current.CancellationToken);
+
+        rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Write, Legal, It.IsAny<CancellationToken>()), Times.Exactly(2));
+        rig.Scope.Verify(s => s.TenantOf(OrganizationRights.Read, Legal, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

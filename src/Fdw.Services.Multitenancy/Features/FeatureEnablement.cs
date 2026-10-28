@@ -33,29 +33,31 @@ public sealed class FeatureEnablement : IFeatureEnablement
 
     private readonly IConfigurationGatewayProvider _gateways;
     private readonly FeatureTables _tables;
-    private readonly FeatureScope _scope;
+    private readonly IOrganizationScope _scope;
+    private readonly IScopeAuthority _authority;
     private readonly ILogger<FeatureEnablement> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="FeatureEnablement"/> class.</summary>
     /// <param name="gateways">Supplies the configuration gateway of the tables.</param>
     /// <param name="tables">Names the store, path and tables the switches are kept in.</param>
-    /// <param name="organizations">Reads an organization, which names its tenant.</param>
-    /// <param name="authority">Says whether the caller holds a right for an organization.</param>
+    /// <param name="organizations">Says whether the caller holds a right for an organization, and which tenant it is in.</param>
+    /// <param name="authority">Says whether the caller holds a right for a whole company.</param>
     /// <param name="logger">The logger.</param>
     public FeatureEnablement(
-        IConfigurationGatewayProvider gateways, FeatureTables tables, IOrganizationProvider organizations, IScopeAuthority authority,
+        IConfigurationGatewayProvider gateways, FeatureTables tables, IOrganizationScope organizations, IScopeAuthority authority,
         ILogger<FeatureEnablement>? logger)
     {
         _gateways = gateways ?? throw new ArgumentNullException(nameof(gateways));
         _tables = tables ?? throw new ArgumentNullException(nameof(tables));
         _logger = logger ?? NullLogger<FeatureEnablement>.Instance;
-        _scope = new FeatureScope(organizations, authority, _logger);
+        _scope = organizations ?? throw new ArgumentNullException(nameof(organizations));
+        _authority = authority ?? throw new ArgumentNullException(nameof(authority));
     }
 
     /// <inheritdoc />
     public async Task<IGenericResult<IReadOnlyList<FeatureState>>> ForTenant(Guid tenantId, CancellationToken cancellationToken = default)
     {
-        var may = await _scope.MayActForTenant(FeatureScope.TenantReadRight, tenantId, cancellationToken).ConfigureAwait(false);
+        var may = await _authority.May(FeatureScope.TenantReadRight, new ThingScope(tenantId, null), cancellationToken).ConfigureAwait(false);
         return may.IsFailure
             ? may.ToNewResult<IReadOnlyList<FeatureState>>()
             : await TenantStates(tenantId, cancellationToken).ConfigureAwait(false);
@@ -97,7 +99,7 @@ public sealed class FeatureEnablement : IFeatureEnablement
     /// <inheritdoc />
     public async Task<IGenericResult<FeatureState>> SetForTenant(Guid tenantId, string featureName, bool enabled, CancellationToken cancellationToken = default)
     {
-        var may = await _scope.MayActForTenant(FeatureScope.TenantWriteRight, tenantId, cancellationToken).ConfigureAwait(false);
+        var may = await _authority.May(FeatureScope.TenantWriteRight, new ThingScope(tenantId, null), cancellationToken).ConfigureAwait(false);
         if (may.IsFailure)
         {
             return may.ToNewResult<FeatureState>();

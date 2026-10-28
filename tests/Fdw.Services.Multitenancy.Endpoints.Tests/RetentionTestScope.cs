@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Fdw.Messages;
 using Fdw.Results;
@@ -9,8 +10,9 @@ using Moq;
 namespace Fdw.Services.Multitenancy.Endpoints.Tests;
 
 /// <summary>
-/// The organization and the scope check the retention services are built over in tests (FDW-2215): one organization in one tenant, and
-/// a scope authority that allows or refuses every question it is asked.
+/// The organization scope the retention and feature services are built over in tests (FDW-2215, FDW-2887): one organization in one
+/// tenant, which the scope admits or refuses for every right it is asked, and one it does not hold. Which callers it admits is
+/// OrganizationScopeTests' question.
 /// </summary>
 internal static class RetentionTestScope
 {
@@ -18,15 +20,26 @@ internal static class RetentionTestScope
     internal static readonly Guid Finance = new("44444444-0000-0000-0000-000000000001");
     internal static readonly Guid Unknown = new("44444444-0000-0000-0000-0000000000ff");
 
-    // Reads Finance as an organization of Tenant; Unknown is an organization the store holds nothing for.
-    internal static Mock<IOrganizationProvider> Organizations()
+    // Names Finance as an organization of Tenant when it admits the caller, and refuses the caller otherwise; Unknown is refused as not found.
+    internal static Mock<IOrganizationScope> Scope(bool allows)
     {
-        var organizations = new Mock<IOrganizationProvider>();
-        organizations.Setup(o => o.Get(Finance, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(new OrganizationConfiguration { Id = Finance, TenantId = Tenant }));
-        organizations.Setup(o => o.Get(Unknown, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(GenericResult<OrganizationConfiguration>.Success(null!));
-        return organizations;
+        var scope = new Mock<IOrganizationScope>();
+        scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(allows ? GenericResult<Guid>.Success(Tenant) : GenericResult<Guid>.Failure(new GenericMessage("the caller may not act for the organization")));
+        scope.Setup(s => s.TenantOf(It.IsAny<string>(), Unknown, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<Guid>.Failure(new GenericMessage("there is no such organization")));
+        return scope;
+    }
+
+    // The documents of a department that keeps contracts: they are dated by SignedDate and can be deleted or archived.
+    internal static Mock<IRetainedDocuments> Documents()
+    {
+        var documents = new Mock<IRetainedDocuments>();
+        documents.Setup(d => d.Offers(Tenant, Finance, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<RetentionOffer>.Success(new RetentionOffer(["SignedDate"], ["Delete", "Archive"])));
+        documents.Setup(d => d.DocumentTypes(Tenant, Finance, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<IReadOnlyList<string>>.Success(["Contract"]));
+        return documents;
     }
 
     // Answers every question the same way: allowed, or refused.

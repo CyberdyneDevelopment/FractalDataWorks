@@ -16,5 +16,5 @@ namespace Fdw.Claims.Abstractions;
 public sealed class GlobalTenantClaim : ClaimDefinitionBase
 {
     /// <summary>Initializes a new instance of the <see cref="GlobalTenantClaim"/> class.</summary>
-    public GlobalTenantClaim() : base(name: "globalTenant", isArray: false, TokenDestinations.AccessToken) { }
+    public GlobalTenantClaim() : base(name: "globalTenant", isArray: false, isSessionBound: true, TokenDestinations.AccessToken) { }
 }

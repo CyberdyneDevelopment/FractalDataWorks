@@ -17,6 +17,13 @@ public interface IClaimDefinition : ITypeOption<int, IClaimDefinition>
     bool IsArray { get; }
 
     /// <summary>
+    /// When true, the claim is the platform's statement about a session it created (who is acting, with which role, for which agent, in
+    /// which tenant tier). No other issuer has standing to make it, so a token from another issuer can never be configured to carry it
+    /// onto a principal (FDW-2933). A claim states this; it has no default.
+    /// </summary>
+    bool IsSessionBound { get; }
+
+    /// <summary>
     /// The token destination name(s) the claim is written to (see <see cref="TokenDestinations"/>).
     /// </summary>
     IReadOnlyList<string> Destinations { get; }

@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Fdw.Services.Settings.Endpoints;
 
 /// <summary>
-/// Generic base endpoint for setting an organization's value for a setting (FDW-1579). The caller must act in the organization, and the
-/// organization cannot set a setting its tenant or the platform locked.
+/// Generic base endpoint for setting an organization's value for a setting (FDW-1579). The caller must hold the right at the organization's scope,
+/// and the organization cannot set a setting its tenant or the platform locked.
 /// </summary>
 public abstract class SetOrganizationInheritedSettingEndpointBase : Endpoint<SetOrganizationInheritedSettingRequest, InheritedSettingResponse>
 {

@@ -70,4 +70,7 @@ public partial class JwtBearerAuthenticationConfiguration : IJwtBearerAuthentica
 
     /// <inheritdoc />
     public string Roles { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    public string AcceptedClaims { get; set; } = string.Empty;
 }

@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Services.Quality.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -54,10 +55,7 @@ public abstract class RejectPromotionEndpointBase : Endpoint<PromotionActionRequ
             if (!result.IsSuccess)
             {
                 PromotionEndpointLog.RejectPromotionFailed(_logger, req.Id, result.CurrentMessage!);
-                var status = (result.CurrentMessage ?? string.Empty)
-                    .Contains("not found", System.StringComparison.OrdinalIgnoreCase) ? 404 : 500;
-                AddError("Failed to reject promotion");
-                await Send.ErrorsAsync(status, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
                 return;
             }
 
