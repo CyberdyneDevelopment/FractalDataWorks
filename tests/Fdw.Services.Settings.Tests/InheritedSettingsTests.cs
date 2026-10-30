@@ -47,10 +47,19 @@ public sealed class InheritedSettingsTests
         _serverProvider.Setup(p => p.Save(It.IsAny<IServerSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback((IServerSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_server, row))
             .ReturnsAsync(GenericResult.Success());
+        _serverProvider.Setup(p => p.Update(It.IsAny<IServerSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((IServerSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_server, row))
+            .ReturnsAsync(GenericResult.Success());
         _tenantProvider.Setup(p => p.Save(It.IsAny<ITenantSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback((ITenantSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_tenants, row))
             .ReturnsAsync(GenericResult.Success());
+        _tenantProvider.Setup(p => p.Update(It.IsAny<ITenantSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((ITenantSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_tenants, row))
+            .ReturnsAsync(GenericResult.Success());
         _organizationProvider.Setup(p => p.Save(It.IsAny<IOrganizationSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((IOrganizationSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_organizations, row))
+            .ReturnsAsync(GenericResult.Success());
+        _organizationProvider.Setup(p => p.Update(It.IsAny<IOrganizationSettingImplementationConfiguration>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback((IOrganizationSettingImplementationConfiguration row, string _, string _, string _, CancellationToken _) => Keep(_organizations, row))
             .ReturnsAsync(GenericResult.Success());
         _scope.Setup(s => s.TenantOf(It.IsAny<string>(), Finance, It.IsAny<CancellationToken>())).ReturnsAsync(GenericResult<Guid>.Success(Tenant));

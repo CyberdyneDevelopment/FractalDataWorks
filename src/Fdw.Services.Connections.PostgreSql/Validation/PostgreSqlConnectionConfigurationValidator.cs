@@ -30,7 +30,8 @@ public sealed class PostgreSqlConnectionConfigurationValidator : FdwConfiguratio
 
         RuleFor(x => x.CommandTimeout)
             .GreaterThan(0)
-            .WithMessage("CommandTimeout must be greater than 0");
+            .When(x => x.CommandTimeout.HasValue)
+            .WithMessage("CommandTimeout must be greater than 0 when it is stated; leave it out to take the instance's DefaultCommandTimeoutSeconds");
 
         RuleFor(x => x.MaxSerialInsert)
             .GreaterThan(0)

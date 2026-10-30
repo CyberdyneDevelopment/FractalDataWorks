@@ -46,7 +46,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
     private readonly IDataGatewayProvider _dataGateways;
     private readonly IPipelineConfigurationProvider _pipelines;
     private readonly IPipelineExecutionQueue _queue;
-    private readonly PipelineRunSlot _slot;
+    private readonly PipelineRunScheduler _scheduler;
     private readonly IPipelineStatusBroadcaster _broadcaster;
     private readonly IExecutionCompletionSignaler? _signaler;
     private readonly ILogger<PipelineRunStarter> _logger;
@@ -56,7 +56,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
     /// <param name="dataGateways">Writes the run row.</param>
     /// <param name="pipelines">Finds the pipeline to start and the parameters it declares.</param>
     /// <param name="queue">Takes the request the executor runs.</param>
-    /// <param name="slot">The gate on how many pipelines run at once; a run that waits on a pipeline it started hands its place back.</param>
+    /// <param name="scheduler">Decides how many pipelines run at once; a run that waits on a pipeline it started hands its place back.</param>
     /// <param name="broadcaster">Announces that the run was triggered.</param>
     /// <param name="signaler">Keeps a run's completion for a caller that awaits it (optional; a host that orchestrates has one).</param>
     /// <param name="logger">The logger.</param>
@@ -65,7 +65,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         IDataGatewayProvider dataGateways,
         IPipelineConfigurationProvider pipelines,
         IPipelineExecutionQueue queue,
-        PipelineRunSlot slot,
+        PipelineRunScheduler scheduler,
         IPipelineStatusBroadcaster broadcaster,
         IExecutionCompletionSignaler? signaler = null,
         ILogger<PipelineRunStarter>? logger = null)
@@ -74,7 +74,7 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
         _dataGateways = dataGateways ?? throw new ArgumentNullException(nameof(dataGateways));
         _pipelines = pipelines ?? throw new ArgumentNullException(nameof(pipelines));
         _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-        _slot = slot ?? throw new ArgumentNullException(nameof(slot));
+        _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
         _broadcaster = broadcaster ?? throw new ArgumentNullException(nameof(broadcaster));
         _signaler = signaler;
         _logger = logger ?? NullLogger<PipelineRunStarter>.Instance;
@@ -201,13 +201,13 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
                 TenantId = start.TenantId,
                 Parameters = planned.Values
             }, ct).ConfigureAwait(false);
-        if (!enqueued)
+        if (!enqueued.IsAccepted)
         {
             if (start.AwaitCompletion)
                 _signaler!.Deregister(executionId);
             return await Refuse(
-                executionId, "QueueFull",
-                GenericResult.Failure(PipelineRunStartLog.QueueFull(_logger, pipeline.Name, executionId))).ConfigureAwait(false);
+                executionId, enqueued.Code,
+                GenericResult.Failure(PipelineRunStartLog.RunNotTaken(_logger, pipeline.Name, executionId, enqueued.Reason))).ConfigureAwait(false);
         }
 
         PipelineRunStartLog.RunStarted(_logger, pipeline.Name, executionId, start.ParentExecutionId, start.TriggerSource);
@@ -250,8 +250,8 @@ public sealed class PipelineRunStarter : IPipelineRunStarter
 
         try
         {
-            // The run that waits hands its slot back, so the pipeline it started can run; it takes the slot again when that ends.
-            var handedBack = _slot.Yield();
+            // The run that waits hands its place back, so the pipeline it started can run; it takes the place again when that ends.
+            var handedBack = _scheduler.Yield();
             await using (handedBack.ConfigureAwait(false))
             {
                 return await _signaler.Await(executionId, cancellationToken).ConfigureAwait(false);

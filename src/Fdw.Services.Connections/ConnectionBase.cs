@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Timeouts;
 using Fdw.Data.Abstractions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
@@ -112,6 +113,20 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
     }
 
     /// <summary>
+    /// Gives the native command the timeout its data command carries (FDW-3324).
+    /// </summary>
+    /// <param name="native">The native command the translator made.</param>
+    /// <param name="timeout">The timeout the data command carries, longer than zero.</param>
+    /// <param name="owner">Who set the limit, in the words a failure uses; empty when the command does not say.</param>
+    /// <returns>A success once the native command carries the timeout; a failure for a kind of connection that cannot apply one.</returns>
+    /// <remarks>
+    /// Why the base refuses: a kind that does not override this cannot honour a command timeout, and running the command without it would
+    /// ignore a limit someone set, so the command is refused and the failure says so. SQL Server, PostgreSQL and SQLite override it.
+    /// </remarks>
+    protected virtual IGenericResult ApplyCommandTimeout(TCommand native, TimeSpan timeout, string owner)
+        => GenericResult.Failure(ConnectionLogger.CommandTimeoutNotApplied(Logger, owner));
+
+    /// <summary>
     /// Executes a data command against the unified container by translating to TCommand.
     /// ServiceBase already handled IGenericCommand → IDataCommand.
     /// Container is passed by DataGateway (not looked up internally).
@@ -137,6 +152,15 @@ public abstract class ConnectionBase<TCommand, TConfiguration, TService>
             return translationResult.Messages.Any()
                 ? translationResult.ToNewResult<T>()
                 : GenericResult<T>.Failure(ConnectionLogger.TranslationFailed(Logger));
+        }
+
+        // A command that carries a timeout of its own (FDW-3324) is given it before it runs, or refused by a kind that cannot apply one: a
+        // limit someone set is never ignored.
+        if (CommandTimeoutPolicy.TryGet(command, out var commandTimeout, out var commandTimeoutOwner))
+        {
+            var timed = ApplyCommandTimeout(translationResult.Value, commandTimeout, commandTimeoutOwner);
+            if (timed.IsFailure)
+                return timed.ToNewResult<T>();
         }
 
         // A command that names columns to return answers the rows it wrote, and a result of rows asks for the rows a command

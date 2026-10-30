@@ -93,6 +93,31 @@ public static partial class PipelineRunLog
         Message = "In {owner}: '{target}' cannot be used by a load: {reason}")]
     public static partial IGenericMessage LoadTargetUnusable(ILogger logger, string owner, string target, string reason);
 
+    /// <summary>Logs a destination written as files whose declared container is not a file.</summary>
+    [MessageLogging(EventId = 20260, Level = LogLevel.Warning,
+        Message = "In {owner}: '{target}' is not a file, so it cannot be written as one file or as files split by a field")]
+    public static partial IGenericMessage TargetNotAFile(ILogger logger, string owner, string target);
+
+    /// <summary>Logs a Files destination whose split field is not a field of the rows.</summary>
+    [MessageLogging(EventId = 20261, Level = LogLevel.Warning,
+        Message = "In {owner}: the split field '{field}' is not a field of the rows, which have {available}; nothing was written")]
+    public static partial IGenericMessage SplitFieldNotInRows(ILogger logger, string owner, string field, string available);
+
+    /// <summary>Logs a Files destination with a row whose split value is null or blank.</summary>
+    [MessageLogging(EventId = 20262, Level = LogLevel.Warning,
+        Message = "In {owner}: row {row} has no value in the split field '{field}', so no file can be named for it; nothing was written")]
+    public static partial IGenericMessage SplitValueBlank(ILogger logger, string owner, string field, int row);
+
+    /// <summary>Logs a Files destination with a split value that cannot name a file.</summary>
+    [MessageLogging(EventId = 20263, Level = LogLevel.Warning,
+        Message = "In {owner}: the split value '{value}' cannot name a file: {reason}; nothing was written")]
+    public static partial IGenericMessage SplitValueInvalid(ILogger logger, string owner, string value, string reason);
+
+    /// <summary>Logs a Files destination with two split values that differ only in case.</summary>
+    [MessageLogging(EventId = 20264, Level = LogLevel.Warning,
+        Message = "In {owner}: the split values '{first}' and '{second}' differ only in case, so a store that ignores case would write one file; nothing was written")]
+    public static partial IGenericMessage SplitValuesCollide(ILogger logger, string owner, string first, string second);
+
     /// <summary>Logs a load that needs a service the pipeline was built without.</summary>
     [MessageLogging(EventId = 20218, Level = LogLevel.Error,
         Message = "In {owner}: the pipeline was built without the {service} that loads need")]
@@ -182,6 +207,11 @@ public static partial class PipelineRunLog
     [MessageLogging(EventId = 20234, Level = LogLevel.Information,
         Message = "Pipeline '{pipelineName}' watermark advanced to {lastSuccessfulRun}")]
     public static partial IGenericMessage WatermarkAdvanced(ILogger logger, string pipelineName, string lastSuccessfulRun);
+
+    /// <summary>Logs that a later run had already recorded a later watermark, so this run left it where it was.</summary>
+    [MessageLogging(EventId = 20239, Level = LogLevel.Information,
+        Message = "Pipeline '{pipelineName}' watermark was already ahead of this run's start, so it was left as it is")]
+    public static partial IGenericMessage WatermarkAlreadyAhead(ILogger logger, string pipelineName);
 
     /// <summary>Logs that a run has no tenant, so no watermark is kept for it.</summary>
     [MessageLogging(EventId = 20235, Level = LogLevel.Information,

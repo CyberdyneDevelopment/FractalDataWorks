@@ -120,7 +120,7 @@ public abstract class UpdateDataSetEndpointBase : CrudUpdateEndpointBase<UpdateD
             federated.FederationStrategy = mergedFederationStrategy;
         ApplyRequestedChildren(existing, request);
 
-        var saveResult = await _dataSetProvider.Save(existing, "DataSet", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
+        var saveResult = await _dataSetProvider.Update(existing, "DataSet", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
         if (saveResult.IsFailure)
         {
             DataSetEndpointLog.DataSetUpdateFailed(Logger, request.Name, "Save failed");

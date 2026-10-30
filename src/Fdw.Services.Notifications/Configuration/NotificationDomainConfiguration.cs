@@ -28,4 +28,7 @@ public partial class NotificationDomainConfiguration : DomainConfiguration
 
     /// <summary>Gets or sets the name of the secret the channel reads from its secret manager, when it has one.</summary>
     public string? SecretKeyName { get; set; }
+
+    /// <summary>Gets or sets what the notification is for, kept on the domain row.</summary>
+    public string? Description { get; set; }
 }

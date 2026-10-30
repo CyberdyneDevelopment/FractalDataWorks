@@ -11,9 +11,14 @@ public class UserPreferencesResponse
     public string? ThemeName { get; set; }
 
     /// <summary>
-    /// Gets or sets whether dark mode is enabled.
+    /// Gets or sets whether dark mode is enabled: kept for readers that predate <see cref="ColorMode"/>, and true only when the colour mode is dark.
     /// </summary>
     public bool DarkMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the colour mode the person chose: "light", "dark" or "system"; null when they have not chosen.
+    /// </summary>
+    public string? ColorMode { get; set; }
 
     /// <summary>
     /// Gets or sets the language preference.

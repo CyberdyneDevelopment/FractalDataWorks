@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Web.Calculations.Clients.CalculationEntities;
-using Fdw.Web.Calculations.Clients.Formula;
 using Fdw.Web.Calculations.Clients.Models;
 using Fdw.Web.Clients.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -96,15 +95,6 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
         => Delete($"calculation-entities/{id}", ct);
 
     /// <summary>
-    /// Validates a calculation formula.
-    /// </summary>
-    /// <param name="request">The validation request.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A result containing the formula validation response.</returns>
-    public virtual Task<IGenericResult<PreviewFormulaResponse>> ValidateFormula(ValidateFormulaPayload request, CancellationToken ct = default)
-        => Post<ValidateFormulaPayload, PreviewFormulaResponse>("calculation-entities/validate-formula", request, ct);
-
-    /// <summary>
     /// Previews a calculation with sample data.
     /// </summary>
     /// <param name="request">The preview request.</param>
@@ -130,14 +120,6 @@ public class CalculationApiClient : ApiClientBase, ICalculationApiClient
     /// <returns>A result containing all DataSet field groups.</returns>
     public virtual Task<IGenericResult<IReadOnlyList<DataSetFieldsPayload>>> GetDataSetFields(CancellationToken ct = default)
         => GetList<DataSetFieldsPayload>("datasets/fields", ct);
-
-    /// <summary>
-    /// Gets the catalogue of built-in and user-defined functions available in formula expressions.
-    /// </summary>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A result containing the list of available functions.</returns>
-    public virtual Task<IGenericResult<IReadOnlyList<FunctionInfo>>> GetFunctions(CancellationToken ct = default)
-        => GetList<FunctionInfo>("calculations/functions", ct);
 
     /// <summary>
     /// Executes a windowed calculation.

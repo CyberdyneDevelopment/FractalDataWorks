@@ -19,11 +19,12 @@ public sealed class RunningTotalCalculationType : WindowedCalculationTypeBase
         category: "Windowed",
         calculate: (rows, col, _) =>
         {
-            var result = new List<decimal>(rows.Count);
+            var result = new List<decimal?>(rows.Count);
             var running = 0m;
-            foreach (var r in rows)
+            foreach (var v in WindowedColumn.Read(rows, col))
             {
-                running += r.TryGetValue<decimal>(col, out var v) ? v : 0m;
+                if (v.HasValue)
+                    running += v.Value;
                 result.Add(running);
             }
             return result;

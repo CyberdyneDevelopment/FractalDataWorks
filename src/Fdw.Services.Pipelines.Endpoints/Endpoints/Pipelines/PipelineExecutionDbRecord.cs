@@ -1,11 +1,13 @@
 using System;
+using Fdw.Data;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
 /// <summary>
 /// Internal record type for pipeline execution database table (etl.PipelineExecution).
 /// </summary>
-public class PipelineExecutionDbRecord
+[GenerateMapper]
+public partial class PipelineExecutionDbRecord
 {
     /// <summary>Gets or sets the unique execution identifier.</summary>
     public Guid Id { get; set; }
@@ -20,10 +22,10 @@ public class PipelineExecutionDbRecord
     public string Status { get; set; } = string.Empty;
 
     /// <summary>Gets or sets when execution started. Null while the run is queued.</summary>
-    public DateTime? StartedAt { get; set; }
+    public DateTimeOffset? StartedAt { get; set; }
 
     /// <summary>Gets or sets when execution completed.</summary>
-    public DateTime? CompletedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
 
     /// <summary>Gets or sets the number of records extracted.</summary>
     public int RecordsExtracted { get; set; }

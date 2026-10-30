@@ -19,7 +19,7 @@ public sealed class RowNumberCalculationType : WindowedCalculationTypeBase
         category: "Windowed",
         calculate: (rows, col, _) =>
         {
-            var result = new List<decimal>(rows.Count);
+            var result = new List<decimal?>(rows.Count);
             for (var i = 0; i < rows.Count; i++)
                 result.Add(i + 1);
             return result;

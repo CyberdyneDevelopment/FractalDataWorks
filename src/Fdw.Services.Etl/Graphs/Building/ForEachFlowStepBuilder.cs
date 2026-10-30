@@ -24,6 +24,8 @@ public sealed class ForEachFlowStepBuilder : FlowStepBuilderBase
             return Missing(component, context);
         }
 
-        return GenericResult<IFlowStep>.Success(new FlowForEach(component.Name, variable, list, body, context.Logger));
+        return component.BatchSize < 1
+            ? GenericResult<IFlowStep>.Failure(GraphLog.StepInvalid(context.Logger, component.Name, component.ComponentType, $"takes {component.BatchSize} items a round, which is not at least one"))
+            : GenericResult<IFlowStep>.Success(new FlowForEach(component.Name, variable, list, body, component.BatchSize, context.Logger));
     }
 }

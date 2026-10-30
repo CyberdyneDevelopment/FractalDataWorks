@@ -156,6 +156,16 @@ public class ConnectionProviderTests
             where T : IConnectionImplementationConfiguration
             => throw new NotSupportedException("Test provider does not support Save.");
 
+        public Task<IGenericResult> Update<T>(
+            T implementationConfiguration, string domain, string implementationName, string name, CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
+            => throw new NotSupportedException("Test provider does not support Update.");
+
+        public Task<IGenericResult> Create<T>(
+            T implementationConfiguration, string domain, string implementationName, string name, CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
+            => throw new NotSupportedException("Test provider does not support Create.");
+
         public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
             => throw new NotSupportedException("Test provider does not support Delete.");
 

@@ -57,6 +57,9 @@ public sealed partial class SystemNotificationConfiguration : INotificationImple
     /// </summary>
     public string? SecretKeyName { get; set; }
 
+    /// <summary>Gets or sets what the notification is for, kept on the domain row.</summary>
+    public string? Description { get; set; }
+
     // ========================================
     // System-specific fields
     // ========================================

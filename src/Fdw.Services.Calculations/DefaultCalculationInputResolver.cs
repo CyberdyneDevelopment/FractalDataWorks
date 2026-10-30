@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Fdw.Results;
 using Fdw.Calculations;
 using Fdw.Services.Calculations.Abstractions;
+using Fdw.Services.Data.Abstractions;
 using Fdw.Services.Calculations.Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -13,19 +14,25 @@ namespace Fdw.Services.Calculations;
 
 /// <summary>
 /// Default implementation of <see cref="ICalculationInputResolver"/>.
-/// Resolves inputs by kind: DataSet, Container, or Scalar.
+/// Resolves Scalar inputs to their values and DataSet inputs to the data set's rows, read as the caller; a Container input is refused,
+/// because nothing reads one yet.
 /// </summary>
 public sealed class DefaultCalculationInputResolver : ICalculationInputResolver
 {
     private readonly ILogger<DefaultCalculationInputResolver> _logger;
+    private readonly IDataSetRowReader? _rowReader;
 
     /// <summary>
     /// Initializes a new instance of <see cref="DefaultCalculationInputResolver"/>.
     /// </summary>
     /// <param name="logger">The logger instance. Falls back to NullLogger if null.</param>
-    public DefaultCalculationInputResolver(ILogger<DefaultCalculationInputResolver>? logger)
+    /// <param name="rowReader">
+    /// Reads a DataSet input's rows. When none is registered a DataSet input refuses with a coded failure instead of reading nothing.
+    /// </param>
+    public DefaultCalculationInputResolver(ILogger<DefaultCalculationInputResolver>? logger, IDataSetRowReader? rowReader = null)
     {
         _logger = logger ?? NullLogger<DefaultCalculationInputResolver>.Instance;
+        _rowReader = rowReader;
     }
 
     /// <inheritdoc/>
@@ -66,41 +73,27 @@ public sealed class DefaultCalculationInputResolver : ICalculationInputResolver
                 }
                 else if (string.Equals(kindName, "DataSet", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.IsNullOrWhiteSpace(input.DataSetName))
+                    var read = await ReadDataSet(input, context, cancellationToken).ConfigureAwait(false);
+                    if (!read.IsSuccess || read.Value is not { } rows)
                     {
-                        CalculationEntityLog.InputResolutionSkipped(_logger, input.InputAlias, "DataSet name is empty");
-                        continue;
+                        return read.ToNewResult<IReadOnlyList<ResolvedCalculationInput>>();
                     }
 
-                    // DataSet resolution is deferred to the execution context.
-                    // The resolved value is the DataSet name for the entity type to query.
                     resolved.Add(new ResolvedCalculationInput
                     {
                         InputAlias = input.InputAlias,
                         Kind = input.Kind,
-                        ResolvedValue = input.DataSetName
+                        ResolvedValue = rows
                     });
 
-                    CalculationEntityLog.InputResolutionSucceeded(_logger, input.InputAlias, 1);
+                    CalculationEntityLog.InputResolutionSucceeded(_logger, input.InputAlias, rows.Count);
                 }
                 else if (string.Equals(kindName, "Container", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.IsNullOrWhiteSpace(input.ConnectionName) || string.IsNullOrWhiteSpace(input.ContainerPath))
-                    {
-                        CalculationEntityLog.InputResolutionSkipped(_logger, input.InputAlias, "Connection name or container path is empty");
-                        continue;
-                    }
-
-                    // Container resolution is deferred to the execution context.
-                    // The resolved value carries the connection+container reference for the entity type to query.
-                    resolved.Add(new ResolvedCalculationInput
-                    {
-                        InputAlias = input.InputAlias,
-                        Kind = input.Kind,
-                        ResolvedValue = new ContainerReference(input.ConnectionName, input.ContainerPath)
-                    });
-
-                    CalculationEntityLog.InputResolutionSucceeded(_logger, input.InputAlias, 1);
+                    // Why a refusal: resolving the input to its name or reference handed the entity type no rows, so the
+                    // calculation ran over nothing and answered success.
+                    return GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Failure(
+                        CalculationEntityLog.InputKindNotRead(_logger, input.InputAlias, kindName));
                 }
                 else
                 {
@@ -115,5 +108,25 @@ public sealed class DefaultCalculationInputResolver : ICalculationInputResolver
         }
 
         return GenericResult<IReadOnlyList<ResolvedCalculationInput>>.Success(resolved);
+    }
+
+    // The rows of a DataSet input, read through the context's gateway so the data store applies the caller's access, up to the row
+    // cap the host states. A run whose host states no cap has no caller to read as, and refuses.
+    private async Task<IGenericResult<IReadOnlyList<Dictionary<string, object?>>>> ReadDataSet(
+        CalculationInput input, ICalculationContext context, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(input.DataSetName))
+            return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
+                CalculationEntityLog.DataSetInputNamesNoDataSet(_logger, input.InputAlias));
+
+        if (_rowReader is null)
+            return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
+                CalculationEntityLog.DataSetRowReaderNotRegistered(_logger, input.InputAlias));
+
+        if (!context.Parameters.TryGetValue(CalculationDataSetRead.RowCapParameterName, out var cap) || cap is not int rowCap || rowCap <= 0)
+            return GenericResult<IReadOnlyList<Dictionary<string, object?>>>.Failure(
+                CalculationEntityLog.DataSetInputHasNoCaller(_logger, input.InputAlias));
+
+        return await _rowReader.Read(context.DataGateway, input.DataSetName, rowCap, cancellationToken).ConfigureAwait(false);
     }
 }

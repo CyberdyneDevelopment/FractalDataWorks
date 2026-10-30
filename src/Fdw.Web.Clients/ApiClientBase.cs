@@ -182,6 +182,7 @@ public abstract class ApiClientBase
         string? reason;
         string? upstreamReferenceId;
         string? upstreamCode;
+        string? executionId;
         try
         {
             var body = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
@@ -189,9 +190,11 @@ public abstract class ApiClientBase
             detail = string.IsNullOrWhiteSpace(body)
                 ? $"status {(int)response.StatusCode}"
                 : DescribeBody(document, body);
-            reason = document is null ? null : StringOf(document.RootElement, "detail");
+            // A problem body states its reason in "detail"; a refused trigger answers a body of its own that states it in "reason".
+            reason = document is null ? null : StringOf(document.RootElement, "detail") is { } stated ? stated : StringOf(document.RootElement, "reason");
             upstreamReferenceId = document is null ? null : StringOf(document.RootElement, "referenceId");
             upstreamCode = document is null ? null : StringOf(document.RootElement, "code");
+            executionId = document is null ? null : StringOf(document.RootElement, ResultDetailKeys.ExecutionId);
         }
         catch (OperationCanceledException)
         {
@@ -210,7 +213,8 @@ public abstract class ApiClientBase
         var details = ResultDetails.Create()
             .With("method", method).With("uri", RequestUri(path))
             .With("statusCode", (int)response.StatusCode).With("detail", detail).With("reason", reason)
-            .With(ResultDetailKeys.UpstreamReferenceId, upstreamReferenceId).With(ResultDetailKeys.UpstreamCode, upstreamCode);
+            .With(ResultDetailKeys.UpstreamReferenceId, upstreamReferenceId).With(ResultDetailKeys.UpstreamCode, upstreamCode)
+            .With(ResultDetailKeys.ExecutionId, executionId);
         return GenericResult.Failure(code, Logger, details);
     }
 

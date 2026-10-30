@@ -23,8 +23,8 @@ An endpoint is an HTTP orchestrator. It does not open a gateway, and it does not
 | `ListVisualizationTypesEndpointBase` | class | Base endpoint for listing all available visualization types. |
 | `PreviewCalculationEndpointBase` | class | Base endpoint for previewing a calculation with sample data. |
 | `UpdateCalculationEntityEndpointBase` | class | Base endpoint for updating a calculation entity. Route: PUT /calculation-entities/{id} |
-| `ValidateFormulaEndpointBase` | class | Base endpoint for validating a formula expression. Route: POST /calculation-entities/validate-formula |
 | `WindowedCalculationEndpointBase` | class | Base endpoint for executing a windowed calculation. Route: POST /calculations/windowed |
+| `ListWindowFunctionsEndpointBase` | class | Base endpoint for listing the window functions a windowed calculation may name. Route: GET /calculations/window-functions |
 
 ## Request and response models
 
@@ -37,8 +37,8 @@ Endpoint-layer models are named `Request` / `Response`; the client layer names i
 | `ExecuteCalculationEntityRequest` | class | Request to execute a calculation entity. |
 | `ExecuteCalculationEntityResponse` | class | Response from executing a calculation entity. |
 | `UpdateCalculationEntityRequest` | class | Request to update an existing calculation entity. |
-| `ValidateFormulaRequest` | class | Request to validate a formula expression. |
-| `ValidateFormulaResponse` | class | Response from validating a formula expression. |
+| `WindowFunctionPayload` | class | One window function a windowed calculation may name. |
+| `WindowFunctionsResponse` | class | The window functions a windowed calculation may name. |
 | `WindowedCalculationRequest` | class | Request to execute a windowed calculation. |
 | `WindowedCalculationResponse` | class | Response from a windowed calculation execution. |
 | `WindowedOrderFieldResponse` | class | Specifies a field and sort direction for windowed calculation ordering. |

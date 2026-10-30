@@ -1,5 +1,6 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ using Fdw.Operations.Abstractions.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
 using Fdw.Results;
 using Fdw.Services.Abstractions;
+using Fdw.Data.DataSets.Abstractions;
+using Fdw.Services.Settings;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Authorization.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -16,6 +19,7 @@ using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
 using Fdw.Services.Etl.Graphs;
 using Fdw.Services.Etl.Logging;
+using Fdw.Services.Etl.Pipelines.Loads;
 using Fdw.Services.Etl.Projects.Abstractions;
 using Fdw.Services.Pipelines;
 using Fdw.Services.Pipelines.Hubs;
@@ -46,7 +50,10 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     private const string EtlSchemaPath = "etl";
 
     private readonly PipelineExecutionQueue _queue;
-    private readonly PipelineRunSlot _slot;
+    private readonly PipelineRunScheduler _scheduler;
+    private readonly PipelineRunControl _runControl;
+    private readonly IPipelineRunRequestStore _requests;
+    private readonly IPipelineRunHolds _holds;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PipelineExecutionBackgroundService> _logger;
     private readonly IExecutionCompletionSignaler? _completionSignaler;
@@ -56,13 +63,19 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
     /// </summary>
     public PipelineExecutionBackgroundService(
         PipelineExecutionQueue queue,
-        PipelineRunSlot slot,
+        PipelineRunScheduler scheduler,
+        PipelineRunControl runControl,
+        IPipelineRunRequestStore requests,
+        IPipelineRunHolds holds,
         IServiceScopeFactory scopeFactory,
         ILogger<PipelineExecutionBackgroundService> logger,
         IExecutionCompletionSignaler? completionSignaler = null)
     {
         _queue = queue;
-        _slot = slot ?? throw new ArgumentNullException(nameof(slot));
+        _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
+        _runControl = runControl ?? throw new ArgumentNullException(nameof(runControl));
+        _requests = requests ?? throw new ArgumentNullException(nameof(requests));
+        _holds = holds ?? throw new ArgumentNullException(nameof(holds));
         _scopeFactory = scopeFactory;
         _logger = logger ?? NullLogger<PipelineExecutionBackgroundService>.Instance;
         _completionSignaler = completionSignaler;
@@ -74,33 +87,202 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         EtlLog.BackgroundExecutorStarted(_logger);
 
         // Why each run on its own task: a run that waits for the pipeline it started has to leave the loop free to start that one.
-        // Why the slot is taken here: runs still start in the order they were queued and never overlap (FDW-1511).
+        // Why a run queues with the scheduler here: runs are queued in the order they were enqueued, and the scheduler starts them as the
+        // limits and the tables they write allow (FDW-3085). Only the queueing is in the loop; waiting for a turn is in the run's own task.
+        // Why the runs accepted before the host last stopped come first, and not through the queue: they are older than anything the queue holds, and a
+        // backlog bigger than the queue's capacity would otherwise wait for a reader that is not started yet (FDW-3216).
         List<Task> running = [];
+        foreach (var request in await Recovered(stoppingToken).ConfigureAwait(false))
+        {
+            running.Add(await StartRun(request, stoppingToken).ConfigureAwait(false));
+        }
+
         await foreach (var request in _queue.Reader.ReadAllAsync(stoppingToken).ConfigureAwait(false))
         {
-            await _slot.Acquire(stoppingToken).ConfigureAwait(false);
             running.RemoveAll(task => task.IsCompleted);
-            running.Add(Task.Run(() => RunHoldingSlot(request, stoppingToken), CancellationToken.None));
+            running.Add(await StartRun(request, stoppingToken).ConfigureAwait(false));
         }
 
         await Task.WhenAll(running).ConfigureAwait(false);
         EtlLog.BackgroundExecutorStopping(_logger);
     }
 
-    private async Task RunHoldingSlot(PipelineExecutionRequest request, CancellationToken stoppingToken)
+    // Queues the run with the scheduler, in the order it came, and leaves it waiting for its turn on a task of its own.
+    private async Task<Task> StartRun(PipelineExecutionRequest request, CancellationToken stoppingToken)
     {
-        _slot.MarkHeld();
+        var admission = await Admit(request, stoppingToken).ConfigureAwait(false);
+        return Task.Run(() => RunWhenItsTurn(request, admission, stoppingToken), CancellationToken.None);
+    }
+
+    // The runs the host accepted before it last stopped and did not start, oldest first, each held run with the time it was held until (FDW-3216). A host
+    // that cannot read them starts without them and says so: their records stay as they are, and the next start reads them again.
+    private async Task<IReadOnlyList<PipelineExecutionRequest>> Recovered(CancellationToken stoppingToken)
+    {
+        var recovery = await _requests.Recover(stoppingToken).ConfigureAwait(false);
+        if (recovery.IsFailure || recovery.Value is null)
+        {
+            PipelineRunRecoveryLog.RecoveryFailed(_logger, recovery.CurrentMessage);
+            return [];
+        }
+
+        PipelineRunRecoveryLog.RunsRecovered(
+            _logger, recovery.Value.Requests.Count, recovery.Value.Requests.Count(request => request.HeldUntil is not null), recovery.Value.Approvals.Count,
+            recovery.Value.WithoutRequest);
+        if (recovery.Value.Interrupted.Count > 0)
+        {
+            PipelineRunRecoveryLog.RunsWereRunning(_logger, recovery.Value.Interrupted.Count);
+        }
+
+        foreach (var approval in recovery.Value.Approvals)
+        {
+            if (_holds.Hold(approval))
+            {
+                PipelineRunRecoveryLog.ApprovalWaitsAgain(_logger, approval.ExecutionId, approval.PipelineName);
+            }
+        }
+
+        foreach (var request in recovery.Value.Requests)
+        {
+            PipelineRunRecoveryLog.RunTakenUp(
+                _logger, request.ExecutionId, request.PipelineName, request.HeldUntil is { } until ? "held until " + until.ToString("O", CultureInfo.InvariantCulture) : "waiting for its turn");
+        }
+
+        var again = await new PipelineCutOffRuns(_requests, _scopeFactory, _logger).StartAgain(recovery.Value.Interrupted, stoppingToken).ConfigureAwait(false);
+        return [.. again, .. recovery.Value.Requests];
+    }
+
+    // Reads the limits and works out what the run writes, then queues it with the scheduler. A limit that is not set refuses the run: it
+    // is completed as failed naming the setting, and never queued. So is a pipeline that does not state a usable number of parallel runs
+    // or overflow behavior, and a run past its pipeline's limit when the pipeline refuses (FDW-3117).
+    private async Task<RunAdmission> Admit(PipelineExecutionRequest request, CancellationToken stoppingToken)
+    {
+        // Held from here, while the run waits for its turn, so a cancel reaches a queued run as well as a running one (FDW-2950).
+        var run = _runControl.Register(request.ExecutionId, stoppingToken);
         try
         {
-            await ProcessRequest(request, stoppingToken).ConfigureAwait(false);
+            return await AdmitRegistered(request, run, stoppingToken).ConfigureAwait(false);
         }
-        finally
+        catch
         {
-            _slot.Release();
+            run.Dispose();
+            throw;
         }
     }
 
-    private async Task ProcessRequest(PipelineExecutionRequest request, CancellationToken stoppingToken)
+    private async Task<RunAdmission> AdmitRegistered(PipelineExecutionRequest request, PipelineRunHandle run, CancellationToken stoppingToken)
+    {
+        var scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
+
+            var limits = PipelineRunLimits.Read(scope.ServiceProvider.GetRequiredService<IEffectiveSettingsProvider>(), request.TenantId, _logger);
+            if (limits.IsFailure || limits.Value is null)
+            {
+                return new RunAdmission(null, new Refusal("RunLimitRefused", string.Concat(limits.CurrentMessage)), run);
+            }
+
+            var pipeline = await scope.ServiceProvider.GetRequiredService<IPipelineConfigurationProvider>()
+                .Get(request.PipelineId, ConfigurationLevels.WholeAggregate, stoppingToken).ConfigureAwait(false);
+            var claim = await PipelineRunClaims.For(
+                request,
+                pipeline.IsSuccess ? pipeline.Value : null,
+                new LoadTargetResolver(
+                    scope.ServiceProvider.GetService<IDataSetConfigurationProvider>(), scope.ServiceProvider.GetService<IDataStoreProvider>()),
+                limits.Value,
+                _logger,
+                stoppingToken).ConfigureAwait(false);
+            if (claim.IsFailure || claim.Value is null)
+            {
+                return new RunAdmission(null, new Refusal("PipelineParallelismInvalid", string.Concat(claim.CurrentMessage)), run);
+            }
+
+            var place = _scheduler.Queue(claim.Value, request.HeldUntil);
+            if (request.HeldUntil is null && place.HeldUntil is { } until)
+            {
+                await RecordHold(request, until, stoppingToken).ConfigureAwait(false);
+            }
+
+            return place.IsRefused ? Refused(request, place, run) : new RunAdmission(place, null, run);
+        }
+    }
+
+    // A run the scheduler held back keeps the time it is held until on its record, so a restart puts it back for that time (FDW-3216). A hold that cannot
+    // be recorded is logged by the store and here; the run is held all the same, and a restart would take it up as a run waiting for its turn.
+    private async Task RecordHold(PipelineExecutionRequest request, DateTimeOffset until, CancellationToken stoppingToken)
+    {
+        var recorded = await _requests.RecordHeld(request, until, stoppingToken).ConfigureAwait(false);
+        if (recorded.IsFailure)
+        {
+            PipelineRunRecoveryLog.HoldNotRecorded(_logger, request.ExecutionId, until, recorded.CurrentMessage);
+        }
+    }
+
+    private RunAdmission Refused(PipelineExecutionRequest request, PipelineRunPlace place, PipelineRunHandle run)
+    {
+        PipelineRunSchedulerLog.RunRefused(_logger, request.PipelineName, place.RefusedLimit);
+        return new RunAdmission(
+            null,
+            new Refusal("RunRefused", $"Pipeline '{request.PipelineName}' already has {place.RefusedLimit} runs active, its limit, and its overflow behavior is Refuse."),
+            run);
+    }
+
+    private async Task RunWhenItsTurn(PipelineExecutionRequest request, RunAdmission admission, CancellationToken stoppingToken)
+    {
+        using var run = admission.Run;
+        if (admission.Place is not { } place)
+        {
+            await ProcessRequest(request, admission.Refusal, run, stoppingToken).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            await _scheduler.Wait(place, run.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (OperationCanceledException) when (run.IsCancelled)
+        {
+            // Cancelled while it waited: it never ran, so the row only needs closing and anyone waiting on it needs telling.
+            await CancelWaiting(request, stoppingToken).ConfigureAwait(false);
+            return;
+        }
+
+        _scheduler.Hold(place);
+        try
+        {
+            await ProcessRequest(request, null, run, stoppingToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _scheduler.Release(place);
+        }
+    }
+
+    private sealed record RunAdmission(PipelineRunPlace? Place, Refusal? Refusal, PipelineRunHandle Run);
+
+    private sealed record Refusal(string Reason, string Message);
+
+    // A run cancelled before it got its place: closes it the way a cancelled run is closed.
+    private async Task CancelWaiting(PipelineExecutionRequest request, CancellationToken stoppingToken)
+    {
+        var scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            EstablishSystemAuthenticationContext(scope.ServiceProvider, request);
+            var orgId = await ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
+            await HandleCancellation(
+                scope.ServiceProvider.GetRequiredService<IExecutionTracker>(),
+                scope.ServiceProvider.GetRequiredService<IPipelineStatusBroadcaster>(),
+                request, orgId, _completionSignaler, _logger).ConfigureAwait(false);
+            _ = await _requests.Forget(request.ExecutionId, stoppingToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ProcessRequest(PipelineExecutionRequest request, Refusal? refusal, PipelineRunHandle run, CancellationToken stoppingToken)
     {
         EtlLog.ExecutionDequeued(_logger, request.PipelineName, request.ExecutionId);
 
@@ -119,15 +301,31 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
 
             var orgId = await ResolveOwningOrg(scope.ServiceProvider, request, stoppingToken).ConfigureAwait(false);
 
+            var stoppedWithHost = false;
             try
             {
                 await TransitionToRunning(executionTracker, dataGateways, broadcaster, request, orgId, _logger, stoppingToken).ConfigureAwait(false);
-                await RunPipeline(scope.ServiceProvider, executionTracker, pipelineProvider, dataGateways, broadcaster, request, orgId, stoppingToken).ConfigureAwait(false);
+                if (refusal is not null)
+                {
+                    await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
+                        request.ExecutionId, request.PipelineName, orgId,
+                        false, refusal.Reason, refusal.Message, 0, 0, 0, 0).ConfigureAwait(false);
+                    return;
+                }
+
+                await RunPipeline(scope.ServiceProvider, executionTracker, pipelineProvider, dataGateways, broadcaster, request, orgId, run, stoppingToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested && run.IsCancelled)
             {
-                EtlLog.ExecutionCancelledDuringShutdown(_logger, ex, request.PipelineName, request.ExecutionId);
+                PipelineRunControlLog.RunCancelled(_logger, request.ExecutionId, request.PipelineName);
                 await HandleCancellation(executionTracker, broadcaster, request, orgId, _completionSignaler, _logger).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                // Why not cancelled (FDW-3236): Cancelled means a person cancelled the run. A run the host's own stop cut off is left Running with its stored
+                // request, exactly as a crash leaves it, so the next start finds it and starts it again.
+                stoppedWithHost = true;
+                PipelineRunRecoveryLog.RunStoppedWithHost(_logger, request.ExecutionId, request.PipelineName);
             }
             catch (Exception ex)
             {
@@ -135,6 +333,15 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
                 await CompleteWithMetrics(dataGateways, executionTracker, broadcaster, _completionSignaler, _logger,
                     request.ExecutionId, request.PipelineName, orgId,
                     false, "Exception", ex.Message, 0, 0, 0, 0).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Why at the end of the run and not at its start (FDW-3236): a run that ends keeps nothing, but a run that is cut off must still have its request.
+                // A request that cannot be removed is logged by the store, and is removed when the host next reads the stored requests, since its run has ended.
+                if (!stoppedWithHost)
+                {
+                    _ = await _requests.Forget(request.ExecutionId, CancellationToken.None).ConfigureAwait(false);
+                }
             }
         }
     }
@@ -273,6 +480,7 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
         IPipelineStatusBroadcaster broadcaster,
         PipelineExecutionRequest request,
         Guid? orgId,
+        PipelineRunHandle run,
         CancellationToken stoppingToken)
     {
         var runAs = await ResolveTenantRun(services, request, _logger, stoppingToken).ConfigureAwait(false);
@@ -310,8 +518,16 @@ public sealed class PipelineExecutionBackgroundService : BackgroundService
             return;
         }
 
-        var options = OptionsOf(request, startedAt, watermark.Value?.LastSuccessfulRun);
-        var executeResult = await ExecuteAs(services, runAs.Value, pipeline, options, stoppingToken).ConfigureAwait(false);
+        var options = OptionsOf(request, startedAt, watermark.Value?.LastSuccessfulRun) with { PauseGate = run.Gate };
+        var executeResult = await ExecuteAs(services, runAs.Value, pipeline, options, run.Token).ConfigureAwait(false);
+
+        // A run a person cancelled ends as cancelled, not as the failure its runner reports for a stopped run (FDW-2950). A run the host's own stop cut off is
+        // not a failure either: it is passed up as a stop, so it stays Running for the next start to find (FDW-3236).
+        if (executeResult.IsFailure && (run.IsCancelled || stoppingToken.IsCancellationRequested))
+        {
+            throw new OperationCanceledException(run.IsCancelled ? run.Token : stoppingToken);
+        }
+
         if (executeResult.IsSuccess)
         {
             var metrics = executeResult.Value!;

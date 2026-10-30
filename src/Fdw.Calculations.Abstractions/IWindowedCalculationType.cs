@@ -23,7 +23,7 @@ public interface IWindowedCalculationType : ITypeOption<int, WindowedCalculation
     /// <param name="columnName">The column to operate on.</param>
     /// <param name="parameter">Optional numeric parameter.</param>
     /// <returns>One decimal result per input row, in the same order as <paramref name="rows"/>.</returns>
-    IReadOnlyList<decimal> Calculate(IReadOnlyList<IDataRow> rows, string columnName, double? parameter = null);
+    IReadOnlyList<decimal?> Calculate(IReadOnlyList<IDataRow> rows, string columnName, double? parameter = null);
 
     /// <summary>
     /// Returns the SQL window function expression for this calculation.

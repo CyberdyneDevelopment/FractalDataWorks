@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
+using Fdw.Results;
 using Fdw.Services.Messaging.Endpoints.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -78,6 +79,12 @@ public abstract class DenyAccessRequestEndpointBase : Endpoint<ReviewAccessReque
             if (!result.IsSuccess)
             {
                 MessagingEndpointLog.AccessRequestDenyFailed(_logger, req.Id.ToString(), result.CurrentMessage!);
+                if (FailureCategory.IsMissing(result))
+                {
+                    await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                    return;
+                }
+
                 AddError("Failed to deny access request");
                 await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
                 return;

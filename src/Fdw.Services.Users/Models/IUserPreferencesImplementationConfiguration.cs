@@ -15,8 +15,11 @@ public interface IUserPreferencesImplementationConfiguration : IImplementationCo
     /// <summary>Gets or sets the UserPreferences ThemeName.</summary>
     string? ThemeName { get; set; }
 
-    /// <summary>Gets or sets the UserPreferences DarkMode.</summary>
+    /// <summary>Gets or sets the UserPreferences DarkMode: the legacy mirror of <see cref="ColorMode"/>, true only when the mode is dark.</summary>
     bool DarkMode { get; set; }
+
+    /// <summary>Gets or sets the colour mode the person chose (<see cref="UserColorModes"/>); null when they have not chosen.</summary>
+    string? ColorMode { get; set; }
 
     /// <summary>Gets or sets the UserPreferences Language.</summary>
     string? Language { get; set; }

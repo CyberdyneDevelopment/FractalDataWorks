@@ -8,7 +8,7 @@ namespace Fdw.Etl.Abstractions.Monitoring.AlertSeverityOptions;
 /// </summary>
 /// <ExcludeFromCoverageReason>TypeOption - no logic to test</ExcludeFromCoverageReason>
 [ExcludeFromCodeCoverage]
-[TypeOption(typeof(AlertSeverities), "Critical", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(AlertSeverities), "Critical")]
 public sealed class CriticalSeverity : AlertSeverityBase
 {
     /// <summary>

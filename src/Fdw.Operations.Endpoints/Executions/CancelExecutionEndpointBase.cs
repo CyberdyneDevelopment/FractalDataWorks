@@ -1,11 +1,8 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using FastEndpoints;
-using Fdw.Operations.Abstractions;
+using System;
 using Fdw.Operations.Abstractions.Execution;
 using Fdw.Operations.Abstractions.TypeCollections.ExecutionStateOptions;
-using Microsoft.AspNetCore.Http;
+using Fdw.Results;
+using Fdw.Services.Authentication.Abstractions.Security;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Operations.Endpoints.Executions;
@@ -13,28 +10,15 @@ namespace Fdw.Operations.Endpoints.Executions;
 /// <summary>
 /// Endpoint to cancel an execution.
 /// </summary>
-public abstract class CancelExecutionEndpointBase : Endpoint<ExecutionStateRequest, ExecutionDetailDto>
+public abstract class CancelExecutionEndpointBase : ExecutionRunStateEndpointBase
 {
-    private readonly IExecutionTracker _tracker;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="CancelExecutionEndpointBase"/> class.
     /// </summary>
-    protected CancelExecutionEndpointBase(ILogger logger, IExecutionTracker tracker)
+    protected CancelExecutionEndpointBase(ILogger logger, IExecutionTracker tracker, IExecutionRunControl runControl, IUserNames userNames)
+        : base(logger, tracker, runControl, userNames)
     {
-        EndpointLogger = logger;
-        _tracker = tracker;
     }
-
-    /// <summary>
-    /// Gets the execution tracker.
-    /// </summary>
-    protected IExecutionTracker Tracker => _tracker;
-
-    /// <summary>
-    /// Gets the logger instance.
-    /// </summary>
-    protected ILogger EndpointLogger { get; }
 
     /// <inheritdoc/>
     public override void Configure()
@@ -49,85 +33,35 @@ public abstract class CancelExecutionEndpointBase : Endpoint<ExecutionStateReque
         Summary(s =>
         {
             s.Summary = "Cancel execution";
-            s.Description = "Cancels a running or paused execution. Cannot cancel already completed or failed executions.";
+            s.Description = "Cancels a waiting, running or paused execution and stops its run. Cannot cancel an execution that has finished.";
         });
     }
 
     /// <inheritdoc/>
-    public override async Task HandleAsync(ExecutionStateRequest req, CancellationToken ct)
-    {
-        
-        OnCancellingExecution(req.Id);
+    protected override IExecutionStateType TargetState => ExecutionStateTypes.Cancelled;
 
-        // Get current execution
-        var itemResult = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        if (!itemResult.IsSuccess || itemResult.Value == null)
-        {
-            OnExecutionNotFound(req.Id);
-            await Send.NotFoundAsync(ct).ConfigureAwait(false);
-            return;
-        }
+    /// <inheritdoc/>
+    protected override string Verb => "cancel";
 
-        var execution = itemResult.Value;
+    /// <inheritdoc/>
+    protected override IGenericResult Act(Guid executionId) => RunControl.Cancel(executionId);
 
-        // Check if already in terminal state
-        if (execution.State.IsTerminal)
-        {
-            OnExecutionAlreadyTerminal(req.Id, execution.State.Name);
-            ThrowError($"Execution is already in terminal state '{execution.State.Name}'", 409);
-            return;
-        }
+    /// <inheritdoc/>
+    protected override void OnRequested(Guid id) => OnCancellingExecution(id);
 
-        // Transition to Cancelled
-        var transitionResult = await _tracker.TransitionState(
-            req.Id,
-            ExecutionStateTypes.Cancelled,
-            message: req.Message ?? "Cancelled via API",
-            actor: req.Actor ?? "API:CancelEndpoint",
-            cancellationToken: ct).ConfigureAwait(false);
+    /// <inheritdoc/>
+    protected override void OnNotFound(Guid id) => OnExecutionNotFound(id);
 
-        if (!transitionResult.IsSuccess)
-        {
-            var errorMessage = transitionResult.CurrentMessage ?? "Failed to cancel execution";
-            OnCancelFailed(req.Id, errorMessage);
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to cancel execution", Details = errorMessage }, statusCode: 500)).ConfigureAwait(false);
-            return;
-        }
+    /// <inheritdoc/>
+    protected override void OnTerminal(Guid id, string state) => OnExecutionAlreadyTerminal(id, state);
 
-        OnExecutionCancelled(req.Id);
+    /// <inheritdoc/>
+    protected override void OnFailed(Guid id, string error) => OnCancelFailed(id, error);
 
-        // Get updated execution
-        var updatedResult = await _tracker.GetItem(req.Id, ct).ConfigureAwait(false);
-        var updatedExecution = updatedResult.IsSuccess ? updatedResult.Value ?? execution : execution;
+    /// <inheritdoc/>
+    protected override void OnDone(Guid id) => OnExecutionCancelled(id);
 
-        await Send.OkAsync(MapToDetailDto(updatedExecution), ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Maps an execution item to a detail DTO.
-    /// </summary>
-    protected virtual ExecutionDetailDto MapToDetailDto(IExecutionItem item)
-    {
-        return new ExecutionDetailDto
-        {
-            Id = item.Id,
-            ParentId = item.ParentId,
-            RootId = item.RootId,
-            ItemType = item.ItemType.Name,
-            Name = item.Name,
-            State = item.State.Name,
-            CorrelationId = item.CorrelationId,
-            TriggerSource = item.TriggerSource,
-            Parameters = item.Parameters,
-            CreatedAt = item.CreatedAt,
-            StartedAt = item.StartedAt,
-            CompletedAt = item.CompletedAt,
-            ResultCode = item.ResultCode,
-            ResultMessage = item.ResultMessage
-        };
-    }
-
-    /// <summary>Called when cancelling execution. Override for custom logging.</summary>
+    /// <summary>Called when canceling an execution. Override for custom logging.</summary>
     protected virtual void OnCancellingExecution(Guid id) { }
 
     /// <summary>Called when execution is not found. Override for custom logging.</summary>
@@ -139,6 +73,6 @@ public abstract class CancelExecutionEndpointBase : Endpoint<ExecutionStateReque
     /// <summary>Called when cancel fails. Override for custom logging.</summary>
     protected virtual void OnCancelFailed(Guid id, string error) { }
 
-    /// <summary>Called when execution is cancelled. Override for custom logging.</summary>
+    /// <summary>Called when the execution is done. Override for custom logging.</summary>
     protected virtual void OnExecutionCancelled(Guid id) { }
 }

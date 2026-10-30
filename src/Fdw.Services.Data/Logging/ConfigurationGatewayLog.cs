@@ -21,6 +21,11 @@ public static partial class ConfigurationGatewayLog
         Message = "ConfigurationGateway: connection '{connectionName}' not found in IDataConnectionProvider")]
     public static partial IGenericMessage ConnectionNotFound(ILogger logger, string connectionName);
 
+    /// <summary>Logged when the generation of a configuration database could not be read.</summary>
+    [MessageLogging(EventId = 71004, Level = LogLevel.Warning,
+        Message = "ConfigurationGateway: the generation of the database behind connection '{connectionName}' could not be read: {reason}")]
+    public static partial IGenericMessage GenerationNotRead(ILogger logger, string connectionName, string reason);
+
     /// <summary>Logged when the connection factory fails to create a connection.</summary>
     [MessageLogging(EventId = 71001, Level = LogLevel.Error,
         Message = "ConfigurationGateway: failed to create connection '{connectionName}': {reason}")]

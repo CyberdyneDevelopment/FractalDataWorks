@@ -387,27 +387,13 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         var fk = binding.Value!.Key;
 
         var joinColumn = fk.KeyFields[0].ReferencedField!.Name;              // the domain's Physical key field the FK holds
-        var keyColumn = LookupKeyField(domain.Value.Keys, "Logical");         // the domain's durable Id — what filters
+        var keyColumn = ConfigurationKeys.FieldOf(domain.Value.Keys, "Logical");         // the domain's durable Id — what filters
         if (keyColumn is null)
             return GenericResult<(string, string, string, string)>.Failure(
                 DefaultConfigurationProviderLog.NoSuitableKeyForContainer(_logger, typeof(TConfiguration).Name, domain.Value.Name));
 
         return GenericResult<(string ForeignKey, string DomainContainer, string JoinColumn, string KeyColumn)>.Success(
             (fk.KeyFields[0].LocalField.Name, domain.Value.Name, joinColumn, keyColumn));
-    }
-
-    private static string? LookupKeyField(IReadOnlyList<IContainerKey> keys, string keyTypeName)
-    {
-        for (var i = 0; i < keys.Count; i++)
-        {
-            var key = keys[i];
-            if (!string.Equals(key.KeyType.Name, keyTypeName, StringComparison.Ordinal)) continue;
-            if (string.Equals(keyTypeName, "Logical", StringComparison.Ordinal) && key.ReferencedContainer is not null) continue;
-            if (key.KeyFields.Count == 0) continue;
-            return key.KeyFields[0].LocalField.Name;
-        }
-
-        return null;
     }
 
     // ── the domain's contract ───────────────────────────────────────────────
@@ -535,7 +521,8 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
     // row. At zero the row is composed without its collections, which stay empty -- not read, not none.
     private async Task<IGenericResult> LoadChildrenInto(object ownerRow, IPocoMapper ownerMapper, string ownerContainerName, DateTimeOffset? asOf, int levels, CancellationToken ct, OwnerFilter? owner = null)
     {
-        var descriptors = ownerMapper.CascadeChildren;
+        // A list of the owner's own type is a tree, attached by the domain provider (see ConfigurationTrees); it is not a child table.
+        var descriptors = ownerMapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, ownerRow.GetType())).ToList();
         if (descriptors.Count == 0 || levels <= 0)
             return GenericResult.Success();
 
@@ -792,12 +779,12 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         if (containerResult.IsFailure)
             return containerResult.ToNewResult<(string Physical, string Logical)>();
 
-        var physical = LookupKeyField(containerResult.Value!.Keys, "Physical");
+        var physical = ConfigurationKeys.FieldOf(containerResult.Value!.Keys, "Physical");
         if (physical is null)
             return GenericResult<(string Physical, string Logical)>.Failure(
                 DefaultConfigurationProviderLog.ContainerKeyNotDeclared(_logger, containerName, "Physical"));
 
-        var logical = LookupKeyField(containerResult.Value.Keys, "Logical");
+        var logical = ConfigurationKeys.FieldOf(containerResult.Value.Keys, "Logical");
         if (logical is null)
             return GenericResult<(string Physical, string Logical)>.Failure(
                 DefaultConfigurationProviderLog.ContainerKeyNotDeclared(_logger, containerName, "Logical"));
@@ -891,7 +878,8 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         if (mapper == PocoMapperCollection.NotFound)
             return GenericResult.Success();
 
-        var descriptors = mapper.CascadeChildren;
+        // A tree list holds members of their own, saved on their own; saving the parent does not rewrite them.
+        var descriptors = mapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, owner.GetType())).ToList();
         for (var c = 0; c < descriptors.Count; c++)
         {
             var result = descriptors[c].IsPropertyCollection
@@ -1023,7 +1011,8 @@ public abstract class ImplementationProviderBase<TConfiguration, TContract>
         if (mapper == PocoMapperCollection.NotFound)
             return GenericResult.Success();
 
-        var descriptors = mapper.CascadeChildren;
+        // A tree list holds members of their own; retiring the parent retires its own rows, not theirs.
+        var descriptors = mapper.CascadeChildren.Where(d => !ConfigurationTrees.IsTree(d, ownerType)).ToList();
         for (var c = 0; c < descriptors.Count; c++)
         {
             var childContainer = ChildContainer(descriptors[c], ownerType.Name);

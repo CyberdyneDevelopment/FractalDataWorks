@@ -95,7 +95,7 @@ public abstract class DetachWorkspaceResourceEndpointBase : Endpoint<DetachWorks
         // The resource is a child of the workspace aggregate: saving the workspace without it retires the
         // version that had it, and the new version is written without it.
         workspace.Value.Resources.Remove(found[0]);
-        var saved = await _workspaces.Save(
+        var saved = await _workspaces.Update(
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure)
         {

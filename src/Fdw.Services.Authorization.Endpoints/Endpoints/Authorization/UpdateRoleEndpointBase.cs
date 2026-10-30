@@ -88,7 +88,7 @@ public abstract class UpdateRoleEndpointBase : Endpoint<UpdateRoleRequest>
 
         var updated = ApplyUpdates(existing.Value, req);
 
-        var result = await _roleProvider.Save(updated, RoleDomain, RoleImplementation, updated.Name, ct).ConfigureAwait(false);
+        var result = await _roleProvider.Update(updated, RoleDomain, RoleImplementation, updated.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             AuthorizationEndpointLog.RoleWriteFailed(EndpointLogger, "update", req.Name, result.CurrentMessage);

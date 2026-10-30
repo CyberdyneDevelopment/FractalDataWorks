@@ -89,13 +89,16 @@ public sealed class FlowLoadDestination : IFlowComponent
     /// <summary>Gets how many rows the load commands affected over the run.</summary>
     public int RowsLoaded { get; private set; }
 
-    /// <summary>Whether a load must be given every row at once: one that states a soft delete flags the keys absent from its rows.</summary>
+    /// <summary>
+    /// Whether a load must be given every row at once: one that states a soft delete flags the keys absent from its rows, and one that writes a file or files
+    /// (FDW-3193) writes each file once, so a file is not added to again by a later batch and a bad value in a late row leaves no file.
+    /// </summary>
     /// <param name="unit">The load.</param>
     /// <returns><see langword="true"/> when the load states a soft delete mode.</returns>
     internal static bool NeedsWholeSet(LoadUnit unit)
     {
         ArgumentNullException.ThrowIfNull(unit);
-        return !string.IsNullOrWhiteSpace(unit.Row.SoftDeleteMode);
+        return unit.Addressing is not null || !string.IsNullOrWhiteSpace(unit.Row.SoftDeleteMode);
     }
 
     /// <inheritdoc />
@@ -145,6 +148,21 @@ public sealed class FlowLoadDestination : IFlowComponent
         return GenericResult.Success();
     }
 
+    // A destination that writes files empties each file it writes in the same unit of work as it writes it (FDW-3193): the files are known only from the
+    // rows, so the truncate cannot run before them, and a file that fails to write is not left emptied.
+    private async Task<IGenericResult> LoadFiles(IReadOnlyList<IDictionary<string, object?>> rows, bool first, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<LoadUnit> units = first && _truncateFirst is not null ? [_truncateFirst, _unit] : [_unit];
+        var loaded = await _executor.Run(_pipelineName, units, rows, _parameters, _startedAt, cancellationToken).ConfigureAwait(false);
+        if (loaded.IsFailure)
+        {
+            return GenericResult.Failure(FlowLog.DestinationLoadFailed(_logger, _name, rows.Count, loaded.CurrentMessage));
+        }
+
+        RowsLoaded += loaded.Value;
+        return GenericResult.Success();
+    }
+
     // A test run: the rows are received and counted by the link, and none is written.
     private async Task<IGenericResult> CountOnly(IFlowInput input, CancellationToken cancellationToken)
     {
@@ -162,6 +180,11 @@ public sealed class FlowLoadDestination : IFlowComponent
     // target.
     private async Task<IGenericResult> Load(IReadOnlyList<IDictionary<string, object?>> rows, bool first, CancellationToken cancellationToken)
     {
+        if (_unit.Addressing is not null)
+        {
+            return await LoadFiles(rows, first, cancellationToken).ConfigureAwait(false);
+        }
+
         if (first && _truncateFirst is not null)
         {
             var emptied = await _executor

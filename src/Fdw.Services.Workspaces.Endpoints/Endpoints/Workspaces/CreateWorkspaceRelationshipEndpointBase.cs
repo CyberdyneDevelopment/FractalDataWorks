@@ -132,7 +132,7 @@ public abstract class CreateWorkspaceRelationshipEndpointBase
         // The relationship is a child of the workspace aggregate: saving the workspace writes it under the
         // workspace's current row, and the version it replaces keeps the children it had.
         workspace.Value.Relationships.Add(relationship);
-        var saved = await _workspaces.Save(
+        var saved = await _workspaces.Update(
             workspace.Value, workspace.Value.Domain, workspace.Value.Implementation, workspace.Value.Name, ct).ConfigureAwait(false);
         if (saved.IsFailure) return saved.ToNewResult<WorkspaceMapEdgeDto>();
 

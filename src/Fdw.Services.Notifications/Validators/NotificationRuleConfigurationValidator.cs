@@ -1,3 +1,4 @@
+using System.Linq;
 using FluentValidation;
 using Fdw.Validation;
 using Fdw.Services.Notifications.Configuration;
@@ -9,8 +10,9 @@ namespace Fdw.Services.Notifications.Validators;
 /// </summary>
 public sealed class NotificationRuleConfigurationValidator : FdwConfigurationValidator<NotificationRuleImplementationConfiguration>
 {
+    // How a rule combines its conditions. A rule saves as "Or" and nothing in a request sets it, but the column is NOT NULL and the
+    // member is settable, so a value outside the set is refused here, not stored.
     private static readonly string[] ValidConditionOperators = ["And", "Or"];
-    private static readonly string[] ValidSeverities = ["Info", "Warning", "Error", "Critical"];
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NotificationRuleConfigurationValidator"/> class.
@@ -34,8 +36,8 @@ public sealed class NotificationRuleConfigurationValidator : FdwConfigurationVal
             .WithMessage("ConditionOperator must be 'And' or 'Or'");
 
         RuleFor(x => x.Severity)
-            .Must(s => System.Array.IndexOf(ValidSeverities, s) >= 0)
-            .WithMessage("Severity must be one of: Info, Warning, Error, Critical");
+            .Must(NotificationRuleSeverities.Offers)
+            .WithMessage($"Severity must be one of: {string.Join(", ", NotificationRuleSeverities.All().Select(pair => pair.Key))}");
 
         When(x => x.CooldownMinutes.HasValue, () =>
         {

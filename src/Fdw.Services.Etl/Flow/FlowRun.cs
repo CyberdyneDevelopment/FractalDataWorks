@@ -36,8 +36,9 @@ internal sealed class FlowRun
     /// <summary>Wires a validated graph.</summary>
     /// <param name="graph">The graph; it has passed <see cref="FlowGraphValidator"/>.</param>
     /// <param name="capacity">The batches each link buffers.</param>
+    /// <param name="pauseGate">The gate every batch passes before it leaves a component; null when the run cannot be paused.</param>
     /// <returns>The wired run.</returns>
-    public static FlowRun Build(FlowGraph graph, int capacity)
+    public static FlowRun Build(FlowGraph graph, int capacity, IFlowPauseGate? pauseGate)
     {
         var run = new FlowRun();
         var inputs = new Dictionary<(string, string), FlowInputState>();
@@ -61,7 +62,7 @@ internal sealed class FlowRun
             foreach (var output in component.Outputs)
             {
                 var tap = errorOutputs.Contains(output, StringComparer.OrdinalIgnoreCase) ? run._rejected : null;
-                run._ports[component.Name].Add(new FlowChannelOutput(output, run.LinksOf(graph, component.Name, output, inputs), component.Name, tap));
+                run._ports[component.Name].Add(new FlowChannelOutput(output, run.LinksOf(graph, component.Name, output, inputs), component.Name, tap, pauseGate));
             }
         }
 

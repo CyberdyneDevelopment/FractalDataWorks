@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Commands.Data.Abstractions;
+using Fdw.Commands.Data.Abstractions.Timeouts;
 using Fdw.Data.Abstractions;
 using Fdw.Messages;
 using Fdw.Results;
@@ -195,6 +197,120 @@ public sealed class ConnectionExpansionTests
                 return GenericResult<string>.Success("assembled");
             });
         return command;
+    }
+
+    private static IReadOnlyDictionary<string, object> CarryingATimeout()
+    {
+        var metadata = new Dictionary<string, object>();
+        CommandTimeoutPolicy.Set(metadata, TimeSpan.FromSeconds(3), "secret manager 'Vault'");
+        return metadata;
+    }
+
+    [Fact]
+    public async Task AnExpansionThatCarriesACommandTimeoutIsRefusedByCodeAndNothingRuns()
+    {
+        var ran = 0;
+        var command = Expandable("BulkUpsert", Single("Delete"), Single("Insert"));
+        command.Setup(c => c.Metadata).Returns(CarryingATimeout());
+
+        var result = await CommandExpansion.Run<int>(
+            command.Object,
+            _container.Object,
+            (_, _) =>
+            {
+                ran++;
+                return Task.FromResult<IGenericResult<int>>(GenericResult<int>.Success(1));
+            },
+            NullLogger.Instance,
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-62035");
+        result.CurrentMessage.ShouldNotBeNull().ShouldContain("secret manager 'Vault'");
+        ran.ShouldBe(0);
+        command.Verify(c => c.Expand(It.IsAny<IStorageContainer>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ABulkExpansionThatCarriesACommandTimeoutIsRefusedToo()
+    {
+        var ran = 0;
+        var command = Expandable("BulkUpsert", Single("Upsert"));
+        command.Setup(c => c.Metadata).Returns(CarryingATimeout());
+
+        var result = await CommandExpansion.Run<int>(
+            command.Object,
+            _container.Object,
+            (_, _) =>
+            {
+                ran++;
+                return Task.FromResult<IGenericResult<int>>(GenericResult<int>.Success(1));
+            },
+            NullLogger.Instance,
+            1000,
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-62035");
+        ran.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task AnAssembledExpansionThatCarriesACommandTimeoutIsRefusedAndNeverAssembles()
+    {
+        var handed = new List<IReadOnlyList<ExpansionAnswer>>();
+        var ran = 0;
+        var command = Assembled("Save", handed, new ExpandedCommand(Single("Close")), new ExpandedCommand(Single("Insert")));
+        command.Setup(c => c.Metadata).Returns(CarryingATimeout());
+
+        var result = await CommandExpansion.RunAssembled(
+            command.Object,
+            _container.Object,
+            (_, _) =>
+            {
+                ran++;
+                return Task.FromResult<IGenericResult<int>>(GenericResult<int>.Success(1));
+            },
+            (_, _) =>
+            {
+                ran++;
+                return Task.FromResult<IGenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>>(
+                    GenericResult<IReadOnlyList<IReadOnlyDictionary<string, object?>>>.Success([]));
+            },
+            NullLogger.Instance,
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-62035");
+        ran.ShouldBe(0);
+        handed.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AConnectionWithNoTranslatorRefusesAnExpandingCommandThatCarriesACommandTimeout()
+    {
+        var connection = Connection(["Upsert"]);
+        var command = Expandable("BulkUpsert", Single("Upsert"), Single("Upsert"));
+        command.Setup(c => c.Metadata).Returns(CarryingATimeout());
+
+        var result = await connection.Execute<int>(command.Object, _container.Object, TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldEndWith("-62035");
+        connection.Ran.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AnExpandingCommandWithNoCommandTimeoutStillExpands()
+    {
+        var connection = Connection(["Upsert"]);
+        var command = Expandable("BulkUpsert", Single("Upsert"), Single("Upsert"));
+        command.Setup(c => c.Metadata).Returns(new Dictionary<string, object>());
+
+        var result = await connection.Execute<int>(command.Object, _container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(2);
     }
 
     private static IReadOnlyList<IReadOnlyDictionary<string, object?>> OneRow(string key)

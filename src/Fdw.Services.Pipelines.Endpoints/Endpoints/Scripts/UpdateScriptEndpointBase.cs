@@ -60,6 +60,6 @@ public abstract class UpdateScriptEndpointBase : CrudUpdateEndpointBase<ScriptPa
             return script.ToNewResult<ScriptPayload>();
         }
 
-        return await ScriptSave.Save(_provider, script.Value, Logger, ct).ConfigureAwait(false);
+        return await ScriptSave.Update(_provider, script.Value, Logger, ct).ConfigureAwait(false);
     }
 }

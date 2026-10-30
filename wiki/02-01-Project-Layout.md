@@ -117,7 +117,6 @@ Each service domain provides its own `.Endpoints` NuGet package containing gener
 | `Fdw.Services.Catalog.Endpoints` | Glossary, annotations, search |
 | `Fdw.Operations.Endpoints` | Executions, dataflow, configuration metadata |
 | `Fdw.Schema.Endpoints` | Schema discovery and import |
-| `Fdw.Web.Search.Endpoints` | Full-text search |
 | `Fdw.UI.Themes.Endpoints` | Theme CRUD and defaults |
 | `Fdw.Services.Authentication.Endpoints` | Authentication (login, refresh, logout, user info) |
 | `Fdw.Calculations.Endpoints` | Calculation execution and type listing |

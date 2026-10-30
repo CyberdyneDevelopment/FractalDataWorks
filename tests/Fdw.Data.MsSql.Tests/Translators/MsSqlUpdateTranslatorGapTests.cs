@@ -322,4 +322,89 @@ public sealed class MsSqlUpdateTranslatorGapTests
         result.IsSuccess.ShouldBeTrue();
         result.Value!.CommandText.ShouldContain("WHERE ([Id] = @where_p0 AND [Status] = @where_p1)");
     }
+
+    private static Mock<IFilterableCommand> CreateUpdateWithNoFilter(object record)
+    {
+        var command = new Mock<IFilterableCommand>();
+        command.Setup(c => c.Filter).Returns((IFilterExpression?)null);
+        command.As<IDataCommandWithInput>().Setup(c => c.InputData).Returns(record);
+        return command;
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateRefusesAnEntityRecordWithoutThePrimaryKeyWhenThereIsNoFilter()
+    {
+        // FDW-3321: with no filter and no key in the record there is no WHERE to build. The statement used
+        // to be issued without one and wrote every row of the table.
+        var container = CreateContainer(
+            name: "Customers",
+            fields: [CreateField("CustomerKey").Object, CreateField("Name").Object],
+            primaryKeyFieldName: "CustomerKey");
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(new { Name = "x" }).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull().Name.ShouldBe("MissingPrimaryKeyValue");
+        result.Details!.GetValue<string>("Container").ShouldBe("Customers");
+        result.Details.GetValue<string>("PrimaryKeyField").ShouldBe("CustomerKey");
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateRefusesADictionaryRecordWithoutThePrimaryKeyWhenThereIsNoFilter()
+    {
+        var container = CreateContainer(
+            name: "Customers",
+            fields: [CreateField("CustomerKey").Object, CreateField("Name").Object],
+            primaryKeyFieldName: "CustomerKey");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["Name"] = "x" };
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull().Name.ShouldBe("MissingPrimaryKeyValue");
+        result.Details!.GetValue<string>("Container").ShouldBe("Customers");
+        result.Details.GetValue<string>("PrimaryKeyField").ShouldBe("CustomerKey");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateKeepsRefusingANullPrimaryKeyWhenThereIsNoFilter()
+    {
+        var container = CreateContainer(
+            name: "Customers",
+            fields: [CreateField("CustomerKey").Object, CreateField("Name").Object],
+            primaryKeyFieldName: "CustomerKey");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["CustomerKey"] = null, ["Name"] = "x" };
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Code.ShouldNotBeNull().Name.ShouldBe("NullPrimaryKeyValue");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task TranslateUpdateTakesTheKeyFromADictionaryRecordWhenThereIsNoFilter()
+    {
+        var container = CreateContainer(
+            name: "Customers",
+            fields: [CreateField("CustomerKey").Object, CreateField("Name").Object],
+            primaryKeyFieldName: "CustomerKey");
+        IDictionary<string, object?> record = new Dictionary<string, object?> { ["CustomerKey"] = 42, ["Name"] = "x" };
+
+        var result = await _sut.Translate(
+            CreateUpdateWithNoFilter(record).Object, container.Object, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.CommandText.ShouldContain("WHERE [CustomerKey] = @where_pk");
+    }
 }

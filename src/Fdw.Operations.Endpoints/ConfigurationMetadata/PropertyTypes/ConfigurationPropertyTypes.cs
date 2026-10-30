@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using Fdw.Collections;
+using Fdw.Configuration;
 using Fdw.Collections.Attributes;
 
 namespace Fdw.Operations.Endpoints.ConfigurationMetadata.PropertyTypes;
@@ -13,18 +13,14 @@ namespace Fdw.Operations.Endpoints.ConfigurationMetadata.PropertyTypes;
 [TypeCollection(typeof(ConfigurationPropertyTypeBaseResponse), typeof(IConfigurationPropertyType), typeof(ConfigurationPropertyTypes), RestrictToCurrentCompilation = true)]
 public abstract partial class ConfigurationPropertyTypes : TypeCollectionBase<ConfigurationPropertyTypeBaseResponse, IConfigurationPropertyType>
 {
-    private static readonly HashSet<string> SecretPropertyPatterns = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Password", "Secret", "ApiKey", "Credential"
-    };
-
     /// <summary>
     /// Converts a property to its UI property type descriptor.
-    /// Handles name-based patterns (secret, connection) then delegates to type-based lookup.
+    /// A member carrying <see cref="SecretValueAttribute"/> is a secret and no other member is; a name ending in ConnectionName is a connection;
+    /// the rest go to the type-based lookup.
     /// </summary>
     public static IConfigurationPropertyTypeDto Convert(PropertyInfo property)
     {
-        if (IsSecretProperty(property.Name))
+        if (property.IsDefined(typeof(SecretValueAttribute), inherit: true))
             return ConfigurationPropertyTypeDtos.Secret;
 
         if (property.Name.EndsWith("ConnectionName", StringComparison.OrdinalIgnoreCase) ||
@@ -47,15 +43,5 @@ public abstract partial class ConfigurationPropertyTypes : TypeCollectionBase<Co
 
         var match = ByDataType(underlyingType);
         return match.Id == 0 ? ConfigurationPropertyTypeDtos.Text : match.DtoValue;
-    }
-
-    private static bool IsSecretProperty(string propertyName)
-    {
-        foreach (var pattern in SecretPropertyPatterns)
-        {
-            if (propertyName.Contains(pattern, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
     }
 }

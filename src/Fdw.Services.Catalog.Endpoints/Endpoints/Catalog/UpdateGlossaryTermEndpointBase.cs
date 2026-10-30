@@ -89,7 +89,7 @@ public abstract class UpdateGlossaryTermEndpointBase : Endpoint<UpdateGlossaryTe
 
         GlossaryTermMapper.ApplyDto(config, req, category.Value.Id);
 
-        var result = await _provider.Save(config, "GlossaryTerm", "GlossaryTerm", config.Name, ct).ConfigureAwait(false);
+        var result = await _provider.Update(config, "GlossaryTerm", "GlossaryTerm", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {

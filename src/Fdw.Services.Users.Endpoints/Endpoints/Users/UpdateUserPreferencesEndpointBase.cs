@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Services.Users;
 using Fdw.Services.Users.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Microsoft.Extensions.Logging;
 
 namespace Fdw.Services.Users.Endpoints;
@@ -70,7 +71,7 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
         try
         {
             // A user's preferences are found by the name the row was written under -- the user's id.
-            var loadResult = await _preferenceProvider.Get(userId.ToString(), ct).ConfigureAwait(false);
+            var loadResult = await _preferenceProvider.Get(PreferenceEndpointIdentity.RowName(userId), ct).ConfigureAwait(false);
             if (!loadResult.IsSuccess)
             {
                 AddError(loadResult.CurrentMessage ?? "Failed to load existing preferences.");
@@ -84,19 +85,21 @@ public abstract class UpdateUserPreferencesEndpointBase : Endpoint<UpdateUserPre
                 : new UserPreferencesImplementationConfiguration
                 {
                     Id = Guid.CreateVersion7(),
-                    Name = userId.ToString(),
+                    Name = PreferenceEndpointIdentity.RowName(userId),
                     UserId = userId,
                     IsCurrent = true,
                     IsDeleted = false,
                 };
 
-            if (req.ThemeName is not null) record.ThemeName = req.ThemeName;
-            if (req.DarkMode.HasValue) record.DarkMode = req.DarkMode.Value;
-            if (req.Language is not null) record.Language = req.Language;
-            if (req.Timezone is not null) record.Timezone = req.Timezone;
+            var applied = UserPreferenceChanges.Apply(req, record, _logger);
+            if (applied.IsFailure)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(applied, HttpContext)).ConfigureAwait(false);
+                return;
+            }
 
             var saveResult = await _preferenceProvider
-                .Save(record, "UserPreferences", "UserPreferences", userId.ToString(), ct)
+                .Save(record, "UserPreferences", "UserPreferences", PreferenceEndpointIdentity.RowName(userId), ct)
                 .ConfigureAwait(false);
             if (!saveResult.IsSuccess)
             {

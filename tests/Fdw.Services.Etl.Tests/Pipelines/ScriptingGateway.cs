@@ -18,8 +18,10 @@ internal sealed class ScriptingGateway
     /// <param name="rows">The rows a read answers.</param>
     /// <param name="affected">The rows affected a run answers.</param>
     /// <param name="fails">Whether every read and run fails.</param>
-    public ScriptingGateway(IReadOnlyList<IDictionary<string, object?>> rows, int affected = 0, bool fails = false)
+    /// <param name="failure">The messages a failing read or run carries, in order; one uncoded message when it is not given.</param>
+    public ScriptingGateway(IReadOnlyList<IDictionary<string, object?>> rows, int affected = 0, bool fails = false, IReadOnlyList<IGenericMessage>? failure = null)
     {
+        IReadOnlyList<IGenericMessage> refusal = failure is null ? [new GenericMessage("script refused")] : failure;
         var gateway = new Mock<IEtlGateway>();
         gateway
             .Setup(g => g.Execute<IReadOnlyList<IDictionary<string, object?>>>(
@@ -29,7 +31,7 @@ internal sealed class ScriptingGateway
                 Commands.Add((store, command));
                 return Task.FromResult<IGenericResult<IReadOnlyList<IDictionary<string, object?>>>>(
                     fails
-                        ? GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Failure(new GenericMessage("script refused"))
+                        ? GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Failure(refusal)
                         : GenericResult<IReadOnlyList<IDictionary<string, object?>>>.Success(rows));
             });
         gateway
@@ -38,7 +40,7 @@ internal sealed class ScriptingGateway
             {
                 Commands.Add((store, command));
                 return Task.FromResult<IGenericResult<int>>(
-                    fails ? GenericResult<int>.Failure(new GenericMessage("script refused")) : GenericResult<int>.Success(affected));
+                    fails ? GenericResult<int>.Failure(refusal) : GenericResult<int>.Success(affected));
             });
         Gateway = gateway.Object;
     }

@@ -25,11 +25,13 @@ public sealed class RestConfiguration
     /// <summary>
     /// Gets or sets the API key for API Key authentication.
     /// </summary>
+    [SecretValue]
     public string? ApiKey { get; set; }
 
     /// <summary>
     /// Gets or sets the bearer token for Bearer authentication.
     /// </summary>
+    [SecretValue]
     public string? BearerToken { get; set; }
 
     /// <summary>

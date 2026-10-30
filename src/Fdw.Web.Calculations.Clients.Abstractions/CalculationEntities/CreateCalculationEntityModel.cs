@@ -20,7 +20,7 @@ public sealed class CreateCalculationEntityModel
     public string? Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the calculation entity type name (e.g. "Formula", "Windowed").
+    /// Gets or sets the calculation entity type name (e.g. "Windowed").
     /// </summary>
     public string CalculationEntityType { get; set; } = string.Empty;
 
@@ -45,8 +45,8 @@ public sealed class CreateCalculationEntityModel
     public string ResultDataTypeName { get; set; } = "Decimal";
 
     /// <summary>
-    /// Gets or sets the calculation type's own settings, as a JSON object (for Formula,
-    /// <c>FormulaLanguage</c>, <c>FormulaBody</c> and <c>TimeoutSeconds</c>).
+    /// Gets or sets the calculation type's own settings, as a JSON object (for Windowed,
+    /// <c>TargetField</c> and <c>WindowFunction</c>).
     /// </summary>
     public JsonElement? Configuration { get; set; }
 }

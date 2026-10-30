@@ -54,7 +54,6 @@ The web console (`reference-react-ui`) calls the API over HTTP and uses none of 
         +-- Operations.Clients                    (DataflowApiClient, ConfigurationApiClient)
         +-- Web.Analytics.Clients                 (AnalyticsApiClient)
         +-- Web.Calculations.Clients              (CalculationApiClient)
-        +-- Web.Search.Clients                    (SearchApiClient)
         +-- UI.Themes.Clients                     (ThemeApiClient)
         +-- Web.Clients.Abstractions              (ApiClientBase, ClientLog)
               +-- Contracts/                      (IColumnSchema, IDataSetField, etc.)
@@ -200,7 +199,6 @@ A .NET consumer (the terminal UI, or a host that calls another host's API) refer
 | `UI.Themes.Clients` | `ThemeApiClient` | Theme management |
 | `Web.Calculations.Clients` | `CalculationApiClient` | Calculations |
 | `Web.Analytics.Clients` | `AnalyticsApiClient`, `PromotionApiClient` | Analytics |
-| `Web.Search.Clients` | `SearchApiClient` | Global search |
 
 All clients inherit from `ApiClientBase` in `Web.Clients.Abstractions`, which provides HTTP plumbing, authentication header injection, structured error handling, and `ClientLog` for structured logging.
 

@@ -319,6 +319,54 @@ public class UserConfigurationProviderTests
         order.ShouldBe(["implementation superseded", "implementation written"]);
     }
 
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SavingALoadedUserUnderANewNameRenamesItsDomainRowInPlaceInsteadOfMintingASecondUser()
+    {
+        var store = ConfigurationStore.Users(User("alice", "alice@example.com"));
+        var loaded = (await store.Provider.Get("alice", TestContext.Current.CancellationToken)).Value!;
+        var id = loaded.Id;
+
+        var result = await store.Provider.Save(loaded, UsersDomain, store.ImplementationName, "alicia", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        loaded.Id.ShouldBe(id);
+
+        // The domain row is updated where it is: a row's Id is unique across its versions in the domain tables, so a new version
+        // of it under the same Id would be refused. Nothing is retired and nothing is inserted into the domain table.
+        store.Updates.Count.ShouldBe(1);
+        store.Writes.Where(write => write.Target.Container == "Users").ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SavingOneUserUnderTheNameOfAnotherIsRefusedAndWritesNothing()
+    {
+        var store = ConfigurationStore.Users(User("alice", "alice@example.com"), User("bob", "bob@example.com"));
+        var loaded = (await store.Provider.Get("alice", TestContext.Current.CancellationToken)).Value!;
+
+        var result = await store.Provider.Save(loaded, UsersDomain, store.ImplementationName, "bob", TestContext.Current.CancellationToken);
+
+        result.IsFailure.ShouldBeTrue();
+        result.Messages[^1].Code.ShouldBe("SERVICES-41061");
+        store.Writes.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Users")]
+    public async Task SavingANewRecordUnderAnExistingNameStillSavesIntoThatUser()
+    {
+        var store = ConfigurationStore.Users(User("alice", "alice@example.com"));
+        var fresh = User("alice", "alice@new.example.com");
+
+        var result = await store.Provider.Save(fresh, UsersDomain, store.ImplementationName, "alice", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
     // ── Reading several members by id (FDW-1003) ──────────────────────────────
 
     [Fact]

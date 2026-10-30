@@ -75,7 +75,6 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Results` | GenericResult, GenericMessage |
 | `Fdw.Results.Abstractions` | IGenericResult, IGenericMessage interfaces |
 | `Fdw.Messages` | Message infrastructure |
-| `Fdw.Expressions` | Expression tree utilities |
 | `Fdw.Processors.Abstractions` | Processor pipeline interfaces |
 
 ### 2. Collections
@@ -388,9 +387,6 @@ This document maps every project in `src/` to a logical domain and describes the
 | `Fdw.Web.Http.Authentication` | HTTP auth middleware |
 | `Fdw.Web.Analytics.Clients` | Analytics HTTP client |
 | `Fdw.Web.Analytics.Clients.Abstractions` | Analytics interfaces |
-| `Fdw.Web.Search.Clients` | Search HTTP client |
-| `Fdw.Web.Search.Clients.Models` | Search client DTO models |
-| `Fdw.Web.Search.Endpoints` | Search API endpoints |
 | `Fdw.Web.Calculations.Clients` | Calculation HTTP client |
 | `Fdw.Web.Calculations.Clients.Abstractions` | Calculation client interfaces |
 

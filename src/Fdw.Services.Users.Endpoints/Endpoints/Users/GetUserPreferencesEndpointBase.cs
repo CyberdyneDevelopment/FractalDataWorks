@@ -68,7 +68,7 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
 
         try
         {
-            var result = await _preferenceProvider.Get(userId, ct).ConfigureAwait(false);
+            var result = await _preferenceProvider.Get(PreferenceEndpointIdentity.RowName(userId), ct).ConfigureAwait(false);
 
             if (!result.IsSuccess)
             {
@@ -83,10 +83,11 @@ public abstract class GetUserPreferencesEndpointBase : EndpointWithoutRequest<Us
                 {
                     ThemeName = prefs.ThemeName,
                     DarkMode = prefs.DarkMode,
+                    ColorMode = prefs.ColorMode,
                     Language = prefs.Language,
                     Timezone = prefs.Timezone
                 }
-                : new UserPreferencesResponse { DarkMode = false };
+                : new UserPreferencesResponse();
             await Send.OkAsync(response, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)

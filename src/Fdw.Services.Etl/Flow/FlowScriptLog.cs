@@ -31,6 +31,11 @@ public static partial class FlowScriptLog
         Message = "Flow step '{step}' could not run its script on data store '{dataStore}': {reason}")]
     public static partial IGenericMessage RunFailed(ILogger logger, string step, string dataStore, string? reason);
 
+    /// <summary>Logs a script step whose failure carried no message in a failure category, so its reason can only be the messages it did carry.</summary>
+    [MessageLogging(EventId = 20936, Level = LogLevel.Error,
+        Message = "Flow step '{step}' on data store '{dataStore}' failed with no coded failure message; it carried: {carried}")]
+    public static partial IGenericMessage FailureCarriedNoCodedMessage(ILogger logger, string step, string dataStore, string carried);
+
     /// <summary>Logs an Execute SQL step whose script ran.</summary>
     [MessageLogging(EventId = 20933, Level = LogLevel.Information,
         Message = "Flow step '{step}' ran its script on data store '{dataStore}' and affected {rows} row(s)")]

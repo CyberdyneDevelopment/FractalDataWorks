@@ -93,7 +93,7 @@ public abstract class UpdateCategoryEndpointBase : CrudUpdateEndpointBase<Catego
         category.DisplayName = request.DisplayName;
         category.Description = request.Description;
         category.ParentCategoryId = parent.Value;
-        var saved = await _categories.Save(category, CategoryDomainConfiguration.DomainName, existing.Type, request.Name, ct).ConfigureAwait(false);
+        var saved = await _categories.Update(category, CategoryDomainConfiguration.DomainName, existing.Type, request.Name, ct).ConfigureAwait(false);
         return saved.IsFailure
             ? saved.ToNewResult<CategoryPayload>()
             : await CategoryReads.Read(_categories, request.Name, Logger, ct).ConfigureAwait(false);

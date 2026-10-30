@@ -28,6 +28,11 @@ public class ConfigurationPropertyInfoDto
     public bool IsRequired { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this property can be sent empty (null) to clear it. False for a property that always has a value.
+    /// </summary>
+    public bool CanBeEmpty { get; set; }
+
+    /// <summary>
     /// Gets or sets whether this property contains sensitive data.
     /// </summary>
     public bool IsSecret { get; set; }

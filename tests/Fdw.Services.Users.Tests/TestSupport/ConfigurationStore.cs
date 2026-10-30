@@ -62,6 +62,7 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
     private readonly List<TDomain> _rows = [];
     private readonly Dictionary<Guid, TContract> _byRow = [];
     private IGenericMessage? _readFailure;
+    private Guid? _removeAfterServing;
 
     private ConfigurationStore(
         TProvider provider,
@@ -86,6 +87,9 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
 
     /// <summary>Every configuration write the store received, in order, with the container it was addressed to.</summary>
     public List<(IDataCommand Command, DataStoreTarget Target)> Writes { get; } = [];
+
+    /// <summary>Gets the in-place updates sent to the store, in order: a rename of a domain row is one.</summary>
+    public List<(IDataCommand Command, DataStoreTarget Target)> Updates { get; } = [];
 
     /// <summary>The faked gateway underneath, for tests that assert on the domain row itself.</summary>
     public Mock<IConfigurationGateway> Gateway { get; }
@@ -168,6 +172,11 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
                         ? new ConfigurationWriteResult([DomainKeys()], new Dictionary<string, object?>(StringComparer.Ordinal))
                         : new ConfigurationWriteResult([], DomainKeys())));
         gateway
+            .Setup(g => g.Execute<int>(
+                It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
+            .Callback((IDataCommand command, DataStoreTarget target, CancellationToken _) => store.Updates.Add((command, target)))
+            .ReturnsAsync(GenericResult<int>.Success(1));
+        gateway
             .Setup(g => g.Execute<IEnumerable<Dictionary<string, object?>>>(
                 It.IsAny<IDataCommand>(), It.IsAny<DataStoreTarget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GenericResult<IEnumerable<Dictionary<string, object?>>>.Success([DomainKeys()]));
@@ -175,16 +184,10 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
         // A list read asks for each record whole; a single read asks for it to a depth.
         store.Implementations
             .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .Returns((Guid id, CancellationToken _) => Task.FromResult(
-                store._byRow.TryGetValue(id, out var item)
-                    ? GenericResult<TContract>.Success(item)
-                    : GenericResult<TContract>.Success(default!)));
+            .Returns((Guid id, CancellationToken _) => Task.FromResult(store.Serve(id)));
         store.Implementations
             .Setup(p => p.Get(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .Returns((Guid id, int _, CancellationToken _) => Task.FromResult(
-                store._byRow.TryGetValue(id, out var item)
-                    ? GenericResult<TContract>.Success(item)
-                    : GenericResult<TContract>.Success(default!)));
+            .Returns((Guid id, int _, CancellationToken _) => Task.FromResult(store.Serve(id)));
         store.SaveSucceeds();
         store.Implementations
             .Setup(p => p.Supersede(It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()))
@@ -286,6 +289,28 @@ internal sealed class ConfigurationStore<TProvider, TContract, TDomain>
             },
             _ => true,
         };
+
+    /// <summary>
+    /// Makes the store serve this record once and then lose its rows, as a reset of the database does between a service's read and its write.
+    /// </summary>
+    /// <param name="id">The record that is served and then removed.</param>
+    public void LosesTheRowAfterItIsRead(Guid id) => _removeAfterServing = id;
+
+    // The record a read by id answers with; the one the store was told to lose is gone from the next read on.
+    private IGenericResult<TContract> Serve(Guid id)
+    {
+        if (!_byRow.TryGetValue(id, out var item))
+            return GenericResult<TContract>.Success(default!);
+
+        if (_removeAfterServing == id)
+        {
+            _removeAfterServing = null;
+            _byRow.Remove(id);
+            _rows.RemoveAll(row => row.Id == id);
+        }
+
+        return GenericResult<TContract>.Success(item);
+    }
 
     /// <summary>Makes every read of this store fail.</summary>
     public void CannotBeRead(IGenericMessage message) => _readFailure = message;

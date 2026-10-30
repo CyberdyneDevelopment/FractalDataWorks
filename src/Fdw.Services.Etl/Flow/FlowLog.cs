@@ -8,7 +8,7 @@ namespace Fdw.Services.Etl.Flow;
 /// <summary>
 /// MessageLogging for the row-flow engine (FDW-1386): graph refusals, component failures and the end of a run. Every refusal is
 /// logged and returned in the failure result.
-/// EventId range: 20901-20938. The Set variable calculation and script token messages (FDW-1957, FDW-1970) take the catalog's category numbers (RESULTCODE-CATALOG.md): 20000 and 20001 for a value that is missing or invalid, 30000 for a name that is not found, 90001 for an operation that failed, and 21000 and 21001 for this package's own missing and invalid values.
+/// EventId range: 20901-20949. The Set variable calculation and script token messages (FDW-1957, FDW-1970) take the catalog's category numbers (RESULTCODE-CATALOG.md): 20000 and 20001 for a value that is missing or invalid, 30000 for a name that is not found, 90001 for an operation that failed, and 21000 and 21001 for this package's own missing and invalid values.
 /// </summary>
 [MessageLoggingTypeCode("FLOW")]
 public static partial class FlowLog
@@ -118,6 +118,11 @@ public static partial class FlowLog
         Message = "Flow step '{step}' loops over variable '{variable}' which does not hold a list")]
     public static partial IGenericMessage LoopNeedsList(ILogger logger, string step, string variable);
 
+    /// <summary>Logs a loop that works through its list in batches (FDW-3086).</summary>
+    [MessageLogging(EventId = 20940, Level = LogLevel.Information,
+        Message = "Flow step '{step}' works through the {items} items of variable '{variable}' in batches of {batchSize}")]
+    public static partial IGenericMessage LoopBatched(ILogger logger, string step, string variable, int items, int batchSize);
+
     /// <summary>Logs an Execute Pipeline step in a run that cannot start pipelines.</summary>
     [MessageLogging(EventId = 20922, Level = LogLevel.Error,
         Message = "Flow step '{step}' starts pipeline '{pipeline}' but the run has no {missing}, so there is nothing to start it under")]
@@ -162,6 +167,11 @@ public static partial class FlowLog
     [MessageLogging(EventId = 20938, Level = LogLevel.Information,
         Message = "Step '{step}' ({kind}) has an outside effect and was skipped in a test run")]
     public static partial IGenericMessage StepSkippedInTestRun(ILogger logger, string step, string kind);
+
+    /// <summary>Logs a file of a list of files whose fields are not those of the first file (FDW-3089).</summary>
+    [MessageLogging(EventId = 20939, Level = LogLevel.Error,
+        Message = "Flow source '{component}' reads a list of files as one stream, and '{file}' has different fields from the first file '{firstFile}': {difference}")]
+    public static partial IGenericMessage SourceFilesDiffer(ILogger logger, string component, string file, string firstFile, string difference);
 
     /// <summary>Logs a destination that finished loading.</summary>
     [MessageLogging(EventId = 20929, Level = LogLevel.Information,

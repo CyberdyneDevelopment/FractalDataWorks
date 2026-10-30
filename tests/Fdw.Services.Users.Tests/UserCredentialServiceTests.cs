@@ -1010,6 +1010,61 @@ public class UserCredentialServiceTests
         result.Messages.ShouldContain(m => ReferenceEquals(m, saveMessage));
     }
 
+    // ── The user's row is gone after the read (FDW-3179) ─────────────────────────
+    // A database reset between the service's read and its write removes the row. The write must fail as missing; it must not create
+    // a user under the same name (the second 'admin' with no roles that a sign-in during a reset once made).
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task ForcePasswordChangeWhenTheRowIsGoneAfterTheReadFailsAsMissingAndCreatesNoUser()
+    {
+        var userId = Guid.NewGuid();
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, MakeUserConfig(userId));
+        userStore.LosesTheRowAfterItIsRead(userId);
+        var service = MakeService(new Mock<ICredentialServiceProvider>().Object, userStore.Provider);
+
+        var result = await service.ForcePasswordChange(userId, TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+        userStore.Writes.ShouldBeEmpty();
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "Security")]
+    public async Task VerifyOnWrongPasswordWhenTheRowIsGoneAfterTheReadStillReturnsNoMatchAndCreatesNoUser()
+    {
+        var userId = Guid.NewGuid();
+        var userStore = MakeUserStore();
+        SetupGetUser(userStore, userId, MakeUserConfig(userId, failedLoginCount: 0, lockoutEnd: null));
+        userStore.LosesTheRowAfterItIsRead(userId);
+
+        var credentialServiceMock = new Mock<ICredentialService>();
+        credentialServiceMock
+            .Setup(s => s.Validate(userId, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenericResult<ICredentialOutcome>.Success(MakeVaultOutcome(grantsAccess: false)));
+        var providerMock = MakeResolvingProvider(credentialServiceMock.Object);
+        var policy = new UsersServiceImplementationConfiguration { MaxFailedLoginAttempts = 5, LockoutDurationMinutes = 15 };
+        var service = MakeService(providerMock.Object, userStore.Provider, policy);
+
+        var result = await service.Verify(userId, "Password", "wrong-password", TestContext.Current.CancellationToken);
+
+        // The refusal still stands: the lockout write failing never turns a wrong password into a grant. What it must not do is write.
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value.Name.ShouldBe("NoMatch");
+        userStore.Writes.ShouldBeEmpty();
+        userStore.Implementations.Verify(
+            p => p.Save(It.IsAny<IUserImplementationConfiguration>(), It.IsAny<IDataContainer>(), It.IsAny<IReadOnlyDictionary<string, object?>>(), It.IsAny<ConfigurationWriteScope>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     [Trait("Priority", "P0")]
     [Trait("Category", "Security")]

@@ -101,6 +101,157 @@ public sealed class RecursiveCascadeSaveTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "Cascade")]
+    public async Task DeleteByNameFailsAsMissingForANameNoRowCarries()
+    {
+        var gateway = new HeaderReturningGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Delete("Ghost", TestContext.Current.CancellationToken);
+
+        // A row that is not there is not deleted: success here answered 204 for a DELETE of something that never existed.
+        result.IsSuccess.ShouldBeFalse();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task UpdateFailsAsMissingForANameNoRowCarriesAndMintsNothing()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Update(
+            new TestRootConfiguration { Id = Guid.Empty }, "TestRoot", "Default", "Ghost", TestContext.Current.CancellationToken);
+
+        // A read that outlived its row (FDW-3179): writing it back must not bring the member back.
+        result.IsSuccess.ShouldBeFalse();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+        gateway.SavedConfigs.ShouldBeEmpty();
+        gateway.Transaction.RolledBack.ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task UpdateFailsAsMissingForARecordWhoseIdNamesNoMemberWhereSaveMintsOne()
+    {
+        var staleRecord = () => new TestRootConfiguration { Id = Guid.NewGuid() };
+
+        var savedGateway = new RecordingGateway();
+        var savingDomain = new TestRootDomainProvider(GatewayProviderFor(savedGateway));
+        savingDomain.Register("Default", ImplementationProvider(savedGateway));
+        var saved = await savingDomain.Save(staleRecord(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        var updatedGateway = new RecordingGateway();
+        var updatingDomain = new TestRootDomainProvider(GatewayProviderFor(updatedGateway));
+        updatingDomain.Register("Default", ImplementationProvider(updatedGateway));
+        var updated = await updatingDomain.Update(staleRecord(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // Save is an upsert by name, so it mints the member; that is right for a create and was the defect for a credential write.
+        saved.IsSuccess.ShouldBeTrue();
+        savedGateway.SavedConfigs.OfType<DomainConfiguration>().ShouldHaveSingleItem();
+        updated.IsSuccess.ShouldBeFalse();
+        FailureCategory.IsMissing(updated).ShouldBeTrue();
+        updatedGateway.SavedConfigs.ShouldBeEmpty();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task UpdateRefusesAStaleIdWhenAMemberMadeSinceNowCarriesTheName()
+    {
+        var reseeded = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var gateway = new HeaderReturningGateway(reseeded) { FiltersByKey = true, DataStores = [RecordingGateway.TestRootStore()] };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Update(
+            new TestRootConfiguration { Id = Guid.NewGuid() }, "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // The record was read before a reset; the seed has since made a different member under the same name. Writing the old
+        // record into that row would put one person's cached credential state over another's.
+        result.IsSuccess.ShouldBeFalse();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+        gateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task UpdateFailsAsMissingWhenTheRowIsNotThereAndTheIdNamesNoMember()
+    {
+        var gateway = new HeaderReturningGateway { FiltersByKey = true, DataStores = [RecordingGateway.TestRootStore()] };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Update(
+            new TestRootConfiguration { Id = Guid.NewGuid() }, "TestRoot", "Default", "Ghost", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        FailureCategory.IsMissing(result).ShouldBeTrue();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task CreateMintsAMemberForANameNoRowCarries()
+    {
+        var gateway = new RecordingGateway();
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Create(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeTrue();
+        gateway.SavedConfigs.OfType<DomainConfiguration>().ShouldHaveSingleItem();
+        gateway.SavedConfigs.OfType<TestRootConfiguration>().ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task CreateRefusesANameAMemberAlreadyCarries()
+    {
+        var existing = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+
+        var createdGateway = new HeaderReturningGateway(existing) { FiltersByKey = true, DataStores = [RecordingGateway.TestRootStore()] };
+        var creatingDomain = new TestRootDomainProvider(GatewayProviderFor(createdGateway));
+        creatingDomain.Register("Default", ImplementationProvider(createdGateway));
+        var created = await creatingDomain.Create(
+            new TestRootConfiguration(), "TestRoot", "Default", "Root", TestContext.Current.CancellationToken);
+
+        // Save is an upsert by name; a create that used it wrote over the member carrying the name (FDW-3208).
+        created.IsSuccess.ShouldBeFalse();
+        created.Messages[^1].Code.ShouldBe("SERVICES-40001");
+        createdGateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P0")]
+    [Trait("Category", "DataIntegrity")]
+    public async Task CreateRefusesARecordWhoseIdNamesAMemberUnderAnotherName()
+    {
+        var existing = new DomainConfiguration { Id = Guid.NewGuid(), Name = "Root", Domain = "TestRoot", Implementation = "Default" };
+        var gateway = new HeaderReturningGateway(existing) { FiltersByKey = true, DataStores = [RecordingGateway.TestRootStore()] };
+        var domain = new TestRootDomainProvider(GatewayProviderFor(gateway));
+        domain.Register("Default", ImplementationProvider(gateway));
+
+        var result = await domain.Create(
+            new TestRootConfiguration { Id = existing.Id }, "TestRoot", "Default", "Renamed", TestContext.Current.CancellationToken);
+
+        // Written under a free name, a record carrying that Id would rename the member: an update, not a create.
+        result.IsSuccess.ShouldBeFalse();
+        result.Messages[^1].Code.ShouldBe("SERVICES-40001");
+        gateway.Transaction.Committed.ShouldBeFalse();
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "Cascade")]
     public async Task DomainSaveStampsTheDomainIdOntoTheImplementation()
     {
         var gateway = new RecordingGateway();
@@ -330,7 +481,7 @@ public sealed class RecursiveCascadeSaveTests
             return Task.FromResult(GenericResult<T>.Success((T)(object)new ConfigurationWriteResult([], written)));
         }
 
-        private static IDataStore TestRootStore()
+        internal static IDataStore TestRootStore()
         {
             var implementation = Container("TestRoot", [],
                 [Key("Physical", "RowId"), Key("Logical", "Id"), Key("Foreign", "TestRootDomainRowId")]);
@@ -455,7 +606,21 @@ public sealed class RecursiveCascadeSaveTests
 
         public HeaderReturningGateway(params DomainConfiguration[] rows) => _rows = rows;
 
-        public IReadOnlyList<IDataStore> DataStores { get; } = [];
+        /// <summary>Answers a domain read with only the rows its Id and Name conditions select, as a store does.</summary>
+        public bool FiltersByKey { get; init; }
+
+        private bool Selects(IDataCommand command, DomainConfiguration row)
+            => !FiltersByKey
+               || command is not IQueryCommand { Filter.Root: { } root }
+               || Conditions(root).All(condition => condition.PropertyName switch
+               {
+                   "Id" => condition.Value is Guid id && id == row.Id,
+                   "Name" => condition.Value is string name && string.Equals(name, row.Name, StringComparison.Ordinal),
+                   _ => true,
+               });
+
+        /// <summary>The schema tree the gateway reaches; a write needs the domain container in it, and a read test that answers rows alone leaves it empty.</summary>
+        public IReadOnlyList<IDataStore> DataStores { get; init; } = [];
 
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, CancellationToken cancellationToken = default)
             => Execute<T>(command, default(DataStoreTarget)!, cancellationToken);
@@ -466,7 +631,7 @@ public sealed class RecursiveCascadeSaveTests
         public Task<IGenericResult<T>> Execute<T>(IDataCommand command, DataStoreTarget target, CancellationToken cancellationToken = default)
         {
             if (typeof(T) == typeof(IEnumerable<DomainConfiguration>))
-                return Task.FromResult(GenericResult<T>.Success((T)(object)new List<DomainConfiguration>(_rows)));
+                return Task.FromResult(GenericResult<T>.Success((T)(object)_rows.Where(row => Selects(command, row)).ToList()));
 
             if (typeof(T).IsGenericType && typeof(T).GetGenericTypeDefinition() == typeof(IEnumerable<>))
                 return Task.FromResult(GenericResult<T>.Success((T)(object)Array.CreateInstance(typeof(T).GetGenericArguments()[0], 0)));

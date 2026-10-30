@@ -11,6 +11,34 @@ namespace Fdw.Services.Connections.Abstractions.Logging;
 public static partial class ConnectionLogger
 {
     /// <summary>
+    /// Logs a data command that carries a command timeout sent to a kind of connection that cannot apply one (FDW-3324).
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="owner">Who set the limit, in the words a failure uses; empty when the command does not say.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(
+        EventId = 62034,
+        Level = LogLevel.Error,
+        Message = "A command carrying a command timeout ({owner}) was sent to a kind of connection that cannot apply one, so it is not run",
+        ClientMessage = "This kind of connection cannot apply the command timeout that was set ({owner}), so the command was not run")]
+    public static partial IGenericMessage CommandTimeoutNotApplied(ILogger logger, string owner);
+
+    /// <summary>
+    /// Logs a command that expands into simpler commands and carries a command timeout (FDW-3334): the steps are commands of their own,
+    /// so the limit cannot reach them and the command is refused instead of run without it.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="commandType">The type of the command that declares the expansion.</param>
+    /// <param name="owner">Who set the limit, in the words a failure uses; empty when the command does not say.</param>
+    /// <returns>The structured message.</returns>
+    [MessageLogging(
+        EventId = 62035,
+        Level = LogLevel.Error,
+        Message = "Command type '{commandType}' expands into other commands and carries a command timeout ({owner}) that its steps cannot take, so it is not run",
+        ClientMessage = "The command timeout that was set ({owner}) cannot be applied to a command that runs as several, so the command was not run")]
+    public static partial IGenericMessage ExpansionCannotCarryCommandTimeout(ILogger logger, string commandType, string owner);
+
+    /// <summary>
     /// Logs when translation of a command fails.
     /// </summary>
     /// <param name="logger">The logger instance.</param>

@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Fdw.Results;
+using Fdw.Services.Notifications.Abstractions;
 using Fdw.Services.Notifications.Endpoints.Logging;
 using Fdw.Web.RestEndpoints.Crud;
 using Microsoft.Extensions.Logging;
@@ -13,9 +14,14 @@ namespace Fdw.Services.Notifications.Endpoints;
 /// </summary>
 public abstract class ListNotificationListsEndpointBase : CrudListEndpointBase<NotificationListSummaryDto>
 {
+    private readonly INotificationLists _lists;
+
     /// <summary>Initializes a new instance of the <see cref="ListNotificationListsEndpointBase"/> class.</summary>
-    protected ListNotificationListsEndpointBase(ILogger<ListNotificationListsEndpointBase> logger) : base(logger)
+    /// <param name="logger">The logger.</param>
+    /// <param name="lists">Reads the notification lists from the configuration store.</param>
+    protected ListNotificationListsEndpointBase(ILogger<ListNotificationListsEndpointBase> logger, INotificationLists lists) : base(logger)
     {
+        _lists = lists;
     }
 
     /// <inheritdoc />
@@ -35,8 +41,12 @@ public abstract class ListNotificationListsEndpointBase : CrudListEndpointBase<N
         return LoadNotificationLists(ct);
     }
 
-    /// <summary>
-    /// Loads the notification lists. Override to implement data retrieval.
-    /// </summary>
-    protected abstract Task<IGenericResult<List<NotificationListSummaryDto>>> LoadNotificationLists(CancellationToken ct);
+    // The lists the store holds; a store that holds none answers none, and one that cannot be read answers its failure.
+    private async Task<IGenericResult<List<NotificationListSummaryDto>>> LoadNotificationLists(CancellationToken ct)
+    {
+        var lists = await _lists.List(ct).ConfigureAwait(false);
+        return lists.IsSuccess && lists.Value is { } found
+            ? GenericResult<List<NotificationListSummaryDto>>.Success([.. found])
+            : lists.ToNewResult<List<NotificationListSummaryDto>>();
+    }
 }

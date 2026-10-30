@@ -79,27 +79,6 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             });
             builder.Services.TryAddSingleton<IDataSetAnnotationConfigurationProvider>(sp => sp.GetRequiredService<DataSetAnnotationConfigurationProvider>());
 
-            builder.Services.AddSingleton<IPromotionRequestImplementationConfigurationProvider, PromotionRequestImplementationConfigurationProvider>(sp => new PromotionRequestImplementationConfigurationProvider(sp.GetRequiredService<ILogger<PromotionRequestImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "PromotionRequestConfiguration"));
-            builder.Services.TryAddSingleton<PromotionRequestConfigurationProvider>(sp =>
-            {
-                var domain = new PromotionRequestConfigurationProvider(
-                    sp.GetRequiredService<ILogger<PromotionRequestConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "PromotionRequest");
-                domain.Register("PromotionRequest", sp.GetRequiredService<IPromotionRequestImplementationConfigurationProvider>());
-                return domain;
-            });
-            builder.Services.TryAddSingleton<IPromotionRequestConfigurationProvider>(sp => sp.GetRequiredService<PromotionRequestConfigurationProvider>());
-
-            builder.Services.AddSingleton<IEnvironmentImplementationConfigurationProvider, EnvironmentImplementationConfigurationProvider>(sp => new EnvironmentImplementationConfigurationProvider(sp.GetRequiredService<ILogger<EnvironmentImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "EnvironmentConfiguration"));
-            builder.Services.TryAddSingleton<EnvironmentConfigurationProvider>(sp =>
-            {
-                var domain = new EnvironmentConfigurationProvider(
-                    sp.GetRequiredService<ILogger<EnvironmentConfigurationProvider>>(),
-                    sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "Environment");
-                domain.Register("Environment", sp.GetRequiredService<IEnvironmentImplementationConfigurationProvider>());
-                return domain;
-            });
-            builder.Services.TryAddSingleton<IEnvironmentConfigurationProvider>(sp => sp.GetRequiredService<EnvironmentConfigurationProvider>());
 
             builder.Services.AddSingleton<IQualityRuleImplementationConfigurationProvider, QualityRuleImplementationConfigurationProvider>(sp => new QualityRuleImplementationConfigurationProvider(sp.GetRequiredService<ILogger<QualityRuleImplementationConfigurationProvider>>(), sp.GetRequiredService<IConfigurationGatewayProvider>(), QualityServiceTypes.ConfigurationConnection, "quality", "QualityRuleConfiguration"));
             builder.Services.TryAddSingleton<QualityRuleConfigurationProvider>(sp =>
@@ -112,10 +91,7 @@ public sealed class DefaultQualityServiceType : QualityServiceTypeBase
             });
             builder.Services.TryAddSingleton<IQualityRuleConfigurationProvider>(sp => sp.GetRequiredService<QualityRuleConfigurationProvider>());
 
-
-
             builder.Services.TryAddScoped<ICatalogService, CatalogService>();
-            builder.Services.TryAddSingleton<IPromotionService, PromotionService>();
             return GenericResult<IHostApplicationBuilder>.Success(builder);
         });
 

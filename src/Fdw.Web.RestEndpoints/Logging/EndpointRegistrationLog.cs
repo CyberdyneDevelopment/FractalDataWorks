@@ -162,4 +162,12 @@ public static partial class EndpointRegistrationLog
     [MessageLogging(EventId = 11029, Level = LogLevel.Debug,
         Message = "PermissionClaimsPreProcessor attached globally — every endpoint's Policies(resource:action) is checked, however the endpoint was declared")]
     public static partial IGenericMessage PermissionPreProcessorAttached(ILogger logger);
+
+    /// <summary>Logs how many request validators the collection handed to FastEndpoints, and from how many assemblies.</summary>
+    /// <param name="logger">The logger.</param>
+    /// <param name="validatorCount">How many validator types were registered.</param>
+    /// <param name="assemblyCount">How many assemblies were searched: those of the declared endpoints and of their base types.</param>
+    [MessageLogging(EventId = 11307, Level = LogLevel.Debug,
+        Message = "Registered {validatorCount} request validator(s) from {assemblyCount} assembly(ies) of the declared endpoints and their base types")]
+    public static partial IGenericMessage ValidatorsRegistered(ILogger logger, int validatorCount, int assemblyCount);
 }

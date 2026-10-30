@@ -20,4 +20,10 @@ public static class ResultDetailKeys
     /// <c>upstreamCode</c> beside the relaying host's own code.
     /// </summary>
     public const string UpstreamCode = "upstreamCode";
+
+    /// <summary>
+    /// The id of the execution a downstream host closed when it refused a trigger, as its answer states it. A relaying host reports it beside the reason, as
+    /// <c>executionId</c>, so the caller can read the record of the run that was not taken.
+    /// </summary>
+    public const string ExecutionId = "executionId";
 }

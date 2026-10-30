@@ -42,6 +42,11 @@ public static class PipelineDetailMapper
             Description = pipeline.Description,
             IsEnabled = pipeline is IEnablablePipelineConfiguration { IsEnabled: true },
             RequireApprovalToRun = pipeline is IApprovalGatedPipelineConfiguration { RequireApprovalToRun: true },
+            MaxParallelRuns = (pipeline as IParallelRunPipelineConfiguration)?.MaxParallelRuns,
+            OverflowBehavior = (pipeline as IParallelRunPipelineConfiguration)?.OverflowBehavior,
+            DelayedStartSeconds = (pipeline as IParallelRunPipelineConfiguration)?.DelayedStartSeconds,
+            DelayedStartTimeOfDay = (pipeline as IParallelRunPipelineConfiguration)?.DelayedStartTimeOfDay,
+            DelayedStartTimeZoneId = (pipeline as IParallelRunPipelineConfiguration)?.DelayedStartTimeZoneId,
             CreatedAt = pipeline.CreateDate,
             UpdatedAt = pipeline.ModifyDate,
         };

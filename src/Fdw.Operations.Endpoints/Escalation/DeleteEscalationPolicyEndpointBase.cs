@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastEndpoints;
 using Fdw.Operations.Abstractions.Escalation;
+using Fdw.Results;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -52,6 +53,13 @@ public abstract class DeleteEscalationPolicyEndpointBase : Endpoint<EscalationPo
 
             if (!result.IsSuccess)
             {
+                if (FailureCategory.IsMissing(result))
+                {
+                    OperationsEndpointLog.EscalationPolicyNotFound(_logger, req.Id);
+                    await Send.NotFoundAsync(ct).ConfigureAwait(false);
+                    return;
+                }
+
                 OperationsEndpointLog.DeleteEscalationPolicyFailed(_logger, req.Id, result.CurrentMessage!);
                 AddError("Failed to delete escalation policy");
                 await Send.ErrorsAsync(500, ct).ConfigureAwait(false);

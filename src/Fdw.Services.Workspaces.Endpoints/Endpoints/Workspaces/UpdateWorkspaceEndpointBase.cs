@@ -138,7 +138,7 @@ public abstract class UpdateWorkspaceEndpointBase : CrudUpdateEndpointBase<Updat
         config.Resources = [];
         config.Relationships = [];
 
-        var saved = await _provider.Save(config, "Workspace", config.Implementation, config.Name, ct).ConfigureAwait(false);
+        var saved = await _provider.Update(config, "Workspace", config.Implementation, config.Name, ct).ConfigureAwait(false);
 
         config.Members = members;
         config.Resources = resources;

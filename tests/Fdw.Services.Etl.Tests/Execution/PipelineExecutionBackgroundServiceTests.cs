@@ -1,6 +1,7 @@
 using System;
 using Fdw.Services.Authentication.Abstractions.Security;
 using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Abstractions.Thresholds;
 using Fdw.Services.Etl.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,8 +19,8 @@ namespace Fdw.Services.Etl.Tests.Execution;
 public sealed class PipelineExecutionBackgroundServiceTests
 {
     private static PipelineExecutionBackgroundService CreateSut() =>
-        new(new PipelineExecutionQueue(), new PipelineRunSlot(), Mock.Of<IServiceScopeFactory>(),
-            NullLogger<PipelineExecutionBackgroundService>.Instance);
+        new(new PipelineExecutionQueue(100, Mock.Of<IPipelineRunRequestStore>(), Mock.Of<IPipelineRunStopCheck>()), new PipelineRunScheduler(TimeProvider.System), new PipelineRunControl(),
+            Mock.Of<IPipelineRunRequestStore>(), Mock.Of<IPipelineRunHolds>(), Mock.Of<IServiceScopeFactory>(), NullLogger<PipelineExecutionBackgroundService>.Instance);
 
     private static PipelineExecutionRequest CreateRequest(Guid? tenantId) => new()
     {

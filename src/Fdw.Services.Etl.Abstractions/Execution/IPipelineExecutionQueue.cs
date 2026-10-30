@@ -16,9 +16,10 @@ public interface IPipelineExecutionQueue
     /// <param name="request">The execution request to enqueue.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
-    /// <c>true</c> if the request was enqueued; <c>false</c> if the queue is full (backpressure).
-    /// Why <c>bool</c> return instead of throwing: callers (endpoints) can return HTTP 503
-    /// Service Unavailable cleanly without exception overhead.
+    /// Whether the request was taken, and when it was not, why: the queue is full (backpressure), or a threshold on waiting runs that stops new runs fires
+    /// (FDW-3161). Why a result instead of throwing: callers (endpoints) can return HTTP 503 Service Unavailable cleanly without exception overhead, and
+    /// close the run's record with the reason.
     /// </returns>
-    ValueTask<bool> Enqueue(PipelineExecutionRequest request, CancellationToken cancellationToken = default);
+    /// <exception cref="System.InvalidOperationException">The run's request could not be recorded, or the thresholds that decide whether it is taken cannot be read or are stated wrongly.</exception>
+    ValueTask<PipelineEnqueueResult> Enqueue(PipelineExecutionRequest request, CancellationToken cancellationToken = default);
 }

@@ -25,6 +25,8 @@ public sealed class NotificationConfigurationValidatorTests
         public string? SecretManagerName { get; set; }
 
         public string? SecretKeyName { get; set; }
+
+        public string? Description { get; set; }
     }
 
     private readonly NotificationConfigurationValidator _sut = new();

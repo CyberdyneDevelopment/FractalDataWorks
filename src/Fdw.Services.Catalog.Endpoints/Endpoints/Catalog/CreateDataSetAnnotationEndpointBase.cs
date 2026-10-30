@@ -4,6 +4,7 @@ using FastEndpoints;
 using Fdw.Services.Quality;
 using Microsoft.AspNetCore.Http;
 using Fdw.Services.Catalog.Clients.Models;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Catalog.Endpoints;
 
@@ -40,11 +41,11 @@ public abstract class CreateDataSetAnnotationEndpointBase : Endpoint<DataSetAnno
         var config = DataSetAnnotationRequestMapper.FromPayload(
             req.DataSetName, req.Owner, req.Steward, req.Classification, req.Tags);
 
-        var result = await _provider.Save(config, "DataSetAnnotation", "DataSetAnnotation", config.Name, ct).ConfigureAwait(false);
+        var result = await _provider.Create(config, "DataSetAnnotation", "DataSetAnnotation", config.Name, ct).ConfigureAwait(false);
 
         if (!result.IsSuccess)
         {
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to create annotation", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            await Send.ResultAsync(ResultHttpStatusMapper.Answer(result, HttpContext)).ConfigureAwait(false);
             return;
         }
 

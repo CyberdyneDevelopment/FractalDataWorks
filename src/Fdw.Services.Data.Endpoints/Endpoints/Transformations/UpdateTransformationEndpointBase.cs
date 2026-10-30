@@ -85,7 +85,7 @@ public abstract class UpdateTransformationEndpointBase : CrudUpdateEndpointBase<
             return prepared.ToNewResult<TransformationPayload>();
 
         var saved = await _transformations
-            .Save(prepared.Value!, TransformationDomain.Name, current.Value.Implementation, request.Name, ct)
+            .Update(prepared.Value!, TransformationDomain.Name, current.Value.Implementation, request.Name, ct)
             .ConfigureAwait(false);
         if (saved.IsFailure)
             return saved.ToNewResult<TransformationPayload>();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Fdw.Collections;
 
 namespace Fdw.Services.Calculations.Abstractions;
@@ -15,4 +16,7 @@ public abstract class CalculationInputKindBase : TypeOptionBase<CalculationInput
         : base(name)
     {
     }
+
+    /// <inheritdoc/>
+    public abstract IReadOnlyList<CalculationSetting> Settings { get; }
 }

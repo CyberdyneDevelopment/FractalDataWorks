@@ -160,6 +160,14 @@ public partial class DataStoreServiceTypes : ServiceTypeCollectionBase<
                     sp.GetRequiredService<IDataSetVariationConfigurationProvider>(),
                     sp.GetService<ILogger<DataSetResolver>>()));
 
+            // The rows of a data set for a consumer that is not a data query, such as a calculation's input (FDW-3130): read through
+            // the gateway the consumer holds, so the access is the caller's, and capped.
+            builder.Services.TryAddSingleton<IDataSetRowReader>(sp =>
+                new DataSetRowReader(
+                    sp.GetRequiredService<IDataSetResolver>(),
+                    sp.GetService<ILogger<DataSetRowReader>>(),
+                    sp.GetService<IFilterCalculations>()));
+
             // A category is one node of a category tree (FDW-1270, FDW-1465): its own domain whose implementation is its
             // type, DataSet, Glossary or Custom. Each type's table holds only the key; the fields of a node live on the domain row, so
             // the whole tree reads in one query.

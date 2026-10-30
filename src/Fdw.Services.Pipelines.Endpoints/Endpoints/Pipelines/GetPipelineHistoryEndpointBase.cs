@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 using Fdw.Services.Pipelines;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 
 namespace Fdw.Services.Pipelines.Endpoints;
 
@@ -20,8 +21,9 @@ namespace Fdw.Services.Pipelines.Endpoints;
 /// </summary>
 public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatusRequest, List<PipelineExecutionRecord>>
 {
-    /// <summary>Initializes a new instance of the <see cref="GetPipelineHistoryEndpointBase"/> class.</summary>
-        private readonly IDataGatewayProvider _dataGateways;
+    private const int LatestRunCount = 100;
+
+    private readonly IDataGatewayProvider _dataGateways;
 
     /// <summary>Initializes a new instance of the <see cref="GetPipelineHistoryEndpointBase"/> class.</summary>
     protected GetPipelineHistoryEndpointBase(ILogger logger, IDataGatewayProvider dataGateways)
@@ -51,7 +53,7 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
         Summary(s =>
         {
             s.Summary = "Get execution history for a pipeline";
-            s.Description = "Returns the execution history for a specific pipeline.";
+            s.Description = "Returns the latest 100 runs of a specific pipeline, newest first, each with its stored status beside success.";
         });
     }
 
@@ -73,9 +75,10 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
 
         OnFetchingExecutionHistory(req.Name);
 
-        var command = new QueryCommand<PipelineExecutionDbRecord>
-        {
-            Filter = new FilterExpression
+        var rows = await PipelineExecutionHistory.Page(
+            DataGateway,
+            EndpointLogger,
+            new FilterExpression
             {
                 Root = new FilterCondition
                 {
@@ -83,27 +86,20 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
                     Operator = FilterOperators.ByName("Equal"),
                     Value = req.Name
                 }
-            }
-        };
+            },
+            0,
+            LatestRunCount,
+            ct).ConfigureAwait(false);
 
-        var result = await DataGateway.Execute<IEnumerable<PipelineExecutionDbRecord>>(
-            command, new DataStoreTarget(PipelineServiceTypes.OperationalConnection, "etl", "PipelineExecution"), ct).ConfigureAwait(false);
-
-        if (!result.IsSuccess)
+        if (rows.IsFailure)
         {
-            OnExecutionHistoryFetchFailed(result.CurrentMessage ?? "Unknown error");
-            await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to fetch execution history", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);
+            OnExecutionHistoryFetchFailed(rows.CurrentMessage);
+            var (statusCode, errorResponse) = ResultHttpStatusMapper.Map(rows, HttpContext);
+            await Send.ResultAsync(TypedResults.Json(errorResponse, statusCode: statusCode)).ConfigureAwait(false);
             return;
         }
 
-        // Apply sorting and take top 100 in-memory
-        var records = result.Value!
-            .OrderByDescending(r => r.StartedAt)
-            .Take(100)
-            .Select(MapToExecutionRecord)
-            .ToList();
-
-        await Send.OkAsync(records, ct).ConfigureAwait(false);
+        await Send.OkAsync(rows.Value!.Select(MapToExecutionRecord).ToList(), ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -113,8 +109,9 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
     {
         ExecutionId = dbRecord.Id,
         PipelineName = dbRecord.PipelineName,
-        StartedAt = dbRecord.StartedAt,
-        CompletedAt = dbRecord.CompletedAt,
+        StartedAt = dbRecord.StartedAt?.UtcDateTime,
+        CompletedAt = dbRecord.CompletedAt?.UtcDateTime,
+        Status = dbRecord.Status,
         Success = string.Equals(dbRecord.Status, "Succeeded", StringComparison.OrdinalIgnoreCase),
         ErrorMessage = dbRecord.ErrorMessage,
         RecordsExtracted = dbRecord.RecordsExtracted,
@@ -129,5 +126,5 @@ public abstract class GetPipelineHistoryEndpointBase : Endpoint<GetPipelineStatu
     protected virtual void OnFetchingExecutionHistory(string pipelineName) { }
 
     /// <summary>Called when execution history fetch fails. Override for custom logging.</summary>
-    protected virtual void OnExecutionHistoryFetchFailed(string error) { }
+    protected virtual void OnExecutionHistoryFetchFailed(string? error) { }
 }

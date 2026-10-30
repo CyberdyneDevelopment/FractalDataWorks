@@ -52,6 +52,14 @@ public abstract class DestinationFlowComponentBuilderBase : FlowComponentBuilder
                 $"the load kind '{loadKindName}' does not load the rows a component receives"));
         }
 
+        var kindProblems = TargetKindRules.WriteProblems(component);
+        if (kindProblems.Count > 0)
+        {
+            return GenericResult<IFlowComponent>.Failure(GraphLog.ComponentInvalid(
+                context.Logger, component.Name, component.ComponentType, string.Join("; ", kindProblems.Select(problem => problem.Message))));
+        }
+
+        var addressing = LoadAddressing.Of(component.TargetKind, component.PhysicalPath, component.PhysicalName, component.SplitField);
         if (DestinationOptions.ColumnListsBound(component))
         {
             var lists = DestinationOptions.ColumnLists(component, kind, context.Logger);
@@ -61,7 +69,7 @@ public abstract class DestinationFlowComponentBuilderBase : FlowComponentBuilder
             }
         }
 
-        var unit = UnitFor(component, kind, DestinationOptions.Row(component, kind));
+        var unit = UnitFor(component, kind, DestinationOptions.Row(component, kind))?.WithAddressing(addressing);
         if (unit is null)
         {
             return MissingSettings.Of(component, context);
@@ -71,7 +79,7 @@ public abstract class DestinationFlowComponentBuilderBase : FlowComponentBuilder
         if (truncateFirst)
         {
             var truncateKind = LoadStepKinds.ByName("Truncate");
-            truncate = UnitFor(component, truncateKind, DestinationOptions.ColumnsRow(component, truncateKind));
+            truncate = UnitFor(component, truncateKind, DestinationOptions.ColumnsRow(component, truncateKind))?.WithAddressing(addressing);
         }
 
         var destination = new FlowLoadDestination(

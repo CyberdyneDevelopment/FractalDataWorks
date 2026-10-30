@@ -39,16 +39,30 @@ public interface IDomainConfigurationProvider
         string name,
         CancellationToken ct = default);
 
+    /// <summary>Writes a configured member that already exists; it never creates one.</summary>
+    /// <param name="implementationConfiguration">The configuration to write.</param>
+    /// <param name="domain">The domain this member belongs to.</param>
+    /// <param name="implementationName">Which implementation this is; it selects the provider that writes it.</param>
+    /// <param name="name">The member's name, which the domain row carries.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>Success; a not-found failure when the provider holds no member the record identifies (a row that is not there is not updated); or another structured failure.</returns>
+    Task<IGenericResult> Update(
+        IImplementationConfiguration implementationConfiguration,
+        string domain,
+        string implementationName,
+        string name,
+        CancellationToken ct = default);
+
     /// <summary>Deletes a configured member by durable id.</summary>
     /// <param name="id">The member's durable id.</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>Success, or a structured failure.</returns>
+    /// <returns>Success; a not-found failure when the provider holds no member with that id or name (a row that is not there is not deleted); or another structured failure.</returns>
     Task<IGenericResult> Delete(Guid id, CancellationToken ct = default);
 
     /// <summary>Deletes a configured member by name.</summary>
     /// <param name="name">The member's name.</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>Success, or a structured failure.</returns>
+    /// <returns>Success; a not-found failure when the provider holds no member with that id or name (a row that is not there is not deleted); or another structured failure.</returns>
     Task<IGenericResult> Delete(string name, CancellationToken ct = default);
 }
 
@@ -193,16 +207,59 @@ public interface IDomainConfigurationProvider<TImplementationConfiguration>
         CancellationToken ct = default)
         where T : TImplementationConfiguration;
 
+    /// <summary>Writes a configured member that already exists; it never creates one.</summary>
+    /// <typeparam name="T">The implementation configuration being written.</typeparam>
+    /// <param name="implementationConfiguration">The configuration to write.</param>
+    /// <param name="domain">The domain this member belongs to.</param>
+    /// <param name="implementationName">Which implementation this is; it selects the provider that writes it.</param>
+    /// <param name="name">The member's name, which the domain row carries.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>Success; a not-found failure when the provider holds no member the record identifies (a row that is not there is not updated); or another structured failure.</returns>
+    /// <remarks>
+    /// The sibling of <c>Save</c> for a caller that read a member and writes it back. The record identifies the member by its Id, or by the
+    /// name when it carries none: a record whose Id names a member under another name renames that member, and a record whose Id names no
+    /// member, or a name no row carries, is refused instead of minting a new member. A stale read (the row removed by a reset or a delete
+    /// after the read) therefore cannot re-create the member, nor overwrite a member re-created under the same name.
+    /// </remarks>
+    Task<IGenericResult> Update<T>(
+        T implementationConfiguration,
+        string domain,
+        string implementationName,
+        string name,
+        CancellationToken ct = default)
+        where T : TImplementationConfiguration;
+
+    /// <summary>Writes a configured member that does not exist yet; it never replaces one.</summary>
+    /// <typeparam name="T">The implementation configuration being written.</typeparam>
+    /// <param name="implementationConfiguration">The configuration to write.</param>
+    /// <param name="domain">The domain this member belongs to.</param>
+    /// <param name="implementationName">Which implementation this is; it selects the provider that writes it.</param>
+    /// <param name="name">The member's name, which the domain row carries.</param>
+    /// <param name="ct">The cancellation token.</param>
+    /// <returns>Success; an already-exists failure when a member carries the name, or the record's Id names a member (nothing is written); or another structured failure.</returns>
+    /// <remarks>
+    /// The counterpart of <c>Update</c> for a caller that makes a member: <c>Save</c> is an upsert by name, so a create that used it wrote over
+    /// the member already carrying the name. The check sits inside the write's unit of work, with the insert, so two creates of one name cannot
+    /// both pass it.
+    /// </remarks>
+    Task<IGenericResult> Create<T>(
+        T implementationConfiguration,
+        string domain,
+        string implementationName,
+        string name,
+        CancellationToken ct = default)
+        where T : TImplementationConfiguration;
+
     /// <summary>Deletes a configured member by durable id.</summary>
     /// <param name="id">The member's durable id.</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>Success, or a structured failure.</returns>
+    /// <returns>Success; a not-found failure when the provider holds no member with that id or name (a row that is not there is not deleted); or another structured failure.</returns>
     Task<IGenericResult> Delete(Guid id, CancellationToken ct = default);
 
     /// <summary>Deletes a configured member by name.</summary>
     /// <param name="name">The member's name.</param>
     /// <param name="ct">A token to cancel the operation.</param>
-    /// <returns>Success, or a structured failure.</returns>
+    /// <returns>Success; a not-found failure when the provider holds no member with that id or name (a row that is not there is not deleted); or another structured failure.</returns>
     Task<IGenericResult> Delete(string name, CancellationToken ct = default);
 
     /// <summary>Registers the provider that supplies one implementation's own configuration.</summary>

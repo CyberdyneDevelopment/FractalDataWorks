@@ -26,6 +26,6 @@ public sealed class CreateCalculationEntityRequestValidator : FdwEndpointValidat
 
         RuleFor(x => x.Configuration)
             .NotNull()
-            .WithMessage("Configuration is required: the calculation type's own settings, e.g. FormulaLanguage and FormulaBody for Formula");
+            .WithMessage("Configuration is required: the calculation type's own settings, e.g. TargetField and WindowFunction for Windowed");
     }
 }

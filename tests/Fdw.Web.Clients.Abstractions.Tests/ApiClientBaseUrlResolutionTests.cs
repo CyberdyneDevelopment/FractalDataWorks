@@ -97,6 +97,18 @@ public sealed class ApiClientBaseUrlResolutionTests
             where T : IConnectionImplementationConfiguration
             => Task.FromResult(GenericResult.Success());
 
+        public Task<IGenericResult> Update<T>(
+            T implementationConfiguration, string domain, string implementationName, string name,
+            CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
+            => Task.FromResult(GenericResult.Success());
+
+        public Task<IGenericResult> Create<T>(
+            T implementationConfiguration, string domain, string implementationName, string name,
+            CancellationToken ct = default)
+            where T : IConnectionImplementationConfiguration
+            => Task.FromResult(GenericResult.Success());
+
         public Task<IGenericResult> Delete(Guid id, CancellationToken ct = default)
             => Task.FromResult(GenericResult.Success());
 

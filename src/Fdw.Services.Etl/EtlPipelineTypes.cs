@@ -8,7 +8,9 @@ using Fdw.ServiceTypes;
 using Fdw.Services.Etl.Abstractions;
 using Fdw.Services.Pipelines.Abstractions;
 using Fdw.Services.Etl.Abstractions.Execution;
+using Fdw.Services.Etl.Abstractions.Thresholds;
 using Fdw.Services.Etl.Execution;
+using Fdw.Services.Etl.Thresholds;
 using Fdw.Services.Pipelines;
 using Fdw.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -112,12 +114,11 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
     /// <para>
     /// Idempotent by design: safe to call from multiple registration paths (both
     /// the pipeline options and OrchestrationTypes.Register call this) regardless
-    /// of call order — the first caller's queueCapacity wins.
+    /// of call order.
     /// </para>
     /// </remarks>
     /// <param name="services">The service collection.</param>
-    /// <param name="queueCapacity">Maximum pending execution requests (default: 100).</param>
-    public static void RegisterPipelineExecutionQueue(IServiceCollection services, int queueCapacity = 100)
+    public static void RegisterPipelineExecutionQueue(IServiceCollection services)
     {
         // The requests of the runs that wait for approval (FDW-1937), kept beside the queue they would have entered.
         services.TryAddSingleton<IPipelineRunHolds, PipelineRunHolds>();
@@ -125,10 +126,29 @@ public partial class EtlPipelineTypes : ServiceTypeCollectionBase<
         if (services.Any(d => d.ServiceType == typeof(IPipelineExecutionQueue)))
             return;
 
-        var queue = new PipelineExecutionQueue(queueCapacity);
-        services.AddSingleton(queue);
-        services.TryAddSingleton<PipelineRunSlot>();
-        services.AddSingleton<IPipelineExecutionQueue>(queue);
+        // What the host keeps of each run it accepts, so a restart can take the runs that were held or waiting up again (FDW-3216). The queue takes the
+        // request of every run it accepts into it.
+        services.TryAddSingleton<IPipelineRunRequestStore, PipelineRunRequestStore>();
+
+        // The thresholds on waiting runs (FDW-3161): one monitor is the observer the scheduler tells, the check a trigger asks before it takes a run, and the
+        // loop that judges the thresholds and sends their notification rules.
+        services.TryAddSingleton<IWaitThresholdSource, WaitThresholdSource>();
+        services.TryAddScoped<IWaitThresholdStore, WaitThresholdStore>();
+        services.TryAddSingleton<WaitThresholdJudge>();
+        services.TryAddSingleton<WaitThresholdMonitor>();
+        services.TryAddSingleton<IPipelineWaitObserver>(provider => provider.GetRequiredService<WaitThresholdMonitor>());
+        services.TryAddSingleton<IPipelineRunStopCheck>(provider => provider.GetRequiredService<WaitThresholdMonitor>());
+        services.AddHostedService(provider => provider.GetRequiredService<WaitThresholdMonitor>());
+
+        // The number of triggers the queue holds is a setting (FDW-3155), read when the host first needs the queue.
+        services.AddSingleton(PipelineExecutionQueue.Create);
+        services.TryAddSingleton<PipelineRunScheduler>();
+
+        // What the host holds of each run it has queued, so cancelling, pausing and resuming an execution reaches the run (FDW-2950).
+        services.TryAddSingleton<PipelineRunControl>();
+        services.TryAddSingleton<Fdw.Operations.Abstractions.Execution.IExecutionRunControl>(
+            provider => provider.GetRequiredService<PipelineRunControl>());
+        services.AddSingleton<IPipelineExecutionQueue>(provider => provider.GetRequiredService<PipelineExecutionQueue>());
         services.AddHostedService<PipelineExecutionBackgroundService>();
 
         // Scoped: it takes the execution tracker and the data gateways, which are per scope. A pipeline that starts another and

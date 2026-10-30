@@ -48,10 +48,10 @@ public static partial class PipelineRunStartLog
         Message = "EtlPipelineTypes.OperationalConnection is not set; the host must name the operational store a run's start and end are kept in, so pipeline '{pipeline}' was not started")]
     public static partial IGenericMessage OperationalStoreNotNamed(ILogger logger, string pipeline);
 
-    /// <summary>Logs a start whose request the queue did not accept.</summary>
+    /// <summary>Logs a start whose request the queue did not accept: the queue is full, or a threshold on waiting runs stops new runs (FDW-3161).</summary>
     [MessageLogging(EventId = 20806, Level = LogLevel.Error,
-        Message = "The execution queue is full, so pipeline '{pipeline}' (execution '{executionId}') was not started")]
-    public static partial IGenericMessage QueueFull(ILogger logger, string pipeline, Guid executionId);
+        Message = "Pipeline '{pipeline}' (execution '{executionId}') was not started: {reason}")]
+    public static partial IGenericMessage RunNotTaken(ILogger logger, string pipeline, Guid executionId, string reason);
 
     /// <summary>Logs a start that must be awaited on a host that has no completion signaler.</summary>
     [MessageLogging(EventId = 20807, Level = LogLevel.Error,

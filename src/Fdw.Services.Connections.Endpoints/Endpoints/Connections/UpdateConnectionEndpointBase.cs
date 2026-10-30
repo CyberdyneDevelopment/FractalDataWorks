@@ -99,10 +99,11 @@ public abstract class UpdateConnectionEndpointBase : CrudUpdateEndpointBase<Upda
         if (admitted.IsFailure) return admitted.ToNewResult<ConnectionDetailDto>();
 
         // Identity is restamped here, not left to the behaviour. An update changes fields; it never renames a
-        // connection or moves it to another implementation, so these three are the caller's to preserve --
+        // connection, gives it another Id or moves it to another implementation, so these four are the caller's to preserve --
         // whatever a type's merge does, a Save under a different name or implementation is never what an
         // update meant. (The per-type MergeUpdate this replaced dropped all three, and Save then asked for a
         // provider registered under "".)
+        updatedConnection.Id = existingConnection.Id;
         updatedConnection.Name = existingConnection.Name;
         updatedConnection.Domain = existingConnection.Domain;
         updatedConnection.Implementation = existingConnection.Implementation;
@@ -125,7 +126,7 @@ public abstract class UpdateConnectionEndpointBase : CrudUpdateEndpointBase<Upda
 
         // One save, one record: the provider versions the implementation row and writes everything under
         // it. The name identifies the member, so the existing domain row is the one this hangs from.
-        var connectionSave = await _connectionProvider.Save(updatedConnection, "Connection", updatedConnection.Implementation, request.Name, ct).ConfigureAwait(false);
+        var connectionSave = await _connectionProvider.Update(updatedConnection, "Connection", updatedConnection.Implementation, request.Name, ct).ConfigureAwait(false);
         await ConnectionCredentialStore.Retire(
             connectionSave.IsFailure ? credentials.Value!.Written : credentials.Value!.Retiring,
             request.Name, HttpContext.RequestServices, Logger, ct).ConfigureAwait(false);

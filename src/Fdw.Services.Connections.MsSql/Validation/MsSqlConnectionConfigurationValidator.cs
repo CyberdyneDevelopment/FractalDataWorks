@@ -30,7 +30,8 @@ public sealed class MsSqlConnectionConfigurationValidator : FdwConfigurationVali
 
         RuleFor(x => x.CommandTimeoutSeconds)
             .GreaterThan(0)
-            .WithMessage("CommandTimeoutSeconds must be greater than 0");
+            .When(x => x.CommandTimeoutSeconds.HasValue)
+            .WithMessage("CommandTimeoutSeconds must be greater than 0 when it is stated; leave it out to take the instance's DefaultCommandTimeoutSeconds");
 
         RuleFor(x => x.MaxSerialInsert)
             .GreaterThan(0)

@@ -56,7 +56,7 @@ public abstract class UpdateQualityRuleEndpointBase : Endpoint<UpdateQualityRule
         if (req.Expression is not null) config.Expression = req.Expression;
         if (req.IsEnabled is not null) config.IsEnabled = req.IsEnabled.Value;
 
-        var result = await _provider.Save(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
+        var result = await _provider.Update(config, "QualityRule", "QualityRule", config.Name, ct).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
             await Send.ResultAsync(TypedResults.Json(new { Error = "Failed to update quality rule", Details = result.CurrentMessage }, statusCode: 500)).ConfigureAwait(false);

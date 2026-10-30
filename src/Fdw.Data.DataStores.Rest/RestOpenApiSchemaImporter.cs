@@ -15,6 +15,7 @@ using Fdw.Data.SchemaImporters.Abstractions.Configuration;
 using Fdw.Results;
 using Fdw.Services.Connections;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
 
@@ -25,23 +26,32 @@ namespace Fdw.Data.DataStores.Rest;
 /// Returns a discovered <see cref="DataStoreImplementationConfiguration"/> with HttpPath rows containing
 /// one Endpoint container per operation.
 /// </summary>
-[TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "OpenApi", RestrictToCurrentCompilation = true)]
+[TypeOption(typeof(SchemaImporters.Abstractions.SchemaImporters), "OpenApi")]
 [ExcludeFromCodeCoverage] // Excluded: requires HTTP connections
 public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfiguration>, ISchemaImporter<RestConfiguration>
 {
     private readonly ILogger<RestOpenApiSchemaImporter> _logger;
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="RestOpenApiSchemaImporter"/> class without a logger. The
+    /// registration module initializer builds registered options through this constructor.
+    /// </summary>
+    public RestOpenApiSchemaImporter()
+        : this(null)
+    {
+    }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="RestOpenApiSchemaImporter"/> class.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
-    public RestOpenApiSchemaImporter(ILogger<RestOpenApiSchemaImporter> logger)
+    public RestOpenApiSchemaImporter(ILogger<RestOpenApiSchemaImporter>? logger)
         : base(
             name: "OpenApi",
             description: "Imports schema from OpenAPI 3.0/Swagger specifications",
             dataStoreType: "Rest")
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger ?? NullLogger<RestOpenApiSchemaImporter>.Instance;
     }
 
     #region ISchemaImporter Implementation
@@ -83,9 +93,11 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
                 Name = storeName,
             };
 
-            var totalEndpoints = ImportEndpoints(openApiDocument, baseUrl, dataStore, options);
+            var endpointsResult = ImportEndpoints(openApiDocument, baseUrl, dataStore, options);
+            if (!endpointsResult.IsSuccess)
+                return endpointsResult.ToNewResult<DataStoreImplementationConfiguration>();
 
-            RestImporterLogger.OpenApiImportCompleted(_logger, storeName, totalEndpoints);
+            RestImporterLogger.OpenApiImportCompleted(_logger, storeName, endpointsResult.Value);
 
             return GenericResult<DataStoreImplementationConfiguration>.Success(dataStore);
         }
@@ -111,7 +123,7 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
         return GenericResult<OpenApiDocument>.Success(document);
     }
 
-    private int ImportEndpoints(
+    private IGenericResult<int> ImportEndpoints(
         OpenApiDocument document,
         string baseUrl,
         DataStoreImplementationConfiguration dataStore,
@@ -140,16 +152,15 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
                 }
 
                 var pathResult = CreateEndpointPath(baseUrl, pathTemplate, operation.Key, operation.Value, options);
+                if (!pathResult.IsSuccess)
+                    return pathResult.ToNewResult<int>();
 
-                if (pathResult.IsSuccess && pathResult.Value != null)
-                {
-                    dataStore.Paths.Add(pathResult.Value);
-                    totalEndpoints++;
-                }
+                dataStore.Paths.Add(pathResult.Value!);
+                totalEndpoints++;
             }
         }
 
-        return totalEndpoints;
+        return GenericResult<int>.Success(totalEndpoints);
     }
 
     /// <summary>
@@ -219,12 +230,13 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
                 Format = DetermineFormatFromOperation(operation)
             };
 
-            var ordinal = 0;
-            foreach (var field in BuildFieldsFromOperation(operation))
+            foreach (var fieldResult in BuildFieldsFromOperation(operation, $"{method} {pathTemplate}"))
             {
-                field.Ordinal = ordinal;
-                container.Fields.Add(field);
-                ordinal++;
+                if (!fieldResult.IsSuccess)
+                    return fieldResult.ToNewResult<DataPathConfiguration>();
+
+                fieldResult.Value!.Ordinal = container.Fields.Count;
+                container.Fields.Add(fieldResult.Value);
             }
 
             // 2. Build the path config that holds the endpoint container
@@ -258,97 +270,100 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
 
     #region Schema Building
 
-    private static List<DataContainerFieldConfiguration> BuildFieldsFromOperation(OpenApiOperation operation)
+    private static IEnumerable<IGenericResult<DataContainerFieldConfiguration>> BuildFieldsFromOperation(
+        OpenApiOperation operation,
+        string endpoint)
     {
-        var fields = new List<DataContainerFieldConfiguration>();
-
-        // Add request body fields
+        // Request body fields
         if (operation.RequestBody != null)
         {
-            foreach (var content in operation.RequestBody.Content)
+            foreach (var content in operation.RequestBody.Content.Where(c => c.Value.Schema != null))
             {
-                if (content.Value.Schema != null)
-                {
-                    fields.AddRange(ParseSchema(content.Value.Schema, "Request"));
-                }
+                foreach (var field in ParseSchema(content.Value.Schema, "Request", $"{endpoint} request body"))
+                    yield return field;
             }
         }
 
-        // Add response fields (200 OK response)
+        // Response fields (200 OK response)
         if (operation.Responses.TryGetValue("200", out var successResponse))
         {
-            foreach (var content in successResponse.Content)
+            foreach (var content in successResponse.Content.Where(c => c.Value.Schema != null))
             {
-                if (content.Value.Schema != null)
-                {
-                    fields.AddRange(ParseSchema(content.Value.Schema, "Response"));
-                }
+                foreach (var field in ParseSchema(content.Value.Schema, "Response", $"{endpoint} 200 response"))
+                    yield return field;
             }
         }
 
-        // Add path parameters
+        // Path parameters, then query parameters
         foreach (var param in operation.Parameters.Where(p => p.In == ParameterLocation.Path))
-        {
-            fields.Add(CreateFieldFromParameter(param));
-        }
+            yield return CreateFieldFromParameter(param, $"{endpoint} path parameter");
 
-        // Add query parameters
         foreach (var param in operation.Parameters.Where(p => p.In == ParameterLocation.Query))
-        {
-            fields.Add(CreateFieldFromParameter(param));
-        }
-
-        return fields;
+            yield return CreateFieldFromParameter(param, $"{endpoint} query parameter");
     }
 
-    private static List<DataContainerFieldConfiguration> ParseSchema(OpenApiSchema schema, string prefix)
+    private static IEnumerable<IGenericResult<DataContainerFieldConfiguration>> ParseSchema(
+        OpenApiSchema schema,
+        string prefix,
+        string location)
     {
-        var fields = new List<DataContainerFieldConfiguration>();
-
         if (string.Equals(schema.Type, "object", StringComparison.Ordinal) && schema.Properties != null)
         {
             foreach (var prop in schema.Properties)
             {
-                var isRequired = schema.Required?.Contains(prop.Key) ?? false;
-
-                fields.Add(new DataContainerFieldConfiguration
-                {
-                    Id = Guid.NewGuid(),
-                    Name = $"{prefix}.{prop.Key}",
-                    DataType = MapJsonSchemaTypeName(prop.Value.Type, prop.Value.Format),
-                    IsNullable = !isRequired,
-                    Description = prop.Value.Description
-                });
+                yield return CreateField(
+                    $"{prefix}.{prop.Key}",
+                    location,
+                    prop.Value.Type,
+                    prop.Value.Format,
+                    !(schema.Required?.Contains(prop.Key) ?? false),
+                    prop.Value.Description);
             }
         }
         else if (string.Equals(schema.Type, "array", StringComparison.Ordinal) && schema.Items != null)
         {
             // For arrays, parse the items schema
-            fields.AddRange(ParseSchema(schema.Items, prefix));
+            foreach (var field in ParseSchema(schema.Items, prefix, location))
+                yield return field;
         }
-
-        return fields;
     }
 
-    private static DataContainerFieldConfiguration CreateFieldFromParameter(OpenApiParameter param)
+    private static IGenericResult<DataContainerFieldConfiguration> CreateFieldFromParameter(
+        OpenApiParameter param,
+        string location)
     {
-        return new DataContainerFieldConfiguration
+        return CreateField(param.Name, location, param.Schema?.Type, param.Schema?.Format, !param.Required, param.Description);
+    }
+
+    private static IGenericResult<DataContainerFieldConfiguration> CreateField(
+        string name,
+        string location,
+        string? jsonType,
+        string? format,
+        bool isNullable,
+        string? description)
+    {
+        var dataType = MapJsonSchemaType(name, location, jsonType, format);
+        if (!dataType.IsSuccess)
+            return dataType.ToNewResult<DataContainerFieldConfiguration>();
+
+        return GenericResult<DataContainerFieldConfiguration>.Success(new DataContainerFieldConfiguration
         {
             Id = Guid.NewGuid(),
-            Name = param.Name,
-            DataType = MapJsonSchemaTypeName(param.Schema?.Type, param.Schema?.Format),
-            IsNullable = !param.Required,
-            Description = param.Description
-        };
+            Name = name,
+            DataType = dataType.Value!.Name,
+            IsNullable = isNullable,
+            Description = description
+        });
     }
 
-    private static string MapJsonSchemaTypeName(string? jsonType, string? format)
-        => MapJsonSchemaType(jsonType, format).Name;
-
-    private static Type MapJsonSchemaType(string? jsonType, string? format)
+    private static IGenericResult<Type> MapJsonSchemaType(string field, string location, string? jsonType, string? format)
     {
+        if (string.IsNullOrEmpty(jsonType))
+            return FieldTypeUnknown(field, location, "(no type declared)");
+
         // Build composite key: type+format (e.g., "integer+int64", "string+date-time")
-        var sourceTypeName = jsonType?.ToLowerInvariant() ?? "string";
+        var sourceTypeName = jsonType.ToLowerInvariant();
         var compositeKey = string.IsNullOrEmpty(format)
             ? sourceTypeName
             : $"{sourceTypeName}+{format.ToLowerInvariant()}";
@@ -362,12 +377,19 @@ public sealed class RestOpenApiSchemaImporter : SchemaImporterBase<RestConfigura
             converter = JsonSchemaConverters.BySourceType(sourceTypeName);
         }
 
-        // Return converter CLR type or fallback to string
-        if (converter != JsonSchemaConverters.NotFound)
-            return converter.TargetClrType;
+        return converter == JsonSchemaConverters.NotFound
+            ? FieldTypeUnknown(field, location, compositeKey)
+            : GenericResult<Type>.Success(converter.TargetClrType);
+    }
 
-        // Fallback to string for unknown types
-        return typeof(string);
+    private static IGenericResult<Type> FieldTypeUnknown(string field, string location, string sourceType)
+    {
+        return GenericResult<Type>.Failure(
+            RestDataStoreResultCodes.ByName("OpenApiFieldTypeUnknown"),
+            ResultDetails.Create()
+                .With("Field", field)
+                .With("Location", location)
+                .With("SourceType", sourceType));
     }
 
     #endregion

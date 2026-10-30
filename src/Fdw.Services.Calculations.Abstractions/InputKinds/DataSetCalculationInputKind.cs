@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Fdw.Collections.Attributes;
 
@@ -17,4 +18,10 @@ public sealed class DataSetCalculationInputKind : CalculationInputKindBase
         : base(name: "DataSet")
     {
     }
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<CalculationSetting> Settings { get; } =
+    [
+        new CalculationSetting("dataSetName", "DataSet", true, "The data set, or the view of one, whose rows the calculation reads"),
+    ];
 }

@@ -23,7 +23,7 @@ namespace Fdw.Services.Etl.Graphs;
 [ExcludeFromCodeCoverage]
 [GenerateMapper]
 [ManagedConfiguration(ServiceCategory = "Pipeline", ServiceType = "Graph")]
-public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementationConfiguration, IApprovalGatedPipelineConfiguration, IDeclaresRunParameters
+public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementationConfiguration, IApprovalGatedPipelineConfiguration, IParallelRunPipelineConfiguration, IDeclaresRunParameters
 {
     /// <summary>Gets or sets the durable identity of the pipeline, the domain row's.</summary>
     public Guid Id { get; set; }
@@ -57,6 +57,30 @@ public sealed partial class GraphPipelineConfiguration : IEtlPipelineImplementat
     /// omits it states false.
     /// </summary>
     public bool RequireApprovalToRun { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many runs of the pipeline may run at once (FDW-3117). There is no default: a graph states it, and one that does not
+    /// is refused.
+    /// </summary>
+    public int MaxParallelRuns { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the option of <c>OverflowBehaviors</c> that says what happens to a run triggered while <see cref="MaxParallelRuns"/>
+    /// runs are active (FDW-3117). There is no default: a graph states it, and one that does not is refused.
+    /// </summary>
+    public string OverflowBehavior { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the seconds a run held by the <c>DelayedStart</c> behavior waits before it joins the queue (FDW-3129). Null unless that behavior
+    /// states a delay; it states exactly one of this and <see cref="DelayedStartTimeOfDay"/>.
+    /// </summary>
+    public int? DelayedStartSeconds { get; set; }
+
+    /// <summary>Gets or sets the time of day, <c>HH:mm</c> on 24 hours, a run held by the <c>DelayedStart</c> behavior joins the queue (FDW-3129). It goes with <see cref="DelayedStartTimeZoneId"/>.</summary>
+    public string? DelayedStartTimeOfDay { get; set; }
+
+    /// <summary>Gets or sets the time zone, a <see cref="TimeZoneInfo"/> id, <see cref="DelayedStartTimeOfDay"/> is read in (FDW-3129). A tenant has no time zone to read, so the pipeline states its own.</summary>
+    public string? DelayedStartTimeZoneId { get; set; }
 
     /// <summary>Gets or sets the organization the pipeline belongs to.</summary>
     public Guid? OrgId { get; set; }

@@ -104,10 +104,17 @@ public partial class ConfigurationGatewayTypes : ServiceTypeCollectionBase<
             var serverTierCache = new DataGatewayResultCache(new MemoryCache(new MemoryCacheOptions()), loggerFactory);
             var serverTierOptions = new MainDataGatewayConfiguration { IsEnabled = true, EnableCache = true };
 
-            builder.Services.TryAddSingleton<IConfigurationGatewayProvider>(sp =>
+            builder.Services.TryAddSingleton(sp =>
                 new ConfigurationGatewayProvider(
                     connectionName => Build(sp, connectionName, loggerFactory, serverTierCache, serverTierOptions),
                     sp.GetService<ILogger<ConfigurationGatewayProvider>>()));
+            builder.Services.TryAddSingleton<IConfigurationGatewayProvider>(sp => sp.GetRequiredService<ConfigurationGatewayProvider>());
+            builder.Services.TryAddSingleton<IDatabaseGenerationCatalog>(sp => sp.GetRequiredService<ConfigurationGatewayProvider>());
+
+            // Looks at each configuration database now and then and empties the shared result cache when one was reset or
+            // cannot be reached. Takes the cache the gateways take, and how often to look from the setting ResetWatchIntervalSeconds
+            // (FDW-3207); a host with no cache or no settings says so and watches nothing.
+            builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, DatabaseResetWatcher>(DatabaseResetWatcher.Create));
 
             // The declared connections themselves, for platform plumbing that needs one by name -- the credential
             // vault over AuthDb. Same source and factory resolution as the gateways above, so a connection the host

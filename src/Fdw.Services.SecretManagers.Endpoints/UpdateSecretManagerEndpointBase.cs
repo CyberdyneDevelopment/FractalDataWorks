@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Fdw.Services.SecretManagers;
 using Fdw.Services.SecretManagers.Abstractions;
 using Fdw.Services.SecretManagers.Endpoints.Logging;
+using Fdw.Web.RestEndpoints.ErrorMapping;
 using Fdw.Web.RestEndpoints.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,7 +45,7 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
         Summary(s =>
         {
             s.Summary = "Update secret manager";
-            s.Description = "Updates an existing secret manager configuration.";
+            s.Description = "Changes the settings of an existing secret manager. Send the settings to change as a JSON object under 'configuration'; the members left out keep their values. A setting the secret manager's type does not take is refused, naming it and listing those it takes.";
         });
         ConfigureEndpoint();
     }
@@ -69,15 +70,21 @@ public abstract class UpdateSecretManagerEndpointBase : Endpoint<UpdateSecretMan
                 return;
             }
 
-            // SecretManagerType IS the implementation the domain row names. Description and
-            // Environment are columns on the sec.SecretManager domain row, which a domain read does
-            // not carry, so they are the app's to fill -- second-wave-split payload, not invented here.
-            var saveResult = await _configProvider.Save(existing, "SecretManager", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
+            // The implementation the domain row names is the secret manager's type, and its settings are what this route changes: the sent
+            // members are laid over the stored ones and saved. The domain row's Description and Environment are not written by a save of the
+            // implementation, so this route does not take them (FDW-2890).
+            var changed = SecretManagerSettings.Read(existing.Implementation, req.Configuration, existing, _logger);
+            if (changed.IsFailure || changed.Value is null)
+            {
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(changed, HttpContext)).ConfigureAwait(false);
+                return;
+            }
+
+            changed.Value.Id = existing.Id;
+            var saveResult = await _configProvider.Update(changed.Value, "SecretManager", existing.Implementation, existing.Name, ct).ConfigureAwait(false);
             if (saveResult.IsFailure)
             {
-                SecretManagerEndpointLog.UpdateFailed(_logger, saveResult.CurrentMessage ?? "Unknown error");
-                AddError(saveResult.CurrentMessage ?? "Failed to update secret manager configuration");
-                await Send.ErrorsAsync(500, ct).ConfigureAwait(false);
+                await Send.ResultAsync(ResultHttpStatusMapper.Answer(saveResult, HttpContext)).ConfigureAwait(false);
                 return;
             }
 

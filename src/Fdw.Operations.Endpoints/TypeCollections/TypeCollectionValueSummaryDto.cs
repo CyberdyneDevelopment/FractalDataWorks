@@ -28,6 +28,9 @@ public sealed class TypeCollectionValueSummaryDto
     /// <summary>Gets or sets the required configuration properties for this TypeOption.</summary>
     public IReadOnlyList<string> RequiredProperties { get; set; } = [];
 
+    /// <summary>Gets or sets the levels the option may be stated at (FDW-3161); null for an option that does not say. A mode of thresholds on waiting runs states the levels it applies to, so the console offers the server only the modes that list the server.</summary>
+    public IReadOnlyList<string>? Levels { get; set; }
+
     /// <summary>Gets or sets the parameters the option takes, for the console to build its picker from; empty when it declares none.</summary>
     public IReadOnlyList<TypeCollectionValueParameterDto> Parameters { get; set; } = [];
 

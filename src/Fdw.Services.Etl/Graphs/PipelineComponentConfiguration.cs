@@ -57,6 +57,15 @@ public sealed partial class PipelineComponentConfiguration : IGenericConfigurati
     /// <summary>Gets or sets the physical name (the file) a container source reads instead of the declared container's name (FDW-1952); none reads the declared name.</summary>
     public string? PhysicalName { get; set; }
 
+    /// <summary>Gets or sets the name of the <c>TargetKinds</c> option that says what a container source reads (FDW-3089); none reads the declared container as before.</summary>
+    public string? TargetKind { get; set; }
+
+    /// <summary>Gets or sets the name of the list run parameter that holds the file names of the <c>Files</c> kind (FDW-3089).</summary>
+    public string? FilesList { get; set; }
+
+    /// <summary>Gets or sets the field whose value names the file each row of the <c>Files</c> kind of a destination goes to (FDW-3193).</summary>
+    public string? SplitField { get; set; }
+
     /// <summary>Gets or sets how many rows go in a batch.</summary>
     public int? BatchSize { get; set; }
 

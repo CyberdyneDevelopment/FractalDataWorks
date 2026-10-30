@@ -53,7 +53,7 @@ public static partial class IdentityEndpointLog
     /// <param name="reason">The structured reason from the domain.</param>
     /// <returns>The structured message.</returns>
     [MessageLogging(EventId = 51000, Level = LogLevel.Warning, Message = "Identity '{name}' could not obtain a token for audience '{audience}': {reason}")]
-    public static partial IGenericMessage IdentityVerificationFailed(ILogger logger, string name, string audience, string reason);
+    public static partial IGenericMessage IdentityVerificationFailed(ILogger logger, string name, string audience, string? reason);
 
     /// <summary>Logs that a verification request omitted a value it cannot run without.</summary>
     /// <param name="logger">The logger.</param>

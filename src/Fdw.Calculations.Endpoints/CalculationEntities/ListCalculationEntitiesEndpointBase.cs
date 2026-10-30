@@ -126,7 +126,7 @@ public abstract class ListCalculationEntitiesEndpointBase : CrudPageEndpointBase
     /// <param name="ct">The cancellation token.</param>
     /// <returns>The summary, or the failure that ends the page.</returns>
     /// <remarks>
-    /// A calculation is always one of a type (Formula, Windowed), which the summary declares required. A row
+    /// A calculation is always one of a type (Windowed), which the summary declares required. A row
     /// with none is a fault in what was persisted: the page ends with that failure, as the previous list, which
     /// composed every entity, failed on it too. It is not dropped from the list and given no made-up type.
     /// </remarks>

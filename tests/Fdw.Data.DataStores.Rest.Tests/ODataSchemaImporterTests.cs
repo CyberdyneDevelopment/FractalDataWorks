@@ -31,13 +31,29 @@ public sealed class ODataSchemaImporterTests
     [Fact]
     [Trait("Priority", "P1")]
     [Trait("Category", "DataIntegrity")]
-    public void ConstructorThrowsArgumentNullExceptionWhenLoggerIsNull()
+    public void ConstructorWithoutLoggerBuildsTheImporterTheRegistrationInitializerNeeds()
     {
         // Act
-        var act = () => new ODataSchemaImporter(null!);
+        var parameterless = new ODataSchemaImporter();
+        var nullLogger = new ODataSchemaImporter(null);
 
         // Assert
-        Should.Throw<ArgumentNullException>(act).ParamName.ShouldBe("logger");
+        parameterless.Name.ShouldBe("OData");
+        nullLogger.Name.ShouldBe("OData");
+    }
+
+    [Fact]
+    [Trait("Priority", "P1")]
+    [Trait("Category", "DataIntegrity")]
+    public void TypeOptionIsNotRestrictedToItsCompilationSoSchemaImportersRegistersIt()
+    {
+        // Act
+        var option = typeof(ODataSchemaImporter).GetCustomAttribute<Fdw.Collections.Attributes.TypeOptionAttribute>();
+
+        // Assert
+        option.ShouldNotBeNull();
+        option!.RestrictToCurrentCompilation.ShouldBeFalse();
+        typeof(ODataSchemaImporter).GetConstructor(Type.EmptyTypes).ShouldNotBeNull();
     }
 
     [Fact]
@@ -125,7 +141,8 @@ public sealed class ODataSchemaImporterTests
         var detected = InvokeDetectEdmNamespace(doc);
 
         // Assert
-        detected.ShouldBe(edmV4Ns);
+        detected.IsSuccess.ShouldBeTrue();
+        detected.Value.ShouldBe(edmV4Ns);
     }
 
     [Fact]
@@ -143,24 +160,26 @@ public sealed class ODataSchemaImporterTests
         var detected = InvokeDetectEdmNamespace(doc);
 
         // Assert
-        detected.ShouldBe(edmV3Ns);
+        detected.IsSuccess.ShouldBeTrue();
+        detected.Value.ShouldBe(edmV3Ns);
     }
 
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Etl")]
-    public void DetectEdmNamespaceDefaultsToV4WhenNoEntityTypesPresent()
+    public void DetectEdmNamespaceFailsWhenNoEntityTypesPresent()
     {
         // Arrange
         var edmxNs = (XNamespace)"http://docs.oasis-open.org/odata/ns/edmx";
-        var edmV4Ns = (XNamespace)"http://docs.oasis-open.org/odata/ns/edm";
         var doc = new XDocument(new XElement(edmxNs + "Edmx"));
 
         // Act
         var detected = InvokeDetectEdmNamespace(doc);
 
         // Assert
-        detected.ShouldBe(edmV4Ns);
+        detected.IsSuccess.ShouldBeFalse();
+        detected.Code.ShouldNotBeNull();
+        detected.Code!.Name.ShouldBe("ODataNoEntityTypes");
     }
 
     [Fact]
@@ -452,11 +471,11 @@ public sealed class ODataSchemaImporterTests
         return ((string, string))method.Invoke(null, [source])!;
     }
 
-    private static XNamespace InvokeDetectEdmNamespace(XDocument edmx)
+    private static Fdw.Results.IGenericResult<XNamespace> InvokeDetectEdmNamespace(XDocument edmx)
     {
         var method = typeof(ODataSchemaImporter).GetMethod("DetectEdmNamespace", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("DetectEdmNamespace not found");
-        return (XNamespace)method.Invoke(null, [edmx])!;
+        return (Fdw.Results.IGenericResult<XNamespace>)method.Invoke(null, [edmx])!;
     }
 
     private static bool InvokeShouldExclude(string containerName, SchemaImporterOptions? options)

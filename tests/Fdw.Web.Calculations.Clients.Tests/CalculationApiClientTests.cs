@@ -358,59 +358,6 @@ public sealed class CalculationApiClientTests
     [Fact]
     [Trait("Priority", "P2")]
     [Trait("Category", "Api")]
-    public async Task ValidateFormulaSendsCorrectRequest()
-    {
-        var expected = new PreviewFormulaResponse { IsValid = true, InferredResultType = "decimal" };
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(expected)
-        });
-        var sut = CreateClient(handler);
-        var request = new ValidateFormulaPayload { Formula = "SUM(Amount)", TargetDataSet = "Sales" };
-
-        var result = await sut.ValidateFormula(request, TestContext.Current.CancellationToken);
-
-        handler.LastRequest.ShouldNotBeNull();
-        handler.LastRequest.RequestUri!.PathAndQuery.ShouldBe("/calculation-entities/validate-formula");
-        handler.LastRequest.Method.ShouldBe(HttpMethod.Post);
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldNotBeNull();
-        result.Value!.IsValid.ShouldBeTrue();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
-    public async Task ValidateFormulaReturnsFailureOnNonSuccess()
-    {
-        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.BadRequest));
-        var sut = CreateClient(handler);
-        var request = new ValidateFormulaPayload { Formula = "INVALID" };
-
-        var result = await sut.ValidateFormula(request, TestContext.Current.CancellationToken);
-
-        result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldNotBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
-    public async Task ValidateFormulaReturnsFailureOnException()
-    {
-        var handler = new MockHttpMessageHandler((_, _) => throw new HttpRequestException("Network error"));
-        var sut = CreateClient(handler);
-        var request = new ValidateFormulaPayload { Formula = "ERR" };
-
-        var result = await sut.ValidateFormula(request, TestContext.Current.CancellationToken);
-
-        result.IsFailure.ShouldBeTrue();
-        result.Messages.ShouldNotBeEmpty();
-    }
-
-    [Fact]
-    [Trait("Priority", "P2")]
-    [Trait("Category", "Api")]
     public async Task PreviewCalculationSendsCorrectRequest()
     {
         var expected = new PreviewCalculationResponse

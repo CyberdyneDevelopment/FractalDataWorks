@@ -28,7 +28,13 @@ public class PipelineExecutionRecord
     public DateTime? CompletedAt { get; set; }
 
     /// <summary>
-    /// Gets or sets whether execution was successful.
+    /// Gets or sets the status the run is stored with: the queued state, Running, Succeeded or Failed.
+    /// </summary>
+    public required string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether execution was successful. False for every run that did not succeed, including one that has not finished;
+    /// <see cref="Status"/> says which.
     /// </summary>
     public bool Success { get; set; }
 

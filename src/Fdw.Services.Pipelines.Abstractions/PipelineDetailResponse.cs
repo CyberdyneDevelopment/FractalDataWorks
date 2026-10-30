@@ -27,6 +27,21 @@ public class PipelineDetailResponse
     /// <summary>Gets or sets whether a run of the pipeline waits until someone who holds <c>pipelines:approve</c> approves it (FDW-1937).</summary>
     public bool RequireApprovalToRun { get; set; }
 
+    /// <summary>Gets or sets how many runs of the pipeline may run at once (FDW-3117); <see langword="null"/> for a pipeline kind that does not state it.</summary>
+    public int? MaxParallelRuns { get; set; }
+
+    /// <summary>Gets or sets what happens to a run triggered while that many are active, the name of an option of <c>OverflowBehaviors</c> (FDW-3117); <see langword="null"/> for a pipeline kind that does not state it.</summary>
+    public string? OverflowBehavior { get; set; }
+
+    /// <summary>Gets or sets the seconds a held run waits, for the <c>DelayedStart</c> behavior with a delay (FDW-3129).</summary>
+    public int? DelayedStartSeconds { get; set; }
+
+    /// <summary>Gets or sets the time of day (<c>HH:mm</c>) a held run joins the queue, for the <c>DelayedStart</c> behavior with a time of day (FDW-3129).</summary>
+    public string? DelayedStartTimeOfDay { get; set; }
+
+    /// <summary>Gets or sets the time zone the time of day is read in (FDW-3129).</summary>
+    public string? DelayedStartTimeZoneId { get; set; }
+
     /// <summary>Gets or sets the creation timestamp.</summary>
     public DateTimeOffset CreatedAt { get; set; }
 

@@ -34,6 +34,9 @@ public sealed class SyntheticSecretManagerConfiguration : ISecretManagerImplemen
     /// <summary>Gets or sets the environment-variable prefix secret keys are looked up under.</summary>
     public string Prefix { get; set; } = string.Empty;
 
+    [SecretValue]
+    public string? ClientSecret { get; set; }
+
 
 
 }

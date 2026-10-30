@@ -52,6 +52,16 @@ public static partial class AuiLog
         string providerName,
         string reason);
 
+    /// <summary> Logs that an AUI manifest was refused because nobody is signed in. </summary>
+    [MessageLogging(
+        EventId = 51700,
+        Level = LogLevel.Warning,
+        Message = "AUI manifest for '{path}' refused: the request carries no signed-in user",
+        ClientMessage = "Sign in to read the agent interface")]
+    public static partial IGenericMessage SignInRequired(
+        ILogger logger,
+        string path);
+
     /// <summary> Logs that an agent browser was detected. </summary>
     [MessageLogging(
         EventId = 11002,

@@ -132,9 +132,13 @@ public partial class MsSqlConnectionConfiguration : IDatabaseConnectionConfigura
     public IDictionary<string, string?> AdditionalProperties { get; set; } = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Gets or sets the command timeout in seconds.
+    /// Gets or sets the command timeout in seconds, or <see langword="null"/> when the connection states none (FDW-3284).
     /// </summary>
-    public int CommandTimeoutSeconds { get; set; } = 30;
+    /// <remarks>
+    /// No number is assumed here or in the column. A connection that states none takes the instance's setting DefaultCommandTimeoutSeconds, and
+    /// is not built when that is not set either.
+    /// </remarks>
+    public int? CommandTimeoutSeconds { get; set; }
 
     /// <inheritdoc/>
     public int MaxSerialInsert { get; set; }

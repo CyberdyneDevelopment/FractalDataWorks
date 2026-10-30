@@ -37,6 +37,7 @@ public sealed class ServicesTypeCollectionFixture
         PocoMapperCollection.RegisterMember(new TestContainerConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new TestContainerFieldConfigurationPocoMapper());
         PocoMapperCollection.RegisterMember(new SettingRowPocoMapper());
+        PocoMapperCollection.RegisterMember(new TreeNodeConfigurationPocoMapper());
     }
 }
 

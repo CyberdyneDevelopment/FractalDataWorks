@@ -54,7 +54,7 @@ public class CatalogUsesTests
         calculation.SetupGet(c => c.OutputDataSetName).Returns(outputDataSet);
         var inputs = new List<CalculationInputConfigurationBase>();
         if (inputDataSet is not null)
-            inputs.Add(new FormulaCalculationInputConfiguration { DataSetName = inputDataSet });
+            inputs.Add(new WindowedCalculationInputConfiguration { DataSetName = inputDataSet });
         calculation.SetupGet(c => c.Inputs).Returns(inputs);
         var provider = new Mock<ICalculationConfigurationProvider>();
         IReadOnlyList<ICalculationEntityImplementationConfiguration> all = [calculation.Object];

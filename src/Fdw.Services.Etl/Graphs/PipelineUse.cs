@@ -11,6 +11,12 @@ namespace Fdw.Services.Etl.Graphs;
 /// <param name="Parents">The names it sits under, outermost first: the store and path of a container; empty for the rest.</param>
 public sealed record PipelineUse(string Relation, string Kind, string Name, IReadOnlyList<string> Parents)
 {
+    /// <summary>Gets the path a destination of the File kind writes at in place of the declared container's (FDW-3193); none for every other use.</summary>
+    public string? PhysicalPath { get; init; }
+
+    /// <summary>Gets the file a destination of the File kind writes in place of the declared container's (FDW-3193); none for every other use.</summary>
+    public string? PhysicalName { get; init; }
+
     /// <summary>Whether this is the same use as another: the same relation on the same thing, compared without regard to case.</summary>
     /// <param name="other">The other use.</param>
     /// <returns><see langword="true"/> when both name the same relation, kind, name and parents.</returns>
@@ -20,6 +26,8 @@ public sealed record PipelineUse(string Relation, string Kind, string Name, IRea
         return string.Equals(Relation, other.Relation, StringComparison.Ordinal)
             && string.Equals(Kind, other.Kind, StringComparison.Ordinal)
             && string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(PhysicalPath ?? string.Empty, other.PhysicalPath ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(PhysicalName ?? string.Empty, other.PhysicalName ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             && Parents.Count == other.Parents.Count
             && Parents.Zip(other.Parents, (a, b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase)).All(same => same);
     }

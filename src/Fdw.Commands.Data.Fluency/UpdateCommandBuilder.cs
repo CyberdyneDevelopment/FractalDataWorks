@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Fdw.Collections;
+using Fdw.Commands.Data.Abstractions.Timeouts;
 using Fdw.Data;
 using Fdw.Data.Abstractions;
 using Fdw.Services.Data.Abstractions;
@@ -21,6 +22,7 @@ public class UpdateCommandBuilder<T>
     private string[]? _returnColumns;
     private readonly Stack<FilterGroupBuilder> _groupStack = new();
     private FilterGroupBuilder? _rootGroup;
+    private readonly Dictionary<string, object> _metadata = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UpdateCommandBuilder{T}"/> class.
@@ -29,6 +31,18 @@ public class UpdateCommandBuilder<T>
     public UpdateCommandBuilder(string containerName)
     {
         _containerName = containerName;
+    }
+
+    /// <summary>
+    /// Gives the update a command timeout of its own, which every connection kind applies over its own (FDW-3324).
+    /// </summary>
+    /// <param name="timeout">The timeout, longer than zero.</param>
+    /// <param name="owner">Who sets the limit, in the words a failure uses, for example <c>secret manager 'MsSqlSecrets'</c>.</param>
+    /// <returns>The builder for method chaining.</returns>
+    public UpdateCommandBuilder<T> CommandTimeout(TimeSpan timeout, string owner)
+    {
+        CommandTimeoutPolicy.Set(_metadata, timeout, owner);
+        return this;
     }
 
     /// <summary>
@@ -200,7 +214,7 @@ public class UpdateCommandBuilder<T>
             }
         }
 
-        var command = new UpdateCommand<T>(entity) { Filter = filter, ReturnColumns = _returnColumns };
+        var command = new UpdateCommand<T>(entity) { Filter = filter, ReturnColumns = _returnColumns, Metadata = new Dictionary<string, object>(_metadata, StringComparer.OrdinalIgnoreCase) };
         return new DataGatewayCall(command, new DataStoreTarget(_dataStoreName, _pathName, _containerName));
     }
 
